@@ -115,7 +115,7 @@ proof upgrades, solver feedback, and consumer boundaries is
 [`docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
 The commit-sized curriculum/resource work matrix is
 [`docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md`](docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
-The current execution ledger for stabilizing the 90 existing math packs,
+The current execution ledger for stabilizing the 91 existing math packs,
 resolving unclassified solver-reuse rows, completing learner paths, and
 deepening proof routes field by field is
 [`docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md).
@@ -170,17 +170,20 @@ Fubini-style sum, and simple-function integral replay queryable while keeping
 Lebesgue measure, general product-measure existence, convergence theorems, and
 almost-everywhere reasoning in the Lean-horizon lane.
 The sequence/real-analysis lane now also splits bounded monotone sequence and
-finite recurrence-prefix checks into focused packs: finite monotone-prefix
+finite recurrence-prefix and separation/root-finding checks into focused packs: finite monotone-prefix
 replay, finite prefix supremum, finite tail-gap replay, Fibonacci prefix
-replay, affine recurrence replay, companion-matrix state replay, and checked
-QF_LRA/Farkas rejection of bad upper-bound and bad finite-value rows, while
+replay, affine recurrence replay, companion-matrix state replay, exact
+bisection/Newton replay, finite convex-combination/separator replay, and checked
+QF_LRA/Farkas rejection of bad upper-bound, bad finite-value, bad Newton-step,
+and bad separator rows, while
 monotone convergence, closed-form recurrence solving, asymptotics, and
-stability/convergence theorems remain Lean-horizon.
+separation/stability/convergence theorems remain Lean-horizon.
 The optimization/convexity bridge rows now make exact LP feasibility,
 objective-threshold Farkas replay, finite midpoint/Jensen shadows, affine
-monotonicity, gradient replay, Hessian-minor witnesses, and least-squares
-normal-equation replay queryable while keeping duality, KKT sufficiency, SDP,
-and algorithm-convergence claims in the Lean-horizon lane.
+monotonicity, gradient replay, Hessian-minor witnesses, least-squares
+normal-equation replay, finite root-finding steps, and finite hyperplane
+separation queryable while keeping duality, KKT sufficiency, SDP, general
+separation, and algorithm-convergence claims in the Lean-horizon lane.
 The first route-note pass has also landed on the high-use learner cluster
 pages for logic/proof, graph/discrete reasoning, linear algebra/optimization,
 probability/statistics, and algebra/number theory.
@@ -404,8 +407,9 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **90 promoted solver-reuse
+the foundational resource dashboards now report **91 promoted solver-reuse
 packs**, **0 non-benchmark-horizon packs**, and **0 unclassified packs** after
+the latest finite-separation bad separator QF_LRA/Farkas promotion,
 the latest finite-root-finding bad Newton-step QF_LRA/Farkas promotion,
 the latest bounded-dynamics bad invariant-bound QF_LRA/Farkas promotion,
 complex-algebraic bad norm-squared QF_LRA/Farkas promotion,

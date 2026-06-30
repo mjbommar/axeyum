@@ -49,6 +49,9 @@ const FINITE_RECURRENCE_PREFIX_BAD_VALUE: &str = include_str!(
 const FINITE_ROOT_FINDING_BAD_NEWTON_STEP: &str = include_str!(
     "../../../artifacts/examples/math/finite-root-finding-v0/smt2/bad-newton-step-farkas-conflict.smt2"
 );
+const FINITE_SEPARATION_BAD_SEPARATOR: &str = include_str!(
+    "../../../artifacts/examples/math/finite-separation-v0/smt2/bad-separator-farkas-conflict.smt2"
+);
 const MULTIVARIABLE_CALCULUS_BAD_GRADIENT: &str = include_str!(
     "../../../artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2"
 );
@@ -454,6 +457,14 @@ fn finite_root_finding_bad_newton_step_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-root-finding-v0 bad-Newton-step SMT-LIB artifact",
         FINITE_ROOT_FINDING_BAD_NEWTON_STEP,
+    );
+}
+
+#[test]
+fn finite_separation_bad_separator_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-separation-v0 bad-separator SMT-LIB artifact",
+        FINITE_SEPARATION_BAD_SEPARATOR,
     );
 }
 

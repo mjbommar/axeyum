@@ -19,6 +19,7 @@ Example packs:
 - [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
+- [finite-separation-v0](../../../artifacts/examples/math/finite-separation-v0/)
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
@@ -64,7 +65,9 @@ Fibonacci and affine recurrence replay plus a companion-matrix state trace,
 with a checked QF_LRA/Farkas bad finite value certificate. The
 finite-root-finding slice adds exact bisection/Newton iteration replay,
 residual-decrease checking, and a checked QF_LRA/Farkas bad Newton-step
-certificate. The finite random-matrix slice adds exact
+certificate. The finite-separation slice adds exact convex-hull membership,
+separating-hyperplane score replay, supporting-face checking, and a checked
+QF_LRA/Farkas bad-separator certificate. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, rank distributions, and a checked QF_LRA/Farkas bad trace-square
 certificate. The spectral slice checks exact finite
@@ -243,6 +246,22 @@ decrease. The bad row rejects `17/12 = 4/3` through checked QF_LRA/Farkas
 evidence, making it useful for numerical-analysis lessons without claiming a
 general convergence theorem.
 
+For a finite separation example, encode a convex hull and a separating normal:
+
+```text
+vertices = (0,0), (1,0), (0,1)
+point = (1/3,1/3)
+normal = (1,1)
+threshold = 1
+outside = (2,2)
+```
+
+The validator checks nonnegative convex weights summing to one, recomputes all
+dot products, checks the tight face `{(1,0),(0,1)}`, and rejects a malformed
+outside-point inequality through checked QF_LRA/Farkas evidence. This is the
+finite-dimensional, exact-rational version of a separation certificate, not the
+general theorem.
+
 For a Jacobian/Hessian bridge into optimization, encode:
 
 ```text
@@ -286,6 +305,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-separation-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_separator_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
@@ -321,6 +342,7 @@ replay, read
 [End To End: Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md),
 [End To End: Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md),
 [End To End: Finite Root Finding](finite-root-finding-end-to-end.md),
+[End To End: Finite Hyperplane Separation](finite-separation-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md),
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md),

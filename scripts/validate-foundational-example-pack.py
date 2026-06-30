@@ -10013,6 +10013,118 @@ def vector_add_fraction(left: list[Fraction], right: list[Fraction]) -> list[Fra
     return [left_item + right_item for left_item, right_item in zip(left, right)]
 
 
+def validate_finite_separation(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    combination = checks["convex-combination-replay"]
+    if combination["expected_result"] != "sat":
+        fail("convex-combination-replay must expect sat")
+    values = single_witness_values(combination, witnesses)
+    vertices = require_fraction_vector_list("convex hull vertices", values.get("vertices"))
+    weights = require_fraction_vector("convex hull weights", values.get("weights"))
+    point = require_fraction_vector("convex hull point", values.get("point"))
+    dimension = len(vertices[0])
+    require_vector_length("convex hull point", point, dimension)
+    if len(weights) != len(vertices):
+        fail("convex-combination-replay weights must match vertices")
+    if any(weight < 0 for weight in weights):
+        fail("convex-combination-replay weights must be nonnegative")
+    if sum(weights, Fraction(0)) != 1:
+        fail("convex-combination-replay weights must sum to one")
+    replayed_point = [Fraction(0) for _ in range(dimension)]
+    for weight, vertex in zip(weights, vertices):
+        replayed_point = vector_add_fraction(replayed_point, scalar_vec(weight, vertex))
+    if replayed_point != point:
+        fail("convex-combination-replay weighted vertex sum does not match point")
+
+    separator = checks["separating-hyperplane-replay"]
+    if separator["expected_result"] != "sat":
+        fail("separating-hyperplane-replay must expect sat")
+    values = single_witness_values(separator, witnesses)
+    separator_vertices = require_fraction_vector_list("separator vertices", values.get("vertices"))
+    normal = require_fraction_vector("separator normal", values.get("normal"))
+    threshold = require_fraction("separator threshold", values.get("threshold"))
+    outside_point = require_fraction_vector("separator outside_point", values.get("outside_point"))
+    vertex_scores = require_fraction_vector("separator vertex_scores", values.get("vertex_scores"))
+    outside_score = require_fraction("separator outside_score", values.get("outside_score"))
+    margin = require_fraction("separator margin", values.get("margin"))
+    tight_indices = require_nonnegative_int_list("separator tight_indices", values.get("tight_indices"))
+    if separator_vertices != vertices:
+        fail("separating-hyperplane-replay must use the same vertices as the convex-hull row")
+    require_vector_length("separator normal", normal, dimension)
+    require_vector_length("separator outside_point", outside_point, dimension)
+    if len(vertex_scores) != len(separator_vertices):
+        fail("separating-hyperplane-replay vertex_scores must match vertices")
+    computed_vertex_scores = [dot_product(normal, vertex) for vertex in separator_vertices]
+    if vertex_scores != computed_vertex_scores:
+        fail("separating-hyperplane-replay vertex_scores are incorrect")
+    if any(score > threshold for score in vertex_scores):
+        fail("separating-hyperplane-replay has a vertex above the threshold")
+    if outside_score != dot_product(normal, outside_point):
+        fail("separating-hyperplane-replay outside_score is incorrect")
+    if not outside_score > threshold:
+        fail("separating-hyperplane-replay outside point must be strictly separated")
+    if margin != outside_score - threshold:
+        fail("separating-hyperplane-replay margin is incorrect")
+    if margin <= 0:
+        fail("separating-hyperplane-replay margin must be positive")
+
+    supporting = checks["supporting-face-replay"]
+    if supporting["expected_result"] != "sat":
+        fail("supporting-face-replay must expect sat")
+    supporting_values = single_witness_values(supporting, witnesses)
+    if supporting_values != values:
+        fail("supporting-face-replay must cite the separator witness")
+    computed_tight_indices = [
+        index
+        for index, score in enumerate(vertex_scores)
+        if score == threshold
+    ]
+    if not computed_tight_indices:
+        fail("supporting-face-replay must have at least one tight vertex")
+    if tight_indices != computed_tight_indices:
+        fail("supporting-face-replay tight_indices do not match separator scores")
+    for index in tight_indices:
+        if index >= len(separator_vertices):
+            fail("supporting-face-replay tight index is outside the vertex list")
+
+    bad = checks["bad-separator-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-separator-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "triangle-separator":
+        fail("bad-separator-rejected must cite the triangle-separator source witness")
+    computed = require_fraction("bad separator computed_outside_score", data.get("computed_outside_score"))
+    claimed_upper_bound = require_fraction("bad separator claimed_upper_bound", data.get("claimed_upper_bound"))
+    if computed != outside_score:
+        fail("bad-separator-rejected computed_outside_score does not match replay")
+    if not computed > claimed_upper_bound:
+        fail("bad-separator-rejected malformed bound must be strictly below the replayed score")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad separator smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-separation-v0/smt2/bad-separator-farkas-conflict.smt2":
+        fail("bad-separator-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad separator smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad separator farkas_regression", regression)
+    if "finite_separation_bad_separator_artifact_emits_checked_farkas" not in regression:
+        fail("bad-separator-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad separator certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-separator-rejected certificate must document checked Farkas evidence")
+
+    horizon = checks["general-separation-theorem-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-separation-theorem-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-separation-theorem-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("separation theorem target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("separation theorem future_checker", data.get("future_checker"))
+
+
 def inner_product(
     gram_matrix: list[list[Fraction]],
     left: list[Fraction],
@@ -16584,6 +16696,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_recurrence_prefix(expected)
     if metadata["id"] == "finite-root-finding-v0":
         validate_finite_root_finding(expected)
+    if metadata["id"] == "finite-separation-v0":
+        validate_finite_separation(expected)
     if metadata["id"] == "function-composition-v0":
         validate_function_composition(expected)
     if metadata["id"] == "generating-functions-v0":

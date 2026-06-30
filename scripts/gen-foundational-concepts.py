@@ -160,6 +160,10 @@ CURRICULUM_MAP = {
                 "Finite bisection/Newton root-finding replay and checked bad-step rejection.",
             ),
             (
+                "finite-separation-v0",
+                "Finite convex-hull and separating-hyperplane replay with checked bad-separator rejection.",
+            ),
+            (
                 "multivariable-calculus-rational-v0",
                 "Exact rational gradients, directional derivatives, Jacobian chain-rule replay, and Hessian minors.",
             ),
@@ -373,6 +377,10 @@ CURRICULUM_MAP = {
                 "finite-root-finding-v0",
                 "Exact rational root-finding iterations and bad Newton-step rejection.",
             ),
+            (
+                "finite-separation-v0",
+                "Exact convex-hull, dot-product, and separating-hyperplane replay.",
+            ),
         ],
     },
     "calculus": {
@@ -416,6 +424,7 @@ FIELD_PACKS = {
         ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and bad midpoint-convexity rejection."),
         ("multivariable-calculus-rational-v0", "Exact gradients, directional derivatives, Hessian minors, and local convexity shadows."),
         ("inner-product-spaces-rational-v0", "Exact rational projections, Gram matrices, and orthogonal residual checks."),
+        ("finite-separation-v0", "Finite convex-hull and hyperplane-separation replay with checked bad-separator rejection."),
     ],
     "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, and rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."),
@@ -1277,6 +1286,10 @@ BRIDGE_CONCEPTS = [
             (
                 "least-squares-regression-v0",
                 "Normal-equation, residual-orthogonality, and regression coefficient rows over exact rationals.",
+            ),
+            (
+                "finite-separation-v0",
+                "Finite convex-hull, supporting-face, and hyperplane-separation rows over exact rationals.",
             ),
             (
                 "reals-rcf-shadow-v0",

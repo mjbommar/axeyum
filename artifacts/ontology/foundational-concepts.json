@@ -780,6 +780,12 @@
           "notes": "Finite bisection/Newton root-finding replay and checked bad-step rejection."
         },
         {
+          "id": "finite-separation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-separation-v0",
+          "notes": "Finite convex-hull and separating-hyperplane replay with checked bad-separator rejection."
+        },
+        {
           "id": "multivariable-calculus-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
@@ -1708,6 +1714,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
           "notes": "Exact rational root-finding iterations and bad Newton-step rejection."
+        },
+        {
+          "id": "finite-separation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-separation-v0",
+          "notes": "Exact convex-hull, dot-product, and separating-hyperplane replay."
         }
       ],
       "proof_routes": [
@@ -2762,6 +2774,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/least-squares-regression-v0",
           "notes": "Normal-equation, residual-orthogonality, and regression coefficient rows over exact rationals."
+        },
+        {
+          "id": "finite-separation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-separation-v0",
+          "notes": "Finite convex-hull, supporting-face, and hyperplane-separation rows over exact rationals."
         },
         {
           "id": "reals-rcf-shadow-v0",
@@ -8245,6 +8263,12 @@
           "notes": "Finite Recurrence Prefix Checks"
         },
         {
+          "id": "finite-separation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-separation-v0",
+          "notes": "Finite Hyperplane Separation Checks"
+        },
+        {
           "id": "finite-simplicial-homology-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-simplicial-homology-v0",
@@ -8926,6 +8950,12 @@
           "notes": "Exact rational projections, Gram matrices, and orthogonal residual checks."
         },
         {
+          "id": "finite-separation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-separation-v0",
+          "notes": "Finite convex-hull and hyperplane-separation replay with checked bad-separator rejection."
+        },
+        {
           "id": "finite-root-finding-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
@@ -9320,6 +9350,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
           "notes": "Finite Root-Finding Checks"
+        },
+        {
+          "id": "finite-separation-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-separation-v0",
+          "notes": "Finite Hyperplane Separation Checks"
         },
         {
           "id": "finite-topology-v0",

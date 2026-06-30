@@ -18,6 +18,7 @@ Example packs:
 - [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
+- [finite-separation-v0](../../../artifacts/examples/math/finite-separation-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
@@ -37,7 +38,8 @@ samples, ordered-field real witnesses, small nonlinear polynomial constraints,
 fixed-degree polynomial identities and roots, rational polynomial
 factorization/division/GCD/square-free replay, finite generating-function
 coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
-companion-matrix replay, finite bisection/Newton root-finding replay, LP feasibility and
+companion-matrix replay, finite bisection/Newton root-finding replay, finite
+convex-hull/separating-hyperplane replay, LP feasibility and
 infeasibility certificates, finite convexity and monotonicity checks, exact
 rational gradients, Jacobian chain-rule replay, Hessian minor checks,
 midpoints, collinearity determinants, squared distances, affine maps, signed
@@ -156,6 +158,24 @@ after exact replay computes `x_1 = 17/12`, then checks the final contradiction
 with QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Root Finding](finite-root-finding-end-to-end.md).
 
+For finite separation, encode a rational triangle, convex weights, and a
+separator:
+
+```text
+vertices = (0,0), (1,0), (0,1)
+weights = 1/3, 1/3, 1/3
+normal = (1,1)
+threshold = 1
+outside = (2,2)
+```
+
+The `finite-separation-v0` validator checks the convex-combination witness,
+recomputes every separator dot product, checks the tight supporting face, and
+rejects the false claim `normal . outside <= 1` after exact replay computes
+`normal . outside = 4`. The bad row routes that final exact-linear conflict
+through checked QF_LRA/Farkas evidence. For a focused trace, read
+[End To End: Finite Hyperplane Separation](finite-separation-end-to-end.md).
+
 For a matrix-invariant check, encode a fixed matrix and its characteristic
 polynomial:
 
@@ -227,6 +247,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-separation-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_separator_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas

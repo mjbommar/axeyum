@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": "finite-separation-v0",
+  "title": "Finite Hyperplane Separation Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_reals",
+    "curriculum_linear_algebra",
+    "field_optimization_and_convexity",
+    "field_real_analysis",
+    "field_linear_algebra",
+    "bridge_rational_convexity_shadow"
+  ],
+  "field_ids": [
+    "optimization_and_convexity",
+    "real_analysis",
+    "linear_algebra"
+  ],
+  "curriculum_nodes": [
+    "reals",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite convex-hull replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "finite linear algebra",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-separation-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite separation bad separator QF_LRA/Farkas regression seed",
+    "pressure": "Exact separator replay computes outside_score = 4 for point (2,2) under x + y, while the malformed row claims outside_score <= 1.",
+    "evidence": [
+      "bad-separator-rejected"
+    ],
+    "next_step": "Promote additional finite separation rows only when they add distinct convex-hull, support, duality, or certificate pressure; keep general separation, Hahn-Banach, SDP duality, and algorithm convergence in horizon lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/finite-separation-end-to-end.md",
+    "artifacts/examples/math/finite-separation-v0/smt2/bad-separator-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "convex-combination-replay",
+    "separating-hyperplane-replay",
+    "supporting-face-replay",
+    "bad-separator-rejected",
+    "general-separation-theorem-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite convex-hull and separator witnesses as deterministic exact-rational replay rows.",
+    "Replay convex weights, dot products, margins, and tight faces over exact rationals.",
+    "Route false finite separator claims through checked QF_LRA/Farkas evidence after replay computes the offending value.",
+    "Keep general separation theorems, Hahn-Banach-style arguments, SDP duality, and convergence claims marked Lean-horizon until proof artifacts exist."
+  ]
+}
