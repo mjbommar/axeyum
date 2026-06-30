@@ -38,6 +38,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-martingales-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite martingale bad conditional-expectation QF_LRA/Farkas regression seed",
+    "pressure": "Malformed terminal table where exact replay computes the up-block conditional expectation 3/2 but the false martingale equality claims 1.",
+    "evidence": [
+      "bad-martingale-rejected"
+    ],
+    "next_step": "Promote additional optional-stopping or submartingale rows only when they add distinct exact-linear solver pressure; keep convergence, Doob inequalities, stochastic integration, and continuous-time martingales in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -46,6 +55,9 @@
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/curriculum/02-structures/counting.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/finite-martingales-v0/smt2/bad-martingale-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
@@ -58,7 +70,7 @@
   "graduation_criteria": [
     "Encode finite filtrations as time-indexed partitions of probability atoms.",
     "Replay finite adaptedness, martingale, submartingale, and bounded stopping-time witnesses by exact rational model evaluation.",
-    "Emit checked finite counterexample evidence for rejected martingale claims.",
+    "Emit checked finite counterexample evidence for rejected martingale claims; the bad martingale row now has checked QF_LRA/Farkas evidence.",
     "Keep general martingale convergence, optional stopping, Doob inequalities, and stochastic integration marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

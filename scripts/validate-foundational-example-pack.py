@@ -13146,6 +13146,11 @@ def validate_finite_martingales(expected: dict[str, Any]) -> None:
         fail("bad-martingale-rejected actual conditional expectation is incorrect")
     if actual == current_values:
         fail("bad-martingale-rejected must document a false martingale equality")
+    require_string("bad martingale smt2_artifact", data.get("smt2_artifact"))
+    check_source("bad martingale smt2_artifact", data["smt2_artifact"])
+    require_string("bad martingale farkas_regression", data.get("farkas_regression"))
+    if "finite_martingales_bad_conditional_expectation_emits_checked_farkas" not in data["farkas_regression"]:
+        fail("bad-martingale-rejected must link the Farkas regression")
 
     horizon = checks["general-martingale-lean-horizon"]
     if horizon["expected_result"] != "not-run":

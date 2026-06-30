@@ -280,11 +280,14 @@ Build sequence:
 20. `finite-integration-v0` now links `bad-expectation-rejected` to
     `artifacts/examples/math/finite-integration-v0/smt2/bad-expectation-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
-21. Route-specific tamper/rejection regressions now land for the active
+21. `finite-martingales-v0` now links `bad-martingale-rejected` to
+    `artifacts/examples/math/finite-martingales-v0/smt2/bad-martingale-farkas-conflict.smt2`,
+    checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
+22. Route-specific tamper/rejection regressions now land for the active
     certificate routes: Boolean CNF/LRAT, QF_BV DRAT, QF_LRA/Farkas,
     QF_LIA/Diophantine, and QF_UF/Alethe all mutate emitted resource
     certificates and require independent checker rejection.
-22. Revisit crate/repo boundaries only after three real consumers or repeated
+23. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

@@ -35,7 +35,9 @@ and replays a bounded stopping time by exact rational expectation.
 
 This pack is checked finite evidence for the bad martingale row. It is not a
 proof of general martingale convergence, optional stopping, Doob inequalities,
-or stochastic integration.
+or stochastic integration. The malformed martingale row is also mirrored by a
+source-linked QF_LRA/Farkas regression after finite replay computes the
+conditional expectation.
 
 Validation:
 

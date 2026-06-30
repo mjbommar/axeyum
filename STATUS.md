@@ -248,6 +248,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `integral_value = 5/2` versus `integral_value = 3`; generated dashboards move
   promoted solver-reuse packs to 21.
 
+- **Finite martingales QF_LRA promotion landed.**
+  [`finite-martingales-v0`](artifacts/examples/math/finite-martingales-v0/)
+  now links `bad-martingale-rejected` to a source-level QF_LRA artifact for the
+  malformed terminal table. The shared `math_resource_lra_routes` regression
+  emits and independently rechecks Farkas evidence for
+  `up_block_conditional_expectation = 3/2` versus
+  `up_block_conditional_expectation = 1`; generated dashboards move promoted
+  solver-reuse packs to 22.
+
 - **Curriculum pressure by fragment landed.** The generated
   [`curriculum-pressure-by-fragment.md`](docs/foundational-resources/generated/curriculum-pressure-by-fragment.md)
   dashboard groups the 84 non-template math packs into overlapping Bool/CNF,

@@ -307,6 +307,20 @@ fn finite_integration_bad_expectation_emits_checked_farkas() {
 }
 
 #[test]
+fn finite_martingales_bad_conditional_expectation_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let up_block_conditional_expectation = real(&mut arena, "up_block_conditional_expectation");
+    let replay_computed_expectation = eq_ratio(&mut arena, up_block_conditional_expectation, 3, 2);
+    let false_martingale_equality = eq_ratio(&mut arena, up_block_conditional_expectation, 1, 1);
+
+    assert_farkas_checked(
+        "finite-martingales-v0 bad-martingale-rejected",
+        &arena,
+        &[replay_computed_expectation, false_martingale_equality],
+    );
+}
+
+#[test]
 fn finite_markov_chain_bad_stochastic_row_emits_checked_farkas() {
     let mut arena = TermArena::new();
     let p10 = real(&mut arena, "p10");

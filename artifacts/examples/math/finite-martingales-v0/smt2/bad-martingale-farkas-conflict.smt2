@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const up_block_conditional_expectation Real)
+(assert (= up_block_conditional_expectation (/ 3 2)))
+(assert (= up_block_conditional_expectation 1))
+(check-sat)

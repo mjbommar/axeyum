@@ -27,7 +27,9 @@ finite filtration, recomputes the stopped values, and checks
 Expected result: `unsat`.
 
 The validator rejects the malformed terminal table because the conditional
-expectation on the up block is `3/2`, not `1`.
+expectation on the up block is `3/2`, not `1`. The source-linked QF_LRA
+artifact records the resulting exact-linear contradiction and is checked by
+the shared Farkas route regression.
 
 ## `general-martingale-lean-horizon`
 

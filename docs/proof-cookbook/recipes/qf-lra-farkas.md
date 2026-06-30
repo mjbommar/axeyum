@@ -90,6 +90,8 @@ Canonical examples:
 - [Finite Integration](../../../artifacts/examples/math/finite-integration-v0/)
   uses a bad expectation row after exact finite weighted-sum replay computes
   the integral.
+- [Finite Martingales](../../../artifacts/examples/math/finite-martingales-v0/)
+  uses a bad conditional-expectation row after exact finite filtration replay.
 - [Finite Markov Chain](../../../artifacts/examples/math/finite-markov-chain-v0/)
   and [Finite Hitting Times](../../../artifacts/examples/math/finite-hitting-times-v0/)
   use malformed stochastic-row and expected-time equations.
