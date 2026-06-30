@@ -348,7 +348,12 @@ Use one row per commit unless the change is purely navigational.
    [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
    so the three rule packs expose bounded sample rows and generated-query
    families before new law-specific schema fields are created.
-10. Add future rules/law crosswalk examples only by reusing existing
+10. Landed: add functional-analysis/operator consumer-query coverage through
+   [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
+   `scripts/check-foundational-resources.sh`, making finite operator bounds,
+   inner-product positivity, Chebyshev grids, spectral/eigenpair witnesses, and
+   operator bridge rows visible through the public JSON contract.
+11. Add future rules/law crosswalk examples only by reusing existing
    math-resource patterns; do not create a separate rule ontology until the
    current JSON boundary is exercised by more consumers.
 

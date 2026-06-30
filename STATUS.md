@@ -205,6 +205,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Functional-analysis/operator consumer queries landed.**
+  [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
+  now shows public JSON queries for the
+  `functional_analysis_and_operator_theory` Farkas field summary, the shared
+  operator bridge lookup, and checked finite-operator, inner-product,
+  Chebyshev, and spectral Farkas rows. `check-foundational-resources.sh` now
+  smoke-checks those queries so this field stays visible without promoting
+  Banach/Hilbert or infinite-dimensional theorem claims.
+
 - **Rules/law generated-query dashboard landed.**
   [`rules-query-dashboard.md`](docs/rules-as-code/generated/rules-query-dashboard.md)
   is generated from the three committed rules-as-code packs and reports 738

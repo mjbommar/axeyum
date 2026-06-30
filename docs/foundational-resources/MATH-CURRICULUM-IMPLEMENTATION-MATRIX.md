@@ -263,9 +263,12 @@ Build sequence:
    atlas concept lookup, and field-level curriculum readiness over the
    committed JSON data contract. The smoke set now covers probability/Farkas,
    dynamics/Farkas, measure/Farkas, and optimization/Farkas field-readiness
-   examples, plus measure bridge concept lookup, LP-objective and convexity
-   bridge concept lookup, checked measure-theory Farkas rows, and checked
-   optimization/convexity Farkas rows.
+   examples, geometry/Farkas readiness, and functional-analysis/operator
+   Farkas readiness, plus measure bridge concept lookup, LP-objective and
+   convexity bridge concept lookup, operator bridge concept lookup, checked
+   measure-theory Farkas rows, checked optimization/convexity Farkas rows,
+   checked geometry Farkas rows, and checked functional-analysis/operator
+   Farkas rows.
 16. Negative example-pack validator fixtures now land through
     `scripts/check-foundational-negative-fixtures.py` and
     `artifacts/fixtures/foundational-example-pack-invalid/`, covering unknown
@@ -411,7 +414,13 @@ Build sequence:
 45. [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
     now adds the first generated rules/law query surface, exposing bounded
     sample rows and generated-query families from committed rule-pack JSON.
-46. Revisit crate/repo boundaries only after three real consumers or repeated
+46. Functional-analysis/operator field-readiness consumer queries now land in
+    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
+    `scripts/check-foundational-resources.sh`, covering the Farkas field
+    summary, operator bridge lookup, and checked finite-operator,
+    inner-product, Chebyshev, and spectral rows without promoting
+    infinite-dimensional theorem claims.
+47. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

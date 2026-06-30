@@ -257,6 +257,39 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+For functional analysis and operator theory, query the same exact-rational
+route to group finite-dimensional operator bounds, inner-product positivity,
+Chebyshev duplicate-node grids, spectral/eigenpair witnesses, and dual-space
+rows while keeping Banach, Hilbert, compact-operator, minimax, and
+infinite-dimensional approximation claims in the proof-horizon lane:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field functional_analysis_and_operator_theory \
+  --route Farkas \
+  --require-any
+```
+
+Use the atlas query to expose the shared operator bridge vocabulary:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field functional_analysis_and_operator_theory \
+  --text operator \
+  --require-any
+```
+
+To display concrete checked finite-operator, inner-product, Chebyshev, and
+spectral rows, drill into checked Farkas examples:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field functional_analysis_and_operator_theory \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+```
+
 ## Proof And Check Mining
 
 ```sh

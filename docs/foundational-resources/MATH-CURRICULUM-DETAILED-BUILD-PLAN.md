@@ -575,6 +575,13 @@ Pick one row per commit unless the change is purely navigational.
     committed rule-pack JSON and reports bounded sample rows plus generated
     coverage, equivalence, threshold, cap, version-delta, and monotonicity
     query-family counts.
+67. Landed: add functional-analysis/operator field-readiness consumer query
+    coverage. `CONSUMER-QUERIES.md` and
+    `check-foundational-resources.sh` now exercise the
+    `functional_analysis_and_operator_theory` Farkas field summary, the
+    operator bridge concept lookup, and checked finite-operator,
+    inner-product, Chebyshev, and spectral Farkas rows, making that field's
+    finite-dimensional resources visible through the committed JSON contract.
 
 ## Validation Checklist
 

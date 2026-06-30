@@ -1518,7 +1518,11 @@ Pick one item per commit unless the change is purely navigational.
 77. Landed: add
     [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
     as the generated bounded-query surface for the current rules/law packs.
-78. Continue proof-route promotions or consumer-query examples; revisit the
+78. Landed: add functional-analysis/operator field-readiness consumer queries
+    through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational
+    smoke check, covering Farkas field readiness, the operator bridge lookup,
+    and checked finite-operator, inner-product, Chebyshev, and spectral rows.
+79. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

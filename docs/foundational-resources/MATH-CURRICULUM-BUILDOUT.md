@@ -2017,6 +2017,15 @@ matrix witnesses stay visible through the public JSON boundary without
 promoting duality, KKT sufficiency, SDP strong duality, gradient-descent,
 line-search, active-set method theory, Wolfe line-search, projected-gradient
 convergence, proximal-gradient convergence, or convergence-theorem claims.
+The consumer query layer now also exposes functional-analysis/operator
+readiness: `CONSUMER-QUERIES.md` shows the Farkas field summary, operator
+bridge lookup, and checked finite-operator, inner-product, Chebyshev, and
+spectral Farkas row drill-downs. The foundational-resource smoke check runs
+those same queries so finite-dimensional operator bounds, inner-product
+positivity, Chebyshev duplicate-node grids, spectral/eigenpair witnesses, and
+dual-space rows remain visible through the public JSON boundary without
+promoting Banach, Hilbert, compact-operator, minimax, or infinite-dimensional
+approximation theorem claims.
 The learner layer now also has
 [`matrix-computation-index.md`](../learn/math/matrix-computation-index.md),
 which groups LU, rank/nullity, residual, projection, eigenpair,
