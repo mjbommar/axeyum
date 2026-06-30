@@ -40,7 +40,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 55 bridge-concept rows.
+- 56 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math example packs.
 - 516 expected checks.
@@ -1559,14 +1559,19 @@ Pick one item per commit unless the change is purely navigational.
     bounded-dynamics, explicit-Euler, invariant, threshold, and finite-error
     rows discoverable without promoting ODE, stability, convergence-rate,
     stiffness, chaos, or PDE claims.
-85. Landed: add analysis/numerical/complex field-readiness consumer queries
+85. Landed: add `bridge_finite_circle_inversion_cyclic_replay` plus circle
+    lookup and concept-scoped Farkas route smoke queries, making finite circle,
+    inversion, and cyclic-configuration resources discoverable without
+    promoting general circle, inversion, cyclic-quadrilateral, angle, Ptolemy,
+    or synthetic geometry theorem claims.
+86. Landed: add analysis/numerical/complex field-readiness consumer queries
     through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational
     smoke check, covering real-analysis Farkas readiness, epsilon/gradient
     bridge lookups, checked bounded-analysis rows, numerical-analysis Farkas
     readiness, residual/operator bridge lookups, checked exact numerical rows,
     complex-analysis Farkas readiness, real-pair bridge lookup, and checked
     algebraic complex rows.
-84. Landed: add foundations/discrete/probability field-readiness consumer
+87. Landed: add foundations/discrete/probability field-readiness consumer
     queries through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the
     foundational smoke check, covering logic/proof Boolean readiness,
     proof-vocabulary lookups, checked proof-pattern/CNF rows,
@@ -1575,37 +1580,37 @@ Pick one item per commit unless the change is purely navigational.
     readiness, finite-family lookups, checked counting/coefficient/tail-count
     rows, probability-theory Farkas readiness, probability-table lookups, and
     checked finite probability/process rows.
-85. Landed: add
+88. Landed: add
     [FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md) as the
     compact all-field R6 consumer matrix, summarizing pack/check counts,
     smoke-checked route, bridge lookup, checked-row drilldown, and
     theorem-horizon boundary for all 18 math fields.
-86. Landed: add
+89. Landed: add
     [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md) and exact
     `--concept` filters for `query-foundational-resources.py packs/checks`,
     making matrix resources queryable by bridge concept plus proof route.
-87. Landed: add
+90. Landed: add
     [PROOF-ROUTE-QUERY-MATRIX.md](PROOF-ROUTE-QUERY-MATRIX.md) and
     `query-foundational-resources.py routes`, making proof/evidence route
     coverage queryable by normalized route alias and optional field scope.
-88. Landed: add number-system semantic-boundary bridge rows for
+91. Landed: add number-system semantic-boundary bridge rows for
     exact-vs-floating arithmetic and totality conventions. The rows attach to
     exact rational, numerical, finite arithmetic, fixed-width BV, and finite
     function-table packs; `CONSUMER-QUERIES.md` and the foundational smoke
     check now exercise `number_theory` totality lookup and
     `numerical_analysis` floating-boundary lookup.
-89. Landed: add the gcd/divisibility witness bridge row, tying
+92. Landed: add the gcd/divisibility witness bridge row, tying
     `gcd-bezout-v0`, `integer-lia-v0`, `modular-arithmetic-v0`, and
     `number-theory-v0` to shared gcd/common-divisor replay, Bezout replay,
     quotient replay, and checked gcd non-divisibility evidence. The
     foundational smoke check now exercises number-theory gcd concept lookup.
-90. Landed: add the modular CRT/inverse witness bridge row, tying
+93. Landed: add the modular CRT/inverse witness bridge row, tying
     `modular-arithmetic-v0`, `number-theory-v0`, `finite-fields-v0`, and
     `finite-ideals-v0` to concrete CRT congruence replay, modular inverse
     replay, fixed residue searches, finite-field unit/nonunit contrasts, and
     checked nonunit Diophantine evidence. The foundational smoke check now
     exercises number-theory CRT concept lookup.
-91. Landed: add the finite-counting replay bridge row, tying `counting-v0`,
+94. Landed: add the finite-counting replay bridge row, tying `counting-v0`,
     `proof-methods-refutation-v0`, `cardinality-principles-v0`,
     `generating-functions-v0`, `finite-group-actions-v0`, and
     `exact-statistical-tests-v0` to finite enumeration, pigeonhole proofs,
@@ -1613,7 +1618,7 @@ Pick one item per commit unless the change is purely navigational.
     exact finite tail counts. The foundational smoke check now exercises
     discrete-math counting lookup plus concept-scoped Boolean and Diophantine
     route queries.
-92. Continue proof-route promotions or consumer-query examples; revisit the
+95. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

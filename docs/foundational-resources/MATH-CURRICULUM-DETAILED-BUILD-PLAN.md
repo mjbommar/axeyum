@@ -36,7 +36,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 55 bridge-concept rows.
+- 56 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math packs.
 - 516 expected checks.
@@ -220,7 +220,7 @@ Exit criteria:
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | LP objective/Farkas, rational convexity/gradient bridge rows, finite root-finding step replay, finite hyperplane-separation replay, finite KKT replay, finite active-set QP face/slack replay, finite SDP primal/dual replay, finite gradient-descent replay, finite Armijo line-search replay, finite Wolfe line-search replay, finite projected-gradient interval replay, and finite proximal-gradient replay landed; add only distinct duality, degenerate active-set variants, working-set pivots, higher-dimensional SDP, strong-Wolfe/nonconvex line-search, box-plus-L1, or stochastic/convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | maintain landed finite dynamics/Euler bridge and keep numerical-honesty rows distinct from promoted exact residual/error certificates | QF_LRA/Farkas, replay, Lean horizon |
 | `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | maintain landed finite dynamics/Euler bridge; add only distinct transition, reachability, invariant, stochastic, or finite-error pressure | QF_LRA/Farkas, replay, Lean horizon |
-| `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, circle, inversion, and cyclic rational geometry | finite cyclic geometry now has checked bad diagonal-intersection replay; add only distinct circle-line correspondence, angle variants beyond the square witness, Ptolemy shadows, or higher-degree polynomial-geometry pressure | QF_LRA/Farkas, finite replay |
+| `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, circle, inversion, and cyclic rational geometry | maintain landed coordinate/oriented replay and finite circle/inversion/cyclic replay bridge rows; add only distinct circle-line correspondence, angle variants beyond the square witness, Ptolemy shadows, or higher-degree polynomial-geometry pressure | QF_LRA/Farkas, finite replay |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now has a checked bad-bound row; add only distinct norm, recurrence, interpolation, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
 
 ## Curriculum Node Build Ledger
@@ -694,8 +694,15 @@ Pick one row per commit unless the change is purely navigational.
     bounded-dynamics, and explicit-Euler packs queryable from the atlas while
     preserving the boundary around ODE theory, stability, convergence rates,
     stiffness, chaos, and PDE claims. The dynamics consumer smoke now includes
-    Euler lookup and concept-scoped Farkas route queries, and the atlas now
-    validates 55 bridge rows.
+    Euler lookup and concept-scoped Farkas route queries, and that increment
+    raised the atlas to 55 bridge rows.
+83. Landed: add the finite circle/inversion/cyclic replay bridge row.
+    `bridge_finite_circle_inversion_cyclic_replay` makes finite circle,
+    inversion, and cyclic-configuration packs queryable from the atlas while
+    preserving the boundary around general circle, inversion,
+    cyclic-quadrilateral, angle, Ptolemy, and synthetic geometry theorems. The
+    geometry consumer smoke now includes circle lookup and concept-scoped
+    Farkas route queries, and the atlas now validates 56 bridge rows.
 
 ## Validation Checklist
 

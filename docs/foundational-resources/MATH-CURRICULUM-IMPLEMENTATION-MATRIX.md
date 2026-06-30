@@ -105,7 +105,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `optimization_and_convexity` | rationals, reals, linear algebra | landed LP objective/Farkas, rational convexity/gradient bridge rows, finite root-finding step replay, finite hyperplane-separation replay, finite KKT replay, finite active-set QP face/slack replay, finite SDP replay, finite gradient-descent replay, finite Armijo line-search replay, finite Wolfe line-search replay, finite projected-gradient interval replay, and finite proximal-gradient soft-threshold replay; add narrower duality, degenerate active sets, working-set pivots, higher-dimensional SDP, box-plus-L1, strong-Wolfe/nonconvex line-search, or stochastic/convergence rows only when reused | QF_LRA/Farkas, NRA shadows |
 | `numerical_analysis` | linear algebra, calculus | maintain landed finite dynamics/Euler bridge alongside residual bounds, interval boxes, exact error recurrences, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | QF_LRA, replay, numerical-honesty metadata |
 | `differential_equations_and_dynamical_systems` | calculus, linear algebra | maintain landed finite dynamics/Euler bridge for bounded recurrences, Euler traces, invariant checks, threshold reachability, and finite error tables | QF_LRA, BV/LIA counters, Lean horizon |
-| `geometry` | reals, polynomials, linear algebra | landed coordinate, incidence, rigid-configuration, affine, oriented-area, finite circle-geometry, finite inversion-geometry, and finite cyclic-geometry shadows; add only distinct angle variants beyond the square witness, Ptolemy shadows, circle-line correspondence, or higher-degree polynomial-geometry pressure when reused | QF_LRA/NRA, replay |
+| `geometry` | reals, polynomials, linear algebra | landed coordinate/incidence/rigid/affine/oriented replay plus finite circle/inversion/cyclic replay bridge rows; add only distinct angle variants beyond the square witness, Ptolemy shadows, circle-line correspondence, or higher-degree polynomial-geometry pressure when reused | QF_LRA/NRA, replay |
 | `functional_analysis_and_operator_theory` | linear algebra, real analysis | finite operators, inner products, Chebyshev-system slices | QF_LRA, finite replay, Lean horizon |
 
 ## Route-Specific Build Plan
@@ -205,8 +205,9 @@ Build sequence:
    set/foundations vocabulary, including finite Boolean algebra,
    partition/relation roundtrips, image/preimage/inverse tables, finite
    bijection/cardinality, and cardinality theorem horizons. R1 bridge-concept
-   rows now also land for coordinate/incidence/rigid/oriented/circle/inversion/cyclic geometry replay and complex
-   real-pair transform replay, plus finite inner-product/projection and finite
+   rows now also land for coordinate/incidence/rigid/oriented geometry replay,
+   finite circle/inversion/cyclic geometry replay, and complex real-pair
+   transform replay, plus finite inner-product/projection and finite
    operator/Chebyshev replay, keeping those field-specific finite shadows
    queryable without overstating synthetic, differential, analytic, Lebesgue,
    optimization duality, KKT, SDP, convergence, Banach, Hilbert,

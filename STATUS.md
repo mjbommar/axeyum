@@ -205,6 +205,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite circle/inversion/cyclic geometry bridge concept landed.**
+  `bridge_finite_circle_inversion_cyclic_replay` now makes finite
+  circle-geometry, inversion-geometry, and cyclic-geometry rows queryable from
+  one shared atlas concept, with exact coordinate replay and checked
+  QF_LRA/Farkas bad-radius, bad-inverse-coordinate, and
+  bad-diagonal-intersection rows kept separate from general circle,
+  inversion, cyclic-quadrilateral, angle, Ptolemy, and synthetic geometry
+  theorems. `CONSUMER-QUERIES.md`, `FIELD-READINESS-QUERY-MATRIX.md`, and
+  `check-foundational-resources.sh` now exercise circle lookup plus
+  concept-scoped Farkas route queries through the public JSON/query boundary.
+  Focused concept queries, pack validation, the three geometry Farkas
+  regressions, link checks, and the resource consumer smoke all pass for the
+  new bridge.
+
 - **Finite dynamics/Euler bridge concept landed.**
   `bridge_finite_dynamics_euler_replay` now makes finite recurrence-prefix,
   bounded-dynamics, and explicit-Euler rows queryable from one shared atlas
@@ -1563,7 +1577,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the detailed operating plan for turning the curriculum and 18-field math
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
-  library splits. It now records the current committed baseline of 101 concept
+  library splits. It now records the current committed baseline of 102 concept
   rows, 102 non-template packs, 516 expected checks, 222 checked rows, 229
   replay-only rows, 65 Lean-horizon rows, and 102 promoted solver-reuse packs,
   then lays out field-by-field build plans plus a prioritized execution queue.
@@ -1618,7 +1632,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
-  is now generated with 55 bridge rows. The proof-methodology rows are
+  is now generated with 56 bridge rows. The proof-methodology rows are
   `bridge_finite_model_replay`, `bridge_counterexample_proof`,
   `bridge_refutation_query`, `bridge_finite_proof_pattern`,
   `bridge_finite_quantifier_expansion`,
@@ -1674,10 +1688,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) and
   point at existing validated packs plus proof-cookbook recipes. The
   geometry/complex bridge rows now add
-  `bridge_coordinate_orientation_geometry` and
+  `bridge_coordinate_orientation_geometry`,
+  `bridge_finite_circle_inversion_cyclic_replay`, and
   `bridge_complex_real_pair_transform`, grouping finite coordinate, affine,
-  oriented-area replay and complex real-pair transform replay without
-  overclaiming synthetic, differential, global, or analytic theorem coverage.
+  oriented-area, circle, inversion, cyclic-configuration, and complex real-pair
+  transform replay without overclaiming synthetic, differential, global, or
+  analytic theorem coverage.
   The functional-analysis bridge rows now add
   `bridge_inner_product_projection` and
   `bridge_finite_operator_chebyshev`, grouping finite Gram/projection,
@@ -1697,7 +1713,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   while keeping duality, KKT sufficiency, SDP strong duality, general
   separation, projected-gradient convergence, proximal-gradient convergence,
   and convergence theorems as Lean horizons. The
-  foundational resource consumer now reports 101 concept rows while
+  foundational resource consumer now reports 102 concept rows while
   preserving 23 curriculum rows and 18 field rows. Next resource work should
   add the next proof-frontier promotion or boundary evidence from a real
   repeated consumer, depending on which roadmap lane is being advanced.

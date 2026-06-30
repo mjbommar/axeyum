@@ -31,6 +31,9 @@ Concept rows:
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
 - `field_geometry`, `field_linear_algebra`, and `field_real_analysis` in the
   [math field dashboard](../../foundational-resources/generated/math-field-dashboard.md)
+- `bridge_coordinate_orientation_geometry` and
+  `bridge_finite_circle_inversion_cyclic_replay` in the Foundational Concept
+  Atlas.
 
 ## Claim Shape
 
@@ -69,6 +72,12 @@ Concept rows:
 Every row uses exact rational coordinates. The packs do not claim general
 Euclidean, affine, oriented-geometry, circle-geometry, inversion-geometry, or
 cyclic-geometry theorems.
+
+The shared `bridge_finite_circle_inversion_cyclic_replay` row is the atlas
+vocabulary for these finite circle, inversion, and cyclic packs. It exists so
+consumers can find the checked finite coordinate/Farkas route without reading
+that bridge as a proof of general circle, inversion, angle, Ptolemy, or
+synthetic geometry theorems.
 
 ## Replay Coordinate Facts
 

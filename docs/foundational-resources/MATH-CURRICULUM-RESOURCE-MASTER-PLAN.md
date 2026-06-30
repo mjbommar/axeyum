@@ -45,7 +45,7 @@ As of 2026-06-30, the committed resource query reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 55 bridge-concept rows.
+- 56 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math packs.
 - 516 expected checks.
@@ -313,7 +313,7 @@ Next useful increments:
 | `optimization_and_convexity` | LP, convexity, least squares, root finding, KKT, active-set QP, SDP, gradient/line-search/projected/proximal rows | duality, degenerate active sets, working-set pivots, strong-Wolfe, box-plus-L1, stochastic/convergence horizons | QF_LRA/Farkas, QF_NRA, Lean horizon | finite KKT/duality/algorithm rows do not claim general sufficiency/convergence |
 | `numerical_analysis` | residuals, Euler steps, root-finding, finite optimization iterations, operator bounds | landed finite dynamics/Euler bridge for recurrence prefixes, invariants, Euler steps, and finite error tables; add only distinct pivoting/stability or reproducible numerical metadata pressure | QF_LRA/Farkas, replay, Lean horizon | exact replay is separate from floating-point experiment claims |
 | `differential_equations_and_dynamical_systems` | bounded recurrences, Euler traces, finite invariants, stochastic kernels/hitting times | landed finite dynamics/Euler bridge plus stochastic-kernel bridge; add transition/invariant variants only when they add distinct finite pressure | QF_LRA/Farkas, finite replay, Lean horizon | continuous existence/uniqueness and PDE claims stay horizon |
-| `geometry` | coordinate, incidence, rigid, affine, oriented area, circle, inversion, cyclic quadrilaterals | circle-line correspondence, angle rows beyond the square witness, Ptolemy shadows, higher-degree polynomial geometry | QF_LRA/Farkas, finite replay, QF_NRA horizon | synthetic/global geometry claims stay Lean horizon |
+| `geometry` | coordinate, incidence, rigid, affine, oriented area, circle, inversion, cyclic quadrilaterals | landed finite circle/inversion/cyclic replay bridge; add only distinct circle-line correspondence, angle rows beyond the square witness, Ptolemy shadows, or higher-degree polynomial geometry | QF_LRA/Farkas, finite replay, QF_NRA horizon | synthetic/global geometry claims stay Lean horizon |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, projections, Chebyshev slices, finite duals | norm variants, finite approximation/interpolation, operator-spectrum rows | QF_LRA/Farkas, finite replay, Lean horizon | Banach/Hilbert and infinite-dimensional claims are not finite checks |
 
 ## Near-Term Commit Queue
@@ -326,112 +326,116 @@ Use one row per commit unless the change is purely navigational.
 3. Landed: add the next distinct geometry resource,
    `finite-cyclic-geometry-v0`, as cyclic/angle pressure rather than another
    coordinate-distance variant.
-4. Landed: add a matrix-computation index page that groups LU, rank/nullity,
+4. Landed: add `bridge_finite_circle_inversion_cyclic_replay` so the finite
+   circle, inversion, and cyclic-configuration packs are discoverable as a
+   shared geometry bridge without promoting general circle/inversion/cyclic
+   theorems.
+5. Landed: add a matrix-computation index page that groups LU, rank/nullity,
    residual, eigenpair, characteristic-polynomial, random-matrix, projection,
    chain-complex, operator, and tensor/module rows by proof route.
-5. Landed: add
+6. Landed: add
    [`analysis-calculus-theorem-horizon-map.md`](../learn/math/analysis-calculus-theorem-horizon-map.md),
    mapping completeness, IVT/MVT/FTC, compactness, sequence convergence,
    recurrence/asymptotics, root-finding convergence, optimization convergence,
    measure/probability convergence, functional analysis, and dynamics from
    finite shadows to missing Lean/theorem reconstruction routes.
-6. Landed: add
+7. Landed: add
    [`matrix-corpus-benchmark-boundary.md`](../learn/math/matrix-corpus-benchmark-boundary.md),
    separating educational matrix rows, solver regressions, benchmark-corpus
    rows, and theorem-horizon claims before any performance or parity language.
-7. Promote one replay-heavy family per route only when a compact source artifact
+8. Promote one replay-heavy family per route only when a compact source artifact
    exists and a route-specific regression can check it.
-8. Landed: add the
+9. Landed: add the
    [`tax-benefit-arithmetic-v0`](../rules-as-code/examples/tax-benefit-arithmetic-v0/)
    rules/law pack by reusing integer threshold, cap, phase-out monotonicity,
    effective-date, finite replay, and Bool/QF_LIA proof-route patterns.
-9. Landed: add the generated
+10. Landed: add the generated
    [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
    so the three rule packs expose bounded sample rows and generated-query
    families before new law-specific schema fields are created.
-10. Landed: add functional-analysis/operator consumer-query coverage through
+11. Landed: add functional-analysis/operator consumer-query coverage through
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
    `scripts/check-foundational-resources.sh`, making finite operator bounds,
    inner-product positivity, Chebyshev grids, spectral/eigenpair witnesses, and
    operator bridge rows visible through the public JSON contract.
-11. Landed: add topology consumer-query coverage through
+12. Landed: add topology consumer-query coverage through
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
    `scripts/check-foundational-resources.sh`, making finite topology axioms,
    compactness/connectedness shadows, continuous-map/preimage rows, homology
    boundary checks, and topology bridge rows visible through the public JSON
    contract.
-12. Landed: add statistics consumer-query coverage through
+13. Landed: add statistics consumer-query coverage through
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
    `scripts/check-foundational-resources.sh`, making exact finite tests,
    contingency tables, finite probability/process rows, least-squares,
    random-matrix moments, finite-table concepts, and tail-count obstructions
    visible through the public JSON contract.
-13. Landed: add linear-algebra consumer-query coverage through
+14. Landed: add linear-algebra consumer-query coverage through
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
    `scripts/check-foundational-resources.sh`, making exact matrix rows,
    residual/eigen/projection/rank vocabulary, finite vector/dual/module/tensor
    rows, and Farkas/Alethe proof routes visible through the public JSON
    contract.
-14. Landed: add core algebra/number/graph consumer-query coverage through
+15. Landed: add core algebra/number/graph consumer-query coverage through
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
    `scripts/check-foundational-resources.sh`, making abstract-algebra
    Alethe/QF_BV rows, homomorphism/ideal bridge vocabulary, number-theory
    Diophantine rows, finite-family vocabulary, graph-theory Boolean rows, and
    graph-family vocabulary visible through the public JSON contract.
-15. Landed: add `bridge_finite_graph_replay_obstruction` and graph concept
+16. Landed: add `bridge_finite_graph_replay_obstruction` and graph concept
    smoke queries so finite coloring, reachability/traversal, matching, cut, and
    d-separation packs can be found by one shared bridge concept without
    promoting graph theorems or asymptotic-runtime claims.
-16. Landed: add analysis/numerical/complex consumer-query coverage through
+17. Landed: add analysis/numerical/complex consumer-query coverage through
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
    `scripts/check-foundational-resources.sh`, making bounded real-analysis
    Farkas rows, epsilon/gradient bridge vocabulary, exact numerical residual
    and operator rows, numerical-analysis bridge vocabulary, real-pair complex
    algebra rows, and complex-analysis bridge vocabulary visible through the
    public JSON contract.
-16. Landed: add foundations/discrete/probability consumer-query coverage
+18. Landed: add foundations/discrete/probability consumer-query coverage
    through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
    `scripts/check-foundational-resources.sh`, making logic/proof Boolean rows,
    proof vocabulary, set-theory Alethe rows, partition vocabulary,
    discrete-math Diophantine rows, finite-family vocabulary,
    probability-theory Farkas rows, and probability-table vocabulary visible
    through the public JSON contract.
-17. Landed: add
+19. Landed: add
    [FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md) as the
    compact all-field consumer map over the same JSON/query boundary: one row
    per math field with current pack/check counts, the primary smoke-checked
    readiness route, bridge lookup terms, checked-row drilldown, and theorem
    horizon boundary.
-18. Landed: add
+20. Landed: add
    [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md) plus exact
    concept filters on `query-foundational-resources.py packs/checks`, making
    matrix packs discoverable by computation bridge concept and proof route
    without introducing a typed API or separate package.
-19. Landed: add
+21. Landed: add
    [PROOF-ROUTE-QUERY-MATRIX.md](PROOF-ROUTE-QUERY-MATRIX.md) plus the
    `query-foundational-resources.py routes` summary command, making finite
    replay, Boolean, QF_BV, QF_LIA, QF_LRA, QF_UF, and Lean-horizon coverage
    queryable by route and optional field.
-20. Landed: add number-system semantic-boundary bridge rows for
+22. Landed: add number-system semantic-boundary bridge rows for
    exact-vs-floating arithmetic and totality conventions, plus consumer smoke
    queries for number-theory totality and numerical-analysis floating-boundary
    lookup.
-21. Landed: add the gcd/divisibility witness bridge row and number-theory gcd
+23. Landed: add the gcd/divisibility witness bridge row and number-theory gcd
    consumer smoke lookup, making gcd/common-divisor replay, Bezout replay,
    quotient replay, modular nonunit obstructions, and checked
    UnsatDiophantine gcd certificates queryable from the atlas.
-22. Landed: add the modular CRT/inverse witness bridge row and number-theory
+24. Landed: add the modular CRT/inverse witness bridge row and number-theory
    CRT consumer smoke lookup, making concrete CRT congruence witnesses,
    modular inverse witnesses, fixed residue searches, finite-field unit
    contrasts, and the checked nonunit Diophantine certificate queryable from
    the atlas while keeping full CRT, field, and quotient-ring theorems in the
    horizon lane.
-23. Landed: add the finite-counting replay bridge row and discrete-math
+25. Landed: add the finite-counting replay bridge row and discrete-math
    counting consumer smoke lookups, making finite enumeration, pigeonhole
    proofs, double-counting tables, coefficient extraction, finite orbit counts,
    and exact finite tail counts queryable from the atlas while keeping
    asymptotic counting and unbounded combinatorics in the horizon lane.
-24. Add future rules/law crosswalk examples only by reusing existing
+26. Add future rules/law crosswalk examples only by reusing existing
    math-resource patterns; do not create a separate rule ontology until the
    current JSON boundary is exercised by more consumers.
 

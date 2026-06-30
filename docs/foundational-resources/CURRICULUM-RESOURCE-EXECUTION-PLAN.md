@@ -35,7 +35,7 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 101 atlas rows generated from curriculum, field data, 55 R1 bridge
+- 102 atlas rows generated from curriculum, field data, 56 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
@@ -45,8 +45,9 @@ As of this plan, the math resource lane has:
   linear-algebra computation vocabulary, probability/statistics finite-table
   vocabulary, measure-theory additivity/product/integration vocabulary,
   optimization/convexity LP and finite-shadow vocabulary, algebra-map
-  vocabulary, coordinate/incidence/rigid/oriented/circle/inversion/cyclic geometry replay, complex real-pair
-  transform replay, finite inner-product/projection replay, finite
+  vocabulary, coordinate/incidence/rigid/oriented geometry replay, finite
+  circle/inversion/cyclic geometry replay, complex real-pair transform replay,
+  finite inner-product/projection replay, finite
   operator/Chebyshev replay, and Lean horizons, plus five route-specific
   example families.
 - 102 non-template math example packs, plus the validating template pack.

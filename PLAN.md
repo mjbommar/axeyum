@@ -158,7 +158,7 @@ finite-martingales' bad conditional-expectation row now promoted after finite
 filtration replay computes the up-block expectation, and finite Markov-chain's
 existing bad stochastic-row artifact now explicitly promoted in solver-reuse
 metadata.
-The foundational concept atlas now also includes 55 generated R1 bridge
+The foundational concept atlas now also includes 56 generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 refutation-as-query, finite proof-pattern replay, finite quantifier expansion,
 bounded induction obligations, Boolean CNF DRAT/LRAT anatomy, QF_LRA Farkas
@@ -179,10 +179,10 @@ finite product-measure/integration replay, finite tail/count obstructions,
 homomorphism preservation, kernel/image replay, quotient maps,
 ideal closure, module actions, tensor bilinearity, finite group actions,
 totality conventions, and Lean horizons, plus coordinate/incidence/rigid/
-oriented/circle/inversion/cyclic geometry replay, complex real-pair transform
-replay, finite inner-product/projection replay, and finite
-operator/Chebyshev replay, so resource packs can point at shared evidence and
-boundary vocabulary instead of repeating it locally.
+oriented geometry replay, finite circle/inversion/cyclic geometry replay,
+complex real-pair transform replay, finite inner-product/projection replay,
+and finite operator/Chebyshev replay, so resource packs can point at shared
+evidence and boundary vocabulary instead of repeating it locally.
 The measure-theory bridge rows now make finite event-algebra/additivity,
 complement, monotonicity, subadditivity, product-table, marginal, finite
 Fubini-style sum, and simple-function integral replay queryable while keeping

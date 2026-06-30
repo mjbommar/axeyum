@@ -5382,6 +5382,106 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_finite_circle_inversion_cyclic_replay",
+        "title": "Finite Circle Inversion And Cyclic Replay",
+        "field_ids": ["geometry", "linear_algebra", "real_analysis"],
+        "resource_status": "validated",
+        "summary": (
+            "Finite circle, inversion, and cyclic-configuration rows state "
+            "exact rational coordinates, a circle or inversion center, witness "
+            "points, and the coordinate formula being checked. The trusted "
+            "object is replay of point-on-circle, tangent, chord, inversion, "
+            "distance-product, collinearity, or cyclic-quadrilateral data, or "
+            "a checked QF_LRA/Farkas certificate for a malformed fixed claim."
+        ),
+        "prerequisites": [
+            "bridge_coordinate_orientation_geometry",
+            "bridge_qf_lra_farkas_anatomy",
+            "bridge_bounded_theorem_shadow",
+            "curriculum_reals",
+            "curriculum_linear_algebra",
+            "curriculum_polynomials",
+        ],
+        "unlocks": [
+            "field_geometry",
+            "field_real_analysis",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite coordinate replay",
+            "finite polynomial geometry",
+            "finite circle-geometry replay",
+            "finite inversion replay",
+            "finite cyclic-configuration replay",
+            "QF_LRA",
+            "Farkas certificate",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-circle-geometry-v0",
+                "Point-on-circle, tangent-line, chord-midpoint perpendicularity, and checked bad-radius rows.",
+            ),
+            (
+                "finite-inversion-geometry-v0",
+                "Unit-circle inversion image, inverse-distance product, collinearity, and checked bad inverse-coordinate rows.",
+            ),
+            (
+                "finite-cyclic-geometry-v0",
+                "Cyclic quadrilateral replay, diagonal-intersection, opposite-angle, and checked bad-intersection rows.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite circle/inversion/cyclic replay plus QF_LRA/Farkas",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/finite-circle-geometry-end-to-end.md",
+                    "docs/learn/math/finite-inversion-geometry-end-to-end.md",
+                    "docs/learn/math/finite-cyclic-geometry-end-to-end.md",
+                    "docs/learn/math/coordinate-affine-geometry-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The packs replay the exact rational coordinate formula "
+                    "first; malformed rows graduate only when the exposed "
+                    "linear contradiction has rechecked Farkas evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-circle-geometry-end-to-end.md",
+            "docs/learn/math/finite-inversion-geometry-end-to-end.md",
+            "docs/learn/math/finite-cyclic-geometry-end-to-end.md",
+            "docs/learn/math/coordinate-affine-geometry-end-to-end.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite circle/inversion/cyclic replay does not prove general Euclidean circle theorems, inversion theorems, cyclic-quadrilateral theorems, power-of-a-point, or Ptolemy.",
+            "Angle preservation, circle-line correspondences, and synthetic theorem statements remain Lean-horizon until kernel-checked proof routes exist.",
+            "Higher-degree polynomial geometry is included only when a pack states a fixed finite coordinate obligation and a checked proof route.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the circle/inversion parameters, finite point set, exact rational coordinates, and witness relation being replayed.",
+                "The validator recomputes circle membership, tangent or chord constraints, inversion coordinates, distance products, collinearity, or cyclic configuration data.",
+                "Malformed fixed rows link source artifacts or route regressions before claiming checked Farkas evidence.",
+            ],
+        },
+    },
+    {
         "id": "bridge_complex_real_pair_transform",
         "title": "Complex Real-Pair Transform Replay",
         "field_ids": ["complex_analysis", "real_analysis", "linear_algebra", "abstract_algebra"],
