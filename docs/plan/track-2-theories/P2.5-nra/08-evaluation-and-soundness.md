@@ -59,6 +59,39 @@ structured / mixed real-int instances bypass it entirely. The 25% is therefore a
 NIA at 71% is closer; its residual is the UNSAT side → [Phase E](07-phaseE-nia.md)
 incremental linearization over UFLIA.
 
+### ROOT CAUSE (2026-06-30): Boolean structure, not the polynomial algorithms
+
+Inspecting the small undecided instances shows the real bottleneck. They are
+**Boolean combinations of nonlinear atoms**, e.g.:
+- `ones`: `(>= a 1)…(>= d 1) ∧ (or (= a 1)(= b 1)(= c 1)(= d 1)) ∧ (< (* a b c d) 1)`
+- `simple-mono-unsat`: `(or (= a 4)(= a 3)) ∧ (> b 0) ∧ (> c 0) ∧ (< (* a b c d d) 0)`
+- `issue3656`: `(distinct (and (>= c …)(< c …)) (= (* b c) 0))`
+
+axeyum's CAD + sign-cell decider are mathematically strong but **only accept a flat
+conjunction** (`decide_real_poly_constraint` declines on *any* non-conjunctive
+structure; `decompose_multivariate` declines on coupled shapes). The moment an
+`or` / `distinct` / `ite` appears — i.e. essentially every real benchmark — the
+whole NRA stack declines and falls to the ≤2-cap `nra.rs`. **There is no
+DPLL(T)/case-split over the Boolean skeleton feeding conjunctions (cubes) to the
+CAD.** That missing lazy-SMT loop — not the polynomial math — is the dominant
+QF_NRA gap.
+
+**This reframes the priority order:**
+1. **Boolean-case-split over NRA atoms (the keystone lever).** Enumerate the
+   Boolean skeleton's satisfying assignments of theory atoms (DPLL(T)-lite, bounded
+   cube count) and run the *existing* flat-conjunction CAD/decider on each cube;
+   all-unsat ⇒ `unsat`, any cube `sat` (replay-checked) ⇒ `sat`, too many cubes /
+   any cube `unknown` ⇒ `unknown`. Sound by construction (case analysis). This is
+   the tractable precursor to the full [CDCL(T) loop (P1.5)](../../track-1-engine/P1.5-cdcl-t-loop.md)
+   and is the **single highest-leverage NRA increment** — it unlocks the strong CAD
+   on real (Boolean-structured) benchmarks. *(Next task; see #66.)*
+2. Then the ≤2 cap matters less (cubes are conjunctions the CAD handles); raise it
+   for the residual non-CAD multivariate cubes.
+3. Graceful `unknown` on the LRA-replay i128 overflow (soundness hygiene).
+
+The full CDCL(T) loop (P1.5) generalizes step 1 to incremental, conflict-driven
+theory propagation; the bounded case-split is the measured-justified first slice.
+
 ## Measurement protocol (no claim without a re-run)
 
 - **Corpus:** the public QF_NRA / QF_NIA / QF_UFNRA divisions (the gitignored NAS
