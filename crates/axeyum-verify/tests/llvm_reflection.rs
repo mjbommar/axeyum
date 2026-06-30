@@ -182,45 +182,47 @@ fn lower_rhs(
     }
 }
 
-fn reflect_ll(ll: &str) -> Reflected {
-    let mut arena = TermArena::new();
-    let mut env: HashMap<String, (TermId, u32)> = HashMap::new();
-    let mut params = Vec::new();
-    let mut result = None;
-
+/// Parse the parameter list of the `define` line into `(name, width)` pairs.
+fn param_decls(ll: &str) -> Vec<(String, u32)> {
     let define = ll
         .lines()
         .map(str::trim)
         .find(|l| l.starts_with("define"))
         .expect("a `define` line");
     // Parameter list is inside the parens *after* `@name` (not the `range(...)`).
-    let after_at = define.split_once('@').expect("@name").1;
-    let params_str = after_at
+    let params_str = define
+        .split_once('@')
+        .expect("@name")
+        .1
         .split_once('(')
         .expect("param list")
         .1
         .split_once(')')
         .expect("param list close")
         .0;
-    for arg in params_str
+    params_str
         .split(',')
         .map(str::trim)
         .filter(|s| !s.is_empty())
-    {
-        let toks: Vec<&str> = arg.split_whitespace().collect();
-        let width = width_of(toks[0]);
-        let name = toks.last().unwrap().trim_start_matches('%').to_string();
-        let sort = if width == 1 {
-            Sort::Bool
-        } else {
-            Sort::BitVec(width)
-        };
-        let sym = arena.declare(&name, sort).unwrap();
-        let term = arena.var(sym);
-        env.insert(name.clone(), (term, width));
-        params.push((name, sym, width));
-    }
+        .map(|arg| {
+            let toks: Vec<&str> = arg.split_whitespace().collect();
+            (
+                toks.last().unwrap().trim_start_matches('%').to_string(),
+                width_of(toks[0]),
+            )
+        })
+        .collect()
+}
 
+/// Lower the instruction body (parameters must already be seeded in `env`) to the
+/// `(result_term, result_width)` produced by `ret`.
+fn lower_body(
+    arena: &mut TermArena,
+    env: &mut HashMap<String, (TermId, u32)>,
+    ll: &str,
+) -> (TermId, u32) {
+    let mut result = None;
+    let mut result_width = 0;
     let mut in_body = false;
     for raw in ll.lines() {
         let line = raw.trim();
@@ -234,21 +236,50 @@ fn reflect_ll(ll: &str) -> Reflected {
         if let Some(rest) = line.strip_prefix("ret ") {
             let toks: Vec<&str> = rest.split_whitespace().collect();
             let w = width_of(toks[0]);
-            result = Some(resolve(&mut arena, &env, toks[1], w));
+            result = Some(resolve(arena, env, toks[1], w));
+            result_width = w;
             continue;
         }
         let (dst_tok, rhs) = line.split_once(" = ").expect("instruction `%d = ..`");
         let dst = dst_tok.trim_start_matches('%').to_string();
-        let (term, width) = lower_rhs(&mut arena, &env, rhs);
+        let (term, width) = lower_rhs(arena, env, rhs);
         env.insert(dst, (term, width));
     }
+    (result.expect("a `ret`"), result_width)
+}
 
+fn reflect_ll(ll: &str) -> Reflected {
+    let mut arena = TermArena::new();
+    let mut env: HashMap<String, (TermId, u32)> = HashMap::new();
+    let mut params = Vec::new();
+    for (name, width) in param_decls(ll) {
+        let sort = if width == 1 {
+            Sort::Bool
+        } else {
+            Sort::BitVec(width)
+        };
+        let sym = arena.declare(&name, sort).unwrap();
+        env.insert(name.clone(), (arena.var(sym), width));
+        params.push((name, sym, width));
+    }
+    let (result, _w) = lower_body(&mut arena, &mut env, ll);
     Reflected {
         arena,
         params,
         env,
-        result: result.expect("a `ret`"),
+        result,
     }
+}
+
+/// Reflect a single-input function into an *existing* arena, using `x` as its
+/// parameter — so two functions can be lowered over the *same* symbol and proved
+/// equivalent.
+fn reflect_unary_into(arena: &mut TermArena, x: TermId, ll: &str) -> TermId {
+    let decls = param_decls(ll);
+    assert_eq!(decls.len(), 1, "reflect_unary_into expects one parameter");
+    let mut env: HashMap<String, (TermId, u32)> = HashMap::new();
+    env.insert(decls[0].0.clone(), (x, decls[0].1));
+    lower_body(arena, &mut env, ll).0
 }
 
 // ---- helpers -------------------------------------------------------------------
@@ -399,4 +430,65 @@ fn llvm_reflection_matches_real_rust_under_fuzz() {
             "reflected pick diverged at c={c}, a={a}, b={b}"
         );
     }
+}
+
+// ---- L3: one front end, two languages, proved equivalent -----------------------
+
+/// `clamp` from **clang** (C), `clang -O1 -S -emit-llvm`. Note the numeric SSA
+/// names (`%0`, `%2`) — the reflector handles them like any other.
+const CLAMP_C_LL: &str = r"
+define dso_local noundef range(i32 0, 101) i32 @clamp(i32 noundef %0) local_unnamed_addr {
+  %2 = tail call i32 @llvm.umin.i32(i32 %0, i32 100)
+  ret i32 %2
+}
+";
+
+/// A hand-written alternative `clamp` in LLVM IR via `icmp`+`select` (the form a
+/// less-aggressive compiler emits) — semantically clamp, *structurally different*
+/// from the `@llvm.umin` form, so proving them equal is real solver work.
+const CLAMP_SELECT_LL: &str = r"
+define i32 @clamp_sel(i32 %x) {
+entry:
+  %c = icmp ugt i32 %x, 100
+  %r = select i1 %c, i32 100, i32 %x
+  ret i32 %r
+}
+";
+
+/// One front end, two languages: `clamp` from **C (clang)** and **Rust (rustc)**
+/// both reflect through the *same* pipeline, and each is proved `<= 100`.
+/// (Measured: at `-O`, LLVM canonicalizes both to `@llvm.umin`, so the two
+/// reflections are in fact the identical interned term — the IR converged
+/// completely. The point stands: one reflector, the whole LLVM family.)
+#[test]
+fn c_and_rust_clamp_both_verify() {
+    for (ll, lang) in [(CLAMP_RS_LL, "Rust"), (CLAMP_C_LL, "C")] {
+        let mut r = reflect_ll(ll);
+        let hundred = r.arena.bv_const(32, 100).unwrap();
+        let goal = r.arena.bv_ule(r.result, hundred).unwrap();
+        assert!(
+            matches!(r.prove_goal(goal), ProofOutcome::Proved(_)),
+            "{lang} clamp must be <= 100 for all u32"
+        );
+    }
+}
+
+/// Non-trivial symbolic equivalence over LLVM IR: the `@llvm.umin` clamp and the
+/// `icmp`+`select` clamp reflect to *different* terms, proved equal for all `u32`
+/// by the solver — the equivalence the optimizer happened not to do for us.
+#[test]
+fn two_llvm_clamp_forms_proved_equivalent() {
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::BitVec(32)).unwrap();
+    let x = arena.var(x_sym);
+    let umin_t = reflect_unary_into(&mut arena, x, CLAMP_RS_LL);
+    let sel_t = reflect_unary_into(&mut arena, x, CLAMP_SELECT_LL);
+    let goal = arena.eq(umin_t, sel_t).unwrap();
+    assert!(
+        matches!(
+            prove(&mut arena, &[], goal, &SolverConfig::default()).unwrap(),
+            ProofOutcome::Proved(_)
+        ),
+        "the umin and icmp/select clamp forms must be provably equivalent"
+    );
 }
