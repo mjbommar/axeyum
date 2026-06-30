@@ -224,7 +224,8 @@ validated pack data and the repo-root command that replays it.
   no-surjection enumeration refutations, and the Cantor Lean horizon.
 - [Cardinality Principles](cardinality-principles-end-to-end.md): follows
   inclusion-exclusion, disjoint-union additivity, double-counting, powerset
-  cardinality, and an overlapping-set counterexample to false additivity.
+  cardinality, an overlapping-set counterexample to false additivity, and a
+  checked QF_LIA/Diophantine overlap-additivity contradiction.
 - [Finite Rings](finite-rings-end-to-end.md): follows `Z/4Z` ring-table replay,
   zero-divisor witness replay, and checked non-distributive-table rejection.
 - [Finite Fields](finite-fields-end-to-end.md): follows `F_7` inverse-table

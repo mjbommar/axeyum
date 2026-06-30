@@ -208,7 +208,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `induction` | `logic_and_proof`, `number_theory` | `induction-obligations-v0`, `induction-patterns-v0` | Bounded base/step obligations, weak/strong induction prefixes, loop invariants, bad-step counterexamples; general induction marked Lean-horizon. |
 | `sets` | `set_theory_and_foundations` | `finite-sets-v0`, `finite-order-lattices-v0` | Membership, subset, union/intersection, finite identities, finite Boolean lattices, and order-theoretic set structure. |
 | `relations-and-functions` | `set_theory_and_foundations`, `discrete_math` | `relations-functions-v0`, `equivalence-classes-v0`, `function-composition-v0`, `finite-monoids-v0`, `finite-permutation-groups-v0`, `finite-group-actions-v0`, `finite-order-lattices-v0` | Finite relation properties, partial orders, lattices, monotone maps, injective/surjective checks, function composition, closed transformation monoids, permutation groups as bijective function tables, group actions as function tables, image/preimage, inverse tables, equivalence classes, quotient maps, and EUF slices. |
-| `cardinality` | `set_theory_and_foundations`, `discrete_math` | `finite-cardinality-v0`, `cardinality-principles-v0`, `finite-order-lattices-v0` | Finite bijections/counting, inclusion-exclusion, disjoint unions, double counting, powersets, finite Boolean lattices; infinite cardinality marked Lean-horizon. |
+| `cardinality` | `set_theory_and_foundations`, `discrete_math` | `finite-cardinality-v0`, `cardinality-principles-v0`, `finite-order-lattices-v0` | Finite bijections/counting, inclusion-exclusion, disjoint unions, double counting, powersets, finite Boolean lattices, checked QF_LIA overlap-additivity conflict; infinite cardinality marked Lean-horizon. |
 | `naturals` | `number_theory`, `discrete_math` | `natural-arithmetic-v0` | Bounded Peano arithmetic and LIA/BV arithmetic identities. |
 | `integers` | `number_theory` | `integer-lia-v0` | Linear integer equations/inequalities and witnesses. |
 | `rationals` | `real_analysis`, `linear_algebra` | `rationals-lra-v0`, `polynomial-factorization-rational-v0` | Exact rational order/field facts, density, trichotomy, Farkas links, rational polynomial division, GCD, and factorization replay. |
@@ -482,7 +482,8 @@ no-surjection rows, and a Cantor-diagonal theorem target that stays
 Lean-horizon. `cardinality-principles-v0` now validates finite
 inclusion-exclusion, disjoint-union additivity, bipartite-edge double
 counting, powerset cardinality, checked false disjoint-additivity rejection,
-and an arbitrary-cardinality Lean-horizon row. `induction-obligations-v0` now
+a source-linked QF_LIA/Diophantine overlap-additivity count contradiction, and
+an arbitrary-cardinality Lean-horizon row. `induction-obligations-v0` now
 validates exact prefix-sum base-case replay, bounded step-obligation
 enumeration with a source-linked QF_LIA arithmetic-DPLL bad-step count
 regression, bounded conclusion checking, a bad-step counterexample witness,
@@ -1192,7 +1193,8 @@ induction, loop-invariant replay, invalid-step counterexamples, and
 full-schema Lean-horizon examples.
 `cardinality-principles-v0` now deepens the cardinality curriculum row with
 finite inclusion-exclusion, disjoint-union additivity, bipartite-edge double
-counting, powerset enumeration, invalid additivity counterexamples, and
+counting, powerset enumeration, invalid additivity counterexamples, a checked
+QF_LIA/Diophantine overlap-additivity count obstruction, and
 infinite-cardinality Lean-horizon examples.
 `calculus-riemann-sum-v0` now deepens the calculus curriculum row with exact
 finite Riemann sums, midpoint/trapezoid replay, antiderivative endpoint
@@ -1494,6 +1496,9 @@ related LIA arithmetic-DPLL solver-reuse lane also has
 `induction-obligations-v0` promoted for its bounded bad-step count row,
 `graph-search-runtime-v0` promoted for its bad finite DFS cost-bound row, and
 `natural-arithmetic-v0` promoted for its bad bounded negative-domain row.
+`cardinality-principles-v0` is now promoted for a QF_LIA/Diophantine
+overlap-additivity count contradiction after finite replay computes the true
+union count.
 The QF_BV/DRAT solver-reuse lane now also has `number-theory-v0` promoted for
 its modulo-7 quadratic nonresidue row.
 The Boolean proof-upgrade lane has its first concrete resource-backed proof

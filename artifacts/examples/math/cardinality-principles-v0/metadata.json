@@ -28,9 +28,19 @@
     "finite relations",
     "finite enumeration",
     "integer arithmetic replay",
+    "QF_LIA / Diophantine",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/cardinality-principles-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite cardinality overlap-additivity QF_LIA/Diophantine regression seed",
+    "pressure": "Exact finite replay computes |A union B| = 4 for overlapping sets, while the malformed row claims the same count equals |A| + |B| = 6.",
+    "evidence": [
+      "overlap-additivity-count-conflict"
+    ],
+    "next_step": "Promote additional cardinality-principle rows only when they add distinct finite-count, incidence, powerset, or Boolean function-map pressure; keep arbitrary infinite-cardinality theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/00-foundations/cardinality.md",
     "docs/curriculum/00-foundations/sets.md",
@@ -38,6 +48,9 @@
     "docs/curriculum/02-structures/counting.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+    "artifacts/examples/math/cardinality-principles-v0/smt2/overlap-additivity-diophantine-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
@@ -46,12 +59,14 @@
     "double-counting-bipartite-edges",
     "finite-powerset-cardinality",
     "overlapping-disjoint-additivity-counterexample",
+    "overlap-additivity-count-conflict",
     "cantor-schroeder-bernstein-lean-horizon"
   ],
   "graduation_criteria": [
     "Replay every finite set count, incidence count, and powerset count from explicit data.",
     "Represent false finite rules with concrete counterexample evidence.",
+    "Keep the overlapping-set disjoint-additivity conflict tied to source-linked QF_LIA/Diophantine evidence after finite replay computes both counts.",
     "Keep arbitrary infinite-cardinality theorems under Lean horizon until no-sorry kernel-checked artifacts exist.",
-    "Promote finite UNSAT variants only after CNF/LRAT or equivalent proof-object evidence checks the same enumerations."
+    "Promote additional finite UNSAT variants only after CNF/LRAT, QF_LIA, or equivalent proof-object evidence checks the same enumerations."
   ]
 }

@@ -475,10 +475,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   report 75 promoted, 6 non-benchmark-horizon, and 3 unclassified
   solver-reuse packs.
 
+- **Cardinality-principles QF_LIA/Diophantine promotion landed.**
+  `cardinality-principles-v0` now carries promoted `solver_reuse` metadata for
+  its overlapping-set false additivity row. The new source-level artifact
+  `overlap-additivity-diophantine-conflict.smt2` isolates finite replay's
+  computed `union_count = 4` against the malformed disjoint-additivity claim
+  `claimed_disjoint_sum = 6` and the asserted equality between them, and
+  `math_resource_lia_routes::cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence`
+  checks the emitted `UnsatDiophantine` certificate. Generated dashboards now
+  report 76 promoted, 6 non-benchmark-horizon, and 2 unclassified
+  solver-reuse packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 75-promoted, 6 non-benchmark-horizon, and
-  3-unclassified solver-reuse counts. The decision remains in-repo and
+  now records the refreshed 76-promoted, 6 non-benchmark-horizon, and
+  2-unclassified solver-reuse counts. The decision remains in-repo and
   JSON-first: the query consumer reads promoted solver-reuse rows, but there is
   still no external consumer, repeated typed API demand, or reusable encoder
   boundary that warrants a new crate or separate repository.
@@ -942,8 +953,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
   library splits. It records the current committed baseline of 65 concept rows,
-  84 non-template packs, 413 expected checks, 195 checked rows, 171 replay-only
-  rows, 47 Lean-horizon rows, and 16 promoted solver-reuse packs, then lays out
+  84 non-template packs, 414 expected checks, 196 checked rows, 171 replay-only
+  rows, 47 Lean-horizon rows, and 76 promoted solver-reuse packs, then lays out
   field-by-field build plans plus a prioritized execution queue. Linked it from
   `PLAN.md`, the foundational-resources index, mdBook summary, sibling-project
   notes, roadmap, buildout plan, implementation matrix, and execution plan.
@@ -11670,6 +11681,15 @@ plan is built and committed on the current branch:
   `solver_reuse.status` as `promoted`, the expected row records the checked
   `UnsatArithDpll` certificate path, and generated dashboards report 75
   promoted, 6 non-benchmark-horizon, and 3 unclassified packs.
+
+- **2026-06-30** — **Cardinality-principles QF_LIA promotion landed.**
+  Added
+  `artifacts/examples/math/cardinality-principles-v0/smt2/overlap-additivity-diophantine-conflict.smt2`
+  for the overlapping-set false additivity count row and wired it into
+  `math_resource_lia_routes`. The pack metadata now marks
+  `solver_reuse.status` as `promoted`, the expected row records the checked
+  `UnsatDiophantine` certificate path, and generated dashboards report 76
+  promoted, 6 non-benchmark-horizon, and 2 unclassified packs.
 
 - **2026-06-29** — **Proof-cookbook math-example route sections landed.**
   Added `Math Examples Using This Route` sections to the six active proof

@@ -39,6 +39,23 @@ Expected result: `sat`.
 The validator accepts this row only because `A` and `B` overlap, the false
 disjoint sum is `6`, and the true union count is `4`.
 
+## `overlap-additivity-count-conflict`
+
+Expected result: `unsat`.
+
+After finite replay computes the two relevant counts, the source SMT-LIB
+artifact records the final integer contradiction:
+
+```text
+union_count = 4
+claimed_disjoint_sum = 6
+union_count = claimed_disjoint_sum
+```
+
+The `math_resource_lia_routes` regression parses
+`smt2/overlap-additivity-diophantine-conflict.smt2`, emits
+`UnsatDiophantine` evidence, and independently checks the certificate.
+
 ## `cantor-schroeder-bernstein-lean-horizon`
 
 Expected result: `not-run`.

@@ -27,6 +27,17 @@ sum left degrees = |E| = sum right degrees
 For powersets, the validator enumerates every subset of the listed base set and
 requires the table to match exactly.
 
+For the promoted overlapping-set conflict, finite replay computes:
+
+```text
+|A union B| = 4
+|A| + |B| = 6
+```
+
+The rejected solver artifact asks those two counts to be equal, giving a tiny
+QF_LIA/Diophantine contradiction without claiming any arbitrary-cardinality
+theorem.
+
 ## Limitations
 
 These examples are fixed finite tables. They teach the executable shape of

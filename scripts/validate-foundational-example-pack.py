@@ -6236,6 +6236,37 @@ def validate_cardinality_principles(expected: dict[str, Any]) -> None:
     if false_sum == true_union_count:
         fail("bad additivity row does not falsify disjoint additivity for overlapping sets")
 
+    conflict = checks["overlap-additivity-count-conflict"]
+    if conflict["expected_result"] != "unsat" or conflict.get("proof_status") != "checked":
+        fail("overlap-additivity-count-conflict must be a checked unsat row")
+    data = conflict.get("data", {})
+    conflict_union_count = require_counting_int(
+        "overlap additivity conflict true_union_count",
+        data.get("true_union_count"),
+    )
+    conflict_disjoint_sum = require_counting_int(
+        "overlap additivity conflict claimed_disjoint_sum",
+        data.get("claimed_disjoint_sum"),
+    )
+    if conflict_union_count != true_union_count:
+        fail("overlap-additivity-count-conflict true_union_count does not match replay")
+    if conflict_disjoint_sum != false_sum:
+        fail("overlap-additivity-count-conflict claimed_disjoint_sum does not match replay")
+    if conflict_union_count == conflict_disjoint_sum:
+        fail("overlap-additivity-count-conflict must record different counts")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("overlap additivity smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/cardinality-principles-v0/smt2/overlap-additivity-diophantine-conflict.smt2"
+    ):
+        fail("overlap-additivity-count-conflict smt2_artifact must name the checked QF_LIA artifact")
+    check_source("overlap additivity smt2_artifact", smt2_artifact)
+    lia_regression = data.get("lia_regression")
+    require_string("overlap additivity lia_regression", lia_regression)
+    if "cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence" not in lia_regression:
+        fail("overlap-additivity-count-conflict must link the LIA route regression")
+
     horizon = checks["cantor-schroeder-bernstein-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("cantor-schroeder-bernstein-lean-horizon must be not-run")

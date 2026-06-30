@@ -54,8 +54,9 @@ monotone maps, fixed points, and a QF_UF/Alethe bad-order counterexample. The
 finite-cardinality pack checks explicit bijections, proper-subset injections,
 finite injection and surjection refutations, and an infinite-cardinality
 Lean-horizon row. The cardinality-principles pack checks inclusion-exclusion,
-disjoint-union additivity, double counting, powerset cardinality, and invalid
-additivity counterexamples. The
+disjoint-union additivity, double counting, powerset cardinality, invalid
+additivity counterexamples, and a checked QF_LIA/Diophantine overlap-additivity
+count contradiction. The
 topology pack checks empty/universe membership, closure under finite unions and
 intersections, closure/interior computation, and finite metric balls. The
 compactness pack checks finite open covers, subcovers, minimal-subcover
@@ -203,7 +204,9 @@ A intersect B = {b,c}
 
 The validator checks inclusion-exclusion exactly. It also verifies disjoint
 unions, bipartite edge double-counting, finite powersets, and an overlapping
-counterexample to the false rule `|A union B| = |A| + |B|`.
+counterexample to the false rule `|A union B| = |A| + |B|`. The promoted
+solver row turns the replayed counts `4` and `6` into a source-linked
+QF_LIA/Diophantine contradiction.
 
 For topology, the same finite-set discipline scales up to set families:
 
@@ -273,6 +276,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-order-lattices-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/cardinality-principles-v0
+cargo test -p axeyum-solver --test math_resource_lia_routes cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0

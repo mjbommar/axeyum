@@ -27,7 +27,7 @@ Candidate route totals:
 |---|---:|---|
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 7 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
-| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 8 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
+| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 9 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 33 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
 | [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 54 | General theorem statements that remain outside bounded SMT replay. |
@@ -399,6 +399,10 @@ First targets:
 - [integer-lia-v0](../../artifacts/examples/math/integer-lia-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the
   `2*x + 4*y = 3` gcd divisibility obstruction)
+- [cardinality-principles-v0](../../artifacts/examples/math/cardinality-principles-v0/)
+  (resource-backed QF_LIA/Diophantine regression landed for the
+  overlap-additivity count contradiction after finite replay computes
+  `|A union B| = 4` but the malformed disjoint-additivity row claims `6`)
 
 Related checked integer-arithmetic solver-reuse promotion:
 
@@ -460,6 +464,8 @@ Graduation:
 - polynomial-identity rows state whether the checked object is coefficient or
   factor replay, a QF_LIA false-root contradiction, or a general
   polynomial-theory Lean horizon.
+- cardinality-principle rows state whether the checked object is finite count
+  replay, a QF_LIA count contradiction, or an infinite-cardinality Lean horizon.
 
 ### 5. QF_BV Bit-Blast
 

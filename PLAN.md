@@ -256,14 +256,17 @@ compactness now contributes checked DRAT/LRAT evidence for a bad open-cover row,
 finite connectedness now contributes checked DRAT/LRAT evidence for a bad
 connectedness row, and induction obligations, graph search runtime, and natural
 arithmetic now contribute checked arithmetic-DPLL regressions for bounded bad
-step counts, bad finite DFS cost, and bounded-natural negativity. The five active resource proof-certificate routes
+step counts, bad finite DFS cost, and bounded-natural negativity, while
+cardinality principles now contributes a checked QF_LIA/Diophantine regression
+for the overlapping-set false-additivity count conflict. The five active resource proof-certificate routes
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **75 promoted solver-reuse
-packs**, **6 non-benchmark-horizon packs**, and **3 unclassified packs** after
-the latest induction-obligations bounded bad-step count QF_LIA arithmetic-DPLL
+the foundational resource dashboards now report **76 promoted solver-reuse
+packs**, **6 non-benchmark-horizon packs**, and **2 unclassified packs** after
+the latest cardinality-principles overlap-additivity count QF_LIA/Diophantine
 promotion,
+induction-obligations bounded bad-step count QF_LIA arithmetic-DPLL promotion,
 complex-plane bad unit-square real-part QF_LRA/Farkas promotion,
 calculus-algebraic false-derivative QF_LRA/Farkas promotion,
 multivariable-calculus bad-gradient QF_LRA/Farkas promotion,

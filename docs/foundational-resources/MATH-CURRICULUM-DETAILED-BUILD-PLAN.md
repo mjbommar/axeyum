@@ -37,13 +37,13 @@ The committed resource query currently reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math packs.
-- 413 expected checks.
-- 195 checked proof/evidence rows.
+- 414 expected checks.
+- 196 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 75 promoted solver-reuse packs.
+- 76 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 3 unclassified solver-reuse packs.
+- 2 unclassified solver-reuse packs.
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
 allowed only when they fill a clear curriculum/field hole that cannot be served
@@ -93,7 +93,6 @@ Current unclassified queue:
 
 | Pack | Practical Next Step |
 |---|---|
-| `cardinality-principles-v0` | choose a small inclusion-exclusion/double-counting proof route or mark theorem rows horizon |
 | `polynomial-factorization-rational-v0` | promote a rational coefficient obstruction or mark as replay-centered |
 | `reals-rcf-shadow-v0` | keep RCF/NRA shadows explicit; promote only when the certificate route is ready |
 
@@ -235,7 +234,7 @@ Exit criteria:
 | `induction` | deepen | bounded step-count row now has a source-linked QF_LIA arithmetic-DPLL regression; keep the universal schema Lean-horizon |
 | `sets` | maintain | keep finite set/lattice false claims checked and linked |
 | `relations-and-functions` | maintain | add image/preimage rows only when reused by several packs |
-| `cardinality` | classify | decide finite cardinal principles route versus infinite Lean horizon |
+| `cardinality` | deepen | cardinality-principles overlap-additivity now has source-linked QF_LIA/Diophantine evidence; keep infinite cardinality Lean-horizon |
 | `naturals` | maintain | keep bounded prefix and LIA/BV width limits explicit |
 | `integers` | maintain | group common Diophantine obstructions |
 | `rationals` | maintain | exact rational order and Farkas conflicts are already the model |
@@ -281,19 +280,21 @@ Pick one row per commit unless the change is purely navigational.
    bad unit-square real-part QF_LRA/Farkas artifact and route regression.
 11. Landed: promote `induction-obligations-v0` through a source-linked bounded
    bad-step count QF_LIA arithmetic-DPLL artifact and route regression.
-12. Promote or classify the remaining unclassified packs, starting with compact
+12. Landed: promote `cardinality-principles-v0` through a source-linked
+   overlap-additivity count QF_LIA/Diophantine artifact and route regression.
+13. Promote or classify the remaining unclassified packs, starting with compact
    source-level conflicts where the route is clear.
-13. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
+14. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
    CNF stays source-level readable.
-14. Upgrade finite-measure from non-benchmark with a finite-additivity or
+15. Upgrade finite-measure from non-benchmark with a finite-additivity or
    complement conflict through QF_LRA/Farkas.
-15. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
+16. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
    conflict through QF_LRA/Farkas.
-16. Add a proof-object learner page that follows one resource from source claim
+17. Add a proof-object learner page that follows one resource from source claim
    to emitted proof and corrupted-proof rejection.
-17. Add a generated or query-based audit for unclassified solver-reuse packs if
+18. Add a generated or query-based audit for unclassified solver-reuse packs if
    manual tracking starts to drift.
-18. Revisit the library boundary after unclassified packs are resolved and at
+19. Revisit the library boundary after unclassified packs are resolved and at
    least one non-doc consumer repeats resource parsing logic.
 
 ## Validation Checklist

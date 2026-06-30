@@ -11,7 +11,8 @@ The examples are:
 - double-counting the edges of a finite bipartite graph;
 - powerset cardinality for a three-element set;
 - a checked counterexample to the false rule `|A union B| = |A| + |B|` when
-  the sets overlap;
+  the sets overlap, plus a source-linked QF_LIA/Diophantine certificate for the
+  final count contradiction;
 - a Lean-horizon row for arbitrary infinite cardinality theorems.
 
 ## Concepts
@@ -27,7 +28,11 @@ The examples are:
 
 The validator replays every finite count from the listed sets, subsets,
 function-like incidence tables, and degree tables. Counterexample rows are
-accepted only when the listed finite data really violates the false rule.
+accepted only when the listed finite data really violates the false rule. The
+promoted overlap-additivity row records replay's computed `union_count = 4`
+against the malformed `claimed_disjoint_sum = 6` equality in
+`smt2/overlap-additivity-diophantine-conflict.smt2`, which Axeyum checks with
+`UnsatDiophantine` evidence.
 
 These checks are finite arithmetic evidence. They do not prove arbitrary
 cardinal arithmetic, Cantor-Schroeder-Bernstein, countability, or choice
@@ -37,4 +42,5 @@ Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/cardinality-principles-v0
+cargo test -p axeyum-solver --test math_resource_lia_routes cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence
 ```

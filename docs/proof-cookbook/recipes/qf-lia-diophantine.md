@@ -26,9 +26,9 @@ The route is used by Axeyum's integer evidence layer. Some math resource packs,
 such as integer LIA, gcd/Bezout, bounded number theory, modular arithmetic,
 exact statistical tests, finite simplicial homology, induction patterns,
 induction obligations, descriptive statistics, generating functions, and
-polynomial identities, still use finite replay for many rows today; this recipe
-is their graduation path when those examples are emitted as solver-form LIA
-obligations.
+polynomial identities, and cardinality principles, still use finite replay for
+many rows today; this recipe is their graduation path when those examples are
+emitted as solver-form LIA obligations.
 
 ## Evidence Artifact
 
@@ -116,6 +116,9 @@ Canonical examples:
 - [Polynomial Identities](../../../artifacts/examples/math/polynomial-identities-v0/)
   uses a false rational-root row as a fixed integer polynomial-evaluation
   contradiction.
+- [Cardinality Principles](../../../artifacts/examples/math/cardinality-principles-v0/)
+  uses an overlapping-set false disjoint-additivity row after finite replay
+  computes the true union count.
 - [Graph Search Runtime](../../../artifacts/examples/math/graph-search-runtime-v0/)
   and [Natural Arithmetic](../../../artifacts/examples/math/natural-arithmetic-v0/)
   use arithmetic-DPLL-backed LIA rows for finite DFS cost and bounded-natural
@@ -153,6 +156,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/in
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/cardinality-principles-v0
 ```
 
 ## Links
@@ -172,3 +176,4 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/po
 - [Descriptive Statistics pack](../../../artifacts/examples/math/descriptive-statistics-v0/)
 - [Generating Functions pack](../../../artifacts/examples/math/generating-functions-v0/)
 - [Polynomial Identities pack](../../../artifacts/examples/math/polynomial-identities-v0/)
+- [Cardinality Principles pack](../../../artifacts/examples/math/cardinality-principles-v0/)

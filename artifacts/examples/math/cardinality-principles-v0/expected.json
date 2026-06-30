@@ -132,6 +132,20 @@
       "notes": "The validator checks the overlap and confirms the false disjoint sum differs from the true union count."
     },
     {
+      "id": "overlap-additivity-count-conflict",
+      "claim": "The overlapping sets also satisfy the disjoint-additivity equality |A union B| = |A| + |B|.",
+      "expected_result": "unsat",
+      "validation": "finite_cardinality_overlap_additivity_lia_conflict",
+      "proof_status": "checked",
+      "data": {
+        "true_union_count": 4,
+        "claimed_disjoint_sum": 6,
+        "smt2_artifact": "artifacts/examples/math/cardinality-principles-v0/smt2/overlap-additivity-diophantine-conflict.smt2",
+        "lia_regression": "cargo test -p axeyum-solver --test math_resource_lia_routes cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence"
+      },
+      "notes": "After finite set replay computes |A union B| = 4 and |A| + |B| = 6, Axeyum checks the final equality contradiction through QF_LIA/Diophantine evidence."
+    },
+    {
       "id": "cantor-schroeder-bernstein-lean-horizon",
       "claim": "Arbitrary set cardinality theorems such as Cantor-Schroeder-Bernstein require a theorem-prover route.",
       "expected_result": "not-run",

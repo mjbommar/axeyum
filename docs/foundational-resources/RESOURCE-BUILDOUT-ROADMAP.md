@@ -40,13 +40,13 @@ The current committed data boundary reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math example packs.
-- 413 expected checks.
-- 195 checked proof/evidence rows.
+- 414 expected checks.
+- 196 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 75 promoted solver-reuse packs.
+- 76 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 3 unclassified solver-reuse packs.
+- 2 unclassified solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -431,6 +431,9 @@ Build next:
   finite/infinite cardinality boundary.
 - Promote small false set/lattice/cardinality claims to Bool/CNF or QF_UF
   routes when the source encoding is obvious.
+- Keep `cardinality-principles-v0`'s promoted overlap-additivity row tied to
+  the source QF_LIA/Diophantine artifact after finite replay computes the true
+  union count.
 - Keep Cantor, choice, ordinal/cardinal arithmetic, and infinite set theory as
   Lean-horizon rows.
 
@@ -1121,7 +1124,13 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/induction-obligations-v0/smt2/bounded-step-counterexample-count-lia-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lia_routes induction_obligations_bounded_step_count_emits_checked_lia_dpll_evidence`.
-32. Continue proof-route promotions or consumer-query examples; revisit the
+32. Landed: promote `cardinality-principles-v0` through a source-linked
+    QF_LIA/Diophantine regression for `overlap-additivity-count-conflict`. The
+    artifact
+    `artifacts/examples/math/cardinality-principles-v0/smt2/overlap-additivity-diophantine-conflict.smt2`
+    is checked by
+    `cargo test -p axeyum-solver --test math_resource_lia_routes cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence`.
+33. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

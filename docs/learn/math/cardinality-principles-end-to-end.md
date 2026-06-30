@@ -22,6 +22,7 @@ Concept rows:
 | `double-counting-bipartite-edges` | `sat` | checked |
 | `finite-powerset-cardinality` | `sat` | checked |
 | `overlapping-disjoint-additivity-counterexample` | `sat` | checked |
+| `overlap-additivity-count-conflict` | `unsat` | checked QF_LIA/Diophantine |
 | `cantor-schroeder-bernstein-lean-horizon` | `not-run` | lean-horizon |
 
 The checked rows are finite set, subset, and incidence-table replay rows. The
@@ -165,6 +166,20 @@ But the validator recomputes:
 The expected result is `sat` because the row is a checked counterexample to the
 false universal rule, not a proof that the false rule is valid.
 
+The promoted solver row then turns the replayed counts into a tiny integer
+contradiction:
+
+```text
+union_count = 4
+claimed_disjoint_sum = 6
+union_count = claimed_disjoint_sum
+```
+
+That source artifact lives at
+`artifacts/examples/math/cardinality-principles-v0/smt2/overlap-additivity-diophantine-conflict.smt2`.
+The route emits and checks `UnsatDiophantine` evidence for the impossible
+equality.
+
 ## Name The Infinite Horizon
 
 The final row records the theorem-prover boundary:
@@ -182,9 +197,10 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/cardinality-principles-v0
+cargo test -p axeyum-solver --test math_resource_lia_routes cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence
 ```
 
-Expected output:
+The validator prints:
 
 ```text
 validated 1 foundational example pack(s)
@@ -196,7 +212,7 @@ This lesson shows Axeyum's resource pattern for finite counting principles:
 
 ```text
 untrusted fast search -> candidate set tables, incidence table, subset list
-trusted small checking -> recomputed counts, side conditions, counterexample row
+trusted small checking -> recomputed counts, side conditions, QF_LIA certificate
 ```
 
 General cardinal arithmetic, countability, uncountability,
