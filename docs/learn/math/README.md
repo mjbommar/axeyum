@@ -134,7 +134,7 @@ validated pack data and the repo-root command that replays it.
   nonnegativity, negative-discriminant rejection, and the completeness horizon.
 - [Polynomial Identities](polynomial-identities-end-to-end.md): follows exact
   coefficient multiplication, factor-theorem root replay, quotient checking,
-  and checked false-root rejection.
+  and checked false-root rejection through QF_LIA/Diophantine evidence.
 - [Rational Polynomial Factorization](polynomial-factorization-end-to-end.md):
   follows factor-list replay, long division, Euclidean GCD, square-free
   decomposition, fixed irreducibility rejection, and the algebra Lean horizon.

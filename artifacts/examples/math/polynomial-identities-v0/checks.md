@@ -26,3 +26,15 @@ Expected result: `unsat`.
 The checked query is the fixed false claim that `1` is a rational root of
 `x^2 + 1`. The validator evaluates the polynomial exactly and confirms the
 result is `2`, not `0`.
+
+The same contradiction is source-linked as QF_LIA:
+
+```text
+x_squared = 1
+value = x_squared + 1
+value = 0
+```
+
+The `math_resource_lia_routes` regression parses
+`smt2/false-rational-root-diophantine-conflict.smt2`, emits
+`UnsatDiophantine` evidence, and independently checks that certificate.

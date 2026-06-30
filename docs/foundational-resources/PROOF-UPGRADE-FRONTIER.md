@@ -369,6 +369,9 @@ First targets:
 - [generating-functions-v0](../../artifacts/examples/math/generating-functions-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the bad finite
   Cauchy-product coefficient row)
+- [polynomial-identities-v0](../../artifacts/examples/math/polynomial-identities-v0/)
+  (resource-backed QF_LIA/Diophantine regression landed for the false
+  rational-root row)
 - [integer-lia-v0](../../artifacts/examples/math/integer-lia-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the
   `2*x + 4*y = 3` gcd divisibility obstruction)
@@ -420,6 +423,9 @@ Graduation:
 - generating-function rows state whether the checked object is finite
   coefficient replay, a QF_LIA coefficient contradiction, or a general
   generating-function Lean horizon.
+- polynomial-identity rows state whether the checked object is coefficient or
+  factor replay, a QF_LIA false-root contradiction, or a general
+  polynomial-theory Lean horizon.
 
 ### 5. QF_BV Bit-Blast
 

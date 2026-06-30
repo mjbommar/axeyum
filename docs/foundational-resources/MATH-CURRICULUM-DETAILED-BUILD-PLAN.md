@@ -41,9 +41,9 @@ The committed resource query currently reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 67 promoted solver-reuse packs.
+- 68 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 11 unclassified solver-reuse packs.
+- 10 unclassified solver-reuse packs.
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
 allowed only when they fill a clear curriculum/field hole that cannot be served
@@ -96,7 +96,6 @@ Current unclassified queue:
 | `finite-predicate-v0` | decide finite-expansion regression versus non-benchmark educational replay |
 | `induction-obligations-v0` | mark bounded obligations as non-benchmark or promote one QF_LIA bad-step row |
 | `cardinality-principles-v0` | choose a small inclusion-exclusion/double-counting proof route or mark theorem rows horizon |
-| `polynomial-identities-v0` | add a coefficient-conflict artifact if it pressures LIA/LRA, otherwise keep replay-only |
 | `polynomial-factorization-rational-v0` | promote a rational coefficient obstruction or mark as replay-centered |
 | `reals-rcf-shadow-v0` | keep RCF/NRA shadows explicit; promote only when the certificate route is ready |
 | `sequence-limit-shadow-v0` | promote one finite tail-bound LRA row or mark general convergence as Lean horizon |
@@ -254,7 +253,7 @@ Exit criteria:
 | `groups` | maintain | table replay plus Alethe equality conflicts |
 | `rings` | maintain | BV fixed finite rings only when width is conceptually relevant |
 | `fields` | maintain | finite fields plus linear-algebra links; arbitrary-field facts horizon |
-| `polynomials` | classify | coefficient arithmetic and factorization replay need a solver-reuse decision |
+| `polynomials` | deepen | polynomial identities now have a QF_LIA false-root regression; factorization still needs a solver-reuse decision |
 | `sequences-and-limits` | classify | bounded tails can be checked; convergence theorem stays Lean horizon |
 | `counting` | promote | pigeonhole CNF/LRAT and coefficient-count rows |
 | `number-theory` | maintain | bounded residue and Diophantine families |
@@ -273,19 +272,21 @@ Pick one row per commit unless the change is purely navigational.
    gain negative, certificate-bearing examples.
 3. Landed: promote `generating-functions-v0` through a source-linked finite
    Cauchy-product coefficient QF_LIA/Diophantine artifact and route regression.
-4. Promote or classify the remaining algebra/calculus/counting unclassified
+4. Landed: promote `polynomial-identities-v0` through a source-linked false
+   rational-root QF_LIA/Diophantine artifact and route regression.
+5. Promote or classify the remaining algebra/calculus/counting unclassified
    packs, starting with coefficient conflicts where the source route is clear.
-5. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
+6. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
    CNF stays source-level readable.
-6. Upgrade finite-measure from non-benchmark with a finite-additivity or
+7. Upgrade finite-measure from non-benchmark with a finite-additivity or
    complement conflict through QF_LRA/Farkas.
-7. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
+8. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
    conflict through QF_LRA/Farkas.
-8. Add a proof-object learner page that follows one resource from source claim
+9. Add a proof-object learner page that follows one resource from source claim
    to emitted proof and corrupted-proof rejection.
-9. Add a generated or query-based audit for unclassified solver-reuse packs if
+10. Add a generated or query-based audit for unclassified solver-reuse packs if
    manual tracking starts to drift.
-10. Revisit the library boundary after unclassified packs are resolved and at
+11. Revisit the library boundary after unclassified packs are resolved and at
    least one non-doc consumer repeats resource parsing logic.
 
 ## Validation Checklist

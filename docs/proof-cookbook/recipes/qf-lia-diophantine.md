@@ -25,9 +25,9 @@ contradiction `0 = d` with `d != 0`.
 The route is used by Axeyum's integer evidence layer. Some math resource packs,
 such as integer LIA, gcd/Bezout, bounded number theory, modular arithmetic,
 exact statistical tests, finite simplicial homology, induction patterns,
-descriptive statistics, and generating functions, still use finite replay for
-many rows today; this recipe is their graduation path when those examples are
-emitted as solver-form LIA obligations.
+descriptive statistics, generating functions, and polynomial identities, still
+use finite replay for many rows today; this recipe is their graduation path
+when those examples are emitted as solver-form LIA obligations.
 
 ## Evidence Artifact
 
@@ -109,6 +109,9 @@ Canonical examples:
 - [Generating Functions](../../../artifacts/examples/math/generating-functions-v0/)
   uses a bad finite Cauchy-product coefficient row as a small integer
   convolution contradiction.
+- [Polynomial Identities](../../../artifacts/examples/math/polynomial-identities-v0/)
+  uses a false rational-root row as a fixed integer polynomial-evaluation
+  contradiction.
 - [Graph Search Runtime](../../../artifacts/examples/math/graph-search-runtime-v0/)
   and [Natural Arithmetic](../../../artifacts/examples/math/natural-arithmetic-v0/)
   use arithmetic-DPLL-backed LIA rows for finite DFS cost and bounded-natural
@@ -144,6 +147,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-patterns-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
 ```
 
 ## Links
@@ -161,3 +165,4 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ge
 - [Induction Patterns pack](../../../artifacts/examples/math/induction-patterns-v0/)
 - [Descriptive Statistics pack](../../../artifacts/examples/math/descriptive-statistics-v0/)
 - [Generating Functions pack](../../../artifacts/examples/math/generating-functions-v0/)
+- [Polynomial Identities pack](../../../artifacts/examples/math/polynomial-identities-v0/)

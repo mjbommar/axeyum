@@ -7914,13 +7914,42 @@ def validate_polynomial_identities(expected: dict[str, Any]) -> None:
         fail("factor-theorem-root-witness factor * quotient does not reconstruct polynomial")
 
     false_root = checks["false-rational-root-rejected"]
-    if false_root["expected_result"] != "unsat":
-        fail("false-rational-root-rejected must expect unsat")
+    if false_root["expected_result"] != "unsat" or false_root.get("proof_status") != "checked":
+        fail("false-rational-root-rejected must be a checked unsat row")
+    if false_root["validation"] != "qf_lia_diophantine_evidence":
+        fail("false-rational-root-rejected must use qf_lia_diophantine_evidence validation")
     values = single_witness_values(false_root, witnesses)
     polynomial = require_polynomial("false root polynomial", values.get("polynomial"))
     candidate = require_fraction("false root candidate", values.get("candidate_root"))
-    if polynomial_eval(polynomial, candidate) == 0:
+    evaluated = polynomial_eval(polynomial, candidate)
+    if evaluated == 0:
         fail("false-rational-root-rejected candidate unexpectedly is a root")
+    data = false_root.get("data", {})
+    data_polynomial = require_polynomial("false root data polynomial", data.get("polynomial"))
+    data_candidate = require_fraction("false root data candidate_root", data.get("candidate_root"))
+    actual_value = require_fraction("false root actual_value", data.get("actual_value"))
+    claimed_value = require_fraction("false root claimed_value", data.get("claimed_value"))
+    if data_polynomial != polynomial:
+        fail("false-rational-root-rejected data polynomial must match the witness polynomial")
+    if data_candidate != candidate:
+        fail("false-rational-root-rejected data candidate_root must match the witness candidate")
+    if actual_value != evaluated:
+        fail("false-rational-root-rejected actual_value must match exact polynomial evaluation")
+    if claimed_value != 0:
+        fail("false-rational-root-rejected claimed_value must be the claimed root value 0")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("false root smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/polynomial-identities-v0/smt2/false-rational-root-diophantine-conflict.smt2":
+        fail("false-rational-root-rejected smt2_artifact must name the checked QF_LIA artifact")
+    check_source("false root smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("false root proof_regression", proof_regression)
+    if "polynomial_identities_false_rational_root_emits_checked_diophantine_evidence" not in proof_regression:
+        fail("false-rational-root-rejected proof_regression must name the LIA resource test")
+    certificate = data.get("certificate")
+    require_string("false root certificate", certificate)
+    if "UnsatDiophantine" not in certificate or "Evidence::check" not in certificate:
+        fail("false-rational-root-rejected certificate must document checked Diophantine evidence")
 
 
 def validate_polynomial_factorization_rational(expected: dict[str, Any]) -> None:

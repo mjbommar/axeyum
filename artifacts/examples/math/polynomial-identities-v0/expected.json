@@ -52,10 +52,19 @@
       "id": "false-rational-root-rejected",
       "claim": "The rational number 1 is a root of x^2 + 1.",
       "expected_result": "unsat",
-      "validation": "exact_polynomial_evaluation_replay",
+      "validation": "qf_lia_diophantine_evidence",
       "proof_status": "checked",
+      "data": {
+        "polynomial": ["1", "0", "1"],
+        "candidate_root": "1",
+        "actual_value": "2",
+        "claimed_value": "0",
+        "smt2_artifact": "artifacts/examples/math/polynomial-identities-v0/smt2/false-rational-root-diophantine-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_lia_routes polynomial_identities_false_rational_root_emits_checked_diophantine_evidence",
+        "certificate": "produce_diophantine_evidence emits Evidence::UnsatDiophantine checked by Evidence::check for the integer polynomial evaluation contradiction p(1) = 2 and p(1) = 0"
+      },
       "witnesses": ["bad-rational-root"],
-      "notes": "The validator evaluates 1^2 + 1 exactly and confirms it is not zero."
+      "notes": "The validator evaluates 1^2 + 1 exactly and the Axeyum regression checks the same bad root through QF_LIA/Diophantine evidence."
     }
   ]
 }

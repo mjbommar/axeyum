@@ -44,9 +44,9 @@ The current committed data boundary reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 67 promoted solver-reuse packs.
+- 68 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 11 unclassified solver-reuse packs.
+- 10 unclassified solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -569,6 +569,9 @@ Build next:
   horizons.
 - Use `family_finite_algebra_alethe` as the first family row and add narrower
   children only when dashboards need better routing.
+- Keep the promoted polynomial-identity false-root row tied to the
+  QF_LIA/Diophantine regression; promote factorization only when the source
+  artifact adds distinct coefficient, root, or irreducibility pressure.
 - Keep structure theorems, arbitrary groups/rings/modules, representation
   theory, and category-level facts as Lean-horizon.
 
@@ -1053,7 +1056,13 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/finite-euler-method-v0/smt2/bad-euler-step-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_step_emits_checked_farkas`.
-24. Continue proof-route promotions or consumer-query examples; revisit the
+24. Landed: promote `polynomial-identities-v0` through a source-linked
+    QF_LIA/Diophantine regression for `false-rational-root-rejected`. The
+    artifact
+    `artifacts/examples/math/polynomial-identities-v0/smt2/false-rational-root-diophantine-conflict.smt2`
+    is checked by
+    `cargo test -p axeyum-solver --test math_resource_lia_routes polynomial_identities_false_rational_root_emits_checked_diophantine_evidence`.
+25. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

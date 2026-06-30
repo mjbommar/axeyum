@@ -21,6 +21,7 @@ compare normalized coefficient vectors
 ## Axeyum Route
 
 The intended Axeyum route is fixed-degree exact arithmetic: either rational
-arithmetic over an NRA/LRA shadow for coefficient replay, or bounded BV
-enumeration for finite coefficient domains. The current pack stays at the
-independent replay layer.
+arithmetic over an NRA/LRA shadow for coefficient replay, QF_LIA/Diophantine
+evidence for integer coefficient contradictions, or bounded BV enumeration for
+finite coefficient domains. The false-root row is now source-linked to the
+QF_LIA/Diophantine route; the positive rows remain independent replay checks.

@@ -27,6 +27,9 @@ const DESCRIPTIVE_STATS_BAD_CONTINGENCY_TOTAL: &str = include_str!(
 const GENERATING_FUNCTIONS_BAD_CAUCHY_PRODUCT: &str = include_str!(
     "../../../artifacts/examples/math/generating-functions-v0/smt2/bad-cauchy-product-diophantine-conflict.smt2"
 );
+const POLYNOMIAL_IDENTITIES_FALSE_RATIONAL_ROOT: &str = include_str!(
+    "../../../artifacts/examples/math/polynomial-identities-v0/smt2/false-rational-root-diophantine-conflict.smt2"
+);
 const INTEGER_LIA_DIOPHANTINE_GCD_OBSTRUCTION: &str = include_str!(
     "../../../artifacts/examples/math/integer-lia-v0/smt2/diophantine-gcd-obstruction-conflict.smt2"
 );
@@ -85,6 +88,14 @@ fn generating_functions_bad_cauchy_product_emits_checked_diophantine_evidence() 
     assert_resource_diophantine(
         "generating-functions-v0 bad Cauchy product coefficient obstruction",
         GENERATING_FUNCTIONS_BAD_CAUCHY_PRODUCT,
+    );
+}
+
+#[test]
+fn polynomial_identities_false_rational_root_emits_checked_diophantine_evidence() {
+    assert_resource_diophantine(
+        "polynomial-identities-v0 false rational root obstruction",
+        POLYNOMIAL_IDENTITIES_FALSE_RATIONAL_ROOT,
     );
 }
 

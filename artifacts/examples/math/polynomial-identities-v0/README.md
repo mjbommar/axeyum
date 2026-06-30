@@ -8,7 +8,8 @@ The examples are the exact algebra shadow of Axeyum's fixed-degree BV/NRA route:
 
 - replay the formal coefficient identity `(x + 1)^2 = x^2 + 2x + 1`;
 - replay the factor theorem for `x^2 - 5x + 6` at the root `2`;
-- reject a fixed false root claim for `x^2 + 1` over the rationals.
+- reject a fixed false root claim for `x^2 + 1` over the rationals with a
+  source-linked QF_LIA/Diophantine certificate route.
 
 These are not broad polynomial-theory proofs. They are small checked artifacts
 that establish the table/term discipline needed before adding richer
@@ -29,9 +30,11 @@ zero coefficients, and recomputes polynomial multiplication and evaluation. A
 listed identity is accepted only when the expanded coefficient vectors match.
 A root witness is accepted only when evaluation gives exactly zero and the
 listed quotient/factor multiplication reconstructs the original polynomial.
-The false-root row is checked by exact evaluation.
+The false-root row is checked by exact evaluation and is also linked to
+`smt2/false-rational-root-diophantine-conflict.smt2`, where Axeyum parses the
+same contradiction and checks emitted `UnsatDiophantine` evidence.
 
-This pack does not yet emit Axeyum NRA/BV terms or proof certificates. General
+This pack still does not claim general polynomial theory. General
 factorization, irreducibility, algebraic closure, and quantification over all
 polynomials remain Lean-horizon material.
 

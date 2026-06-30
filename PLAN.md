@@ -251,9 +251,10 @@ bounded-natural negativity. The five active resource proof-certificate routes
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **67 promoted solver-reuse
-packs**, **6 non-benchmark-horizon packs**, and **11 unclassified packs** after
-the latest finite generating-functions QF_LIA/Diophantine coefficient-convolution
+the foundational resource dashboards now report **68 promoted solver-reuse
+packs**, **6 non-benchmark-horizon packs**, and **10 unclassified packs** after
+the latest polynomial-identities false-root QF_LIA/Diophantine promotion,
+finite generating-functions QF_LIA/Diophantine coefficient-convolution
 promotion, PHP(3,2) counting/refutation Bool/CNF promotions, and the replay-only
 classification pass for bounded dynamics, complex algebra, coordinate geometry,
 finite measure, finite operators, and finite topology, plus the earlier

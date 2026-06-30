@@ -365,7 +365,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 ```
 
 For fuller traces from gcd/Bezout, modular congruence, bounded number theory,
-complex real-pair arithmetic, polynomial coefficient and factorization replay,
+complex real-pair arithmetic, polynomial coefficient replay plus the checked
+false-root Diophantine row, and factorization replay,
 transformation-monoid, permutation, action-table, finite-group, finite-ring,
 homomorphism, quotient-ring, finite-vector-space, finite-dual-space, and module
 data through replay, read

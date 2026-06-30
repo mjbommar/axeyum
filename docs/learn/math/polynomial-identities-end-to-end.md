@@ -22,7 +22,8 @@ Concept rows:
 | `false-rational-root-rejected` | `unsat` | checked |
 
 The positive rows replay exact coefficient arithmetic. The negative row is
-checked by exact polynomial evaluation at one listed rational candidate.
+checked by exact polynomial evaluation at one listed rational candidate and is
+also source-linked to a QF_LIA/Diophantine artifact for the same contradiction.
 
 ## Replay Coefficient Multiplication
 
@@ -78,6 +79,20 @@ The validator evaluates:
 
 Since the value is not zero, the claimed root is rejected by exact arithmetic.
 
+The promoted solver-facing artifact records the same fixed obstruction:
+
+```text
+x_squared = 1
+value = x_squared + 1
+value = 0
+```
+
+That is a tiny integer equality system. Axeyum parses
+`artifacts/examples/math/polynomial-identities-v0/smt2/false-rational-root-diophantine-conflict.smt2`,
+derives `UnsatDiophantine` evidence, and checks the certificate against the
+original equalities. The solver route does not prove the factor theorem; it
+only makes this fixed bad-root row reusable as a proof-route regression.
+
 ## Name The Lean Horizon
 
 The pack does not claim broad polynomial theory:
@@ -98,6 +113,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
+cargo test -p axeyum-solver --test math_resource_lia_routes polynomial_identities_false_rational_root_emits_checked_diophantine_evidence
 ```
 
 Expected output:
@@ -112,7 +128,7 @@ This lesson shows Axeyum's current polynomial-identity resource pattern:
 
 ```text
 untrusted fast search -> coefficient, root, or factor candidate
-trusted small checking -> exact rational coefficient arithmetic
+trusted small checking -> exact rational coefficient arithmetic or checked QF_LIA evidence
 remaining horizon -> proof evidence for general polynomial theorems
 ```
 

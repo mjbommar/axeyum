@@ -181,8 +181,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 ```
 
 For fuller traces through exact fraction replay, bounded rational
-real-analysis evidence, real-algebra shadow checks, and coefficient-level
-polynomial replay, read
+real-analysis evidence, real-algebra shadow checks, coefficient-level
+polynomial replay, and a checked false-root Diophantine row, read
 [End To End: Rational Midpoint](rational-midpoint-end-to-end.md),
 [End To End: Bounded Rational Real Analysis](real-analysis-rational-end-to-end.md),
 [End To End: Real Algebra RCF Shadow](reals-rcf-shadow-end-to-end.md), and

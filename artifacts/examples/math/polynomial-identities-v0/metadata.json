@@ -24,15 +24,28 @@
   "axeyum_fragments": [
     "fixed-degree polynomials",
     "LRA (exact rationals)",
+    "QF_LIA / Diophantine",
     "NRA shadow",
     "BV / enumeration"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "fixed polynomial false-root QF_LIA/Diophantine regression seed",
+    "pressure": "Polynomial evaluation contradiction where p(x)=x^2+1 at x=1 forces p(1)=2, but the malformed root row claims p(1)=0.",
+    "evidence": [
+      "false-rational-root-rejected"
+    ],
+    "next_step": "Promote additional polynomial-identity rows only when they add distinct coefficient, factor, root, or exact-rational solver pressure; keep irreducibility, algebraic closure, broad factorization, and polynomial theorem schemas in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/02-structures/polynomials.md",
     "docs/curriculum/02-structures/fields.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+    "artifacts/examples/math/polynomial-identities-v0/smt2/false-rational-root-diophantine-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
@@ -43,7 +56,8 @@
   "graduation_criteria": [
     "Encode fixed-degree polynomial identities as deterministic Axeyum terms.",
     "Replay root and factor witnesses through Axeyum model evaluation.",
-    "Add checked proof/evidence routes for fixed-degree no-counterexample claims.",
+    "Keep the false rational-root row tied to checked QF_LIA/Diophantine evidence for the fixed polynomial evaluation contradiction.",
+    "Add checked proof/evidence routes for broader fixed-degree no-counterexample claims.",
     "Keep irreducibility, algebraic closure, and broad factorization theorems marked Lean-horizon."
   ]
 }
