@@ -38,7 +38,7 @@ The current committed data boundary reports:
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
 - 40 bridge-concept rows.
-- 3 example-family rows.
+- 4 example-family rows.
 - 84 non-template math example packs.
 - 422 expected checks.
 - 204 checked proof/evidence rows.

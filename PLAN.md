@@ -214,6 +214,11 @@ The third example-family row now groups recurring finite Boolean CNF/LRAT
 refutations under `family_boolean_cnf_lrat`, backed by the shared
 `math_resource_boolean_routes` regression across logic, counting, graph,
 finite-set, and finite-topology packs.
+The fourth example-family row now groups recurring integer/count QF_LIA
+Diophantine and arithmetic-DPLL obstructions under
+`family_integer_diophantine`, backed by the shared `math_resource_lia_routes`
+regression across number-theory, induction, counting, statistics, graph-search,
+polynomial, and homology packs.
 The generated coverage, field, proof-gap, learner/proof-upgrade, and
 curriculum-pressure dashboards now expose conservative R0-R6 gate/next-gate
 columns and overlapping fragment-pressure buckets, making R4-to-R5 solver-reuse

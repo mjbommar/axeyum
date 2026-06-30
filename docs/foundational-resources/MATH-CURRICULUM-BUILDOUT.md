@@ -1662,6 +1662,10 @@ The structured atlas now also records recurring finite Boolean CNF/LRAT
 refutations as `family_boolean_cnf_lrat`, spanning logic, counting, graph,
 finite-set, and finite-topology packs backed by the shared
 `math_resource_boolean_routes` regression.
+Recurring integer/count obstructions now also have `family_integer_diophantine`,
+spanning number theory, induction, counting, statistics, graph-search,
+polynomial, and homology packs backed by the shared `math_resource_lia_routes`
+regression.
 The rules/law transfer lane now also has its second concrete pack:
 `authorization-policy-v0` reuses finite predicates, tenant/resource relations,
 explicit deny precedence, bounded version-delta witnesses, and checked

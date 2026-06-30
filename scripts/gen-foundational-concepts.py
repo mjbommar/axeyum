@@ -4288,6 +4288,131 @@ EXAMPLE_FAMILIES = [
             ],
         },
     },
+    {
+        "id": "family_integer_diophantine",
+        "title": "Integer Diophantine And Count Obstruction Family",
+        "field_ids": ["number_theory", "discrete_math"],
+        "resource_status": "validated",
+        "summary": (
+            "Recurring integer equalities, count contradictions, coefficient "
+            "obstructions, and bounded arithmetic claims that recheck through "
+            "QF_LIA Diophantine certificates or arithmetic-DPLL evidence."
+        ),
+        "prerequisites": [
+            "bridge_counterexample_proof",
+            "bridge_bounded_induction_obligation",
+            "curriculum_naturals",
+            "curriculum_integers",
+            "curriculum_modular_arithmetic",
+            "curriculum_counting",
+            "curriculum_polynomials",
+        ],
+        "unlocks": [
+            "field_number_theory",
+            "field_discrete_math",
+            "curriculum_number_theory",
+        ],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "QF_LIA",
+            "Diophantine certificate",
+            "arithmetic-DPLL proof checking",
+            "integer count replay",
+            "finite coefficient replay",
+        ],
+        "example_packs": [
+            (
+                "modular-arithmetic-v0",
+                "Nonunit modular inverse obstruction encoded as 2*b - 6*k = 1.",
+            ),
+            (
+                "gcd-bezout-v0",
+                "Fixed Bezout obstruction where gcd(6,10) does not divide 15.",
+            ),
+            (
+                "integer-lia-v0",
+                "Fixed integer infeasibility rows, including 2*x + 4*y = 3.",
+            ),
+            (
+                "natural-arithmetic-v0",
+                "Bounded natural-domain negative-element rejection through arithmetic-DPLL.",
+            ),
+            (
+                "induction-obligations-v0",
+                "Bounded induction step-count contradiction after finite replay computes zero bad steps.",
+            ),
+            (
+                "induction-patterns-v0",
+                "Finite even-product oddness obstruction checked as an integer equality conflict.",
+            ),
+            (
+                "cardinality-principles-v0",
+                "Overlap-additivity count contradiction after finite set replay computes the true union count.",
+            ),
+            (
+                "generating-functions-v0",
+                "Bad Cauchy-product coefficient row reduced to an integer coefficient contradiction.",
+            ),
+            (
+                "polynomial-identities-v0",
+                "False rational-root row reduced to a fixed integer evaluation contradiction.",
+            ),
+            (
+                "descriptive-statistics-v0",
+                "Bad contingency-table total rejected as an integer margin/count conflict.",
+            ),
+            (
+                "exact-statistical-tests-v0",
+                "Bad finite binomial tail count rejected by an integer count certificate.",
+            ),
+            (
+                "finite-simplicial-homology-v0",
+                "Bad boundary coefficient row reduced to a signed integer coefficient conflict.",
+            ),
+            (
+                "graph-search-runtime-v0",
+                "Bad DFS cost bound rejected through a tiny arithmetic-DPLL contradiction.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "QF_LIA/Diophantine integer obstruction family",
+                "status": "checked",
+                "checker": "cargo test -p axeyum-solver --test math_resource_lia_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+                    "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+                    "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+                ],
+                "notes": (
+                    "Each referenced pack keeps the source finite replay or "
+                    "integer computation separate from the solver proof; the "
+                    "regression parses the committed SMT-LIB row and requires "
+                    "either UnsatDiophantine or checked arithmetic-DPLL evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+            "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+        ],
+        "open_gaps": [
+            "The family certifies fixed integer and count contradictions, not arbitrary number-theory, combinatorics, statistics, or homology theorems.",
+            "New integer-resource packs should join this family only after they have a source-linked SMT-LIB artifact and a checked math_resource_lia_routes regression.",
+            "Lean reconstruction remains partial at the family level until the QF_LIA proof routes are kernel-checked back to the original finite claim.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Every family pack row links a committed SMT-LIB artifact or source-backed QF_LIA regression.",
+                "cargo test -p axeyum-solver --test math_resource_lia_routes passes.",
+                "Learner pages keep finite/count replay separate from the checked integer certificate.",
+            ],
+        },
+    },
 ]
 
 

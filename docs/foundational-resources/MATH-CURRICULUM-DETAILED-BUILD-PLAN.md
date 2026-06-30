@@ -35,7 +35,7 @@ The committed resource query currently reports:
 - 23 curriculum-node concept rows.
 - 18 field rows.
 - 40 bridge-concept rows.
-- 3 example-family rows.
+- 4 example-family rows.
 - 84 non-template math packs.
 - 422 expected checks.
 - 204 checked proof/evidence rows.
