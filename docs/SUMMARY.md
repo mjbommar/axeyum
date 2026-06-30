@@ -8,6 +8,7 @@
   - [University Math Field Taxonomy](foundational-resources/MATH-FIELDS.md)
   - [Math Curriculum Resource Buildout](foundational-resources/MATH-CURRICULUM-BUILDOUT.md)
   - [Math Curriculum Implementation Matrix](foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md)
+  - [Math Curriculum Detailed Build Plan](foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
   - [Math Resource Buildout Roadmap](foundational-resources/RESOURCE-BUILDOUT-ROADMAP.md)
   - [Rules/Law Crosswalk](foundational-resources/RULES-LAW-CROSSWALK.md)
   - [Math Curriculum Coverage](foundational-resources/generated/math-coverage.md)

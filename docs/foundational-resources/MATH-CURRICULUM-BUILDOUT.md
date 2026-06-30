@@ -14,6 +14,10 @@ For the current forward work plan, use the
 For commit-sized work selection across curriculum nodes, math fields, resource
 gates, and proof routes, use the
 [Math Curriculum Implementation Matrix](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
+For the current execution ledger over the existing math packs, unclassified
+solver-reuse rows, learner-path work, proof-route depth, and field-by-field
+next steps, use the
+[Math Curriculum Detailed Build Plan](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md).
 For the detailed operating plan that expands the curriculum into ontology rows,
 example packs, learner pages, proof routes, solver reuse, consumer boundaries,
 rules/law transfer, and future library splits, use the

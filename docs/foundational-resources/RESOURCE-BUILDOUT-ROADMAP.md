@@ -9,6 +9,9 @@ ecosystem from the math curriculum spine. It complements:
   contract and landed-history log.
 - [Math Curriculum Implementation Matrix](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md),
   the commit-sized gate matrix.
+- [Math Curriculum Detailed Build Plan](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md),
+  the current execution ledger for existing packs, unclassified solver-reuse
+  rows, proof-route depth, and field-by-field next steps.
 - [Curriculum Resource Execution Plan](CURRICULUM-RESOURCE-EXECUTION-PLAN.md),
   the current forward plan.
 - [University Math Field Taxonomy](MATH-FIELDS.md), the 18-field university

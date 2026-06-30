@@ -7,6 +7,8 @@ resource system. It complements the phase/history plan in
 [MATH-CURRICULUM-BUILDOUT.md](MATH-CURRICULUM-BUILDOUT.md) and the forward
 execution plan in
 [CURRICULUM-RESOURCE-EXECUTION-PLAN.md](CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
+The current execution ledger for choosing the next pack-level increment is
+[MATH-CURRICULUM-DETAILED-BUILD-PLAN.md](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md).
 The broader resource-family operating plan is
 [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md).
 

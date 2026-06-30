@@ -9,6 +9,10 @@ resource ecosystem. The companion
 the phase contract and landed history; the
 [Math Curriculum Implementation Matrix](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md)
 gives the per-node/per-field build matrix; the
+[Math Curriculum Detailed Build Plan](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
+is the current execution ledger for the existing pack inventory, unclassified
+solver-reuse rows, learner-path work, proof-route depth, and field-by-field
+next steps; the
 [Math Curriculum Resource Buildout Roadmap](RESOURCE-BUILDOUT-ROADMAP.md)
 gives the detailed operating plan across resource families; this file says what
 to build next and how to keep the work coherent.
