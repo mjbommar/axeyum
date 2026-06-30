@@ -219,6 +219,32 @@ reflect-then-prove over reflect-then-enumerate. Arithmetic MIR (overflow-check
 branches) is the next parser frontier; the arbitrary-Rust `stable_mir` front end is
 deferred behind an ADR (it changes the dependency/trust surface).
 
+## Verifying LLVM IR — the whole family through one front end (direction L)
+
+Rust compiles MIR → **LLVM IR** → machine code, and LLVM IR is the *shared* target
+of C/C++/Swift/Zig/Julia/Rust (design: [`llvm-ir-frontend.md`](llvm-ir-frontend.md)).
+A driverless `.ll`-text reflector (`llvm_reflection.rs`, committed clang/rustc
+fixtures — no toolchain at test time) lowers single-block SSA (binops / `icmp` /
+`select` / `llvm.umin`-`umax` / `ret`) to `axeyum-ir` BV terms and proves
+properties symbolically. 6 tests green.
+
+| What | Result |
+|---|---|
+| `clamp(x) <= 100` (from `@llvm.umin` IR) | **Proved** (all `u32`) |
+| `(x&0xff)\|0x100 ∈ [256,511]` (from `and`/`or`) | **Proved** |
+| `pick(c,a,b) ∈ {a,b}` (from `select`) | **Proved** |
+| reflected terms vs the real Rust fn, 50k-sample fuzz | **DISAGREE = 0** |
+| **`clamp` from C (clang) AND Rust (rustc)** | both **Proved `<= 100`** through one reflector |
+| **`@llvm.umin` clamp ≡ `icmp`+`select` clamp** | **Proved equivalent** (non-trivial — different terms) |
+
+Headline: **one front end verifies code from two source languages**, and proves
+two structurally-different LLVM forms of the same function equivalent. Measured
+nicety — at `-O`, C and Rust `clamp` *both* canonicalize to `@llvm.umin`, so the
+reflections are the *identical* interned term: the IR converged completely.
+**Honest boundary:** arithmetic is modeled total/wrapping with `nsw`/`nuw`/poison
+**ignored** (the UB minefield — Alive2 territory); memory (`load`/`store`) and
+`br`/`switch`/`phi` CFG are deferred; the heavy `llvm-sys` path stays behind an ADR.
+
 ## Next
 
 - **Widen the Lean reconstructor to lift this domain's coverage off 1/7**: the
