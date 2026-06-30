@@ -31,7 +31,11 @@ Build from these sources in this order:
 3. Existing validated packs under [`artifacts/examples/math/`](../../artifacts/examples/math/).
 4. Generated dashboards under [`generated/`](generated/), especially field
    coverage, proof gaps, curriculum pressure, and solver-reuse disposition.
-5. External sanity checks, not local taste:
+5. The practical build sequence in
+   [`MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md`](MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md),
+   which turns these rows into staged education, ontology, pack, proof,
+   solver-feedback, rules/law, and consumer-boundary work.
+6. External sanity checks, not local taste:
    [MSC2020](https://mathscinet.ams.org/mathscinet/msc/msc2020.html) for broad
    research-field coverage and [MIT Course 18](https://catalog.mit.edu/subjects/18/)
    for undergraduate/graduate curriculum coverage.
@@ -45,14 +49,14 @@ As of 2026-06-30, the committed resource query reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 63 bridge-concept rows.
+- 64 bridge-concept rows.
 - 5 example-family rows.
-- 106 non-template math packs.
-- 538 expected checks.
-- 229 checked proof/evidence rows.
-- 240 replay-only rows.
-- 69 Lean-horizon rows.
-- 106 promoted solver-reuse packs.
+- 107 non-template math packs.
+- 543 expected checks.
+- 231 checked proof/evidence rows.
+- 242 replay-only rows.
+- 70 Lean-horizon rows.
+- 107 promoted solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
 This means the seed phase is over. The next work is systematic depth:
@@ -87,7 +91,7 @@ For each `not-run` row, say what proof horizon blocks graduation.
 
 ### Wave A: Preserve The Contract
 
-Goal: make the current 106 packs a stable, queryable data product.
+Goal: make the current 107 packs a stable, queryable data product.
 
 Work:
 

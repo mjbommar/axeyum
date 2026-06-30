@@ -9,6 +9,9 @@ resource ecosystem. The companion
 the phase contract and landed history; the
 [Math Curriculum Resource Master Plan](MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md)
 gives the top-down curriculum-wide sequencing plan; the
+[Math Curriculum Resource Build Sequence](MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md)
+gives the practical staged build plan across education, ontology, packs,
+proofs, solver feedback, rules/law transfer, and consumer boundaries; the
 [Math Curriculum Implementation Matrix](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md)
 gives the per-node/per-field build matrix; the
 [Math Curriculum Detailed Build Plan](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
@@ -35,14 +38,14 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 109 atlas rows generated from curriculum, field data, 63 R1 bridge
+- 110 atlas rows generated from curriculum, field data, 64 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
   finite topology-operator/homeomorphism replay, finite specialization-order
   replay, finite boundary-operator replay, finite chain-complex/homology replay,
   finite torsion-homology replay, finite cohomology replay, finite
-  cup-product replay,
+  universal-coefficient shadow replay, finite cup-product replay,
   number-system exact-vs-floating, totality convention, gcd/divisibility
   witness, modular CRT/inverse witness, finite-counting replay vocabulary, and
   finite graph replay/obstruction and finite dynamics/Euler vocabulary,
@@ -54,7 +57,7 @@ As of this plan, the math resource lane has:
   finite inner-product/projection replay, finite
   operator/Chebyshev replay, and Lean horizons, plus five route-specific
   example families.
-- 106 non-template math example packs, plus the validating template pack.
+- 107 non-template math example packs, plus the validating template pack.
 - generated coverage, curriculum-status audit, field, proof-gap,
   learner/proof-upgrade, and curriculum-pressure dashboards under
   [generated/](generated/).
@@ -543,7 +546,7 @@ Next buildout:
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
    and learner/proof-upgrade dashboards. The curriculum-status audit now shows
    where source `planned` rows have validated resources and need a source DAG
-   decision. The curriculum-pressure view now groups the 106 non-template packs
+   decision. The curriculum-pressure view now groups the 107 non-template packs
    into overlapping Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
    Lean-horizon buckets for fragment-level planning.
    Candidate status: the first `solver_reuse` batch is now fully promoted:

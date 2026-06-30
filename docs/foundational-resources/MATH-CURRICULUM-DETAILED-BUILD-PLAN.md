@@ -15,6 +15,9 @@ Use this file when choosing the next commit-sized work item. Use
 [MATH-CURRICULUM-BUILDOUT.md](MATH-CURRICULUM-BUILDOUT.md) for phase history,
 [MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md](MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md)
 for the top-down curriculum-wide buildout plan,
+[MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md](MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md)
+for the practical staged build sequence across education, ontology, examples,
+proofs, solver feedback, rules/law transfer, and consumer boundaries,
 [MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md)
 for per-node gates, [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md)
 for the broader resource-family plan, and

@@ -10,6 +10,9 @@ ecosystem from the math curriculum spine. It complements:
 - [Math Curriculum Resource Master Plan](MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md),
   the top-down curriculum-wide sequencing plan across layers, fields, routes,
   solver reuse, and consumer boundaries.
+- [Math Curriculum Resource Build Sequence](MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md),
+  the practical staged plan for education, ontology, packs, proof artifacts,
+  solver feedback, rules/law transfer, and future library boundaries.
 - [Math Curriculum Implementation Matrix](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md),
   the commit-sized gate matrix.
 - [Math Curriculum Detailed Build Plan](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md),

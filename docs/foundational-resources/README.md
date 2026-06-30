@@ -17,6 +17,10 @@ schemas, examples, and validation workflows.
 - [MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md](MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md)
   is the top-down curriculum-wide plan for building the full resource system by
   layer, field, proof route, solver reuse, and consumer boundary.
+- [MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md](MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md)
+  is the practical curriculum-to-resource build sequence for education pages,
+  ontology rows, example packs, proof artifacts, solver feedback, rules/law
+  transfer, and future library boundaries.
 - [MATH-CURRICULUM-BUILDOUT.md](MATH-CURRICULUM-BUILDOUT.md) is the detailed
   buildout plan from the current curriculum DAG to atlas rows, example packs,
   lessons, proof hooks, dashboards, and eventual library boundaries.

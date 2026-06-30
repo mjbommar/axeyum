@@ -14,6 +14,10 @@ For the current forward work plan, use the
 For the top-down curriculum-wide plan across layers, fields, proof routes,
 solver reuse, and consumer boundaries, use the
 [Math Curriculum Resource Master Plan](MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md).
+For the practical curriculum-to-resource build sequence across educational
+content, ontology rows, example packs, proof artifacts, solver feedback,
+rules/law transfer, and future library boundaries, use the
+[Math Curriculum Resource Build Sequence](MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md).
 For commit-sized work selection across curriculum nodes, math fields, resource
 gates, and proof routes, use the
 [Math Curriculum Implementation Matrix](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
@@ -1298,7 +1302,7 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 109 atlas rows validate, including generated bridge-concept rows for
+  Status: 110 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows,
   refutation-as-query, finite proof-pattern replay, finite quantifier
   expansion, bounded induction obligations, Boolean CNF DRAT/LRAT anatomy,

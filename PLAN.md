@@ -112,6 +112,10 @@ and the top-down curriculum-wide resource master plan in
 [`docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md)
 and the curriculum-to-resource buildout plan in
 [`docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md`](docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md);
+the practical staged build sequence for educational content, ontology rows,
+example packs, proof artifacts, solver feedback, rules/law transfer, and future
+library boundaries is
+[`docs/foundational-resources/MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md`](docs/foundational-resources/MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md);
 the forward execution plan for turning validated packs into learner paths,
 proof upgrades, solver feedback, and consumer boundaries is
 [`docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md).

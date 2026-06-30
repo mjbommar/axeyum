@@ -205,6 +205,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Curriculum resource build sequence landed.** Added
+  `docs/foundational-resources/MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md` as
+  the practical plan for turning the math curriculum into educational content,
+  ontology/bridge rows, example packs, proof artifacts, solver-feedback rows,
+  rules/law transfer examples, and eventual library boundaries. The document
+  records the current 110-concept / 107-pack / 543-check / 107-promoted-pack
+  baseline, R0-R6 gates, staged learner/proof/solver work, field-specific next
+  work for delta-epsilon balls, graph runtime pathologies, random matrices,
+  LU/matrix computation, topology quotients, Chebyshev/operator rows, and
+  rules/law transfer, plus a commit-sized execution queue. `PLAN.md` and the
+  foundational-resource index, master plan, execution plan, detailed build
+  plan, operating roadmap, and library-boundary decision now link the sequence
+  and carry refreshed public-query counts where they had drifted.
+
 - **Finite universal-coefficient shadow resource and bridge landed.**
   `finite-universal-coefficient-shadow-v0` and
   `bridge_finite_universal_coefficient_shadow` now make one dual integer
