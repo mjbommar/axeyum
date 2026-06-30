@@ -322,9 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   generated dashboards move promoted solver-reuse packs to 48 and leave
   36 unclassified packs.
 
+- **Integer-count QF_LIA/Diophantine promotion batch landed.**
+  `modular-arithmetic-v0`, `exact-statistical-tests-v0`,
+  `finite-simplicial-homology-v0`, `induction-patterns-v0`, and
+  `descriptive-statistics-v0` now carry promoted `solver_reuse` metadata tied
+  to source-level QF_LIA artifacts. The shared `math_resource_lia_routes`
+  regression checks all five rows with independently rechecked Diophantine
+  evidence; generated dashboards move promoted solver-reuse packs to 53 and
+  leave 31 unclassified packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 48-promoted-pack review count. The
+  now records the refreshed 53-promoted-pack review count. The
   decision remains in-repo and JSON-first: the query consumer reads promoted
   solver-reuse rows, but there is still no external consumer, repeated typed API
   demand, or reusable encoder boundary that warrants a new crate or separate

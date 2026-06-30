@@ -31,6 +31,15 @@
     "QF_LIA / Diophantine"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "exact binomial bad tail-count QF_LIA/Diophantine regression seed",
+    "pressure": "Finite binomial tail-count contradiction where C(4,3)+C(4,4) forces tail_count = 5 but the malformed p-value row claims tail_count = 4.",
+    "evidence": [
+      "qf-lia-bad-binomial-tail-count"
+    ],
+    "next_step": "Promote additional exact-test count rows only when they add distinct integer-count solver pressure; keep asymptotic tests, approximations, and floating-point statistical procedures in numerical-honesty metadata."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -38,7 +47,9 @@
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/curriculum/01-number-systems/naturals.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-lia-diophantine.md"
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+    "artifacts/examples/math/exact-statistical-tests-v0/smt2/bad-binomial-tail-count-diophantine-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
   ],
   "expected_results": [
     "binomial-tail-pvalue",

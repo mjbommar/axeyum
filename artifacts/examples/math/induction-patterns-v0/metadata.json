@@ -30,6 +30,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-patterns-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite induction even-product oddness QF_LIA/Diophantine regression seed",
+    "pressure": "Finite prefix arithmetic contradiction where 6*(6+1) forces product = 42 but the malformed oddness row claims product = 41.",
+    "evidence": [
+      "qf-lia-even-product-odd-obstruction"
+    ],
+    "next_step": "Promote additional finite induction-pattern rows only when they add distinct arithmetic, invariant, or bounded-counterexample solver pressure; keep universal induction schemas in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/00-foundations/induction.md",
     "docs/curriculum/00-foundations/proof-methods.md",
@@ -37,7 +46,9 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/induction-patterns-v0/smt2/even-product-odd-diophantine-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
   ],
   "expected_results": [
     "weak-induction-even-sum-prefix",

@@ -33,6 +33,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite simplicial boundary coefficient QF_LIA/Diophantine regression seed",
+    "pressure": "Oriented-boundary coefficient contradiction where coeff_ac is forced to be -1 but the malformed row claims coeff_ac = 1.",
+    "evidence": [
+      "qf-lia-bad-boundary-coefficient"
+    ],
+    "next_step": "Promote additional finite chain-complex rows only when they add distinct integer-linear solver pressure; keep homology invariance, exact sequences, and cohomology theory in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -41,7 +50,9 @@
     "docs/curriculum/03-destinations/linear-algebra.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-simplicial-homology-v0/smt2/bad-boundary-coefficient-diophantine-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
   ],
   "expected_results": [
     "simplicial-complex-closure",

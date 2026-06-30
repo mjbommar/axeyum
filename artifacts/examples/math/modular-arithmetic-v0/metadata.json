@@ -16,6 +16,15 @@
   "curriculum_nodes": ["modular-arithmetic", "divisibility-and-euclid", "fields"],
   "axeyum_fragments": ["BV / LIA", "LIA / enumeration", "QF_LIA / Diophantine"],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "modular nonunit inverse QF_LIA/Diophantine regression seed",
+    "pressure": "Nonunit inverse obstruction where 2*b - 6*k = 1 has no integer solution because gcd(2,6) does not divide 1.",
+    "evidence": [
+      "qf-lia-nonunit-diophantine"
+    ],
+    "next_step": "Promote additional modular arithmetic rows only when they add distinct divisibility, CRT, or finite-field solver pressure; keep deeper number-theory theorems in Lean-horizon resources."
+  },
   "source_refs": [
     "docs/curriculum/02-structures/modular-arithmetic.md",
     "docs/curriculum/02-structures/divisibility-and-euclid.md",
@@ -23,7 +32,9 @@
     "docs/curriculum/BACKLOG.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-lia-diophantine.md"
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+    "artifacts/examples/math/modular-arithmetic-v0/smt2/nonunit-inverse-diophantine-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
   ],
   "expected_results": [
     "crt-coprime-witness",
