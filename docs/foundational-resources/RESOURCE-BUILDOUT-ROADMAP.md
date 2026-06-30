@@ -1564,7 +1564,11 @@ Pick one item per commit unless the change is purely navigational.
     compact all-field R6 consumer matrix, summarizing pack/check counts,
     smoke-checked route, bridge lookup, checked-row drilldown, and
     theorem-horizon boundary for all 18 math fields.
-86. Continue proof-route promotions or consumer-query examples; revisit the
+86. Landed: add
+    [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md) and exact
+    `--concept` filters for `query-foundational-resources.py packs/checks`,
+    making matrix resources queryable by bridge concept plus proof route.
+87. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

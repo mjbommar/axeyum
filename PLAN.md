@@ -129,6 +129,10 @@ The compact all-field consumer readiness table is
 [`docs/foundational-resources/FIELD-READINESS-QUERY-MATRIX.md`](docs/foundational-resources/FIELD-READINESS-QUERY-MATRIX.md);
 it records the smoke-checked route, bridge lookup, checked-row drilldown, and
 theorem boundary for all 18 math fields.
+The matrix computation consumer query guide is
+[`docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md`](docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md);
+it records exact concept-plus-route queries for LU, residual, rank/nullity,
+eigenpair, random-matrix, tensor/module, operator, and Chebyshev resources.
 The rules/law transfer crosswalk that maps finite predicates, arithmetic
 thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
@@ -417,6 +421,11 @@ now turns that full-field smoke layer into a single consumer-facing table:
 one row per math field with pack/check counts, the primary readiness route,
 bridge lookup terms, checked-row drilldown, and the theorem claims that remain
 out of scope.
+The matrix computation lane now has
+[`MATRIX-COMPUTATION-QUERIES.md`](docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md),
+and the query helper accepts exact `--concept` filters on `packs` and `checks`,
+so consumers can discover matrix rows by bridge concept plus proof route without
+parsing generated Markdown or adding a typed API.
 The foundational example-pack validator now also has committed negative
 fixtures for unknown fields, metadata/check drift, and missing witness
 references, and `check-foundational-resources.sh` requires those invalid packs

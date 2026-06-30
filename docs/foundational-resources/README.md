@@ -50,6 +50,10 @@ schemas, examples, and validation workflows.
   compact 18-field map of the smoke-checked readiness route, bridge lookup,
   checked-row drilldown, and theorem-horizon boundary for downstream
   consumers.
+- [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md) gives
+  copyable concept-plus-route queries for LU, residuals, rank/nullity,
+  eigenpairs, random matrices, tensor/module rows, operators, and Chebyshev
+  systems.
 - [RULES-LAW-CROSSWALK.md](RULES-LAW-CROSSWALK.md) maps the math-resource
   patterns into rules/law checks for finite predicates, thresholds, graph
   reachability, precedence, proof routes, and current rules-as-code packs,

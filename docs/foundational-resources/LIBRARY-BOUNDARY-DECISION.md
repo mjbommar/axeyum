@@ -28,6 +28,8 @@ generator or validator internals. Common consumer lookups are demonstrated by
 and [Foundational Resource Consumer Queries](CONSUMER-QUERIES.md). The compact
 [Field Readiness Query Matrix](FIELD-READINESS-QUERY-MATRIX.md) summarizes the
 same public query surface across all 18 math fields.
+[Matrix Computation Consumer Queries](MATRIX-COMPUTATION-QUERIES.md) narrows
+that same surface for bridge-concept-plus-route discovery over matrix packs.
 
 The 2026-06-30 review keeps the same decision. The consumer-query layer now
 reads promoted solver-reuse metadata directly, including the promoted
@@ -38,6 +40,9 @@ over the same JSON files, but this is still an in-repository
 downstream-consumer stand-in rather than an external release consumer.
 The all-field matrix is documentation over that same stand-in; it improves
 navigability but does not create a new API boundary.
+The matrix computation query guide and `--concept` filters are likewise still
+documentation plus a dependency-free query-helper surface over committed JSON,
+not a typed library boundary.
 
 ## Evidence
 
@@ -51,6 +56,7 @@ The Phase M8 threshold is met for size and repeated structure:
 | At least one consumer can read the data without repository-internal knowledge | `scripts/consume-foundational-resources.py` reads the atlas and example-pack JSON directly and cross-checks pack coverage; `scripts/query-foundational-resources.py` answers summary, pack, check, concept, and field-readiness queries without importing validators or generators. |
 | At least one consumer can read promoted solver-reuse rows | `scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any` is part of `scripts/check-foundational-resources.sh` and currently finds 102 promoted packs. |
 | At least one documentation surface maps consumer queries by field | `FIELD-READINESS-QUERY-MATRIX.md` records the smoke-checked route, bridge lookup, checked-row drilldown, and theorem boundary for all 18 math fields without adding a typed API. |
+| At least one documentation surface maps resources by bridge concept and route | `MATRIX-COMPUTATION-QUERIES.md` records concept-plus-route matrix queries, and `check-foundational-resources.sh` smoke-checks representative `packs/checks --concept ... --route ...` commands. |
 
 The current pack-level evidence mix is still intentionally conservative:
 

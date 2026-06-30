@@ -205,6 +205,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Matrix computation concept queries landed.**
+  [MATRIX-COMPUTATION-QUERIES.md](docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md)
+  now gives downstream consumers copyable concept-plus-route queries for LU,
+  residual bounds, rank/nullity, eigenpairs, random-matrix moments,
+  tensor/module rows, finite operators, and Chebyshev systems.
+  `scripts/query-foundational-resources.py` supports exact `--concept` filters
+  for `packs` and `checks`, and the foundational-resource smoke check exercises
+  representative matrix concept queries without adding a crate, typed API, or
+  separate repo.
+
 - **All-field readiness query matrix landed.**
   [FIELD-READINESS-QUERY-MATRIX.md](docs/foundational-resources/FIELD-READINESS-QUERY-MATRIX.md)
   now gives downstream consumers a compact 18-field map: pack/check counts,

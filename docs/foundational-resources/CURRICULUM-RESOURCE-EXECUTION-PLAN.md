@@ -529,6 +529,11 @@ Next buildout:
    Wolfe line-search replay, finite projected-gradient replay, finite
    proximal-gradient replay, least-squares, gradients, residual bounds, and
    matrix witnesses to the same boundary.
+   It now also supports exact atlas concept filters on `packs` and `checks`;
+   [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md) uses that
+   surface to expose LU, residual, rank/nullity, eigenpair, random-matrix,
+   tensor/module, operator, and Chebyshev rows by bridge concept plus proof
+   route, and the smoke set exercises representative matrix concept queries.
 13. Landed: add negative fixtures for the foundational example-pack schema.
    `scripts/check-foundational-negative-fixtures.py` now asserts that invalid
    packs with unknown fields, metadata/check id drift, and missing witness

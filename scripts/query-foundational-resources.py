@@ -169,6 +169,21 @@ class ResourceStore:
             fail(f"{ATLAS} has no rows")
         self.packs = self._load_packs()
 
+    def pack_ids_for_concept(self, concept_id: str) -> set[str]:
+        for concept in self.concepts:
+            if concept.get("id") != concept_id:
+                continue
+            pack_ids = set()
+            for pack_ref in concept.get("example_packs", []):
+                if isinstance(pack_ref, dict):
+                    pack_id = pack_ref.get("id")
+                else:
+                    pack_id = str(pack_ref)
+                if pack_id:
+                    pack_ids.add(pack_id)
+            return pack_ids
+        fail(f"unknown concept id: {concept_id}")
+
     def _load_packs(self) -> list[dict[str, Any]]:
         packs = []
         for metadata_path in sorted(EXAMPLE_ROOT.glob("*/metadata.json")):
@@ -364,11 +379,16 @@ def command_summary(args: argparse.Namespace) -> int:
 
 def command_packs(args: argparse.Namespace) -> int:
     store = ResourceStore()
+    concept_pack_ids = (
+        store.pack_ids_for_concept(args.concept) if args.concept else None
+    )
     rows = []
     for row in store.pack_rows():
         pack = row["_pack"]
         metadata = pack["metadata"]
         checks = pack["checks"]
+        if concept_pack_ids is not None and row["pack"] not in concept_pack_ids:
+            continue
         if args.field and args.field not in metadata["field_ids"]:
             continue
         if args.curriculum_node and args.curriculum_node not in metadata["curriculum_nodes"]:
@@ -440,11 +460,16 @@ def command_packs(args: argparse.Namespace) -> int:
 
 def command_checks(args: argparse.Namespace) -> int:
     store = ResourceStore()
+    concept_pack_ids = (
+        store.pack_ids_for_concept(args.concept) if args.concept else None
+    )
     rows = []
     for row in store.check_rows():
         pack = row["_pack"]
         metadata = pack["metadata"]
         check = row["_check"]
+        if concept_pack_ids is not None and row["pack"] not in concept_pack_ids:
+            continue
         if args.pack and row["pack"] != args.pack:
             continue
         if args.field and args.field not in metadata["field_ids"]:
@@ -566,6 +591,7 @@ def build_parser() -> argparse.ArgumentParser:
     packs = subparsers.add_parser("packs", help="list example packs")
     packs.add_argument("--field", help="exact field id, such as graph_theory")
     packs.add_argument("--curriculum-node", help="exact curriculum node id")
+    packs.add_argument("--concept", help="exact atlas concept id")
     packs.add_argument("--fragment", help="case-insensitive fragment substring")
     packs.add_argument(
         "--route",
@@ -584,6 +610,7 @@ def build_parser() -> argparse.ArgumentParser:
     checks = subparsers.add_parser("checks", help="list expected-result rows")
     checks.add_argument("--pack", help="exact example-pack id")
     checks.add_argument("--field", help="exact field id")
+    checks.add_argument("--concept", help="exact atlas concept id")
     checks.add_argument("--fragment", help="case-insensitive fragment substring")
     checks.add_argument(
         "--route",

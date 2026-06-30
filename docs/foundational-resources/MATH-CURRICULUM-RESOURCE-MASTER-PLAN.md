@@ -397,7 +397,12 @@ Use one row per commit unless the change is purely navigational.
    per math field with current pack/check counts, the primary smoke-checked
    readiness route, bridge lookup terms, checked-row drilldown, and theorem
    horizon boundary.
-18. Add future rules/law crosswalk examples only by reusing existing
+18. Landed: add
+   [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md) plus exact
+   concept filters on `query-foundational-resources.py packs/checks`, making
+   matrix packs discoverable by computation bridge concept and proof route
+   without introducing a typed API or separate package.
+19. Add future rules/law crosswalk examples only by reusing existing
    math-resource patterns; do not create a separate rule ontology until the
    current JSON boundary is exercised by more consumers.
 

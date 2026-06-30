@@ -30,6 +30,8 @@ policy and legal-rule checks, use the
 [Rules/Law Crosswalk](RULES-LAW-CROSSWALK.md).
 For the compact all-field consumer query surface, use the
 [Field Readiness Query Matrix](FIELD-READINESS-QUERY-MATRIX.md).
+For matrix computation discovery by bridge concept and proof route, use the
+[Matrix Computation Consumer Queries](MATRIX-COMPUTATION-QUERIES.md).
 This file remains the phase contract and landed-history log.
 
 The product is not a textbook and not a formal-library clone. It is a set of
@@ -2078,6 +2080,12 @@ checked-row drilldown, and the theorem-horizon boundary to avoid overclaiming.
 This is still a documentation layer over committed JSON and
 `query-foundational-resources.py`, not a new crate, typed API, or repository
 split.
+The matrix-resource consumer layer now also has
+[`MATRIX-COMPUTATION-QUERIES.md`](MATRIX-COMPUTATION-QUERIES.md), and
+`query-foundational-resources.py` supports exact atlas concept filters on
+`packs` and `checks`. This makes LU, residual, rank/nullity, eigenpair,
+random-matrix, tensor/module, operator, and Chebyshev rows discoverable by
+bridge concept plus proof route while preserving the JSON-first R6 boundary.
 The consumer query layer now also exposes optimization/convexity readiness:
 `CONSUMER-QUERIES.md` shows the Farkas field summary, LP-objective and
 convexity bridge lookups, and checked optimization/convexity Farkas row

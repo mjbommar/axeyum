@@ -17,6 +17,8 @@ consumer would.
 For a compact all-field map of the current smoke-checked readiness routes,
 bridge lookups, checked-row drilldowns, and theorem boundaries, see
 [FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md).
+For concept-plus-route matrix discovery, see
+[MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md).
 
 ## Contract Summary
 
@@ -95,6 +97,30 @@ matches; `pack-metadata` means the pack advertises that route at the metadata
 level even if no individual check label contains the substring.
 Hyphen and underscore spellings are normalized for substring search, so
 `qf-bv` and `QF_BV` match the same route text.
+
+## Concept And Proof-Route Discovery
+
+```sh
+python3 scripts/query-foundational-resources.py packs \
+  --concept bridge_lu_replay \
+  --route Farkas \
+  --require-any
+```
+
+This answers: "Which packs are attached to this atlas bridge concept and also
+use or point at this proof route?" Concept filters use the committed
+`example_packs` list in the foundational concept atlas. Route filters keep the
+same case-insensitive public-text behavior as field-focused pack discovery.
+
+For concrete checked rows under a concept:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_residual_bound \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+```
 
 For a narrower row-level view, query checks directly:
 
@@ -916,6 +942,10 @@ python3 scripts/query-foundational-resources.py concepts --field linear_algebra 
 python3 scripts/query-foundational-resources.py concepts --field linear_algebra --text projection --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field linear_algebra --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field linear_algebra --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_lu_replay --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_rank_nullity --route Alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_random_matrix_finite_moment --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field abstract_algebra --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text homomorphism --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text ideal --require-any >/dev/null

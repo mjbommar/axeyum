@@ -492,7 +492,13 @@ Build sequence:
     checked-row drilldown, and theorem-horizon boundary for each field while
     keeping the public boundary as committed JSON plus
     `query-foundational-resources.py`.
-54. Revisit crate/repo boundaries only after three real consumers or repeated
+54. [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md) now lands
+    as the matrix-resource consumer map for concept-plus-route discovery.
+    `query-foundational-resources.py packs/checks --concept ...` reads atlas
+    `example_packs` membership so LU, residual, rank/nullity, eigenpair,
+    random-matrix, tensor/module, operator, and Chebyshev rows are queryable by
+    computation family and proof route.
+55. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

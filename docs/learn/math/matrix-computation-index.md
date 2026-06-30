@@ -8,6 +8,8 @@ checker or certificate path.
 For the promotion boundary between educational examples, solver regressions,
 and benchmark-corpus claims, see
 [Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md).
+For downstream discovery by computation family plus proof route, see
+[Matrix Computation Consumer Queries](../../foundational-resources/MATRIX-COMPUTATION-QUERIES.md).
 
 Concept rows:
 

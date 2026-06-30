@@ -639,6 +639,13 @@ Pick one row per commit unless the change is purely navigational.
     primary readiness routes, bridge lookup terms, checked-row drilldowns, and
     theorem-horizon boundaries, while preserving the JSON-first R6 boundary and
     avoiding a premature typed API, crate, or repo split.
+75. Landed: make matrix rows queryable by bridge concept plus proof route.
+    [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md) documents
+    the new `packs --concept ... --route ...` and
+    `checks --concept ... --route ... --proof-status checked` flow for LU,
+    residual, rank/nullity, eigenpair, random-matrix, tensor/module, operator,
+    and Chebyshev resources; `check-foundational-resources.sh` now smoke-checks
+    representative matrix concept queries.
 
 ## Validation Checklist
 
