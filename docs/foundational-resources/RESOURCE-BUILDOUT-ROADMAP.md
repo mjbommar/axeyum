@@ -1201,7 +1201,12 @@ Pick one item per commit unless the change is purely navigational.
     `linear-optimization-v0` through exact LP feasible-point replay,
     objective-threshold replay, checked QF_LRA/Farkas infeasible-threshold
     evidence, and tampered-certificate rejection.
-42. Continue proof-route promotions or consumer-query examples; revisit the
+42. Landed: add standalone finite probability mass-table learner page.
+    `docs/learn/math/finite-probability-mass-tables-end-to-end.md` follows
+    `finite-probability-v0` through exact PMF normalization, conditional
+    probability replay, Bayes posterior replay, checked QF_LRA/Farkas
+    bad-normalization rejection, and checked bad-posterior rejection.
+43. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

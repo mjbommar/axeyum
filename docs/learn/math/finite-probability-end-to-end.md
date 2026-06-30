@@ -13,6 +13,8 @@ exact product measures, and finite expectations. It uses the
 [finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/),
 and [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/)
 packs.
+For the single-pack first-principles finite probability table view, read
+[End To End: Finite Probability Mass Tables](finite-probability-mass-tables-end-to-end.md).
 
 Concept rows:
 

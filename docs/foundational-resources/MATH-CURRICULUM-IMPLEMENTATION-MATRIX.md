@@ -207,7 +207,9 @@ Build sequence:
    lesson or a named combined lesson; standalone finite topology and finite
    measure pages now split those first-principles stories from the combined
    topology/measure bridge, and standalone linear optimization now splits the
-   LP/Farkas story from the combined linear-system/LP bridge.
+   LP/Farkas story from the combined linear-system/LP bridge. Standalone
+   finite probability mass tables now split the PMF/conditioning/Bayes story
+   from the broader finite-probability process bridge.
 7. Continue QF_BV promotions only for fixed-width educational claims that are
    not better served by existing CNF/LRA/LIA routes; the first finite
    rings/fields/graph-coloring DRAT rows are covered.

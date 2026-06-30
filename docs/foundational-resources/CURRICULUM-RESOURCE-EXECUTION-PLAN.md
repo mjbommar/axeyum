@@ -352,7 +352,7 @@ Next buildout:
 | `complex_analysis` | real-pair algebra lessons now; analytic theorem rows as Lean horizon |
 | `topology` | standalone finite topology lesson landed; maintain granular compactness/connectedness/homology rows |
 | `measure_theory` | standalone finite measure lesson landed; keep Lebesgue/convergence theorem rows Lean-horizon |
-| `probability_theory` | standalone finite probability lesson and stochastic-process path through kernels/Markov chains |
+| `probability_theory` | standalone finite probability mass-table lesson landed; maintain stochastic-process path through kernels/Markov chains |
 | `statistics` | exact finite tests, regression, concentration, and explicit numerical-honesty status |
 | `optimization_and_convexity` | standalone LP/Farkas lesson landed; maintain convexity/gradient/Hessian bridge rows |
 | `numerical_analysis` | residual/error-bound examples with exact rational shadows and numerical limits |
@@ -371,9 +371,11 @@ Next buildout:
 3. Add focused graph lessons for reachability, search runtime, matching, cuts,
    and d-separation.
 4. Landed: add standalone finite probability and finite measure lessons. The
-   finite probability page was already focused; the new finite measure page now
-   follows finite sigma-algebra replay, exact finite additivity, event
-   complements, and checked QF_LRA/Farkas bad-complement rejection.
+   finite probability mass-table page now follows exact PMF normalization,
+   conditional probability replay, Bayes posterior replay, checked QF_LRA/Farkas
+   bad-normalization rejection, and checked bad-posterior rejection; the finite
+   measure page follows finite sigma-algebra replay, exact finite additivity,
+   event complements, and checked QF_LRA/Farkas bad-complement rejection.
 5. Landed: add standalone linear optimization and finite topology lessons. The
    finite topology page now follows topology axiom replay, closure/interior
    replay, exact metric-ball replay, and checked Bool/CNF missing-empty-set

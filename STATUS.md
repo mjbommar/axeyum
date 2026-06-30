@@ -694,6 +694,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   evidence, and tampered-certificate rejection. The combined linear-system/LP
   page remains as the matrix-to-optimization bridge.
 
+- **Standalone finite probability mass-table lesson landed.**
+  [`finite-probability-mass-tables-end-to-end.md`](docs/learn/math/finite-probability-mass-tables-end-to-end.md)
+  now follows `finite-probability-v0` through exact PMF normalization,
+  conditional probability replay, Bayes posterior replay, checked QF_LRA/Farkas
+  bad-normalization rejection, and checked bad-posterior rejection. The broader
+  finite-probability page remains as the stochastic-process bridge.
+
 - **Curriculum status audit landed.** The generated
   [`curriculum-status-audit.md`](docs/foundational-resources/generated/curriculum-status-audit.md)
   dashboard separates source `curriculum_status` from generated
@@ -11863,6 +11870,14 @@ plan is built and committed on the current branch:
   Updated the learner index plus rational/real and linear-algebra cluster pages
   so the combined linear-system/LP page is a bridge rather than the only LP
   entry point.
+
+- **2026-06-30** — **Standalone finite probability mass-table lesson landed.**
+  Added
+  [`finite-probability-mass-tables-end-to-end.md`](docs/learn/math/finite-probability-mass-tables-end-to-end.md)
+  as the focused first-principles learner page for `finite-probability-v0`.
+  Updated the learner index and probability/statistics cluster page so the
+  broad finite-probability process page is a bridge rather than the only
+  probability entry point.
 
 - **2026-06-30** — **PHP Bool/CNF resource promotion landed.**
   Added source-level DIMACS artifacts for

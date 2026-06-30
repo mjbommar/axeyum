@@ -239,6 +239,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ra
 
 For a fuller trace through atom-table replay, read
 [End To End: Conditional Probability, Random Variables, Kernels, Concentration, Martingales, And Product Measures](finite-probability-end-to-end.md).
+For the single-pack finite-probability table story, read
+[End To End: Finite Probability Mass Tables](finite-probability-mass-tables-end-to-end.md).
 For a focused finite random-variable trace, read
 [End To End: Finite Random Variables](finite-random-variables-end-to-end.md).
 For a focused finite conditional-expectation trace, read

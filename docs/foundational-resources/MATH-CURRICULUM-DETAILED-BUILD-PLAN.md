@@ -208,7 +208,7 @@ Exit criteria:
 | `complex_analysis` | real-pair algebra and transformations | complex algebra now has a checked bad norm-squared row; add only distinct real-pair arithmetic, polynomial-root, or algebraic-identity pressure | real-pair LRA/NRA, finite replay, Lean horizon |
 | `topology` | finite topologies, compactness, connectedness, continuous maps, homology | standalone finite-topology lesson and checked missing-empty-set Bool/CNF row landed; add only distinct closure, metric-ball, preimage, or finite-set pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, Lean horizon |
 | `measure_theory` | finite measures, product measure, integration, random variables | standalone finite-measure lesson and bad-complement QF_LRA/Farkas row landed; promote only distinct finite-additivity, monotonicity, or measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
-| `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
+| `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | standalone finite probability mass-table lesson landed; keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians | standalone LP/Farkas lesson landed; add only distinct duality, KKT, convexity, gradient, or Hessian pressure next | QF_LRA/Farkas, QF_NRA shadows |
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms | keep finite replay and numerical-honesty rows distinct from promoted exact residual/error certificates | QF_LRA/Farkas, replay, Lean horizon |
@@ -348,6 +348,11 @@ Pick one row per commit unless the change is purely navigational.
    LP feasible-point replay, objective-threshold replay, checked
    QF_LRA/Farkas infeasible-threshold evidence, and tamper rejection out of the
    combined linear-system/LP bridge lesson.
+35. Landed: add standalone finite probability mass-table learner page,
+   splitting exact PMF normalization, conditional probability replay, Bayes
+   posterior replay, checked QF_LRA/Farkas bad-normalization rejection, and
+   checked bad-posterior rejection out of the broad finite-probability process
+   bridge lesson.
 
 ## Validation Checklist
 

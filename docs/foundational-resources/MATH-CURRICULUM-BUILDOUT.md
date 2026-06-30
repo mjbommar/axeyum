@@ -962,6 +962,9 @@ remains the cross-field bridge.
 The exact linear-optimization first-principles story is now also split into a
 focused standalone LP/Farkas page, while the combined linear-system/LP page
 remains the matrix-to-optimization bridge.
+The exact finite-probability first-principles story is now also split into a
+focused standalone probability mass-table page, while the broad
+finite-probability page remains the stochastic-process bridge.
 
 Deliverables:
 
@@ -1425,6 +1428,10 @@ follows the exact LP threshold conflict through source SMT-LIB, emitted
 It now also has a standalone linear-optimization page for exact feasible-point
 replay, objective-threshold replay, checked QF_LRA/Farkas evidence, and
 tampered-certificate rejection.
+`finite-probability-v0` now also has a standalone finite-probability
+mass-table page for exact PMF normalization, conditional probability replay,
+Bayes posterior replay, checked QF_LRA/Farkas bad-normalization rejection, and
+checked bad-posterior rejection.
 `equivalence-classes-v0` now has an Alethe certificate anatomy lesson that
 follows the quotient-map congruence conflict through source SMT-LIB, emitted
 zero-trust `UnsatAletheProof` evidence, and same-artifact truncated-proof

@@ -267,6 +267,10 @@ validated pack data and the repo-root command that replays it.
   checked Bayes-posterior refutation, random-variable, conditional-expectation,
   finite stochastic-kernel, concentration, finite martingale, product-measure,
   and simple-function integral replay.
+- [Finite Probability Mass Tables](finite-probability-mass-tables-end-to-end.md):
+  follows exact PMF normalization, conditional probability, Bayes posterior
+  replay, checked QF_LRA/Farkas bad normalization, and checked bad-posterior
+  rejection.
 - [Finite Measure](finite-measure-end-to-end.md): follows finite
   sigma-algebra replay, exact finite additivity, event-complement replay,
   checked QF_LRA/Farkas bad-complement rejection, and the countable-measure

@@ -195,6 +195,11 @@ topology/measure page as a cross-field bridge rather than the only entry point.
 for feasible-point replay, objective-threshold replay, checked
 QF_LRA/Farkas evidence, and tampered-certificate rejection, leaving the
 combined linear-system/LP page as the matrix-to-optimization bridge.
+`finite-probability-v0` now also has a standalone finite probability
+mass-table page for exact PMF normalization, conditional probability, Bayes
+posterior replay, checked QF_LRA/Farkas bad normalization, and checked bad
+posterior rejection, leaving the broader finite-probability page as the
+stochastic-process bridge.
 The six active proof-cookbook routes for CNF/LRAT, QF_BV, QF_LIA, QF_LRA,
 QF_UF/Alethe, and Lean horizons now each name concrete math example packs that
 use the route.
