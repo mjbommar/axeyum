@@ -24,6 +24,7 @@ Example packs:
 - [finite-sdp-v0](../../../artifacts/examples/math/finite-sdp-v0/)
 - [finite-gradient-descent-v0](../../../artifacts/examples/math/finite-gradient-descent-v0/)
 - [finite-line-search-v0](../../../artifacts/examples/math/finite-line-search-v0/)
+- [finite-wolfe-line-search-v0](../../../artifacts/examples/math/finite-wolfe-line-search-v0/)
 - [finite-projected-gradient-v0](../../../artifacts/examples/math/finite-projected-gradient-v0/)
 - [finite-proximal-gradient-v0](../../../artifacts/examples/math/finite-proximal-gradient-v0/)
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
@@ -83,6 +84,8 @@ quadratic gradient replay, step-update replay, objective-decrease checking,
 finite descent-bound replay, and a checked QF_LRA/Farkas bad-decrease
 certificate. The finite line-search slice adds exact Armijo trial rejection,
 one accepted backtracked step, and a checked QF_LRA/Farkas bad-acceptance
+certificate. The finite Wolfe line-search slice adds exact Wolfe
+sufficient-decrease and curvature replay plus a checked bad-curvature
 certificate. The finite projected-gradient slice adds exact interval
 projection after a trial step and a checked QF_LRA/Farkas bad-projection
 certificate. The finite proximal-gradient slice adds exact L1 soft-threshold
@@ -355,6 +358,25 @@ the final nonpositive-violation contradiction is checked through
 QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Line Search Checks](finite-line-search-end-to-end.md).
 
+For a finite Wolfe line-search example, encode a one-dimensional quadratic and
+one exact Wolfe step:
+
+```text
+f(x) = x^2
+x0 = 1
+direction = -2
+c1 = 1/4
+c2 = 1/2
+accepted alpha = 1/2
+```
+
+The `finite-wolfe-line-search-v0` validator recomputes the derivative,
+directional derivative, exact minimizer, Wolfe sufficient-decrease slack,
+Wolfe curvature slack, and the bad-row curvature violation for the full step
+`alpha = 1`. The final nonpositive-violation contradiction is checked through
+QF_LRA/Farkas evidence. For a focused trace, read
+[End To End: Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md).
+
 For a finite projected-gradient example, encode a one-dimensional quadratic and
 an interval constraint:
 
@@ -443,6 +465,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-line-search-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_armijo_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-wolfe-line-search-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_curvature_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-projected-gradient-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_projected_gradient_bad_projection_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-proximal-gradient-v0
@@ -485,6 +509,7 @@ replay, read
 [End To End: Finite Hyperplane Separation](finite-separation-end-to-end.md),
 [End To End: Finite KKT Checks](finite-kkt-end-to-end.md),
 [End To End: Finite Line Search Checks](finite-line-search-end-to-end.md),
+[End To End: Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md),
 [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md),
 [End To End: Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),

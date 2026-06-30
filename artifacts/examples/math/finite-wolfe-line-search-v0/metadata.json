@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "finite-wolfe-line-search-v0",
+  "title": "Finite Wolfe Line-Search Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_reals",
+    "curriculum_calculus",
+    "field_optimization_and_convexity",
+    "field_numerical_analysis",
+    "field_real_analysis",
+    "bridge_rational_convexity_shadow"
+  ],
+  "field_ids": [
+    "optimization_and_convexity",
+    "numerical_analysis",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "reals",
+    "calculus"
+  ],
+  "axeyum_fragments": [
+    "finite optimization replay",
+    "finite numerical replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "symbolic derivative replay",
+    "finite Wolfe line search",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-wolfe-line-search-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Wolfe line-search bad curvature QF_LRA/Farkas regression seed",
+    "pressure": "Exact Wolfe curvature replay computes violation 2 for alpha=1, so the malformed nonpositive-violation row is inconsistent.",
+    "evidence": [
+      "bad-wolfe-curvature-rejected"
+    ],
+    "next_step": "Promote additional Wolfe or exact-line-search rows only when they add distinct strong-Wolfe, nonconvex, stochastic, or convergence pressure; keep general line-search convergence and rate theorems in horizon lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/finite-wolfe-line-search-end-to-end.md",
+    "artifacts/examples/math/finite-wolfe-line-search-v0/smt2/bad-wolfe-curvature-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "wolfe-descent-direction-replay",
+    "exact-line-minimizer-replay",
+    "wolfe-sufficient-decrease-replay",
+    "wolfe-curvature-replay",
+    "bad-wolfe-curvature-rejected",
+    "general-wolfe-line-search-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite Wolfe line-search witnesses as deterministic exact-rational replay rows.",
+    "Replay derivatives, descent directions, exact minimizer candidates, sufficient-decrease inequalities, curvature inequalities, and curvature violations over exact rationals.",
+    "Route false Wolfe curvature claims through checked QF_LRA/Farkas evidence after replay computes the offending violation.",
+    "Keep general Wolfe existence, convergence, rate, stochastic, and floating-point stability claims marked Lean-horizon until proof artifacts exist."
+  ]
+}

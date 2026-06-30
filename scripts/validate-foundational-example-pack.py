@@ -10693,6 +10693,186 @@ def validate_finite_line_search(expected: dict[str, Any]) -> None:
     require_string("line search future_checker", data.get("future_checker"))
 
 
+def validate_finite_wolfe_line_search(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    direction_check = checks["wolfe-descent-direction-replay"]
+    if direction_check["expected_result"] != "sat":
+        fail("wolfe-descent-direction-replay must expect sat")
+    values = single_witness_values(direction_check, witnesses)
+    polynomial = require_quadratic("Wolfe line search polynomial", values.get("polynomial"))
+    start_x = require_fraction("Wolfe line search start_x", values.get("start_x"))
+    start_value = require_fraction("Wolfe line search start_value", values.get("start_value"))
+    gradient = require_fraction("Wolfe line search gradient", values.get("gradient"))
+    descent_direction = require_fraction(
+        "Wolfe line search descent_direction",
+        values.get("descent_direction"),
+    )
+    initial_directional_derivative = require_fraction(
+        "Wolfe line search initial_directional_derivative",
+        values.get("initial_directional_derivative"),
+    )
+    wolfe_c1 = require_fraction("Wolfe line search wolfe_c1", values.get("wolfe_c1"))
+    wolfe_c2 = require_fraction("Wolfe line search wolfe_c2", values.get("wolfe_c2"))
+    accepted_step = require_fraction("Wolfe line search accepted_step", values.get("accepted_step"))
+    accepted_candidate_x = require_fraction(
+        "Wolfe line search accepted_candidate_x",
+        values.get("accepted_candidate_x"),
+    )
+    accepted_value = require_fraction("Wolfe line search accepted_value", values.get("accepted_value"))
+    accepted_gradient = require_fraction(
+        "Wolfe line search accepted_gradient",
+        values.get("accepted_gradient"),
+    )
+    accepted_directional_derivative = require_fraction(
+        "Wolfe line search accepted_directional_derivative",
+        values.get("accepted_directional_derivative"),
+    )
+    armijo_rhs = require_fraction("Wolfe line search armijo_rhs", values.get("armijo_rhs"))
+    armijo_slack = require_fraction("Wolfe line search armijo_slack", values.get("armijo_slack"))
+    curvature_bound = require_fraction(
+        "Wolfe line search curvature_bound",
+        values.get("curvature_bound"),
+    )
+    curvature_slack = require_fraction(
+        "Wolfe line search curvature_slack",
+        values.get("curvature_slack"),
+    )
+    bad_step = require_fraction("Wolfe line search bad_step", values.get("bad_step"))
+    bad_candidate_x = require_fraction(
+        "Wolfe line search bad_candidate_x",
+        values.get("bad_candidate_x"),
+    )
+    bad_value = require_fraction("Wolfe line search bad_value", values.get("bad_value"))
+    bad_gradient = require_fraction("Wolfe line search bad_gradient", values.get("bad_gradient"))
+    bad_directional_derivative = require_fraction(
+        "Wolfe line search bad_directional_derivative",
+        values.get("bad_directional_derivative"),
+    )
+    bad_curvature_abs = require_fraction(
+        "Wolfe line search bad_curvature_abs",
+        values.get("bad_curvature_abs"),
+    )
+    bad_curvature_violation = require_fraction(
+        "Wolfe line search bad_curvature_violation",
+        values.get("bad_curvature_violation"),
+    )
+
+    if not (0 < wolfe_c1 < wolfe_c2 < 1):
+        fail("wolfe-descent-direction-replay requires 0 < c1 < c2 < 1")
+    if accepted_step <= 0 or bad_step <= 0:
+        fail("Wolfe line-search step sizes must be positive")
+    if polynomial_eval(polynomial, start_x) != start_value:
+        fail("wolfe-descent-direction-replay start_value is incorrect")
+    if quadratic_derivative_value(polynomial, start_x) != gradient:
+        fail("wolfe-descent-direction-replay gradient is incorrect")
+    if gradient * descent_direction != initial_directional_derivative:
+        fail("wolfe-descent-direction-replay directional derivative is incorrect")
+    if initial_directional_derivative >= 0:
+        fail("wolfe-descent-direction-replay direction must be a descent direction")
+
+    minimizer = checks["exact-line-minimizer-replay"]
+    if minimizer["expected_result"] != "sat":
+        fail("exact-line-minimizer-replay must expect sat")
+    minimizer_values = single_witness_values(minimizer, witnesses)
+    if minimizer_values != values:
+        fail("exact-line-minimizer-replay must cite the Wolfe line-search witness")
+    if start_x + accepted_step * descent_direction != accepted_candidate_x:
+        fail("exact-line-minimizer-replay accepted candidate is incorrect")
+    if polynomial_eval(polynomial, accepted_candidate_x) != accepted_value:
+        fail("exact-line-minimizer-replay accepted value is incorrect")
+    if quadratic_derivative_value(polynomial, accepted_candidate_x) != accepted_gradient:
+        fail("exact-line-minimizer-replay accepted gradient is incorrect")
+    if accepted_gradient * descent_direction != accepted_directional_derivative:
+        fail("exact-line-minimizer-replay accepted directional derivative is incorrect")
+    if accepted_directional_derivative != 0:
+        fail("exact-line-minimizer-replay expected zero directional derivative")
+
+    sufficient_decrease = checks["wolfe-sufficient-decrease-replay"]
+    if sufficient_decrease["expected_result"] != "sat":
+        fail("wolfe-sufficient-decrease-replay must expect sat")
+    sufficient_decrease_values = single_witness_values(sufficient_decrease, witnesses)
+    if sufficient_decrease_values != values:
+        fail("wolfe-sufficient-decrease-replay must cite the Wolfe line-search witness")
+    computed_armijo_rhs = start_value + wolfe_c1 * accepted_step * initial_directional_derivative
+    if armijo_rhs != computed_armijo_rhs:
+        fail("wolfe-sufficient-decrease-replay Armijo RHS is incorrect")
+    if armijo_rhs - accepted_value != armijo_slack:
+        fail("wolfe-sufficient-decrease-replay Armijo slack is incorrect")
+    if armijo_slack < 0:
+        fail("wolfe-sufficient-decrease-replay must record nonnegative slack")
+
+    curvature = checks["wolfe-curvature-replay"]
+    if curvature["expected_result"] != "sat":
+        fail("wolfe-curvature-replay must expect sat")
+    curvature_values = single_witness_values(curvature, witnesses)
+    if curvature_values != values:
+        fail("wolfe-curvature-replay must cite the Wolfe line-search witness")
+    if wolfe_c2 * abs(initial_directional_derivative) != curvature_bound:
+        fail("wolfe-curvature-replay curvature_bound is incorrect")
+    if curvature_bound - abs(accepted_directional_derivative) != curvature_slack:
+        fail("wolfe-curvature-replay curvature_slack is incorrect")
+    if curvature_slack < 0:
+        fail("wolfe-curvature-replay must record nonnegative slack")
+
+    if start_x + bad_step * descent_direction != bad_candidate_x:
+        fail("bad Wolfe candidate is incorrect")
+    if polynomial_eval(polynomial, bad_candidate_x) != bad_value:
+        fail("bad Wolfe value is incorrect")
+    if quadratic_derivative_value(polynomial, bad_candidate_x) != bad_gradient:
+        fail("bad Wolfe gradient is incorrect")
+    if bad_gradient * descent_direction != bad_directional_derivative:
+        fail("bad Wolfe directional derivative is incorrect")
+    if abs(bad_directional_derivative) != bad_curvature_abs:
+        fail("bad Wolfe curvature absolute value is incorrect")
+    if bad_curvature_abs - curvature_bound != bad_curvature_violation:
+        fail("bad Wolfe curvature violation is incorrect")
+    if bad_curvature_violation <= 0:
+        fail("bad Wolfe row must have positive curvature violation")
+
+    bad = checks["bad-wolfe-curvature-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-wolfe-curvature-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "quadratic-wolfe-step":
+        fail("bad-wolfe-curvature-rejected must cite the quadratic-wolfe-step witness")
+    computed_violation = require_fraction(
+        "bad Wolfe computed_violation",
+        data.get("computed_violation"),
+    )
+    claimed_upper_bound = require_fraction(
+        "bad Wolfe claimed_violation_upper_bound",
+        data.get("claimed_violation_upper_bound"),
+    )
+    if computed_violation != bad_curvature_violation:
+        fail("bad-wolfe-curvature-rejected computed_violation does not match replay")
+    if computed_violation <= claimed_upper_bound:
+        fail("bad-wolfe-curvature-rejected malformed bound must contradict replay")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad Wolfe smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-wolfe-line-search-v0/smt2/bad-wolfe-curvature-farkas-conflict.smt2":
+        fail("bad-wolfe-curvature-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad Wolfe smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad Wolfe farkas_regression", regression)
+    if "finite_wolfe_line_search_bad_curvature_artifact_emits_checked_farkas" not in regression:
+        fail("bad-wolfe-curvature-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad Wolfe certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-wolfe-curvature-rejected certificate must document checked Farkas evidence")
+
+    horizon = checks["general-wolfe-line-search-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-wolfe-line-search-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-wolfe-line-search-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("Wolfe line search target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("Wolfe line search future_checker", data.get("future_checker"))
+
+
 def validate_finite_projected_gradient(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -17583,6 +17763,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_gradient_descent(expected)
     if metadata["id"] == "finite-line-search-v0":
         validate_finite_line_search(expected)
+    if metadata["id"] == "finite-wolfe-line-search-v0":
+        validate_finite_wolfe_line_search(expected)
     if metadata["id"] == "finite-projected-gradient-v0":
         validate_finite_projected_gradient(expected)
     if metadata["id"] == "finite-proximal-gradient-v0":

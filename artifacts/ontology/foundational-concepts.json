@@ -810,6 +810,12 @@
           "notes": "Finite exact Armijo line-search replay with checked bad-acceptance rejection."
         },
         {
+          "id": "finite-wolfe-line-search-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-wolfe-line-search-v0",
+          "notes": "Finite exact Wolfe line-search replay with checked bad-curvature rejection."
+        },
+        {
           "id": "finite-projected-gradient-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-projected-gradient-v0",
@@ -1782,6 +1788,12 @@
           "notes": "Exact Armijo trial rejection, backtracked-step acceptance, and bad-acceptance rejection."
         },
         {
+          "id": "finite-wolfe-line-search-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-wolfe-line-search-v0",
+          "notes": "Exact Wolfe sufficient-decrease and curvature replay with bad-curvature rejection."
+        },
+        {
           "id": "finite-projected-gradient-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-projected-gradient-v0",
@@ -1895,6 +1907,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-line-search-v0",
           "notes": "Finite exact Armijo rejection/acceptance replay and convergence-theorem horizon rows."
+        },
+        {
+          "id": "finite-wolfe-line-search-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-wolfe-line-search-v0",
+          "notes": "Finite exact Wolfe sufficient-decrease/curvature replay and convergence-theorem horizon rows."
         },
         {
           "id": "finite-projected-gradient-v0",
@@ -2836,7 +2854,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A rational convexity-shadow row checks fixed midpoint/Jensen instances, finite second differences, affine monotonicity, exact gradient replay, Hessian-minor witnesses, finite gradient-descent, line-search, projected-gradient, and proximal-gradient steps, finite KKT stationarity/complementarity, and finite SDP primal/dual slack rows over rational data while keeping general convex-analysis theorems separate.",
+      "summary": "A rational convexity-shadow row checks fixed midpoint/Jensen instances, finite second differences, affine monotonicity, exact gradient replay, Hessian-minor witnesses, finite gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient steps, finite KKT stationarity/complementarity, and finite SDP primal/dual slack rows over rational data while keeping general convex-analysis theorems separate.",
       "prerequisites": [
         "bridge_lp_objective_farkas",
         "bridge_bounded_epsilon_delta_shadow",
@@ -2857,6 +2875,7 @@
         "finite grid replay",
         "finite gradient descent replay",
         "finite line search replay",
+        "finite Wolfe line search replay",
         "finite projected gradient replay",
         "finite KKT replay",
         "finite SDP replay",
@@ -2907,6 +2926,12 @@
           "notes": "Finite exact Armijo rejection/acceptance and bad-acceptance rows over exact rationals."
         },
         {
+          "id": "finite-wolfe-line-search-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-wolfe-line-search-v0",
+          "notes": "Finite exact Wolfe sufficient-decrease, curvature, and bad-curvature rows over exact rationals."
+        },
+        {
           "id": "finite-projected-gradient-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-projected-gradient-v0",
@@ -2953,7 +2978,7 @@
             "docs/learn/math/linear-algebra-and-optimization.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "The finite checker recomputes midpoint values, grid differences, gradients, Jacobians, Hessian minors, and normal-equation residuals, finite gradient, Armijo line-search, projected-gradient, and proximal-gradient steps, finite KKT residuals, and two-by-two SDP slack/objective arithmetic exactly; false linearized claims use checked Farkas evidence when promoted."
+          "notes": "The finite checker recomputes midpoint values, grid differences, gradients, Jacobians, Hessian minors, and normal-equation residuals, finite gradient, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient steps, finite KKT residuals, and two-by-two SDP slack/objective arithmetic exactly; false linearized claims use checked Farkas evidence when promoted."
         }
       ],
       "source_refs": [
@@ -8944,7 +8969,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, gradient-step, line-search, projected-gradient, and proximal-gradient rational shadows."
+          "notes": "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -9017,6 +9042,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
           "notes": "Finite Root-Finding Checks"
+        },
+        {
+          "id": "finite-wolfe-line-search-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-wolfe-line-search-v0",
+          "notes": "Finite Wolfe Line-Search Checks"
         },
         {
           "id": "inner-product-spaces-rational-v0",
@@ -9163,6 +9194,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-line-search-v0",
           "notes": "Finite Armijo line-search replay with checked bad-acceptance rejection."
+        },
+        {
+          "id": "finite-wolfe-line-search-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-wolfe-line-search-v0",
+          "notes": "Finite Wolfe line-search replay with checked bad-curvature rejection."
         },
         {
           "id": "finite-projected-gradient-v0",
@@ -9619,6 +9656,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-topology-v0",
           "notes": "Finite Topology And Metric-Ball Checks"
+        },
+        {
+          "id": "finite-wolfe-line-search-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-wolfe-line-search-v0",
+          "notes": "Finite Wolfe Line-Search Checks"
         },
         {
           "id": "generating-functions-v0",

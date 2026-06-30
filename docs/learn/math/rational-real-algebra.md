@@ -23,6 +23,7 @@ Example packs:
 - [finite-sdp-v0](../../../artifacts/examples/math/finite-sdp-v0/)
 - [finite-gradient-descent-v0](../../../artifacts/examples/math/finite-gradient-descent-v0/)
 - [finite-line-search-v0](../../../artifacts/examples/math/finite-line-search-v0/)
+- [finite-wolfe-line-search-v0](../../../artifacts/examples/math/finite-wolfe-line-search-v0/)
 - [finite-projected-gradient-v0](../../../artifacts/examples/math/finite-projected-gradient-v0/)
 - [finite-proximal-gradient-v0](../../../artifacts/examples/math/finite-proximal-gradient-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
@@ -47,8 +48,8 @@ coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
 companion-matrix replay, finite bisection/Newton root-finding replay, finite
 convex-hull/separating-hyperplane replay, finite KKT stationarity and
 complementary-slackness replay, finite SDP primal/dual slack replay, finite
-gradient-descent step replay, finite line-search replay, finite
-projected-gradient replay, finite proximal-gradient replay, LP feasibility and
+gradient-descent step replay, finite line-search replay, finite Wolfe
+line-search replay, finite projected-gradient replay, finite proximal-gradient replay, LP feasibility and
 infeasibility certificates, finite convexity and monotonicity checks, exact
 rational gradients, Jacobian chain-rule replay, Hessian minor checks,
 midpoints, collinearity determinants, squared distances, affine maps, signed
@@ -255,6 +256,26 @@ violation `1`; the final contradiction is checked through QF_LRA/Farkas
 evidence. For a focused trace, read
 [End To End: Finite Line Search Checks](finite-line-search-end-to-end.md).
 
+For a finite Wolfe line-search check, encode one exact quadratic line-search
+certificate:
+
+```text
+f(x) = x^2
+x0 = 1
+direction = -2
+c1 = 1/4
+c2 = 1/2
+accepted alpha = 1/2
+```
+
+The `finite-wolfe-line-search-v0` validator recomputes the derivative,
+directional derivative, exact minimizer candidate, Wolfe sufficient-decrease
+slack, and Wolfe curvature slack. Its bad row claims the full step `alpha = 1`
+satisfies curvature even though exact replay computes curvature violation `2`;
+the final nonpositive-violation contradiction is checked through
+QF_LRA/Farkas evidence. For a focused trace, read
+[End To End: Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md).
+
 For a finite projected-gradient check, encode one interval-constrained step:
 
 ```text
@@ -369,6 +390,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-line-search-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_armijo_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-wolfe-line-search-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_curvature_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-projected-gradient-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_projected_gradient_bad_projection_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-proximal-gradient-v0
@@ -415,6 +438,7 @@ For exact finite convexity and KKT replay, read
 gradient descent, line search, projected gradient, and proximal gradient, read
 [End To End: Finite Gradient Descent Checks](finite-gradient-descent-end-to-end.md)
 and [End To End: Finite Line Search Checks](finite-line-search-end-to-end.md),
+and [End To End: Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md),
 and [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md),
 and [End To End: Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md). For exact
 finite coordinate, incidence, rigid-configuration, affine, and oriented geometry replay, read
@@ -426,7 +450,7 @@ finite coordinate, incidence, rigid-configuration, affine, and oriented geometry
 
 Completeness, arbitrary limits, continuity, compactness, integration, general
 KKT sufficiency, constraint qualifications, proximal-gradient convergence, and
-general real-analysis theorems
+Wolfe line-search convergence, and general real-analysis theorems
 remain Lean-horizon. Nonlinear real arithmetic closed-form
 generating-function extraction, asymptotics, and SOS/RCF certificates are
 future proof-route work, not assumed coverage.

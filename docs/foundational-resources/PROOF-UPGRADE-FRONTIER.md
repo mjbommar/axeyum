@@ -249,6 +249,9 @@ First targets:
 - [finite-line-search-v0](../../artifacts/examples/math/finite-line-search-v0/)
   (source-linked Farkas regression landed for the bad Armijo row after exact
   line-search replay computes rejected-step violation `1`)
+- [finite-wolfe-line-search-v0](../../artifacts/examples/math/finite-wolfe-line-search-v0/)
+  (source-linked Farkas regression landed for the bad curvature row after exact
+  Wolfe replay computes curvature violation `2`)
 - [finite-projected-gradient-v0](../../artifacts/examples/math/finite-projected-gradient-v0/)
   (source-linked Farkas regression landed for the bad projection row after
   exact projected-gradient replay rejects `3/2` for the interval `[0,1]`)

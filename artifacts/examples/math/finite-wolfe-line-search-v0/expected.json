@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-wolfe-line-search-v0",
+  "witnesses": [
+    {
+      "id": "quadratic-wolfe-step",
+      "description": "One exact Wolfe line-search witness for f(x)=x^2 from x=1 along direction -2.",
+      "values": {
+        "polynomial": ["0", "0", "1"],
+        "start_x": "1",
+        "start_value": "1",
+        "gradient": "2",
+        "descent_direction": "-2",
+        "initial_directional_derivative": "-4",
+        "wolfe_c1": "1/4",
+        "wolfe_c2": "1/2",
+        "accepted_step": "1/2",
+        "accepted_candidate_x": "0",
+        "accepted_value": "0",
+        "accepted_gradient": "0",
+        "accepted_directional_derivative": "0",
+        "armijo_rhs": "1/2",
+        "armijo_slack": "1/2",
+        "curvature_bound": "2",
+        "curvature_slack": "2",
+        "bad_step": "1",
+        "bad_candidate_x": "-1",
+        "bad_value": "1",
+        "bad_gradient": "-2",
+        "bad_directional_derivative": "4",
+        "bad_curvature_abs": "4",
+        "bad_curvature_violation": "2"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "wolfe-descent-direction-replay",
+      "claim": "At x=1 for f(x)=x^2, direction -2 is a descent direction with directional derivative -4.",
+      "expected_result": "sat",
+      "validation": "finite_wolfe_direction_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-wolfe-step"],
+      "notes": "The validator differentiates the quadratic and recomputes gradient * direction."
+    },
+    {
+      "id": "exact-line-minimizer-replay",
+      "claim": "The exact line minimizer along direction -2 is alpha=1/2 and reaches x=0.",
+      "expected_result": "sat",
+      "validation": "finite_exact_line_minimizer_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-wolfe-step"],
+      "notes": "The validator recomputes x+alpha*d, f(candidate), the gradient, and the zero directional derivative at the minimizer."
+    },
+    {
+      "id": "wolfe-sufficient-decrease-replay",
+      "claim": "The accepted step alpha=1/2 satisfies Wolfe sufficient decrease with slack 1/2.",
+      "expected_result": "sat",
+      "validation": "finite_wolfe_sufficient_decrease_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-wolfe-step"],
+      "notes": "The validator recomputes the Armijo right-hand side f(x)+c1*alpha*phi'(0) and the nonnegative slack."
+    },
+    {
+      "id": "wolfe-curvature-replay",
+      "claim": "The accepted step alpha=1/2 satisfies the Wolfe curvature bound with slack 2.",
+      "expected_result": "sat",
+      "validation": "finite_wolfe_curvature_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-wolfe-step"],
+      "notes": "The validator checks |phi'(alpha)| <= c2*|phi'(0)| over exact rationals."
+    },
+    {
+      "id": "bad-wolfe-curvature-rejected",
+      "claim": "The full step alpha=1 satisfies the same Wolfe curvature bound.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_wolfe_curvature_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "quadratic-wolfe-step",
+        "computed_violation": "2",
+        "claimed_violation_upper_bound": "0",
+        "smt2_artifact": "artifacts/examples/math/finite-wolfe-line-search-v0/smt2/bad-wolfe-curvature-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_curvature_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes curvature violation 2 for alpha=1, so the malformed nonpositive-violation claim is rejected by checked Farkas evidence."
+    },
+    {
+      "id": "general-wolfe-line-search-lean-horizon",
+      "claim": "General Wolfe line-search existence, convergence, and rate theorems require future Lean reconstruction.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Wolfe and strong-Wolfe line-search existence, descent lemmas, Zoutendijk-style convergence theorems, and rate statements for smooth optimization methods",
+        "future_checker": "Lean module with no sorryAx dependencies plus exact rational certificate bridges for finite Wolfe line-search witnesses"
+      },
+      "notes": "The finite rows check only one rational quadratic Wolfe instance; Wolfe line-search theory remains proof-assistant work."
+    }
+  ]
+}

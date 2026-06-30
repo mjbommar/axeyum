@@ -180,6 +180,10 @@ CURRICULUM_MAP = {
                 "Finite exact Armijo line-search replay with checked bad-acceptance rejection.",
             ),
             (
+                "finite-wolfe-line-search-v0",
+                "Finite exact Wolfe line-search replay with checked bad-curvature rejection.",
+            ),
+            (
                 "finite-projected-gradient-v0",
                 "Finite exact projected-gradient interval projection with checked bad-projection rejection.",
             ),
@@ -422,6 +426,10 @@ CURRICULUM_MAP = {
                 "Exact Armijo trial rejection, backtracked-step acceptance, and bad-acceptance rejection.",
             ),
             (
+                "finite-wolfe-line-search-v0",
+                "Exact Wolfe sufficient-decrease and curvature replay with bad-curvature rejection.",
+            ),
+            (
                 "finite-projected-gradient-v0",
                 "Exact interval projection after a gradient step and bad-projection rejection.",
             ),
@@ -462,6 +470,10 @@ CURRICULUM_MAP = {
                 "Finite exact Armijo rejection/acceptance replay and convergence-theorem horizon rows.",
             ),
             (
+                "finite-wolfe-line-search-v0",
+                "Finite exact Wolfe sufficient-decrease/curvature replay and convergence-theorem horizon rows.",
+            ),
+            (
                 "finite-projected-gradient-v0",
                 "Finite exact projected-gradient interval replay and convergence-theorem horizon rows.",
             ),
@@ -497,10 +509,11 @@ FIELD_PACKS = {
         ("finite-sdp-v0", "Finite SDP primal/dual slack replay with checked bad-objective rejection."),
         ("finite-gradient-descent-v0", "Finite gradient-descent step replay with checked bad-decrease rejection."),
         ("finite-line-search-v0", "Finite Armijo line-search replay with checked bad-acceptance rejection."),
+        ("finite-wolfe-line-search-v0", "Finite Wolfe line-search replay with checked bad-curvature rejection."),
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold replay with checked bad-proximal-point rejection."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, gradient-step, line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": ("coordinate-geometry-v0", "Incidence, line equations, distance tables, midpoint, collinearity, and rigid finite configurations."),
     "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
@@ -1325,7 +1338,7 @@ BRIDGE_CONCEPTS = [
             "A rational convexity-shadow row checks fixed midpoint/Jensen "
             "instances, finite second differences, affine monotonicity, exact "
             "gradient replay, Hessian-minor witnesses, finite gradient-descent, "
-            "line-search, projected-gradient, and proximal-gradient steps, finite KKT "
+            "Armijo/Wolfe line-search, projected-gradient, and proximal-gradient steps, finite KKT "
             "stationarity/complementarity, and finite SDP primal/dual slack "
             "rows over rational data while keeping "
             "general convex-analysis theorems separate."
@@ -1350,6 +1363,7 @@ BRIDGE_CONCEPTS = [
             "finite grid replay",
             "finite gradient descent replay",
             "finite line search replay",
+            "finite Wolfe line search replay",
             "finite projected gradient replay",
             "finite KKT replay",
             "finite SDP replay",
@@ -1384,6 +1398,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-line-search-v0",
                 "Finite exact Armijo rejection/acceptance and bad-acceptance rows over exact rationals.",
+            ),
+            (
+                "finite-wolfe-line-search-v0",
+                "Finite exact Wolfe sufficient-decrease, curvature, and bad-curvature rows over exact rationals.",
             ),
             (
                 "finite-projected-gradient-v0",
@@ -1425,7 +1443,7 @@ BRIDGE_CONCEPTS = [
                 "notes": (
                     "The finite checker recomputes midpoint values, grid "
                     "differences, gradients, Jacobians, Hessian minors, and "
-                    "normal-equation residuals, finite gradient, Armijo line-search, projected-gradient, and proximal-gradient steps, finite KKT residuals, and "
+                    "normal-equation residuals, finite gradient, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient steps, finite KKT residuals, and "
                     "two-by-two SDP slack/objective arithmetic exactly; false linearized "
                     "claims use checked Farkas evidence when promoted."
                 ),
