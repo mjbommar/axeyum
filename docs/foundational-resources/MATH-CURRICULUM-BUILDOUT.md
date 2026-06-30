@@ -1459,6 +1459,11 @@ polynomial, Cayley-Hamilton, and finite eigenvalue-interval step needed before
 broader spectral claims, with checked QF_LRA/Farkas false-characteristic
 polynomial rejection. `metric-continuity-v0` now adds the finite
 epsilon-delta and open-ball preimage bridge for analysis/topology learners.
+`metric-ball-epsilon-delta-index.md` now ties the bounded rational-ball,
+finite metric-continuity, sequence-tail, finite compactness, finite
+connectedness, and finite open-preimage resources into one learner path while
+keeping quantified continuity, compactness, connectedness, and convergence
+theorems in the Lean-horizon lane.
 `finite-compactness-v0` now adds the finite open-cover/subcover and
 finite-intersection bridge to the compactness horizon.
 `finite-connectedness-v0` now adds the finite clopen-subset/open-separation
@@ -2026,8 +2031,9 @@ per-pack query families for coverage, equivalence, thresholds, caps,
 version-deltas, and monotonicity.
 The consumer query layer now also exposes topology readiness:
 `CONSUMER-QUERIES.md` shows the Boolean/Diophantine field summaries,
-compactness/preimage/closure/homeomorphism/specialization/boundary/homology
-bridge lookups, concept queries for finite topology-operator/homeomorphism,
+metric/compactness/preimage/closure/homeomorphism/specialization/boundary/homology
+bridge lookups, concept queries for metric-ball, bounded epsilon-delta,
+finite topology-operator/homeomorphism,
 finite specialization-order, finite boundary-operator, and finite homology
 rows, and checked
 Boolean/Alethe/Diophantine topology row drill-downs. The

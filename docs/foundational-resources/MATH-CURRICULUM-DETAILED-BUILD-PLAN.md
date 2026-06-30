@@ -791,6 +791,15 @@ Pick one row per commit unless the change is purely navigational.
     invariance theorems in the Lean-horizon lane. The topology consumer smoke
     now includes quotient lookup and concept-scoped Alethe route queries, and
     the atlas now validates 65 bridge rows.
+93. Landed: add `metric-ball-epsilon-delta-index.md` as the cross-pack learner
+    path for bounded real-analysis, finite metric continuity, sequence-tail
+    shadows, finite compactness, finite connectedness, and finite
+    continuity/open-preimage replay. The bridge source refs and consumer smoke
+    now make `bridge_metric_ball` and
+    `bridge_bounded_epsilon_delta_shadow` discoverable through topology and
+    real-analysis queries while keeping quantified continuity, compactness,
+    connectedness, convergence, and arbitrary-space theorem claims in the
+    Lean-horizon lane.
 
 ## Validation Checklist
 

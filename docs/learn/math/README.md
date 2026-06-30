@@ -37,6 +37,9 @@ Companion maps:
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md):
   maps finite analysis, calculus, optimization, measure, dynamics, and operator
   shadows to their missing Lean/theorem reconstruction routes.
+- [Metric Balls And Epsilon-Delta Index](metric-ball-epsilon-delta-index.md):
+  connects bounded rational balls, finite metric continuity, sequence-tail
+  shadows, finite compactness, finite connectedness, and open-preimage replay.
 
 ## End-To-End Lessons
 
@@ -197,6 +200,10 @@ Companion maps:
   table replay, finite Lipschitz checks, epsilon-delta containment,
   open-ball preimage replay, checked QF_LRA/Farkas bad-delta rejection, and
   the continuity Lean horizon.
+- [Metric Balls And Epsilon-Delta Index](metric-ball-epsilon-delta-index.md):
+  groups bounded real-analysis, metric-continuity, finite-topology,
+  compactness, connectedness, and open-preimage resources by exact replay
+  shape and theorem horizon.
 - [Real Algebra RCF Shadow](reals-rcf-shadow-end-to-end.md): follows ordered
   field and nonlinear product witnesses, a quadratic root replay, square
   nonnegativity, negative-discriminant rejection with QF_LRA/Farkas evidence,

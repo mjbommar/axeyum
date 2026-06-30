@@ -433,6 +433,11 @@ Use atlas lookups for the reusable topology bridge concepts:
 ```sh
 python3 scripts/query-foundational-resources.py concepts \
   --field topology \
+  --text metric \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field topology \
   --text compactness \
   --require-any
 
@@ -492,7 +497,8 @@ python3 scripts/query-foundational-resources.py concepts \
   --require-any
 ```
 
-Concept-plus-route queries find finite topology-operator/homeomorphism rows,
+Concept-plus-route queries find finite metric-ball and bounded
+epsilon-delta rows, finite topology-operator/homeomorphism rows,
 finite quotient-topology rows, finite specialization-order rows, finite
 boundary-operator rows, finite
 chain-complex/homology rows, finite torsion-homology rows, finite cohomology
@@ -500,6 +506,22 @@ rows, finite universal-coefficient shadow rows, and finite cup-product rows
 without hard-coding pack ids:
 
 ```sh
+python3 scripts/query-foundational-resources.py packs \
+  --concept bridge_metric_ball \
+  --route Farkas \
+  --require-any
+
+python3 scripts/query-foundational-resources.py packs \
+  --concept bridge_bounded_epsilon_delta_shadow \
+  --route Farkas \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_bounded_epsilon_delta_shadow \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
 python3 scripts/query-foundational-resources.py packs \
   --concept bridge_finite_topology_operator_homeomorphism \
   --route Alethe \
@@ -934,6 +956,11 @@ python3 scripts/query-foundational-resources.py concepts \
 
 python3 scripts/query-foundational-resources.py concepts \
   --field real_analysis \
+  --text metric \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field real_analysis \
   --text gradient \
   --require-any
 ```
@@ -1262,6 +1289,7 @@ python3 scripts/query-foundational-resources.py fields --field topology --route 
 python3 scripts/query-foundational-resources.py fields --field topology --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field topology --route qf-bv --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text compactness --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field topology --text metric --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text preimage --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text closure --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text homeomorphism --require-any >/dev/null
@@ -1276,6 +1304,9 @@ python3 scripts/query-foundational-resources.py checks --field topology --route 
 python3 scripts/query-foundational-resources.py checks --field topology --route alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field topology --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field topology --route qf-bv --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_metric_ball --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_bounded_epsilon_delta_shadow --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_bounded_epsilon_delta_shadow --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_topology_operator_homeomorphism --route alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_topology_operator_homeomorphism --route alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_specialization_order_replay --route alethe --require-any >/dev/null
@@ -1329,6 +1360,7 @@ python3 scripts/query-foundational-resources.py packs --concept bridge_finite_gr
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_graph_replay_obstruction --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field real_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text epsilon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field real_analysis --text metric --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text gradient --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field real_analysis --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field numerical_analysis --route Farkas --require-any >/dev/null

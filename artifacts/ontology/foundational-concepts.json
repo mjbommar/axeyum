@@ -4614,7 +4614,8 @@
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/learn/math/finite-topology-measure-end-to-end.md",
             "docs/learn/math/analysis-topology-proof-horizons.md",
-            "docs/learn/math/analysis-calculus-theorem-horizon-map.md"
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+            "docs/learn/math/metric-ball-epsilon-delta-index.md"
           ],
           "notes": "The finite checker recomputes the ball from the distance table and rational radius; solver evidence is only needed when a later negative row isolates a linear contradiction."
         }
@@ -4625,6 +4626,7 @@
         "docs/learn/math/finite-topology-measure-end-to-end.md",
         "docs/learn/math/analysis-topology-proof-horizons.md",
         "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+        "docs/learn/math/metric-ball-epsilon-delta-index.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md"
       ],
       "open_gaps": [
@@ -4711,6 +4713,7 @@
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/metric-ball-epsilon-delta-index.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
           "notes": "The finite/bounded rows are checked directly; bad linear delta claims are promoted only when the final rational inequality conflict carries rechecked Farkas evidence."
@@ -4722,6 +4725,7 @@
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/learn/math/analysis-topology-proof-horizons.md",
         "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+        "docs/learn/math/metric-ball-epsilon-delta-index.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
@@ -4803,6 +4807,7 @@
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/metric-ball-epsilon-delta-index.md",
             "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
           ],
           "notes": "Finite cover and subcover rows are replayed from source sets; the promoted bad-cover row separately checks the isolated Boolean contradiction with DRAT/LRAT."
@@ -4815,6 +4820,7 @@
         "docs/learn/math/finite-compactness-end-to-end.md",
         "docs/learn/math/analysis-topology-proof-horizons.md",
         "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+        "docs/learn/math/metric-ball-epsilon-delta-index.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
       ],
@@ -4895,6 +4901,7 @@
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/metric-ball-epsilon-delta-index.md",
             "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
           ],
           "notes": "The finite checker enumerates all subsets and recomputes clopen/open-separation facts; the promoted negative row also checks the isolated Boolean contradiction with DRAT/LRAT."
@@ -4907,6 +4914,7 @@
         "docs/learn/math/finite-connectedness-end-to-end.md",
         "docs/learn/math/analysis-topology-proof-horizons.md",
         "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+        "docs/learn/math/metric-ball-epsilon-delta-index.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
       ],
@@ -4988,7 +4996,8 @@
           "sources": [
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
-            "docs/learn/math/finite-continuous-maps-end-to-end.md"
+            "docs/learn/math/finite-continuous-maps-end-to-end.md",
+            "docs/learn/math/metric-ball-epsilon-delta-index.md"
           ],
           "notes": "The validator recomputes every listed preimage from the function table and checks openness in the domain; general continuity theorems remain Lean-horizon."
         }
@@ -4999,6 +5008,7 @@
         "docs/learn/math/finite-continuous-maps-end-to-end.md",
         "docs/learn/math/analysis-topology-proof-horizons.md",
         "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+        "docs/learn/math/metric-ball-epsilon-delta-index.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md"
       ],
       "open_gaps": [

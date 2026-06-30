@@ -9,6 +9,10 @@ Concept rows:
 - `curriculum_sequences_and_limits`, `curriculum_calculus`, and
   `curriculum_reals` in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
+- `bridge_metric_ball`, `bridge_bounded_epsilon_delta_shadow`,
+  `bridge_continuity_preimage`, `bridge_compactness_shadow`, and
+  `bridge_connectedness_shadow` for the bounded metric, epsilon-delta,
+  finite-cover, finite-separation, and open-preimage slices.
 - `bridge_finite_topology_operator_homeomorphism`,
   `bridge_finite_quotient_topology_replay`,
   `bridge_finite_specialization_order_replay`,
@@ -60,6 +64,7 @@ Example packs:
 Companion map:
 
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
+- [Metric Balls And Epsilon-Delta Index](metric-ball-epsilon-delta-index.md)
 
 ## What Axeyum Checks
 

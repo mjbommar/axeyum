@@ -206,10 +206,11 @@ Lebesgue measure, general product-measure existence, convergence theorems, and
 almost-everywhere reasoning in the Lean-horizon lane.
 The public foundational-resource consumer query layer now also exercises the
 topology lane: Boolean, Alethe, Diophantine, and QF_BV field readiness,
-compactness/preimage/closure/homeomorphism/quotient/specialization/boundary/homology/
+metric/compactness/preimage/closure/homeomorphism/quotient/specialization/boundary/homology/
 torsion/cohomology/universal/cup
-bridge lookups, concept-scoped finite topology-operator/homeomorphism, finite
-quotient-topology, finite specialization-order, finite boundary-operator, chain-complex/homology, and
+bridge lookups, concept-scoped metric-ball, bounded epsilon-delta,
+finite topology-operator/homeomorphism, finite quotient-topology, finite
+specialization-order, finite boundary-operator, chain-complex/homology, and
 finite torsion-homology/cohomology/universal-coefficient/cup-product
 queries, and checked
 Boolean/Alethe/Diophantine/QF_BV rows for finite topology, compactness, connectedness,

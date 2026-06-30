@@ -1693,6 +1693,13 @@ Pick one item per commit unless the change is purely navigational.
      evidence discoverable without promoting quotient topology universal
      properties, quotient-map theorem schemas, or arbitrary preservation and
      invariance theorems.
+104. Landed: add `metric-ball-epsilon-delta-index.md`, wiring bounded
+     rational balls, finite metric continuity, sequence-tail shadows, finite
+     compactness, finite connectedness, and open-preimage topology replay into
+     one learner path. The atlas source refs and consumer smoke now expose
+     metric-ball and bounded epsilon-delta bridge discovery without promoting
+     quantified continuity, compactness, connectedness, or convergence
+     theorems.
 
 ## Validation Checklist
 

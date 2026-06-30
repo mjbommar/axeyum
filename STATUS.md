@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Metric-ball / epsilon-delta learner index landed.**
+  `metric-ball-epsilon-delta-index.md` now ties bounded rational balls,
+  finite metric continuity, sequence-tail shadows, finite compactness, finite
+  connectedness, and finite continuity/open-preimage replay into one learner
+  path. The generated bridge source refs and consumer smoke now make
+  `bridge_metric_ball` and `bridge_bounded_epsilon_delta_shadow` discoverable
+  through topology and real-analysis queries without changing the 108-pack /
+  65-bridge baseline. The boundary is explicit: exact finite or bounded replay
+  and checked Farkas/Boolean certificates are current evidence; quantified
+  continuity, compactness, connectedness, convergence, and arbitrary-space
+  theorem claims remain Lean-horizon.
+
 - **Finite quotient-topology resource and bridge landed.**
   `finite-quotient-topology-v0` and
   `bridge_finite_quotient_topology_replay` now make quotient-map fibers,

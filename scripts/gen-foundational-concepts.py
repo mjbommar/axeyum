@@ -2947,6 +2947,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/finite-topology-measure-end-to-end.md",
                     "docs/learn/math/analysis-topology-proof-horizons.md",
                     "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+                    "docs/learn/math/metric-ball-epsilon-delta-index.md",
                 ],
                 "notes": (
                     "The finite checker recomputes the ball from the distance "
@@ -2961,6 +2962,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/finite-topology-measure-end-to-end.md",
             "docs/learn/math/analysis-topology-proof-horizons.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+            "docs/learn/math/metric-ball-epsilon-delta-index.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
@@ -3032,6 +3034,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/finite-model-replay.md",
                     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/metric-ball-epsilon-delta-index.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
@@ -3047,6 +3050,7 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/analysis-topology-proof-horizons.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+            "docs/learn/math/metric-ball-epsilon-delta-index.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
@@ -3115,6 +3119,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/finite-model-replay.md",
                     "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/metric-ball-epsilon-delta-index.md",
                     "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
                 ],
                 "notes": (
@@ -3131,6 +3136,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/finite-compactness-end-to-end.md",
             "docs/learn/math/analysis-topology-proof-horizons.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+            "docs/learn/math/metric-ball-epsilon-delta-index.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
         ],
@@ -3198,6 +3204,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/finite-model-replay.md",
                     "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/metric-ball-epsilon-delta-index.md",
                     "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
                 ],
                 "notes": (
@@ -3214,6 +3221,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/finite-connectedness-end-to-end.md",
             "docs/learn/math/analysis-topology-proof-horizons.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+            "docs/learn/math/metric-ball-epsilon-delta-index.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
         ],
@@ -3283,6 +3291,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/finite-model-replay.md",
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
                     "docs/learn/math/finite-continuous-maps-end-to-end.md",
+                    "docs/learn/math/metric-ball-epsilon-delta-index.md",
                 ],
                 "notes": (
                     "The validator recomputes every listed preimage from the "
@@ -3297,6 +3306,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/finite-continuous-maps-end-to-end.md",
             "docs/learn/math/analysis-topology-proof-horizons.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+            "docs/learn/math/metric-ball-epsilon-delta-index.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
