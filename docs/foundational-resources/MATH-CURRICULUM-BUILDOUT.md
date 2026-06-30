@@ -767,7 +767,8 @@ Euler-method traces, polynomial-solution error replay, invariant checks,
 checked QF_LRA/Farkas rejection of a bad Euler step, and an ODE-theory
 Lean-horizon row.
 `artifacts/examples/math/finite-operator-v0/` now validates exact
-finite-dimensional norm, matrix-operator, and Chebyshev recurrence checks.
+finite-dimensional norm, matrix-operator, Chebyshev recurrence checks, and a
+checked QF_LRA/Farkas bad operator-bound row.
 `artifacts/examples/math/inner-product-spaces-rational-v0/` now validates
 exact rational Gram matrices, positive-definite principal minors,
 Cauchy-Schwarz replay for fixed vectors, orthogonal projection replay,
@@ -842,8 +843,8 @@ Recommended order:
    fixed-step rejection.
 11. `finite-operator-v0` and `inner-product-spaces-rational-v0`:
    finite-dimensional norms/operators, exact rational inner products,
-   projections, Gram-Schmidt replay, QF_LRA/Farkas bad-norm rejection, and
-   Chebyshev polynomial examples.
+   projections, Gram-Schmidt replay, QF_LRA/Farkas bad-bound and bad-norm
+   rejections, and Chebyshev polynomial examples.
 12. `complex-algebraic-v0` and `complex-plane-transforms-v0`: complex
     arithmetic, unit-root cycles, conjugation/product replay, and rational
     Mobius transforms as real-pair algebra.

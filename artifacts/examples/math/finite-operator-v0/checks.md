@@ -20,3 +20,12 @@ Expected result: `sat`.
 
 The validator checks the exact values `T0(1/2)`, `T1(1/2)`, `T2(1/2)`, and
 `T3(1/2)` against the recurrence `T(n+1) = 2*x*T(n) - T(n-1)`.
+
+## `bad-operator-bound-rejected`
+
+Expected result: `unsat`.
+
+The validator recomputes `A*x = (3, 3)`, `||A*x||_infty = 3`, `||A||_row-sum =
+3`, and `||x||_infty = 2`. The malformed row claims the image norm is at most
+`2`, so the source QF_LRA artifact closes the final contradiction with checked
+Farkas evidence.

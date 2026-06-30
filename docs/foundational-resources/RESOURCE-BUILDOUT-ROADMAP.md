@@ -40,12 +40,12 @@ The current committed data boundary reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math example packs.
-- 419 expected checks.
-- 201 checked proof/evidence rows.
+- 420 expected checks.
+- 202 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 81 promoted solver-reuse packs.
-- 3 non-benchmark-horizon solver-reuse packs.
+- 82 promoted solver-reuse packs.
+- 2 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
@@ -886,8 +886,10 @@ Build next:
 - Add concept rows for finite-dimensional norm, matrix operator, dual space,
   projection, Gram matrix, Chebyshev system, interpolation matrix,
   alternating residual, spectral decomposition, and Banach/Hilbert horizon.
-- Promote finite-dimensional bad norm/operator/interpolation rows through
-  QF_LRA/Farkas where exact rational constraints apply.
+- Keep `finite-operator-v0`'s promoted bad operator-bound row tied to exact
+  replay plus the source QF_LRA/Farkas artifact.
+- Promote additional finite-dimensional bad norm/operator/interpolation rows
+  through QF_LRA/Farkas where exact rational constraints apply.
 - Keep Banach-space theorems, compact operators, general Chebyshev spaces,
   projection theorem, and topological duals as Lean-horizon.
 

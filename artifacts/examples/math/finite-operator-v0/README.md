@@ -10,6 +10,8 @@ small LRA/NRA/BV obligations:
 
 - an `l1` norm triangle witness;
 - an infinity-norm matrix operator bound via the row-sum norm;
+- a malformed finite-dimensional operator-bound row checked through
+  QF_LRA/Farkas evidence;
 - a Chebyshev polynomial recurrence witness at a fixed rational point.
 
 ## Concepts
@@ -26,12 +28,13 @@ small LRA/NRA/BV obligations:
 
 The validator parses every vector, matrix entry, norm, and polynomial value as
 an exact rational string. It recomputes vector sums, norms, matrix-vector
-products, row-sum operator norms, and the Chebyshev recurrence
-`T(n+1) = 2*x*T(n) - T(n-1)`.
+products, row-sum operator norms, the bad-bound source data, and the Chebyshev
+recurrence `T(n+1) = 2*x*T(n) - T(n-1)`.
 
-This pack is replay-only today. General normed-space theorems, compact
-operators, approximation theorems, and Chebyshev-space theorems remain
-Lean-horizon material.
+The malformed operator-bound row is checked by the QF_LRA/Farkas route after
+exact replay computes `||A*x||_infty = 3` and rejects the claimed upper bound
+`2`. General normed-space theorems, compact operators, approximation theorems,
+and Chebyshev-space theorems remain Lean-horizon material.
 
 Validation:
 

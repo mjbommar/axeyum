@@ -211,7 +211,9 @@ For an operator example, the finite-operator pack checks:
 ||A*x||_infty <= ||A||_row-sum * ||x||_infty
 ```
 
-using exact rational arithmetic.
+using exact rational arithmetic. Its bad-bound row also rejects the malformed
+claim `||A*x||_infty <= 2` after replay computes `||A*x||_infty = 3`, with the
+final inequality conflict checked by QF_LRA/Farkas evidence.
 
 For a Jacobian/Hessian bridge into optimization, encode:
 
@@ -263,6 +265,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 ```
 
@@ -293,11 +296,11 @@ finite Chebyshev-system interpolation and alternation replay, read
 ## Proof Upgrade Notes
 
 Exact rational matrix witnesses, projections, residuals, spectra, random-matrix
-moments, and finite-dimensional operator rows start as
+moments, and satisfiable finite-dimensional operator rows start as
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md).
 Infeasible rational systems, LP thresholds, bad residual bounds, malformed
-eigenpairs, bad characteristic-polynomial rows, and negative-norm examples
-graduate through
+eigenpairs, bad characteristic-polynomial rows, bad operator-bound rows, and
+negative-norm examples graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
 Finite vector-space, dual-space, module, ideal, and tensor-product equality
 conflicts use

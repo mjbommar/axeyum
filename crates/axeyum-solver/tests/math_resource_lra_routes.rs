@@ -46,6 +46,9 @@ const FINITE_MEASURE_BAD_COMPLEMENT: &str = include_str!(
 const COORDINATE_GEOMETRY_BAD_DISTANCE_SQUARED: &str = include_str!(
     "../../../artifacts/examples/math/coordinate-geometry-v0/smt2/bad-distance-squared-farkas-conflict.smt2"
 );
+const FINITE_OPERATOR_BAD_OPERATOR_BOUND: &str = include_str!(
+    "../../../artifacts/examples/math/finite-operator-v0/smt2/bad-operator-bound-farkas-conflict.smt2"
+);
 const RATIONALS_TRICHOTOMY_NONLESS: &str = include_str!(
     "../../../artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-nonless-farkas-conflict.smt2"
 );
@@ -369,6 +372,14 @@ fn coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "coordinate-geometry-v0 bad-distance-squared SMT-LIB artifact",
         COORDINATE_GEOMETRY_BAD_DISTANCE_SQUARED,
+    );
+}
+
+#[test]
+fn finite_operator_bad_operator_bound_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-operator-v0 bad-operator-bound SMT-LIB artifact",
+        FINITE_OPERATOR_BAD_OPERATOR_BOUND,
     );
 }
 

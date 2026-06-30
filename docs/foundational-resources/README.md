@@ -359,8 +359,9 @@ schemas, examples, and validation workflows.
   invariant checks, checked rejection of a bad Euler step, and an ODE-theory
   Lean-horizon row.
 - [`artifacts/examples/math/finite-operator-v0/`](../../artifacts/examples/math/finite-operator-v0/)
-  validates exact finite-dimensional norm, matrix-operator, and Chebyshev
-  recurrence checks.
+  validates exact finite-dimensional norm, matrix-operator, Chebyshev
+  recurrence checks, and checked QF_LRA/Farkas rejection of a bad operator
+  bound.
 - [`artifacts/examples/math/finite-chebyshev-systems-v0/`](../../artifacts/examples/math/finite-chebyshev-systems-v0/)
   validates exact finite Vandermonde unisolvence, interpolation replay,
   alternating residual signs, checked QF_LRA/Farkas rejection of a

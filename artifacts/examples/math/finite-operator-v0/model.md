@@ -45,6 +45,15 @@ row-sum norm of `A` is `3`, giving:
 ||A*x||_infty = 3 <= 3 * 2 = 6
 ```
 
+The bad-bound row reuses the same exact source object but claims:
+
+```text
+||A*x||_infty <= 2
+```
+
+Exact replay computes `||A*x||_infty = 3`, so the final inequality is a small
+QF_LRA/Farkas contradiction.
+
 ## Chebyshev Recurrence Witness
 
 For `x = 1/2`, the listed values are:

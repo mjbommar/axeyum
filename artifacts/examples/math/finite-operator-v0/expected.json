@@ -66,6 +66,30 @@
       "proof_status": "replay-only",
       "witnesses": ["chebyshev-half-values"],
       "notes": "The validator checks T0, T1, and every listed recurrence step exactly."
+    },
+    {
+      "id": "bad-operator-bound-rejected",
+      "claim": "The listed matrix-vector image has infinity norm at most 2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_operator_bad_bound_refutation",
+      "proof_status": "checked",
+      "data": {
+        "matrix": [
+          ["1", "-1"],
+          ["2", "1"]
+        ],
+        "vector": ["2", "-1"],
+        "computed_image": ["3", "3"],
+        "computed_image_norm": "3",
+        "computed_operator_norm": "3",
+        "computed_vector_norm": "2",
+        "computed_bound": "6",
+        "claimed_bound": "2",
+        "smt2_artifact": "artifacts/examples/math/finite-operator-v0/smt2/bad-operator-bound-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact operator replay computes ||A*x||_infty = 3 and row-sum bound 6, while the malformed row claims the image norm is at most 2; the source QF_LRA artifact isolates that final inequality conflict for Farkas checking."
     }
   ]
 }

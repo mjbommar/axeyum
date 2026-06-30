@@ -314,8 +314,9 @@ validated pack data and the repo-root command that replays it.
   reachability, explicit Euler replay, finite error tables, and checked
   QF_LRA/Farkas bad Euler-step rejection.
 - [Bounded Dynamics And Operators](analysis-dynamics-end-to-end.md): follows
-  bounded recurrence, invariant, operator-bound, Chebyshev recurrence, and
-  finite Chebyshev-system replay.
+  bounded recurrence, invariant, operator-bound, checked QF_LRA/Farkas bad
+  operator-bound rejection, Chebyshev recurrence, and finite Chebyshev-system
+  replay.
 - [Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md): follows
   exact Vandermonde unisolvence, interpolation, alternating residual signs,
   checked QF_LRA/Farkas duplicate-node determinant rejection, and the

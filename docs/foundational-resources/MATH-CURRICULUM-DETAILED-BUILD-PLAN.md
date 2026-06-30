@@ -37,12 +37,12 @@ The committed resource query currently reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math packs.
-- 419 expected checks.
-- 201 checked proof/evidence rows.
+- 420 expected checks.
+- 202 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 81 promoted solver-reuse packs.
-- 3 non-benchmark-horizon solver-reuse packs.
+- 82 promoted solver-reuse packs.
+- 2 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -97,7 +97,6 @@ Recently classified as explicit non-benchmark-horizon rows:
 |---|---|
 | `bounded-dynamics-v0` | add a bounded safety or invariant-refutation row with a source-linked QF_LRA/BV artifact |
 | `complex-algebraic-v0` | add a false real-pair algebra or polynomial-root row with a source-linked LRA/NRA artifact |
-| `finite-operator-v0` | add a false operator-bound, norm inequality, or recurrence row with a source-linked exact-rational artifact |
 
 Exit criteria:
 
@@ -214,7 +213,7 @@ Exit criteria:
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms | keep finite replay and numerical-honesty rows distinct from promoted exact residual/error certificates | QF_LRA/Farkas, replay, Lean horizon |
 | `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | upgrade bounded dynamics from non-benchmark only with checked invariant/transition counterexamples | QF_LRA/Farkas, replay, Lean horizon |
 | `geometry` | coordinate, affine, orientation/area rational geometry | coordinate geometry now has a checked bad squared-distance row; add only distinct incidence, collinearity, midpoint, or rigid-configuration pressure | QF_LRA/Farkas, finite replay |
-| `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | keep finite-dimensional operator replay non-benchmark until a checked bad-bound row exists | QF_LRA/Farkas, replay, Lean horizon |
+| `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now has a checked bad-bound row; add only distinct norm, recurrence, interpolation, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
 
 ## Curriculum Node Build Ledger
 
@@ -289,11 +288,13 @@ Pick one row per commit unless the change is purely navigational.
    missing-empty-set Bool/CNF DIMACS artifact and DRAT/LRAT route regression.
 18. Landed: promote `coordinate-geometry-v0` through a source-linked bad
    squared-distance QF_LRA/Farkas artifact and route regression.
-19. Add a proof-object learner page that follows one resource from source claim
+19. Landed: promote `finite-operator-v0` through a source-linked bad
+   operator-bound QF_LRA/Farkas artifact and route regression.
+20. Add a proof-object learner page that follows one resource from source claim
    to emitted proof and corrupted-proof rejection.
-20. Add a generated or query-based audit for unclassified solver-reuse packs if
+21. Add a generated or query-based audit for unclassified solver-reuse packs if
    manual tracking starts to drift.
-21. Revisit the library boundary after unclassified packs are resolved and at
+22. Revisit the library boundary after unclassified packs are resolved and at
    least one non-doc consumer repeats resource parsing logic.
 
 ## Validation Checklist

@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const image_norm Real)
+(assert (= image_norm 3))
+(assert (<= image_norm 2))
+(check-sat)

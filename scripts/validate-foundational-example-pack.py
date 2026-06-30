@@ -9295,6 +9295,69 @@ def validate_finite_operator(expected: dict[str, Any]) -> None:
     if image_norm > bound:
         fail("matrix operator witness violates the claimed norm bound")
 
+    bad_bound = checks["bad-operator-bound-rejected"]
+    if bad_bound["expected_result"] != "unsat" or bad_bound.get("proof_status") != "checked":
+        fail("bad-operator-bound-rejected must be a checked unsat row")
+    data = bad_bound.get("data", {})
+    matrix = require_fraction_matrix("bad operator matrix", data.get("matrix"))
+    vector = require_fraction_vector("bad operator vector", data.get("vector"))
+    computed_image = require_fraction_vector(
+        "bad operator computed_image",
+        data.get("computed_image"),
+    )
+    require_mat_vec_shape("bad operator matrix", matrix, vector)
+    if len(matrix) != len(computed_image):
+        fail("bad operator computed_image length must match matrix height")
+    if mat_vec(matrix, vector) != computed_image:
+        fail("bad operator computed_image does not equal A*x")
+    computed_image_norm = require_fraction(
+        "bad operator computed_image_norm",
+        data.get("computed_image_norm"),
+    )
+    computed_operator_norm = require_fraction(
+        "bad operator computed_operator_norm",
+        data.get("computed_operator_norm"),
+    )
+    computed_vector_norm = require_fraction(
+        "bad operator computed_vector_norm",
+        data.get("computed_vector_norm"),
+    )
+    computed_bound = require_fraction(
+        "bad operator computed_bound",
+        data.get("computed_bound"),
+    )
+    claimed_bound = require_fraction(
+        "bad operator claimed_bound",
+        data.get("claimed_bound"),
+    )
+    if linf_norm(computed_image) != computed_image_norm:
+        fail("bad-operator-bound-rejected computed image norm is incorrect")
+    if row_sum_norm(matrix) != computed_operator_norm:
+        fail("bad-operator-bound-rejected operator norm is incorrect")
+    if linf_norm(vector) != computed_vector_norm:
+        fail("bad-operator-bound-rejected vector norm is incorrect")
+    if computed_operator_norm * computed_vector_norm != computed_bound:
+        fail("bad-operator-bound-rejected computed bound is incorrect")
+    if computed_image_norm <= claimed_bound:
+        fail("bad-operator-bound-rejected must document a false upper bound")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad operator smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-operator-v0/smt2/"
+        "bad-operator-bound-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-operator-bound-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad operator smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad operator farkas_regression", regression)
+    if "finite_operator_bad_operator_bound_artifact_emits_checked_farkas" not in regression:
+        fail("bad-operator-bound-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad operator certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("bad-operator-bound-rejected certificate must document Farkas evidence")
+
     chebyshev = checks["chebyshev-recurrence-witness"]
     if chebyshev["expected_result"] != "sat":
         fail("chebyshev-recurrence-witness must expect sat")
