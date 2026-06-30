@@ -1701,6 +1701,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   ODE/numerical-analysis Lean horizon. The lesson is linked from the math
   learning index plus the analysis/topology path.
 
+- **Bounded-dynamics end-to-end lesson landed.** Added
+  [`bounded-dynamics-end-to-end.md`](docs/learn/math/bounded-dynamics-end-to-end.md)
+  as the learner-facing trace for the bounded-dynamics pack: exact recurrence
+  trace replay, finite invariant checking, threshold reachability, checked
+  QF_LRA/Farkas bad invariant-bound rejection, and the continuous-dynamics/ODE
+  Lean horizon. The lesson is linked from the math learning index plus the
+  finite dynamics/Euler and bounded-dynamics/operator bridge pages.
+
 - **Finite-operator end-to-end lesson landed.** Added
   [`finite-operator-end-to-end.md`](docs/learn/math/finite-operator-end-to-end.md)
   as the learner-facing trace for the finite-operator pack:
@@ -11996,6 +12004,14 @@ plan is built and committed on the current branch:
   finite Chebyshev recurrence replay, checked QF_LRA/Farkas bad-bound
   evidence, and the Banach/Hilbert/compact-operator Lean horizon out of the
   broad bounded-dynamics/operator bridge.
+
+- **2026-06-30** — **Bounded-dynamics end-to-end lesson landed.**
+  Added
+  [`bounded-dynamics-end-to-end.md`](docs/learn/math/bounded-dynamics-end-to-end.md)
+  to split exact recurrence trace replay, finite invariant checking, threshold
+  reachability, checked QF_LRA/Farkas bad invariant-bound evidence, and the
+  continuous-dynamics/ODE Lean horizon out of the combined finite
+  dynamics/Euler bridge.
 
 - **2026-06-30** — **PHP Bool/CNF resource promotion landed.**
   Added source-level DIMACS artifacts for

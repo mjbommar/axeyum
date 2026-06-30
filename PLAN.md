@@ -200,6 +200,10 @@ mass-table page for exact PMF normalization, conditional probability, Bayes
 posterior replay, checked QF_LRA/Farkas bad normalization, and checked bad
 posterior rejection, leaving the broader finite-probability page as the
 stochastic-process bridge.
+`bounded-dynamics-v0` now also has a standalone bounded recurrence dynamics
+page for exact trace replay, finite invariant checking, threshold reachability,
+and checked QF_LRA/Farkas bad invariant-bound evidence, leaving the combined
+finite-dynamics/Euler page as the numerical-step bridge.
 `finite-operator-v0` now also has a standalone finite-dimensional operator
 page for exact `l1` norm replay, row-sum operator-bound replay, finite
 Chebyshev recurrence replay, and checked QF_LRA/Farkas bad-bound evidence,

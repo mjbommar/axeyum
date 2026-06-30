@@ -1215,13 +1215,19 @@ Pick one item per commit unless the change is purely navigational.
     row-sum operator-bound replay, finite Chebyshev recurrence replay,
     checked QF_LRA/Farkas bad-bound evidence, and the
     Banach/Hilbert/compact-operator Lean horizon.
-45. Landed: add field-level curriculum-readiness consumer queries.
+45. Landed: add standalone bounded-dynamics learner page.
+    `docs/learn/math/bounded-dynamics-end-to-end.md` follows
+    `bounded-dynamics-v0` through exact recurrence trace replay, finite
+    invariant checking, threshold reachability, checked QF_LRA/Farkas
+    bad invariant-bound evidence, and the continuous-dynamics/ODE Lean
+    horizon.
+46. Landed: add field-level curriculum-readiness consumer queries.
     `scripts/query-foundational-resources.py fields --field probability_theory`
     summarizes pack counts, check counts, proof-status counts, proof-cookbook
     route counts, solver-reuse statuses, sample packs, and Lean-horizon packs
     from the committed JSON contract; the foundational resource smoke check now
     includes a probability/Farkas field-readiness query.
-46. Continue proof-route promotions or consumer-query examples; revisit the
+47. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

@@ -360,6 +360,10 @@ Pick one row per commit unless the change is purely navigational.
    finite-dimensional `l1` norm replay, row-sum operator-bound replay,
    Chebyshev recurrence replay, and checked QF_LRA/Farkas bad-bound evidence
    out of the broad bounded-dynamics/operator bridge lesson.
+37. Landed: add standalone bounded-dynamics learner page, splitting exact
+   recurrence trace replay, finite invariant checking, threshold reachability,
+   and checked QF_LRA/Farkas bad invariant-bound evidence out of the combined
+   finite dynamics/Euler bridge lesson.
 
 ## Validation Checklist
 

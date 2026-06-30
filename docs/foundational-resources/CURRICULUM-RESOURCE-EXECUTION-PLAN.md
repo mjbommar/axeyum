@@ -123,8 +123,9 @@ High-priority focused lessons still worth auditing or adding:
 - finite topology as a standalone topology-axiom/closure/interior bridge;
 - finite operators now have a standalone finite-dimensional
   norm/operator-bound bridge;
-- bounded dynamics remains worth auditing as a standalone recurrence/invariant
-  bridge if the finite dynamics/Euler page becomes too dense.
+- bounded dynamics now has a standalone recurrence/invariant bridge;
+- finite Euler remains worth auditing as a standalone numerical-step bridge if
+  the finite dynamics/Euler page becomes too dense.
 
 Exit criteria:
 

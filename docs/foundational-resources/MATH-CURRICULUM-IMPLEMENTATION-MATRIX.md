@@ -211,7 +211,9 @@ Build sequence:
    finite probability mass tables now split the PMF/conditioning/Bayes story
    from the broader finite-probability process bridge. Standalone finite
    operators now split the norm/operator-bound story from the broad
-   bounded-dynamics/operator bridge.
+   bounded-dynamics/operator bridge. Standalone bounded dynamics now splits
+   recurrence traces, finite invariants, and threshold reachability from the
+   finite dynamics/Euler bridge.
 7. Recurring fixed-width finite algebra, residue, and one-bit graph
    obstructions now have the `family_fixed_width_bv_drat` example-family row,
    backed by the shared `math_resource_bv_routes` regression across finite

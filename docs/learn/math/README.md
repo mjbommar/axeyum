@@ -341,6 +341,9 @@ validated pack data and the repo-root command that replays it.
   `boundary^2 = 0`, Betti-rank replay, bad-boundary rejection, a
   QF_LIA/Diophantine bad-coefficient certificate, and the homology Lean
   horizon.
+- [Bounded Recurrence Dynamics](bounded-dynamics-end-to-end.md): follows exact
+  finite recurrence replay, bounded invariant checking, threshold reachability,
+  and checked QF_LRA/Farkas bad invariant-bound rejection.
 - [Finite Dynamics And Euler Replay](finite-dynamics-euler-end-to-end.md):
   follows bounded recurrence traces, finite invariants, threshold
   reachability, explicit Euler replay, finite error tables, and checked

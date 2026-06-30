@@ -1422,6 +1422,10 @@ reachability, checked bad invariant-bound rejection with QF_LRA/Farkas
 evidence, explicit Euler replay, exact finite error tables, checked bad
 Euler-step rejection with QF_LRA/Farkas evidence, and the
 ODE/numerical-analysis Lean horizon.
+`bounded-dynamics-v0` now also has a standalone bounded recurrence dynamics
+lesson for exact trace replay, finite invariant checking, threshold
+reachability, checked QF_LRA/Farkas bad invariant-bound rejection, and the
+continuous-dynamics/ODE Lean horizon.
 `finite-operator-v0` now also has a standalone finite-dimensional operator
 lesson for exact `l1` norm replay, row-sum operator-bound replay, finite
 Chebyshev recurrence replay, checked QF_LRA/Farkas bad operator-bound

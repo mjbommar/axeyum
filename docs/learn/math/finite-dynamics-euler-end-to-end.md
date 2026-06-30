@@ -4,6 +4,8 @@ This lesson follows two exact finite dynamics resources from recurrence data to
 checked transition replay. It uses
 [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/) and
 [finite-euler-method-v0](../../../artifacts/examples/math/finite-euler-method-v0/).
+For the bounded recurrence and invariant slice alone, read
+[End To End: Bounded Recurrence Dynamics](bounded-dynamics-end-to-end.md).
 
 Concept rows:
 

@@ -12,6 +12,8 @@ the finite hitting-time slice in
 [finite-hitting-times-v0](../../../artifacts/examples/math/finite-hitting-times-v0/),
 and the finite spectral slice in
 [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/).
+For a focused bounded recurrence and invariant trace, read
+[End To End: Bounded Recurrence Dynamics](bounded-dynamics-end-to-end.md).
 For a focused finite recurrence and Euler-step trace, read
 [End To End: Finite Dynamics And Euler Replay](finite-dynamics-euler-end-to-end.md).
 For a focused finite-dimensional operator and norm-bound trace, read
