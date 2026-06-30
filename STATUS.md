@@ -177,13 +177,19 @@ note over-broadly "ruled out" the hang from QF_LIA evidence; `bug330` confirms i
 is real, scoped to the QF_AUFLIA path — and verified **pre-existing**, not from
 the write-index change.)*
 
-**Headline (honest):** after this session, **on the accessible curated corpus
-axeyum is at/near z3 parity across the board** — most divisions tie, QF_SEQ leads,
-and the residual gaps are the *known-hard frontier* (`issue5836-2` is actually
-UF+**NRA**; deep array extensionality; budget), not cheap bounded wins. The big
-remaining decide-rate work lives on the **full NAS corpus** (strings ~117 →
-unbounded-string DP; NRA/CAD depth) — multi-week *engine* work gated on NAS-corpus
-access, where Z3/cvc5 parity is next won.
+**Headline (honest):** after this session's gains — **curated QF_UF reached full
+z3 parity** (37→41/48, via `ite`-elimination + the Bool-equality-is-`iff` euf fix
++ robustness); QF_ABV 173→176/177; NAS QF_UF 42→44/63 — **the bounded decide-rate
+wins are exhausted across every slice we can measure** (curated + the mounted NAS
+QF_BV/QF_LRA/QF_UF). Every remaining residual is *deep engine work*, measured and
+localized: NAS QF_UF −11 = LIA+UF CEGAR convergence (`hash_sat_*`, grinds 248 LP
+rounds w/o a sat candidate) + a `build_model` sub-cause; NAS QF_LRA −1 = MIP/LP
+efficiency (`miplib-*`); QF_ABV −1 = lazy-ext replay/budget; QF_AUFLIA −2 = the
+pre-existing `bug330` deadline-hang (#63) + a UFLIA budget case; `issue5836-2` =
+UF+**NRA**. The next decide-rate work is genuine multi-week *engine* depth
+(LP/simplex, LIA+UF CEGAR, `build_model` completeness, NRA/CAD, the unbounded-
+string DP) — where Z3/cvc5 parity is actually won — not more bounded triage. All
+gains DISAGREE=0, fuzz-validated.
 
 **Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no
 core IR/solver/rewrite edits; every increment builds, passes gates, and holds
@@ -507,9 +513,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
   78 promoted, 6 non-benchmark-horizon, and 0 unclassified solver-reuse packs.
 
+- **Finite-measure QF_LRA/Farkas promotion landed.**
+  `finite-measure-v0` now carries promoted `solver_reuse` metadata for its bad
+  complement-measure row. The new source-level artifact
+  `bad-complement-measure-farkas-conflict.smt2` isolates replay's computed
+  `mu(A) = 1/3` and `mu(U) = 1` against the malformed complement claim
+  `mu(A^c) = 1/2` while preserving complement additivity, and
+  `math_resource_lra_routes::finite_measure_bad_complement_artifact_emits_checked_farkas`
+  checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
+  79 promoted, 5 non-benchmark-horizon, and 0 unclassified solver-reuse packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 78-promoted, 6 non-benchmark-horizon, and
+  now records the refreshed 79-promoted, 5 non-benchmark-horizon, and
   0-unclassified solver-reuse counts. The decision remains in-repo and
   JSON-first: the query consumer reads promoted solver-reuse rows, but there is
   still no external consumer, repeated typed API demand, or reusable encoder
@@ -974,8 +990,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
   library splits. It records the current committed baseline of 65 concept rows,
-  84 non-template packs, 416 expected checks, 198 checked rows, 171 replay-only
-  rows, 47 Lean-horizon rows, and 78 promoted solver-reuse packs, then lays out
+  84 non-template packs, 417 expected checks, 199 checked rows, 171 replay-only
+  rows, 47 Lean-horizon rows, and 79 promoted solver-reuse packs, then lays out
   field-by-field build plans plus a prioritized execution queue. Linked it from
   `PLAN.md`, the foundational-resources index, mdBook summary, sibling-project
   notes, roadmap, buildout plan, implementation matrix, and execution plan.
@@ -11729,6 +11745,14 @@ plan is built and committed on the current branch:
   `solver_reuse.status` as `promoted`, the expected row records the checked
   `UnsatFarkas` certificate path, and generated dashboards report 78 promoted,
   6 non-benchmark-horizon, and 0 unclassified packs.
+
+- **2026-06-30** — **Finite-measure QF_LRA promotion landed.** Added
+  `artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2`
+  for the bad complement-measure row and wired it into `math_resource_lra_routes`.
+  The pack metadata now marks `solver_reuse.status` as `promoted`, the expected
+  row records the checked `UnsatFarkas` certificate path, and generated
+  dashboards report 79 promoted, 5 non-benchmark-horizon, and 0 unclassified
+  packs.
 
 - **2026-06-29** — **Proof-cookbook math-example route sections landed.**
   Added `Math Examples Using This Route` sections to the six active proof
