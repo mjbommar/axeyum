@@ -159,7 +159,9 @@ lookup without importing validators or generators.
 The rules/law transfer lane now has a crosswalk from math resources to concrete
 policy/rule checks, with `benefit-eligibility-v0` mapped to finite predicates,
 Bool/QF_LIA thresholds, temporal versioning, replayed witnesses, and proof-route
-upgrade targets.
+upgrade targets; the first source-linked Bool/QF_LIA fixtures now check its
+consistency and fixed no-exception monotonicity obligations through the
+`rules_as_code_examples` solver regression.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, and finite tensor products now add
 secondary equality-heavy promotions for bad antisymmetry, bad nonbijection,

@@ -103,9 +103,14 @@
     {
       "id": "consistency",
       "expected_result": "unsat",
-      "validation": "finite_sample_replay",
-      "proof_status": "proof-gap",
-      "proof_gap": "No dedicated rules-as-code SMT harness yet; intended encoding is Bool/QF_LIA with ineligible defined as not eligible."
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 1(a)", "Example Rule 1(b)", "Example Rule 1(c)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/benefit-eligibility-v0/smt2/consistency-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples benefit_eligibility_consistency_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
     },
     {
       "id": "coverage",
@@ -124,9 +129,14 @@
     {
       "id": "monotonicity",
       "expected_result": "unsat",
-      "validation": "finite_sample_replay",
-      "proof_status": "proof-gap",
-      "proof_gap": "No solver proof yet; validator checks the finite sample that increasing income cannot turn ineligible into eligible with all other facts fixed."
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 1(a)", "Example Rule 1(b)", "Example Rule 1(c)", "Example Rule 1(d)", "Example Rule 1(e)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/benefit-eligibility-v0/smt2/monotonicity-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples benefit_eligibility_monotonicity_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
     },
     {
       "id": "temporal_transition",

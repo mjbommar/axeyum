@@ -60,4 +60,5 @@ Validate the current pack with:
 
 ```sh
 python3 scripts/validate-rules-as-code.py
+cargo test -p axeyum-solver --test rules_as_code_examples
 ```

@@ -21,9 +21,9 @@ Every row above is replayed by
 
 | Check | Expected | Current evidence |
 |---|---|---|
-| `consistency` | `unsat` | Finite-sample replay only; needs Bool/QF_LIA Axeyum proof harness. |
+| `consistency` | `unsat` | Source-linked Bool/QF_LIA fixture with checked Axeyum evidence. |
 | `coverage` | `unsat` | Finite-sample replay only; needs Bool/QF_LIA Axeyum proof harness. |
 | `threshold_cliff` | `sat` | Concrete witnesses replay. |
-| `monotonicity` | `unsat` | Finite-sample replay only; needs QF_LIA proof harness. |
+| `monotonicity` | `unsat` | Source-linked Bool/QF_LIA fixture with checked Axeyum evidence for the fixed no-exception obligation. |
 | `temporal_transition` | `sat` | Concrete witnesses replay. |
 | `implementation_equivalence` | `sat` | Validator implementation agrees with documented witnesses; solver equivalence query is future work. |

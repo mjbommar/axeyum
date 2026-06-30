@@ -7,11 +7,13 @@ both true.
 
 Expected result: `unsat`.
 
-Current validation: finite-sample replay in
-[validate-rules-as-code.py](../../../../scripts/validate-rules-as-code.py).
+Current validation: source-linked Bool/QF_LIA fixture
+[consistency-bool-qf-lia-conflict.smt2](smt2/consistency-bool-qf-lia-conflict.smt2)
+checked by
+`cargo test -p axeyum-solver --test rules_as_code_examples`.
 
-Proof status: proof gap. The intended Axeyum encoding is a Bool/QF_LIA query
-for `eligible and ineligible`.
+Proof status: checked. Axeyum must produce certified evidence and re-check it
+against the parsed rule obligation.
 
 ## Coverage
 
@@ -49,9 +51,13 @@ not eligible(income1)
 eligible(income2)
 ```
 
-Current validation: finite-sample replay over the listed sample domain.
+Current validation: source-linked Bool/QF_LIA fixture
+[monotonicity-bool-qf-lia-conflict.smt2](smt2/monotonicity-bool-qf-lia-conflict.smt2)
+checked by
+`cargo test -p axeyum-solver --test rules_as_code_examples`, plus finite-sample
+replay over the listed sample domain.
 
-Proof status: proof gap until encoded as a QF_LIA query.
+Proof status: checked for the fixed no-exception monotonicity obligation.
 
 ## Temporal Transition
 

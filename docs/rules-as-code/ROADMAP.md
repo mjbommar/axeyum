@@ -51,7 +51,10 @@ The local validator
 [validate-rules-as-code.py](../../scripts/validate-rules-as-code.py) checks the
 metadata shape, citation file references, expected check records, concrete
 witness replay, and finite-sample consistency/coverage/monotonicity. Solver
-proof integration is still an explicit proof gap.
+proof integration has started: consistency and monotonicity now have
+source-linked Bool/QF_LIA fixtures checked by
+`cargo test -p axeyum-solver --test rules_as_code_examples`; coverage and
+implementation equivalence remain explicit proof gaps.
 
 The cross-resource reuse map is
 [Rules/Law Crosswalk For Foundational Resources](../foundational-resources/RULES-LAW-CROSSWALK.md).
@@ -212,14 +215,13 @@ Near-term documentation checks:
 python3 scripts/validate-rules-as-code.py
 ```
 
-Planned rule-pack checks:
+Rule-pack solver checks:
 
 ```sh
 cargo test -p axeyum-solver --test rules_as_code_examples
 ```
 
-The test target does not need to exist for the roadmap step, but the planned
-interface should be explicit:
+The interface stays explicit:
 
 - every rule-pack check has an expected `sat`/`unsat`/`unknown`;
 - every `sat` witness replays against the original rule model;

@@ -68,10 +68,10 @@ pack already exercises the first slice of this crosswalk:
 
 | Pack Check | Current Evidence | Crosswalk Pattern | Next Axeyum Upgrade |
 |---|---|---|---|
-| `consistency` | finite-sample replay | finite predicates plus Bool/QF_LIA | encode `eligible and ineligible` as a source-linked query and require checked `unsat` evidence |
+| `consistency` | source-linked Bool/QF_LIA fixture with checked Axeyum evidence | finite predicates plus Bool/QF_LIA | broaden from one fixed source-linked obligation to reusable generated consistency queries |
 | `coverage` | finite-sample replay | finite predicate totality | encode a no-output fact pattern and keep the finite-domain boundary explicit |
 | `threshold_cliff` | concrete witnesses replay | integer thresholds | produce minimized QF_LIA witnesses at and just above active thresholds |
-| `monotonicity` | finite-sample replay | arithmetic monotonicity | encode the bad monotonicity pattern with exception guards and expect `unsat` |
+| `monotonicity` | source-linked Bool/QF_LIA fixture with checked Axeyum evidence for the fixed no-exception obligation | arithmetic monotonicity | broaden to generated exception-aware monotonicity queries |
 | `temporal_transition` | concrete witnesses replay | versioned arithmetic dates | keep the old/new date split explicit and test both sides of the effective date |
 | `implementation_equivalence` | executable validator replay | bounded equivalence | add an existential mismatch query over the bounded sample domain |
 
@@ -98,9 +98,9 @@ exists.
 
 ## Build Order
 
-1. Keep `benefit-eligibility-v0` as the reference pack and add source-linked
-   Bool/QF_LIA fixtures for consistency, coverage, monotonicity, and bounded
-   implementation equivalence.
+1. Keep `benefit-eligibility-v0` as the reference pack. Landed: source-linked
+   Bool/QF_LIA fixtures for consistency and fixed no-exception monotonicity.
+   Next: add coverage and bounded implementation-equivalence fixtures.
 2. Add the authorization-policy pack from the
    [rules-as-code roadmap](../rules-as-code/ROADMAP.md) and reuse graph
    reachability plus finite order/lattice checks for tenant isolation and

@@ -46,6 +46,20 @@ def require_date(context: str, value: Any) -> str:
     return value
 
 
+def require_string(context: str, value: Any) -> str:
+    if not isinstance(value, str) or not value:
+        fail(f"{context} must be a non-empty string")
+    return value
+
+
+def check_repo_path(context: str, value: Any) -> str:
+    path_text = require_string(context, value)
+    path = ROOT / path_text
+    if not path.exists():
+        fail(f"{context} references missing path {path_text}")
+    return path_text
+
+
 @dataclass(frozen=True)
 class Facts:
     age: int
@@ -206,11 +220,46 @@ def validate_expected(metadata: dict[str, Any], expected: dict[str, Any]) -> Non
             fail(f"{check_id}.expected_result is invalid")
         if check["proof_status"] == "proof-gap" and "proof_gap" not in check:
             fail(f"{check_id} marks proof-gap without proof_gap text")
+        for citation in check.get("source_citations", []):
+            if citation not in citations:
+                fail(f"{check_id} cites unknown label {citation}")
         for witness_id in check.get("witnesses", []):
             if witness_id not in witness_ids:
                 fail(f"{check_id} references unknown witness {witness_id}")
 
+    validate_solver_fixture(
+        checks["consistency"],
+        "consistency-bool-qf-lia-conflict.smt2",
+        "benefit_eligibility_consistency_emits_checked_evidence",
+    )
+    validate_solver_fixture(
+        checks["monotonicity"],
+        "monotonicity-bool-qf-lia-conflict.smt2",
+        "benefit_eligibility_monotonicity_emits_checked_evidence",
+    )
     validate_finite_sample(expected["sample_domain"], params)
+
+
+def validate_solver_fixture(check: dict[str, Any], expected_file: str, expected_test: str) -> None:
+    check_id = check["id"]
+    if check["expected_result"] != "unsat":
+        fail(f"{check_id} solver fixture must be unsat")
+    if check["validation"] != "bool_qf_lia_solver_regression":
+        fail(f"{check_id} must use bool_qf_lia_solver_regression validation")
+    if check["proof_status"] != "checked":
+        fail(f"{check_id} must be marked checked")
+    data = check.get("data")
+    if not isinstance(data, dict):
+        fail(f"{check_id} checked solver fixture must include data")
+    artifact = check_repo_path(f"{check_id}.data.smt2_artifact", data.get("smt2_artifact"))
+    if not artifact.endswith(f"/{expected_file}"):
+        fail(f"{check_id}.data.smt2_artifact must point at {expected_file}")
+    regression = require_string(f"{check_id}.data.proof_regression", data.get("proof_regression"))
+    if expected_test not in regression or "rules_as_code_examples" not in regression:
+        fail(f"{check_id}.data.proof_regression must link {expected_test}")
+    certificate = require_string(f"{check_id}.data.certificate", data.get("certificate"))
+    if "certified evidence" not in certificate or "Evidence::check" not in certificate:
+        fail(f"{check_id}.data.certificate must document checked evidence")
 
 
 def validate_finite_sample(sample_domain: dict[str, Any], params: dict[str, Any]) -> None:

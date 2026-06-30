@@ -924,8 +924,9 @@ shapes, source math packs, Axeyum fragments, proof routes, and the current
 
 Next work:
 
-- Use the crosswalk to add source-linked Bool/QF_LIA fixtures to
-  `benefit-eligibility-v0`.
+- Extend the `benefit-eligibility-v0` Bool/QF_LIA proof harness from the landed
+  consistency and monotonicity fixtures to coverage and bounded implementation
+  equivalence.
 - Reuse pack schema ideas before creating law-specific schema fields.
 - Keep citations and source provenance mandatory for legal/policy examples.
 

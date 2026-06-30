@@ -37,5 +37,5 @@
     "implementation_equivalence"
   ],
   "axeyum_fragments": ["Bool", "QF_LIA"],
-  "proof_expectation": "Replay witnesses now; encode checks as Bool/QF_LIA formulas and add proof-producing Axeyum harness next."
+  "proof_expectation": "Consistency and monotonicity now have source-linked Bool/QF_LIA fixtures with checked Axeyum evidence; replay witnesses for threshold and temporal rows; coverage and implementation equivalence remain future proof-harness work."
 }

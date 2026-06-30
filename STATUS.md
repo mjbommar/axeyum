@@ -658,6 +658,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   rules-as-code README/roadmap, buildout roadmap, execution plan, and
   implementation matrix.
 
+- **Benefit-eligibility Bool/QF_LIA fixtures landed.**
+  [`benefit-eligibility-v0`](docs/rules-as-code/examples/benefit-eligibility-v0/README.md)
+  now has source-linked SMT-LIB fixtures for consistency and fixed
+  no-exception monotonicity:
+  [`consistency-bool-qf-lia-conflict.smt2`](docs/rules-as-code/examples/benefit-eligibility-v0/smt2/consistency-bool-qf-lia-conflict.smt2)
+  and
+  [`monotonicity-bool-qf-lia-conflict.smt2`](docs/rules-as-code/examples/benefit-eligibility-v0/smt2/monotonicity-bool-qf-lia-conflict.smt2).
+  The new
+  [`rules_as_code_examples`](crates/axeyum-solver/tests/rules_as_code_examples.rs)
+  regression parses both obligations, requires `Unsat`, and accepts only
+  certified evidence that independently rechecks with `Evidence::check`. The
+  rules validator now enforces the artifact paths, citation labels, regression
+  names, and checked-evidence contract. Coverage and bounded implementation
+  equivalence remain the next proof-harness gaps for this pack.
+
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
   is now generated with twenty-two bridge rows. The first proof-methodology rows are

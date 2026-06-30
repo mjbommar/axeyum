@@ -222,7 +222,9 @@ Build sequence:
 13. Rules/law transfer now lands through
    [RULES-LAW-CROSSWALK.md](RULES-LAW-CROSSWALK.md): finite predicates,
    arithmetic thresholds, graph reachability, precedence, and proof routes are
-   mapped to concrete policy/rule checks before new rule packs are added.
+   mapped to concrete policy/rule checks before new rule packs are added. The
+   first `benefit-eligibility-v0` consistency and fixed no-exception
+   monotonicity fixtures are now checked by `rules_as_code_examples`.
 14. First solver-reuse promotions landed: `logic-basics-v0` now links
     `tiny-cnf-refutation` to a DIMACS artifact, `finite-cardinality-v0` links
     `no-injection-four-to-three` to a DIMACS artifact, and
