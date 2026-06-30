@@ -5,7 +5,7 @@ examples finite and explicit:
 
 - shortest-path distance by BFS replay;
 - deterministic DFS traversal order replay;
-- no-path refutation in a disconnected graph;
+- a CNF-backed no-path refutation in a disconnected graph;
 - edge-cut separation replay.
 
 The point is not to prove asymptotic graph theory. The point is to show how a
@@ -25,6 +25,9 @@ finite graph claim can be reduced to a small replayable artifact.
   graph.
 - The disconnected no-path row is checked by finite reachability from the
   source component.
+- The disconnected no-path row also has a source-linked bounded reachability
+  fixed-point DIMACS artifact and a Boolean regression that emits and
+  independently checks DRAT and LRAT proof objects.
 - The edge-cut row is checked by confirming reachability before the cut and
   non-reachability after removing the cut edge.
 - Asymptotic runtime and extremal graph claims remain theorem-prover horizons,

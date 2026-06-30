@@ -1460,6 +1460,45 @@ def validate_graph_reachability(expected: dict[str, Any]) -> None:
     target = require_graph_vertex("disconnected target", data.get("target"), vertices)
     if target in shortest_distances(vertices, edges, source):
         fail("disconnected-no-path unexpectedly has a source-to-target path")
+    depth_bound = require_int("disconnected-no-path depth_bound", data.get("depth_bound"))
+    if vertices != ["s", "a", "b", "t"] or edges != [("s", "a"), ("b", "t")]:
+        fail("disconnected-no-path DIMACS artifact is fixed to the two-component s-a/b-t graph")
+    if source != "s" or target != "t" or depth_bound != len(vertices) - 1:
+        fail("disconnected-no-path DIMACS artifact is fixed to s, t, and depth bound 3")
+    adjacency = graph_adjacency(vertices, edges)
+    expected_dimacs: list[list[str]] = []
+    vertex_count = len(vertices)
+    for vertex_index, vertex in enumerate(vertices):
+        variable = vertex_index + 1
+        expected_dimacs.append([str(variable if vertex == source else -variable)])
+    for depth in range(1, depth_bound + 1):
+        for vertex_index, vertex in enumerate(vertices):
+            current = depth * vertex_count + vertex_index + 1
+            previous_sources = [
+                (depth - 1) * vertex_count + vertices.index(previous_vertex) + 1
+                for previous_vertex in [vertex, *adjacency[vertex]]
+            ]
+            for previous_source in previous_sources:
+                expected_dimacs.append([f"-{previous_source}", str(current)])
+            expected_dimacs.append(
+                [f"-{current}", *[str(previous_source) for previous_source in previous_sources]]
+            )
+    target_variable = depth_bound * vertex_count + vertices.index(target) + 1
+    expected_dimacs.append([str(target_variable)])
+    require_dimacs_artifact(
+        "disconnected-no-path",
+        data.get("cnf_artifact"),
+        "p cnf 16 41",
+        expected_dimacs,
+    )
+    proof_regression = data.get("proof_regression")
+    require_string("disconnected-no-path proof_regression", proof_regression)
+    if "math_resource_boolean_routes.rs::graph_reachability_disconnected_no_path" not in proof_regression:
+        fail("disconnected-no-path proof_regression must name the Boolean resource test")
+    certificate = data.get("certificate")
+    require_string("disconnected-no-path certificate", certificate)
+    if "DRAT" not in certificate or "LRAT" not in certificate or "independently" not in certificate:
+        fail("disconnected-no-path certificate must document DRAT/LRAT independent checking")
 
     cut = checks["edge-cut-separates"]
     if cut["expected_result"] != "sat" or cut.get("proof_status") != "checked":

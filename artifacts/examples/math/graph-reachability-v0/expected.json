@@ -81,9 +81,13 @@
           ["b", "t"]
         ],
         "source": "s",
-        "target": "t"
+        "target": "t",
+        "depth_bound": 3,
+        "cnf_artifact": "artifacts/examples/math/graph-reachability-v0/cnf/disconnected-no-path.cnf",
+        "proof_regression": "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs::graph_reachability_disconnected_no_path_emits_checked_drat_and_lrat",
+        "certificate": "The Boolean resource regression emits a DRAT refutation, elaborates it to LRAT, and checks both proof objects independently."
       },
-      "notes": "The validator computes the reachable component from s and confirms t is absent."
+      "notes": "The validator computes the reachable component from s, checks the bounded reachability fixed-point DIMACS artifact, and the Rust regression confirms emitted DRAT and LRAT proof objects independently check."
     },
     {
       "id": "edge-cut-separates",

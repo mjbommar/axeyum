@@ -87,6 +87,10 @@ First targets:
   (solver-reuse promotion landed for `triangle-no-perfect-matching`:
   source-linked `K3` exact-cover DIMACS artifact, DRAT emission, LRAT
   elaboration, and independent checks)
+- [graph-reachability-v0](../../artifacts/examples/math/graph-reachability-v0/)
+  (solver-reuse promotion landed for `disconnected-no-path`: source-linked
+  bounded reachability fixed-point DIMACS artifact, DRAT emission, LRAT
+  elaboration, and independent checks)
 
 Expected artifact:
 
@@ -106,6 +110,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/pr
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/logic-basics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-matching-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-reachability-v0
 ./scripts/check-foundational-resources.sh
 ```
 

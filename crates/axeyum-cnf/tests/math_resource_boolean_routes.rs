@@ -26,6 +26,9 @@ const FINITE_CARDINALITY_NO_INJECTION_FOUR_TO_THREE: &str = include_str!(
 const GRAPH_MATCHING_TRIANGLE_NO_PERFECT_MATCHING: &str = include_str!(
     "../../../artifacts/examples/math/graph-matching-v0/cnf/triangle-no-perfect-matching.cnf"
 );
+const GRAPH_REACHABILITY_DISCONNECTED_NO_PATH: &str = include_str!(
+    "../../../artifacts/examples/math/graph-reachability-v0/cnf/disconnected-no-path.cnf"
+);
 
 fn assert_unsat_resource_cnf_checks(
     label: &str,
@@ -115,5 +118,15 @@ fn graph_matching_triangle_no_perfect_matching_emits_checked_drat_and_lrat() {
         GRAPH_MATCHING_TRIANGLE_NO_PERFECT_MATCHING,
         3,
         6,
+    );
+}
+
+#[test]
+fn graph_reachability_disconnected_no_path_emits_checked_drat_and_lrat() {
+    assert_unsat_resource_cnf_checks(
+        "graph-reachability-v0 disconnected-no-path",
+        GRAPH_REACHABILITY_DISCONNECTED_NO_PATH,
+        16,
+        41,
     );
 }
