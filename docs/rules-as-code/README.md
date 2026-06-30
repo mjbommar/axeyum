@@ -25,6 +25,7 @@ docs/rules-as-code/
   examples/
     benefit-eligibility-v0/
     authorization-policy-v0/
+    tax-benefit-arithmetic-v0/
 artifacts/ontology/
   rules-core.schema.json
 scripts/
@@ -35,6 +36,7 @@ Current example packs:
 
 - [Benefit Eligibility V0](examples/benefit-eligibility-v0/README.md)
 - [Authorization Policy V0](examples/authorization-policy-v0/README.md)
+- [Tax Benefit Arithmetic V0](examples/tax-benefit-arithmetic-v0/README.md)
 
 ## Roadmap
 
@@ -63,6 +65,12 @@ The second pack,
 [Authorization Policy V0](examples/authorization-policy-v0/README.md), reuses
 finite predicates, tenant/resource relations, precedence, and bounded
 implementation-equivalence checks for a Cedar/OPA-style access-control shape.
+
+The third pack,
+[Tax Benefit Arithmetic V0](examples/tax-benefit-arithmetic-v0/README.md),
+reuses integer thresholds, phase-out monotonicity, caps, effective-date
+transitions, and bounded implementation-equivalence checks for a tax/benefit
+arithmetic shape.
 
 Validate the current packs with:
 

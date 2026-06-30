@@ -90,6 +90,13 @@ class AuthorizationFacts:
     policy_version: int
 
 
+@dataclass(frozen=True)
+class TaxBenefitFacts:
+    income: int
+    household_size: int
+    application_date: str
+
+
 def benefit_facts_from_json(context: str, value: Any) -> BenefitFacts:
     if not isinstance(value, dict):
         fail(f"{context} must be an object")
@@ -137,6 +144,19 @@ def authorization_facts_from_json(context: str, value: Any) -> AuthorizationFact
     )
 
 
+def tax_benefit_facts_from_json(context: str, value: Any) -> TaxBenefitFacts:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    require_keys(context, value, {"income", "household_size", "application_date"})
+    return TaxBenefitFacts(
+        income=require_int(f"{context}.income", value["income"]),
+        household_size=require_int(f"{context}.household_size", value["household_size"]),
+        application_date=require_date(
+            f"{context}.application_date", value["application_date"]
+        ),
+    )
+
+
 def standard_threshold(date: str, params: dict[str, Any]) -> int:
     return (
         params["standard_threshold_before"]
@@ -172,6 +192,29 @@ def authorization_allows(facts: AuthorizationFacts) -> bool:
         if facts.action == "export":
             return facts.policy_version >= 2
     return False
+
+
+def tax_phase_start(date: str, params: dict[str, Any]) -> int:
+    return (
+        params["phase_start_before"]
+        if date < params["change_date"]
+        else params["phase_start_after"]
+    )
+
+
+def tax_benefit(facts: TaxBenefitFacts, params: dict[str, Any]) -> int:
+    if facts.household_size < 1 or facts.household_size > params["max_household_size"]:
+        fail(f"household_size out of bounded domain: {facts.household_size}")
+    if facts.income < 0:
+        fail(f"income must be nonnegative: {facts.income}")
+
+    phase_start = tax_phase_start(facts.application_date, params)
+    base = params["base_credit"] + params["household_adjustment"] * (
+        facts.household_size - 1
+    )
+    capped_base = min(base, params["credit_cap"])
+    phaseout = params["phaseout_rate"] * max(0, facts.income - phase_start)
+    return max(0, capped_base - phaseout)
 
 
 def validate_metadata(pack_dir: Path, metadata: dict[str, Any]) -> None:
@@ -236,6 +279,8 @@ def validate_expected(pack_dir: Path, metadata: dict[str, Any], expected: dict[s
         witness_ids = validate_benefit_expected(expected, citations)
     elif pack_id == "authorization_policy_v0":
         witness_ids = validate_authorization_expected(expected, citations)
+    elif pack_id == "tax_benefit_arithmetic_v0":
+        witness_ids = validate_tax_benefit_expected(expected, citations)
     else:
         fail(f"unsupported rules-as-code pack id {pack_id}")
 
@@ -336,6 +381,63 @@ def validate_authorization_expected(expected: dict[str, Any], citations: set[str
         validate_citations(witness_id, witness["source_citations"], citations)
 
     validate_authorization_finite_sample(expected["sample_domain"], params)
+    return witness_ids
+
+
+def validate_tax_benefit_expected(expected: dict[str, Any], citations: set[str]) -> set[str]:
+    params = expected["parameters"]
+    require_keys(
+        "parameters",
+        params,
+        {
+            "change_date",
+            "phase_start_before",
+            "phase_start_after",
+            "base_credit",
+            "household_adjustment",
+            "credit_cap",
+            "max_household_size",
+            "phaseout_rate",
+        },
+    )
+    require_date("parameters.change_date", params["change_date"])
+    for key in (
+        "phase_start_before",
+        "phase_start_after",
+        "base_credit",
+        "household_adjustment",
+        "credit_cap",
+        "max_household_size",
+        "phaseout_rate",
+    ):
+        if not isinstance(params[key], int) or params[key] < 0:
+            fail(f"parameters.{key} must be a non-negative integer")
+    if params["max_household_size"] < 1:
+        fail("parameters.max_household_size must be at least 1")
+    if params["phaseout_rate"] == 0:
+        fail("parameters.phaseout_rate must be positive")
+
+    witness_ids: set[str] = set()
+    for index, witness in enumerate(expected["witnesses"]):
+        require_keys(
+            f"witnesses[{index}]",
+            witness,
+            {"id", "facts", "expected_benefit", "source_citations", "explanation"},
+        )
+        witness_id = witness["id"]
+        if witness_id in witness_ids:
+            fail(f"duplicate witness id {witness_id}")
+        witness_ids.add(witness_id)
+        expected_benefit = require_int(
+            f"{witness_id}.expected_benefit", witness["expected_benefit"]
+        )
+        facts = tax_benefit_facts_from_json(f"{witness_id}.facts", witness["facts"])
+        actual = tax_benefit(facts, params)
+        if actual != expected_benefit:
+            fail(f"{witness_id} replay mismatch: expected {expected_benefit}, got {actual}")
+        validate_citations(witness_id, witness["source_citations"], citations)
+
+    validate_tax_benefit_finite_sample(expected["sample_domain"], params)
     return witness_ids
 
 
@@ -470,6 +572,41 @@ def validate_authorization_finite_sample(
             fail(f"authorization sample_domain.{key} must match parameters.{key}")
     if checked == 0:
         fail("authorization finite sample was empty")
+
+
+def validate_tax_benefit_finite_sample(
+    sample_domain: dict[str, Any], params: dict[str, Any]
+) -> None:
+    require_keys("sample_domain", sample_domain, {"incomes", "household_sizes", "dates"})
+    incomes = sorted(sample_domain["incomes"])
+    household_sizes = sorted(sample_domain["household_sizes"])
+    dates = sample_domain["dates"]
+    if household_sizes != list(range(1, params["max_household_size"] + 1)):
+        fail("tax benefit sample_domain.household_sizes must cover 1..max_household_size")
+    for income in incomes:
+        if not isinstance(income, int) or income < 0:
+            fail("tax benefit sample_domain.incomes must be non-negative integers")
+    for date in dates:
+        require_date("sample_domain.dates[]", date)
+
+    checked = 0
+    for date in dates:
+        for household_size in household_sizes:
+            previous_benefit = None
+            for income in incomes:
+                facts = TaxBenefitFacts(income, household_size, date)
+                benefit = tax_benefit(facts, params)
+                if benefit < 0:
+                    fail(f"non-negative benefit failed for {facts}")
+                if benefit > params["credit_cap"]:
+                    fail(f"benefit cap failed for {facts}")
+                if previous_benefit is not None and benefit > previous_benefit:
+                    fail(f"phase-out monotonicity failed for {facts}")
+                previous_benefit = benefit
+                checked += 1
+
+    if checked == 0:
+        fail("tax benefit finite sample was empty")
 
 
 def validate_pack(pack_dir: Path) -> str:

@@ -1989,11 +1989,16 @@ Recurring fixed-width finite algebra, residue, and one-bit graph encodings now
 also have `family_fixed_width_bv_drat`, spanning finite fields, finite rings,
 graph coloring, and bounded number-theory residue packs backed by the shared
 `math_resource_bv_routes` regression.
-The rules/law transfer lane now also has its second concrete pack:
+The rules/law transfer lane now has three concrete packs beyond the crosswalk:
 `authorization-policy-v0` reuses finite predicates, tenant/resource relations,
 explicit deny precedence, bounded version-delta witnesses, and checked
 Bool/QF_LIA evidence for tenant isolation, deny precedence, admin tenant
-boundaries, and implementation equivalence.
+boundaries, and implementation equivalence; `tax-benefit-arithmetic-v0` reuses
+integer thresholds, household-size adjustments, caps, active phase-out
+monotonicity, effective-date witnesses, and checked Bool/QF_LIA evidence for
+non-negative benefit, cap, active phase-out monotonicity, and bounded
+implementation equivalence, while the rules validator replays the full
+piecewise finite sample.
 The consumer query layer now also exposes optimization/convexity readiness:
 `CONSUMER-QUERIES.md` shows the Farkas field summary, LP-objective and
 convexity bridge lookups, and checked optimization/convexity Farkas row

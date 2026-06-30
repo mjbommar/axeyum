@@ -186,7 +186,9 @@ Build order:
    finite predicates, thresholds, reachability, precedence, optimization, and
    proof routes. Status: `benefit-eligibility-v0` and
    `authorization-policy-v0` now exercise the eligibility and access-control
-   slices with replayed witnesses plus checked Bool/QF_LIA proof fixtures.
+   slices with replayed witnesses plus checked Bool/QF_LIA proof fixtures, and
+   `tax-benefit-arithmetic-v0` now exercises the threshold/cap/phase-out slice
+   with replayed witnesses plus checked Bool/QF_LIA proof fixtures.
 3. Add typed accessors only after repeated scripts duplicate parsing logic.
 4. Split a crate or separate repo only after a boundary decision cites at least
    three duplicated consumers or one external release-cadence need.
@@ -561,6 +563,12 @@ Pick one row per commit unless the change is purely navigational.
     matrix rows, solver regressions, benchmark-corpus rows, and theorem-horizon
     claims; lists the current matrix families; and records the promotion
     checklist needed before solver-reuse or performance language is used.
+65. Landed: add
+    [`tax-benefit-arithmetic-v0`](../rules-as-code/examples/tax-benefit-arithmetic-v0/)
+    as the third rules/law pack. The pack reuses integer thresholds,
+    household-size adjustments, caps, active phase-out monotonicity,
+    effective-date witnesses, and checked Bool/QF_LIA proof fixtures while the
+    rules validator replays the full piecewise finite sample.
 
 ## Validation Checklist
 

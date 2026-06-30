@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "tax_benefit_arithmetic_v0",
+  "title": "Example Tax Benefit Arithmetic With Phase-Out",
+  "domain": "tax_benefit",
+  "jurisdiction": "example",
+  "source_citations": [
+    {"label": "Example Rule 3(a)", "uri": "source.md#rule-3a-household-credit"},
+    {"label": "Example Rule 3(b)", "uri": "source.md#rule-3b-credit-cap"},
+    {"label": "Example Rule 3(c)", "uri": "source.md#rule-3c-phase-out"},
+    {"label": "Example Rule 3(d)", "uri": "source.md#rule-3d-effective-date"},
+    {"label": "Example Rule 3(e)", "uri": "source.md#rule-3e-implementation"}
+  ],
+  "effective_interval": {
+    "from": "2026-01-01",
+    "to": null
+  },
+  "actors": ["household", "tax_agency"],
+  "inputs": [
+    {"name": "income", "sort": "Int"},
+    {"name": "household_size", "sort": "Int"},
+    {"name": "application_date", "sort": "Date"}
+  ],
+  "outputs": [
+    {"name": "benefit", "sort": "Int"}
+  ],
+  "checks": [
+    "non_negative_benefit",
+    "cap_respected",
+    "threshold_cliff",
+    "phaseout_monotonicity",
+    "temporal_transition",
+    "implementation_equivalence"
+  ],
+  "axeyum_fragments": ["Bool", "QF_LIA", "finite replay"],
+  "proof_expectation": "Non-negativity and cap have source-linked Bool/QF_LIA fixtures for the bounded rule; phase-out monotonicity and bounded implementation equivalence have checked fixtures for the active linear phase-out slice, while the validator replays the full piecewise formula over the finite sample. Threshold-cliff and temporal-transition rows remain replayed witnesses."
+}

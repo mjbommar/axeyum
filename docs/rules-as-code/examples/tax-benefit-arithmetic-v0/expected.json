@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "pack_id": "tax_benefit_arithmetic_v0",
+  "parameters": {
+    "change_date": "2026-07-01",
+    "phase_start_before": 40,
+    "phase_start_after": 45,
+    "base_credit": 20,
+    "household_adjustment": 5,
+    "credit_cap": 30,
+    "max_household_size": 3,
+    "phaseout_rate": 2
+  },
+  "sample_domain": {
+    "incomes": [0, 39, 40, 41, 44, 45, 46, 55, 56, 60, 61],
+    "household_sizes": [1, 2, 3],
+    "dates": ["2026-06-30", "2026-07-01"]
+  },
+  "witnesses": [
+    {
+      "id": "new_threshold_full_credit",
+      "facts": {
+        "income": 45,
+        "household_size": 3,
+        "application_date": "2026-07-01"
+      },
+      "expected_benefit": 30,
+      "source_citations": ["Example Rule 3(a)", "Example Rule 3(b)", "Example Rule 3(d)"],
+      "explanation": "A household of size 3 at the new threshold receives the capped 30-unit credit."
+    },
+    {
+      "id": "one_step_phaseout",
+      "facts": {
+        "income": 46,
+        "household_size": 3,
+        "application_date": "2026-07-01"
+      },
+      "expected_benefit": 28,
+      "source_citations": ["Example Rule 3(c)", "Example Rule 3(d)"],
+      "explanation": "One income unit above the new threshold reduces the capped credit by 2 units."
+    },
+    {
+      "id": "zero_after_full_phaseout",
+      "facts": {
+        "income": 61,
+        "household_size": 3,
+        "application_date": "2026-07-01"
+      },
+      "expected_benefit": 0,
+      "source_citations": ["Example Rule 3(c)"],
+      "explanation": "The phase-out may reduce the raw benefit below zero, but the final benefit floors at 0."
+    },
+    {
+      "id": "temporal_before_change",
+      "facts": {
+        "income": 43,
+        "household_size": 1,
+        "application_date": "2026-06-30"
+      },
+      "expected_benefit": 14,
+      "source_citations": ["Example Rule 3(c)", "Example Rule 3(d)"],
+      "explanation": "Before the effective date, income 43 is three units above the old threshold 40."
+    },
+    {
+      "id": "temporal_after_change",
+      "facts": {
+        "income": 43,
+        "household_size": 1,
+        "application_date": "2026-07-01"
+      },
+      "expected_benefit": 20,
+      "source_citations": ["Example Rule 3(a)", "Example Rule 3(d)"],
+      "explanation": "On the effective date, the same income is below the new threshold 45."
+    }
+  ],
+  "checks": [
+    {
+      "id": "non_negative_benefit",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 3(c)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/tax-benefit-arithmetic-v0/smt2/non-negative-benefit-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples tax_benefit_arithmetic_non_negative_benefit_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "cap_respected",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 3(a)", "Example Rule 3(b)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/tax-benefit-arithmetic-v0/smt2/cap-respected-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples tax_benefit_arithmetic_cap_respected_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "threshold_cliff",
+      "expected_result": "sat",
+      "validation": "witness_replay",
+      "witnesses": ["new_threshold_full_credit", "one_step_phaseout"],
+      "proof_status": "replayed",
+      "source_citations": ["Example Rule 3(c)", "Example Rule 3(d)"]
+    },
+    {
+      "id": "phaseout_monotonicity",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 3(a)", "Example Rule 3(c)", "Example Rule 3(d)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/tax-benefit-arithmetic-v0/smt2/phaseout-monotonicity-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples tax_benefit_arithmetic_phaseout_monotonicity_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "temporal_transition",
+      "expected_result": "sat",
+      "validation": "witness_replay",
+      "witnesses": ["temporal_before_change", "temporal_after_change"],
+      "proof_status": "replayed",
+      "source_citations": ["Example Rule 3(d)"]
+    },
+    {
+      "id": "implementation_equivalence",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 3(a)", "Example Rule 3(c)", "Example Rule 3(d)", "Example Rule 3(e)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/tax-benefit-arithmetic-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples tax_benefit_arithmetic_implementation_equivalence_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      },
+      "notes": "The SMT-LIB mismatch query encodes the formal rule model and bounded executable interpretation over the active linear phase-out slice; the validator replays the full piecewise formula over the finite sample."
+    }
+  ]
+}

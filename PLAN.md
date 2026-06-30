@@ -360,6 +360,11 @@ tenant/resource relations, explicit deny precedence, admin tenant guarding,
 intended version-delta witnesses, and checked Bool/QF_LIA fixtures for tenant
 isolation, deny precedence, admin tenant boundaries, and bounded implementation
 equivalence.
+`tax-benefit-arithmetic-v0` now adds the third rules/law pack: integer
+thresholds, household-size adjustments, caps, active phase-out monotonicity,
+effective-date witnesses, and checked Bool/QF_LIA fixtures for non-negative
+benefit, cap, active phase-out monotonicity, and bounded implementation
+equivalence, with the validator replaying the full piecewise finite sample.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, finite tensor products, and finite
 group actions now add secondary equality-heavy promotions for bad antisymmetry,

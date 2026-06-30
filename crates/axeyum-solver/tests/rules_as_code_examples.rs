@@ -31,6 +31,18 @@ const AUTHORIZATION_POLICY_ADMIN_TENANT_GUARD: &str = include_str!(
 const AUTHORIZATION_POLICY_IMPLEMENTATION_EQUIVALENCE: &str = include_str!(
     "../../../docs/rules-as-code/examples/authorization-policy-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2"
 );
+const TAX_BENEFIT_ARITHMETIC_NON_NEGATIVE: &str = include_str!(
+    "../../../docs/rules-as-code/examples/tax-benefit-arithmetic-v0/smt2/non-negative-benefit-bool-qf-lia-conflict.smt2"
+);
+const TAX_BENEFIT_ARITHMETIC_CAP_RESPECTED: &str = include_str!(
+    "../../../docs/rules-as-code/examples/tax-benefit-arithmetic-v0/smt2/cap-respected-bool-qf-lia-conflict.smt2"
+);
+const TAX_BENEFIT_ARITHMETIC_PHASEOUT_MONOTONICITY: &str = include_str!(
+    "../../../docs/rules-as-code/examples/tax-benefit-arithmetic-v0/smt2/phaseout-monotonicity-bool-qf-lia-conflict.smt2"
+);
+const TAX_BENEFIT_ARITHMETIC_IMPLEMENTATION_EQUIVALENCE: &str = include_str!(
+    "../../../docs/rules-as-code/examples/tax-benefit-arithmetic-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2"
+);
 
 #[test]
 fn benefit_eligibility_consistency_emits_checked_evidence() {
@@ -93,6 +105,38 @@ fn authorization_policy_implementation_equivalence_emits_checked_evidence() {
     assert_rule_unsat_evidence(
         "authorization-policy-v0 implementation equivalence",
         AUTHORIZATION_POLICY_IMPLEMENTATION_EQUIVALENCE,
+    );
+}
+
+#[test]
+fn tax_benefit_arithmetic_non_negative_benefit_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "tax-benefit-arithmetic-v0 non-negative benefit",
+        TAX_BENEFIT_ARITHMETIC_NON_NEGATIVE,
+    );
+}
+
+#[test]
+fn tax_benefit_arithmetic_cap_respected_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "tax-benefit-arithmetic-v0 cap respected",
+        TAX_BENEFIT_ARITHMETIC_CAP_RESPECTED,
+    );
+}
+
+#[test]
+fn tax_benefit_arithmetic_phaseout_monotonicity_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "tax-benefit-arithmetic-v0 phaseout monotonicity",
+        TAX_BENEFIT_ARITHMETIC_PHASEOUT_MONOTONICITY,
+    );
+}
+
+#[test]
+fn tax_benefit_arithmetic_implementation_equivalence_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "tax-benefit-arithmetic-v0 implementation equivalence",
+        TAX_BENEFIT_ARITHMETIC_IMPLEMENTATION_EQUIVALENCE,
     );
 }
 

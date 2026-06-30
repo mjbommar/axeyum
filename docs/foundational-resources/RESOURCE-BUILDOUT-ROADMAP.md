@@ -1051,13 +1051,14 @@ separate logic story:
 Detailed mapping:
 [RULES-LAW-CROSSWALK.md](RULES-LAW-CROSSWALK.md) records the reusable check
 shapes, source math packs, Axeyum fragments, proof routes, and the current
-`benefit-eligibility-v0` and `authorization-policy-v0` mappings.
+`benefit-eligibility-v0`, `authorization-policy-v0`, and
+`tax-benefit-arithmetic-v0` mappings.
 
 Next work:
 
-- Use the completed `benefit-eligibility-v0` and `authorization-policy-v0`
-  Bool/QF_LIA proof harnesses as reference patterns for generated multi-row
-  coverage/equivalence queries.
+- Use the completed `benefit-eligibility-v0`, `authorization-policy-v0`, and
+  `tax-benefit-arithmetic-v0` Bool/QF_LIA proof harnesses as reference patterns
+  for generated multi-row coverage/equivalence and threshold/cap queries.
 - Reuse pack schema ideas before creating law-specific schema fields.
 - Keep citations and source provenance mandatory for legal/policy examples.
 
@@ -1104,7 +1105,10 @@ Pick one item per commit unless the change is purely navigational.
 8. Landed: add `authorization-policy-v0` as the second rules/law pack, with
    source-linked Bool/QF_LIA proof fixtures for tenant isolation, explicit deny
    precedence, admin tenant guarding, and bounded implementation equivalence.
-9. Landed: add a consumer-query recipe for "find all packs for a field and
+9. Landed: add `tax-benefit-arithmetic-v0` as the third rules/law pack, with
+   source-linked Bool/QF_LIA proof fixtures for non-negative benefit, cap,
+   active phase-out monotonicity, and bounded implementation equivalence.
+10. Landed: add a consumer-query recipe for "find all packs for a field and
    route" through the `--route` filter in
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md).
@@ -1500,7 +1504,11 @@ Pick one item per commit unless the change is purely navigational.
     solver regressions, benchmark-corpus rows, and theorem-horizon claims, and
     records the promotion checklist before matrix rows support solver-reuse or
     performance language.
-76. Continue proof-route promotions or consumer-query examples; revisit the
+76. Landed: add
+    [`tax-benefit-arithmetic-v0`](../rules-as-code/examples/tax-benefit-arithmetic-v0/)
+    as the third rules/law pack, reusing integer threshold, cap, phase-out,
+    effective-date, finite replay, and Bool/QF_LIA proof-route patterns.
+77. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

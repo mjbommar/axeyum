@@ -280,6 +280,9 @@ Build sequence:
    `authorization-policy-v0` now adds the access-control slice with checked
    Bool/QF_LIA fixtures for tenant isolation, explicit deny precedence, admin
    tenant guarding, and bounded implementation equivalence.
+   `tax-benefit-arithmetic-v0` now adds the threshold/cap/phase-out slice with
+   checked Bool/QF_LIA fixtures for non-negative benefit, cap, active phase-out
+   monotonicity, and bounded implementation equivalence.
 18. First solver-reuse promotions landed: `logic-basics-v0` now links
     `tiny-cnf-refutation` to a DIMACS artifact, `finite-cardinality-v0` links
     `no-injection-four-to-three` to a DIMACS artifact, and
@@ -401,7 +404,11 @@ Build sequence:
     now separates matrix educational resources, solver regressions,
     benchmark-corpus rows, and theorem-horizon claims, with promotion criteria
     before any matrix row is used for solver-reuse or performance language.
-44. Revisit crate/repo boundaries only after three real consumers or repeated
+44. [`tax-benefit-arithmetic-v0`](../rules-as-code/examples/tax-benefit-arithmetic-v0/)
+    now adds the third rules/law pack, reusing integer thresholds,
+    household-size adjustments, caps, active phase-out monotonicity,
+    effective-date witnesses, and checked Bool/QF_LIA proof fixtures.
+45. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

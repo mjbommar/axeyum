@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Tax/benefit arithmetic rules/law pack landed.**
+  [`tax-benefit-arithmetic-v0`](docs/rules-as-code/examples/tax-benefit-arithmetic-v0/README.md)
+  is the third rules-as-code pack and reuses integer thresholds, household-size
+  adjustments, caps, active phase-out monotonicity, effective-date witnesses,
+  and bounded implementation-equivalence checks. The pack has checked
+  Bool/QF_LIA fixtures for non-negative benefit, cap, active phase-out
+  monotonicity, and bounded implementation equivalence; the validator replays
+  the full piecewise finite sample. The focused
+  `rules_as_code_examples` regression now checks 12 obligations with certified
+  evidence across the three rule packs.
+
 - **Matrix corpus/benchmark boundary note landed.**
   [`matrix-corpus-benchmark-boundary.md`](docs/learn/math/matrix-corpus-benchmark-boundary.md)
   now separates educational matrix examples, solver regressions,

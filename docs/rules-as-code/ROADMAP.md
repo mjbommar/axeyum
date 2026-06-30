@@ -39,10 +39,11 @@ for formalized rule obligations.
 
 ## Current Status
 
-The first two rule packs have landed:
+The first three rule packs have landed:
 
 - [Benefit Eligibility V0](examples/benefit-eligibility-v0/README.md)
 - [Authorization Policy V0](examples/authorization-policy-v0/README.md)
+- [Tax Benefit Arithmetic V0](examples/tax-benefit-arithmetic-v0/README.md)
 
 The first metadata schema lives at
 [rules-core.schema.json](../../artifacts/ontology/rules-core.schema.json).
@@ -52,12 +53,13 @@ each pack and checks metadata shape, citation file references, expected check
 records, concrete witness replay, and pack-specific finite-sample invariants.
 Solver proof integration has started: benefit consistency, coverage,
 monotonicity, and bounded implementation equivalence now have source-linked
-Bool/QF_LIA fixtures, and authorization tenant isolation, explicit deny
-precedence, admin tenant guarding, and bounded implementation equivalence do as
-well. They are checked by
+Bool/QF_LIA fixtures; authorization tenant isolation, explicit deny precedence,
+admin tenant guarding, and bounded implementation equivalence do as well; and
+tax/benefit non-negativity, cap, active phase-out monotonicity, and bounded
+implementation equivalence now have checked fixtures. They are checked by
 `cargo test -p axeyum-solver --test rules_as_code_examples`; benefit threshold
-and temporal-transition rows plus authorization version-delta rows remain
-replayed witnesses.
+and temporal-transition rows, authorization version-delta rows, and tax/benefit
+threshold-cliff and temporal-transition rows remain replayed witnesses.
 
 The cross-resource reuse map is
 [Rules/Law Crosswalk For Foundational Resources](../foundational-resources/RULES-LAW-CROSSWALK.md).
@@ -196,6 +198,11 @@ This pack connects to Cedar/OPA-style policy use cases without depending on
 either implementation.
 
 ## Third Example Pack: Tax/Benefit Arithmetic
+
+Status: landed as
+[Tax Benefit Arithmetic V0](examples/tax-benefit-arithmetic-v0/README.md), with
+source-linked Bool/QF_LIA proof fixtures for non-negativity, cap,
+active-phase-out monotonicity, and bounded implementation equivalence.
 
 Model a tiny tax/benefit formula:
 

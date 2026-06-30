@@ -340,9 +340,13 @@ Use one row per commit unless the change is purely navigational.
    rows, and theorem-horizon claims before any performance or parity language.
 7. Promote one replay-heavy family per route only when a compact source artifact
    exists and a route-specific regression can check it.
-8. Add rules/law crosswalk examples only by reusing existing math-resource
-   patterns; do not create a separate rule ontology until the current JSON
-   boundary is exercised by more consumers.
+8. Landed: add the
+   [`tax-benefit-arithmetic-v0`](../rules-as-code/examples/tax-benefit-arithmetic-v0/)
+   rules/law pack by reusing integer threshold, cap, phase-out monotonicity,
+   effective-date, finite replay, and Bool/QF_LIA proof-route patterns.
+9. Add future rules/law crosswalk examples only by reusing existing
+   math-resource patterns; do not create a separate rule ontology until the
+   current JSON boundary is exercised by more consumers.
 
 ## Anti-Patterns
 
