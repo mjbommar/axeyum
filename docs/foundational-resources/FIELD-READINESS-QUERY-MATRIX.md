@@ -23,7 +23,7 @@ committed data contract:
 
 The smoke coverage lives in
 [`scripts/check-foundational-resources.sh`](../../scripts/check-foundational-resources.sh).
-At the time this matrix was written, the public summary reports 96 concept
+At the time this matrix was written, the public summary reports 97 concept
 rows, 102 non-template packs, 516 expected checks, 222 checked rows, 229
 replay-only rows, 65 Lean-horizon rows, and 102 promoted solver-reuse packs.
 
@@ -49,7 +49,7 @@ checked rows a learner page, catalog card, or downstream app can display.
 | `set_theory_and_foundations` | 30 / 164 | `fields --field set_theory_and_foundations --route Alethe` | `concepts --field set_theory_and_foundations --text partition` | `checks --field set_theory_and_foundations --route Alethe --proof-status checked` | ZFC, ordinals, choice, infinite cardinality, or complete-lattice theorems. |
 | `discrete_math` | 21 / 102 | `fields --field discrete_math --route Diophantine` | `concepts --field discrete_math --text finite` | `checks --field discrete_math --route Diophantine --proof-status checked` | Asymptotic enumeration, recurrence closed forms, or broad combinatorial theorem families. |
 | `graph_theory` | 6 / 26 | `fields --field graph_theory --route boolean` | `concepts --field graph_theory --text graph` | `checks --field graph_theory --route boolean --proof-status checked` | Extremal graph theory, graph minors, asymptotic algorithms, or general graph theorems. |
-| `number_theory` | 9 / 50 | `fields --field number_theory --route Diophantine` | `concepts --field number_theory --text finite`; `concepts --field number_theory --text totality` | `checks --field number_theory --route Diophantine --proof-status checked` | Analytic/algebraic number theory or unbounded number-theory theorem coverage. |
+| `number_theory` | 9 / 50 | `fields --field number_theory --route Diophantine` | `concepts --field number_theory --text finite`; `concepts --field number_theory --text totality`; `concepts --field number_theory --text gcd` | `checks --field number_theory --route Diophantine --proof-status checked` | Analytic/algebraic number theory or unbounded number-theory theorem coverage. |
 | `linear_algebra` | 39 / 193 | `fields --field linear_algebra --route Farkas` and `fields --field linear_algebra --route Alethe` | `concepts --field linear_algebra --text rank`; `concepts --field linear_algebra --text projection` | `checks --field linear_algebra --route Farkas --proof-status checked`; `checks --field linear_algebra --route Alethe --proof-status checked` | Spectral theorems, conditioning/stability, or general vector-space/module theorem claims. |
 | `abstract_algebra` | 20 / 107 | `fields --field abstract_algebra --route Alethe` | `concepts --field abstract_algebra --text homomorphism`; `concepts --field abstract_algebra --text ideal` | `checks --field abstract_algebra --route Alethe --proof-status checked`; `checks --field abstract_algebra --route qf-bv --proof-status checked` | Arbitrary group/ring/module/category theory or infinite algebra. |
 | `real_analysis` | 50 / 256 | `fields --field real_analysis --route Farkas` | `concepts --field real_analysis --text epsilon`; `concepts --field real_analysis --text gradient` | `checks --field real_analysis --route Farkas --proof-status checked` | Completeness, IVT/MVT/FTC, general convergence, compactness, or theorem-level calculus. |

@@ -205,6 +205,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **GCD/divisibility bridge concept landed.**
+  `bridge_gcd_divisibility_witness` now makes gcd/common-divisor replay,
+  Bezout coefficient replay, quotient witnesses, modular nonunit obstructions,
+  and checked gcd non-divisibility certificates queryable from the foundational
+  concept atlas. `CONSUMER-QUERIES.md` and
+  `check-foundational-resources.sh` now exercise number-theory gcd concept
+  lookup through the public JSON/query boundary.
+
 - **Proof-route query matrix landed.**
   [PROOF-ROUTE-QUERY-MATRIX.md](docs/foundational-resources/PROOF-ROUTE-QUERY-MATRIX.md)
   now gives downstream consumers route-level discovery for finite replay,
@@ -1515,7 +1523,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the detailed operating plan for turning the curriculum and 18-field math
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
-  library splits. It now records the current committed baseline of 96 concept
+  library splits. It now records the current committed baseline of 97 concept
   rows, 102 non-template packs, 516 expected checks, 222 checked rows, 229
   replay-only rows, 65 Lean-horizon rows, and 102 promoted solver-reuse packs,
   then lays out field-by-field build plans plus a prioritized execution queue.
@@ -1570,7 +1578,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
-  is now generated with 50 bridge rows. The proof-methodology rows are
+  is now generated with 51 bridge rows. The proof-methodology rows are
   `bridge_finite_model_replay`, `bridge_counterexample_proof`,
   `bridge_refutation_query`, `bridge_finite_proof_pattern`,
   `bridge_finite_quantifier_expansion`,
@@ -1583,6 +1591,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `bridge_totality_conventions`, which make exact rational replay,
   floating-point/numerical-honesty boundaries, SMT totality, explicit side
   conditions, and frontend trapping/UB boundaries queryable; the
+  gcd/divisibility row is `bridge_gcd_divisibility_witness`, making
+  gcd/common-divisor replay, Bezout replay, quotient witnesses, modular
+  nonunit obstructions, and checked gcd non-divisibility certificates
+  queryable; the
   optimization/convexity rows are `bridge_lp_objective_farkas` and
   `bridge_rational_convexity_shadow`; the
   set/foundations rows are `bridge_finite_boolean_algebra`,
@@ -1632,7 +1644,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   while keeping duality, KKT sufficiency, SDP strong duality, general
   separation, projected-gradient convergence, proximal-gradient convergence,
   and convergence theorems as Lean horizons. The
-  foundational resource consumer now reports 96 concept rows while
+  foundational resource consumer now reports 97 concept rows while
   preserving 23 curriculum rows and 18 field rows. Next resource work should
   add the next proof-frontier promotion or boundary evidence from a real
   repeated consumer, depending on which roadmap lane is being advanced.

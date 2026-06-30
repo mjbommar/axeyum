@@ -158,14 +158,14 @@ finite-martingales' bad conditional-expectation row now promoted after finite
 filtration replay computes the up-block expectation, and finite Markov-chain's
 existing bad stochastic-row artifact now explicitly promoted in solver-reuse
 metadata.
-The foundational concept atlas now also includes 50 generated R1 bridge
+The foundational concept atlas now also includes 51 generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 refutation-as-query, finite proof-pattern replay, finite quantifier expansion,
 bounded induction obligations, Boolean CNF DRAT/LRAT anatomy, QF_LRA Farkas
 certificate anatomy, exact-vs-floating arithmetic, LP objective-threshold
 replay, rational convexity/gradient shadows, QF_UF Alethe certificate
-anatomy, QF_BV bit-blast
-certificate anatomy, finite Boolean algebra, finite partition/relation
+anatomy, QF_BV bit-blast certificate anatomy, gcd/divisibility witnesses,
+finite Boolean algebra, finite partition/relation
 roundtrips, finite image/preimage/inverse tables, finite bijection/cardinality,
 cardinality theorem horizons, metric balls, bounded epsilon-delta shadows,
 compactness shadows, connectedness shadows, continuity-by-preimage, LU

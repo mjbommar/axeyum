@@ -1298,14 +1298,14 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 96 atlas rows validate, including generated bridge-concept rows for
+  Status: 97 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows,
   refutation-as-query, finite proof-pattern replay, finite quantifier
   expansion, bounded induction obligations, Boolean CNF DRAT/LRAT anatomy,
   QF_LRA Farkas certificate anatomy, exact-vs-floating arithmetic, LP
   objective-threshold replay, rational convexity/gradient shadows, QF_UF
   Alethe certificate anatomy, QF_BV bit-blast
-  certificate anatomy, finite Boolean algebra, finite
+  certificate anatomy, gcd/divisibility witnesses, finite Boolean algebra, finite
   partition/relation roundtrips, finite image/preimage/inverse tables, finite
   bijection/cardinality, cardinality theorem horizons, metric balls, bounded
   epsilon-delta shadows, compactness shadows, connectedness shadows,
@@ -2136,6 +2136,12 @@ root-finding, optimization, measure/probability, functional-analysis/operator,
 and dynamics finite shadows to checked evidence routes, missing Lean/theorem
 dependencies, and next build artifacts without counting finite checks as
 general theorem proofs.
+The number-system concept layer now also has `bridge_gcd_divisibility_witness`.
+It groups gcd/common-divisor replay, Bezout replay, quotient witnesses,
+modular nonunit obstructions, and checked gcd non-divisibility certificates
+across `gcd-bezout-v0`, `integer-lia-v0`, `modular-arithmetic-v0`, and
+`number-theory-v0`, and the foundational-resource smoke check now exercises
+the number-theory gcd concept lookup through the public JSON/query boundary.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

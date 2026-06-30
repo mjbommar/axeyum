@@ -36,7 +36,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 50 bridge-concept rows.
+- 51 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math packs.
 - 516 expected checks.
@@ -660,7 +660,14 @@ Pick one row per commit unless the change is purely navigational.
     analysis, statistics, and optimization. `bridge_totality_conventions`
     makes SMT totality, explicit side conditions, and frontend
     trapping/UB boundaries queryable across number theory, foundations, real
-    analysis, and numerical resources. The atlas now validates 50 bridge rows.
+    analysis, and numerical resources. That increment raised the atlas to 50
+    bridge rows.
+78. Landed: add the gcd/divisibility witness bridge row.
+    `bridge_gcd_divisibility_witness` makes gcd/common-divisor replay, Bezout
+    coefficient replay, quotient witnesses, modular nonunit obstructions, and
+    checked gcd non-divisibility certificates queryable from the atlas. The
+    number-theory consumer smoke now includes gcd concept lookup, and the atlas
+    now validates 51 bridge rows.
 
 ## Validation Checklist
 

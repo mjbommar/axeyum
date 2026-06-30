@@ -8,7 +8,8 @@ Concept rows:
   `curriculum_complex` in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
 - `bridge_totality_conventions` and
-  `bridge_exact_vs_floating_arithmetic` in the
+  `bridge_exact_vs_floating_arithmetic`, plus
+  `bridge_gcd_divisibility_witness`, in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
 - `field_number_theory`, `field_real_analysis`, and `field_complex_analysis`
   in the [math field dashboard](../../foundational-resources/generated/math-field-dashboard.md)
@@ -93,6 +94,9 @@ gcd(252, 198) = 18
 
 The `gcd-bezout-v0` validator recomputes the gcd, common divisors, Bezout
 identity, quotient witness, and the fixed obstruction for `6*x + 10*y = 15`.
+Those rows now share the `bridge_gcd_divisibility_witness` concept: the small
+checked object is the gcd computation or gcd non-divisibility certificate, not
+a broad number-theory theorem.
 For modular arithmetic, encode the witness and its modulus:
 
 ```text

@@ -3473,6 +3473,112 @@
       }
     },
     {
+      "id": "bridge_gcd_divisibility_witness",
+      "kind": "bridge-concept",
+      "title": "GCD Divisibility Witness",
+      "domain": "mathematics",
+      "field_ids": [
+        "number_theory",
+        "abstract_algebra",
+        "discrete_math"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "A gcd/divisibility row checks the integer witness directly: recompute the gcd, Bezout identity, quotient witness, or fixed gcd non-divisibility obstruction before trusting any solver search. UNSAT rows graduate through checked QF_LIA/Diophantine evidence when the source claim is an integer linear equation.",
+      "prerequisites": [
+        "bridge_totality_conventions",
+        "bridge_counterexample_proof",
+        "curriculum_integers",
+        "curriculum_divisibility_and_euclid"
+      ],
+      "unlocks": [
+        "curriculum_modular_arithmetic",
+        "curriculum_number_theory",
+        "family_integer_diophantine",
+        "field_number_theory"
+      ],
+      "decidability": "decidable",
+      "axeyum_fragments": [
+        "integer gcd replay",
+        "Bezout witness replay",
+        "divisibility quotient replay",
+        "QF_LIA / Diophantine",
+        "UnsatDiophantine certificate",
+        "finite modular arithmetic"
+      ],
+      "example_packs": [
+        {
+          "id": "gcd-bezout-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/gcd-bezout-v0",
+          "notes": "GCD/common-divisor replay, Bezout coefficient replay, quotient replay, and a checked gcd non-divisibility obstruction."
+        },
+        {
+          "id": "integer-lia-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/integer-lia-v0",
+          "notes": "Fixed 2*x + 4*y = 3 infeasibility row checked by gcd non-divisibility evidence."
+        },
+        {
+          "id": "modular-arithmetic-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/modular-arithmetic-v0",
+          "notes": "Composite nonunit inverse row encoded as 2*b - 6*k = 1 and checked through the Diophantine route."
+        },
+        {
+          "id": "number-theory-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/number-theory-v0",
+          "notes": "Bounded residue, sum-of-squares, and fixed Diophantine witness rows that reuse gcd/divisibility vocabulary."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "gcd/divisibility replay plus QF_LIA/Diophantine certificate",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lia_routes",
+          "lean_status": "partial",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+            "docs/learn/math/number-systems-and-arithmetic.md",
+            "docs/learn/math/diophantine-certificate-anatomy-end-to-end.md",
+            "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+            "artifacts/examples/math/gcd-bezout-v0/smt2/diophantine-gcd-obstruction-conflict.smt2",
+            "artifacts/examples/math/integer-lia-v0/smt2/diophantine-gcd-obstruction-conflict.smt2",
+            "artifacts/examples/math/modular-arithmetic-v0/smt2/nonunit-inverse-diophantine-conflict.smt2"
+          ],
+          "notes": "The replay rows recompute the source arithmetic. The solver-backed rows additionally parse committed SMT-LIB artifacts and require independently checked UnsatDiophantine evidence."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+        "docs/learn/math/number-systems-and-arithmetic.md",
+        "docs/learn/math/gcd-bezout-end-to-end.md",
+        "docs/learn/math/diophantine-certificate-anatomy-end-to-end.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
+      ],
+      "open_gaps": [
+        "This bridge certifies fixed gcd/divisibility and linear Diophantine rows, not unique factorization, prime distribution, or general number-theory theorems.",
+        "Modular, quotient-ring, or algebra packs that derive a gcd obstruction must still keep their source replay separate from the integer certificate.",
+        "Lean reconstruction for the QF_LIA/Diophantine route remains partial at the family level."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the exact integers, coefficients, divisor, target, modulus, or quotient witness being checked.",
+          "UNSAT rows link a committed SMT-LIB artifact and a math_resource_lia_routes regression when they claim certificate evidence.",
+          "Learner pages explain gcd non-divisibility as the small checked obstruction rather than a black-box solver result."
+        ]
+      }
+    },
+    {
       "id": "bridge_finite_boolean_algebra",
       "kind": "bridge-concept",
       "title": "Finite Boolean Algebra",

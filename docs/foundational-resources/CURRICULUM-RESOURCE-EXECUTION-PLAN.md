@@ -35,11 +35,12 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 96 atlas rows generated from curriculum, field data, 50 R1 bridge
+- 97 atlas rows generated from curriculum, field data, 51 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
-  number-system exact-vs-floating and totality convention vocabulary,
+  number-system exact-vs-floating, totality convention, and gcd/divisibility
+  witness vocabulary,
   linear-algebra computation vocabulary, probability/statistics finite-table
   vocabulary, measure-theory additivity/product/integration vocabulary,
   optimization/convexity LP and finite-shadow vocabulary, algebra-map
@@ -206,9 +207,11 @@ pack has landed.
 Add bridge-concept or example-family rows for repeated subtopics:
 
 - number systems: landed bridge rows for exact-vs-floating arithmetic and
-  totality conventions, so exact rational replay, fixed-width SMT totality,
-  and frontend side-condition boundaries are queryable across number theory,
-  real analysis, numerical analysis, statistics, and optimization resources;
+  totality conventions, plus gcd/divisibility witnesses, so exact rational
+  replay, fixed-width SMT totality, frontend side-condition boundaries, and
+  gcd non-divisibility certificates are queryable across number theory, real
+  analysis, numerical analysis, statistics, optimization, algebra, and
+  discrete resources;
 - logic: landed bridge rows for refutation-as-query, finite proof-pattern
   replay, finite quantifier expansion, and bounded induction obligations;
   general induction schemas remain Lean horizon;

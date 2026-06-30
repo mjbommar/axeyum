@@ -45,7 +45,7 @@ As of 2026-06-30, the committed resource query reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 50 bridge-concept rows.
+- 51 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math packs.
 - 516 expected checks.
@@ -412,7 +412,11 @@ Use one row per commit unless the change is purely navigational.
    exact-vs-floating arithmetic and totality conventions, plus consumer smoke
    queries for number-theory totality and numerical-analysis floating-boundary
    lookup.
-21. Add future rules/law crosswalk examples only by reusing existing
+21. Landed: add the gcd/divisibility witness bridge row and number-theory gcd
+   consumer smoke lookup, making gcd/common-divisor replay, Bezout replay,
+   quotient replay, modular nonunit obstructions, and checked
+   UnsatDiophantine gcd certificates queryable from the atlas.
+22. Add future rules/law crosswalk examples only by reusing existing
    math-resource patterns; do not create a separate rule ontology until the
    current JSON boundary is exercised by more consumers.
 
