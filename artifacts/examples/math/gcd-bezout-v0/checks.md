@@ -41,4 +41,6 @@ The fixed false claim is that integers `x` and `y` satisfy:
 
 The validator recomputes `gcd(6, 10) = 2` and checks that `2` does not divide
 `15`, which is the exact obstruction for this two-variable linear Diophantine
-equation.
+equation. The resource-backed Axeyum regression parses the matching QF_LIA
+SMT-LIB artifact and requires independently rechecked `UnsatDiophantine`
+evidence.

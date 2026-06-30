@@ -27,6 +27,9 @@ const DESCRIPTIVE_STATS_BAD_CONTINGENCY_TOTAL: &str = include_str!(
 const INTEGER_LIA_DIOPHANTINE_GCD_OBSTRUCTION: &str = include_str!(
     "../../../artifacts/examples/math/integer-lia-v0/smt2/diophantine-gcd-obstruction-conflict.smt2"
 );
+const GCD_BEZOUT_DIOPHANTINE_GCD_OBSTRUCTION: &str = include_str!(
+    "../../../artifacts/examples/math/gcd-bezout-v0/smt2/diophantine-gcd-obstruction-conflict.smt2"
+);
 const NATURAL_ARITHMETIC_BOUNDED_NEGATIVE: &str = include_str!(
     "../../../artifacts/examples/math/natural-arithmetic-v0/smt2/bounded-natural-negative-lia-conflict.smt2"
 );
@@ -79,6 +82,14 @@ fn integer_lia_diophantine_gcd_obstruction_emits_checked_diophantine_evidence() 
     assert_resource_diophantine(
         "integer-lia-v0 Diophantine gcd obstruction",
         INTEGER_LIA_DIOPHANTINE_GCD_OBSTRUCTION,
+    );
+}
+
+#[test]
+fn gcd_bezout_diophantine_gcd_obstruction_emits_checked_diophantine_evidence() {
+    assert_resource_diophantine(
+        "gcd-bezout-v0 Diophantine gcd obstruction",
+        GCD_BEZOUT_DIOPHANTINE_GCD_OBSTRUCTION,
     );
 }
 

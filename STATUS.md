@@ -361,9 +361,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   evidence; generated dashboards move promoted solver-reuse packs to 62 and
   leave 22 unclassified packs.
 
+- **Rational-order and gcd/Bezout arithmetic source promotion landed.**
+  `rationals-lra-v0` now carries source-level SMT-LIB artifacts and promoted
+  `solver_reuse` metadata for its fixed trichotomy and order-transitivity
+  conflicts. `gcd-bezout-v0` now carries the same source-linked promotion for
+  its fixed Diophantine gcd obstruction. The focused LRA and LIA route
+  regressions parse those artifacts before checking independent Farkas or
+  Diophantine evidence; generated dashboards move promoted solver-reuse packs
+  to 64 and leave 20 unclassified packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 62-promoted-pack review count. The
+  now records the refreshed 64-promoted-pack review count. The
   decision remains in-repo and JSON-first: the query consumer reads promoted
   solver-reuse rows, but there is still no external consumer, repeated typed API
   demand, or reusable encoder boundary that warrants a new crate or separate

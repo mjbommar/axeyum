@@ -23,13 +23,24 @@
     "QF_LIA"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gcd-bezout-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "gcd Bezout Diophantine obstruction QF_LIA regression seed",
+    "pressure": "Fixed linear Diophantine obstruction where gcd(6,10)=2 does not divide the target 15, so 6*x + 10*y = 15 has no integer solution.",
+    "evidence": [
+      "diophantine-gcd-obstruction"
+    ],
+    "next_step": "Promote additional divisibility rows only when they add distinct integer-linear gcd, divisibility, or modular solver pressure; keep unique factorization and prime-distribution theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/02-structures/divisibility-and-euclid.md",
     "docs/curriculum/01-number-systems/integers.md",
     "docs/curriculum/03-destinations/number-theory.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-lia-diophantine.md"
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+    "artifacts/examples/math/gcd-bezout-v0/smt2/diophantine-gcd-obstruction-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
   ],
   "expected_results": [
     "gcd-common-divisors-replay",

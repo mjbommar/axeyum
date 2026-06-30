@@ -1,0 +1,7 @@
+(set-logic QF_LRA)
+(declare-const left Real)
+(declare-const right Real)
+(assert (= left (/ 1 4)))
+(assert (= right (/ 3 4)))
+(assert (= left right))
+(check-sat)

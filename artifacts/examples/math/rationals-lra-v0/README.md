@@ -23,13 +23,14 @@ route and Farkas evidence:
 The validator parses fraction strings exactly with Python rational arithmetic
 and checks the listed equalities/inequalities. The two fixed `unsat` order rows
 also have an Axeyum regression that builds the corresponding `QF_LRA` formulas,
-emits `UnsatFarkas` evidence, and rechecks that evidence independently. This is
-not a general theorem of rational order theory; it is checked evidence for the
-fixed rows.
+emits `UnsatFarkas` evidence, and rechecks that evidence independently. Those
+rows now also carry source-level SMT-LIB artifacts that the route regression
+parses before checking Farkas evidence. This is not a general theorem of
+rational order theory; it is checked evidence for the fixed rows.
 
 Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes
+cargo test -p axeyum-solver --test math_resource_lra_routes rationals
 ```

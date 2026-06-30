@@ -70,7 +70,9 @@
       "data": {
         "a": 6,
         "b": 10,
-        "target": 15
+        "target": 15,
+        "smt2_artifact": "artifacts/examples/math/gcd-bezout-v0/smt2/diophantine-gcd-obstruction-conflict.smt2",
+        "diophantine_regression": "cargo test -p axeyum-solver --test math_resource_lia_routes gcd_bezout_diophantine_gcd_obstruction"
       },
       "notes": "The validator checks gcd(6,10) = 2 and 2 does not divide 15."
     }

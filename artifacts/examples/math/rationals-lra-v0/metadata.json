@@ -15,6 +15,16 @@
   "curriculum_nodes": ["rationals", "reals"],
   "axeyum_fragments": ["LRA (exact rationals)", "QF_LRA"],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "fixed rational order QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational order conflicts for trichotomy branches over 1/4 and 3/4 plus a transitivity violation over 1/5 < 2/5 < 3/5.",
+    "evidence": [
+      "trichotomy-fixed-unsat",
+      "order-transitivity-fixed-unsat"
+    ],
+    "next_step": "Promote additional rational-order rows only when they add distinct exact-linear solver pressure; keep general ordered-field and completeness theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/curriculum/01-number-systems/reals.md",
@@ -22,6 +32,10 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-nonless-farkas-conflict.smt2",
+    "artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-equality-farkas-conflict.smt2",
+    "artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-greater-farkas-conflict.smt2",
+    "artifacts/examples/math/rationals-lra-v0/smt2/order-transitivity-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [

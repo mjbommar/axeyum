@@ -19,6 +19,18 @@ const LINEAR_OPTIMIZATION_OBJECTIVE_THRESHOLD: &str = include_str!(
 const CONVEXITY_BAD_MIDPOINT: &str = include_str!(
     "../../../artifacts/examples/math/convexity-rational-v0/smt2/bad-midpoint-convexity-farkas-conflict.smt2"
 );
+const RATIONALS_TRICHOTOMY_NONLESS: &str = include_str!(
+    "../../../artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-nonless-farkas-conflict.smt2"
+);
+const RATIONALS_TRICHOTOMY_EQUALITY: &str = include_str!(
+    "../../../artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-equality-farkas-conflict.smt2"
+);
+const RATIONALS_TRICHOTOMY_GREATER: &str = include_str!(
+    "../../../artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-greater-farkas-conflict.smt2"
+);
+const RATIONALS_ORDER_TRANSITIVITY: &str = include_str!(
+    "../../../artifacts/examples/math/rationals-lra-v0/smt2/order-transitivity-farkas-conflict.smt2"
+);
 
 fn real(arena: &mut TermArena, name: &str) -> TermId {
     arena.real_var(name).unwrap()
@@ -124,6 +136,26 @@ fn rationals_trichotomy_fixed_unsat_branches_emit_checked_farkas() {
 }
 
 #[test]
+fn rationals_trichotomy_source_artifacts_emit_checked_farkas() {
+    for (label, smt2) in [
+        (
+            "rationals-lra-v0 trichotomy non-less SMT-LIB artifact",
+            RATIONALS_TRICHOTOMY_NONLESS,
+        ),
+        (
+            "rationals-lra-v0 trichotomy equality SMT-LIB artifact",
+            RATIONALS_TRICHOTOMY_EQUALITY,
+        ),
+        (
+            "rationals-lra-v0 trichotomy greater SMT-LIB artifact",
+            RATIONALS_TRICHOTOMY_GREATER,
+        ),
+    ] {
+        assert_resource_farkas(label, smt2);
+    }
+}
+
+#[test]
 fn rationals_order_transitivity_fixed_unsat_emits_checked_farkas() {
     let mut arena = TermArena::new();
     let a = real(&mut arena, "a");
@@ -147,6 +179,14 @@ fn rationals_order_transitivity_fixed_unsat_emits_checked_farkas() {
             b_lt_c,
             not_a_lt_c,
         ],
+    );
+}
+
+#[test]
+fn rationals_order_transitivity_source_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "rationals-lra-v0 order-transitivity SMT-LIB artifact",
+        RATIONALS_ORDER_TRANSITIVITY,
     );
 }
 

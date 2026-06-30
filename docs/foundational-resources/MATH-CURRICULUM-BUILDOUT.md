@@ -461,7 +461,8 @@ non-ideal rejection, checked quotient representative congruence, and a general
 ideal-theory Lean-horizon row.
 `gcd-bezout-v0` now
 validates gcd/common-divisor replay, Bezout coefficient replay, direct
-divisibility witnesses, and a checked linear Diophantine gcd obstruction.
+divisibility witnesses, and a source-linked checked linear Diophantine gcd
+obstruction.
 `number-theory-v0` now validates bounded CRT compatibility, quadratic-residue
 replay, checked nonresidue enumeration plus a QF_BV/DRAT proof-route row,
 sum-of-two-squares replay, checked mod-4 two-squares obstruction, and bounded
@@ -1499,10 +1500,10 @@ same CNF/DRAT/LRAT regression pattern on the contradiction row `p`, `p -> q`,
 `finite-sets-v0` now carries promoted solver-reuse metadata for the malformed
 distributive-law counterexample at element `c`, completing the first Boolean
 CNF/LRAT proof-upgrade target set.
-The QF_LRA/Farkas lane now has its first resource-backed proof regression:
-`rationals-lra-v0` closes the fixed trichotomy impossible branches and the
-fixed order-transitivity violating branch with Axeyum `UnsatFarkas` evidence
-that is independently rechecked.
+The QF_LRA/Farkas lane now has a source-linked solver-reuse promotion for
+`rationals-lra-v0`: fixed trichotomy impossible branches and the fixed
+order-transitivity violating branch carry SMT-LIB artifacts with Axeyum
+`UnsatFarkas` evidence that is independently rechecked.
 `linear-algebra-rational-v0` now also routes its singular inconsistent system
 through a source-linked checked Farkas evidence path.
 `linear-optimization-v0` now routes its infeasible objective-threshold conflict

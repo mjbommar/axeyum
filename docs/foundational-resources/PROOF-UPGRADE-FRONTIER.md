@@ -157,7 +157,7 @@ Graduation:
 First targets:
 
 - [rationals-lra-v0](../../artifacts/examples/math/rationals-lra-v0/)
-  (first resource-backed Farkas regression landed for fixed trichotomy and
+  (source-linked solver-reuse promotion landed for fixed trichotomy and
   order-transitivity refutations)
 - [linear-algebra-rational-v0](../../artifacts/examples/math/linear-algebra-rational-v0/)
   (source-linked solver-reuse promotion landed for the singular inconsistent
@@ -369,6 +369,8 @@ Related checked integer-arithmetic solver-reuse promotion:
 Reference packs already on the route:
 
 - [gcd-bezout-v0](../../artifacts/examples/math/gcd-bezout-v0/)
+  (source-linked solver-reuse promotion landed for the fixed Diophantine gcd
+  obstruction)
 - [number-theory-v0](../../artifacts/examples/math/number-theory-v0/)
 
 Expected artifact:

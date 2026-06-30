@@ -25,15 +25,13 @@ general algebraic number theory.
 The validator recomputes each arithmetic fact with exact integers. SAT rows are
 accepted only after replaying the listed witness against the original claim. The
 UNSAT row is accepted only after recomputing the gcd of the coefficients and
-checking the divisibility obstruction for the fixed Diophantine equation.
-
-This pack does not yet emit Axeyum LIA terms or an `UnsatDiophantine`
-certificate. The graduation route is to lower the fixed Diophantine row into
-QF_LIA and check the resulting gcd certificate through Axeyum's integer evidence
-checker.
+checking the divisibility obstruction for the fixed Diophantine equation. The
+same row now also carries a source-level QF_LIA artifact that the route
+regression parses before checking `UnsatDiophantine` evidence.
 
 Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gcd-bezout-v0
+cargo test -p axeyum-solver --test math_resource_lia_routes gcd_bezout_diophantine_gcd_obstruction
 ```
