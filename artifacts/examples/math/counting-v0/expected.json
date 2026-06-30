@@ -50,9 +50,12 @@
       "proof_status": "checked",
       "data": {
         "pigeons": 3,
-        "holes": 2
+        "holes": 2,
+        "cnf_artifact": "artifacts/examples/math/counting-v0/cnf/pigeonhole-3-2.cnf",
+        "proof_regression": "cargo test -p axeyum-cnf --test math_resource_boolean_routes counting_pigeonhole_3_2_emits_checked_drat_and_lrat",
+        "certificate": "The regression parses the source-linked PHP(3,2) DIMACS artifact, emits a DRAT proof, elaborates it to LRAT, and independently checks both proof objects against the CNF."
       },
-      "notes": "The validator enumerates all eight placements and confirms none is injective."
+      "notes": "The validator enumerates all eight placements and confirms none is injective; the cargo regression checks generated DRAT and elaborated LRAT evidence for the matching DIMACS artifact."
     }
   ]
 }

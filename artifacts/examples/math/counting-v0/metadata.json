@@ -24,11 +24,22 @@
     "CNF"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/counting-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite counting pigeonhole Bool/CNF DRAT/LRAT regression seed",
+    "pressure": "PHP(3,2) injective-placement conflict: three pigeons must each choose exactly one of two holes while no hole may receive two pigeons.",
+    "evidence": [
+      "pigeonhole-3-2-unsat"
+    ],
+    "next_step": "Promote additional counting rows only when they add distinct integer-count or Boolean proof pressure; keep general combinatorics and asymptotic identities in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/02-structures/counting.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md"
+    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+    "artifacts/examples/math/counting-v0/cnf/pigeonhole-3-2.cnf",
+    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
   ],
   "expected_results": [
     "permutation-count-fixed",
@@ -38,7 +49,7 @@
   "graduation_criteria": [
     "Encode fixed counting identities as deterministic LIA/enumeration checks.",
     "Replay finite combinatorial witnesses through Axeyum model evaluation.",
-    "Emit deterministic CNF and checked LRAT/DRAT evidence for pigeonhole refutations.",
+    "Keep the resource-backed pigeonhole CNF regression checking generated DRAT and elaborated LRAT proofs.",
     "Keep general combinatorial identities, generating functions, and asymptotics marked Lean-horizon."
   ]
 }

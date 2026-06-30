@@ -100,8 +100,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/proof-methods-refutation-v0/`](../../artifacts/examples/math/proof-methods-refutation-v0/)
   is the first substantive math pack: proof-by-refutation over finite
   pigeonhole examples, with `PHP(2,2)` witness replay and `PHP(3,2)` checked
-  by deterministic CNF truth-table enumeration. LRAT/DRAT remains the
-  proof-object graduation target.
+  by deterministic CNF truth-table enumeration plus a source-linked Boolean
+  DRAT/LRAT route regression.
 - [`artifacts/examples/math/proof-methods-patterns-v0/`](../../artifacts/examples/math/proof-methods-patterns-v0/)
   validates finite proof-method patterns: direct proof/modus ponens,
   contrapositive equivalence, proof by cases, contradiction refutation,

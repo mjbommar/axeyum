@@ -400,7 +400,8 @@ validates propositional SAT witness replay, tautology/contradiction truth-table
 checks, De Morgan equivalence, and a tiny CNF refutation.
 [`proof-methods-refutation-v0`](../../artifacts/examples/math/proof-methods-refutation-v0/),
 now validates with a SAT witness control case and a checked deterministic
-CNF truth-table refutation for `PHP(3,2)`.
+CNF truth-table refutation plus a source-linked DRAT/LRAT route regression for
+`PHP(3,2)`.
 [`proof-methods-patterns-v0`](../../artifacts/examples/math/proof-methods-patterns-v0/)
 validates direct proof/modus ponens, contrapositive equivalence, proof by
 cases, contradiction refutation, invalid-converse counterexample evidence, and

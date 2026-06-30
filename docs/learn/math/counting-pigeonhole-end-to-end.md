@@ -21,7 +21,7 @@ Concept rows:
 
 Every row is fixed and finite. The pack does not prove general binomial
 identities, recurrence schemas, asymptotic counting, probabilistic limit
-theorems, or a certificate-producing pigeonhole SAT proof yet.
+theorems, or unbounded pigeonhole principles.
 
 ## Replay A Permutation Count
 
@@ -85,6 +85,19 @@ pigeons, there are:
 possible placements. The validator enumerates all eight and confirms that
 every placement has a collision, so no injective placement exists.
 
+The same row also has a source DIMACS artifact:
+
+```text
+artifacts/examples/math/counting-v0/cnf/pigeonhole-3-2.cnf
+```
+
+The Boolean proof-route regression parses that artifact, emits a DRAT
+refutation, elaborates it to LRAT, and checks both proof objects:
+
+```sh
+cargo test -p axeyum-cnf --test math_resource_boolean_routes counting_pigeonhole_3_2_emits_checked_drat_and_lrat
+```
+
 ## Why This Matters
 
 Counting is one of the smallest places where Axeyum's trust story splits into
@@ -92,13 +105,13 @@ two useful routes:
 
 ```text
 finite arithmetic rows -> exact replay
-finite impossibility rows -> enumeration now, CNF/LRAT later
+finite impossibility rows -> enumeration plus checked CNF/DRAT/LRAT
 ```
 
-The current pigeonhole evidence is checked finite enumeration. The graduation
-route is to emit deterministic CNF and check an LRAT or DRAT proof object, so
-the impossibility can be verified by a smaller proof checker instead of by
-enumerating all placements.
+The current pigeonhole evidence includes both checked finite enumeration and a
+checked CNF proof-object route. That gives two independent views of the same
+finite impossibility: direct replay of all placements, and a smaller
+certificate checked against the DIMACS formula.
 
 ## Run It
 
@@ -106,11 +119,14 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/counting-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes counting_pigeonhole_3_2_emits_checked_drat_and_lrat
 ```
 
 ## Trust Boundary
 
 The validator checks factorial, permutation, and binomial counts using exact
 integer arithmetic. For the pigeonhole row, it enumerates the fixed finite
-function space and checks injectivity directly. General combinatorics and
-proof-producing SAT certificates remain future proof-route work.
+function space and checks injectivity directly. The Boolean route test checks
+the generated DRAT and elaborated LRAT certificates for the source CNF.
+General combinatorics, asymptotics, and unbounded pigeonhole theorems remain
+future Lean-horizon work.

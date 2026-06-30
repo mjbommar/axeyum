@@ -14,6 +14,15 @@
   "curriculum_nodes": ["proof-methods", "propositional-logic", "counting"],
   "axeyum_fragments": ["Bool / SAT", "CNF", "truth-table enumeration"],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "proof by refutation pigeonhole Bool/CNF DRAT/LRAT regression seed",
+    "pressure": "The negated finite pigeonhole claim becomes a PHP(3,2) CNF whose unsatisfiability should be certified independently of SAT search.",
+    "evidence": [
+      "php-3-2-unsat"
+    ],
+    "next_step": "Promote additional refutation rows only when they add distinct proof-pattern pressure; keep general proof-system soundness in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/00-foundations/proof-methods.md",
     "docs/curriculum/00-foundations/propositional-logic.md",
@@ -21,12 +30,14 @@
     "docs/proof-cookbook/README.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
-    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "artifacts/examples/math/proof-methods-refutation-v0/cnf/php-3-2.cnf",
+    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
   ],
   "expected_results": ["php-2-2-sat", "php-3-2-unsat"],
   "graduation_criteria": [
     "Emit the PHP(3,2) Boolean formula as deterministic CNF from Axeyum lowering rather than pack-local data.",
-    "Produce and check an LRAT or DRAT proof for the UNSAT case.",
+    "Keep the resource-backed PHP(3,2) CNF regression checking generated DRAT and elaborated LRAT proofs.",
     "Replay the PHP(2,2) witness against the original finite assignment model.",
     "Link any stronger proof-object evidence from the Proof Certificate Cookbook without weakening the finite CNF enumeration check."
   ]

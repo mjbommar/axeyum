@@ -26,12 +26,14 @@ The validator computes factorial, permutation, and combination counts using
 integer arithmetic. For the pigeonhole row, it enumerates every function from
 the pigeon set to the hole set and confirms none is injective.
 
-The current pigeonhole evidence is a checked finite enumeration, not a CNF/LRAT
-proof object. The Boolean CNF recipe remains the graduation route for a
-certificate-producing SAT proof.
+The pigeonhole row now has two independent checks: the validator enumerates the
+finite placements, and the Boolean route regression parses
+[`cnf/pigeonhole-3-2.cnf`](cnf/pigeonhole-3-2.cnf), emits a DRAT refutation,
+elaborates it to LRAT, and checks both proof objects.
 
 Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/counting-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes counting_pigeonhole_3_2_emits_checked_drat_and_lrat
 ```

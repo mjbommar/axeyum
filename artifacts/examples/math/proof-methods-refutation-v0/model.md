@@ -36,4 +36,7 @@ not (x_p1_h and x_p2_h)
 ```
 
 The finite model is purely propositional, so the intended Axeyum route is
-Bool/SAT followed by a checked SAT proof for the UNSAT case.
+Bool/SAT followed by a checked SAT proof for the UNSAT case. This pack now
+keeps the source-level `PHP(3,2)` DIMACS artifact under `cnf/` and routes it
+through the Boolean DRAT/LRAT regression in addition to validator-side finite
+truth-table enumeration.

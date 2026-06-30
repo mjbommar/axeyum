@@ -41,8 +41,8 @@ The committed resource query currently reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 64 promoted solver-reuse packs.
-- 20 unclassified solver-reuse packs.
+- 66 promoted solver-reuse packs.
+- 18 unclassified solver-reuse packs.
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
 allowed only when they fill a clear curriculum/field hole that cannot be served
@@ -92,8 +92,6 @@ Current unclassified queue:
 
 | Pack | Practical Next Step |
 |---|---|
-| `proof-methods-refutation-v0` | promote the `PHP(3,2)` row through a deterministic CNF DRAT/LRAT regression |
-| `counting-v0` | share the same pigeonhole CNF route or add a counting-specific CNF/LIA artifact |
 | `finite-predicate-v0` | decide finite-expansion regression versus non-benchmark educational replay |
 | `induction-obligations-v0` | mark bounded obligations as non-benchmark or promote one QF_LIA bad-step row |
 | `cardinality-principles-v0` | choose a small inclusion-exclusion/double-counting proof route or mark theorem rows horizon |
@@ -262,8 +260,8 @@ Exit criteria:
 
 Pick one row per commit unless the change is purely navigational.
 
-1. Promote the `proof-methods-refutation-v0` and `counting-v0` `PHP(3,2)` rows
-   through source-linked DIMACS plus DRAT/LRAT regression.
+1. Landed: promote the `proof-methods-refutation-v0` and `counting-v0`
+   `PHP(3,2)` rows through source-linked DIMACS plus DRAT/LRAT regression.
 2. Classify the remaining replay-heavy unclassified packs as either promotion
    candidates or explicit non-benchmark educational rows.
 3. Promote a finite-topology axiom conflict if the CNF stays source-level

@@ -20,9 +20,10 @@ Concept rows:
 | `php-2-2-sat` | `sat` | checked |
 | `php-3-2-unsat` | `unsat` | checked |
 
-The checked rows are finite Boolean pigeonhole rows. `PHP(3,2)` is currently
-checked by deterministic CNF truth-table enumeration. LRAT/DRAT remains the
-stronger graduation route for proof-object evidence.
+The checked rows are finite Boolean pigeonhole rows. `PHP(3,2)` is checked two
+ways: deterministic CNF truth-table enumeration in the pack validator, and a
+Boolean proof-route regression that emits DRAT, elaborates LRAT, and checks
+both proof objects for the source DIMACS artifact.
 
 ## Encode
 
@@ -113,12 +114,25 @@ and the matching clauses for `h1`.
 The validator enumerates all `2^6 = 64` Boolean assignments and finds no
 satisfying row, so the CNF is checked `unsat`.
 
-## Keep Proof Objects Separate
-
-Truth-table enumeration is checked finite evidence. It is not the same artifact
-as a SAT proof certificate. The graduation path is:
+The source DIMACS artifact is:
 
 ```text
+artifacts/examples/math/proof-methods-refutation-v0/cnf/php-3-2.cnf
+```
+
+The certificate regression is:
+
+```sh
+cargo test -p axeyum-cnf --test math_resource_boolean_routes proof_methods_refutation_php_3_2_emits_checked_drat_and_lrat
+```
+
+## Keep Proof Objects Separate
+
+Truth-table enumeration is checked finite evidence, but it is not the same
+artifact as a SAT proof certificate. This pack keeps both routes visible:
+
+```text
+deterministic CNF -> truth-table enumeration
 deterministic CNF -> SAT solver UNSAT -> emitted DRAT/LRAT -> checked proof
 ```
 
@@ -131,6 +145,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes proof_methods_refutation_php_3_2_emits_checked_drat_and_lrat
 ```
 
 Expected output:
@@ -145,7 +160,7 @@ This lesson shows Axeyum's resource pattern for proof by refutation:
 
 ```text
 untrusted fast search -> candidate placement or UNSAT result
-trusted small checking -> SAT witness replay, deterministic CNF enumeration, future LRAT/DRAT check
+trusted small checking -> SAT witness replay, deterministic CNF enumeration, checked DRAT/LRAT certificates
 ```
 
 Larger refutation examples need emitted CNF and checked proof certificates

@@ -524,16 +524,16 @@ positive-definiteness by leading principal minors, checked bad-gradient
 rejection, and a multivariable-calculus Lean-horizon row.
 `proof-methods-refutation-v0`
 now validates the `PHP(2,2)` control witness and the `PHP(3,2)` refutation by
-deterministic CNF truth-table enumeration; LRAT/DRAT proof objects remain its
-graduation route, not a pack-level proof gap.
+deterministic CNF truth-table enumeration plus a source-linked Bool/CNF
+DRAT/LRAT route regression.
 
 Recommended order:
 
 1. `proof-methods-refutation-v0` (landed) and
    `proof-methods-patterns-v0` (landed): negation-as-query, pigeonhole,
    direct proof, contrapositive, cases, contradiction, invalid converse
-   counterexamples, and checked finite CNF/truth-table refutations; LRAT/DRAT
-   remains the stronger proof-object graduation route.
+   counterexamples, checked finite CNF/truth-table refutations, and
+   source-linked DRAT/LRAT evidence for the PHP and contradiction rows.
 2. `finite-sets-v0` (landed), `relations-functions-v0` (landed),
    `equivalence-classes-v0` (landed), `function-composition-v0` (landed),
    `finite-monoids-v0` (landed), `finite-permutation-groups-v0` (landed),

@@ -27,7 +27,8 @@ logic pack expands finite-domain quantifiers into explicit predicate-table
 checks, including finite universal/existential replay and relation
 counterexamples. The proof-methods refutation pack records a small pigeonhole
 SAT witness and checks the `PHP(3,2)` UNSAT pigeonhole claim by deterministic
-CNF truth-table enumeration. The proof-patterns pack checks direct proof,
+CNF truth-table enumeration plus checked DRAT/LRAT evidence for the source
+DIMACS artifact. The proof-patterns pack checks direct proof,
 contrapositive, proof by cases, contradiction, and invalid converse examples
 by assignment replay and truth-table enumeration. The induction pack checks
 bounded base, step, and conclusion obligations while keeping the full induction
@@ -62,10 +63,10 @@ x_p1_h1 = true
 The validator checks that every pigeon chooses one hole and no hole receives
 two pigeons. For the `PHP(3,2)` UNSAT row, the pack records the deterministic
 pigeonhole CNF and enumerates all assignments to reject every possible
-placement. The LRAT/DRAT certificate route is still a stronger graduation
-target, but the finite UNSAT claim is no longer just a schema-level proof gap.
-That distinction is part of the lesson: a replayed model, a finite exhaustive
-refutation, and a checked proof object are different artifacts.
+placement. The Boolean route regression also parses the source DIMACS artifact,
+emits DRAT, elaborates LRAT, and checks both certificates. That distinction is
+part of the lesson: a replayed model, a finite exhaustive refutation, and a
+checked proof object are different artifacts.
 For proof patterns, encode each proof move as a finite Boolean obligation:
 
 ```text

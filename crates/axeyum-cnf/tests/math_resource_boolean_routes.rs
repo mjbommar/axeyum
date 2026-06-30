@@ -15,6 +15,10 @@ const TRIANGLE_NOT_2_COLORABLE_CNF: &str = include_str!(
 const CONTRADICTION_REFUTATION_CNF: &str = include_str!(
     "../../../artifacts/examples/math/proof-methods-patterns-v0/cnf/contradiction-refutation.cnf"
 );
+const PROOF_METHODS_REFUTATION_PHP_3_2_CNF: &str =
+    include_str!("../../../artifacts/examples/math/proof-methods-refutation-v0/cnf/php-3-2.cnf");
+const COUNTING_PIGEONHOLE_3_2_CNF: &str =
+    include_str!("../../../artifacts/examples/math/counting-v0/cnf/pigeonhole-3-2.cnf");
 const FINITE_SETS_DISTRIBUTIVE_COUNTEREXAMPLE_CNF: &str = include_str!(
     "../../../artifacts/examples/math/finite-sets-v0/cnf/distributive-law-counterexample.cnf"
 );
@@ -89,6 +93,26 @@ fn proof_methods_contradiction_refutation_emits_checked_drat_and_lrat() {
         CONTRADICTION_REFUTATION_CNF,
         2,
         3,
+    );
+}
+
+#[test]
+fn proof_methods_refutation_php_3_2_emits_checked_drat_and_lrat() {
+    assert_unsat_resource_cnf_checks(
+        "proof-methods-refutation-v0 php-3-2",
+        PROOF_METHODS_REFUTATION_PHP_3_2_CNF,
+        6,
+        12,
+    );
+}
+
+#[test]
+fn counting_pigeonhole_3_2_emits_checked_drat_and_lrat() {
+    assert_unsat_resource_cnf_checks(
+        "counting-v0 pigeonhole-3-2",
+        COUNTING_PIGEONHOLE_3_2_CNF,
+        6,
+        12,
     );
 }
 

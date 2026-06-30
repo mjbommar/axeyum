@@ -370,9 +370,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Diophantine evidence; generated dashboards move promoted solver-reuse packs
   to 64 and leave 20 unclassified packs.
 
+- **PHP Bool/CNF resource promotion landed.**
+  `proof-methods-refutation-v0` and `counting-v0` now carry source-level
+  DIMACS artifacts and promoted `solver_reuse` metadata for their fixed
+  `PHP(3,2)` rows. The `math_resource_boolean_routes` regression parses both
+  CNF artifacts, emits DRAT, elaborates LRAT, and independently checks both
+  proof objects; generated dashboards move promoted solver-reuse packs to 66
+  and leave 18 unclassified packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 64-promoted-pack review count. The
+  now records the refreshed 66-promoted-pack review count. The
   decision remains in-repo and JSON-first: the query consumer reads promoted
   solver-reuse rows, but there is still no external consumer, repeated typed API
   demand, or reusable encoder boundary that warrants a new crate or separate
@@ -11464,10 +11472,19 @@ plan is built and committed on the current branch:
   Added
   [`docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
   as the execution-grade plan for the current math-resource surface. It records
-  the 84-pack baseline, R0-R6 gates, build waves, the 20 unclassified
-  solver-reuse packs, field and curriculum-node ledgers, validation commands,
+  the then-current 84-pack baseline, R0-R6 gates, build waves, the
+  unclassified solver-reuse queue, field and curriculum-node ledgers, validation commands,
   and the first next increment: source-linked `PHP(3,2)` CNF/DRAT/LRAT
   promotions for `proof-methods-refutation-v0` and `counting-v0`.
+
+- **2026-06-30** — **PHP Bool/CNF resource promotion landed.**
+  Added source-level DIMACS artifacts for
+  `proof-methods-refutation-v0` and `counting-v0` `PHP(3,2)` rows and wired
+  both into `crates/axeyum-cnf/tests/math_resource_boolean_routes.rs`. The
+  route regression now emits DRAT, elaborates LRAT, and independently checks
+  both certificates for the two PHP artifacts. The packs now carry promoted
+  `solver_reuse` metadata, and generated dashboards report 66 promoted
+  solver-reuse packs with 18 still unclassified.
 
 - **2026-06-29** — **Proof-cookbook math-example route sections landed.**
   Added `Math Examples Using This Route` sections to the six active proof

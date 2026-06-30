@@ -265,11 +265,11 @@ Asymptotic runtime, extremal graph theory, and closed-form combinatorics remain
 
 ## Horizon
 
-The current pigeonhole refutation is checked by finite enumeration; deterministic
-CNF plus LRAT/DRAT remains the stronger certificate route. Finite permutation
-cycle/sign data, finite group-action orbit counts, reachability, traversal
-traces, finite traversal-cost counters, matching, d-separation, and cut
-certificates now have dedicated finite packs. General permutation-group theory,
+The fixed pigeonhole refutation is checked by finite enumeration and now also
+has source-linked DRAT/LRAT evidence for its DIMACS artifact. Finite
+permutation cycle/sign data, finite group-action orbit counts, reachability,
+traversal traces, finite traversal-cost counters, matching, d-separation, and
+cut certificates now have dedicated finite packs. General permutation-group theory,
 Burnside/orbit-stabilizer theory, closed-form generating-function extraction,
 weighted max-flow/min-cut, extremal graph theory, graph minors, asymptotic
 graph families, causal identification, average-case search, parallel search,

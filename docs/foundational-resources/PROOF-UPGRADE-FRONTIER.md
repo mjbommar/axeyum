@@ -78,6 +78,13 @@ First targets:
 - [proof-methods-patterns-v0](../../artifacts/examples/math/proof-methods-patterns-v0/)
   (solver-reuse promotion landed for contradiction/refutation: source-linked
   DIMACS artifact, DRAT emission, LRAT elaboration, and independent checks)
+- [proof-methods-refutation-v0](../../artifacts/examples/math/proof-methods-refutation-v0/)
+  (solver-reuse promotion landed for `PHP(3,2)`: source-linked pigeonhole
+  DIMACS artifact, DRAT emission, LRAT elaboration, and independent checks)
+- [counting-v0](../../artifacts/examples/math/counting-v0/)
+  (solver-reuse promotion landed for `pigeonhole-3-2-unsat`: source-linked
+  PHP(3,2) DIMACS artifact, DRAT emission, LRAT elaboration, and independent
+  checks)
 - [logic-basics-v0](../../artifacts/examples/math/logic-basics-v0/)
   (solver-reuse promotion landed for `tiny-cnf-refutation`: source-linked
   DIMACS artifact, DRAT emission, LRAT elaboration, and independent checks)
@@ -112,10 +119,11 @@ First targets:
 
 Secondary targets:
 
-- topology/set-family Boolean rows are now represented by finite compactness
-  and finite connectedness; pick the next topology CNF target only when the
-  finite set-family encoding is still source-level obvious and not better
-  expressed as finite replay.
+- pigeonhole/counting rows are now represented by proof-methods refutation and
+  counting, and topology/set-family Boolean rows are now represented by finite
+  compactness and finite connectedness; pick the next Boolean CNF target only
+  when the finite encoding is source-level obvious and not better expressed as
+  finite replay.
 
 Expected artifact:
 
@@ -133,6 +141,8 @@ cargo test -p axeyum-cnf --test math_resource_boolean_routes boolean_resource_ro
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sets-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-patterns-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/counting-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/logic-basics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-matching-v0
@@ -141,6 +151,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-d-separation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes proof_methods_refutation_php_3_2_emits_checked_drat_and_lrat
+cargo test -p axeyum-cnf --test math_resource_boolean_routes counting_pigeonhole_3_2_emits_checked_drat_and_lrat
 ./scripts/check-foundational-resources.sh
 ```
 
