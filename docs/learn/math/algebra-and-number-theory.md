@@ -338,7 +338,7 @@ T(2+i) = ((2+i) - 1) / ((2+i) + 1) = 2/5 + (1/5)i
 ```
 
 It also rejects the false claim that every square of a unit complex number has
-nonnegative real part, using `i^2 = -1`.
+positive real part, using `i^2 = -1`.
 
 Run the checks from the repository root:
 
@@ -362,11 +362,13 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/po
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-plane-transforms-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas
 ```
 
 For fuller traces from gcd/Bezout, modular congruence, bounded number theory,
-complex real-pair arithmetic, polynomial coefficient replay plus the checked
-false-root Diophantine row, and factorization replay,
+complex real-pair arithmetic including the checked bad unit-square
+QF_LRA/Farkas row, polynomial coefficient replay plus the checked false-root
+Diophantine row, and factorization replay,
 transformation-monoid, permutation, action-table, finite-group, finite-ring,
 homomorphism, quotient-ring, finite-vector-space, finite-dual-space, and module
 data through replay, read

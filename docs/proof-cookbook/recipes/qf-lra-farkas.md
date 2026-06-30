@@ -96,6 +96,9 @@ Canonical examples:
 - [Calculus Algebraic Shadow](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
   uses a false derivative-value row after exact polynomial derivative replay
   computes the derivative at a point.
+- [Complex Plane Transforms](../../../artifacts/examples/math/complex-plane-transforms-v0/)
+  uses a bad unit-square real-part row after exact real-pair replay computes
+  `i^2 = -1`.
 - [Rational Multivariable Calculus](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
   uses a bad gradient-component row after exact bivariate polynomial derivative
   replay computes the gradient.
@@ -147,6 +150,7 @@ cargo test -p axeyum-solver --test lean_crosscheck certified_lra_interpolant_bot
 - [dominance scoreboard](../../../bench-results/DOMINANCE.md)
 - [Real Algebra RCF Shadow pack](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
 - [Calculus Algebraic Shadow pack](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
+- [Complex Plane Transforms pack](../../../artifacts/examples/math/complex-plane-transforms-v0/)
 - [Finite Calculus Shadows pack](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
 - [Rational Multivariable Calculus pack](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [Sequence And Limit Shadows pack](../../../artifacts/examples/math/sequence-limit-shadow-v0/)

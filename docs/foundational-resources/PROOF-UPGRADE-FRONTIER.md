@@ -28,7 +28,7 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 7 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 6 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 32 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 33 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
 | [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 54 | General theorem statements that remain outside bounded SMT replay. |
 
@@ -199,6 +199,9 @@ First targets:
 - [calculus-algebraic-shadow-v0](../../artifacts/examples/math/calculus-algebraic-shadow-v0/)
   (source-linked Farkas regression landed for the bad derivative-value row
   after exact polynomial derivative replay computes the derivative at a point)
+- [complex-plane-transforms-v0](../../artifacts/examples/math/complex-plane-transforms-v0/)
+  (source-linked Farkas regression landed for the bad unit-square real-part
+  row after exact real-pair replay computes `i^2 = -1`)
 - [multivariable-calculus-rational-v0](../../artifacts/examples/math/multivariable-calculus-rational-v0/)
   (source-linked Farkas regression landed for the bad gradient-component row
   after exact bivariate polynomial derivative replay computes the gradient)
@@ -264,7 +267,8 @@ Secondary targets:
   Finite integration now contributes a measure-theory expectation regression,
   calculus algebraic shadows now contribute a real-analysis/numerical-analysis
   derivative-value regression, calculus Riemann sums now contribute a
-  real-analysis/numerical-analysis polynomial-integral regression,
+  real-analysis/numerical-analysis polynomial-integral regression, and complex
+  plane transforms now contribute a real-pair algebra exact-linear regression,
   finite product measure contributes a product-probability exact-linear
   regression where the nonlinear product itself is replayed before Farkas checks
   the final contradictory masses, and finite random variables contribute a

@@ -44,9 +44,9 @@ The current committed data boundary reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 73 promoted solver-reuse packs.
+- 74 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 5 unclassified solver-reuse packs.
+- 4 unclassified solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -639,6 +639,9 @@ Build next:
 - Add concept rows for complex-as-real-pair, conjugation, norm, unit roots,
   Mobius transform, fixed polynomial root, and analytic-function horizon.
 - Route algebraic claims through real-pair LRA/NRA or finite replay.
+- Keep `complex-plane-transforms-v0`'s promoted bad unit-square real-part row
+  tied to the source QF_LRA/Farkas artifact after real-pair replay computes
+  `i^2 = -1`.
 - Keep holomorphicity, contour integration, residues, analytic continuation,
   and algebraic closure as Lean-horizon.
 
@@ -1103,7 +1106,13 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/calculus-algebraic-shadow-v0/smt2/false-derivative-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes calculus_algebraic_false_derivative_artifact_emits_checked_farkas`.
-30. Continue proof-route promotions or consumer-query examples; revisit the
+30. Landed: promote `complex-plane-transforms-v0` through a source-linked
+    QF_LRA/Farkas regression for `bad-unit-square-real-part-rejected`. The
+    artifact
+    `artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-unit-square-real-part-farkas-conflict.smt2`
+    is checked by
+    `cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas`.
+31. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

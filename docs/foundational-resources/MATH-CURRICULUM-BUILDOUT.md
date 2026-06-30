@@ -1559,6 +1559,9 @@ the same checked Farkas evidence path after exact witness-root replay.
 `calculus-algebraic-shadow-v0` now routes its false derivative-value row
 through the same checked Farkas evidence path after exact polynomial derivative
 replay computes the derivative at the fixed point.
+`complex-plane-transforms-v0` now routes its bad unit-square real-part row
+through the same checked Farkas evidence path after exact real-pair replay
+computes `i^2 = -1`.
 The structured atlas now records these recurring exact-rational contradictions
 as `family_exact_rational_farkas`, scoped to the optimization/Farkas
 proof-route lane and backed by the shared

@@ -70,7 +70,7 @@
     },
     {
       "id": "bad-unit-square-real-part-rejected",
-      "claim": "Every square of a unit complex number has nonnegative real part.",
+      "claim": "Every square of a unit complex number has positive real part.",
       "expected_result": "unsat",
       "validation": "finite_bad_complex_square_refutation",
       "proof_status": "checked",
@@ -78,10 +78,13 @@
         "z": ["0", "1"],
         "z_norm_squared": "1",
         "z_squared": ["-1", "0"],
-        "claimed_relation": "real_part_nonnegative",
-        "real_part": "-1"
+        "claimed_relation": "real_part_positive",
+        "real_part": "-1",
+        "claimed_lower_bound": "0",
+        "smt2_artifact": "artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-unit-square-real-part-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas"
       },
-      "notes": "The validator rejects the claim because i is unit length but i^2 has real part -1."
+      "notes": "The validator rejects the claim because i is unit length but i^2 has real part -1; the Axeyum regression checks the final real_part = -1 versus real_part > 0 contradiction through QF_LRA/Farkas evidence."
     },
     {
       "id": "general-complex-analysis-lean-horizon",

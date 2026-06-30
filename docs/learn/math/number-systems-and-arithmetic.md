@@ -111,7 +111,10 @@ T(z) = (z - 1) / (z + 1) = 2/5 + (1/5)i
 
 The `complex-plane-transforms-v0` validator recomputes the numerator,
 denominator, denominator norm, division result, and a checked counterexample
-using `i^2 = -1`.
+using `i^2 = -1`. The upgraded bad unit-square row sends an equivalent
+exact-linear conflict, `negated_real_part = 1` versus
+`negated_real_part < 0`, through checked
+`UnsatFarkas` evidence.
 
 Run the checks from the repository root:
 
@@ -124,6 +127,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/nu
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-plane-transforms-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas
 ```
 
 For fuller traces through bounded natural arithmetic, signed integer LIA,

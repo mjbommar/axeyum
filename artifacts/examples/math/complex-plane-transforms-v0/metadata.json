@@ -32,6 +32,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-plane-transforms-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "real-pair unit-square QF_LRA/Farkas regression seed",
+    "pressure": "Exact real-pair replay computes i^2 = -1 + 0*i, while the malformed row claims the real part of every unit square is positive.",
+    "evidence": [
+      "bad-unit-square-real-part-rejected"
+    ],
+    "next_step": "Promote additional complex-plane rows only when real-pair replay exposes a distinct exact-linear, polynomial, or rational-transform solver pressure; keep holomorphicity, residues, analytic continuation, and algebraic-closure theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -39,6 +48,9 @@
     "docs/curriculum/01-number-systems/reals.md",
     "docs/curriculum/02-structures/polynomials.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-unit-square-real-part-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
@@ -51,7 +63,7 @@
   "graduation_criteria": [
     "Encode fixed complex-plane transform checks as deterministic real-pair NRA obligations.",
     "Replay SAT witnesses through Axeyum model evaluation rather than pack-local Python only.",
-    "Add emitted certificates for the false unit-square row once the relevant algebraic proof routes are promoted.",
+    "Keep the false unit-square real-part row tied to source-linked QF_LRA/Farkas evidence for the final exact real-part contradiction after real-pair replay.",
     "Keep holomorphic, contour-integral, residue, analytic-continuation, and fundamental-theorem claims under Lean horizon until formal proof routes exist."
   ]
 }

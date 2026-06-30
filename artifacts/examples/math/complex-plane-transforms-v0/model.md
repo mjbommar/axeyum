@@ -59,7 +59,7 @@ The denominator norm-squared is `10`, and the image norm-squared is `1/5`.
 ## False Square Claim
 
 The unit complex number `i` refutes the claim that every unit complex square
-has nonnegative real part:
+has positive real part:
 
 ```text
 i^2 = -1 + 0i

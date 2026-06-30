@@ -10257,6 +10257,10 @@ def validate_complex_plane_transforms(expected: dict[str, Any]) -> None:
     claimed_relation = data.get("claimed_relation")
     require_string("bad unit square claimed_relation", claimed_relation)
     real_part = require_fraction("bad unit square real_part", data.get("real_part"))
+    claimed_lower_bound = require_fraction(
+        "bad unit square claimed_lower_bound",
+        data.get("claimed_lower_bound"),
+    )
     if complex_norm_squared(z_value) != z_norm_squared:
         fail("bad-unit-square-real-part-rejected z_norm_squared is incorrect")
     if z_norm_squared != 1:
@@ -10265,10 +10269,24 @@ def validate_complex_plane_transforms(expected: dict[str, Any]) -> None:
         fail("bad-unit-square-real-part-rejected z_squared is incorrect")
     if z_squared[0] != real_part:
         fail("bad-unit-square-real-part-rejected real_part is incorrect")
-    if claimed_relation != "real_part_nonnegative":
+    if claimed_relation != "real_part_positive":
         fail("bad-unit-square-real-part-rejected claimed_relation is unexpected")
-    if real_part >= 0:
-        fail("bad-unit-square-real-part-rejected counterexample does not refute nonnegative real part")
+    if claimed_lower_bound != 0:
+        fail("bad-unit-square-real-part-rejected claimed_lower_bound must be 0")
+    if real_part > claimed_lower_bound:
+        fail("bad-unit-square-real-part-rejected counterexample does not refute positive real part")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad unit square smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-unit-square-real-part-farkas-conflict.smt2"
+    ):
+        fail("bad-unit-square-real-part-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad unit square smt2_artifact", smt2_artifact)
+    farkas_regression = data.get("farkas_regression")
+    require_string("bad unit square farkas_regression", farkas_regression)
+    if "complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas" not in farkas_regression:
+        fail("bad-unit-square-real-part-rejected must link the Farkas regression")
 
     horizon = checks["general-complex-analysis-lean-horizon"]
     if horizon["expected_result"] != "not-run":

@@ -28,7 +28,20 @@ image norm-squared.
 Expected result: `unsat`.
 
 The validator rejects the false claim that every square of a unit complex
-number has nonnegative real part. The counterexample is `i^2 = -1`.
+number has positive real part. The counterexample is `i^2 = -1`; after
+real-pair replay, the final contradiction is checked through QF_LRA/Farkas
+evidence.
+
+The source SMT-LIB artifact records:
+
+```text
+negated_real_part = 1
+negated_real_part < 0
+```
+
+The `math_resource_lra_routes` regression parses
+`smt2/bad-unit-square-real-part-farkas-conflict.smt2`, emits `UnsatFarkas`
+evidence, and independently checks the certificate.
 
 ## `general-complex-analysis-lean-horizon`
 

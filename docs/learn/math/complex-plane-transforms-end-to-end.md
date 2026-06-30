@@ -104,7 +104,7 @@ theorems.
 The negative row claims:
 
 ```text
-Every square of a unit complex number has nonnegative real part.
+Every square of a unit complex number has positive real part.
 ```
 
 The checked counterexample is:
@@ -116,9 +116,20 @@ z^2 = [-1, 0]
 real_part(z^2) = -1
 ```
 
-The checker rejects the universal claim over this finite counterexample. That
-is the reusable pattern: broad mathematical prose becomes a concrete witness
-or counterexample row before it is trusted.
+The checker rejects the universal claim over this finite counterexample. The
+promoted source artifact records the equivalent exact-linear contradiction:
+
+```text
+negated_real_part = 1
+negated_real_part < 0
+```
+
+The `math_resource_lra_routes` regression parses
+`artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-unit-square-real-part-farkas-conflict.smt2`,
+emits `UnsatFarkas` evidence, and checks the certificate independently. That is
+the reusable pattern: broad mathematical prose becomes a concrete witness or
+counterexample row before it is trusted, and the final linear contradiction
+gets a small checked certificate.
 
 ## Name The Lean Horizon
 
@@ -143,6 +154,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-plane-transforms-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas
 ```
 
 Expected output:
@@ -157,9 +169,11 @@ This lesson shows Axeyum's current complex-plane resource pattern:
 
 ```text
 untrusted fast search -> complex transform, cycle, identity, or counterexample
-trusted small checking -> exact rational real-pair replay
+trusted small checking -> exact rational real-pair replay and Farkas evidence
 remaining horizon -> holomorphic, contour-integral, and global algebraic theorems
 ```
 
 The graduation target is deterministic real-pair NRA obligations plus Axeyum
-model replay for witnesses and emitted certificates for checked false rows.
+model replay for witnesses. The current false unit-square row is promoted only
+for the final exact-rational real-part contradiction after replay, not for a
+general complex-analysis theorem.
