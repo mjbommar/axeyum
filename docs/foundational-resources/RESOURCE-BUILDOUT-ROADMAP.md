@@ -1209,13 +1209,19 @@ Pick one item per commit unless the change is purely navigational.
     `finite-probability-v0` through exact PMF normalization, conditional
     probability replay, Bayes posterior replay, checked QF_LRA/Farkas
     bad-normalization rejection, and checked bad-posterior rejection.
-44. Landed: add field-level curriculum-readiness consumer queries.
+44. Landed: add standalone finite-operator learner page.
+    `docs/learn/math/finite-operator-end-to-end.md` follows
+    `finite-operator-v0` through exact finite-dimensional `l1` norm replay,
+    row-sum operator-bound replay, finite Chebyshev recurrence replay,
+    checked QF_LRA/Farkas bad-bound evidence, and the
+    Banach/Hilbert/compact-operator Lean horizon.
+45. Landed: add field-level curriculum-readiness consumer queries.
     `scripts/query-foundational-resources.py fields --field probability_theory`
     summarizes pack counts, check counts, proof-status counts, proof-cookbook
     route counts, solver-reuse statuses, sample packs, and Lean-horizon packs
     from the committed JSON contract; the foundational resource smoke check now
     includes a probability/Farkas field-readiness query.
-45. Continue proof-route promotions or consumer-query examples; revisit the
+46. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

@@ -200,6 +200,11 @@ mass-table page for exact PMF normalization, conditional probability, Bayes
 posterior replay, checked QF_LRA/Farkas bad normalization, and checked bad
 posterior rejection, leaving the broader finite-probability page as the
 stochastic-process bridge.
+`finite-operator-v0` now also has a standalone finite-dimensional operator
+page for exact `l1` norm replay, row-sum operator-bound replay, finite
+Chebyshev recurrence replay, and checked QF_LRA/Farkas bad-bound evidence,
+leaving the broader bounded-dynamics/operator page as the cross-resource
+bridge.
 The six active proof-cookbook routes for CNF/LRAT, QF_BV, QF_LIA, QF_LRA,
 QF_UF/Alethe, and Lean horizons now each name concrete math example packs that
 use the route.

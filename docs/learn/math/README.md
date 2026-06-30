@@ -345,6 +345,9 @@ validated pack data and the repo-root command that replays it.
   follows bounded recurrence traces, finite invariants, threshold
   reachability, explicit Euler replay, finite error tables, and checked
   QF_LRA/Farkas bad Euler-step rejection.
+- [Finite-Dimensional Operators](finite-operator-end-to-end.md): follows exact
+  `l1` norm replay, matrix row-sum operator-bound replay, finite Chebyshev
+  recurrence replay, and checked QF_LRA/Farkas bad operator-bound rejection.
 - [Bounded Dynamics And Operators](analysis-dynamics-end-to-end.md): follows
   bounded recurrence, invariant, operator-bound, checked QF_LRA/Farkas bad
   operator-bound rejection, Chebyshev recurrence, and finite Chebyshev-system

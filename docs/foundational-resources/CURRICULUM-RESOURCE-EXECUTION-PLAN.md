@@ -121,8 +121,10 @@ High-priority focused lessons still worth auditing or adding:
 - finite probability and finite measure as separate first-principles lessons;
 - linear optimization as a standalone LP/Farkas bridge;
 - finite topology as a standalone topology-axiom/closure/interior bridge;
-- bounded dynamics and finite operators as separate dynamics/operator bridges
-  if the broad analysis/dynamics lesson becomes too dense.
+- finite operators now have a standalone finite-dimensional
+  norm/operator-bound bridge;
+- bounded dynamics remains worth auditing as a standalone recurrence/invariant
+  bridge if the finite dynamics/Euler page becomes too dense.
 
 Exit criteria:
 

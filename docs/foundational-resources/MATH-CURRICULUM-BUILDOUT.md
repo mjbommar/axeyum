@@ -1422,6 +1422,10 @@ reachability, checked bad invariant-bound rejection with QF_LRA/Farkas
 evidence, explicit Euler replay, exact finite error tables, checked bad
 Euler-step rejection with QF_LRA/Farkas evidence, and the
 ODE/numerical-analysis Lean horizon.
+`finite-operator-v0` now also has a standalone finite-dimensional operator
+lesson for exact `l1` norm replay, row-sum operator-bound replay, finite
+Chebyshev recurrence replay, checked QF_LRA/Farkas bad operator-bound
+rejection, and the Banach/Hilbert/compact-operator Lean horizon.
 `proof-methods-refutation-v0` now also has a proof-object anatomy lesson that
 follows the PHP(3,2) source claim through committed CNF, emitted DRAT/LRAT
 proof objects, and same-artifact corrupted-proof rejection.

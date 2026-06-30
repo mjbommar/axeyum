@@ -356,6 +356,10 @@ Pick one row per commit unless the change is purely navigational.
    posterior replay, checked QF_LRA/Farkas bad-normalization rejection, and
    checked bad-posterior rejection out of the broad finite-probability process
    bridge lesson.
+36. Landed: add standalone finite-operator learner page, splitting exact
+   finite-dimensional `l1` norm replay, row-sum operator-bound replay,
+   Chebyshev recurrence replay, and checked QF_LRA/Farkas bad-bound evidence
+   out of the broad bounded-dynamics/operator bridge lesson.
 
 ## Validation Checklist
 

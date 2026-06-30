@@ -1701,6 +1701,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   ODE/numerical-analysis Lean horizon. The lesson is linked from the math
   learning index plus the analysis/topology path.
 
+- **Finite-operator end-to-end lesson landed.** Added
+  [`finite-operator-end-to-end.md`](docs/learn/math/finite-operator-end-to-end.md)
+  as the learner-facing trace for the finite-operator pack:
+  exact `l1` norm replay, row-sum operator-bound replay, finite Chebyshev
+  recurrence replay, checked QF_LRA/Farkas bad-bound rejection, and the
+  Banach/Hilbert/compact-operator Lean horizon. The lesson is linked from the
+  math learning index plus the broad bounded-dynamics/operator bridge.
+
 - **Finite topology/measure end-to-end lesson landed.** Added
   [`finite-topology-measure-end-to-end.md`](docs/learn/math/finite-topology-measure-end-to-end.md)
   as the learner-facing trace for the finite-topology and finite-measure packs:
@@ -11980,6 +11988,14 @@ plan is built and committed on the current branch:
   across finite fields, finite rings, graph coloring, and bounded
   number-theory residue packs, raising the atlas to 86 rows: 23 curriculum
   rows, 18 field rows, 40 bridge rows, and 5 example-family rows.
+
+- **2026-06-30** — **Finite-operator end-to-end lesson landed.**
+  Added
+  [`finite-operator-end-to-end.md`](docs/learn/math/finite-operator-end-to-end.md)
+  to split exact finite-dimensional norm replay, row-sum operator-bound replay,
+  finite Chebyshev recurrence replay, checked QF_LRA/Farkas bad-bound
+  evidence, and the Banach/Hilbert/compact-operator Lean horizon out of the
+  broad bounded-dynamics/operator bridge.
 
 - **2026-06-30** — **PHP Bool/CNF resource promotion landed.**
   Added source-level DIMACS artifacts for

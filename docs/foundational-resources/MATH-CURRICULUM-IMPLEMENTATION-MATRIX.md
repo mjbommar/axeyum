@@ -209,7 +209,9 @@ Build sequence:
    topology/measure bridge, and standalone linear optimization now splits the
    LP/Farkas story from the combined linear-system/LP bridge. Standalone
    finite probability mass tables now split the PMF/conditioning/Bayes story
-   from the broader finite-probability process bridge.
+   from the broader finite-probability process bridge. Standalone finite
+   operators now split the norm/operator-bound story from the broad
+   bounded-dynamics/operator bridge.
 7. Recurring fixed-width finite algebra, residue, and one-bit graph
    obstructions now have the `family_fixed_width_bv_drat` example-family row,
    backed by the shared `math_resource_bv_routes` regression across finite

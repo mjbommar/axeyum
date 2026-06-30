@@ -14,6 +14,8 @@ and the finite spectral slice in
 [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/).
 For a focused finite recurrence and Euler-step trace, read
 [End To End: Finite Dynamics And Euler Replay](finite-dynamics-euler-end-to-end.md).
+For a focused finite-dimensional operator and norm-bound trace, read
+[End To End: Finite-Dimensional Operators](finite-operator-end-to-end.md).
 
 Concept rows:
 
