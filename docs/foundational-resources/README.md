@@ -41,7 +41,8 @@ schemas, examples, and validation workflows.
   them.
 - [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) gives copyable sample queries over
   the committed JSON data contract for pack discovery, checked-row mining,
-  solver-reuse rows, and atlas concept lookup.
+  solver-reuse rows, atlas concept lookup, and curriculum field-readiness
+  summaries.
 - [RULES-LAW-CROSSWALK.md](RULES-LAW-CROSSWALK.md) maps the math-resource
   patterns into rules/law checks for finite predicates, thresholds, graph
   reachability, precedence, proof routes, and current rules-as-code packs.
@@ -85,8 +86,8 @@ schemas, examples, and validation workflows.
   is a dependency-free downstream-consumer smoke test for the public atlas and
   example-pack JSON contract.
 - [`scripts/query-foundational-resources.py`](../../scripts/query-foundational-resources.py)
-  is a dependency-free consumer query helper for common pack, check, and concept
-  lookups over the same committed JSON contract.
+  is a dependency-free consumer query helper for common pack, check, concept,
+  and field-readiness lookups over the same committed JSON contract.
 - [`artifacts/ontology/foundational-example-pack.schema.json`](../../artifacts/ontology/foundational-example-pack.schema.json)
   defines the example-pack metadata and expected-result shape.
 - [`scripts/validate-foundational-example-pack.py`](../../scripts/validate-foundational-example-pack.py)

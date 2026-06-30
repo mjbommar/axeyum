@@ -248,8 +248,9 @@ The first consumer-facing query layer over the committed foundational-resource
 JSON contract has landed in `scripts/query-foundational-resources.py` and
 `docs/foundational-resources/CONSUMER-QUERIES.md`, covering summary counts,
 pack discovery, field-plus-proof-route discovery, checked-row mining,
-solver-reuse rows, and atlas concept lookup without importing validators or
-generators. The latest boundary review keeps the foundational resources
+solver-reuse rows, atlas concept lookup, and curriculum field-readiness
+summaries without importing validators or generators. The latest boundary
+review keeps the foundational resources
 JSON-first and in-repo: promoted solver-reuse rows are consumer-readable through
 the query helper, but there is still no external consumer or repeated typed API
 need that would justify a crate or repo split.

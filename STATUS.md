@@ -1406,13 +1406,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`query-foundational-resources.py`](scripts/query-foundational-resources.py)
   is a dependency-free read-only consumer over the committed atlas,
   `metadata.json`, and `expected.json` data contract. It supports `summary`,
-  `packs`, `checks`, and `concepts` queries for pack discovery, checked-row
-  mining, field-plus-proof-route discovery, solver-reuse rows, and atlas
-  concept lookup, with examples in
+  `packs`, `checks`, `concepts`, and `fields` queries for pack discovery,
+  checked-row mining, field-plus-proof-route discovery, solver-reuse rows,
+  atlas concept lookup, and curriculum field-readiness summaries, with examples in
   [`CONSUMER-QUERIES.md`](docs/foundational-resources/CONSUMER-QUERIES.md).
   `check-foundational-resources.sh` now runs a small query smoke set for
   summary output, promoted solver-reuse rows, probability/Farkas route pack
-  discovery, graph-theory UNSAT rows, and example-family atlas rows.
+  discovery, graph-theory UNSAT rows, example-family atlas rows, and
+  probability/Farkas field-readiness rows.
 
 - **Foundational example-pack negative fixtures landed.**
   [`check-foundational-negative-fixtures.py`](scripts/check-foundational-negative-fixtures.py)
@@ -11878,6 +11879,17 @@ plan is built and committed on the current branch:
   Updated the learner index and probability/statistics cluster page so the
   broad finite-probability process page is a bridge rather than the only
   probability entry point.
+
+- **2026-06-30** — **Curriculum field-readiness consumer query landed.**
+  Extended
+  [`query-foundational-resources.py`](scripts/query-foundational-resources.py)
+  with a `fields` command that summarizes pack counts, check counts,
+  proof-status counts, proof-cookbook route counts, solver-reuse statuses,
+  sample packs, and Lean-horizon packs per math field from the committed JSON
+  contract. Updated
+  [`CONSUMER-QUERIES.md`](docs/foundational-resources/CONSUMER-QUERIES.md) and
+  the foundational-resource smoke check so consumer examples now cover
+  field-level curriculum readiness as well as pack/check/concept mining.
 
 - **2026-06-30** — **PHP Bool/CNF resource promotion landed.**
   Added source-level DIMACS artifacts for

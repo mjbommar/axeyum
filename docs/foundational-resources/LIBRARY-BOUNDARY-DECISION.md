@@ -31,8 +31,9 @@ The 2026-06-30 review keeps the same decision. The consumer-query layer now
 reads promoted solver-reuse metadata directly, including the promoted
 probability/measure QF_LRA/Farkas rows, equality-heavy QF_UF/Alethe rows, and
 integer-count and coefficient QF_LIA/Diophantine rows, plus fixed-width
-QF_BV/DRAT rows, but this is still an in-repository downstream-consumer stand-in
-rather than an external release consumer.
+QF_BV/DRAT rows. It also exposes field-level curriculum-readiness summaries
+over the same JSON files, but this is still an in-repository
+downstream-consumer stand-in rather than an external release consumer.
 
 ## Evidence
 
@@ -43,7 +44,7 @@ The Phase M8 threshold is met for size and repeated structure:
 | At least 40 validated concept rows | 83 atlas rows: 23 curriculum rows, 18 field rows, 40 bridge-concept rows, and 2 example-family rows. |
 | At least 12 validated example packs | 84 non-template math packs are listed through the atlas data contract. |
 | At least 6 packs with checked proof/evidence routes | 84 non-template packs contain at least one `checked` expected-result row. |
-| At least one consumer can read the data without repository-internal knowledge | `scripts/consume-foundational-resources.py` reads the atlas and example-pack JSON directly and cross-checks pack coverage; `scripts/query-foundational-resources.py` answers summary, pack, check, and concept queries without importing validators or generators. |
+| At least one consumer can read the data without repository-internal knowledge | `scripts/consume-foundational-resources.py` reads the atlas and example-pack JSON directly and cross-checks pack coverage; `scripts/query-foundational-resources.py` answers summary, pack, check, concept, and field-readiness queries without importing validators or generators. |
 | At least one consumer can read promoted solver-reuse rows | `scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any` is part of `scripts/check-foundational-resources.sh` and currently finds 84 promoted packs. |
 
 The current pack-level evidence mix is still intentionally conservative:

@@ -190,7 +190,8 @@ Build order:
 Exit criteria:
 
 - `scripts/consume-foundational-resources.py` and
-  `scripts/query-foundational-resources.py` cover the common consumer questions.
+  `scripts/query-foundational-resources.py` cover the common consumer questions,
+  including field-level curriculum readiness.
 - A boundary decision can point at real usage, not project size alone.
 
 ## Field Build Ledger

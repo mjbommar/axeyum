@@ -105,6 +105,34 @@ python3 scripts/query-foundational-resources.py checks \
 Use this when a consumer needs concrete rows to display as checked examples,
 rather than a list of route-relevant packs.
 
+## Curriculum Field Readiness
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field probability_theory \
+  --require-any
+```
+
+This answers: "For one university-curriculum field, how many packs and checks
+are ready, which proof routes do they exercise, and which packs still carry
+Lean-horizon rows?" The table includes pack and check counts, proof-status
+counts, proof-cookbook route counts, solver-reuse status counts, sample packs,
+and horizon packs.
+
+Route filtering works over the same public route text used by pack discovery:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field graph_theory \
+  --route boolean \
+  --format json \
+  --require-any
+```
+
+Use this view for curriculum navigation, dashboards, or external sites that
+need a field-level readiness summary before drilling into individual packs or
+checks.
+
 ## Proof And Check Mining
 
 ```sh
@@ -159,6 +187,7 @@ consumer workflows:
 - mining checked `sat` and `unsat` rows for learner or benchmark views;
 - finding candidate and promoted solver-reuse rows without scanning prose;
 - listing reusable concept families from the atlas.
+- summarizing field-level curriculum readiness before drilling into packs.
 
 They do not prove solver correctness, proof-certificate validity, or general
 mathematical theorem coverage. Those remain the job of the example-pack
@@ -176,6 +205,7 @@ python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --
 python3 scripts/query-foundational-resources.py packs --field probability_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --expected-result unsat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --kind example-family --format json --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field probability_theory --route Farkas --require-any >/dev/null
 ```
 
 That keeps the examples on this page aligned with the committed data boundary

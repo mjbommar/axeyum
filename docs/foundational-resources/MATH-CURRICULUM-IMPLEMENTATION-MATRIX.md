@@ -232,7 +232,8 @@ Build sequence:
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md): summary counts, pack discovery,
    field-plus-proof-route discovery, checked-row mining, solver-reuse rows,
-   and atlas concept lookup over the committed JSON data contract.
+   atlas concept lookup, and field-level curriculum readiness over the
+   committed JSON data contract.
 13. Negative example-pack validator fixtures now land through
     `scripts/check-foundational-negative-fixtures.py` and
     `artifacts/fixtures/foundational-example-pack-invalid/`, covering unknown

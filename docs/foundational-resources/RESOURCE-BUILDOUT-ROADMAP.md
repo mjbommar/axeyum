@@ -1206,7 +1206,13 @@ Pick one item per commit unless the change is purely navigational.
     `finite-probability-v0` through exact PMF normalization, conditional
     probability replay, Bayes posterior replay, checked QF_LRA/Farkas
     bad-normalization rejection, and checked bad-posterior rejection.
-43. Continue proof-route promotions or consumer-query examples; revisit the
+43. Landed: add field-level curriculum-readiness consumer queries.
+    `scripts/query-foundational-resources.py fields --field probability_theory`
+    summarizes pack counts, check counts, proof-status counts, proof-cookbook
+    route counts, solver-reuse statuses, sample packs, and Lean-horizon packs
+    from the committed JSON contract; the foundational resource smoke check now
+    includes a probability/Farkas field-readiness query.
+44. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

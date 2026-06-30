@@ -237,8 +237,8 @@ Near-term boundary:
 - `scripts/query-foundational-resources.py` plus
   [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) are the consumer-facing sample
   query layer for summary counts, pack discovery, field-plus-proof-route
-  discovery, checked-row mining, solver-reuse candidates, and atlas concept
-  lookup.
+  discovery, checked-row mining, solver-reuse candidates, atlas concept
+  lookup, and field-level curriculum readiness.
 - No Rust crate or separate repository until at least one real consumer needs
   typed APIs, release cadence, or large external corpora.
 
@@ -438,8 +438,9 @@ Next buildout:
    candidate to promoted for their source-linked regression artifacts.
 12. Landed: add consumer-facing sample queries over the JSON data contract.
    `scripts/query-foundational-resources.py` now supports summary, pack, check,
-   and concept queries including field-plus-proof-route discovery, and
-   `check-foundational-resources.sh` runs a small query smoke set.
+   concept, and field-readiness queries including field-plus-proof-route
+   discovery, and `check-foundational-resources.sh` runs a small query smoke
+   set.
 13. Landed: add negative fixtures for the foundational example-pack schema.
    `scripts/check-foundational-negative-fixtures.py` now asserts that invalid
    packs with unknown fields, metadata/check id drift, and missing witness

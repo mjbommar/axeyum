@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ATLAS = ROOT / "artifacts" / "ontology" / "foundational-concepts.json"
 EXAMPLE_ROOT = ROOT / "artifacts" / "examples" / "math"
 DEFAULT_LIMIT = 20
+RECIPE_PREFIX = "docs/proof-cookbook/recipes/"
 
 
 class QueryError(Exception):
@@ -102,6 +103,14 @@ def metadata_route_text(metadata: dict[str, Any]) -> list[str]:
             "graduation_criteria": metadata.get("graduation_criteria", []),
         }
     )
+
+
+def recipe_names(metadata: dict[str, Any]) -> list[str]:
+    names = []
+    for source_ref in metadata.get("source_refs", []):
+        if source_ref.startswith(RECIPE_PREFIX) and source_ref.endswith(".md"):
+            names.append(Path(source_ref).stem)
+    return sorted(set(names))
 
 
 def shorten(value: str, width: int = 90) -> str:
@@ -245,6 +254,77 @@ class ResourceStore:
                 }
             )
         return sorted(rows, key=lambda row: row["concept"])
+
+    def field_summary_rows(self) -> list[dict[str, Any]]:
+        field_titles = {}
+        for concept in self.concepts:
+            if concept.get("kind") != "field":
+                continue
+            field_ids = concept.get("field_ids", [])
+            if len(field_ids) == 1:
+                field_titles[field_ids[0]] = concept.get("title", field_ids[0])
+
+        field_ids = set(field_titles)
+        for concept in self.concepts:
+            field_ids.update(concept.get("field_ids", []))
+        for pack in self.packs:
+            field_ids.update(pack["metadata"].get("field_ids", []))
+
+        rows = []
+        for field_id in sorted(field_ids):
+            field_concepts = [
+                concept
+                for concept in self.concepts
+                if field_id in concept.get("field_ids", [])
+            ]
+            field_packs = [
+                pack
+                for pack in self.packs
+                if field_id in pack["metadata"].get("field_ids", [])
+            ]
+            proof_counts: Counter[str] = Counter()
+            result_counts: Counter[str] = Counter()
+            route_counts: Counter[str] = Counter()
+            solver_reuse_counts: Counter[str] = Counter()
+            curriculum_nodes = set()
+            horizon_packs = []
+            route_text = []
+
+            for pack in field_packs:
+                metadata = pack["metadata"]
+                checks = pack["checks"]
+                curriculum_nodes.update(metadata.get("curriculum_nodes", []))
+                solver_reuse = metadata.get("solver_reuse") or {}
+                solver_reuse_counts[solver_reuse.get("status", "unclassified")] += 1
+                routes = recipe_names(metadata)
+                route_counts.update(routes)
+                route_text.extend(routes)
+                route_text.extend(metadata_route_text(metadata))
+                if any(check.get("proof_status") == "lean-horizon" for check in checks):
+                    horizon_packs.append(pack["id"])
+                for check in checks:
+                    proof_counts[check.get("proof_status", "")] += 1
+                    result_counts[check.get("expected_result", "")] += 1
+                    route_text.extend(check_route_text(check))
+
+            rows.append(
+                {
+                    "field": field_id,
+                    "title": field_titles.get(field_id, field_id.replace("_", " ")),
+                    "concepts": len(field_concepts),
+                    "packs": len(field_packs),
+                    "checks": sum(result_counts.values()),
+                    "results": count_text(result_counts),
+                    "proof": count_text(proof_counts),
+                    "routes": count_text(route_counts),
+                    "solver_reuse": count_text(solver_reuse_counts),
+                    "curriculum_nodes": sorted(curriculum_nodes),
+                    "sample_packs": [pack["id"] for pack in field_packs[:5]],
+                    "horizon_packs": sorted(horizon_packs)[:5],
+                    "_route_text": route_text,
+                }
+            )
+        return rows
 
 
 def command_summary(args: argparse.Namespace) -> int:
@@ -424,6 +504,41 @@ def command_concepts(args: argparse.Namespace) -> int:
     )
 
 
+def command_fields(args: argparse.Namespace) -> int:
+    store = ResourceStore()
+    rows = []
+    for row in store.field_summary_rows():
+        if args.field and row["field"] != args.field:
+            continue
+        if args.route and not contains_text(row["_route_text"], args.route):
+            continue
+        if args.text:
+            haystack = [
+                row["field"],
+                row["title"],
+                *(row["curriculum_nodes"]),
+                *(row["sample_packs"]),
+                *(row["horizon_packs"]),
+            ]
+            if not contains_text(haystack, args.text):
+                continue
+        rows.append(clean_row(row))
+    return emit(
+        rows,
+        [
+            "field",
+            "packs",
+            "checks",
+            "proof",
+            "routes",
+            "solver_reuse",
+            "sample_packs",
+            "horizon_packs",
+        ],
+        args,
+    )
+
+
 def clean_row(row: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in row.items() if not key.startswith("_")}
 
@@ -490,6 +605,19 @@ def build_parser() -> argparse.ArgumentParser:
     concepts.add_argument("--text", help="case-insensitive search over concept text")
     add_output_args(concepts, default_limit=DEFAULT_LIMIT)
     concepts.set_defaults(func=command_concepts)
+
+    fields = subparsers.add_parser("fields", help="summarize curriculum fields")
+    fields.add_argument("--field", help="exact field id, such as probability_theory")
+    fields.add_argument(
+        "--route",
+        help="case-insensitive proof/evidence route substring, such as Farkas or Lean",
+    )
+    fields.add_argument(
+        "--text",
+        help="case-insensitive search over field, curriculum-node, and pack names",
+    )
+    add_output_args(fields, default_limit=DEFAULT_LIMIT)
+    fields.set_defaults(func=command_fields)
     return parser
 
 

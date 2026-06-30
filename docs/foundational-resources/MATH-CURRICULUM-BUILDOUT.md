@@ -1100,8 +1100,11 @@ consumer queries in `scripts/query-foundational-resources.py` and
 [Foundational Resource Consumer Queries](CONSUMER-QUERIES.md). The generated
 dashboards now also surface conservative R0-R6 gate and next-gate columns, so
 pack-level solver-reuse and consumer-boundary progress is visible without
-manual scans; crates or repo splits are deferred until external consumers,
-generated typed APIs, or shared encoders require them.
+manual scans. The consumer query helper now also exposes field-readiness
+summaries for curriculum navigation across pack counts, check counts, proof
+routes, solver-reuse statuses, and Lean-horizon packs; crates or repo splits
+are deferred until external consumers, generated typed APIs, or shared encoders
+require them.
 
 Possible boundaries:
 
@@ -1143,9 +1146,9 @@ Exit criteria:
   internals. `scripts/query-foundational-resources.py` now adds sample
   consumer-facing queries over that same committed data boundary for summary
   counts, pack discovery, field-plus-proof-route discovery, checked-row mining,
-  solver-reuse rows, and atlas concept lookup. Generated dashboards expose
-  gate/next-gate status, status-audit recommendations, and fragment-pressure
-  buckets derived from the same files.
+  solver-reuse rows, atlas concept lookup, and field-level curriculum readiness.
+  Generated dashboards expose gate/next-gate status, status-audit
+  recommendations, and fragment-pressure buckets derived from the same files.
 
 ## First Ten Commits To Make
 
