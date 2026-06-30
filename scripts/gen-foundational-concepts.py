@@ -640,6 +640,414 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_metric_ball",
+        "title": "Metric Ball",
+        "field_ids": ["real_analysis", "topology"],
+        "resource_status": "validated",
+        "summary": (
+            "A metric ball is represented as an exact finite distance-table "
+            "query: choose a center and rational radius, then include exactly "
+            "the points whose distance is strictly below the radius."
+        ),
+        "prerequisites": [
+            "bridge_finite_model_replay",
+            "curriculum_sets",
+            "curriculum_reals",
+        ],
+        "unlocks": [
+            "bridge_bounded_epsilon_delta_shadow",
+            "bridge_continuity_preimage",
+            "field_topology",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite metric spaces",
+            "exact rational distance comparison",
+            "LRA (exact rationals)",
+            "finite topology",
+        ],
+        "example_packs": [
+            (
+                "finite-topology-v0",
+                "Finite metric-ball witness checked by exact rational distance comparison.",
+            ),
+            (
+                "real-analysis-rational-v0",
+                "Nested rational neighborhoods and finite rational ball membership replay.",
+            ),
+            (
+                "metric-continuity-v0",
+                "Finite domain and output balls used by bounded continuity examples.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite metric-ball replay",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py",
+                "lean_status": "not-required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/learn/math/finite-topology-measure-end-to-end.md",
+                    "docs/learn/math/analysis-topology-proof-horizons.md",
+                ],
+                "notes": (
+                    "The finite checker recomputes the ball from the distance "
+                    "table and rational radius; solver evidence is only needed "
+                    "when a later negative row isolates a linear contradiction."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/learn/math/finite-topology-measure-end-to-end.md",
+            "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        ],
+        "open_gaps": [
+            "Finite metric-ball replay does not prove general metric-topology theorems.",
+            "Rows involving arbitrary radii or quantified neighborhoods remain bounded shadows until Lean coverage exists.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Every metric-ball row records the finite carrier, distance table, center, and rational radius.",
+                "The validator recomputes strict radius membership without floating-point tolerance.",
+                "Learner pages distinguish finite ball replay from general metric-space topology.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_bounded_epsilon_delta_shadow",
+        "title": "Bounded Epsilon-Delta Shadow",
+        "field_ids": ["real_analysis", "topology", "logic_and_proof"],
+        "resource_status": "validated",
+        "summary": (
+            "A continuity or limit theorem is approximated by fixed rational "
+            "epsilon, delta, center, and finite sample data, with every "
+            "distance and output-bound check recomputed exactly."
+        ),
+        "prerequisites": [
+            "bridge_metric_ball",
+            "bridge_bounded_theorem_shadow",
+            "curriculum_sequences_and_limits",
+        ],
+        "unlocks": [
+            "bridge_continuity_preimage",
+            "bridge_lean_horizon",
+            "curriculum_calculus",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "bounded epsilon-delta templates",
+            "QF_LRA",
+            "Farkas certificate",
+            "finite rational neighborhoods",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "real-analysis-rational-v0",
+                "Bounded linear epsilon-delta witness plus checked bad-delta QF_LRA/Farkas row.",
+            ),
+            (
+                "metric-continuity-v0",
+                "Finite metric continuity rows with a checked strict output-bound conflict.",
+            ),
+            (
+                "sequence-limit-shadow-v0",
+                "Bounded epsilon-N and finite Cauchy-tail checks for sequence-limit shadows.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "bounded exact-rational epsilon-delta replay",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite/bounded rows are checked directly; bad linear "
+                    "delta claims are promoted only when the final rational "
+                    "inequality conflict carries rechecked Farkas evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "A bounded epsilon-delta row proves only the listed finite sample and rational bounds.",
+            "The fully quantified forall epsilon exists delta theorem remains a Lean horizon.",
+            "Nonlinear side conditions need separate NRA/RCF or Lean treatment before graduation.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the fixed epsilon, delta, center, sample domain, and exact function table or formula.",
+                "The validator rejects corrupted finite samples or bad output-bound claims.",
+                "General continuity or limit theorem statements remain linked as Lean-horizon rows.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_compactness_shadow",
+        "title": "Compactness Shadow",
+        "field_ids": ["topology", "set_theory_and_foundations", "real_analysis"],
+        "resource_status": "validated",
+        "summary": (
+            "Compactness is represented by finite open-cover, subcover, "
+            "minimal-subcover, and finite-intersection checks over an explicit "
+            "finite topology, with general compactness theorems left to Lean."
+        ),
+        "prerequisites": [
+            "bridge_bounded_theorem_shadow",
+            "bridge_metric_ball",
+            "curriculum_sets",
+        ],
+        "unlocks": [
+            "bridge_lean_horizon",
+            "field_topology",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite topology",
+            "finite open covers",
+            "Bool / CNF",
+            "DRAT / LRAT",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-compactness-v0",
+                "Finite open-cover, subcover, minimality, finite-intersection, and bad-cover rows.",
+            ),
+            (
+                "finite-topology-v0",
+                "Finite topology axioms and metric-ball replay that compactness rows build on.",
+            ),
+            (
+                "finite-continuous-maps-v0",
+                "Finite continuous-map rows that name compactness-preservation as a horizon.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite open-cover replay plus Bool/CNF bad-cover certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-cnf --test math_resource_boolean_routes",
+                "lean_status": "required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+                ],
+                "notes": (
+                    "Finite cover and subcover rows are replayed from source "
+                    "sets; the promoted bad-cover row separately checks the "
+                    "isolated Boolean contradiction with DRAT/LRAT."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-compactness-end-to-end.md",
+            "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite open-cover replay is not Heine-Borel, arbitrary topological compactness, or general finite-intersection-property equivalence.",
+            "Continuous-image compactness and compactness in metric or uniform spaces remain Lean horizons.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite universe, topology, cover family, and listed subcover or closed family.",
+                "The validator recomputes cover unions, subcover coverage, and finite intersections.",
+                "Bad-cover rows carry source-linked checked DRAT/LRAT evidence before solver reuse is claimed.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_connectedness_shadow",
+        "title": "Connectedness Shadow",
+        "field_ids": ["topology", "set_theory_and_foundations", "real_analysis"],
+        "resource_status": "validated",
+        "summary": (
+            "Connectedness is represented by finite clopen-subset enumeration "
+            "and open-separation replay over explicit finite topologies, with "
+            "general connectedness theorems kept as Lean horizons."
+        ),
+        "prerequisites": [
+            "bridge_bounded_theorem_shadow",
+            "curriculum_sets",
+            "field_topology",
+        ],
+        "unlocks": [
+            "bridge_lean_horizon",
+            "field_topology",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite topology",
+            "clopen subset enumeration",
+            "Bool / CNF",
+            "DRAT / LRAT",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-connectedness-v0",
+                "Finite connected-space, separation, clopen-subset, and bad-connectedness rows.",
+            ),
+            (
+                "finite-topology-v0",
+                "Finite topology axioms that connectedness rows depend on.",
+            ),
+            (
+                "finite-continuous-maps-v0",
+                "Finite continuous-map rows that name connectedness-preservation as a horizon.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite clopen replay plus Bool/CNF bad-connectedness certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-cnf --test math_resource_boolean_routes",
+                "lean_status": "required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker enumerates all subsets and recomputes "
+                    "clopen/open-separation facts; the promoted negative row "
+                    "also checks the isolated Boolean contradiction with DRAT/LRAT."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-connectedness-end-to-end.md",
+            "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite connectedness replay does not prove interval connectedness, path-connectedness implications, or connected components in arbitrary spaces.",
+            "Continuous-image connectedness remains a Lean-horizon theorem until a no-sorry route exists.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite universe, topology, candidate separation, or clopen subset.",
+                "The validator enumerates subsets and recomputes open, closed, clopen, and separation facts.",
+                "Bad-connectedness rows carry source-linked checked DRAT/LRAT evidence before solver reuse is claimed.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_continuity_preimage",
+        "title": "Continuity By Open Preimage",
+        "field_ids": ["topology", "set_theory_and_foundations", "real_analysis"],
+        "resource_status": "validated",
+        "summary": (
+            "Finite topological continuity is checked by recomputing the "
+            "preimage of every codomain-open set through a total function table "
+            "and requiring each preimage to be open in the domain topology."
+        ),
+        "prerequisites": [
+            "bridge_metric_ball",
+            "bridge_bounded_epsilon_delta_shadow",
+            "curriculum_relations_and_functions",
+        ],
+        "unlocks": [
+            "bridge_compactness_shadow",
+            "bridge_connectedness_shadow",
+            "bridge_lean_horizon",
+            "field_topology",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite functions",
+            "finite topology",
+            "open-set preimage enumeration",
+            "Bool / enumeration",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-continuous-maps-v0",
+                "Finite continuity, open-preimage, homeomorphism, and bad-continuity rows.",
+            ),
+            (
+                "metric-continuity-v0",
+                "Metric epsilon-delta and open-ball preimage rows over finite rational metric spaces.",
+            ),
+            (
+                "relations-functions-v0",
+                "Finite function-table totality and single-valuedness checks used by preimage replay.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite open-preimage replay",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py",
+                "lean_status": "required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/finite-continuous-maps-end-to-end.md",
+                ],
+                "notes": (
+                    "The validator recomputes every listed preimage from the "
+                    "function table and checks openness in the domain; general "
+                    "continuity theorems remain Lean-horizon."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-continuous-maps-end-to-end.md",
+            "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        ],
+        "open_gaps": [
+            "Finite preimage replay does not prove continuous-image, homeomorphism-invariance, compactness-preservation, or connectedness-preservation theorems.",
+            "Future solver reuse needs a source-linked artifact for the bad-continuity rows before treating them as certificate-backed.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state domain/codomain finite topologies and the total function table.",
+                "The validator recomputes each codomain-open preimage and rejects non-open preimages.",
+                "General topological continuity theorems remain linked as Lean-horizon rows.",
+            ],
+        },
+    },
+    {
         "id": "bridge_lean_horizon",
         "title": "Lean Horizon",
         "field_ids": ["logic_and_proof"],

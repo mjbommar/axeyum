@@ -29,10 +29,10 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 47 atlas rows generated from curriculum, field data, the first R1 bridge
-  concepts for finite replay/counterexample/bounded-shadow/Lean-horizon
-  status, the finite-algebra QF_UF/Alethe example family, and the
-  exact-rational QF_LRA/Farkas example family.
+- 52 atlas rows generated from curriculum, field data, nine R1 bridge concepts
+  for finite replay, counterexample proof, bounded theorem shadows, analysis/
+  topology boundary vocabulary, and Lean horizons, plus the finite-algebra
+  QF_UF/Alethe and exact-rational QF_LRA/Farkas example families.
 - 84 non-template math example packs, plus the validating template pack.
 - generated coverage, field, proof-gap, learner/proof-upgrade, and
   curriculum-pressure dashboards under [generated/](generated/).
@@ -158,9 +158,11 @@ Add bridge-concept or example-family rows for repeated subtopics:
   inequalities;
 - algebra: homomorphisms, kernels/images, ideals, quotients, modules, tensor
   products, group actions;
-- analysis: bounded epsilon-delta shadows, metric continuity with checked
-  QF_LRA/Farkas bad-delta evidence, finite compactness with checked
-  Bool/CNF bad-cover evidence, finite connectedness, finite integration;
+- analysis: landed bridge rows for metric balls, bounded epsilon-delta shadows,
+  compactness shadows, connectedness shadows, and continuity-by-preimage, plus
+  metric continuity with checked QF_LRA/Farkas bad-delta evidence, finite
+  compactness with checked Bool/CNF bad-cover evidence, finite connectedness,
+  and finite integration;
 - linear algebra: LU replay, rank/nullity, dual spaces, inner products,
   spectral decompositions, numerical residual bounds;
 - probability/statistics: finite kernels, conditional expectation,
@@ -345,7 +347,9 @@ Next buildout:
 4. Add standalone finite probability and finite measure lessons.
 5. Add standalone linear optimization and finite topology lessons.
 6. Landed: add bridge-concept rows for finite model replay, proof by
-   counterexample, bounded theorem shadows, and Lean horizons.
+   counterexample, bounded theorem shadows, metric balls, bounded epsilon-delta
+   shadows, compactness shadows, connectedness shadows, continuity-by-preimage,
+   and Lean horizons.
 7. Add QF_LRA/Farkas upgrade rows for rational, LP, convexity, concentration,
    and linear-system examples.
    Status: `family_exact_rational_farkas` now groups the recurring checked

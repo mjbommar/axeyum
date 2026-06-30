@@ -184,9 +184,14 @@ Build sequence:
 ## Commit-Sized Execution Queue
 
 1. R1 bridge-concept rows landed for finite replay, bounded theorem shadows,
-   counterexample proof, and Lean horizon; keep future bridge rows narrow and
-   generated from `scripts/gen-foundational-concepts.py`.
-2. Finish learner audit so every non-template pack appears in a focused lesson
+   counterexample proof, Lean horizon, and the first analysis/topology boundary
+   terms: metric balls, bounded epsilon-delta shadows, compactness shadows,
+   connectedness shadows, and continuity-by-preimage. Keep future bridge rows
+   narrow and generated from `scripts/gen-foundational-concepts.py`.
+2. Add linear-algebra computation bridge rows for LU, rank/nullity, residual
+   bounds, eigenpairs, characteristic polynomials, and finite random-matrix
+   moments.
+3. Finish learner audit so every non-template pack appears in a focused lesson
    or a named combined lesson.
 3. Continue QF_BV promotions only for fixed-width educational claims that are
    not better served by existing CNF/LRA/LIA routes; the first finite

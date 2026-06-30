@@ -34,14 +34,14 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 4 bridge-concept rows.
+- 9 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math example packs.
 - 412 expected checks.
 - 194 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 13 promoted solver-reuse packs.
+- 14 promoted solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -103,7 +103,7 @@ Near-term concept-row families:
 | finite model replay | Repeated witness-check story across most packs | model replay, counterexample replay, bounded enumeration |
 | proof object anatomy | Explains checked UNSAT beyond "solver says no" | CNF/LRAT, Farkas, Alethe, QF_BV DRAT |
 | algebraic structure maps | Current algebra packs are broad | homomorphism, kernel/image, quotient, action, ideal, module, tensor |
-| analysis/topology boundaries | Prevents overclaiming bounded examples | metric ball, epsilon-delta shadow, compactness shadow, connectedness shadow |
+| analysis/topology boundaries | Prevents overclaiming bounded examples | metric ball, epsilon-delta shadow, compactness shadow, connectedness shadow, continuity preimage |
 | matrix computation | Bridges education and solver corpora | LU replay, rank/nullity, residual bound, eigenpair, characteristic polynomial |
 | probability/statistics tables | Many packs share finite probability structure | pushforward, kernel, expectation, conditioning, tail-count obstruction |
 | rules/law transfer | Reuses math concepts for policies | finite predicate, threshold, exception, precedence, temporal version |
@@ -583,12 +583,15 @@ Current packs:
 - `finite-connectedness-v0`
 - `finite-continuous-maps-v0`
 
+Landed:
+
+- Bridge rows for metric ball, bounded epsilon-delta shadow, compactness
+  shadow, connectedness shadow, and continuity-by-preimage.
+
 Build next:
 
-- Add concept rows for rational interval, metric ball, bounded epsilon-delta
-  sample, sequence tail, Cauchy shadow, squeeze shadow, compactness shadow,
-  connectedness shadow, continuity preimage, derivative identity, and
-  integration horizon.
+- Add concept rows for rational interval, sequence tail, Cauchy shadow,
+  squeeze shadow, derivative identity, and integration horizon.
 - Promote exact rational bad-bound rows through QF_LRA/Farkas.
 - Keep completeness, Bolzano-Weierstrass, Heine-Borel, IVT, MVT, FTC, and
   general convergence as Lean-horizon.
@@ -937,29 +940,26 @@ call sites or one external consumer.
 
 Pick one item per commit unless the change is purely navigational.
 
-1. Add concept rows for the highest-use analysis/topology boundary terms:
-   metric ball, bounded epsilon-delta shadow, compactness shadow,
-   connectedness shadow, and continuity preimage.
-2. Add concept rows for linear algebra computation families: LU, rank/nullity,
+1. Add concept rows for linear algebra computation families: LU, rank/nullity,
    residual bound, eigenpair, characteristic polynomial, random-matrix finite
    moment.
-3. Add concept rows for algebra maps: homomorphism, kernel/image, quotient,
+2. Add concept rows for algebra maps: homomorphism, kernel/image, quotient,
    ideal, module, tensor bilinearity, group action.
-4. Add "math example using this route" sections to the six active proof
+3. Add "math example using this route" sections to the six active proof
    cookbook recipes.
-5. Promote one QF_LRA/Farkas probability/statistics row that has a small exact
+4. Promote one QF_LRA/Farkas probability/statistics row that has a small exact
    rational contradiction and strong learner value.
-6. Promote one QF_UF/Alethe algebra row that exercises homomorphism or quotient
+5. Promote one QF_UF/Alethe algebra row that exercises homomorphism or quotient
    congruence not already covered by the family row.
-7. Add a rules/law crosswalk doc that maps finite predicates, arithmetic
+6. Add a rules/law crosswalk doc that maps finite predicates, arithmetic
    thresholds, graph reachability, and proof routes to policy/rule checks.
-8. Add a consumer-query recipe for "find all packs for a field and route".
-9. Add negative validator fixtures for one resource schema once the schema
+7. Add a consumer-query recipe for "find all packs for a field and route".
+8. Add negative validator fixtures for one resource schema once the schema
    shape stops changing.
-10. Audit `planned` vs `covered` statuses in the curriculum DAG and generated
+9. Audit `planned` vs `covered` statuses in the curriculum DAG and generated
     dashboards so status means current resource maturity, not historical state.
-11. Add one route-specific tamper/rejection test per proof certificate route.
-12. Revisit the library boundary decision after the next five solver-reuse
+10. Add one route-specific tamper/rejection test per proof certificate route.
+11. Revisit the library boundary decision after the next five solver-reuse
     promotions and at least one downstream consumer use.
 
 ## Validation Checklist
