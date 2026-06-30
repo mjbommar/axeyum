@@ -25,6 +25,7 @@ Example packs:
 - [finite-gradient-descent-v0](../../../artifacts/examples/math/finite-gradient-descent-v0/)
 - [finite-line-search-v0](../../../artifacts/examples/math/finite-line-search-v0/)
 - [finite-projected-gradient-v0](../../../artifacts/examples/math/finite-projected-gradient-v0/)
+- [finite-proximal-gradient-v0](../../../artifacts/examples/math/finite-proximal-gradient-v0/)
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
@@ -84,6 +85,8 @@ certificate. The finite line-search slice adds exact Armijo trial rejection,
 one accepted backtracked step, and a checked QF_LRA/Farkas bad-acceptance
 certificate. The finite projected-gradient slice adds exact interval
 projection after a trial step and a checked QF_LRA/Farkas bad-projection
+certificate. The finite proximal-gradient slice adds exact L1 soft-threshold
+replay after a trial step and a checked QF_LRA/Farkas bad-proximal-point
 certificate. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, rank distributions, and a checked QF_LRA/Farkas bad trace-square
@@ -369,6 +372,24 @@ claims `3/2` is feasible for `[0,1]`; the final upper-bound contradiction is
 checked through QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md).
 
+For a finite proximal-gradient example, encode one L1-regularized quadratic:
+
+```text
+f(x) = 1/2 * (x - 3)^2
+g(x) = |x|
+x0 = 0
+alpha = 1/2
+lambda = 1
+```
+
+The `finite-proximal-gradient-v0` validator recomputes the derivative,
+ordinary trial point `3/2`, L1 soft-threshold value `1`, zero positive-branch
+optimality residual, composite objective decrease from `9/2` to `3`, and the
+bad-row residual for a claimed prox point `1/4`. The final nonzero-residual
+contradiction is checked through QF_LRA/Farkas evidence. For a focused trace,
+read
+[End To End: Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md).
+
 For a Jacobian/Hessian bridge into optimization, encode:
 
 ```text
@@ -424,6 +445,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_armijo_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-projected-gradient-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_projected_gradient_bad_projection_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-proximal-gradient-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_proximal_gradient_bad_proximal_point_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
@@ -463,6 +486,7 @@ replay, read
 [End To End: Finite KKT Checks](finite-kkt-end-to-end.md),
 [End To End: Finite Line Search Checks](finite-line-search-end-to-end.md),
 [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md),
+[End To End: Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md),
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md),
@@ -485,7 +509,8 @@ moments, and satisfiable finite-dimensional operator rows start as
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md).
 Infeasible rational systems, LP thresholds, bad residual bounds, malformed
 eigenpairs, bad characteristic-polynomial rows, bad operator-bound rows,
-bad KKT stationarity rows, and negative-norm examples graduate through
+bad KKT stationarity rows, bad proximal residual rows, and negative-norm
+examples graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
 Finite vector-space, dual-space, module, ideal, and tensor-product equality
 conflicts use

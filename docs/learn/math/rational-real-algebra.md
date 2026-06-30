@@ -24,6 +24,7 @@ Example packs:
 - [finite-gradient-descent-v0](../../../artifacts/examples/math/finite-gradient-descent-v0/)
 - [finite-line-search-v0](../../../artifacts/examples/math/finite-line-search-v0/)
 - [finite-projected-gradient-v0](../../../artifacts/examples/math/finite-projected-gradient-v0/)
+- [finite-proximal-gradient-v0](../../../artifacts/examples/math/finite-proximal-gradient-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
@@ -47,7 +48,7 @@ companion-matrix replay, finite bisection/Newton root-finding replay, finite
 convex-hull/separating-hyperplane replay, finite KKT stationarity and
 complementary-slackness replay, finite SDP primal/dual slack replay, finite
 gradient-descent step replay, finite line-search replay, finite
-projected-gradient replay, LP feasibility and
+projected-gradient replay, finite proximal-gradient replay, LP feasibility and
 infeasibility certificates, finite convexity and monotonicity checks, exact
 rational gradients, Jacobian chain-rule replay, Hessian minor checks,
 midpoints, collinearity determinants, squared distances, affine maps, signed
@@ -270,6 +271,23 @@ point for `[0,1]`; the final upper-bound contradiction is checked through
 QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md).
 
+For a finite proximal-gradient check, encode one L1-regularized quadratic step:
+
+```text
+f(x) = 1/2 * (x - 3)^2
+g(x) = |x|
+x0 = 0
+alpha = 1/2
+```
+
+The `finite-proximal-gradient-v0` validator recomputes the derivative,
+ordinary trial point `3/2`, L1 soft-threshold point `1`, the zero
+positive-branch optimality residual, and exact composite decrease. Its bad row
+claims `1/4` satisfies the proximal optimality equation; replay computes
+residual `-3/2`, and the final nonzero-residual contradiction is checked
+through QF_LRA/Farkas evidence. For a focused trace, read
+[End To End: Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md).
+
 For a matrix-invariant check, encode a fixed matrix and its characteristic
 polynomial:
 
@@ -353,6 +371,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_armijo_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-projected-gradient-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_projected_gradient_bad_projection_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-proximal-gradient-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_proximal_gradient_bad_proximal_point_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
@@ -392,10 +412,11 @@ For exact LP feasibility and Farkas threshold evidence, read
 For exact finite convexity and KKT replay, read
 [End To End: Rational Convexity](convexity-rational-end-to-end.md) and
 [End To End: Finite KKT Checks](finite-kkt-end-to-end.md). For exact finite
-gradient descent, line search, and projected gradient, read
+gradient descent, line search, projected gradient, and proximal gradient, read
 [End To End: Finite Gradient Descent Checks](finite-gradient-descent-end-to-end.md)
 and [End To End: Finite Line Search Checks](finite-line-search-end-to-end.md),
-and [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md). For exact
+and [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md),
+and [End To End: Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md). For exact
 finite coordinate, incidence, rigid-configuration, affine, and oriented geometry replay, read
 [End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md)
 [End To End: Incidence Geometry](incidence-geometry-end-to-end.md), and
@@ -404,7 +425,8 @@ finite coordinate, incidence, rigid-configuration, affine, and oriented geometry
 ## Horizon
 
 Completeness, arbitrary limits, continuity, compactness, integration, general
-KKT sufficiency, constraint qualifications, and general real-analysis theorems
+KKT sufficiency, constraint qualifications, proximal-gradient convergence, and
+general real-analysis theorems
 remain Lean-horizon. Nonlinear real arithmetic closed-form
 generating-function extraction, asymptotics, and SOS/RCF certificates are
 future proof-route work, not assumed coverage.

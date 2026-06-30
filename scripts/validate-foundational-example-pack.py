@@ -10824,6 +10824,194 @@ def validate_finite_projected_gradient(expected: dict[str, Any]) -> None:
     require_string("projected gradient future_checker", data.get("future_checker"))
 
 
+def validate_finite_proximal_gradient(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    gradient_check = checks["proximal-gradient-gradient-replay"]
+    if gradient_check["expected_result"] != "sat":
+        fail("proximal-gradient-gradient-replay must expect sat")
+    values = single_witness_values(gradient_check, witnesses)
+    smooth_polynomial = require_quadratic(
+        "proximal gradient smooth_polynomial",
+        values.get("smooth_polynomial"),
+    )
+    start_x = require_fraction("proximal gradient start_x", values.get("start_x"))
+    smooth_value_start = require_fraction(
+        "proximal gradient smooth_value_start",
+        values.get("smooth_value_start"),
+    )
+    regularization_lambda = require_fraction(
+        "proximal gradient lambda",
+        values.get("lambda"),
+    )
+    gradient = require_fraction("proximal gradient gradient", values.get("gradient"))
+    step_size = require_fraction("proximal gradient step_size", values.get("step_size"))
+    trial_x = require_fraction("proximal gradient trial_x", values.get("trial_x"))
+    soft_threshold = require_fraction(
+        "proximal gradient soft_threshold",
+        values.get("soft_threshold"),
+    )
+    prox_x = require_fraction("proximal gradient prox_x", values.get("prox_x"))
+    proximal_optimality_residual = require_fraction(
+        "proximal gradient proximal_optimality_residual",
+        values.get("proximal_optimality_residual"),
+    )
+    smooth_value_prox = require_fraction(
+        "proximal gradient smooth_value_prox",
+        values.get("smooth_value_prox"),
+    )
+    nonsmooth_value_start = require_fraction(
+        "proximal gradient nonsmooth_value_start",
+        values.get("nonsmooth_value_start"),
+    )
+    nonsmooth_value_prox = require_fraction(
+        "proximal gradient nonsmooth_value_prox",
+        values.get("nonsmooth_value_prox"),
+    )
+    composite_value_start = require_fraction(
+        "proximal gradient composite_value_start",
+        values.get("composite_value_start"),
+    )
+    composite_value_prox = require_fraction(
+        "proximal gradient composite_value_prox",
+        values.get("composite_value_prox"),
+    )
+    composite_decrease = require_fraction(
+        "proximal gradient composite_decrease",
+        values.get("composite_decrease"),
+    )
+
+    if step_size <= 0:
+        fail("proximal-gradient-gradient-replay step_size must be positive")
+    if regularization_lambda <= 0:
+        fail("proximal-gradient-gradient-replay lambda must be positive")
+    if polynomial_eval(smooth_polynomial, start_x) != smooth_value_start:
+        fail("proximal-gradient-gradient-replay smooth_value_start is incorrect")
+    if quadratic_derivative_value(smooth_polynomial, start_x) != gradient:
+        fail("proximal-gradient-gradient-replay gradient is incorrect")
+
+    trial = checks["proximal-trial-step-replay"]
+    if trial["expected_result"] != "sat":
+        fail("proximal-trial-step-replay must expect sat")
+    trial_values = single_witness_values(trial, witnesses)
+    if trial_values != values:
+        fail("proximal-trial-step-replay must cite the proximal-gradient witness")
+    if start_x - step_size * gradient != trial_x:
+        fail("proximal-trial-step-replay trial_x is incorrect")
+    if step_size * regularization_lambda != soft_threshold:
+        fail("proximal-trial-step-replay soft_threshold must equal alpha * lambda")
+
+    prox = checks["soft-threshold-prox-replay"]
+    if prox["expected_result"] != "sat":
+        fail("soft-threshold-prox-replay must expect sat")
+    prox_values = single_witness_values(prox, witnesses)
+    if prox_values != values:
+        fail("soft-threshold-prox-replay must cite the proximal-gradient witness")
+    if trial_x > soft_threshold:
+        computed_prox = trial_x - soft_threshold
+        computed_residual = (prox_x - trial_x) / step_size + regularization_lambda
+    elif trial_x < -soft_threshold:
+        computed_prox = trial_x + soft_threshold
+        computed_residual = (prox_x - trial_x) / step_size - regularization_lambda
+    else:
+        computed_prox = Fraction(0)
+        if prox_x != 0:
+            fail("soft-threshold-prox-replay prox_x must be zero in the threshold interval")
+        computed_residual = Fraction(0)
+    if prox_x != computed_prox:
+        fail("soft-threshold-prox-replay prox_x is incorrect")
+    if computed_residual != proximal_optimality_residual:
+        fail("soft-threshold-prox-replay proximal_optimality_residual is incorrect")
+    if proximal_optimality_residual != 0:
+        fail("soft-threshold-prox-replay expected a zero optimality residual")
+
+    decrease = checks["composite-decrease-replay"]
+    if decrease["expected_result"] != "sat":
+        fail("composite-decrease-replay must expect sat")
+    decrease_values = single_witness_values(decrease, witnesses)
+    if decrease_values != values:
+        fail("composite-decrease-replay must cite the proximal-gradient witness")
+    if polynomial_eval(smooth_polynomial, prox_x) != smooth_value_prox:
+        fail("composite-decrease-replay smooth_value_prox is incorrect")
+    if regularization_lambda * abs(start_x) != nonsmooth_value_start:
+        fail("composite-decrease-replay nonsmooth_value_start is incorrect")
+    if regularization_lambda * abs(prox_x) != nonsmooth_value_prox:
+        fail("composite-decrease-replay nonsmooth_value_prox is incorrect")
+    if smooth_value_start + nonsmooth_value_start != composite_value_start:
+        fail("composite-decrease-replay composite_value_start is incorrect")
+    if smooth_value_prox + nonsmooth_value_prox != composite_value_prox:
+        fail("composite-decrease-replay composite_value_prox is incorrect")
+    if composite_value_start - composite_value_prox != composite_decrease:
+        fail("composite-decrease-replay composite_decrease is incorrect")
+    if composite_decrease <= 0:
+        fail("composite-decrease-replay expected a positive finite decrease")
+
+    bad = checks["bad-proximal-point-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-proximal-point-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "l1-quadratic-proximal-step":
+        fail("bad-proximal-point-rejected must cite the l1-quadratic-proximal-step witness")
+    computed_prox_x = require_fraction(
+        "bad proximal computed_prox_x",
+        data.get("computed_prox_x"),
+    )
+    claimed_prox_x = require_fraction(
+        "bad proximal claimed_prox_x",
+        data.get("claimed_prox_x"),
+    )
+    computed_optimality_residual = require_fraction(
+        "bad proximal computed_optimality_residual",
+        data.get("computed_optimality_residual"),
+    )
+    claimed_optimality_residual = require_fraction(
+        "bad proximal claimed_optimality_residual",
+        data.get("claimed_optimality_residual"),
+    )
+    proximal_optimality_error = require_fraction(
+        "bad proximal proximal_optimality_error",
+        data.get("proximal_optimality_error"),
+    )
+    if computed_prox_x != prox_x:
+        fail("bad-proximal-point-rejected computed_prox_x does not match replay")
+    if computed_optimality_residual != proximal_optimality_residual:
+        fail("bad-proximal-point-rejected computed residual does not match replay")
+    if claimed_prox_x <= 0:
+        fail("bad-proximal-point-rejected malformed point should exercise the positive branch")
+    expected_claimed_residual = (
+        (claimed_prox_x - trial_x) / step_size + regularization_lambda
+    )
+    if claimed_optimality_residual != expected_claimed_residual:
+        fail("bad-proximal-point-rejected claimed residual is incorrect")
+    if abs(claimed_optimality_residual) != proximal_optimality_error:
+        fail("bad-proximal-point-rejected optimality error is incorrect")
+    if proximal_optimality_error <= 0:
+        fail("bad-proximal-point-rejected malformed point must have nonzero residual")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad proximal smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-proximal-gradient-v0/smt2/bad-proximal-point-farkas-conflict.smt2":
+        fail("bad-proximal-point-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad proximal smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad proximal farkas_regression", regression)
+    if "finite_proximal_gradient_bad_proximal_point_artifact_emits_checked_farkas" not in regression:
+        fail("bad-proximal-point-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad proximal certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-proximal-point-rejected certificate must document checked Farkas evidence")
+
+    horizon = checks["general-proximal-gradient-convergence-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-proximal-gradient-convergence-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-proximal-gradient-convergence-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("proximal gradient target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("proximal gradient future_checker", data.get("future_checker"))
+
+
 def inner_product(
     gram_matrix: list[list[Fraction]],
     left: list[Fraction],
@@ -17397,6 +17585,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_line_search(expected)
     if metadata["id"] == "finite-projected-gradient-v0":
         validate_finite_projected_gradient(expected)
+    if metadata["id"] == "finite-proximal-gradient-v0":
+        validate_finite_proximal_gradient(expected)
     if metadata["id"] == "finite-recurrence-prefix-v0":
         validate_finite_recurrence_prefix(expected)
     if metadata["id"] == "finite-root-finding-v0":

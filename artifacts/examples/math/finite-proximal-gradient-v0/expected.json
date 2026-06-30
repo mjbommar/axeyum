@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-proximal-gradient-v0",
+  "witnesses": [
+    {
+      "id": "l1-quadratic-proximal-step",
+      "description": "One exact proximal-gradient step for f(x)=1/2*(x-3)^2 plus |x|.",
+      "values": {
+        "smooth_polynomial": ["9/2", "-3", "1/2"],
+        "start_x": "0",
+        "smooth_value_start": "9/2",
+        "lambda": "1",
+        "gradient": "-3",
+        "step_size": "1/2",
+        "trial_x": "3/2",
+        "soft_threshold": "1/2",
+        "prox_x": "1",
+        "proximal_optimality_residual": "0",
+        "smooth_value_prox": "2",
+        "nonsmooth_value_start": "0",
+        "nonsmooth_value_prox": "1",
+        "composite_value_start": "9/2",
+        "composite_value_prox": "3",
+        "composite_decrease": "3/2"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "proximal-gradient-gradient-replay",
+      "claim": "At x=0 for f(x)=1/2*(x-3)^2, the smooth gradient is -3.",
+      "expected_result": "sat",
+      "validation": "finite_proximal_gradient_gradient_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["l1-quadratic-proximal-step"],
+      "notes": "The validator differentiates the quadratic and checks the listed smooth value."
+    },
+    {
+      "id": "proximal-trial-step-replay",
+      "claim": "With step size 1/2, the ordinary gradient trial point from x=0 is 3/2.",
+      "expected_result": "sat",
+      "validation": "finite_proximal_gradient_trial_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["l1-quadratic-proximal-step"],
+      "notes": "The validator recomputes x - alpha * gradient over exact rationals."
+    },
+    {
+      "id": "soft-threshold-prox-replay",
+      "claim": "The L1 proximal map with threshold 1/2 sends trial point 3/2 to 1.",
+      "expected_result": "sat",
+      "validation": "finite_l1_soft_threshold_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["l1-quadratic-proximal-step"],
+      "notes": "The validator recomputes sign(v) * max(|v|-alpha*lambda, 0) and the positive-branch optimality residual."
+    },
+    {
+      "id": "composite-decrease-replay",
+      "claim": "The proximal point decreases f(x)+|x| from 9/2 to 3.",
+      "expected_result": "sat",
+      "validation": "finite_proximal_composite_decrease_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["l1-quadratic-proximal-step"],
+      "notes": "The validator evaluates the smooth quadratic and the L1 penalty at the start and proximal point."
+    },
+    {
+      "id": "bad-proximal-point-rejected",
+      "claim": "The malformed proximal point 1/4 satisfies the positive-branch optimality equation.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_proximal_point_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "l1-quadratic-proximal-step",
+        "computed_prox_x": "1",
+        "claimed_prox_x": "1/4",
+        "computed_optimality_residual": "0",
+        "claimed_optimality_residual": "-3/2",
+        "proximal_optimality_error": "3/2",
+        "smt2_artifact": "artifacts/examples/math/finite-proximal-gradient-v0/smt2/bad-proximal-point-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_proximal_gradient_bad_proximal_point_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the true prox point as 1; the malformed point 1/4 leaves a nonzero positive-branch optimality residual and is rejected by checked Farkas evidence."
+    },
+    {
+      "id": "general-proximal-gradient-convergence-lean-horizon",
+      "claim": "General proximal-gradient convergence, rates, and nonsmooth convex analysis require future Lean reconstruction.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Proximal-gradient convergence theorems for composite convex objectives with proper lower-semicontinuous nonsmooth terms, Lipschitz smooth gradients, step-size conditions, and rate statements",
+        "future_checker": "Lean module with no sorryAx dependencies plus exact rational certificate bridges for finite proximal-step witnesses"
+      },
+      "notes": "The finite rows check only one rational L1 proximal step; proximal-gradient theory remains proof-assistant work."
+    }
+  ]
+}
