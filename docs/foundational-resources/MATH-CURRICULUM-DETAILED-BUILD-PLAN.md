@@ -13,6 +13,8 @@ curriculum node -> concept row -> example pack -> learner page
 
 Use this file when choosing the next commit-sized work item. Use
 [MATH-CURRICULUM-BUILDOUT.md](MATH-CURRICULUM-BUILDOUT.md) for phase history,
+[MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md](MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md)
+for the top-down curriculum-wide buildout plan,
 [MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md)
 for per-node gates, [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md)
 for the broader resource-family plan, and
@@ -524,6 +526,13 @@ Pick one row per commit unless the change is purely navigational.
     rejection of a false inverse-coordinate claim, a focused learner page, and
     concept links under reals, polynomials, linear algebra, and the shared
     coordinate-geometry bridge.
+60. Landed: add
+    [MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md](MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md)
+    as the top-down plan for building the 23-node curriculum and 18-field
+    taxonomy into resource waves, acceptance gates, field-by-field priorities,
+    proof routes, solver reuse, consumer boundaries, and the next commit-sized
+    queue. This is a plan-only increment; the next pack should be chosen by the
+    distinct-object/distinct-route rule in that plan.
 
 ## Validation Checklist
 

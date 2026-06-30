@@ -14,6 +14,9 @@ schemas, examples, and validation workflows.
   used to ground the plan.
 - [MATH-FIELDS.md](MATH-FIELDS.md) defines the university-style mathematics
   field taxonomy that seeds the Foundational Concept Atlas.
+- [MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md](MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md)
+  is the top-down curriculum-wide plan for building the full resource system by
+  layer, field, proof route, solver reuse, and consumer boundary.
 - [MATH-CURRICULUM-BUILDOUT.md](MATH-CURRICULUM-BUILDOUT.md) is the detailed
   buildout plan from the current curriculum DAG to atlas rows, example packs,
   lessons, proof hooks, dashboards, and eventual library boundaries.
@@ -21,7 +24,7 @@ schemas, examples, and validation workflows.
   is the commit-sized build matrix for every curriculum node, math field,
   resource gate, and proof route.
 - [MATH-CURRICULUM-DETAILED-BUILD-PLAN.md](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
-  is the current execution ledger for stabilizing the existing 95 math packs,
+  is the current execution ledger for stabilizing the existing 101 math packs,
   resolving unclassified solver-reuse rows, completing learner paths, and
   deepening proof routes field by field.
 - [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md) is the detailed

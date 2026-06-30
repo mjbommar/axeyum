@@ -205,6 +205,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Math curriculum resource master plan landed.**
+  [`MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md)
+  now gives the top-down build plan for expanding the 23-node curriculum and
+  18-field taxonomy into resource waves, acceptance gates, field-by-field
+  build priorities, proof routes, solver reuse, consumer boundaries, and the
+  next commit-sized queue. This is a plan-only increment; the resource baseline
+  remains 101 promoted non-template math packs, 511 expected checks, 221
+  checked rows, 226 replay-only rows, and 64 Lean-horizon rows.
+
 - **Proof-upgrade frontier planned.** The learner path sweep is mechanically
   complete for the current queue (101 focused math packs, 0 path-only links).
   The next resource layer is

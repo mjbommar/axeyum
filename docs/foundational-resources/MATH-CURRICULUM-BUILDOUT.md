@@ -11,6 +11,9 @@ the [University Math Field Taxonomy](MATH-FIELDS.md).
 
 For the current forward work plan, use the
 [Curriculum Resource Execution Plan](CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
+For the top-down curriculum-wide plan across layers, fields, proof routes,
+solver reuse, and consumer boundaries, use the
+[Math Curriculum Resource Master Plan](MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md).
 For commit-sized work selection across curriculum nodes, math fields, resource
 gates, and proof routes, use the
 [Math Curriculum Implementation Matrix](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).

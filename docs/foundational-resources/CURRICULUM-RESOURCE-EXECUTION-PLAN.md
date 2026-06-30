@@ -7,6 +7,8 @@ This is the forward execution plan for turning the
 resource ecosystem. The companion
 [Math Curriculum Resource Buildout Plan](MATH-CURRICULUM-BUILDOUT.md) records
 the phase contract and landed history; the
+[Math Curriculum Resource Master Plan](MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md)
+gives the top-down curriculum-wide sequencing plan; the
 [Math Curriculum Implementation Matrix](MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md)
 gives the per-node/per-field build matrix; the
 [Math Curriculum Detailed Build Plan](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)

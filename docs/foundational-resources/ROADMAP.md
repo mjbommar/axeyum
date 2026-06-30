@@ -49,6 +49,7 @@ docs/foundational-resources/
   README.md
   SOURCES.md
   MATH-FIELDS.md
+  MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md
   MATH-CURRICULUM-BUILDOUT.md
   LIBRARY-BOUNDARY-DECISION.md
   ROADMAP.md
@@ -180,6 +181,8 @@ Required row fields:
 
 Current base: [formal mathematics curriculum](../curriculum/README.md).
 Field spine: [University Math Field Taxonomy](MATH-FIELDS.md).
+Top-down curriculum-wide plan:
+[Math Curriculum Resource Master Plan](MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md).
 Detailed execution plan:
 [Math Curriculum Resource Buildout Plan](MATH-CURRICULUM-BUILDOUT.md).
 Forward execution plan:
