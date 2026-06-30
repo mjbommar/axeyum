@@ -316,8 +316,11 @@ Pick one row per commit unless the change is purely navigational.
    `finite-fields-v0` from the fixed-width composite-modulus no-inverse row
    through source SMT-LIB, generated DIMACS/DRAT evidence, and same-artifact
    truncated-DRAT rejection.
-27. Add a generated or query-based audit for unclassified solver-reuse packs if
-   manual tracking starts to drift.
+27. Landed: add
+   `generated/solver-reuse-disposition-audit.md`, regenerated from pack
+   metadata and freshness-checked by `check-foundational-resources`, so the
+   promoted/non-benchmark-horizon/unclassified solver-reuse disposition counts
+   stay machine-visible.
 28. Revisit the library boundary after unclassified packs are resolved and at
    least one non-doc consumer repeats resource parsing logic.
 

@@ -62,6 +62,10 @@ schemas, examples, and validation workflows.
 - [generated/curriculum-pressure-by-fragment.md](generated/curriculum-pressure-by-fragment.md)
   groups packs by overlapping solver/proof pressure buckets such as Bool/CNF,
   QF_BV, QF_LIA, QF_LRA, QF_UF, finite replay, and Lean horizon.
+- [generated/solver-reuse-disposition-audit.md](generated/solver-reuse-disposition-audit.md)
+  audits every math example pack's solver-reuse disposition so promoted,
+  non-benchmark-horizon, and unclassified rows are visible without manual
+  counting.
 
 ## Current Machine-Readable Artifacts
 

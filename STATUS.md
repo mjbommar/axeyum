@@ -638,6 +638,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   buckets. It is now part of `check-foundational-resources`, so stale fragment
   planning output fails the same gate as coverage and proof-gap dashboards.
 
+- **Solver-reuse disposition audit landed.** The generated
+  [`solver-reuse-disposition-audit.md`](docs/foundational-resources/generated/solver-reuse-disposition-audit.md)
+  dashboard audits every non-template math pack's `solver_reuse` disposition,
+  reporting 84 promoted, 0 non-benchmark-horizon, and 0 unclassified packs.
+  It is now part of `check-foundational-resources`, so any newly added
+  unclassified pack appears in a freshness-checked queue.
+
 - **Curriculum status audit landed.** The generated
   [`curriculum-status-audit.md`](docs/foundational-resources/generated/curriculum-status-audit.md)
   dashboard separates source `curriculum_status` from generated
@@ -11740,6 +11747,13 @@ plan is built and committed on the current branch:
   unclassified solver-reuse queue, field and curriculum-node ledgers, validation commands,
   and the first next increment: source-linked `PHP(3,2)` CNF/DRAT/LRAT
   promotions for `proof-methods-refutation-v0` and `counting-v0`.
+
+- **2026-06-30** — **Solver-reuse disposition audit landed.**
+  Added
+  [`docs/foundational-resources/generated/solver-reuse-disposition-audit.md`](docs/foundational-resources/generated/solver-reuse-disposition-audit.md)
+  from pack metadata, wired it into `check-foundational-resources`, and updated
+  the curriculum buildout docs. The audit reports 84 promoted solver-reuse
+  packs, 0 non-benchmark-horizon packs, and 0 unclassified packs.
 
 - **2026-06-30** — **PHP Bool/CNF resource promotion landed.**
   Added source-level DIMACS artifacts for

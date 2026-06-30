@@ -189,6 +189,9 @@ curriculum-pressure dashboards now expose conservative R0-R6 gate/next-gate
 columns and overlapping fragment-pressure buckets, making R4-to-R5 solver-reuse
 candidates and Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
 Lean-horizon demand visible without hand-maintained scans.
+The generated solver-reuse disposition audit now reports all 84 math packs as
+promoted, with 0 non-benchmark-horizon and 0 unclassified rows, so future
+unclassified packs surface in a freshness-checked queue.
 The generated curriculum-status audit now separates source `curriculum_status`
 from generated `resource_status`, making source `planned` rows with validated
 resource packs visible as explicit `covered` versus `lean-horizon` review

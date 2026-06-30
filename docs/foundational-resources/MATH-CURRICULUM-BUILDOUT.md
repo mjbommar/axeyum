@@ -76,6 +76,7 @@ docs/foundational-resources/
     proof-gap-dashboard.md
     learner-proof-upgrade-dashboard.md
     curriculum-pressure-by-fragment.md
+    solver-reuse-disposition-audit.md
 
 docs/learn/math/
   README.md
@@ -192,6 +193,7 @@ Required first views:
 - list of example packs with validation commands;
 - proof gaps grouped by solver fragment and field.
 - overlapping curriculum pressure by solver/proof fragment.
+- solver-reuse disposition totals and unclassified-pack queue.
 
 Dashboards should be regenerated, not edited by hand.
 
@@ -1040,6 +1042,9 @@ missing learner coverage, and groups non-checked proof rows by candidate
 cookbook route. The curriculum-pressure dashboard groups packs into overlapping
 Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and Lean-horizon buckets
 so solver/proof demand is visible without hand-maintained scans. The
+solver-reuse disposition audit now reports every math pack's promoted,
+non-benchmark-horizon, or unclassified status, with a concrete unclassified
+queue so new packs cannot drift outside the R4-to-R5 promotion workflow. The
 curriculum-status audit now separates source `curriculum_status` from generated
 `resource_status`, so source `planned` rows with validated resource packs are
 reviewed as explicit `covered` versus `lean-horizon` decisions instead of
@@ -1058,6 +1063,7 @@ Deliverables:
 - `docs/foundational-resources/generated/proof-gap-dashboard.md`.
 - `docs/foundational-resources/generated/learner-proof-upgrade-dashboard.md`.
 - `docs/foundational-resources/generated/curriculum-pressure-by-fragment.md`.
+- `docs/foundational-resources/generated/solver-reuse-disposition-audit.md`.
 - Optional `just check-foundational-resources` target once scripts stabilize.
 
 Exit criteria:
