@@ -24,12 +24,23 @@
     "QF_BV"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-rings-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite ring bad distributivity QF_BV/DRAT regression seed",
+    "pressure": "Two-element ring-table conflict where exact finite replay computes a*(b+c)=1 and (a*b)+(a*c)=0 but distributivity demands equality.",
+    "evidence": [
+      "non-distributive-table-qf-bv-drat"
+    ],
+    "next_step": "Promote additional finite ring rows only when they add distinct fixed-width algebra-table solver pressure; keep ideal theory, Noetherian/PID/UFD structure, and quantified ring theory in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/02-structures/rings.md",
     "docs/curriculum/02-structures/groups.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-bv-bitblast.md"
+    "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+    "artifacts/examples/math/finite-rings-v0/smt2/non-distributive-table-bitblast-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_bv_routes.rs"
   ],
   "expected_results": [
     "z4-ring-table",

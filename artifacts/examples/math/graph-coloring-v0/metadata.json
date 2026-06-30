@@ -31,6 +31,15 @@
     "QF_BV"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "graph coloring triangle two-color QF_BV/DRAT regression seed",
+    "pressure": "One-bit triangle coloring conflict where all three vertex colors must be pairwise distinct inside a 1-bit domain.",
+    "evidence": [
+      "triangle-not-2-colorable-qf-bv-drat"
+    ],
+    "next_step": "Promote additional finite graph-coloring rows only when they add distinct Bool/CNF or fixed-width BV solver pressure; keep chromatic-number theorems and infinite graph claims in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -42,7 +51,9 @@
     "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
     "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
     "artifacts/examples/math/graph-coloring-v0/cnf/triangle-not-2-colorable.cnf",
-    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
+    "artifacts/examples/math/graph-coloring-v0/smt2/triangle-not-2-colorable-bitblast-conflict.smt2",
+    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+    "crates/axeyum-solver/tests/math_resource_bv_routes.rs"
   ],
   "expected_results": [
     "triangle-3-coloring-witness",

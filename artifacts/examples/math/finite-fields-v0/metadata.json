@@ -28,13 +28,24 @@
     "finite tables"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-fields-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite field composite nonfield QF_BV/DRAT regression seed",
+    "pressure": "Composite-modulus obstruction where a 3-bit residue inv < 6 is required to satisfy (2*inv) mod 6 = 1, but no residue works.",
+    "evidence": [
+      "composite-modulus-nonfield-qf-bv-drat"
+    ],
+    "next_step": "Promote additional finite-field rows only when they add distinct fixed-width inverse, distributivity, or table solver pressure; keep field extensions, algebraic closure, and quantified field theory in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/02-structures/fields.md",
     "docs/curriculum/02-structures/rings.md",
     "docs/curriculum/02-structures/modular-arithmetic.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-bv-bitblast.md"
+    "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+    "artifacts/examples/math/finite-fields-v0/smt2/composite-modulus-nonfield-bitblast-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_bv_routes.rs"
   ],
   "expected_results": [
     "prime-field-inverse-table",

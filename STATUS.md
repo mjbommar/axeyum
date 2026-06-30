@@ -331,9 +331,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   evidence; generated dashboards move promoted solver-reuse packs to 53 and
   leave 31 unclassified packs.
 
+- **Finite algebra and graph QF_BV/DRAT promotion batch landed.**
+  `finite-rings-v0`, `finite-fields-v0`, and `graph-coloring-v0` now carry
+  promoted `solver_reuse` metadata tied to source-level QF_BV artifacts. The
+  shared `math_resource_bv_routes` regression checks all three rows with
+  independently rechecked DIMACS/DRAT evidence; generated dashboards move
+  promoted solver-reuse packs to 56 and leave 28 unclassified packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 53-promoted-pack review count. The
+  now records the refreshed 56-promoted-pack review count. The
   decision remains in-repo and JSON-first: the query consumer reads promoted
   solver-reuse rows, but there is still no external consumer, repeated typed API
   demand, or reusable encoder boundary that warrants a new crate or separate
