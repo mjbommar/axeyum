@@ -110,6 +110,10 @@ pub fn check_with_lra_within(
             detail: "lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget"
                 .to_owned(),
         })),
+        Decision::Incomplete(detail) => Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail,
+        })),
     }
 }
 
@@ -134,7 +138,10 @@ pub fn lra_farkas_certificate(
 ) -> Result<Option<FarkasCertificate>, SolverError> {
     match decide(arena, assertions)? {
         Decision::UnsatFarkas { certificate, .. } => Ok(Some(certificate)),
-        Decision::Sat(_) | Decision::UnsatTrivial(_) | Decision::TimedOut => Ok(None),
+        Decision::Sat(_)
+        | Decision::UnsatTrivial(_)
+        | Decision::TimedOut
+        | Decision::Incomplete(_) => Ok(None),
     }
 }
 
@@ -202,7 +209,7 @@ pub fn lra_unsat_core(
         }
         // A literally-`false` assertion is its own (singleton) core.
         Decision::UnsatTrivial(origin) => Ok(Some(vec![origin])),
-        Decision::Sat(_) | Decision::TimedOut => Ok(None),
+        Decision::Sat(_) | Decision::TimedOut | Decision::Incomplete(_) => Ok(None),
     }
 }
 
@@ -224,6 +231,13 @@ enum Decision {
     /// The Fourier–Motzkin elimination did not finish within the wall-clock /
     /// size budget; the query is left undecided (a timely, sound `unknown`).
     TimedOut,
+    /// The simplex found a candidate model, but *verifying* it against the
+    /// original assertions could not be completed — e.g. an `i128` overflow while
+    /// evaluating the model. We cannot certify `sat`, so we decline to a graceful
+    /// `unknown` rather than raise a backend error. This is distinct from a model
+    /// that definitely *violates* an assertion, which stays a loud soundness alarm
+    /// (a procedure bug). Carries a human-readable detail.
+    Incomplete(String),
 }
 
 fn decide(arena: &TermArena, assertions: &[TermId]) -> Result<Decision, SolverError> {
@@ -304,8 +318,12 @@ fn decide_within(
                         )));
                     }
                     Err(error) => {
-                        return Err(SolverError::Backend(format!(
-                            "lra sat model replay failed: assertion #{} evaluation error: {error}",
+                        // The candidate could not be *evaluated* (e.g. the exact
+                        // rational comparison overflowed `i128`). This is not a
+                        // wrong model — we simply cannot certify `sat` — so decline
+                        // to a graceful `unknown` rather than raise a backend error.
+                        return Ok(Decision::Incomplete(format!(
+                            "lra: sat model replay could not be verified (assertion #{}): {error}",
                             assertion.index()
                         )));
                     }
