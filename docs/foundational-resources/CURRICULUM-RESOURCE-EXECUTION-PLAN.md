@@ -33,11 +33,11 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 70 atlas rows generated from curriculum, field data, twenty-seven R1 bridge
+- 74 atlas rows generated from curriculum, field data, thirty-one R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
-  analysis/topology boundary vocabulary, linear-algebra computation vocabulary,
-  probability/statistics finite-table vocabulary, algebra-map vocabulary, and
-  Lean horizons, plus the finite-algebra
+  proof-method and finite-logic vocabulary, analysis/topology boundary
+  vocabulary, linear-algebra computation vocabulary, probability/statistics
+  finite-table vocabulary, algebra-map vocabulary, and Lean horizons, plus the finite-algebra
   QF_UF/Alethe and exact-rational QF_LRA/Farkas example families.
 - 84 non-template math example packs, plus the validating template pack.
 - generated coverage, curriculum-status audit, field, proof-gap,
@@ -161,8 +161,9 @@ pack has landed.
 
 Add bridge-concept or example-family rows for repeated subtopics:
 
-- logic: refutation, proof by cases, finite quantifier expansion, induction
-  obligations, induction schemas;
+- logic: landed bridge rows for refutation-as-query, finite proof-pattern
+  replay, finite quantifier expansion, and bounded induction obligations;
+  general induction schemas remain Lean horizon;
 - set theory: equivalence classes, quotients, lattices, finite cardinal
   inequalities;
 - algebra: landed bridge rows for homomorphism preservation, kernel/image
@@ -378,9 +379,12 @@ Next buildout:
 9. Landed: add bridge-concept rows for probability/statistics finite-table
    vocabulary: finite probability mass tables, pushforward distributions,
    stochastic kernels, conditional expectation, and tail/count obstructions.
-10. Landed: add "math example using this route" sections to the six active proof
+10. Landed: add bridge-concept rows for proof-method and finite-logic
+   vocabulary: refutation-as-query, finite proof-pattern replay, finite
+   quantifier expansion, and bounded induction obligations.
+11. Landed: add "math example using this route" sections to the six active proof
    cookbook recipes so proof-route docs point back to concrete packs.
-11. Add QF_LRA/Farkas upgrade rows for rational, LP, convexity, concentration,
+12. Add QF_LRA/Farkas upgrade rows for rational, LP, convexity, concentration,
    linear-system, and probability/statistics table examples.
    Status: `family_exact_rational_farkas` now groups the recurring checked
    exact-rational infeasibility rows and ties them to the shared
@@ -388,7 +392,7 @@ Next buildout:
    conditional expectation, finite hitting times, finite Euler method, and
    finite stochastic kernels now add source-linked probability/statistics and
    dynamics/numerics seeds to that route.
-12. Add QF_UF/Alethe upgrade rows for equivalence, function, and finite algebra
+13. Add QF_UF/Alethe upgrade rows for equivalence, function, and finite algebra
    examples.
    Status: the first high-use learner-page route-note pass now names these
    routes and their trust boundaries; `family_finite_algebra_alethe` now groups

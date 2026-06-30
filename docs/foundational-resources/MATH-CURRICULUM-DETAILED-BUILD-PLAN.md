@@ -34,7 +34,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 27 bridge-concept rows.
+- 31 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math packs.
 - 422 expected checks.
@@ -327,6 +327,10 @@ Pick one row per commit unless the change is purely navigational.
    probability mass tables, pushforward distributions, stochastic kernels,
    conditional expectation, and tail/count obstructions, keeping the finite
    table and theorem-horizon vocabulary shared across existing packs.
+30. Landed: add generated proof/logic bridge rows for refutation-as-query,
+   finite proof-pattern replay, finite quantifier expansion, and bounded
+   induction obligations, keeping proof-method and finite-logic vocabulary
+   shared across existing packs.
 
 ## Validation Checklist
 

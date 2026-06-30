@@ -141,18 +141,19 @@ the event and total measures, finite-martingales' bad conditional-expectation
 row now promoted after finite filtration replay computes the up-block
 expectation, and finite Markov-chain's existing bad stochastic-row artifact now
 explicitly promoted in solver-reuse metadata.
-The foundational concept atlas now also includes twenty-seven generated R1 bridge
+The foundational concept atlas now also includes thirty-one generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
-metric balls, bounded epsilon-delta shadows, compactness shadows,
-connectedness shadows, continuity-by-preimage, LU factorization replay,
-rank-nullity replay, residual bounds, eigenpair witnesses, characteristic
-polynomial replay, finite random-matrix moments, finite probability mass
-tables, finite pushforward distributions, finite stochastic kernels, finite
-conditional expectations, finite tail/count obstructions, homomorphism
-preservation, kernel/image replay, quotient maps, ideal closure, module
-actions, tensor bilinearity, finite group actions, and Lean horizons, so
-resource packs can point at shared evidence and boundary vocabulary instead of
-repeating it locally.
+refutation-as-query, finite proof-pattern replay, finite quantifier expansion,
+bounded induction obligations, metric balls, bounded epsilon-delta shadows,
+compactness shadows, connectedness shadows, continuity-by-preimage, LU
+factorization replay, rank-nullity replay, residual bounds, eigenpair
+witnesses, characteristic polynomial replay, finite random-matrix moments,
+finite probability mass tables, finite pushforward distributions, finite
+stochastic kernels, finite conditional expectations, finite tail/count
+obstructions, homomorphism preservation, kernel/image replay, quotient maps,
+ideal closure, module actions, tensor bilinearity, finite group actions, and
+Lean horizons, so resource packs can point at shared evidence and boundary
+vocabulary instead of repeating it locally.
 The first route-note pass has also landed on the high-use learner cluster
 pages for logic/proof, graph/discrete reasoning, linear algebra/optimization,
 probability/statistics, and algebra/number theory.

@@ -649,8 +649,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) now
   generates five bridge rows for finite probability mass tables, pushforward
   distributions, stochastic kernels, conditional expectation, and tail/count
-  obstructions. The concept atlas now reports 70 rows total: 23 curriculum
-  rows, 18 field rows, 27 bridge rows, and 2 example-family rows.
+  obstructions. Those rows remain part of the current bridge atlas and reuse
+  existing finite probability, measure, kernel, martingale, hitting-time,
+  concentration, and exact-test packs.
+
+- **Proof/logic bridge concepts landed.**
+  [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) now
+  generates four bridge rows for refutation-as-query, finite proof-pattern
+  replay, finite quantifier expansion, and bounded induction obligations. The
+  concept atlas now reports 74 rows total: 23 curriculum rows, 18 field rows,
+  31 bridge rows, and 2 example-family rows.
 
 - **Curriculum status audit landed.** The generated
   [`curriculum-status-audit.md`](docs/foundational-resources/generated/curriculum-status-audit.md)
@@ -1142,9 +1150,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
-  is now generated with twenty-seven bridge rows. The first proof-methodology rows are
+  is now generated with thirty-one bridge rows. The proof-methodology rows are
   `bridge_finite_model_replay`, `bridge_counterexample_proof`,
-  `bridge_bounded_theorem_shadow`, and `bridge_lean_horizon`; the analysis and
+  `bridge_refutation_query`, `bridge_finite_proof_pattern`,
+  `bridge_finite_quantifier_expansion`,
+  `bridge_bounded_induction_obligation`, `bridge_bounded_theorem_shadow`, and
+  `bridge_lean_horizon`; the analysis and
   topology boundary rows are `bridge_metric_ball`,
   `bridge_bounded_epsilon_delta_shadow`, `bridge_compactness_shadow`,
   `bridge_connectedness_shadow`, and `bridge_continuity_preimage`; the
@@ -1161,7 +1172,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   generated from
   [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) and
   point at existing validated packs plus proof-cookbook recipes. The
-  foundational resource consumer now reports 70 concept rows while preserving
+  foundational resource consumer now reports 74 concept rows while preserving
   23 curriculum rows and 18 field rows. Next resource work should add the next
   proof-frontier promotion or boundary evidence from a real repeated consumer,
   depending on which roadmap lane is being advanced.
@@ -11769,8 +11780,15 @@ plan is built and committed on the current branch:
   Added generated bridge-concept rows for finite probability mass tables,
   pushforward distributions, stochastic kernels, conditional expectation, and
   tail/count obstructions. Regenerated the ontology and field dashboard; the
-  foundational concept atlas now validates at 70 rows: 23 curriculum rows,
+  foundational concept atlas then validated at 70 rows: 23 curriculum rows,
   18 field rows, 27 bridge rows, and 2 example-family rows.
+
+- **2026-06-30** — **Proof/logic bridge concepts landed.**
+  Added generated bridge-concept rows for refutation-as-query, finite
+  proof-pattern replay, finite quantifier expansion, and bounded induction
+  obligations. Regenerated the ontology and field dashboard; the foundational
+  concept atlas now validates at 74 rows: 23 curriculum rows, 18 field rows,
+  31 bridge rows, and 2 example-family rows.
 
 - **2026-06-30** — **PHP Bool/CNF resource promotion landed.**
   Added source-level DIMACS artifacts for

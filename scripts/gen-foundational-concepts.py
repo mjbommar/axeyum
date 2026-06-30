@@ -559,6 +559,357 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_refutation_query",
+        "title": "Refutation As Query",
+        "field_ids": ["logic_and_proof", "discrete_math"],
+        "resource_status": "validated",
+        "summary": (
+            "A proof-by-refutation row turns a finite claim into a solver "
+            "query by asserting the hypotheses, negating the target, and "
+            "checking that the resulting finite obligation has a checked "
+            "UNSAT certificate or a replayed countermodel."
+        ),
+        "prerequisites": [
+            "bridge_counterexample_proof",
+            "curriculum_propositional_logic",
+            "curriculum_proof_methods",
+        ],
+        "unlocks": [
+            "bridge_finite_proof_pattern",
+            "bridge_finite_quantifier_expansion",
+            "curriculum_counting",
+        ],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "Bool / SAT",
+            "CNF / DRAT / LRAT",
+            "finite refutation",
+            "proof object anatomy",
+        ],
+        "example_packs": [
+            (
+                "proof-methods-refutation-v0",
+                "Pigeonhole-style proof by refutation with source-linked CNF and checked DRAT/LRAT evidence.",
+            ),
+            (
+                "proof-methods-patterns-v0",
+                "Contradiction and invalid-proof rows that separate countermodel replay from refutation evidence.",
+            ),
+            (
+                "logic-basics-v0",
+                "Tiny Boolean contradictions and tautology-by-negation rows with checked CNF evidence.",
+            ),
+            (
+                "counting-v0",
+                "Finite pigeonhole refutation rows that reuse the same CNF/LRAT trust story.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite refutation query plus Boolean CNF/LRAT certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-cnf --test math_resource_boolean_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/learn/math/proof-methods-refutation-end-to-end.md",
+                    "docs/learn/math/proof-object-anatomy-end-to-end.md",
+                    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+                ],
+                "notes": (
+                    "The solver search and CNF encoding are not trusted as "
+                    "proof by themselves; the small checked object is the "
+                    "DRAT/LRAT certificate for the finite refutation."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/learn/math/proof-methods-refutation-end-to-end.md",
+            "docs/learn/math/proof-object-anatomy-end-to-end.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+        ],
+        "open_gaps": [
+            "A finite refutation proves only the encoded finite obligation unless the mathematical reduction is separately reconstructed.",
+            "Natural-deduction proof methods and arbitrary quantified refutations remain Lean-horizon work.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the hypotheses, negated target, finite universe, and source-level encoding route.",
+                "The validator links the row to the source artifact or replayed countermodel.",
+                "Certificate-backed rows reject corrupted or truncated proof objects in route-specific tests.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_proof_pattern",
+        "title": "Finite Proof Pattern Replay",
+        "field_ids": ["logic_and_proof", "set_theory_and_foundations"],
+        "resource_status": "validated",
+        "summary": (
+            "A finite proof-pattern row checks direct proof, contrapositive, "
+            "proof by cases, contradiction, and invalid-converse shapes over "
+            "a fixed finite Boolean or set model, while keeping general proof "
+            "calculus soundness in the Lean horizon."
+        ),
+        "prerequisites": [
+            "bridge_refutation_query",
+            "bridge_counterexample_proof",
+            "curriculum_proof_methods",
+        ],
+        "unlocks": [
+            "bridge_bounded_induction_obligation",
+            "bridge_lean_horizon",
+            "curriculum_sets",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "Bool / SAT",
+            "truth-table enumeration",
+            "finite set replay",
+            "CNF / DRAT / LRAT",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "proof-methods-patterns-v0",
+                "Finite direct, contrapositive, cases, contradiction, and invalid-converse proof-pattern rows.",
+            ),
+            (
+                "finite-sets-v0",
+                "Finite set identities and counterexample rows that reuse direct and refutation patterns.",
+            ),
+            (
+                "logic-basics-v0",
+                "Boolean implication and contradiction rows that provide the smallest proof-pattern surface.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite truth-table/set replay plus Boolean certificate when unsat",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-cnf --test math_resource_boolean_routes",
+                "lean_status": "required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/proof-methods-patterns-end-to-end.md",
+                    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+                ],
+                "notes": (
+                    "Finite patterns are replayed as concrete examples; a "
+                    "general proof calculus or tactic soundness story is not "
+                    "claimed until Lean reconstruction covers the shape."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/proof-methods-patterns-end-to-end.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite proof-pattern rows do not prove natural-deduction completeness or tactic soundness.",
+            "Rows with quantified hypotheses need the finite-quantifier-expansion bridge or a Lean route.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows name the proof pattern, finite carrier or truth table, and exact expected result.",
+                "The validator recomputes the finite case split, implication, or counterexample directly.",
+                "Learner pages separate proof-pattern examples from theorem-level proof automation.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_quantifier_expansion",
+        "title": "Finite Quantifier Expansion",
+        "field_ids": ["logic_and_proof", "set_theory_and_foundations", "discrete_math"],
+        "resource_status": "validated",
+        "summary": (
+            "A finite quantifier-expansion row replaces universal and "
+            "existential statements over a committed finite domain with the "
+            "corresponding finite conjunctions, disjunctions, relation-table "
+            "lookups, and equality constraints."
+        ),
+        "prerequisites": [
+            "bridge_refutation_query",
+            "bridge_finite_model_replay",
+            "curriculum_predicate_logic",
+        ],
+        "unlocks": [
+            "bridge_quotient_map",
+            "bridge_bounded_induction_obligation",
+            "field_set_theory_and_foundations",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite predicate logic",
+            "finite-domain quantifier expansion",
+            "Bool / CNF",
+            "finite relations",
+            "QF_UF",
+        ],
+        "example_packs": [
+            (
+                "finite-predicate-v0",
+                "Finite-domain universal/existential rows with source-linked Bool/CNF proof evidence.",
+            ),
+            (
+                "relations-functions-v0",
+                "Finite relation and function-table rows that supply predicate extensions.",
+            ),
+            (
+                "equivalence-classes-v0",
+                "Finite equivalence and quotient rows that add equality-heavy QF_UF pressure.",
+            ),
+            (
+                "finite-cardinality-v0",
+                "Finite function-quantifier rows for injection/surjection obstruction examples.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite quantifier expansion with Bool/CNF or QF_UF evidence",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py, cargo test -p axeyum-cnf --test math_resource_boolean_routes, and cargo test -p axeyum-solver --test math_resource_uf_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+                    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+                    "docs/learn/math/finite-predicate-end-to-end.md",
+                    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+                    "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+                ],
+                "notes": (
+                    "The finite expansion is checked for the committed domain; "
+                    "arbitrary-domain first-order validity remains a separate "
+                    "Lean or solver-theory horizon."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/learn/math/finite-predicate-end-to-end.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite-domain expansion does not prove arbitrary-domain first-order validity, compactness, completeness, or Lowenheim-Skolem theorems.",
+            "Quantifier alternation over large or symbolic domains needs a separate solver-theory and proof route.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite domain, relation/function tables, and expanded Boolean or equality obligation.",
+                "The validator rejects metadata/check drift between quantified source rows and expanded checks.",
+                "Learner pages explicitly distinguish finite-domain truth from first-order validity.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_bounded_induction_obligation",
+        "title": "Bounded Induction Obligation",
+        "field_ids": ["logic_and_proof", "number_theory"],
+        "resource_status": "validated",
+        "summary": (
+            "A bounded induction-obligation row checks finite base cases, "
+            "finite step obligations, invariant prefixes, and arithmetic "
+            "counterexample counts, while keeping the universal induction "
+            "schema as an explicit Lean horizon."
+        ),
+        "prerequisites": [
+            "bridge_finite_quantifier_expansion",
+            "bridge_finite_proof_pattern",
+            "curriculum_naturals",
+        ],
+        "unlocks": [
+            "bridge_lean_horizon",
+            "curriculum_number_theory",
+            "curriculum_calculus",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "bounded induction obligations",
+            "finite-domain enumeration",
+            "QF_LIA / arithmetic-DPLL",
+            "QF_LIA / Diophantine",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "induction-obligations-v0",
+                "Bounded base/step obligations and bad-step counterexample-count rows.",
+            ),
+            (
+                "induction-patterns-v0",
+                "Finite weak induction, strong induction, loop-invariant, and parity-obstruction rows.",
+            ),
+            (
+                "natural-arithmetic-v0",
+                "Bounded natural-number prefix and bad negative-domain arithmetic rows.",
+            ),
+            (
+                "graph-search-runtime-v0",
+                "Finite traversal-cost family rows that reuse bounded-prefix arithmetic checks.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "bounded induction replay plus QF_LIA arithmetic certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lia_routes",
+                "lean_status": "required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/induction-obligations-end-to-end.md",
+                    "docs/learn/math/induction-patterns-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+                ],
+                "notes": (
+                    "Finite prefixes and bad-step counts are checked as "
+                    "bounded arithmetic facts; the general induction schema "
+                    "needs Lean reconstruction before it can graduate."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/induction-obligations-end-to-end.md",
+            "docs/learn/math/induction-patterns-end-to-end.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+        ],
+        "open_gaps": [
+            "A bounded prefix or finite step check does not prove the induction schema over all natural numbers.",
+            "Universal induction, recursion principles, and proof-method automation remain Lean-horizon work.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the bound, base cases, step range, arithmetic formula, and expected finite result.",
+                "The validator or route regression rejects corrupted bad-step counts or impossible parity rows.",
+                "Learner pages state the boundary between finite prefixes and theorem-level induction.",
+            ],
+        },
+    },
+    {
         "id": "bridge_bounded_theorem_shadow",
         "title": "Bounded Theorem Shadow",
         "field_ids": ["logic_and_proof"],
