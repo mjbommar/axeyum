@@ -42,6 +42,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite hitting-time bad expected-time QF_LRA/Farkas regression seed",
+    "pressure": "Malformed expected hitting-time table where exact replay reduces the start-state equation to 2*h_start = 2 + h_start + h_middle, conflicting with h_start = 3 and h_middle = 2.",
+    "evidence": [
+      "bad-expected-time-rejected"
+    ],
+    "next_step": "Promote additional absorption-probability or finite-horizon rows only when they add distinct exact-linear solver pressure; keep recurrence, transience, optional stopping, mixing, and infinite-horizon potential theory in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -53,6 +62,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-hitting-times-v0/smt2/bad-expected-time-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [

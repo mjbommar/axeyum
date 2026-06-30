@@ -1523,9 +1523,9 @@ the same checked Farkas evidence path after exact replay computes the row sum.
 `finite-stochastic-kernels-v0` now routes its bad kernel-row rejection through
 the same checked Farkas evidence path after exact replay computes the malformed
 row sum `3/5 + 3/5 = 6/5`.
-`finite-hitting-times-v0` now routes its bad expected-time row through the same
-checked Farkas evidence path after clearing denominators in the finite linear
-equation.
+`finite-hitting-times-v0` now routes its bad expected-time row through a
+source-linked checked Farkas evidence path after clearing denominators in the
+finite linear equation, and its metadata promotes that row for solver reuse.
 `least-squares-regression-v0` now routes its bad coefficient row through the
 same checked Farkas evidence path using the first failed normal equation.
 `real-analysis-rational-v0` now routes its bad linear-delta row through the

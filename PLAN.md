@@ -204,8 +204,9 @@ obstruction, bounded natural arithmetic is now promoted for its bad negative
 domain row, and the finite-probability bad-normalization row now has a checked
 QF_LRA/Farkas regression, with finite Markov chains now promoted for the bad
 stochastic-row obstruction and finite concentration now promoted for the bad
-tail-bound obstruction, with finite hitting times promoted for the bad
-expected-time equation; least-squares regression is now promoted for the bad
+tail-bound obstruction, with finite hitting times now source-linked and
+promoted for the bad expected-time equation; least-squares regression is now
+promoted for the bad
 coefficient row, and bounded rational real analysis for the bad
 linear-delta row, with finite conditional expectation now promoted for the bad
 high-block table and finite Euler method now promoted for the bad fixed-step

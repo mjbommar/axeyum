@@ -283,9 +283,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `high_block_expectation = 5`; generated dashboards move promoted
   solver-reuse packs to 25.
 
+- **Finite hitting-time QF_LRA promotion landed.**
+  [`finite-hitting-times-v0`](artifacts/examples/math/finite-hitting-times-v0/)
+  now carries promoted `solver_reuse` metadata for its existing source-level
+  QF_LRA artifact. The shared `math_resource_lra_routes` regression emits and
+  independently rechecks Farkas evidence for `h_start = 3`, `h_middle = 2`,
+  and `2*h_start = 2 + h_start + h_middle`; generated dashboards move promoted
+  solver-reuse packs to 26.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the post-23-promoted-pack review and refreshed 25-pack count. The
+  now records the post-23-promoted-pack review and refreshed 26-pack count. The
   decision remains in-repo and JSON-first: the query consumer reads promoted
   solver-reuse rows, but there is still no external consumer, repeated typed API
   demand, or reusable encoder boundary that warrants a new crate or separate

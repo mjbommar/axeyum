@@ -2,7 +2,7 @@
 
 Date: 2026-06-29
 
-Reviewed: 2026-06-30; counts refreshed after 25 promoted solver-reuse packs.
+Reviewed: 2026-06-30; counts refreshed after 26 promoted solver-reuse packs.
 
 ## Decision
 
@@ -40,7 +40,7 @@ The Phase M8 threshold is met for size and repeated structure:
 | At least 12 validated example packs | 84 non-template math packs are listed through the atlas data contract. |
 | At least 6 packs with checked proof/evidence routes | 78 non-template packs contain at least one `checked` expected-result row. |
 | At least one consumer can read the data without repository-internal knowledge | `scripts/consume-foundational-resources.py` reads the atlas and example-pack JSON directly and cross-checks pack coverage; `scripts/query-foundational-resources.py` answers summary, pack, check, and concept queries without importing validators or generators. |
-| At least one consumer can read promoted solver-reuse rows | `scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any` is part of `scripts/check-foundational-resources.sh` and currently finds 25 promoted packs. |
+| At least one consumer can read promoted solver-reuse rows | `scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any` is part of `scripts/check-foundational-resources.sh` and currently finds 26 promoted packs. |
 
 The current pack-level evidence mix is still intentionally conservative:
 
@@ -48,7 +48,7 @@ The current pack-level evidence mix is still intentionally conservative:
 - `replay-only`: 171 expected-result rows
 - `lean-horizon`: 47 expected-result rows
 - `not-run`: 47 expected-result rows
-- `solver_reuse`: 25 promoted packs and 59 unclassified packs
+- `solver_reuse`: 26 promoted packs and 58 unclassified packs
 
 That distribution argues for keeping the resource lane close to the proof
 cookbook, validators, and solver evidence work. A premature crate would mostly
