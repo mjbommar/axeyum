@@ -25,7 +25,7 @@ Candidate route totals:
 
 | Route | Pack Count | Meaning |
 |---|---:|---|
-| [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 7 | Boolean refutations that should carry checked CNF proof objects. |
+| [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 8 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 9 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 35 | Exact rational infeasibility and linear inequality obligations. |
@@ -120,14 +120,18 @@ First targets:
   (solver-reuse promotion landed for `bad-connected-claim-rejected`:
   source-linked finite connectedness DIMACS artifact, DRAT emission, LRAT
   elaboration, and independent checks)
+- [finite-topology-v0](../../artifacts/examples/math/finite-topology-v0/)
+  (solver-reuse promotion landed for `bad-empty-open-rejected`: source-linked
+  missing-empty-set DIMACS artifact, DRAT emission, LRAT elaboration, and
+  independent checks)
 
 Secondary targets:
 
 - pigeonhole/counting rows are now represented by proof-methods refutation and
   counting, and topology/set-family Boolean rows are now represented by finite
-  compactness and finite connectedness; pick the next Boolean CNF target only
-  when the finite encoding is source-level obvious and not better expressed as
-  finite replay.
+  compactness, finite connectedness, and finite topology; pick the next Boolean
+  CNF target only when the finite encoding is source-level obvious and not
+  better expressed as finite replay.
 
 Expected artifact:
 
@@ -155,8 +159,10 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-d-separation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 cargo test -p axeyum-cnf --test math_resource_boolean_routes proof_methods_refutation_php_3_2_emits_checked_drat_and_lrat
 cargo test -p axeyum-cnf --test math_resource_boolean_routes counting_pigeonhole_3_2_emits_checked_drat_and_lrat
+cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_topology_bad_empty_open_emits_checked_drat_and_lrat
 ./scripts/check-foundational-resources.sh
 ```
 

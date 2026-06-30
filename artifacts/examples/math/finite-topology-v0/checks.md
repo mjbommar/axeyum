@@ -19,3 +19,12 @@ Expected result: `sat`.
 
 The validator checks a finite rational metric table and recomputes the open
 ball centered at `p1` with radius `3/2`.
+
+## `bad-empty-open-rejected`
+
+Expected result: `unsat`.
+
+The fixed open-set table lists `{a}` and `{a,b}` but omits the empty set. The
+topology axiom requires the empty set to be open, so the source DIMACS artifact
+isolates the one-variable contradiction and the Boolean route checks DRAT/LRAT
+proof objects.

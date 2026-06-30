@@ -51,4 +51,24 @@ d(p0, p2) = 3
 
 The open ball centered at `p1` with radius `3/2` is exactly `{p0, p1}`.
 
+### Bad Empty-Open Claim
+
+The promoted bad row uses the malformed open-set family:
+
+```text
+universe = {a,b}
+open_sets = {{a}, {a,b}}
+```
+
+The table says the empty set is absent. The topology axioms say the empty set
+must be open. The CNF artifact records only that final Boolean conflict:
+
+```text
+empty_is_open = false
+empty_is_open = true
+```
+
+DRAT/LRAT checking proves the tiny CNF is unsatisfiable; it does not prove any
+general theorem about arbitrary topological spaces.
+
 These fixed checks do not prove general topology theorems.

@@ -249,8 +249,8 @@ validated pack data and the repo-root command that replays it.
   and simple-function integral replay.
 - [Finite Topology And Measure](finite-topology-measure-end-to-end.md):
   follows finite topology replay, finite sigma-algebra replay, exact finite
-  measure additivity, event complements, and checked QF_LRA/Farkas
-  bad-complement rejection.
+  measure additivity, event complements, checked Bool/CNF bad-empty-open
+  rejection, and checked QF_LRA/Farkas bad-complement rejection.
 - [Finite Integration](finite-integration-end-to-end.md): follows finite
   simple-function integrals, indicator integrals, integral linearity, checked
   bad-expectation rejection, and the Lebesgue-integration Lean horizon.
@@ -291,7 +291,8 @@ validated pack data and the repo-root command that replays it.
   connectedness, and measure replay.
 - [Finite Topology And Measure](finite-topology-measure-end-to-end.md):
   follows finite topology axioms, closure/interior, metric balls,
-  sigma-algebra closure, finite additivity, and event-complement replay.
+  checked missing-empty-set rejection, sigma-algebra closure, finite
+  additivity, and event-complement replay.
 - [Finite Compactness](finite-compactness-end-to-end.md): follows finite
   open-cover replay, subcover replay, minimal-subcover enumeration,
   finite-intersection-family replay, checked Bool/CNF bad-cover rejection, and

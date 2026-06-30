@@ -74,6 +74,25 @@
       "proof_status": "replay-only",
       "witnesses": ["finite-metric-ball"],
       "notes": "The validator checks the finite metric table and recomputes d(center, point) < radius."
+    },
+    {
+      "id": "bad-empty-open-rejected",
+      "claim": "The listed finite family is a topology even though it omits the empty set.",
+      "expected_result": "unsat",
+      "validation": "finite_topology_bad_empty_open_refutation",
+      "proof_status": "checked",
+      "data": {
+        "universe": ["a", "b"],
+        "open_sets": [
+          ["a"],
+          ["a", "b"]
+        ],
+        "missing_open_set": [],
+        "cnf_artifact": "artifacts/examples/math/finite-topology-v0/cnf/bad-empty-open-rejected.cnf",
+        "boolean_regression": "cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_topology_bad_empty_open_emits_checked_drat_and_lrat",
+        "certificate": "The resource regression emits DRAT, elaborates to LRAT, and checks both with check_drat/check_lrat."
+      },
+      "notes": "The fixed open-set table omits the empty set, while the topology axioms require it; the source DIMACS artifact isolates that one-variable contradiction for DRAT/LRAT checking."
     }
   ]
 }

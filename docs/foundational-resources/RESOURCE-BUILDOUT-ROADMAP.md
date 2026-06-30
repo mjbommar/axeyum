@@ -40,12 +40,12 @@ The current committed data boundary reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math example packs.
-- 417 expected checks.
-- 199 checked proof/evidence rows.
+- 418 expected checks.
+- 200 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 79 promoted solver-reuse packs.
-- 5 non-benchmark-horizon solver-reuse packs.
+- 80 promoted solver-reuse packs.
+- 4 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
@@ -675,8 +675,10 @@ Build next:
   metric ball, continuous preimage, compact open cover, connected clopen
   witness, homeomorphism, simplicial complex, chain complex, boundary squared
   zero, and homology rank.
-- Promote source-level-obvious bad topology rows to Bool/CNF or LIA only when
-  the mathematical object is fixed and tiny.
+- Keep `finite-topology-v0`'s promoted missing-empty-set row tied to the
+  source DIMACS artifact and checked Bool/CNF DRAT/LRAT route.
+- Promote additional source-level-obvious bad topology rows to Bool/CNF, QF_UF,
+  or LIA only when the mathematical object is fixed and tiny.
 - Keep general compactness, connectedness, homotopy, homology invariance, and
   topological spaces as Lean-horizon.
 

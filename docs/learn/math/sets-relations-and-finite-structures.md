@@ -240,6 +240,9 @@ clopen_subsets = {}, {0,1}
 
 The checker confirms the Sierpinski example has no non-trivial clopen subset
 and rejects the false claim that the discrete two-point topology is connected.
+The base finite-topology pack also rejects a malformed open-set table that
+omits the empty set; the final one-variable contradiction is checked through
+the Boolean CNF DRAT/LRAT route.
 For continuous maps, add a total map between finite topologies:
 
 ```text
@@ -278,6 +281,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/cardinality-principles-v0
 cargo test -p axeyum-solver --test math_resource_lia_routes cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_topology_bad_empty_open_emits_checked_drat_and_lrat
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_connectedness_bad_connected_claim_emits_checked_drat_and_lrat

@@ -111,10 +111,12 @@ Canonical examples:
   [Graph Cut](../../../artifacts/examples/math/graph-cut-v0/), and
   [Graph D-Separation](../../../artifacts/examples/math/graph-d-separation-v0/)
   provide small graph refutations where the graph-to-CNF meaning stays visible.
-- [Finite Compactness](../../../artifacts/examples/math/finite-compactness-v0/)
-  and [Finite Connectedness](../../../artifacts/examples/math/finite-connectedness-v0/)
-  use Boolean certificates for finite topology counterexamples, while the
-  general compactness and connectedness theorems remain Lean horizons.
+- [Finite Compactness](../../../artifacts/examples/math/finite-compactness-v0/),
+  [Finite Connectedness](../../../artifacts/examples/math/finite-connectedness-v0/),
+  and [Finite Topology](../../../artifacts/examples/math/finite-topology-v0/)
+  use Boolean certificates for finite topology counterexamples, including a
+  missing-empty-set axiom conflict, while the general compactness,
+  connectedness, and topological-space theorems remain Lean horizons.
 
 The focused resource regression is
 `cargo test -p axeyum-cnf --test math_resource_boolean_routes`.
@@ -135,6 +137,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/lo
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-predicate-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 ```
 
 ## Links
@@ -146,3 +149,4 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 - [Finite Predicate Logic pack](../../../artifacts/examples/math/finite-predicate-v0/)
 - [Proof Methods By Refutation pack](../../../artifacts/examples/math/proof-methods-refutation-v0/)
 - [Graph Coloring pack](../../../artifacts/examples/math/graph-coloring-v0/)
+- [Finite Topology pack](../../../artifacts/examples/math/finite-topology-v0/)

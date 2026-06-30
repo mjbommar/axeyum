@@ -1,0 +1,7 @@
+c finite-topology-v0 bad-empty-open-rejected
+c variable 1: the empty set is listed as open in the claimed finite topology
+c fixed open-set table: empty is omitted
+c topology axiom: every topology contains the empty set
+p cnf 1 2
+-1 0
+1 0

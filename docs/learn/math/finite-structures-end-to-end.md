@@ -23,6 +23,7 @@ Concept rows:
 |---|---|---|
 | `finite-topology-axioms` | `sat` | replay-only |
 | `closure-interior-witness` | `sat` | replay-only |
+| `bad-empty-open-rejected` | `unsat` | checked Bool/CNF DRAT/LRAT |
 | `minimal-subcover-size-witness` | `sat` | checked |
 | `bad-open-cover-rejected` | `unsat` | checked |
 | `finite-connected-space-witness` | `sat` | replay-only |
@@ -94,6 +95,10 @@ interior({b}) = {}
 closure({b}) = {b,c}
 ```
 
+The bad topology row fixes a two-point family `{a}, {a,b}` that omits the empty
+set, then checks the one-variable contradiction between that table and the
+topology axiom requiring `{}` to be open through DRAT/LRAT evidence.
+
 For measure, the checker recomputes the complement:
 
 ```text
@@ -138,6 +143,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_topology_bad_empty_open_emits_checked_drat_and_lrat
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
@@ -159,3 +165,5 @@ general connectedness theorems, continuous-image and homeomorphism-invariance
 theorems, countable additivity, and Lebesgue integration remain proof-horizon
 material. The finite-measure UNSAT row trusts only the explicit finite replay
 and the independent Farkas certificate for the final exact-rational conflict.
+The finite-topology UNSAT row trusts only the explicit open-set table and the
+independent DRAT/LRAT certificate for the final missing-empty-set contradiction.

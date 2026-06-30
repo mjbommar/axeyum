@@ -234,7 +234,7 @@ losing the curriculum anchor.
 | Field | Curriculum Anchor | First New Resource |
 |---|---|---|
 | `graph_theory` | sets, relations, counting | `graph-coloring-v0`, then reachability, search runtime/cost counters, matching, cuts, and d-separation. |
-| `topology` | sets, reals, sequences-and-limits, linear algebra | `finite-topology-v0`, `finite-simplicial-homology-v0`, then metric balls, closure/interior, continuous maps, compactness, connectedness, and finite chain-complex checks. |
+| `topology` | sets, reals, sequences-and-limits, linear algebra | `finite-topology-v0`, `finite-simplicial-homology-v0`, then metric balls, closure/interior, checked finite axiom conflicts, continuous maps, compactness, connectedness, and finite chain-complex checks. |
 | `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-martingales-v0`, `finite-hitting-times-v0`, and `finite-concentration-v0` over finite universes; Lebesgue theory remains horizon. |
 | `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, finite random variables, finite conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, product tables, exact discrete distributions. |
 | `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, `least-squares-regression-v0`, contingency tables, exact small tests, least-squares normal equations, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, and finite concentration checks. |
@@ -694,7 +694,9 @@ signed-area/orientation replay, affine area scaling by determinant,
 barycentric point-inside replay, checked QF_LRA/Farkas rejection of a false
 orientation claim, and a general oriented-geometry Lean-horizon row.
 `artifacts/examples/math/finite-topology-v0/` now validates finite topology
-axioms, closure/interior computation, and exact finite metric-ball replay.
+axioms, closure/interior computation, exact finite metric-ball replay, and a
+checked Bool/CNF DRAT/LRAT rejection of a malformed open-set family that omits
+the empty set.
 `artifacts/examples/math/metric-continuity-v0/` now validates finite
 Lipschitz, epsilon-delta, and open-ball preimage checks with exact rational
 metrics, plus checked QF_LRA/Farkas rejection of an overlarge delta.
@@ -829,7 +831,8 @@ Recommended order:
    constraints, affine maps, signed area/orientation, barycentric replay,
    finite incidence preservation, QF_LRA/Farkas false distance-preservation
    rejection, and QF_LRA/Farkas false orientation rejection.
-8. `finite-topology-v0`: finite closure/interior and metric-ball examples.
+8. `finite-topology-v0`: finite closure/interior, metric-ball examples, and
+   checked Bool/CNF bad-empty-open rejection.
 9. `finite-measure-v0`: finite sigma-algebras, finite measure checks, and
    QF_LRA/Farkas false complement-measure rejection.
 10. `bounded-dynamics-v0` and `finite-euler-method-v0`: recurrence systems,
@@ -929,7 +932,8 @@ finite permutation-group replay, finite group-action/Burnside replay, finite
 order/lattice replay, finite cardinality replay, cardinality-principle replay,
 finite ring/field replay, finite ideal and quotient-ring replay, finite
 algebra-homomorphism replay, finite vector-space/dual/module/tensor replay,
-finite topology/measure, bounded dynamics/operators, finite
+finite topology/measure including checked bad-empty-open and
+bad-complement-measure rows, bounded dynamics/operators, finite
 Euler-step/error replay, finite compactness/connectedness/continuous-map
 replay, finite simplicial-homology replay, finite integration replay, finite
 product-measure/Fubini replay, finite random-variable replay, and finite
@@ -944,8 +948,8 @@ through replay result and proof/evidence status, and exact descriptive
 statistics/regression replay for finite samples, count tables, and normal
 equations, plus coordinate/affine/oriented geometry replay for finite rational
 points, maps, areas, and barycentric coordinates, plus finite topology/measure
-replay for set-family axioms, metric balls, sigma-algebras, additivity, and
-event complements.
+replay for set-family axioms, metric balls, checked missing-empty-set rejection,
+sigma-algebras, additivity, and event complements.
 
 Deliverables:
 
@@ -1376,9 +1380,9 @@ area-scaling, barycentric, checked QF_LRA/Farkas bad-distance, checked
 QF_LRA/Farkas bad-orientation, and general geometry Lean-horizon rows.
 `finite-topology-v0` and `finite-measure-v0` now have a learner-facing
 end-to-end lesson for finite topology axioms, closure/interior, finite
-metric-ball replay, finite sigma-algebra closure, exact finite additivity,
-event complements, checked QF_LRA/Farkas bad-complement rejection, and the
-topology/measure Lean horizon.
+metric-ball replay, checked Bool/CNF bad-empty-open rejection, finite
+sigma-algebra closure, exact finite additivity, event complements, checked
+QF_LRA/Farkas bad-complement rejection, and the topology/measure Lean horizon.
 `bounded-dynamics-v0` and `finite-euler-method-v0` now have a learner-facing
 end-to-end lesson for bounded recurrence traces, invariant replay, threshold
 reachability, explicit Euler replay, exact finite error tables, checked bad

@@ -4,7 +4,7 @@
   "title": "Finite Topology And Metric-Ball Checks",
   "domain": "mathematics",
   "claim_status": "checked",
-  "trust_status": "replay-only",
+  "trust_status": "checked-evidence",
   "concept_ids": [
     "field_topology",
     "field_set_theory_and_foundations",
@@ -26,19 +26,18 @@
   "axeyum_fragments": [
     "finite sets",
     "Bool",
+    "Bool / CNF",
     "LRA (exact rationals)"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0",
   "solver_reuse": {
-    "status": "non-benchmark-horizon",
-    "target": "finite topology replay educational row",
-    "pressure": "The current rows are satisfiable finite topology, closure/interior, and metric-ball witnesses; they teach finite set replay but do not yet contain a source-level Boolean contradiction.",
+    "status": "promoted",
+    "target": "finite topology missing-empty-set Bool/CNF DRAT/LRAT regression seed",
+    "pressure": "Malformed finite topology row where the source open-set table omits the empty set even though the topology axioms require it.",
     "evidence": [
-      "finite-topology-axioms",
-      "closure-interior-witness",
-      "metric-ball-witness"
+      "bad-empty-open-rejected"
     ],
-    "next_step": "Promote only after adding a malformed finite topology or metric-ball row with a source-linked Bool/CNF or QF_LRA artifact; keep compactness, connectedness, continuity, and general topological-space facts in the Lean-horizon lane."
+    "next_step": "Promote additional finite-topology rows only when they add distinct Boolean closure, metric-ball, preimage, or finite-set pressure; keep compactness, connectedness, continuity, and general topological-space facts in the Lean-horizon lane."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -47,17 +46,22 @@
     "docs/curriculum/01-number-systems/reals.md",
     "docs/curriculum/02-structures/sequences-and-limits.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+    "artifacts/examples/math/finite-topology-v0/cnf/bad-empty-open-rejected.cnf",
+    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
     "finite-topology-axioms",
     "closure-interior-witness",
-    "metric-ball-witness"
+    "metric-ball-witness",
+    "bad-empty-open-rejected"
   ],
   "graduation_criteria": [
     "Encode finite topology membership and subset checks as deterministic Bool formulas.",
     "Replay finite closure/interior witnesses through Axeyum model evaluation.",
     "Encode finite metric-ball checks with exact LRA distance comparisons.",
+    "Emit checked finite counterexample evidence for rejected topology axiom claims; the bad empty-open row now has checked Bool/CNF DRAT/LRAT evidence.",
     "Keep compactness, connectedness, continuity, and general topological-space facts marked Lean-horizon."
   ]
 }

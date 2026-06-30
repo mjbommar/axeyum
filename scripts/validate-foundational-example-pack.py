@@ -11752,6 +11752,37 @@ def validate_finite_topology(expected: dict[str, Any]) -> None:
     if computed_ball != expected_ball:
         fail("metric-ball witness does not match finite metric")
 
+    bad_empty = checks["bad-empty-open-rejected"]
+    if bad_empty["expected_result"] != "unsat" or bad_empty.get("proof_status") != "checked":
+        fail("bad-empty-open-rejected must be a checked unsat row")
+    data = bad_empty.get("data", {})
+    universe = require_string_list("bad empty topology universe", data.get("universe"))
+    open_sets = require_set_family("bad empty topology open_sets", data.get("open_sets"), universe)
+    missing_open_set = require_subset("bad empty topology missing_open_set", data.get("missing_open_set"), universe)
+    if missing_open_set != frozenset():
+        fail("bad-empty-open-rejected must document the empty-set axiom failure")
+    if frozenset() in open_sets:
+        fail("bad-empty-open-rejected open_sets must omit the empty set")
+    if frozenset(universe) not in open_sets:
+        fail("bad-empty-open-rejected should isolate the missing-empty-set axiom, not the universe axiom")
+    require_dimacs_artifact(
+        "bad-empty-open-rejected",
+        data.get("cnf_artifact"),
+        "p cnf 1 2",
+        [["-1"], ["1"]],
+    )
+    cnf_artifact = data.get("cnf_artifact")
+    if cnf_artifact != "artifacts/examples/math/finite-topology-v0/cnf/bad-empty-open-rejected.cnf":
+        fail("bad-empty-open-rejected cnf_artifact must name the checked DIMACS artifact")
+    regression = data.get("boolean_regression")
+    require_string("bad empty boolean_regression", regression)
+    if "finite_topology_bad_empty_open_emits_checked_drat_and_lrat" not in regression:
+        fail("bad-empty-open-rejected must link the Boolean proof-route regression")
+    certificate = data.get("certificate")
+    require_string("bad empty certificate", certificate)
+    if not all(token in certificate for token in ("DRAT", "LRAT", "check_drat", "check_lrat")):
+        fail("bad-empty-open-rejected certificate must document checked DRAT/LRAT evidence")
+
 
 def validate_finite_compactness(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)

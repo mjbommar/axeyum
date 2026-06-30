@@ -387,11 +387,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 - **Replay-only solver-reuse classification batch landed.**
   `bounded-dynamics-v0`, `complex-algebraic-v0`,
   `coordinate-geometry-v0`, `finite-measure-v0`, `finite-operator-v0`, and
-  `finite-topology-v0` now carry explicit `non-benchmark-horizon`
-  `solver_reuse` metadata. These packs remain useful educational finite-replay
-  resources until they gain negative, certificate-bearing rows; the later
-  generating-functions promotion moved the current dashboards to 67 promoted,
-  6 non-benchmark-horizon, and 11 unclassified solver-reuse packs.
+  `finite-topology-v0` initially received explicit `non-benchmark-horizon`
+  `solver_reuse` metadata. These packs were kept as educational finite-replay
+  resources until they gained negative, certificate-bearing rows; later
+  finite-measure and finite-topology promotions moved those two packs out of
+  the non-benchmark bucket.
 
 - **Generating-functions QF_LIA/Diophantine promotion landed.**
   `generating-functions-v0` now carries promoted `solver_reuse` metadata for
@@ -520,12 +520,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `mu(A) = 1/3` and `mu(U) = 1` against the malformed complement claim
   `mu(A^c) = 1/2` while preserving complement additivity, and
   `math_resource_lra_routes::finite_measure_bad_complement_artifact_emits_checked_farkas`
-  checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
+  checks the emitted `UnsatFarkas` certificate. Generated dashboards then reported
   79 promoted, 5 non-benchmark-horizon, and 0 unclassified solver-reuse packs.
+
+- **Finite-topology Bool/CNF promotion landed.**
+  `finite-topology-v0` now carries promoted `solver_reuse` metadata for its
+  bad empty-open row. The new source-level artifact
+  `bad-empty-open-rejected.cnf` isolates the malformed open-set table that
+  omits the empty set against the topology axiom requiring it, and
+  `math_resource_boolean_routes::finite_topology_bad_empty_open_emits_checked_drat_and_lrat`
+  checks emitted DRAT plus elaborated LRAT evidence. Generated dashboards now
+  report 80 promoted, 4 non-benchmark-horizon, and 0 unclassified solver-reuse
+  packs.
 
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 79-promoted, 5 non-benchmark-horizon, and
+  now records the refreshed 80-promoted, 4 non-benchmark-horizon, and
   0-unclassified solver-reuse counts. The decision remains in-repo and
   JSON-first: the query consumer reads promoted solver-reuse rows, but there is
   still no external consumer, repeated typed API demand, or reusable encoder
@@ -989,10 +999,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the detailed operating plan for turning the curriculum and 18-field math
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
-  library splits. It records the current committed baseline of 65 concept rows,
-  84 non-template packs, 417 expected checks, 199 checked rows, 171 replay-only
-  rows, 47 Lean-horizon rows, and 79 promoted solver-reuse packs, then lays out
-  field-by-field build plans plus a prioritized execution queue. Linked it from
+  library splits. It now records the current committed baseline of 65 concept
+  rows, 84 non-template packs, 418 expected checks, 200 checked rows, 171
+  replay-only rows, 47 Lean-horizon rows, and 80 promoted solver-reuse packs,
+  then lays out field-by-field build plans plus a prioritized execution queue.
+  Linked it from
   `PLAN.md`, the foundational-resources index, mdBook summary, sibling-project
   notes, roadmap, buildout plan, implementation matrix, and execution plan.
 
@@ -11635,9 +11646,10 @@ plan is built and committed on the current branch:
   Marked `bounded-dynamics-v0`, `complex-algebraic-v0`,
   `coordinate-geometry-v0`, `finite-measure-v0`, `finite-operator-v0`, and
   `finite-topology-v0` as explicit `non-benchmark-horizon` solver-reuse packs.
-  These rows remain learner-facing finite replay examples until they gain
-  negative, certificate-bearing source artifacts; generated dashboards now
-  report 66 promoted, 6 non-benchmark-horizon, and 12 unclassified packs.
+  At that point these rows remained learner-facing finite replay examples
+  until they gained negative, certificate-bearing source artifacts; generated
+  dashboards reported 66 promoted, 6 non-benchmark-horizon, and 12
+  unclassified packs.
 
 - **2026-06-30** — **Generating-functions QF_LIA promotion landed.**
   Added
@@ -11751,8 +11763,15 @@ plan is built and committed on the current branch:
   for the bad complement-measure row and wired it into `math_resource_lra_routes`.
   The pack metadata now marks `solver_reuse.status` as `promoted`, the expected
   row records the checked `UnsatFarkas` certificate path, and generated
-  dashboards report 79 promoted, 5 non-benchmark-horizon, and 0 unclassified
+  dashboards then reported 79 promoted, 5 non-benchmark-horizon, and 0 unclassified
   packs.
+
+- **2026-06-30** — **Finite-topology Bool/CNF promotion landed.** Added
+  `artifacts/examples/math/finite-topology-v0/cnf/bad-empty-open-rejected.cnf`
+  for the bad empty-open row and wired it into `math_resource_boolean_routes`.
+  The pack metadata now marks `solver_reuse.status` as `promoted`, the expected
+  row records the checked DRAT/LRAT certificate path, and generated dashboards
+  report 80 promoted, 4 non-benchmark-horizon, and 0 unclassified packs.
 
 - **2026-06-29** — **Proof-cookbook math-example route sections landed.**
   Added `Math Examples Using This Route` sections to the six active proof

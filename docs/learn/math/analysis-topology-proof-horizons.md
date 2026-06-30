@@ -80,6 +80,12 @@ contains the empty set and universe, and is closed under pairwise union and
 intersection. The closure/interior witness then becomes a finite set
 calculation.
 
+The same pack now includes a malformed two-point open-set family that omits
+the empty set. The final contradiction `empty_is_open = false` and
+`empty_is_open = true` is checked through DRAT/LRAT evidence, while arbitrary
+topological-space axiomatization and theorem development remain Lean-horizon
+work.
+
 For a bounded sequence shadow, encode exact rational values and one fixed
 epsilon:
 
@@ -350,6 +356,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes calculus_riemann_sum
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_topology_bad_empty_open_emits_checked_drat_and_lrat
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0

@@ -159,7 +159,8 @@ one of:
    - Checks: midpoint, collinearity determinant, squared-distance replay.
 8. `artifacts/examples/math/finite-topology-v0/`
    - Fields: `topology`, `set_theory_and_foundations`, `real_analysis`.
-   - Checks: finite topology axioms, closure/interior, metric-ball replay.
+   - Checks: finite topology axioms, closure/interior, metric-ball replay,
+     checked missing-empty-set rejection.
 9. `artifacts/examples/math/finite-measure-v0/`
    - Fields: `measure_theory`, `probability_theory`, `set_theory_and_foundations`.
    - Checks: finite sigma-algebra axioms, finite additivity, event/complement

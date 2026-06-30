@@ -309,7 +309,8 @@ schemas, examples, and validation workflows.
   claim, and an oriented-geometry Lean-horizon row.
 - [`artifacts/examples/math/finite-topology-v0/`](../../artifacts/examples/math/finite-topology-v0/)
   validates finite topology axioms, closure/interior computation, and exact
-  finite metric-ball replay.
+  finite metric-ball replay, plus checked rejection of a missing-empty-set
+  topology claim.
 - [`artifacts/examples/math/finite-measure-v0/`](../../artifacts/examples/math/finite-measure-v0/)
   validates finite sigma-algebra axioms, exact finite additivity, and
   event/complement measure replay.

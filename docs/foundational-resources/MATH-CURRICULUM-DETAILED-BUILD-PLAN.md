@@ -37,12 +37,12 @@ The committed resource query currently reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math packs.
-- 417 expected checks.
-- 199 checked proof/evidence rows.
+- 418 expected checks.
+- 200 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 79 promoted solver-reuse packs.
-- 5 non-benchmark-horizon solver-reuse packs.
+- 80 promoted solver-reuse packs.
+- 4 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -99,7 +99,6 @@ Recently classified as explicit non-benchmark-horizon rows:
 | `complex-algebraic-v0` | add a false real-pair algebra or polynomial-root row with a source-linked LRA/NRA artifact |
 | `coordinate-geometry-v0` | add a false collinearity, midpoint, distance, or incidence row with a source-linked QF_LRA/NRA artifact |
 | `finite-operator-v0` | add a false operator-bound, norm inequality, or recurrence row with a source-linked exact-rational artifact |
-| `finite-topology-v0` | add a malformed finite topology or metric-ball row with a source-linked Bool/CNF or QF_LRA artifact |
 
 Exit criteria:
 
@@ -208,7 +207,7 @@ Exit criteria:
 | `abstract_algebra` | finite groups/rings/fields, homomorphisms, ideals, modules, tensors | add narrower rows only when multiple packs reuse them | QF_UF/Alethe, QF_BV, finite replay |
 | `real_analysis` | bounded rational intervals, metric continuity, RCF shadows, calculus shadows | keep bounded shadows distinct from completeness/convergence theorems | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon |
 | `complex_analysis` | real-pair algebra and transformations | keep algebraic replay rows non-benchmark until a checked real-pair contradiction exists | real-pair LRA/NRA, finite replay, Lean horizon |
-| `topology` | finite topologies, compactness, connectedness, continuous maps, homology | upgrade finite topology from non-benchmark only with a tiny source-level axiom conflict | Bool/CNF, QF_UF/Alethe, QF_LIA, Lean horizon |
+| `topology` | finite topologies, compactness, connectedness, continuous maps, homology | finite topology now has a checked missing-empty-set Bool/CNF row; add only distinct closure, metric-ball, preimage, or finite-set pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, Lean horizon |
 | `measure_theory` | finite measures, product measure, integration, random variables | finite-measure now has a bad complement QF_LRA/Farkas row; promote only distinct finite-additivity, monotonicity, or measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
@@ -254,8 +253,9 @@ Pick one row per commit unless the change is purely navigational.
    `PHP(3,2)` rows through source-linked DIMACS plus DRAT/LRAT regression.
 2. Landed: classify `bounded-dynamics-v0`, `complex-algebraic-v0`,
    `coordinate-geometry-v0`, `finite-measure-v0`, `finite-operator-v0`, and
-   `finite-topology-v0` as explicit non-benchmark educational rows until they
-   gain negative, certificate-bearing examples.
+   initially `finite-topology-v0` as explicit non-benchmark educational rows
+   until they gain negative, certificate-bearing examples. Finite topology has
+   since been promoted by item 17.
 3. Landed: promote `generating-functions-v0` through a source-linked finite
    Cauchy-product coefficient QF_LIA/Diophantine artifact and route regression.
 4. Landed: promote `polynomial-identities-v0` through a source-linked false
@@ -286,8 +286,8 @@ Pick one row per commit unless the change is purely navigational.
    QF_LRA/Farkas artifact and route regression.
 16. Promote or classify any newly added unclassified packs, starting with compact
    source-level conflicts where the route is clear.
-17. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
-   CNF stays source-level readable.
+17. Landed: promote `finite-topology-v0` through a source-linked
+   missing-empty-set Bool/CNF DIMACS artifact and DRAT/LRAT route regression.
 18. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
    conflict through QF_LRA/Farkas.
 19. Add a proof-object learner page that follows one resource from source claim

@@ -256,17 +256,19 @@ and the graph-coloring one-bit triangle two-coloring obstruction, with bounded
 number theory now promoted for the modulo-7 quadratic nonresidue row; finite
 compactness now contributes checked DRAT/LRAT evidence for a bad open-cover row,
 finite connectedness now contributes checked DRAT/LRAT evidence for a bad
-connectedness row, and induction obligations, graph search runtime, and natural
-arithmetic now contribute checked arithmetic-DPLL regressions for bounded bad
+connectedness row, finite topology now contributes checked DRAT/LRAT evidence
+for a missing-empty-set axiom row, and induction obligations, graph search
+runtime, and natural arithmetic now contribute checked arithmetic-DPLL regressions for bounded bad
 step counts, bad finite DFS cost, and bounded-natural negativity, while
 cardinality principles now contributes a checked QF_LIA/Diophantine regression
 for the overlapping-set false-additivity count conflict. The five active resource proof-certificate routes
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **79 promoted solver-reuse
-packs**, **5 non-benchmark-horizon packs**, and **0 unclassified packs** after
-the latest finite-measure bad-complement QF_LRA/Farkas promotion,
+the foundational resource dashboards now report **80 promoted solver-reuse
+packs**, **4 non-benchmark-horizon packs**, and **0 unclassified packs** after
+the latest finite-topology missing-empty-set Bool/CNF DRAT/LRAT promotion,
+finite-measure bad-complement QF_LRA/Farkas promotion,
 real-algebra RCF-shadow negative-discriminant QF_LRA/Farkas
 promotion, polynomial-factorization discriminant QF_LRA/Farkas promotion,
 cardinality-principles overlap-additivity count QF_LIA/Diophantine
@@ -282,7 +284,7 @@ polynomial-identities false-root QF_LIA/Diophantine promotion,
 finite generating-functions QF_LIA/Diophantine coefficient-convolution
 promotion, PHP(3,2) counting/refutation Bool/CNF promotions, and the replay-only
 classification pass for bounded dynamics, complex algebra, coordinate geometry,
-finite operators, and finite topology, plus the earlier
+and finite operators, plus the earlier
 rational-order, gcd/Bezout, Bool/CNF finite-set/proof-method, QF_LRA
 linear-algebra/optimization/convexity, finite-probability, QF_UF, QF_LIA, and
 QF_BV source-metadata promotion batches;

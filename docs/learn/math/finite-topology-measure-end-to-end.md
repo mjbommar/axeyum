@@ -23,6 +23,7 @@ Concept rows:
 | `finite-topology-axioms` | `sat` | replay-only |
 | `closure-interior-witness` | `sat` | replay-only |
 | `metric-ball-witness` | `sat` | replay-only |
+| `bad-empty-open-rejected` | `unsat` | checked Bool/CNF DRAT/LRAT |
 | `finite-sigma-algebra-axioms` | `sat` | replay-only |
 | `finite-measure-additivity` | `sat` | replay-only |
 | `event-complement-measure` | `sat` | replay-only |
@@ -109,6 +110,27 @@ ball(p1, 3/2) = {p0,p1}
 ```
 
 This is exact rational comparison over a finite metric table.
+
+## Reject A Bad Empty-Open Claim
+
+The promoted topology row keeps the source object tiny:
+
+```text
+universe = {a,b}
+open_sets = {a}, {a,b}
+```
+
+The fixed table omits `{}` even though a topology must contain the empty set.
+The source DIMACS artifact records only the final Boolean conflict:
+
+```text
+empty_is_open = false
+empty_is_open = true
+```
+
+The Boolean route emits DRAT, elaborates LRAT, and checks both proof objects
+against that concrete CNF. This proves the malformed finite row is impossible;
+it does not prove a general theorem about arbitrary topological spaces.
 
 ## Replay A Finite Sigma-Algebra
 
@@ -215,6 +237,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_topology_bad_empty_open_emits_checked_drat_and_lrat
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas
 ```
 
@@ -230,7 +253,7 @@ This lesson shows Axeyum's current finite topology/measure resource pattern:
 
 ```text
 untrusted fast search -> set family, metric ball, measure, or complement row
-trusted small checking -> finite set operations, exact rational arithmetic, checked QF_LRA certificate
+trusted small checking -> finite set operations, exact rational arithmetic, checked DRAT/LRAT and QF_LRA certificates
 remaining horizon -> infinite topology, countable measure, and convergence
 ```
 
