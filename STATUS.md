@@ -1207,7 +1207,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
-  is now generated with forty bridge rows. The proof-methodology rows are
+  is now generated with 44 bridge rows. The proof-methodology rows are
   `bridge_finite_model_replay`, `bridge_counterexample_proof`,
   `bridge_refutation_query`, `bridge_finite_proof_pattern`,
   `bridge_finite_quantifier_expansion`,
@@ -1241,7 +1241,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `bridge_complex_real_pair_transform`, grouping finite coordinate, affine,
   oriented-area replay and complex real-pair transform replay without
   overclaiming synthetic, differential, global, or analytic theorem coverage.
-  The foundational resource consumer now reports 88 concept rows while
+  The functional-analysis bridge rows now add
+  `bridge_inner_product_projection` and
+  `bridge_finite_operator_chebyshev`, grouping finite Gram/projection,
+  operator-bound, interpolation, and Chebyshev-grid replay without
+  overclaiming Banach, Hilbert, compact-operator, minimax, or
+  infinite-dimensional approximation theorems. The foundational resource
+  consumer now reports 90 concept rows while
   preserving 23 curriculum rows and 18 field rows. Next resource work should
   add the next proof-frontier promotion or boundary evidence from a real
   repeated consumer, depending on which roadmap lane is being advanced.
@@ -11992,6 +11998,18 @@ plan is built and committed on the current branch:
   the finite coordinate/affine/oriented-area and complex real-pair transform
   replay slices while keeping synthetic, differential, global, and analytic
   theorem claims in the Lean-horizon lane.
+
+- **2026-06-30** — **Functional-analysis bridge concepts landed.**
+  Extended
+  [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) with
+  `bridge_inner_product_projection` and
+  `bridge_finite_operator_chebyshev`. The generated atlas now validates 90
+  concept rows: 23 curriculum rows, 18 field rows, 44 bridge rows, and 5
+  example-family rows. Functional-analysis field queries now expose finite
+  Gram/projection, operator-bound, Chebyshev recurrence, interpolation, and
+  alternating-residual replay slices while keeping Banach, Hilbert,
+  compact-operator, minimax, and infinite-dimensional approximation theorem
+  claims in the Lean-horizon lane.
 
 - **2026-06-30** — **Authorization-policy rules/law pack landed.**
   Added

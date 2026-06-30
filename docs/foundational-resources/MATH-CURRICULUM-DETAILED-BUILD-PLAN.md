@@ -34,7 +34,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 42 bridge-concept rows.
+- 44 bridge-concept rows.
 - 5 example-family rows.
 - 84 non-template math packs.
 - 422 expected checks.
@@ -383,6 +383,15 @@ Pick one row per commit unless the change is purely navigational.
    concept. The atlas now validates 42 bridge rows while keeping synthetic,
    differential, global, and analytic theorem coverage in the Lean-horizon
    lane.
+41. Landed: add generated functional-analysis bridge-concept rows.
+   `bridge_inner_product_projection` makes finite rational Gram, projection,
+   residual, and Gram-Schmidt replay queryable as a shared functional-analysis
+   concept; `bridge_finite_operator_chebyshev` makes finite-dimensional
+   operator bounds, Chebyshev recurrence, interpolation matrices, and
+   alternating residual rows queryable as a shared operator-theory concept. The
+   atlas now validates 44 bridge rows while keeping Banach, Hilbert,
+   compact-operator, minimax, and infinite-dimensional approximation theorem
+   coverage in the Lean-horizon lane.
 
 ## Validation Checklist
 

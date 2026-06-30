@@ -33,14 +33,15 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 88 atlas rows generated from curriculum, field data, 42 R1 bridge
+- 90 atlas rows generated from curriculum, field data, 44 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
   linear-algebra computation vocabulary, probability/statistics finite-table
   vocabulary, algebra-map vocabulary, coordinate/oriented geometry replay,
-  complex real-pair transform replay, and Lean horizons, plus five
-  route-specific example families.
+  complex real-pair transform replay, finite inner-product/projection replay,
+  finite operator/Chebyshev replay, and Lean horizons, plus five route-specific
+  example families.
 - 84 non-template math example packs, plus the validating template pack.
 - generated coverage, curriculum-status audit, field, proof-gap,
   learner/proof-upgrade, and curriculum-pressure dashboards under
@@ -199,6 +200,12 @@ Add bridge-concept or example-family rows for repeated subtopics:
   coordinate, affine, orientation/area, complex algebraic, and complex-plane
   transform packs while leaving synthetic/differential geometry and analytic
   complex analysis as Lean horizons;
+- functional analysis/operator theory: landed bridge rows for finite
+  inner-product/projection replay and finite operator/Chebyshev replay, backed
+  by inner-product, numerical-linear-algebra, least-squares, finite-operator,
+  finite-Chebyshev, spectral, and matrix-invariant packs while leaving Banach,
+  Hilbert, compact-operator, minimax, and infinite-dimensional approximation
+  theorems as Lean horizons;
 - proof-route families: landed example-family rows for finite algebra
   QF_UF/Alethe congruence, exact-rational QF_LRA/Farkas infeasibility, and
   finite Boolean CNF/LRAT refutations, plus integer/count QF_LIA Diophantine

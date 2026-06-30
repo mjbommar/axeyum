@@ -202,8 +202,10 @@ Build sequence:
    partition/relation roundtrips, image/preimage/inverse tables, finite
    bijection/cardinality, and cardinality theorem horizons. R1 bridge-concept
    rows now also land for coordinate/oriented geometry replay and complex
-   real-pair transform replay, keeping those field-specific finite shadows
-   queryable without overstating synthetic, differential, or analytic theorem
+   real-pair transform replay, plus finite inner-product/projection and finite
+   operator/Chebyshev replay, keeping those field-specific finite shadows
+   queryable without overstating synthetic, differential, analytic, Banach,
+   Hilbert, compact-operator, minimax, or infinite-dimensional theorem
    coverage.
 5. Landed: add "math example using this route" sections to the six active
    proof cookbook recipes.

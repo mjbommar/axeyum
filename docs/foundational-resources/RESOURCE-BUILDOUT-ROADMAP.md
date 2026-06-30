@@ -37,7 +37,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 42 bridge-concept rows.
+- 44 bridge-concept rows.
 - 5 example-family rows.
 - 84 non-template math example packs.
 - 422 expected checks.
@@ -888,9 +888,12 @@ Current packs:
 
 Build next:
 
-- Add concept rows for finite-dimensional norm, matrix operator, dual space,
-  projection, Gram matrix, Chebyshev system, interpolation matrix,
-  alternating residual, spectral decomposition, and Banach/Hilbert horizon.
+- Landed bridge rows for finite inner-product/projection replay and finite
+  operator/Chebyshev replay, covering finite-dimensional norms, Gram matrices,
+  projections, matrix operators, Chebyshev grids, interpolation matrices, and
+  alternating residual witnesses.
+- Add narrower concept rows for dual spaces, adjoints, spectral decomposition,
+  or Banach/Hilbert horizons only when multiple packs need the same vocabulary.
 - Keep `finite-operator-v0`'s promoted bad operator-bound row tied to exact
   replay plus the source QF_LRA/Farkas artifact.
 - Promote additional finite-dimensional bad norm/operator/interpolation rows
@@ -1248,7 +1251,15 @@ Pick one item per commit unless the change is purely navigational.
     complex-analysis replay concept. The generated atlas now validates 42
     bridge rows and keeps broader synthetic/differential/analytic theorem
     claims in the Lean-horizon lane.
-50. Continue proof-route promotions or consumer-query examples; revisit the
+50. Landed: add generated functional-analysis bridge concepts.
+    `bridge_inner_product_projection` groups inner-product, projection,
+    residual, least-squares, and dual-space finite replay; and
+    `bridge_finite_operator_chebyshev` groups finite operator bounds,
+    Chebyshev recurrence, interpolation matrices, and alternating residual
+    witnesses. The generated atlas now validates 44 bridge rows and keeps
+    Banach, Hilbert, compact-operator, minimax, and infinite-dimensional
+    approximation claims in the Lean-horizon lane.
+51. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

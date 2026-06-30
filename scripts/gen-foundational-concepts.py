@@ -3987,6 +3987,204 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_inner_product_projection",
+        "title": "Finite Inner-Product And Projection Replay",
+        "field_ids": [
+            "functional_analysis_and_operator_theory",
+            "linear_algebra",
+            "numerical_analysis",
+            "optimization_and_convexity",
+            "real_analysis",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite-dimensional inner-product rows replay exact rational Gram "
+            "matrices, norm squares, fixed-vector Cauchy-Schwarz checks, "
+            "orthogonal projections, and Gram-Schmidt steps while keeping "
+            "Hilbert-space theorems as Lean horizons."
+        ),
+        "prerequisites": [
+            "curriculum_linear_algebra",
+            "curriculum_rationals",
+            "curriculum_reals",
+            "bridge_residual_bound",
+            "bridge_qf_lra_farkas_anatomy",
+        ],
+        "unlocks": [
+            "field_functional_analysis_and_operator_theory",
+            "field_numerical_analysis",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite-dimensional linear algebra",
+            "Gram matrices",
+            "orthogonal projection",
+            "QF_LRA",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "inner-product-spaces-rational-v0",
+                "Exact inner-product, Gram-matrix, projection, Gram-Schmidt, and bad norm rows.",
+            ),
+            (
+                "numerical-linear-algebra-v0",
+                "Residual-bound and finite matrix rows that share projection and norm vocabulary.",
+            ),
+            (
+                "least-squares-regression-v0",
+                "Normal-equation and finite regression rows that use projection-style exact linear replay.",
+            ),
+            (
+                "finite-dual-spaces-v0",
+                "Finite covector, pairing, annihilator, and transpose rows that supply dual-space vocabulary.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite inner-product replay plus QF_LRA/Farkas",
+                "status": "checked",
+                "checker": "cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/inner-product-spaces-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite pack recomputes each rational inner-product "
+                    "quantity first; checked Farkas evidence is used only for "
+                    "the small bad positivity or linear-equation conflict."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/inner-product-spaces-end-to-end.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite rational projection replay does not prove the Hilbert projection theorem, Riesz representation, Hahn-Banach, or completeness results.",
+            "Rows involving floating-point orthogonality, conditioning, or numerical stability require separate numerical-honesty metadata.",
+            "General inner-product, duality, and Hilbert-space theorem statements remain Lean-horizon until no-sorry Lean artifacts exist.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite vector space, basis, Gram matrix, and exact rational vectors.",
+                "The validator recomputes norm squares, projections, Gram-Schmidt steps, and residuals from source data.",
+                "Malformed finite positivity or projection rows link to checked QF_LRA/Farkas regressions after replay.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_operator_chebyshev",
+        "title": "Finite Operator And Chebyshev Replay",
+        "field_ids": [
+            "functional_analysis_and_operator_theory",
+            "numerical_analysis",
+            "linear_algebra",
+            "real_analysis",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite operator rows replay exact rational norm and matrix-action "
+            "bounds, while finite Chebyshev rows replay polynomial bases, "
+            "interpolation matrices, duplicate-node failures, and alternating "
+            "residual witnesses."
+        ),
+        "prerequisites": [
+            "curriculum_linear_algebra",
+            "curriculum_polynomials",
+            "curriculum_reals",
+            "bridge_inner_product_projection",
+            "bridge_qf_lra_farkas_anatomy",
+        ],
+        "unlocks": [
+            "field_functional_analysis_and_operator_theory",
+            "field_numerical_analysis",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite-dimensional operators",
+            "Chebyshev polynomial recurrence",
+            "interpolation matrices",
+            "QF_LRA",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-operator-v0",
+                "Finite-dimensional norm, operator-bound, Chebyshev recurrence, and bad operator-bound rows.",
+            ),
+            (
+                "finite-chebyshev-systems-v0",
+                "Vandermonde unisolvence, interpolation polynomial, alternating residual, and duplicate-node rows.",
+            ),
+            (
+                "spectral-linear-algebra-v0",
+                "Fixed spectral rows that share finite-operator and eigenpair vocabulary.",
+            ),
+            (
+                "matrix-invariants-v0",
+                "Characteristic-polynomial and finite matrix-invariant rows that supply operator polynomial vocabulary.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite operator replay plus QF_LRA/Farkas",
+                "status": "checked",
+                "checker": "cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/finite-operator-end-to-end.md",
+                    "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "Finite operator and Chebyshev packs replay the exact "
+                    "matrix, norm, recurrence, or interpolation calculation "
+                    "before handing the resulting small rational conflict to "
+                    "the shared Farkas route."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-operator-end-to-end.md",
+            "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite operator replay does not prove Banach-space, Hilbert-space, compact-operator, or spectral theorem claims.",
+            "Finite Chebyshev grid replay does not prove Haar, minimax, alternation, or infinite-dimensional approximation theorems.",
+            "General functional-analysis theorem statements remain Lean-horizon until no-sorry Lean artifacts exist.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite vector space, operator matrix, norm, polynomial basis, or sample grid being replayed.",
+                "The validator recomputes matrix actions, norms, recurrence values, interpolation rows, and alternating residual witnesses.",
+                "Malformed finite operator or interpolation rows link to checked QF_LRA/Farkas regressions after replay.",
+            ],
+        },
+    },
+    {
         "id": "bridge_lean_horizon",
         "title": "Lean Horizon",
         "field_ids": ["logic_and_proof"],

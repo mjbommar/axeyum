@@ -1120,7 +1120,7 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 88 atlas rows validate, including generated bridge-concept rows for
+  Status: 90 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows,
   refutation-as-query, finite proof-pattern replay, finite quantifier
   expansion, bounded induction obligations, Boolean CNF DRAT/LRAT anatomy,
@@ -1136,10 +1136,11 @@ Exit criteria:
   expectations, finite tail/count obstructions, homomorphism preservation,
   kernel/image replay, quotient maps, ideal closure, module actions, tensor
   bilinearity, finite group actions, coordinate/oriented geometry replay,
-  complex real-pair transform replay, and Lean horizons, plus example-family
-  rows for recurring finite-algebra QF_UF/Alethe conflicts, exact-rational
-  QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations,
-  integer/count Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
+  complex real-pair transform replay, finite inner-product/projection replay,
+  finite operator/Chebyshev replay, and Lean horizons, plus example-family rows
+  for recurring finite-algebra QF_UF/Alethe conflicts, exact-rational
+  QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
+  Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
   Status: 84 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
