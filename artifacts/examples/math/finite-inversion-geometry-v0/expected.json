@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-inversion-geometry-v0",
+  "witnesses": [
+    {
+      "id": "unit-circle-inversion",
+      "description": "A rational point and its image under inversion in the unit circle.",
+      "values": {
+        "center": ["0", "0"],
+        "radius_squared": "1",
+        "point": ["2", "1"],
+        "point_radius_squared": "5",
+        "scale_factor": "1/5",
+        "inverse_point": ["2/5", "1/5"],
+        "scaled_point": ["2/5", "1/5"],
+        "inverse_radius_squared": "1/5",
+        "radius_product": "1",
+        "dot_product_point_inverse": "1",
+        "collinearity_determinant": "0"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "inversion-image-witness",
+      "claim": "Inversion in the unit circle maps (2,1) to (2/5,1/5).",
+      "expected_result": "sat",
+      "validation": "exact_inversion_image_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["unit-circle-inversion"],
+      "notes": "The validator recomputes |(2,1)|^2 = 5 and multiplies the point by 1/5."
+    },
+    {
+      "id": "inverse-distance-product-witness",
+      "claim": "The squared distances of a unit-circle inversion point and its image multiply to 1.",
+      "expected_result": "sat",
+      "validation": "exact_inverse_distance_product_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["unit-circle-inversion"],
+      "notes": "The validator checks |p|^2 = 5, |p'|^2 = 1/5, and product 1."
+    },
+    {
+      "id": "inversion-collinearity-witness",
+      "claim": "The center, point, and inverse image are collinear.",
+      "expected_result": "sat",
+      "validation": "exact_inversion_collinearity_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["unit-circle-inversion"],
+      "notes": "The validator recomputes the determinant of p and p' and checks it is zero."
+    },
+    {
+      "id": "bad-inversion-image-rejected",
+      "claim": "Inversion in the unit circle maps (2,1) to a point with x-coordinate 1/2.",
+      "expected_result": "unsat",
+      "validation": "exact_bad_inversion_image_refutation",
+      "proof_status": "checked",
+      "data": {
+        "center": ["0", "0"],
+        "point": ["2", "1"],
+        "computed_inverse_point": ["2/5", "1/5"],
+        "claimed_inverse_point": ["1/2", "1/2"],
+        "conflict_coordinate": "x",
+        "computed_conflict_value": "2/5",
+        "claimed_conflict_value": "1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-inversion-geometry-v0/smt2/bad-inversion-x-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_x_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact inversion replay computes inverse x-coordinate 2/5, while the malformed row claims 1/2; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
+      "id": "general-inversion-geometry-lean-horizon",
+      "claim": "General Euclidean inversion theorems, circle-line correspondences, and power-of-a-point require future Lean reconstruction.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Coordinate-free inversion theorems including circle-line correspondences, angle preservation, power of a point, and generalized circle inversions",
+        "future_checker": "Lean module with no sorryAx dependencies plus exact coordinate certificate bridges for finite inversion witnesses"
+      },
+      "notes": "The finite rows check one fixed rational inversion witness; general inversion geometry remains proof-assistant work."
+    }
+  ]
+}

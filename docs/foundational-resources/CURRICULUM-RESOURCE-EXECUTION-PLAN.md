@@ -40,11 +40,11 @@ As of this plan, the math resource lane has:
   linear-algebra computation vocabulary, probability/statistics finite-table
   vocabulary, measure-theory additivity/product/integration vocabulary,
   optimization/convexity LP and finite-shadow vocabulary, algebra-map
-  vocabulary, coordinate/incidence/rigid/oriented/circle geometry replay, complex real-pair
+  vocabulary, coordinate/incidence/rigid/oriented/circle/inversion geometry replay, complex real-pair
   transform replay, finite inner-product/projection replay, finite
   operator/Chebyshev replay, and Lean horizons, plus five route-specific
   example families.
-- 100 non-template math example packs, plus the validating template pack.
+- 101 non-template math example packs, plus the validating template pack.
 - generated coverage, curriculum-status audit, field, proof-gap,
   learner/proof-upgrade, and curriculum-pressure dashboards under
   [generated/](generated/).
@@ -238,9 +238,9 @@ Add bridge-concept or example-family rows for repeated subtopics:
   leaving duality, KKT sufficiency, active-set method theory, SDP strong
   duality, and convergence claims as Lean horizons;
 - geometry/complex analysis: landed bridge rows for coordinate/incidence/
-  rigid/oriented/circle geometry replay and complex real-pair transform replay, backed by
+  rigid/oriented/circle/inversion geometry replay and complex real-pair transform replay, backed by
   the coordinate, incidence, rigid-configuration, affine, orientation/area,
-  finite-circle, complex algebraic, and complex-plane transform packs while leaving synthetic/differential geometry,
+  finite-circle, finite-inversion, complex algebraic, and complex-plane transform packs while leaving synthetic/differential geometry,
   projective configuration theorems, and analytic complex analysis as Lean
   horizons;
 - functional analysis/operator theory: landed bridge rows for finite
@@ -422,7 +422,7 @@ Next buildout:
 | `optimization_and_convexity` | standalone LP/Farkas, finite KKT, finite active-set QP, finite SDP, and finite gradient-descent lessons landed; maintain convexity/gradient/Hessian bridge rows |
 | `numerical_analysis` | residual/error-bound examples with exact rational shadows and numerical limits |
 | `differential_equations_and_dynamical_systems` | bounded recurrence/Euler lessons plus invariant-counterexample rows |
-| `geometry` | finite circle-geometry lesson landed; keep combined coordinate/affine/orientation lesson and add only distinct isometry, inversion, cyclic-configuration, or higher-degree polynomial-geometry rows later |
+| `geometry` | finite inversion-geometry lesson landed; keep combined coordinate/affine/orientation lesson and add only distinct cyclic-configuration, angle, circle-line correspondence, or higher-degree polynomial-geometry rows later |
 | `functional_analysis_and_operator_theory` | finite operator and Chebyshev-system lessons; keep Banach/Hilbert theorems Lean-horizon |
 
 ## Forward Increments From Here
@@ -500,7 +500,7 @@ Next buildout:
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
    and learner/proof-upgrade dashboards. The curriculum-status audit now shows
    where source `planned` rows have validated resources and need a source DAG
-   decision. The curriculum-pressure view now groups the 100 non-template packs
+   decision. The curriculum-pressure view now groups the 101 non-template packs
    into overlapping Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
    Lean-horizon buckets for fragment-level planning.
    Candidate status: the first `solver_reuse` batch is now fully promoted:

@@ -37,6 +37,7 @@ Example packs:
 - [affine-geometry-v0](../../../artifacts/examples/math/affine-geometry-v0/)
 - [orientation-area-geometry-v0](../../../artifacts/examples/math/orientation-area-geometry-v0/)
 - [finite-circle-geometry-v0](../../../artifacts/examples/math/finite-circle-geometry-v0/)
+- [finite-inversion-geometry-v0](../../../artifacts/examples/math/finite-inversion-geometry-v0/)
 
 ## What Axeyum Checks
 
@@ -58,7 +59,8 @@ rational gradients, Jacobian chain-rule replay, Hessian minor checks,
 midpoints, collinearity determinants, squared distances, affine maps, signed
 areas, line-incidence equations, non-parallel line intersections, affine area
 scaling, barycentric point-inside checks, point-on-circle rows, tangent-line
-perpendicularity, and chord-midpoint perpendicularity. The
+perpendicularity, chord-midpoint perpendicularity, unit-circle inversion images,
+inverse-distance products, and inversion collinearity. The
 matrix-invariants pack adds a fixed characteristic polynomial, root evaluation,
 Cayley-Hamilton replay, and exact eigenvalue interval checks.
 
@@ -404,6 +406,21 @@ replay computes squared radius `2`, while the source QF_LRA artifact asserts
 the malformed value `1` and checks that final equality conflict with
 `UnsatFarkas` evidence.
 
+For a finite inversion-geometry check, encode one rational point outside the
+unit circle:
+
+```text
+P = (2,1)
+|P|^2 = 5
+I(P) = (2/5,1/5)
+```
+
+The validator recomputes the scale factor `1/5`, the inverse image, the inverse
+radius squared `1/5`, the product `5 * 1/5 = 1`, and the determinant proving
+the center, point, and inverse point are collinear. The bad row claims inverse
+x-coordinate `1/2`; exact replay computes `2/5`, and the source QF_LRA artifact
+checks that final conflict with `UnsatFarkas` evidence.
+
 Run the checks from the repository root:
 
 ```sh
@@ -450,6 +467,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/af
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-circle-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geometry_bad_radius_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-inversion-geometry-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_x_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 ```
@@ -491,6 +510,8 @@ finite coordinate, incidence, rigid-configuration, affine, and oriented geometry
 [End To End: Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md).
 For finite circle point, tangent, and chord replay, read
 [End To End: Finite Circle Geometry](finite-circle-geometry-end-to-end.md).
+For finite inversion replay, read
+[End To End: Finite Inversion Geometry](finite-inversion-geometry-end-to-end.md).
 
 ## Horizon
 

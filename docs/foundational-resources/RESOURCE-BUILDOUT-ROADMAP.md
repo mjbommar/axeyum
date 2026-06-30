@@ -39,12 +39,12 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 100 non-template math example packs.
-- 506 expected checks.
-- 220 checked proof/evidence rows.
-- 223 replay-only rows.
-- 63 Lean-horizon rows.
-- 100 promoted solver-reuse packs.
+- 101 non-template math example packs.
+- 511 expected checks.
+- 221 checked proof/evidence rows.
+- 226 replay-only rows.
+- 64 Lean-horizon rows.
+- 101 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -922,6 +922,7 @@ Current packs:
 - `affine-geometry-v0`
 - `orientation-area-geometry-v0`
 - `finite-circle-geometry-v0`
+- `finite-inversion-geometry-v0`
 - `complex-plane-transforms-v0`
 
 Build next:
@@ -937,8 +938,10 @@ Build next:
   tied to exact distance replay plus the source QF_LRA/Farkas artifact.
 - Keep `finite-circle-geometry-v0`'s promoted bad radius row tied to exact
   circle-coordinate replay plus the source QF_LRA/Farkas artifact.
-- Promote additional false affine/distance/orientation/incidence/circle claims
-  through QF_LRA/Farkas or NRA only when they add distinct exact-rational
+- Keep `finite-inversion-geometry-v0`'s promoted bad inverse-coordinate row
+  tied to exact inversion replay plus the source QF_LRA/Farkas artifact.
+- Promote additional false affine/distance/orientation/incidence/circle/inversion
+  claims through QF_LRA/Farkas or NRA only when they add distinct exact-rational
   polynomial-geometry pressure.
 - Keep differential geometry, algebraic geometry, global geometry, and
   topology-heavy geometry as Lean-horizon.
@@ -1456,7 +1459,14 @@ Pick one item per commit unless the change is purely navigational.
     chord-midpoint perpendicularity, checked QF_LRA/Farkas rejection of a false
     radius claim, and a circle-geometry Lean horizon. The learner path now
     includes a focused finite circle-geometry end-to-end page.
-71. Continue proof-route promotions or consumer-query examples; revisit the
+71. Landed: add `finite-inversion-geometry-v0`.
+    The new geometry, linear-algebra, and real-analysis pack validates exact
+    unit-circle inversion replay, inverse-distance product checking,
+    collinearity replay, checked QF_LRA/Farkas rejection of a false
+    inverse-coordinate claim, and an inversion-geometry Lean horizon. The
+    learner path now includes a focused finite inversion-geometry end-to-end
+    page.
+72. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

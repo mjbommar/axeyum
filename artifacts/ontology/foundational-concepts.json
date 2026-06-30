@@ -6312,7 +6312,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "Finite coordinate-geometry rows turn incidence, line equations, rigid distance tables, midpoint, collinearity, squared-distance, affine-map, signed-area, circle-point, tangent-line, and chord-midpoint claims into exact rational replay obligations with checked Farkas conflicts for malformed linearized claims.",
+      "summary": "Finite coordinate-geometry rows turn incidence, line equations, rigid distance tables, midpoint, collinearity, squared-distance, affine-map, signed-area, circle-point, tangent-line, chord-midpoint, and inversion-image claims into exact rational replay obligations with checked Farkas conflicts for malformed linearized claims.",
       "prerequisites": [
         "curriculum_reals",
         "curriculum_linear_algebra",
@@ -6331,6 +6331,7 @@
         "signed-area determinants",
         "affine map tables",
         "finite circle-geometry replay",
+        "finite inversion replay",
         "Lean horizon"
       ],
       "example_packs": [
@@ -6369,6 +6370,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-circle-geometry-v0",
           "notes": "Point-on-circle, tangent-line, chord-midpoint perpendicularity, and bad-radius rows over exact rational coordinates."
+        },
+        {
+          "id": "finite-inversion-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-inversion-geometry-v0",
+          "notes": "Unit-circle inversion image, inverse-distance product, collinearity, and bad inverse-coordinate rows."
         }
       ],
       "proof_routes": [
@@ -6383,6 +6390,7 @@
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/coordinate-affine-geometry-end-to-end.md",
             "docs/learn/math/finite-circle-geometry-end-to-end.md",
+            "docs/learn/math/finite-inversion-geometry-end-to-end.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
           "notes": "The packs replay the coordinate calculation first, then use the shared exact-rational Farkas route only for the small contradiction exposed by that replay."
@@ -6396,6 +6404,7 @@
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/learn/math/coordinate-affine-geometry-end-to-end.md",
         "docs/learn/math/finite-circle-geometry-end-to-end.md",
+        "docs/learn/math/finite-inversion-geometry-end-to-end.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
       "open_gaps": [
@@ -8212,6 +8221,12 @@
           "notes": "Finite circle point, tangent-line, chord-midpoint, and bad-radius replay over exact rational coordinates."
         },
         {
+          "id": "finite-inversion-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-inversion-geometry-v0",
+          "notes": "Finite unit-circle inversion image, inverse-distance product, collinearity, and bad inverse-coordinate replay."
+        },
+        {
           "id": "affine-geometry-v0",
           "status": "validated",
           "path": "artifacts/examples/math/affine-geometry-v0",
@@ -8464,6 +8479,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-hitting-times-v0",
           "notes": "Finite Hitting-Time Checks"
+        },
+        {
+          "id": "finite-inversion-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-inversion-geometry-v0",
+          "notes": "Finite Inversion Geometry Checks"
         },
         {
           "id": "finite-kkt-v0",
@@ -9655,6 +9676,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-integration-v0",
           "notes": "Finite Integration And Expectation Checks"
+        },
+        {
+          "id": "finite-inversion-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-inversion-geometry-v0",
+          "notes": "Finite Inversion Geometry Checks"
         },
         {
           "id": "finite-kkt-v0",

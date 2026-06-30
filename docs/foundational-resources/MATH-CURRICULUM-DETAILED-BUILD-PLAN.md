@@ -36,12 +36,12 @@ The committed resource query currently reports:
 - 18 field rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 100 non-template math packs.
-- 506 expected checks.
-- 220 checked proof/evidence rows.
-- 223 replay-only rows.
-- 63 Lean-horizon rows.
-- 100 promoted solver-reuse packs.
+- 101 non-template math packs.
+- 511 expected checks.
+- 221 checked proof/evidence rows.
+- 226 replay-only rows.
+- 64 Lean-horizon rows.
+- 101 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -84,7 +84,7 @@ good R2/R3 lesson while still not being a theorem.
 
 ## Build Waves
 
-### Wave 1: Stabilize The Current 100 Packs
+### Wave 1: Stabilize The Current 101 Packs
 
 Goal: every current non-template pack has a deliberate R5 disposition:
 `promoted`, `non-benchmark-horizon`, or a clear reason to remain unclassified.
@@ -97,7 +97,7 @@ Last row closed:
 
 | Pack | Upgrade Trigger |
 |---|---|
-| `finite-circle-geometry-v0` | added and promoted through a bad radius row with a source-linked QF_LRA/Farkas artifact and route regression |
+| `finite-inversion-geometry-v0` | added and promoted through a bad inverse-coordinate row with a source-linked QF_LRA/Farkas artifact and route regression |
 
 Exit criteria:
 
@@ -136,7 +136,7 @@ Goal: make checked evidence normal for representative UNSAT rows.
 | Bool/CNF DRAT/LRAT | logic, sets, graphs, counting, finite topology | commit small DIMACS artifact, emit DRAT, elaborate/check LRAT, add tamper regression | one representative row per source family is promoted |
 | QF_BV DRAT | finite fields/rings, residue arithmetic, bit encodings | add fixed-width SMT-LIB artifact and DRAT-backed bit-blast regression | width is educationally meaningful, not incidental |
 | QF_LIA/Diophantine | integer equations, gcd, counts, homology coefficients | encode minimal obstruction and check integer certificate | recurring obstruction has a cookbook example |
-| QF_LRA/Farkas | rationals, matrices, LP, probability tables, geometry, circle geometry, dynamics, root finding, separation, KKT, active-set QP, SDP, gradient descent | express exact rational conflict, emit/recheck Farkas certificate | source pack links artifact and learner page names trust boundary |
+| QF_LRA/Farkas | rationals, matrices, LP, probability tables, geometry, circle/inversion geometry, dynamics, root finding, separation, KKT, active-set QP, SDP, gradient descent | express exact rational conflict, emit/recheck Farkas certificate | source pack links artifact and learner page names trust boundary |
 | QF_UF/Alethe | finite functions, quotients, algebra maps, actions, modules | encode congruence/equality conflict and check Alethe | table replay and equality proof are distinct in docs |
 | Lean horizon | induction, completeness, compactness, measure, asymptotics, Hilbert/Banach facts | state theorem shape, prerequisites, and missing reconstruction dependency | finite rows are not counted as theorem proof |
 
@@ -216,7 +216,7 @@ Exit criteria:
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | LP objective/Farkas, rational convexity/gradient bridge rows, finite root-finding step replay, finite hyperplane-separation replay, finite KKT replay, finite active-set QP face/slack replay, finite SDP primal/dual replay, finite gradient-descent replay, finite Armijo line-search replay, finite Wolfe line-search replay, finite projected-gradient interval replay, and finite proximal-gradient replay landed; add only distinct duality, degenerate active-set variants, working-set pivots, higher-dimensional SDP, strong-Wolfe/nonconvex line-search, box-plus-L1, or stochastic/convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | keep finite replay and numerical-honesty rows distinct from promoted exact residual/error certificates | QF_LRA/Farkas, replay, Lean horizon |
 | `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | keep bounded-dynamics and finite-Euler checked rows source-linked; add only distinct transition, reachability, invariant, stochastic, or finite-error pressure | QF_LRA/Farkas, replay, Lean horizon |
-| `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, and circle rational geometry | finite circle geometry now has checked bad-radius replay; add only distinct isometry, inversion, cyclic-configuration, or higher-degree polynomial-geometry pressure | QF_LRA/Farkas, finite replay |
+| `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, circle, and inversion rational geometry | finite inversion geometry now has checked bad inverse-coordinate replay; add only distinct cyclic-configuration, circle-line correspondence, angle, or higher-degree polynomial-geometry pressure | QF_LRA/Farkas, finite replay |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now has a checked bad-bound row; add only distinct norm, recurrence, interpolation, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
 
 ## Curriculum Node Build Ledger
@@ -233,7 +233,7 @@ Exit criteria:
 | `naturals` | maintain | keep bounded prefix and LIA/BV width limits explicit |
 | `integers` | maintain | group common Diophantine obstructions |
 | `rationals` | maintain | exact rational order and Farkas conflicts are already the model |
-| `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding has a source-linked bad-iterate row, separation has a source-linked bad-separator row, KKT has a source-linked bad-stationarity row, active-set QP has a source-linked bad-free-gradient row, SDP has a source-linked bad-objective row, gradient descent has a source-linked bad-decrease row, and finite circle geometry has a source-linked bad-radius row; keep completeness, convergence, separation, KKT sufficiency, active-set method theory, SDP duality, descent-rate, general circle geometry, and broad CAD/SOS/RCF claims horizon |
+| `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding has a source-linked bad-iterate row, separation has a source-linked bad-separator row, KKT has a source-linked bad-stationarity row, active-set QP has a source-linked bad-free-gradient row, SDP has a source-linked bad-objective row, gradient descent has a source-linked bad-decrease row, finite circle geometry has a source-linked bad-radius row, and finite inversion geometry has a source-linked bad inverse-coordinate row; keep completeness, convergence, separation, KKT sufficiency, active-set method theory, SDP duality, descent-rate, general circle/inversion geometry, and broad CAD/SOS/RCF claims horizon |
 | `complex` | deepen | complex-plane bad unit-square real-part row now has a source-linked QF_LRA/Farkas regression; keep analytic theorems Lean-horizon |
 | `divisibility-and-euclid` | maintain | use gcd/Bezout rows as arithmetic-certificate examples |
 | `modular-arithmetic` | maintain | keep LIA nonunit and BV fixed-width residue routes distinct |
@@ -244,7 +244,7 @@ Exit criteria:
 | `sequences-and-limits` | deepen | bounded Cauchy-tail and bounded monotone-prefix bad-bound rows now have QF_LRA/Farkas regressions; convergence theorems stay Lean horizon |
 | `counting` | promote | pigeonhole CNF/LRAT and coefficient-count rows |
 | `number-theory` | maintain | bounded residue and Diophantine families |
-| `linear-algebra` | deepen | matrix corpus notes, dot-product/separator/KKT/active-set-QP/SDP/gradient-step/line-search/Wolfe/projected-gradient/proximal-gradient/circle-tangent rows, and route-specific regression back-links |
+| `linear-algebra` | deepen | matrix corpus notes, dot-product/separator/KKT/active-set-QP/SDP/gradient-step/line-search/Wolfe/projected-gradient/proximal-gradient/circle-tangent/inversion rows, and route-specific regression back-links |
 | `calculus` | deepen | one-variable false derivative, Riemann-sum false integral, multivariable bad-gradient, finite root-finding bad-step, finite KKT bad-stationarity, finite active-set QP bad-free-gradient, finite gradient-descent bad-decrease, finite line-search bad-Armijo, finite Wolfe bad-curvature, finite projected-gradient bad-projection, and finite proximal-gradient bad-proximal-point rows now have QF_LRA/Farkas regressions |
 
 ## Commit-Sized Queue
@@ -518,6 +518,12 @@ Pick one row per commit unless the change is purely navigational.
     rejection of a false radius claim, a focused learner page, and concept links
     under reals, polynomials, linear algebra, and the shared coordinate-geometry
     bridge.
+59. Landed: add `finite-inversion-geometry-v0` as the next distinct inversion
+    geometry pack. The pack validates exact unit-circle inversion replay,
+    inverse-distance product replay, collinearity replay, checked QF_LRA/Farkas
+    rejection of a false inverse-coordinate claim, a focused learner page, and
+    concept links under reals, polynomials, linear algebra, and the shared
+    coordinate-geometry bridge.
 
 ## Validation Checklist
 

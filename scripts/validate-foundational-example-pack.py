@@ -12940,6 +12940,157 @@ def validate_finite_circle_geometry(expected: dict[str, Any]) -> None:
     require_string("general circle geometry future_checker", data.get("future_checker"))
 
 
+def validate_finite_inversion_geometry(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    image = checks["inversion-image-witness"]
+    if image["expected_result"] != "sat":
+        fail("inversion-image-witness must expect sat")
+    values = single_witness_values(image, witnesses)
+    center = require_point2("inversion center", values.get("center"))
+    point = require_point2("inversion point", values.get("point"))
+    radius_squared = require_fraction("inversion radius_squared", values.get("radius_squared"))
+    point_radius_squared = require_fraction(
+        "inversion point_radius_squared",
+        values.get("point_radius_squared"),
+    )
+    scale_factor = require_fraction("inversion scale_factor", values.get("scale_factor"))
+    inverse_point = require_point2("inversion inverse_point", values.get("inverse_point"))
+    scaled_point = require_point2("inversion scaled_point", values.get("scaled_point"))
+    if center != (Fraction(0), Fraction(0)):
+        fail("finite-inversion-geometry currently expects an origin-centered circle")
+    if radius_squared <= 0:
+        fail("inversion radius_squared must be positive")
+    if distance_squared2(center, point) != point_radius_squared:
+        fail("inversion point_radius_squared is incorrect")
+    if point_radius_squared == 0:
+        fail("inversion point must not be the center")
+    if scale_factor != radius_squared / point_radius_squared:
+        fail("inversion scale_factor is incorrect")
+    expected_scaled = (point[0] * scale_factor, point[1] * scale_factor)
+    if scaled_point != expected_scaled:
+        fail("inversion scaled_point is incorrect")
+    if inverse_point != scaled_point:
+        fail("inversion inverse_point must match scaled_point")
+
+    product = checks["inverse-distance-product-witness"]
+    if product["expected_result"] != "sat":
+        fail("inverse-distance-product-witness must expect sat")
+    if single_witness_values(product, witnesses) != values:
+        fail("inverse-distance-product-witness must cite the unit-circle-inversion witness")
+    inverse_radius_squared = require_fraction(
+        "inversion inverse_radius_squared",
+        values.get("inverse_radius_squared"),
+    )
+    radius_product = require_fraction("inversion radius_product", values.get("radius_product"))
+    dot_product_point_inverse = require_fraction(
+        "inversion dot_product_point_inverse",
+        values.get("dot_product_point_inverse"),
+    )
+    if distance_squared2(center, inverse_point) != inverse_radius_squared:
+        fail("inverse-distance-product-witness inverse radius is incorrect")
+    if point_radius_squared * inverse_radius_squared != radius_product:
+        fail("inverse-distance-product-witness radius product is incorrect")
+    if radius_product != radius_squared * radius_squared:
+        fail("inverse-distance-product-witness radius product must equal r^4")
+    computed_dot = point[0] * inverse_point[0] + point[1] * inverse_point[1]
+    if computed_dot != dot_product_point_inverse:
+        fail("inverse-distance-product-witness dot product is incorrect")
+    if dot_product_point_inverse != radius_squared:
+        fail("inverse-distance-product-witness point dot inverse must equal r^2")
+
+    collinear = checks["inversion-collinearity-witness"]
+    if collinear["expected_result"] != "sat":
+        fail("inversion-collinearity-witness must expect sat")
+    if single_witness_values(collinear, witnesses) != values:
+        fail("inversion-collinearity-witness must cite the unit-circle-inversion witness")
+    collinearity_determinant = require_fraction(
+        "inversion collinearity_determinant",
+        values.get("collinearity_determinant"),
+    )
+    point_vector = (point[0] - center[0], point[1] - center[1])
+    inverse_vector = (inverse_point[0] - center[0], inverse_point[1] - center[1])
+    computed_determinant = (
+        point_vector[0] * inverse_vector[1]
+        - point_vector[1] * inverse_vector[0]
+    )
+    if computed_determinant != collinearity_determinant:
+        fail("inversion-collinearity-witness determinant is incorrect")
+    if collinearity_determinant != 0:
+        fail("inversion-collinearity-witness points must be collinear")
+
+    bad_inverse = checks["bad-inversion-image-rejected"]
+    if bad_inverse["expected_result"] != "unsat" or bad_inverse.get("proof_status") != "checked":
+        fail("bad-inversion-image-rejected must be a checked unsat row")
+    data = bad_inverse.get("data", {})
+    bad_center = require_point2("bad inversion center", data.get("center"))
+    bad_point = require_point2("bad inversion point", data.get("point"))
+    computed_inverse_point = require_point2(
+        "bad inversion computed_inverse_point",
+        data.get("computed_inverse_point"),
+    )
+    claimed_inverse_point = require_point2(
+        "bad inversion claimed_inverse_point",
+        data.get("claimed_inverse_point"),
+    )
+    bad_radius_squared = distance_squared2(bad_center, bad_point)
+    if bad_radius_squared == 0:
+        fail("bad-inversion-image-rejected point must not be the center")
+    replayed_inverse = (
+        bad_point[0] / bad_radius_squared,
+        bad_point[1] / bad_radius_squared,
+    )
+    if replayed_inverse != computed_inverse_point:
+        fail("bad-inversion-image-rejected computed inverse is incorrect")
+    if computed_inverse_point == claimed_inverse_point:
+        fail("bad-inversion-image-rejected must document a false inverse claim")
+    conflict_coordinate = data.get("conflict_coordinate")
+    if conflict_coordinate not in {"x", "y"}:
+        fail("bad-inversion-image-rejected conflict_coordinate must be x or y")
+    coordinate_index = 0 if conflict_coordinate == "x" else 1
+    computed_conflict_value = require_fraction(
+        "bad inversion computed_conflict_value",
+        data.get("computed_conflict_value"),
+    )
+    claimed_conflict_value = require_fraction(
+        "bad inversion claimed_conflict_value",
+        data.get("claimed_conflict_value"),
+    )
+    if computed_inverse_point[coordinate_index] != computed_conflict_value:
+        fail("bad-inversion-image-rejected computed conflict value is incorrect")
+    if claimed_inverse_point[coordinate_index] != claimed_conflict_value:
+        fail("bad-inversion-image-rejected claimed conflict value is incorrect")
+    if computed_conflict_value == claimed_conflict_value:
+        fail("bad-inversion-image-rejected conflict values must differ")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad inversion smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-inversion-geometry-v0/smt2/"
+        "bad-inversion-x-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-inversion-image-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad inversion smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad inversion farkas_regression", regression)
+    if "finite_inversion_geometry_bad_inverse_x_artifact_emits_checked_farkas" not in regression:
+        fail("bad-inversion-image-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad inversion certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-inversion-image-rejected certificate must document checked Farkas evidence")
+
+    horizon = checks["general-inversion-geometry-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-inversion-geometry-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-inversion-geometry-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general inversion geometry target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general inversion geometry future_checker", data.get("future_checker"))
+
+
 def validate_incidence_geometry(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -18176,6 +18327,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_chebyshev_systems(expected)
     if metadata["id"] == "finite-circle-geometry-v0":
         validate_finite_circle_geometry(expected)
+    if metadata["id"] == "finite-inversion-geometry-v0":
+        validate_finite_inversion_geometry(expected)
     if metadata["id"] == "finite-compactness-v0":
         validate_finite_compactness(expected)
     if metadata["id"] == "finite-connectedness-v0":

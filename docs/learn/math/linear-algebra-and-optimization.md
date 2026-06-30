@@ -41,6 +41,7 @@ Example packs:
 - [affine-geometry-v0](../../../artifacts/examples/math/affine-geometry-v0/)
 - [orientation-area-geometry-v0](../../../artifacts/examples/math/orientation-area-geometry-v0/)
 - [finite-circle-geometry-v0](../../../artifacts/examples/math/finite-circle-geometry-v0/)
+- [finite-inversion-geometry-v0](../../../artifacts/examples/math/finite-inversion-geometry-v0/)
 - [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
 - [finite-chebyshev-systems-v0](../../../artifacts/examples/math/finite-chebyshev-systems-v0/)
 
@@ -125,6 +126,9 @@ The finite circle-geometry slice checks point-on-circle equations,
 tangent-line/radius perpendicularity, and chord-midpoint perpendicularity as
 small exact vector calculations, then rejects a bad radius row through
 QF_LRA/Farkas evidence.
+The finite inversion-geometry slice checks unit-circle inversion as scalar
+vector replay, inverse-distance products, and collinearity determinants, then
+rejects a bad inverse-coordinate row through QF_LRA/Farkas evidence.
 
 This is a strong resource path because the trusted checker can be small: matrix
 multiplication, vector norms, linear inequalities, and certificate arithmetic.
@@ -347,6 +351,22 @@ the final `2 = 1` conflict is checked through QF_LRA/Farkas evidence. For a
 focused trace, read
 [End To End: Finite Circle Geometry](finite-circle-geometry-end-to-end.md).
 
+For a finite inversion-geometry example, encode the point and inverse image as
+exact rational vectors:
+
+```text
+P = (2,1)
+scale = 1 / |P|^2 = 1/5
+I(P) = (2/5,1/5)
+```
+
+The `finite-inversion-geometry-v0` validator recomputes the scale, inverse
+image, distance product, point/inverse dot product, and determinant for
+collinearity with the center. Its bad row claims inverse x-coordinate `1/2`;
+exact replay computes `2/5`, and the final conflict is checked through
+QF_LRA/Farkas evidence. For a focused trace, read
+[End To End: Finite Inversion Geometry](finite-inversion-geometry-end-to-end.md).
+
 For a finite SDP example, encode a two-by-two trace-one PSD matrix and dual
 slack:
 
@@ -536,6 +556,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/af
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-circle-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geometry_bad_radius_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-inversion-geometry-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_x_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
@@ -570,6 +592,7 @@ replay, read
 [End To End: Incidence Geometry](incidence-geometry-end-to-end.md),
 [End To End: Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md),
 [End To End: Finite Circle Geometry](finite-circle-geometry-end-to-end.md),
+[End To End: Finite Inversion Geometry](finite-inversion-geometry-end-to-end.md),
 [End To End: Rational Inner Product Spaces](inner-product-spaces-end-to-end.md),
 [End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md),
 [End To End: Finite Dual Spaces](finite-dual-spaces-end-to-end.md), and
