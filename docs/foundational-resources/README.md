@@ -400,6 +400,10 @@ schemas, examples, and validation workflows.
   validates exact unit-circle inversion replay, inverse-distance product
   checking, collinearity replay, checked QF_LRA/Farkas rejection of a bad
   inverse-coordinate claim, and an inversion-geometry Lean-horizon row.
+- [`artifacts/examples/math/finite-cyclic-geometry-v0/`](../../artifacts/examples/math/finite-cyclic-geometry-v0/)
+  validates exact cyclic quadrilateral replay, diagonal-intersection and
+  opposite-angle dot-product checks, checked QF_LRA/Farkas rejection of a bad
+  diagonal-intersection claim, and a cyclic-geometry Lean-horizon row.
 - [`artifacts/examples/math/finite-topology-v0/`](../../artifacts/examples/math/finite-topology-v0/)
   validates finite topology axioms, closure/interior computation, and exact
   finite metric-ball replay, plus checked rejection of a missing-empty-set
@@ -551,6 +555,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/af
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-circle-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-inversion-geometry-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-monotonicity-v0

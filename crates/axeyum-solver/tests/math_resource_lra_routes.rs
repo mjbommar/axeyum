@@ -94,6 +94,9 @@ const FINITE_CIRCLE_GEOMETRY_BAD_RADIUS: &str = include_str!(
 const FINITE_INVERSION_GEOMETRY_BAD_INVERSE_X: &str = include_str!(
     "../../../artifacts/examples/math/finite-inversion-geometry-v0/smt2/bad-inversion-x-farkas-conflict.smt2"
 );
+const FINITE_CYCLIC_GEOMETRY_BAD_DIAGONAL_INTERSECTION: &str = include_str!(
+    "../../../artifacts/examples/math/finite-cyclic-geometry-v0/smt2/bad-diagonal-intersection-farkas-conflict.smt2"
+);
 const INCIDENCE_GEOMETRY_BAD_POINT_ON_LINE: &str = include_str!(
     "../../../artifacts/examples/math/incidence-geometry-v0/smt2/bad-incidence-farkas-conflict.smt2"
 );
@@ -591,6 +594,14 @@ fn finite_inversion_geometry_bad_inverse_x_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-inversion-geometry-v0 bad-inversion-x SMT-LIB artifact",
         FINITE_INVERSION_GEOMETRY_BAD_INVERSE_X,
+    );
+}
+
+#[test]
+fn finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-cyclic-geometry-v0 bad-diagonal-intersection SMT-LIB artifact",
+        FINITE_CYCLIC_GEOMETRY_BAD_DIAGONAL_INTERSECTION,
     );
 }
 

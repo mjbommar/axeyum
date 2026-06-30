@@ -541,6 +541,10 @@ FIELD_PACKS = {
             "finite-inversion-geometry-v0",
             "Finite unit-circle inversion image, inverse-distance product, collinearity, and bad inverse-coordinate replay.",
         ),
+        (
+            "finite-cyclic-geometry-v0",
+            "Finite cyclic quadrilateral, diagonal-intersection, opposite-angle, and bad-intersection replay.",
+        ),
     ],
     "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
 }
@@ -4445,9 +4449,9 @@ BRIDGE_CONCEPTS = [
             "Finite coordinate-geometry rows turn incidence, line equations, "
             "rigid distance tables, midpoint, collinearity, squared-distance, "
             "affine-map, signed-area, circle-point, tangent-line, "
-            "chord-midpoint, and inversion-image claims into exact rational "
-            "replay obligations with checked Farkas conflicts for malformed "
-            "linearized claims."
+            "chord-midpoint, inversion-image, and cyclic-configuration "
+            "claims into exact rational replay obligations with checked "
+            "Farkas conflicts for malformed linearized claims."
         ),
         "prerequisites": [
             "curriculum_reals",
@@ -4468,6 +4472,7 @@ BRIDGE_CONCEPTS = [
             "affine map tables",
             "finite circle-geometry replay",
             "finite inversion replay",
+            "finite cyclic-configuration replay",
             "Lean horizon",
         ],
         "example_packs": [
@@ -4499,6 +4504,10 @@ BRIDGE_CONCEPTS = [
                 "finite-inversion-geometry-v0",
                 "Unit-circle inversion image, inverse-distance product, collinearity, and bad inverse-coordinate rows.",
             ),
+            (
+                "finite-cyclic-geometry-v0",
+                "Cyclic quadrilateral, diagonal-intersection, opposite-angle, and bad-intersection rows.",
+            ),
         ],
         "proof_routes": [
             {
@@ -4513,6 +4522,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/coordinate-affine-geometry-end-to-end.md",
                     "docs/learn/math/finite-circle-geometry-end-to-end.md",
                     "docs/learn/math/finite-inversion-geometry-end-to-end.md",
+                    "docs/learn/math/finite-cyclic-geometry-end-to-end.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
@@ -4531,6 +4541,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/coordinate-affine-geometry-end-to-end.md",
             "docs/learn/math/finite-circle-geometry-end-to-end.md",
             "docs/learn/math/finite-inversion-geometry-end-to-end.md",
+            "docs/learn/math/finite-cyclic-geometry-end-to-end.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [

@@ -235,9 +235,10 @@ python3 scripts/query-foundational-resources.py checks \
 ```
 
 For geometry, use the Farkas route to keep finite coordinate, incidence,
-rigid-configuration, affine, oriented-area, circle-geometry, and inversion
-replay together while leaving synthetic, projective, circle-theorem,
-inversion-theorem, and differential geometry claims in the proof-horizon lane:
+rigid-configuration, affine, oriented-area, circle-geometry, inversion, and
+cyclic-configuration replay together while leaving synthetic, projective,
+circle-theorem, inversion-theorem, cyclic-theorem, and differential geometry
+claims in the proof-horizon lane:
 
 ```sh
 python3 scripts/query-foundational-resources.py fields \

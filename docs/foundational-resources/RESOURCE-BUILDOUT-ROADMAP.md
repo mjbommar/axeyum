@@ -42,12 +42,12 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 101 non-template math example packs.
-- 511 expected checks.
-- 221 checked proof/evidence rows.
-- 226 replay-only rows.
-- 64 Lean-horizon rows.
-- 101 promoted solver-reuse packs.
+- 102 non-template math example packs.
+- 516 expected checks.
+- 222 checked proof/evidence rows.
+- 229 replay-only rows.
+- 65 Lean-horizon rows.
+- 102 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -926,6 +926,7 @@ Current packs:
 - `orientation-area-geometry-v0`
 - `finite-circle-geometry-v0`
 - `finite-inversion-geometry-v0`
+- `finite-cyclic-geometry-v0`
 - `complex-plane-transforms-v0`
 
 Build next:
@@ -943,9 +944,12 @@ Build next:
   circle-coordinate replay plus the source QF_LRA/Farkas artifact.
 - Keep `finite-inversion-geometry-v0`'s promoted bad inverse-coordinate row
   tied to exact inversion replay plus the source QF_LRA/Farkas artifact.
-- Promote additional false affine/distance/orientation/incidence/circle/inversion
+- Keep `finite-cyclic-geometry-v0`'s promoted bad diagonal-intersection row
+  tied to exact cyclic-configuration replay plus the source QF_LRA/Farkas
+  artifact.
+- Promote additional false affine/distance/orientation/incidence/circle/inversion/cyclic
   claims through QF_LRA/Farkas or NRA only when they add distinct exact-rational
-  polynomial-geometry pressure.
+  circle-line, angle, Ptolemy, or polynomial-geometry pressure.
 - Keep differential geometry, algebraic geometry, global geometry, and
   topology-heavy geometry as Lean-horizon.
 
@@ -1469,7 +1473,14 @@ Pick one item per commit unless the change is purely navigational.
     inverse-coordinate claim, and an inversion-geometry Lean horizon. The
     learner path now includes a focused finite inversion-geometry end-to-end
     page.
-72. Continue proof-route promotions or consumer-query examples; revisit the
+72. Landed: add `finite-cyclic-geometry-v0`.
+    The new geometry, linear-algebra, and real-analysis pack validates exact
+    cyclic quadrilateral replay, diagonal-intersection and
+    diagonal-perpendicularity replay, opposite-angle dot-product replay,
+    checked QF_LRA/Farkas rejection of a false diagonal-intersection claim, and
+    a cyclic-geometry Lean horizon. The learner path now includes a focused
+    finite cyclic-geometry end-to-end page.
+73. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

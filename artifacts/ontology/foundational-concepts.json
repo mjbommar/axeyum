@@ -6312,7 +6312,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "Finite coordinate-geometry rows turn incidence, line equations, rigid distance tables, midpoint, collinearity, squared-distance, affine-map, signed-area, circle-point, tangent-line, chord-midpoint, and inversion-image claims into exact rational replay obligations with checked Farkas conflicts for malformed linearized claims.",
+      "summary": "Finite coordinate-geometry rows turn incidence, line equations, rigid distance tables, midpoint, collinearity, squared-distance, affine-map, signed-area, circle-point, tangent-line, chord-midpoint, inversion-image, and cyclic-configuration claims into exact rational replay obligations with checked Farkas conflicts for malformed linearized claims.",
       "prerequisites": [
         "curriculum_reals",
         "curriculum_linear_algebra",
@@ -6332,6 +6332,7 @@
         "affine map tables",
         "finite circle-geometry replay",
         "finite inversion replay",
+        "finite cyclic-configuration replay",
         "Lean horizon"
       ],
       "example_packs": [
@@ -6376,6 +6377,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-inversion-geometry-v0",
           "notes": "Unit-circle inversion image, inverse-distance product, collinearity, and bad inverse-coordinate rows."
+        },
+        {
+          "id": "finite-cyclic-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-cyclic-geometry-v0",
+          "notes": "Cyclic quadrilateral, diagonal-intersection, opposite-angle, and bad-intersection rows."
         }
       ],
       "proof_routes": [
@@ -6391,6 +6398,7 @@
             "docs/learn/math/coordinate-affine-geometry-end-to-end.md",
             "docs/learn/math/finite-circle-geometry-end-to-end.md",
             "docs/learn/math/finite-inversion-geometry-end-to-end.md",
+            "docs/learn/math/finite-cyclic-geometry-end-to-end.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
           "notes": "The packs replay the coordinate calculation first, then use the shared exact-rational Farkas route only for the small contradiction exposed by that replay."
@@ -6405,6 +6413,7 @@
         "docs/learn/math/coordinate-affine-geometry-end-to-end.md",
         "docs/learn/math/finite-circle-geometry-end-to-end.md",
         "docs/learn/math/finite-inversion-geometry-end-to-end.md",
+        "docs/learn/math/finite-cyclic-geometry-end-to-end.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
       "open_gaps": [
@@ -8227,6 +8236,12 @@
           "notes": "Finite unit-circle inversion image, inverse-distance product, collinearity, and bad inverse-coordinate replay."
         },
         {
+          "id": "finite-cyclic-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-cyclic-geometry-v0",
+          "notes": "Finite cyclic quadrilateral, diagonal-intersection, opposite-angle, and bad-intersection replay."
+        },
+        {
           "id": "affine-geometry-v0",
           "status": "validated",
           "path": "artifacts/examples/math/affine-geometry-v0",
@@ -8461,6 +8476,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-circle-geometry-v0",
           "notes": "Finite Circle Geometry Checks"
+        },
+        {
+          "id": "finite-cyclic-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-cyclic-geometry-v0",
+          "notes": "Finite Cyclic Geometry Checks"
         },
         {
           "id": "finite-dual-spaces-v0",
@@ -9658,6 +9679,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-continuous-maps-v0",
           "notes": "Finite Continuous Maps And Homeomorphism Checks"
+        },
+        {
+          "id": "finite-cyclic-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-cyclic-geometry-v0",
+          "notes": "Finite Cyclic Geometry Checks"
         },
         {
           "id": "finite-euler-method-v0",

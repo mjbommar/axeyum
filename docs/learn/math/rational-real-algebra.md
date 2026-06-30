@@ -38,6 +38,7 @@ Example packs:
 - [orientation-area-geometry-v0](../../../artifacts/examples/math/orientation-area-geometry-v0/)
 - [finite-circle-geometry-v0](../../../artifacts/examples/math/finite-circle-geometry-v0/)
 - [finite-inversion-geometry-v0](../../../artifacts/examples/math/finite-inversion-geometry-v0/)
+- [finite-cyclic-geometry-v0](../../../artifacts/examples/math/finite-cyclic-geometry-v0/)
 
 ## What Axeyum Checks
 
@@ -60,7 +61,8 @@ midpoints, collinearity determinants, squared distances, affine maps, signed
 areas, line-incidence equations, non-parallel line intersections, affine area
 scaling, barycentric point-inside checks, point-on-circle rows, tangent-line
 perpendicularity, chord-midpoint perpendicularity, unit-circle inversion images,
-inverse-distance products, and inversion collinearity. The
+inverse-distance products, inversion collinearity, cyclic quadrilateral
+membership, diagonal-intersection replay, and opposite-angle dot products. The
 matrix-invariants pack adds a fixed characteristic polynomial, root evaluation,
 Cayley-Hamilton replay, and exact eigenvalue interval checks.
 
@@ -421,6 +423,22 @@ the center, point, and inverse point are collinear. The bad row claims inverse
 x-coordinate `1/2`; exact replay computes `2/5`, and the source QF_LRA artifact
 checks that final conflict with `UnsatFarkas` evidence.
 
+For a finite cyclic-geometry check, encode one square on the unit circle:
+
+```text
+A = (1,0)
+B = (0,1)
+C = (-1,0)
+D = (0,-1)
+```
+
+The validator recomputes that all four points have squared radius `1`, both
+diagonals have midpoint `(0,0)`, the diagonal directions have dot product `0`,
+and the opposite angle vector pairs at `B` and `D` have zero dot product. The
+bad row claims the diagonal intersection has x-coordinate `1/2`; exact replay
+computes `0`, and the source QF_LRA artifact checks that final conflict with
+`UnsatFarkas` evidence.
+
 Run the checks from the repository root:
 
 ```sh
@@ -469,6 +487,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geometry_bad_radius_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-inversion-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_x_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 ```
@@ -512,6 +532,8 @@ For finite circle point, tangent, and chord replay, read
 [End To End: Finite Circle Geometry](finite-circle-geometry-end-to-end.md).
 For finite inversion replay, read
 [End To End: Finite Inversion Geometry](finite-inversion-geometry-end-to-end.md).
+For finite cyclic quadrilateral replay, read
+[End To End: Finite Cyclic Geometry](finite-cyclic-geometry-end-to-end.md).
 
 ## Horizon
 

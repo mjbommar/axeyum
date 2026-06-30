@@ -16,10 +16,10 @@ the route named in the pack metadata.
 
 Generated from the current math resource queue:
 
-- math example packs: 96
-- learner-linked packs: 96 focused links
-- packs with non-checked proof rows: 85
-- non-checked proof rows: 267
+- math example packs: 102
+- learner-linked packs: 102 focused links
+- packs with non-checked proof rows: 91
+- non-checked proof rows: 294
 
 Candidate route totals:
 
@@ -28,9 +28,9 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 8 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 9 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 53 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 57 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
-| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 68 | General theorem statements that remain outside bounded SMT replay. |
+| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 72 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
 
@@ -308,6 +308,10 @@ First targets:
 - [finite-inversion-geometry-v0](../../artifacts/examples/math/finite-inversion-geometry-v0/)
   (source-linked Farkas regression landed for the bad inverse-coordinate row
   after exact inversion replay computes the inverse x-coordinate)
+- [finite-cyclic-geometry-v0](../../artifacts/examples/math/finite-cyclic-geometry-v0/)
+  (source-linked Farkas regression landed for the bad diagonal-intersection row
+  after exact cyclic-configuration replay computes the intersection
+  x-coordinate)
 - [finite-operator-v0](../../artifacts/examples/math/finite-operator-v0/)
   (source-linked Farkas regression landed for the bad operator-bound row after
   exact matrix/operator replay computes the image infinity norm)
@@ -361,6 +365,10 @@ Secondary targets:
   Coordinate geometry now contributes the geometry version of the
   replay-then-Farkas boundary: exact replay computes the squared distance, then
   Farkas checks the final bad-distance equality conflict.
+  Finite cyclic geometry now contributes the cyclic-configuration version of
+  that boundary: exact replay computes circle membership, diagonal midpoints,
+  and angle dot products, then Farkas checks the final bad-intersection
+  equality conflict.
   Finite operators now contribute the functional-analysis version of that
   boundary: exact replay computes the matrix image and infinity norm, then
   Farkas checks the final bad-bound inequality conflict.
@@ -396,6 +404,7 @@ cargo test -p axeyum-solver --test evidence lra_unsat_evidence_carries_a_recheck
 cargo test -p axeyum-solver --test evidence tampered_farkas_evidence_fails_its_own_check
 cargo test -p axeyum-solver --test math_resource_lra_routes qf_lra_resource_route_rejects_tampered_farkas_certificate
 cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_separator_artifact_emits_checked_farkas

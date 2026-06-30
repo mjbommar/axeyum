@@ -20,6 +20,9 @@ and [Finite Circle Geometry](finite-circle-geometry-end-to-end.md).
 For exact unit-circle inversion replay, use
 [finite-inversion-geometry-v0](../../../artifacts/examples/math/finite-inversion-geometry-v0/)
 and [Finite Inversion Geometry](finite-inversion-geometry-end-to-end.md).
+For exact cyclic quadrilateral replay, use
+[finite-cyclic-geometry-v0](../../../artifacts/examples/math/finite-cyclic-geometry-v0/)
+and [Finite Cyclic Geometry](finite-cyclic-geometry-end-to-end.md).
 
 Concept rows:
 
@@ -53,14 +56,19 @@ Concept rows:
 | `inverse-distance-product-witness` | `sat` | replay-only |
 | `inversion-collinearity-witness` | `sat` | replay-only |
 | `bad-inversion-image-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `cyclic-quadrilateral-witness` | `sat` | replay-only |
+| `cyclic-diagonal-intersection-witness` | `sat` | replay-only |
+| `cyclic-opposite-right-angles-witness` | `sat` | replay-only |
+| `bad-cyclic-diagonal-intersection-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-affine-geometry-lean-horizon` | `not-run` | lean-horizon |
 | `general-oriented-geometry-lean-horizon` | `not-run` | lean-horizon |
 | `general-circle-geometry-lean-horizon` | `not-run` | lean-horizon |
 | `general-inversion-geometry-lean-horizon` | `not-run` | lean-horizon |
+| `general-cyclic-geometry-lean-horizon` | `not-run` | lean-horizon |
 
 Every row uses exact rational coordinates. The packs do not claim general
-Euclidean, affine, oriented-geometry, circle-geometry, or inversion-geometry
-theorems.
+Euclidean, affine, oriented-geometry, circle-geometry, inversion-geometry, or
+cyclic-geometry theorems.
 
 ## Replay Coordinate Facts
 
@@ -276,11 +284,12 @@ general barycentric-coordinate theorems
 diagrammatic incidence reasoning
 power-of-a-point, inversion, and cyclic quadrilateral theorems
 angle preservation and circle-line inversion correspondences
+Ptolemy and general angle-chasing theorems
 ```
 
 Those require Lean-backed geometry resources or explicitly scoped algebraic
 proof certificates. These packs only check finite exact-rational coordinate,
-affine, determinant, barycentric, circle, and inversion obligations.
+affine, determinant, barycentric, circle, inversion, and cyclic obligations.
 
 ## Run It
 
@@ -295,6 +304,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geometry_bad_radius_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-inversion-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_x_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
 ```
 
 Expected output for each command:
@@ -308,10 +319,10 @@ validated 1 foundational example pack(s)
 This lesson shows Axeyum's current finite geometry resource pattern:
 
 ```text
-untrusted fast search -> point, map, area, circle, inversion, barycentric, or counterexample row
-trusted small checking -> exact rational coordinate, determinant, scale, and dot-product replay
-proof upgrade -> QF_LRA/Farkas certificates for false distance/orientation/radius/inverse rows
-remaining horizon -> general affine, Euclidean, oriented, circle, and inversion geometry proofs
+untrusted fast search -> point, map, area, circle, inversion, cyclic, barycentric, or counterexample row
+trusted small checking -> exact rational coordinate, determinant, scale, midpoint, and dot-product replay
+proof upgrade -> QF_LRA/Farkas certificates for false distance/orientation/radius/inverse/intersection rows
+remaining horizon -> general affine, Euclidean, oriented, circle, inversion, and cyclic geometry proofs
 ```
 
 The graduation route is deterministic exact-rational replay plus checked proof

@@ -47,12 +47,12 @@ As of 2026-06-30, the committed resource query reports:
 - 18 math-field concept rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 101 non-template math packs.
-- 511 expected checks.
-- 221 checked proof/evidence rows.
-- 226 replay-only rows.
-- 64 Lean-horizon rows.
-- 101 promoted solver-reuse packs.
+- 102 non-template math packs.
+- 516 expected checks.
+- 222 checked proof/evidence rows.
+- 229 replay-only rows.
+- 65 Lean-horizon rows.
+- 102 promoted solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
 This means the seed phase is over. The next work is systematic depth:
@@ -87,7 +87,7 @@ For each `not-run` row, say what proof horizon blocks graduation.
 
 ### Wave A: Preserve The Contract
 
-Goal: make the current 101 packs a stable, queryable data product.
+Goal: make the current 102 packs a stable, queryable data product.
 
 Work:
 
@@ -311,7 +311,7 @@ Next useful increments:
 | `optimization_and_convexity` | LP, convexity, least squares, root finding, KKT, active-set QP, SDP, gradient/line-search/projected/proximal rows | duality, degenerate active sets, working-set pivots, strong-Wolfe, box-plus-L1, stochastic/convergence horizons | QF_LRA/Farkas, QF_NRA, Lean horizon | finite KKT/duality/algorithm rows do not claim general sufficiency/convergence |
 | `numerical_analysis` | residuals, Euler steps, root-finding, finite optimization iterations, operator bounds | error recurrences, interval boxes, pivoting/stability notes, reproducible numerical metadata | QF_LRA/Farkas, replay, Lean horizon | exact replay is separate from floating-point experiment claims |
 | `differential_equations_and_dynamical_systems` | bounded recurrences, Euler traces, finite invariants, stochastic kernels/hitting times | transition/invariant/reachability variants and finite-error pressure | QF_LRA/Farkas, finite replay, Lean horizon | continuous existence/uniqueness and PDE claims stay horizon |
-| `geometry` | coordinate, incidence, rigid, affine, oriented area, circle, inversion | cyclic configurations, circle-line correspondence, angle rows, higher-degree polynomial geometry | QF_LRA/Farkas, finite replay, QF_NRA horizon | synthetic/global geometry claims stay Lean horizon |
+| `geometry` | coordinate, incidence, rigid, affine, oriented area, circle, inversion, cyclic quadrilaterals | circle-line correspondence, angle rows beyond the square witness, Ptolemy shadows, higher-degree polynomial geometry | QF_LRA/Farkas, finite replay, QF_NRA horizon | synthetic/global geometry claims stay Lean horizon |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, projections, Chebyshev slices, finite duals | norm variants, finite approximation/interpolation, operator-spectrum rows | QF_LRA/Farkas, finite replay, Lean horizon | Banach/Hilbert and infinite-dimensional claims are not finite checks |
 
 ## Near-Term Commit Queue
@@ -321,8 +321,9 @@ Use one row per commit unless the change is purely navigational.
 1. Add this master plan and link it from the planning index files.
 2. Audit the generated learner/proof dashboard for packs whose focused lesson is
    stale after recent geometry and optimization additions.
-3. Add the next distinct geometry resource only if it is cyclic/angle/circle-line
-   pressure, not another coordinate-distance variant.
+3. Landed: add the next distinct geometry resource,
+   `finite-cyclic-geometry-v0`, as cyclic/angle pressure rather than another
+   coordinate-distance variant.
 4. Add a matrix-computation index page that groups LU, rank/nullity, residual,
    eigenpair, characteristic-polynomial, random-matrix, projection, and
    tensor/module rows by proof route.

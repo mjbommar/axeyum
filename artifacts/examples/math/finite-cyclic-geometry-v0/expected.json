@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-cyclic-geometry-v0",
+  "witnesses": [
+    {
+      "id": "unit-circle-square",
+      "description": "A square listed as a cyclic quadrilateral on the unit circle.",
+      "values": {
+        "labels": ["A", "B", "C", "D"],
+        "center": ["0", "0"],
+        "radius_squared": "1",
+        "points": [
+          ["1", "0"],
+          ["0", "1"],
+          ["-1", "0"],
+          ["0", "-1"]
+        ],
+        "point_radius_squared": ["1", "1", "1", "1"],
+        "diagonal_ac_midpoint": ["0", "0"],
+        "diagonal_bd_midpoint": ["0", "0"],
+        "diagonal_intersection": ["0", "0"],
+        "diagonal_ac_direction": ["-2", "0"],
+        "diagonal_bd_direction": ["0", "-2"],
+        "diagonal_dot": "0",
+        "angle_b_vectors": [
+          ["1", "-1"],
+          ["-1", "-1"]
+        ],
+        "angle_b_dot": "0",
+        "angle_d_vectors": [
+          ["1", "1"],
+          ["-1", "1"]
+        ],
+        "angle_d_dot": "0"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "cyclic-quadrilateral-witness",
+      "claim": "The four listed square vertices are cyclic: all lie on the unit circle centered at the origin.",
+      "expected_result": "sat",
+      "validation": "exact_cyclic_quadrilateral_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["unit-circle-square"],
+      "notes": "The validator recomputes the squared radius of every point exactly."
+    },
+    {
+      "id": "cyclic-diagonal-intersection-witness",
+      "claim": "The square's two diagonals meet at the origin and are perpendicular.",
+      "expected_result": "sat",
+      "validation": "exact_cyclic_diagonal_intersection_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["unit-circle-square"],
+      "notes": "The validator recomputes both diagonal midpoints, the shared intersection, both diagonal directions, and their dot product."
+    },
+    {
+      "id": "cyclic-opposite-right-angles-witness",
+      "claim": "The opposite angles at B and D in this cyclic quadrilateral are right angles.",
+      "expected_result": "sat",
+      "validation": "exact_cyclic_opposite_angle_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["unit-circle-square"],
+      "notes": "The validator recomputes the two angle vector pairs and checks both dot products are zero."
+    },
+    {
+      "id": "bad-cyclic-diagonal-intersection-rejected",
+      "claim": "The diagonal AC of the square intersects at x-coordinate 1/2.",
+      "expected_result": "unsat",
+      "validation": "exact_bad_cyclic_diagonal_intersection_refutation",
+      "proof_status": "checked",
+      "data": {
+        "diagonal_a": ["1", "0"],
+        "diagonal_c": ["-1", "0"],
+        "computed_intersection": ["0", "0"],
+        "claimed_intersection": ["1/2", "0"],
+        "conflict_coordinate": "x",
+        "computed_conflict_value": "0",
+        "claimed_conflict_value": "1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-cyclic-geometry-v0/smt2/bad-diagonal-intersection-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact diagonal replay computes midpoint/intersection x-coordinate 0, while the malformed row claims 1/2; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
+      "id": "general-cyclic-geometry-lean-horizon",
+      "claim": "General cyclic quadrilateral theorems, Ptolemy, angle chasing, and circle-line correspondences require future Lean reconstruction.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Coordinate-free cyclic quadrilateral theorems including opposite-angle criteria, Ptolemy, inscribed-angle theorems, and circle-line correspondences",
+        "future_checker": "Lean module with no sorryAx dependencies plus exact coordinate certificate bridges for finite cyclic-configuration witnesses"
+      },
+      "notes": "The finite rows check one fixed rational cyclic quadrilateral; general cyclic geometry remains proof-assistant work."
+    }
+  ]
+}

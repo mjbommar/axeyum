@@ -13091,6 +13091,224 @@ def validate_finite_inversion_geometry(expected: dict[str, Any]) -> None:
     require_string("general inversion geometry future_checker", data.get("future_checker"))
 
 
+def validate_finite_cyclic_geometry(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    cyclic = checks["cyclic-quadrilateral-witness"]
+    if cyclic["expected_result"] != "sat":
+        fail("cyclic-quadrilateral-witness must expect sat")
+    values = single_witness_values(cyclic, witnesses)
+    labels = require_string_list("cyclic labels", values.get("labels"))
+    if labels != ["A", "B", "C", "D"]:
+        fail("cyclic labels must be A, B, C, D")
+    center = require_point2("cyclic center", values.get("center"))
+    radius_squared = require_fraction("cyclic radius_squared", values.get("radius_squared"))
+    if center != (Fraction(0), Fraction(0)):
+        fail("finite-cyclic-geometry currently expects an origin-centered circle")
+    if radius_squared <= 0:
+        fail("cyclic radius_squared must be positive")
+    raw_points = values.get("points")
+    if not isinstance(raw_points, list) or len(raw_points) != 4:
+        fail("cyclic points must contain four points")
+    points = [
+        require_point2(f"cyclic points[{index}]", point)
+        for index, point in enumerate(raw_points)
+    ]
+    point_radius_squared = require_fraction_vector(
+        "cyclic point_radius_squared",
+        values.get("point_radius_squared"),
+    )
+    require_vector_length("cyclic point_radius_squared", point_radius_squared, 4)
+    for index, point in enumerate(points):
+        if distance_squared2(center, point) != point_radius_squared[index]:
+            fail("cyclic point_radius_squared entry is incorrect")
+        if point_radius_squared[index] != radius_squared:
+            fail("cyclic-quadrilateral-witness points must lie on the same circle")
+
+    diagonals = checks["cyclic-diagonal-intersection-witness"]
+    if diagonals["expected_result"] != "sat":
+        fail("cyclic-diagonal-intersection-witness must expect sat")
+    if single_witness_values(diagonals, witnesses) != values:
+        fail("cyclic-diagonal-intersection-witness must cite the unit-circle-square witness")
+    ac_midpoint = require_point2(
+        "cyclic diagonal_ac_midpoint",
+        values.get("diagonal_ac_midpoint"),
+    )
+    bd_midpoint = require_point2(
+        "cyclic diagonal_bd_midpoint",
+        values.get("diagonal_bd_midpoint"),
+    )
+    diagonal_intersection = require_point2(
+        "cyclic diagonal_intersection",
+        values.get("diagonal_intersection"),
+    )
+    if midpoint2(points[0], points[2]) != ac_midpoint:
+        fail("cyclic diagonal_ac_midpoint is incorrect")
+    if midpoint2(points[1], points[3]) != bd_midpoint:
+        fail("cyclic diagonal_bd_midpoint is incorrect")
+    if ac_midpoint != diagonal_intersection or bd_midpoint != diagonal_intersection:
+        fail("cyclic diagonal midpoints must equal the listed intersection")
+    ac_direction = require_point2(
+        "cyclic diagonal_ac_direction",
+        values.get("diagonal_ac_direction"),
+    )
+    bd_direction = require_point2(
+        "cyclic diagonal_bd_direction",
+        values.get("diagonal_bd_direction"),
+    )
+    expected_ac_direction = (
+        points[2][0] - points[0][0],
+        points[2][1] - points[0][1],
+    )
+    expected_bd_direction = (
+        points[3][0] - points[1][0],
+        points[3][1] - points[1][1],
+    )
+    if ac_direction != expected_ac_direction:
+        fail("cyclic diagonal_ac_direction is incorrect")
+    if bd_direction != expected_bd_direction:
+        fail("cyclic diagonal_bd_direction is incorrect")
+    diagonal_dot = require_fraction("cyclic diagonal_dot", values.get("diagonal_dot"))
+    computed_diagonal_dot = (
+        ac_direction[0] * bd_direction[0]
+        + ac_direction[1] * bd_direction[1]
+    )
+    if computed_diagonal_dot != diagonal_dot:
+        fail("cyclic diagonal_dot is incorrect")
+    if diagonal_dot != 0:
+        fail("cyclic diagonals must be perpendicular in this witness")
+
+    angles = checks["cyclic-opposite-right-angles-witness"]
+    if angles["expected_result"] != "sat":
+        fail("cyclic-opposite-right-angles-witness must expect sat")
+    if single_witness_values(angles, witnesses) != values:
+        fail(
+            "cyclic-opposite-right-angles-witness must cite "
+            "the unit-circle-square witness"
+        )
+    raw_angle_b_vectors = values.get("angle_b_vectors")
+    if not isinstance(raw_angle_b_vectors, list) or len(raw_angle_b_vectors) != 2:
+        fail("cyclic angle_b_vectors must contain two vectors")
+    angle_b_vectors = [
+        require_point2(f"cyclic angle_b_vectors[{index}]", vector)
+        for index, vector in enumerate(raw_angle_b_vectors)
+    ]
+    expected_angle_b_vectors = [
+        (points[0][0] - points[1][0], points[0][1] - points[1][1]),
+        (points[2][0] - points[1][0], points[2][1] - points[1][1]),
+    ]
+    if angle_b_vectors != expected_angle_b_vectors:
+        fail("cyclic angle_b_vectors are incorrect")
+    angle_b_dot = require_fraction("cyclic angle_b_dot", values.get("angle_b_dot"))
+    computed_angle_b_dot = (
+        angle_b_vectors[0][0] * angle_b_vectors[1][0]
+        + angle_b_vectors[0][1] * angle_b_vectors[1][1]
+    )
+    if computed_angle_b_dot != angle_b_dot:
+        fail("cyclic angle_b_dot is incorrect")
+    if angle_b_dot != 0:
+        fail("cyclic angle at B must be right in this witness")
+
+    raw_angle_d_vectors = values.get("angle_d_vectors")
+    if not isinstance(raw_angle_d_vectors, list) or len(raw_angle_d_vectors) != 2:
+        fail("cyclic angle_d_vectors must contain two vectors")
+    angle_d_vectors = [
+        require_point2(f"cyclic angle_d_vectors[{index}]", vector)
+        for index, vector in enumerate(raw_angle_d_vectors)
+    ]
+    expected_angle_d_vectors = [
+        (points[0][0] - points[3][0], points[0][1] - points[3][1]),
+        (points[2][0] - points[3][0], points[2][1] - points[3][1]),
+    ]
+    if angle_d_vectors != expected_angle_d_vectors:
+        fail("cyclic angle_d_vectors are incorrect")
+    angle_d_dot = require_fraction("cyclic angle_d_dot", values.get("angle_d_dot"))
+    computed_angle_d_dot = (
+        angle_d_vectors[0][0] * angle_d_vectors[1][0]
+        + angle_d_vectors[0][1] * angle_d_vectors[1][1]
+    )
+    if computed_angle_d_dot != angle_d_dot:
+        fail("cyclic angle_d_dot is incorrect")
+    if angle_d_dot != 0:
+        fail("cyclic angle at D must be right in this witness")
+
+    bad_intersection = checks["bad-cyclic-diagonal-intersection-rejected"]
+    if (
+        bad_intersection["expected_result"] != "unsat"
+        or bad_intersection.get("proof_status") != "checked"
+    ):
+        fail("bad-cyclic-diagonal-intersection-rejected must be a checked unsat row")
+    data = bad_intersection.get("data", {})
+    diagonal_a = require_point2("bad cyclic diagonal_a", data.get("diagonal_a"))
+    diagonal_c = require_point2("bad cyclic diagonal_c", data.get("diagonal_c"))
+    computed_intersection = require_point2(
+        "bad cyclic computed_intersection",
+        data.get("computed_intersection"),
+    )
+    claimed_intersection = require_point2(
+        "bad cyclic claimed_intersection",
+        data.get("claimed_intersection"),
+    )
+    if midpoint2(diagonal_a, diagonal_c) != computed_intersection:
+        fail("bad-cyclic-diagonal-intersection-rejected computed intersection is incorrect")
+    if computed_intersection == claimed_intersection:
+        fail("bad-cyclic-diagonal-intersection-rejected must document a false claim")
+    conflict_coordinate = data.get("conflict_coordinate")
+    if conflict_coordinate not in {"x", "y"}:
+        fail("bad-cyclic-diagonal-intersection-rejected conflict_coordinate must be x or y")
+    coordinate_index = 0 if conflict_coordinate == "x" else 1
+    computed_conflict_value = require_fraction(
+        "bad cyclic computed_conflict_value",
+        data.get("computed_conflict_value"),
+    )
+    claimed_conflict_value = require_fraction(
+        "bad cyclic claimed_conflict_value",
+        data.get("claimed_conflict_value"),
+    )
+    if computed_intersection[coordinate_index] != computed_conflict_value:
+        fail("bad-cyclic-diagonal-intersection-rejected computed conflict value is incorrect")
+    if claimed_intersection[coordinate_index] != claimed_conflict_value:
+        fail("bad-cyclic-diagonal-intersection-rejected claimed conflict value is incorrect")
+    if computed_conflict_value == claimed_conflict_value:
+        fail("bad-cyclic-diagonal-intersection-rejected conflict values must differ")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad cyclic smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-cyclic-geometry-v0/smt2/"
+        "bad-diagonal-intersection-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail(
+            "bad-cyclic-diagonal-intersection-rejected smt2_artifact must "
+            "name the checked source artifact"
+        )
+    check_source("bad cyclic smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad cyclic farkas_regression", regression)
+    if (
+        "finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas"
+        not in regression
+    ):
+        fail("bad-cyclic-diagonal-intersection-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad cyclic certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-cyclic-diagonal-intersection-rejected certificate must document checked Farkas evidence")
+
+    horizon = checks["general-cyclic-geometry-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-cyclic-geometry-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-cyclic-geometry-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string(
+        "general cyclic geometry target_theorem_shape",
+        data.get("target_theorem_shape"),
+    )
+    require_string("general cyclic geometry future_checker", data.get("future_checker"))
+
+
 def validate_incidence_geometry(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -18329,6 +18547,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_circle_geometry(expected)
     if metadata["id"] == "finite-inversion-geometry-v0":
         validate_finite_inversion_geometry(expected)
+    if metadata["id"] == "finite-cyclic-geometry-v0":
+        validate_finite_cyclic_geometry(expected)
     if metadata["id"] == "finite-compactness-v0":
         validate_finite_compactness(expected)
     if metadata["id"] == "finite-connectedness-v0":
