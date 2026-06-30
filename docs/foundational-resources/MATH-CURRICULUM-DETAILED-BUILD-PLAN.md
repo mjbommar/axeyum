@@ -540,6 +540,13 @@ Pick one row per commit unless the change is purely navigational.
     diagonal-intersection claim, a focused learner page, and concept links
     under reals, polynomials, linear algebra, and the shared coordinate-geometry
     bridge.
+62. Landed: add
+    [`matrix-computation-index.md`](../learn/math/matrix-computation-index.md)
+    as the route-oriented learner index for LU, rank/nullity, residual,
+    projection, eigenpair, characteristic-polynomial, finite random-matrix,
+    chain-complex, operator, module, and tensor rows. The index groups existing
+    validated packs by replay, QF_LRA/Farkas, QF_UF/Alethe, QF_LIA/Diophantine,
+    Lean-horizon, and numerical-honesty boundaries.
 
 ## Validation Checklist
 

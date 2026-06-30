@@ -324,9 +324,9 @@ Use one row per commit unless the change is purely navigational.
 3. Landed: add the next distinct geometry resource,
    `finite-cyclic-geometry-v0`, as cyclic/angle pressure rather than another
    coordinate-distance variant.
-4. Add a matrix-computation index page that groups LU, rank/nullity, residual,
-   eigenpair, characteristic-polynomial, random-matrix, projection, and
-   tensor/module rows by proof route.
+4. Landed: add a matrix-computation index page that groups LU, rank/nullity,
+   residual, eigenpair, characteristic-polynomial, random-matrix, projection,
+   chain-complex, operator, and tensor/module rows by proof route.
 5. Add a theorem-horizon map for analysis/calculus: completeness, IVT/MVT/FTC,
    compactness, convergence, root-finding convergence, optimization convergence,
    and measure convergence.

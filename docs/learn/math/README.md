@@ -203,6 +203,10 @@ validated pack data and the repo-root command that replays it.
   coefficient extraction, Cauchy product convolution, a bounded Fibonacci
   generating-function identity, bad-product rejection, and the general
   recurrence/asymptotic Lean horizon.
+- [Matrix Computation Index](matrix-computation-index.md): groups LU,
+  rank/nullity, residual, projection, eigenpair, characteristic-polynomial,
+  random-matrix, module, tensor, chain-complex, and operator rows by proof
+  route and theorem horizon.
 - [Matrix Invariants](matrix-invariants-end-to-end.md): follows exact trace,
   determinant, characteristic-polynomial, root, Cayley-Hamilton, Gershgorin,
   and a QF_LRA/Farkas bad-characteristic-polynomial certificate for a fixed

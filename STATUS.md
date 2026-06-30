@@ -205,6 +205,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Matrix-computation learner index landed.**
+  [`matrix-computation-index.md`](docs/learn/math/matrix-computation-index.md)
+  now groups LU, rank/nullity, residual, projection, eigenpair,
+  characteristic-polynomial, finite random-matrix, chain-complex, operator,
+  module, and tensor rows by proof route. The atlas generator now cites this
+  page from the relevant matrix bridge rows, and generated learner dashboards
+  will show it as a focused matrix-resource entry without changing the 102-pack
+  resource baseline.
+
 - **Finite cyclic-geometry resource landed.**
   [`finite-cyclic-geometry-v0`](artifacts/examples/math/finite-cyclic-geometry-v0/README.md)
   and

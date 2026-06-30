@@ -222,6 +222,11 @@ The first QF_BV bit-blast certificate anatomy learner page now follows
 `finite-fields-v0` from a fixed-width composite-modulus no-inverse row through
 source SMT-LIB, generated DIMACS/DRAT evidence, and same-artifact truncated-DRAT
 rejection.
+The matrix-computation learner index now groups LU, rank/nullity, residual,
+projection, eigenpair, characteristic-polynomial, finite random-matrix,
+chain-complex, operator, module, and tensor rows by replay, QF_LRA/Farkas,
+QF_UF/Alethe, QF_LIA/Diophantine, Lean-horizon, and numerical-honesty
+boundaries.
 Those four certificate anatomy stories now also have first-class bridge rows in
 the foundational concept atlas, making the active proof-object routes queryable
 through shared R1 vocabulary.

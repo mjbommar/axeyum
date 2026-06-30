@@ -386,7 +386,12 @@ Build sequence:
     `bad-cyclic-diagonal-intersection-rejected` to
     `artifacts/examples/math/finite-cyclic-geometry-v0/smt2/bad-diagonal-intersection-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
-41. Revisit crate/repo boundaries only after three real consumers or repeated
+41. [`matrix-computation-index.md`](../learn/math/matrix-computation-index.md)
+    now groups LU, rank/nullity, residual, projection, eigenpair,
+    characteristic-polynomial, finite random-matrix, chain-complex, operator,
+    module, and tensor rows by replay, QF_LRA/Farkas, QF_UF/Alethe,
+    QF_LIA/Diophantine, Lean-horizon, and numerical-honesty boundary.
+42. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

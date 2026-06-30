@@ -1480,7 +1480,14 @@ Pick one item per commit unless the change is purely navigational.
     checked QF_LRA/Farkas rejection of a false diagonal-intersection claim, and
     a cyclic-geometry Lean horizon. The learner path now includes a focused
     finite cyclic-geometry end-to-end page.
-73. Continue proof-route promotions or consumer-query examples; revisit the
+73. Landed: add
+    [`matrix-computation-index.md`](../learn/math/matrix-computation-index.md).
+    The new learner index groups LU, rank/nullity, residual, projection,
+    eigenpair, characteristic-polynomial, finite random-matrix, chain-complex,
+    operator, module, and tensor rows by proof route, with explicit
+    finite-replay, QF_LRA/Farkas, QF_UF/Alethe, QF_LIA/Diophantine,
+    Lean-horizon, and numerical-honesty boundaries.
+74. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

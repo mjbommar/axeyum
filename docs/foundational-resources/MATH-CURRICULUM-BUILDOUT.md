@@ -1369,7 +1369,8 @@ Progress: items 1-10, Phase M3 `proof-methods-patterns-v0`, `finite-sets-v0`,
 `multivariable-calculus-rational-v0`, Phase M4 graph-resource
 group and items 4-31, and
 the Phase M5 learner-path scaffold plus first encode/check walkthrough layer
-have landed for the math seed. End-to-end lessons now exist for propositional
+and the route-oriented matrix-computation index have landed for the math seed.
+End-to-end lessons now exist for propositional
 logic basics, finite predicate logic, proof by refutation, proof method
 patterns, induction obligations, induction patterns, graph coloring, graph
 reachability, traversal, search runtime, matching, finite DAG d-separation,
@@ -2004,6 +2005,12 @@ matrix witnesses stay visible through the public JSON boundary without
 promoting duality, KKT sufficiency, SDP strong duality, gradient-descent,
 line-search, active-set method theory, Wolfe line-search, projected-gradient
 convergence, proximal-gradient convergence, or convergence-theorem claims.
+The learner layer now also has
+[`matrix-computation-index.md`](../learn/math/matrix-computation-index.md),
+which groups LU, rank/nullity, residual, projection, eigenpair,
+characteristic-polynomial, finite random-matrix, chain-complex, operator,
+module, and tensor rows by replay, QF_LRA/Farkas, QF_UF/Alethe,
+QF_LIA/Diophantine, Lean-horizon, and numerical-honesty boundaries.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

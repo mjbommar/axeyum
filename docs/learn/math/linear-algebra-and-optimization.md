@@ -46,6 +46,10 @@ Example packs:
 - [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
 - [finite-chebyshev-systems-v0](../../../artifacts/examples/math/finite-chebyshev-systems-v0/)
 
+Companion index:
+
+- [Matrix Computation Index](matrix-computation-index.md)
+
 ## What Axeyum Checks
 
 The linear path uses exact rational matrices. It replays `A*x = b`, checks
@@ -591,6 +595,7 @@ finite rational convexity replay, matrix-invariant replay, multivariable
 derivative/Jacobian replay, exact rational inner-product replay,
 finite-field vector-space replay, finite dual-space replay, and finite module
 replay, read
+[Matrix Computation Index](matrix-computation-index.md),
 [End To End: Linear System And LP Replay](linear-system-end-to-end.md),
 [End To End: Linear Optimization](linear-optimization-end-to-end.md),
 [End To End: Farkas Certificate Anatomy](farkas-certificate-anatomy-end-to-end.md),
