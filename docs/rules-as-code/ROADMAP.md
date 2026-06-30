@@ -53,6 +53,11 @@ metadata shape, citation file references, expected check records, concrete
 witness replay, and finite-sample consistency/coverage/monotonicity. Solver
 proof integration is still an explicit proof gap.
 
+The cross-resource reuse map is
+[Rules/Law Crosswalk For Foundational Resources](../foundational-resources/RULES-LAW-CROSSWALK.md).
+Use it to choose math-resource patterns, proof routes, and trust boundaries
+before adding new rule packs.
+
 ## Audience
 
 | Audience | Need |

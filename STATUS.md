@@ -646,6 +646,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `PLAN.md`, the foundational-resources index, mdBook summary, sibling-project
   notes, roadmap, buildout plan, implementation matrix, and execution plan.
 
+- **Rules/law crosswalk landed.** Added
+  [`RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md)
+  as the concrete transfer map from math resources into rule and policy
+  checks. It maps finite predicates, sets/relations, integer thresholds,
+  threshold cliffs, graph reachability, precedence/lattices, temporal versions,
+  implementation equivalence, and proof routes to current packs and expected
+  rule-check shapes. `benefit-eligibility-v0` is now explicitly tied to
+  finite-sample replay today and Bool/QF_LIA proof-harness upgrades next. The
+  crosswalk is linked from the foundational-resource index, mdBook summary,
+  rules-as-code README/roadmap, buildout roadmap, execution plan, and
+  implementation matrix.
+
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
   is now generated with twenty-two bridge rows. The first proof-methodology rows are

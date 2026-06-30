@@ -917,9 +917,15 @@ separate logic story:
 | probability/statistics | audit sampling, risk scoring, statistical evidence |
 | proof routes | consistency, coverage, equivalence, monotonicity checks |
 
+Detailed mapping:
+[RULES-LAW-CROSSWALK.md](RULES-LAW-CROSSWALK.md) records the reusable check
+shapes, source math packs, Axeyum fragments, proof routes, and the current
+`benefit-eligibility-v0` mapping.
+
 Next work:
 
-- Add a rules/law crosswalk doc after the math resource roadmap stabilizes.
+- Use the crosswalk to add source-linked Bool/QF_LIA fixtures to
+  `benefit-eligibility-v0`.
 - Reuse pack schema ideas before creating law-specific schema fields.
 - Keep citations and source provenance mandatory for legal/policy examples.
 
@@ -957,8 +963,9 @@ Pick one item per commit unless the change is purely navigational.
 5. Landed: promote `finite-ideals-v0` for a quotient-ring representative
    congruence row that exercises equality of induced quotient addition beyond
    the existing bad-ideal closure family row.
-6. Add a rules/law crosswalk doc that maps finite predicates, arithmetic
-   thresholds, graph reachability, and proof routes to policy/rule checks.
+6. Landed: add a rules/law crosswalk doc that maps finite predicates,
+   arithmetic thresholds, graph reachability, precedence, and proof routes to
+   policy/rule checks.
 7. Add a consumer-query recipe for "find all packs for a field and route".
 8. Add negative validator fixtures for one resource schema once the schema
    shape stops changing.

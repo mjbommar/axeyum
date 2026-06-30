@@ -58,7 +58,7 @@ and graduation criteria.
 |---|---|---|---|
 | SMT Fragment Atlas | [docs/atlas/](atlas/README.md) | [Atlas roadmap](atlas/ROADMAP.md) | [smt-fragments.json](../artifacts/ontology/smt-fragments.json) plus [schema](../artifacts/ontology/smt-fragments.schema.json) and [validator](../scripts/validate-smt-fragment-atlas.py). |
 | Proof Certificate Cookbook | [docs/proof-cookbook/](proof-cookbook/README.md) | [Cookbook roadmap](proof-cookbook/ROADMAP.md) | Route-by-route recipes for tiny proof/evidence examples. |
-| Rules-as-Code Verification Lab | [docs/rules-as-code/](rules-as-code/README.md) | [Rules-as-code roadmap](rules-as-code/ROADMAP.md) | [Benefit Eligibility V0](rules-as-code/examples/benefit-eligibility-v0/README.md) with citations, checks, replayed witnesses, schema, validator, and proof gaps. |
+| Rules-as-Code Verification Lab | [docs/rules-as-code/](rules-as-code/README.md) | [Rules-as-code roadmap](rules-as-code/ROADMAP.md) plus [rules/law crosswalk](foundational-resources/RULES-LAW-CROSSWALK.md) | [Benefit Eligibility V0](rules-as-code/examples/benefit-eligibility-v0/README.md) with citations, checks, replayed witnesses, schema, validator, proof gaps, and math-resource reuse map. |
 
 ## Broader Foundational Resource Expansion
 
@@ -222,6 +222,8 @@ incubators:
 3. **Rules-as-Code Verification Lab**
    - Folder: [docs/rules-as-code/](rules-as-code/README.md).
    - Plan: [Rules-as-code roadmap](rules-as-code/ROADMAP.md).
+   - Crosswalk:
+     [Rules/Law Crosswalk](foundational-resources/RULES-LAW-CROSSWALK.md).
    - First artifact:
      [Benefit Eligibility V0](rules-as-code/examples/benefit-eligibility-v0/README.md)
      plus [rules-core schema](../artifacts/ontology/rules-core.schema.json)

@@ -94,6 +94,10 @@ The detailed operating roadmap for building the math-curriculum resource system
 across ontology rows, example packs, learner pages, proof routes, solver reuse,
 rules/law transfer, consumer boundaries, and eventual library splits is
 [`docs/foundational-resources/RESOURCE-BUILDOUT-ROADMAP.md`](docs/foundational-resources/RESOURCE-BUILDOUT-ROADMAP.md).
+The rules/law transfer crosswalk that maps finite predicates, arithmetic
+thresholds, graph reachability, precedence, and proof routes into concrete
+policy/rule checks is
+[`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-06-29): the first QF_UF/Alethe proof
 upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, and finite monoids.
@@ -152,6 +156,10 @@ JSON contract has landed in `scripts/query-foundational-resources.py` and
 `docs/foundational-resources/CONSUMER-QUERIES.md`, covering summary counts,
 pack discovery, checked-row mining, solver-reuse rows, and atlas concept
 lookup without importing validators or generators.
+The rules/law transfer lane now has a crosswalk from math resources to concrete
+policy/rule checks, with `benefit-eligibility-v0` mapped to finite predicates,
+Bool/QF_LIA thresholds, temporal versioning, replayed witnesses, and proof-route
+upgrade targets.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, and finite tensor products now add
 secondary equality-heavy promotions for bad antisymmetry, bad nonbijection,

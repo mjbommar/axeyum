@@ -430,8 +430,11 @@ Next buildout:
    `finite-ideals-v0` now adds
    `artifacts/examples/math/finite-ideals-v0/smt2/quotient-ring-representative-congruence-conflict.smt2`,
    checked from `crates/axeyum-solver/tests/math_resource_uf_routes.rs`.
-11. Add a rules/law reasoning resource plan that explicitly reuses finite
-    predicates, graph reachability, optimization, and proof-route vocabulary.
+11. Landed: add
+    [RULES-LAW-CROSSWALK.md](RULES-LAW-CROSSWALK.md), a rules/law reasoning
+    resource plan that explicitly reuses finite predicates, arithmetic
+    thresholds, graph reachability, precedence, optimization, and proof-route
+    vocabulary.
 12. Add generated typed-consumer sketches only after at least one downstream
     user needs them.
 13. Revisit the library boundary decision once consumers or repeated encoders

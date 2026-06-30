@@ -37,6 +37,11 @@ The first example pack is
 
 The detailed implementation plan lives in [ROADMAP.md](ROADMAP.md).
 
+The math-resource reuse plan lives in
+[Rules/Law Crosswalk For Foundational Resources](../foundational-resources/RULES-LAW-CROSSWALK.md).
+It maps finite predicates, arithmetic thresholds, graph reachability,
+precedence, and proof routes to concrete policy/rule checks.
+
 ## First Example Theme
 
 Start with a small eligibility rule, not a full statute:
