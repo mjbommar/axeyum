@@ -1,0 +1,6 @@
+c logic-basics-v0 tiny-cnf-refutation
+c Clauses encode (p) and (!p or q) and (!q), with p=1 and q=2.
+p cnf 2 3
+1 0
+-1 2 0
+-2 0

@@ -7176,6 +7176,35 @@ def validate_logic_basics(expected: dict[str, Any]) -> None:
     expected_clauses = [["p"], ["!p", "q"], ["!q"]]
     if clauses != expected_clauses:
         fail("tiny-cnf-refutation clauses must match the documented CNF")
+    cnf_artifact = data.get("cnf_artifact")
+    require_string("tiny-cnf-refutation cnf_artifact", cnf_artifact)
+    check_source("tiny-cnf-refutation cnf_artifact", cnf_artifact)
+    dimacs_path = ROOT / cnf_artifact
+    dimacs_header = None
+    dimacs_clauses: list[list[str]] = []
+    for raw_line in dimacs_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("c"):
+            continue
+        if line.startswith("p "):
+            dimacs_header = line
+            continue
+        parts = line.split()
+        if not parts or parts[-1] != "0":
+            fail("tiny-cnf-refutation DIMACS clauses must end with 0")
+        dimacs_clauses.append(parts[:-1])
+    if dimacs_header != "p cnf 2 3":
+        fail("tiny-cnf-refutation DIMACS header must be p cnf 2 3")
+    if dimacs_clauses != [["1"], ["-1", "2"], ["-2"]]:
+        fail("tiny-cnf-refutation DIMACS clauses do not match the documented CNF")
+    proof_regression = data.get("proof_regression")
+    require_string("tiny-cnf-refutation proof_regression", proof_regression)
+    if "math_resource_boolean_routes.rs::logic_basics_tiny_cnf_refutation" not in proof_regression:
+        fail("tiny-cnf-refutation proof_regression must name the Boolean resource test")
+    certificate = data.get("certificate")
+    require_string("tiny-cnf-refutation certificate", certificate)
+    if "DRAT" not in certificate or "LRAT" not in certificate or "independently" not in certificate:
+        fail("tiny-cnf-refutation certificate must document DRAT/LRAT independent checking")
     for assignment in boolean_assignments(variables):
         if cnf_satisfied(clauses, assignment):
             fail("tiny-cnf-refutation found a satisfying assignment")

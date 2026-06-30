@@ -18,6 +18,8 @@ const CONTRADICTION_REFUTATION_CNF: &str = include_str!(
 const FINITE_SETS_DISTRIBUTIVE_COUNTEREXAMPLE_CNF: &str = include_str!(
     "../../../artifacts/examples/math/finite-sets-v0/cnf/distributive-law-counterexample.cnf"
 );
+const LOGIC_BASICS_TINY_CNF_REFUTATION: &str =
+    include_str!("../../../artifacts/examples/math/logic-basics-v0/cnf/tiny-cnf-refutation.cnf");
 
 fn assert_unsat_resource_cnf_checks(
     label: &str,
@@ -77,5 +79,15 @@ fn finite_sets_distributive_counterexample_emits_checked_drat_and_lrat() {
         FINITE_SETS_DISTRIBUTIVE_COUNTEREXAMPLE_CNF,
         5,
         13,
+    );
+}
+
+#[test]
+fn logic_basics_tiny_cnf_refutation_emits_checked_drat_and_lrat() {
+    assert_unsat_resource_cnf_checks(
+        "logic-basics-v0 tiny-cnf-refutation",
+        LOGIC_BASICS_TINY_CNF_REFUTATION,
+        2,
+        3,
     );
 }

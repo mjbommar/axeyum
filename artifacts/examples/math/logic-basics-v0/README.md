@@ -14,8 +14,10 @@ The examples are exact finite Boolean artifacts:
 - reject a tiny unsatisfiable CNF `(p) and (not p or q) and (not q)`.
 
 These checks use exhaustive truth-table enumeration, not an emitted SAT proof.
-The graduation route is deterministic CNF emission plus checked DRAT/LRAT
-evidence for UNSAT rows.
+The `tiny-cnf-refutation` row now also has a deterministic DIMACS artifact and
+an in-tree CNF regression that emits DRAT, elaborates to LRAT, and checks both
+proof objects. The other rows remain finite replay examples until they add
+distinct Boolean regression pressure.
 
 ## Concepts
 
@@ -27,7 +29,9 @@ evidence for UNSAT rows.
 The validator evaluates the original Boolean formulas under all assignments for
 the named variables. A SAT row is accepted only after replaying the witness; an
 UNSAT row is accepted only after exhaustive enumeration finds no satisfying or
-counterexample assignment.
+counterexample assignment. The promoted CNF row additionally exercises the
+untrusted proof-emission path while accepting the result only after the small
+DRAT/LRAT checkers recheck the refutation.
 
 Validation:
 

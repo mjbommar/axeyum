@@ -111,10 +111,13 @@ The generated coverage, field, proof-gap, and learner/proof-upgrade dashboards
 now expose conservative R0-R6 gate and next-gate columns, making R4-to-R5
 solver-reuse candidates visible without hand-maintained scans.
 The first structured solver-reuse candidate batch is also tagged in pack
-metadata for Boolean basics, finite cardinality, graph reachability/matching/
-cuts/d-separation/search-runtime, integer LIA, bounded natural arithmetic, and
-bounded number theory; these remain R4 until promoted to actual regression or
-fuzz artifacts with pack back-links.
+metadata for finite cardinality, graph reachability/matching/cuts/d-separation/
+search-runtime, integer LIA, bounded natural arithmetic, and bounded number
+theory; these remain R4 until promoted to actual regression or fuzz artifacts
+with pack back-links. `logic-basics-v0` is the first promoted pack from that
+batch: its `tiny-cnf-refutation` row now has a source-linked DIMACS artifact and
+the Boolean `math_resource_boolean_routes` regression checks emitted DRAT and
+LRAT proof objects.
 The first consumer-facing query layer over the committed foundational-resource
 JSON contract has landed in `scripts/query-foundational-resources.py` and
 `docs/foundational-resources/CONSUMER-QUERIES.md`, covering summary counts,

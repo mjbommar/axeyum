@@ -13,4 +13,6 @@ The validator checks:
   `(p) and (not p or q) and (not q)`.
 
 The validator is a small trusted replay checker for these finite artifacts. It
-does not yet emit an Axeyum CNF proof object.
+does not emit proof objects itself. The promoted `tiny-cnf-refutation` row is
+also carried by a source-linked DIMACS artifact that the CNF regression uses to
+exercise DRAT emission, LRAT elaboration, and independent proof checking.

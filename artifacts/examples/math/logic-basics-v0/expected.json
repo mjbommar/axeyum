@@ -64,9 +64,12 @@
       "proof_status": "checked",
       "data": {
         "variables": ["p", "q"],
-        "clauses": [["p"], ["!p", "q"], ["!q"]]
+        "clauses": [["p"], ["!p", "q"], ["!q"]],
+        "cnf_artifact": "artifacts/examples/math/logic-basics-v0/cnf/tiny-cnf-refutation.cnf",
+        "proof_regression": "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs::logic_basics_tiny_cnf_refutation_emits_checked_drat_and_lrat",
+        "certificate": "The regression parses the source-linked DIMACS artifact, emits a DRAT proof, elaborates it to LRAT, and independently checks both proof objects against the CNF."
       },
-      "notes": "The validator enumerates all four assignments and finds no satisfying CNF row."
+      "notes": "The validator enumerates all four assignments and finds no satisfying CNF row; the cargo regression checks the emitted DRAT/LRAT proof route for the same DIMACS artifact."
     }
   ]
 }

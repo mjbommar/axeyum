@@ -19,7 +19,7 @@ Generated from the current math resource queue:
 - math example packs: 84
 - learner-linked packs: 84 focused links
 - packs with non-checked proof rows: 73
-- non-checked proof rows: 223
+- non-checked proof rows: 218
 
 Candidate route totals:
 
@@ -28,7 +28,7 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 3 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 5 | Integer equalities, counts, modular constraints, and rank obstructions. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 22 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 23 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 13 | Equality-heavy finite structures and congruence conflicts. |
 | [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 54 | General theorem statements that remain outside bounded SMT replay. |
 
@@ -76,6 +76,9 @@ First targets:
   rejection)
 - [proof-methods-patterns-v0](../../artifacts/examples/math/proof-methods-patterns-v0/)
   (DIMACS-backed DRAT/LRAT regression landed for contradiction/refutation)
+- [logic-basics-v0](../../artifacts/examples/math/logic-basics-v0/)
+  (solver-reuse promotion landed for `tiny-cnf-refutation`: source-linked
+  DIMACS artifact, DRAT emission, LRAT elaboration, and independent checks)
 
 Expected artifact:
 
@@ -92,6 +95,7 @@ cargo test -p axeyum-cnf lrat
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sets-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-patterns-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/logic-basics-v0
 ./scripts/check-foundational-resources.sh
 ```
 
