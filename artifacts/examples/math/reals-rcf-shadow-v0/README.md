@@ -23,7 +23,8 @@ horizons.
 - A positive product witness satisfies a nonlinear real constraint.
 - A quadratic polynomial can have an exact rational real root.
 - `x^2 < 0` has no real solution.
-- A quadratic with negative discriminant has no real root.
+- A quadratic with negative discriminant has no real root, with a QF_LRA/Farkas
+  artifact checking the final nonnegative-discriminant contradiction.
 - The real completeness axiom and epsilon-delta analysis remain Lean-horizon.
 
 ## Validation
@@ -37,7 +38,9 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/re
 The validator uses exact `Fraction` arithmetic. It replays witnesses against
 the original formulas, recognizes the fixed square-nonnegative row, checks the
 quadratic discriminant for the negative-discriminant row, and keeps the
-second-order real-completeness row marked `lean-horizon`.
+second-order real-completeness row marked `lean-horizon`. The promoted solver
+row checks only the final linear discriminant conflict after exact replay has
+computed `D = -4`.
 
 ## Limitations
 

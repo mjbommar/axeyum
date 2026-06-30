@@ -87,6 +87,21 @@
       "notes": "The validator computes b^2 - 4ac and checks it is negative, so the quadratic has no real root."
     },
     {
+      "id": "negative-discriminant-farkas-conflict",
+      "claim": "The fixed quadratic x^2 + 1 has a real root and therefore a nonnegative discriminant.",
+      "expected_result": "unsat",
+      "validation": "real_quadratic_negative_discriminant_farkas_conflict",
+      "proof_status": "checked",
+      "data": {
+        "polynomial": ["1", "0", "1"],
+        "discriminant": "-4",
+        "required_nonnegative_discriminant": true,
+        "smt2_artifact": "artifacts/examples/math/reals-rcf-shadow-v0/smt2/negative-discriminant-farkas-conflict.smt2",
+        "lra_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes reals_rcf_shadow_negative_discriminant_artifact_emits_checked_farkas"
+      },
+      "notes": "After exact replay computes the discriminant -4 for x^2 + 1, Axeyum checks the final nonnegative-discriminant contradiction through QF_LRA/Farkas evidence."
+    },
+    {
       "id": "real-completeness-lean-horizon",
       "claim": "The real least-upper-bound property and epsilon-delta analysis require future Lean resources.",
       "expected_result": "not-run",

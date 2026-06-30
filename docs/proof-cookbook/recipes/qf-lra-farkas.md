@@ -116,6 +116,9 @@ Canonical examples:
   and [Metric Continuity](../../../artifacts/examples/math/metric-continuity-v0/)
   use bounded exact-rational epsilon-delta shadows, not general continuity
   theorems.
+- [Real Algebra RCF Shadow](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
+  uses a fixed negative-discriminant row after exact polynomial replay computes
+  the discriminant of `x^2 + 1`; broader SOS/CAD/RCF proof remains a horizon.
 - [Rational Polynomial Factorization](../../../artifacts/examples/math/polynomial-factorization-rational-v0/)
   uses a fixed negative-discriminant row after exact polynomial replay computes
   the discriminant of `x^2 + 1`.

@@ -263,9 +263,10 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **77 promoted solver-reuse
-packs**, **6 non-benchmark-horizon packs**, and **1 unclassified pack** after
-the latest polynomial-factorization discriminant QF_LRA/Farkas promotion,
+the foundational resource dashboards now report **78 promoted solver-reuse
+packs**, **6 non-benchmark-horizon packs**, and **0 unclassified packs** after
+the latest real-algebra RCF-shadow negative-discriminant QF_LRA/Farkas
+promotion, polynomial-factorization discriminant QF_LRA/Farkas promotion,
 cardinality-principles overlap-additivity count QF_LIA/Diophantine
 promotion,
 induction-obligations bounded bad-step count QF_LIA arithmetic-DPLL promotion,

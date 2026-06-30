@@ -42,5 +42,15 @@ exists x. x^2 + 1 = 0
 discriminant = -4
 ```
 
+The promoted solver row preserves that boundary:
+
+```text
+discriminant + 4 = 0
+discriminant >= 0
+```
+
+QF_LRA/Farkas checks the final linear contradiction. It does not replace an
+SOS, CAD, or general real-closed-field proof route.
+
 The final row records that completeness and general epsilon-delta reasoning are
 not consequences of these finite algebraic checks.

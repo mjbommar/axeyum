@@ -259,6 +259,10 @@ First targets:
 - [polynomial-factorization-rational-v0](../../artifacts/examples/math/polynomial-factorization-rational-v0/)
   (resource-backed Farkas regression landed for the fixed irreducible-quadratic
   discriminant conflict after exact replay computes `D = -4`)
+- [reals-rcf-shadow-v0](../../artifacts/examples/math/reals-rcf-shadow-v0/)
+  (resource-backed Farkas regression landed for the fixed
+  negative-discriminant no-real-root conflict after exact polynomial replay
+  computes `D = -4`)
 
 Secondary targets:
 
@@ -281,6 +285,10 @@ Secondary targets:
   check the contradictory martingale equality. Polynomial factorization now
   contributes the algebra version of the same pattern: replay the discriminant
   exactly, then let Farkas check the final nonnegative-discriminant conflict.
+  The RCF-shadow pack now contributes the real-algebra version of that same
+  boundary: replay the fixed quadratic discriminant, then let Farkas check the
+  nonnegative-discriminant contradiction while keeping general SOS/CAD/RCF
+  proof as a horizon.
 
 Expected artifact:
 
@@ -307,6 +315,9 @@ Graduation:
 - polynomial-factorization rows state whether the checked object is exact
   coefficient/division/GCD replay, a QF_LRA discriminant conflict, or general
   factorization theory in the Lean-horizon lane;
+- RCF-shadow rows state whether the checked object is exact rational replay, a
+  fixed algebraic certificate shape, a QF_LRA discriminant conflict, or a
+  broader SOS/CAD/RCF horizon;
 - dashboards show fewer QF_LRA/Farkas replay-only rows.
 
 ### 3. QF_UF/Alethe

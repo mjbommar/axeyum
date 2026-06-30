@@ -37,13 +37,13 @@ The committed resource query currently reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math packs.
-- 415 expected checks.
-- 197 checked proof/evidence rows.
+- 416 expected checks.
+- 198 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 77 promoted solver-reuse packs.
+- 78 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 1 unclassified solver-reuse pack.
+- 0 unclassified solver-reuse packs.
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
 allowed only when they fill a clear curriculum/field hole that cannot be served
@@ -89,11 +89,7 @@ good R2/R3 lesson while still not being a theorem.
 Goal: every current non-template pack has a deliberate R5 disposition:
 `promoted`, `non-benchmark-horizon`, or a clear reason to remain unclassified.
 
-Current unclassified queue:
-
-| Pack | Practical Next Step |
-|---|---|
-| `reals-rcf-shadow-v0` | keep RCF/NRA shadows explicit; promote only when the certificate route is ready |
+Current unclassified queue: empty.
 
 Recently classified as explicit non-benchmark-horizon rows:
 
@@ -237,7 +233,7 @@ Exit criteria:
 | `naturals` | maintain | keep bounded prefix and LIA/BV width limits explicit |
 | `integers` | maintain | group common Diophantine obstructions |
 | `rationals` | maintain | exact rational order and Farkas conflicts are already the model |
-| `reals` | deepen | distinguish RCF shadows, LRA bounded deltas, and completeness horizon |
+| `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row; keep completeness and broad CAD/SOS/RCF claims horizon |
 | `complex` | deepen | complex-plane bad unit-square real-part row now has a source-linked QF_LRA/Farkas regression; keep analytic theorems Lean-horizon |
 | `divisibility-and-euclid` | maintain | use gcd/Bezout rows as arithmetic-certificate examples |
 | `modular-arithmetic` | maintain | keep LIA nonunit and BV fixed-width residue routes distinct |
@@ -284,19 +280,22 @@ Pick one row per commit unless the change is purely navigational.
 13. Landed: promote `polynomial-factorization-rational-v0` through a
    source-linked irreducible-quadratic discriminant QF_LRA/Farkas artifact and
    route regression.
-14. Promote or classify the remaining unclassified packs, starting with compact
+14. Landed: promote `reals-rcf-shadow-v0` through a source-linked
+   negative-discriminant QF_LRA/Farkas artifact and route regression, closing
+   the current unclassified solver-reuse queue.
+15. Promote or classify any newly added unclassified packs, starting with compact
    source-level conflicts where the route is clear.
-15. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
+16. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
    CNF stays source-level readable.
-16. Upgrade finite-measure from non-benchmark with a finite-additivity or
+17. Upgrade finite-measure from non-benchmark with a finite-additivity or
    complement conflict through QF_LRA/Farkas.
-17. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
+18. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
    conflict through QF_LRA/Farkas.
-18. Add a proof-object learner page that follows one resource from source claim
+19. Add a proof-object learner page that follows one resource from source claim
    to emitted proof and corrupted-proof rejection.
-19. Add a generated or query-based audit for unclassified solver-reuse packs if
+20. Add a generated or query-based audit for unclassified solver-reuse packs if
    manual tracking starts to drift.
-20. Revisit the library boundary after unclassified packs are resolved and at
+21. Revisit the library boundary after unclassified packs are resolved and at
    least one non-doc consumer repeats resource parsing logic.
 
 ## Validation Checklist

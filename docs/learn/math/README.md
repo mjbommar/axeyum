@@ -132,7 +132,8 @@ validated pack data and the repo-root command that replays it.
   the continuity Lean horizon.
 - [Real Algebra RCF Shadow](reals-rcf-shadow-end-to-end.md): follows ordered
   field and nonlinear product witnesses, a quadratic root replay, square
-  nonnegativity, negative-discriminant rejection, and the completeness horizon.
+  nonnegativity, negative-discriminant rejection with QF_LRA/Farkas evidence,
+  and the completeness horizon.
 - [Polynomial Identities](polynomial-identities-end-to-end.md): follows exact
   coefficient multiplication, factor-theorem root replay, quotient checking,
   and checked false-root rejection through QF_LIA/Diophantine evidence.

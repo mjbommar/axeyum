@@ -40,13 +40,13 @@ The current committed data boundary reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math example packs.
-- 415 expected checks.
-- 197 checked proof/evidence rows.
+- 416 expected checks.
+- 198 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 77 promoted solver-reuse packs.
+- 78 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 1 unclassified solver-reuse pack.
+- 0 unclassified solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -1139,7 +1139,12 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/polynomial-factorization-rational-v0/smt2/irreducible-quadratic-discriminant-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes polynomial_factorization_irreducible_quadratic_discriminant_artifact_emits_checked_farkas`.
-34. Continue proof-route promotions or consumer-query examples; revisit the
+34. Landed: promote `reals-rcf-shadow-v0` through a source-linked QF_LRA/Farkas
+    regression for `negative-discriminant-farkas-conflict`. The artifact
+    `artifacts/examples/math/reals-rcf-shadow-v0/smt2/negative-discriminant-farkas-conflict.smt2`
+    is checked by
+    `cargo test -p axeyum-solver --test math_resource_lra_routes reals_rcf_shadow_negative_discriminant_artifact_emits_checked_farkas`.
+35. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

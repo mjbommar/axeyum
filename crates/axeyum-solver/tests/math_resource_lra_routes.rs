@@ -28,6 +28,9 @@ const CALCULUS_ALGEBRAIC_FALSE_DERIVATIVE: &str = include_str!(
 const POLYNOMIAL_FACTORIZATION_IRREDUCIBLE_QUADRATIC_DISCRIMINANT: &str = include_str!(
     "../../../artifacts/examples/math/polynomial-factorization-rational-v0/smt2/irreducible-quadratic-discriminant-farkas-conflict.smt2"
 );
+const REALS_RCF_NEGATIVE_DISCRIMINANT: &str = include_str!(
+    "../../../artifacts/examples/math/reals-rcf-shadow-v0/smt2/negative-discriminant-farkas-conflict.smt2"
+);
 const COMPLEX_PLANE_BAD_UNIT_SQUARE_REAL_PART: &str = include_str!(
     "../../../artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-unit-square-real-part-farkas-conflict.smt2"
 );
@@ -320,6 +323,14 @@ fn polynomial_factorization_irreducible_quadratic_discriminant_artifact_emits_ch
     assert_resource_farkas(
         "polynomial-factorization-rational-v0 irreducible quadratic discriminant SMT-LIB artifact",
         POLYNOMIAL_FACTORIZATION_IRREDUCIBLE_QUADRATIC_DISCRIMINANT,
+    );
+}
+
+#[test]
+fn reals_rcf_shadow_negative_discriminant_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "reals-rcf-shadow-v0 negative-discriminant SMT-LIB artifact",
+        REALS_RCF_NEGATIVE_DISCRIMINANT,
     );
 }
 

@@ -8472,6 +8472,36 @@ def validate_reals_rcf_shadow(expected: dict[str, Any]) -> None:
     if actual_discriminant >= 0:
         fail("negative-discriminant-no-real-root requires a negative discriminant")
 
+    conflict = checks["negative-discriminant-farkas-conflict"]
+    if conflict["expected_result"] != "unsat" or conflict.get("proof_status") != "checked":
+        fail("negative-discriminant-farkas-conflict must be a checked unsat row")
+    data = conflict.get("data", {})
+    conflict_polynomial = require_quadratic(
+        "negative-discriminant conflict polynomial",
+        data.get("polynomial"),
+    )
+    conflict_discriminant = require_fraction(
+        "negative-discriminant conflict discriminant",
+        data.get("discriminant"),
+    )
+    if conflict_polynomial != polynomial:
+        fail("negative-discriminant-farkas-conflict polynomial does not match replay row")
+    if conflict_discriminant != actual_discriminant:
+        fail("negative-discriminant-farkas-conflict discriminant does not match replay row")
+    if conflict_discriminant >= 0:
+        fail("negative-discriminant-farkas-conflict must record a negative discriminant")
+    if data.get("required_nonnegative_discriminant") is not True:
+        fail("negative-discriminant-farkas-conflict must require a nonnegative discriminant")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("negative-discriminant conflict smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/reals-rcf-shadow-v0/smt2/negative-discriminant-farkas-conflict.smt2":
+        fail("negative-discriminant-farkas-conflict smt2_artifact must name the checked QF_LRA artifact")
+    check_source("negative-discriminant conflict smt2_artifact", smt2_artifact)
+    lra_regression = data.get("lra_regression")
+    require_string("negative-discriminant conflict lra_regression", lra_regression)
+    if "reals_rcf_shadow_negative_discriminant_artifact_emits_checked_farkas" not in lra_regression:
+        fail("negative-discriminant-farkas-conflict must link the LRA route regression")
+
     horizon = checks["real-completeness-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("real-completeness-lean-horizon must be not-run")

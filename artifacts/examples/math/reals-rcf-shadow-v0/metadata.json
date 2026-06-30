@@ -23,11 +23,21 @@
   ],
   "axeyum_fragments": [
     "LRA (exact rationals)",
+    "QF_LRA / Farkas",
     "NRA / polynomial constraints",
     "real-closed-field shadow",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "real algebra negative-discriminant QF_LRA/Farkas regression seed",
+    "pressure": "Exact polynomial replay computes discriminant(x^2 + 1) = -4, while the malformed real-root row requires the discriminant to be nonnegative.",
+    "evidence": [
+      "negative-discriminant-farkas-conflict"
+    ],
+    "next_step": "Promote additional RCF-shadow rows only when exact replay reduces them to a source-linked linear, SOS, or RCF certificate; keep full CAD, SOS, real completeness, and epsilon-delta analysis in the Lean/RCF-horizon lanes."
+  },
   "source_refs": [
     "docs/curriculum/01-number-systems/reals.md",
     "docs/curriculum/01-number-systems/rationals.md",
@@ -35,6 +45,8 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/reals-rcf-shadow-v0/smt2/negative-discriminant-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
@@ -43,12 +55,14 @@
     "quadratic-root-real-witness",
     "square-nonnegative-unsat",
     "negative-discriminant-no-real-root",
+    "negative-discriminant-farkas-conflict",
     "real-completeness-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode the linear ordered-field row as QF_LRA and replay the model through Axeyum.",
     "Encode the nonlinear rows as deterministic NRA polynomial constraints.",
-    "Emit and check SOS/RCF-style evidence for the nonlinear UNSAT rows.",
+    "Keep fixed discriminant obstructions tied to source-linked QF_LRA/Farkas evidence after exact replay computes the discriminant.",
+    "Emit and check SOS/RCF-style evidence for broader nonlinear UNSAT rows.",
     "Keep completeness, least-upper-bound, and epsilon-delta theorem claims under Lean horizon until no-sorry Lean artifacts exist."
   ]
 }

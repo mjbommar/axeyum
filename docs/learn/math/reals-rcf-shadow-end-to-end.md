@@ -21,6 +21,7 @@ Concept rows:
 | `quadratic-root-real-witness` | `sat` | replay-only |
 | `square-nonnegative-unsat` | `unsat` | checked |
 | `negative-discriminant-no-real-root` | `unsat` | checked |
+| `negative-discriminant-farkas-conflict` | `unsat` | checked QF_LRA/Farkas |
 | `real-completeness-lean-horizon` | `not-run` | lean-horizon |
 
 The pack is a small algebraic shadow of real-closed-field reasoning. It is not
@@ -103,6 +104,19 @@ b^2 - 4ac = 0 - 4 = -4
 
 A negative discriminant certifies that this quadratic has no real root.
 
+The promoted solver row then checks the final exact-linear contradiction:
+
+```text
+discriminant + 4 = 0
+discriminant >= 0
+```
+
+That source artifact lives at
+`artifacts/examples/math/reals-rcf-shadow-v0/smt2/negative-discriminant-farkas-conflict.smt2`.
+The route emits and independently rechecks `UnsatFarkas` evidence for the
+nonnegative-discriminant conflict. This is still a fixed discriminant shadow,
+not a general CAD, SOS, or RCF proof route.
+
 ## Name The Lean Horizon
 
 The final row records the theorem-prover boundary:
@@ -121,9 +135,10 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes reals_rcf_shadow_negative_discriminant_artifact_emits_checked_farkas
 ```
 
-Expected output:
+The validator prints:
 
 ```text
 validated 1 foundational example pack(s)
@@ -135,7 +150,7 @@ This lesson shows Axeyum's current real-algebra resource pattern:
 
 ```text
 untrusted fast search -> rational real witness or tiny algebraic UNSAT claim
-trusted small checking -> exact Fraction replay, square/nonnegative shape, discriminant check
+trusted small checking -> exact Fraction replay, square/nonnegative shape, discriminant check, QF_LRA certificate
 remaining horizon -> CAD/SOS/RCF certificates and Lean completeness theorems
 ```
 

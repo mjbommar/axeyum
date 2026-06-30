@@ -89,7 +89,8 @@ discriminant = -4
 
 The `reals-rcf-shadow-v0` validator replays the exact product witness, checks
 that `x^2 < 0` is impossible by the fixed square-nonnegative shape, and checks
-that a negative-discriminant quadratic has no real root. For a polynomial check
+that a negative-discriminant quadratic has no real root, with a QF_LRA/Farkas
+artifact for the final nonnegative-discriminant contradiction. For a polynomial check
 outside the real-specific pack, encode a coefficient list:
 
 ```text
@@ -171,6 +172,7 @@ Run the checks from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/real-analysis-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes reals_rcf_shadow_negative_discriminant_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes polynomial_factorization_irreducible_quadratic_discriminant_artifact_emits_checked_farkas

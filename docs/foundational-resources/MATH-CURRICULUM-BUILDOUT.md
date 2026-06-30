@@ -212,7 +212,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `naturals` | `number_theory`, `discrete_math` | `natural-arithmetic-v0` | Bounded Peano arithmetic and LIA/BV arithmetic identities. |
 | `integers` | `number_theory` | `integer-lia-v0` | Linear integer equations/inequalities and witnesses. |
 | `rationals` | `real_analysis`, `linear_algebra` | `rationals-lra-v0`, `polynomial-factorization-rational-v0` | Exact rational order/field facts, density, trichotomy, Farkas links, rational polynomial division, GCD, factorization replay, and a QF_LRA discriminant conflict. |
-| `reals` | `real_analysis`, `optimization_and_convexity` | `real-analysis-rational-v0`, `reals-rcf-shadow-v0`, `multivariable-calculus-rational-v0` | Bounded rational neighborhoods, algebraic real constraints through LRA/NRA, exact rational gradients, and Hessian checks; completeness marked horizon. |
+| `reals` | `real_analysis`, `optimization_and_convexity` | `real-analysis-rational-v0`, `reals-rcf-shadow-v0`, `multivariable-calculus-rational-v0` | Bounded rational neighborhoods, algebraic real constraints through LRA/NRA, checked QF_LRA negative-discriminant shadow, exact rational gradients, and Hessian checks; completeness marked horizon. |
 | `complex` | `complex_analysis`, `linear_algebra` | `complex-algebraic-v0`, `complex-plane-transforms-v0` | Complex arithmetic, unit-root cycles, conjugation, and rational transforms as real-pair algebraic constraints. |
 | `divisibility-and-euclid` | `number_theory` | `gcd-bezout-v0` | GCD, Bezout witness replay, divisibility checks. |
 | `modular-arithmetic` | `number_theory`, `abstract_algebra` | `modular-arithmetic-v0`, `finite-ideals-v0` | Congruences, inverses, CRT, fixed-modulus enumeration, QF_LIA nonunit Diophantine obstruction, modular ring ideals, and quotient rings. |
@@ -504,7 +504,8 @@ relation asymmetry replay, and a general first-order Lean-horizon row.
 `reals-rcf-shadow-v0` now validates exact ordered-field midpoint replay,
 nonlinear real product replay, a quadratic real-root witness, checked
 `x^2 < 0` infeasibility, checked negative-discriminant no-root infeasibility,
-and a completeness/epsilon-delta Lean-horizon row. `real-analysis-rational-v0`
+a source-linked QF_LRA/Farkas negative-discriminant conflict, and a
+completeness/epsilon-delta Lean-horizon row. `real-analysis-rational-v0`
 now validates exact rational interval/ball inclusion, a bounded linear
 epsilon-delta sample, finite squeeze-style polynomial side conditions, checked
 QF_LRA/Farkas rejection of a false delta, and a general real-analysis
@@ -1548,6 +1549,10 @@ same checked Farkas evidence path using the final output-bound contradiction.
 `polynomial-factorization-rational-v0` now routes its fixed
 irreducible-quadratic discriminant row through the same checked Farkas evidence
 path after exact replay computes `D = -4`.
+`reals-rcf-shadow-v0` now routes its fixed negative-discriminant no-real-root
+row through the same checked Farkas evidence path after exact replay computes
+`D = -4`, while keeping square-nonnegativity and general SOS/CAD/RCF proof
+routes distinct.
 `finite-conditional-expectation-v0` now routes its bad high-block table through
 a source-linked checked Farkas evidence path using the denominator-cleared block
 average contradiction, and its metadata promotes that row for solver reuse.
