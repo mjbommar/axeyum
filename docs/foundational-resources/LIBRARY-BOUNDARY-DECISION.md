@@ -2,7 +2,8 @@
 
 Date: 2026-06-29
 
-Reviewed: 2026-06-30; counts refreshed after 66 promoted solver-reuse packs.
+Reviewed: 2026-06-30; counts refreshed after 66 promoted solver-reuse packs
+and 6 explicit non-benchmark-horizon packs.
 
 ## Decision
 
@@ -50,7 +51,8 @@ The current pack-level evidence mix is still intentionally conservative:
 - `replay-only`: 171 expected-result rows
 - `lean-horizon`: 47 expected-result rows
 - `not-run`: 47 expected-result rows
-- `solver_reuse`: 66 promoted packs and 18 unclassified packs
+- `solver_reuse`: 66 promoted packs, 6 non-benchmark-horizon packs, and 12
+  unclassified packs
 
 That distribution argues for keeping the resource lane close to the proof
 cookbook, validators, and solver evidence work. A premature crate would mostly
@@ -58,7 +60,9 @@ freeze a data shape that is still learning from proof-route upgrades.
 
 The 2026-06-30 review also confirms that the new solver-reuse metadata is still
 evolving. The latest promotions mostly add source-linked regression back-links
-to existing example packs; they do not yet create a repeated public API need.
+to existing example packs, while the first explicit non-benchmark-horizon rows
+document useful educational replay packs that are not yet solver assets. They
+do not yet create a repeated public API need.
 
 ## What Not To Extract Yet
 

@@ -29,6 +29,17 @@
     "LRA (exact rationals)"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0",
+  "solver_reuse": {
+    "status": "non-benchmark-horizon",
+    "target": "bounded recurrence replay educational row",
+    "pressure": "The current rows are satisfiable finite trace, invariant, and threshold-reachability witnesses; they teach replay but do not yet contain an UNSAT safety certificate or benchmarkable contradiction.",
+    "evidence": [
+      "linear-recurrence-trace",
+      "bounded-invariant-witness",
+      "unsafe-threshold-reachable"
+    ],
+    "next_step": "Promote only after adding a bounded safety or invariant-refutation row with a source-linked QF_LRA/BV artifact; keep continuous-time existence, uniqueness, stability, chaos, and PDE theory in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",

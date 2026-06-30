@@ -252,11 +252,13 @@ now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
 the foundational resource dashboards now report **66 promoted solver-reuse
-packs** and **18 unclassified packs** after the latest PHP(3,2) counting and
-refutation Bool/CNF promotions, rational-order and gcd/Bezout arithmetic,
-Bool/CNF finite-set and proof-method, QF_LRA linear-algebra/optimization/convexity,
-finite-probability, QF_UF, QF_LIA, and QF_BV source-metadata promotion
-batches;
+packs**, **6 non-benchmark-horizon packs**, and **12 unclassified packs** after
+the latest PHP(3,2) counting/refutation Bool/CNF promotions and the replay-only
+classification pass for bounded dynamics, complex algebra, coordinate geometry,
+finite measure, finite operators, and finite topology, plus the earlier
+rational-order, gcd/Bezout, Bool/CNF finite-set/proof-method, QF_LRA
+linear-algebra/optimization/convexity, finite-probability, QF_UF, QF_LIA, and
+QF_BV source-metadata promotion batches;
 prefer the next
 proof-frontier lane or equality-heavy pack that can carry a small checked
 certificate and a resource-backed regression.

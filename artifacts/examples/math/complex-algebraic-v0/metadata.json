@@ -31,6 +31,17 @@
     "bounded polynomial identity"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0",
+  "solver_reuse": {
+    "status": "non-benchmark-horizon",
+    "target": "complex real-pair algebra replay educational row",
+    "pressure": "The current rows are satisfiable exact real-pair arithmetic, conjugate-norm, and polynomial-root witnesses; they teach encoding but do not yet contain a checked algebraic contradiction.",
+    "evidence": [
+      "complex-arithmetic-replay",
+      "conjugate-norm-replay",
+      "quadratic-root-witness"
+    ],
+    "next_step": "Promote only after adding a false real-pair algebra or polynomial-root row with a source-linked LRA/NRA artifact; keep holomorphy, contour integration, residues, analytic continuation, and algebraic-closure theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",

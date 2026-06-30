@@ -42,7 +42,8 @@ The committed resource query currently reports:
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
 - 66 promoted solver-reuse packs.
-- 18 unclassified solver-reuse packs.
+- 6 non-benchmark-horizon solver-reuse packs.
+- 12 unclassified solver-reuse packs.
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
 allowed only when they fill a clear curriculum/field hole that cannot be served
@@ -103,13 +104,18 @@ Current unclassified queue:
 | `calculus-algebraic-shadow-v0` | promote a polynomial identity/refutation only if the chosen route checks the original claim |
 | `calculus-riemann-sum-v0` | choose exact finite-sum replay versus an LRA false-integral artifact |
 | `multivariable-calculus-rational-v0` | promote a bad-gradient/Jacobian row if it adds new solver pressure |
-| `complex-algebraic-v0` | decide real-pair algebra replay versus an NRA/LRA artifact |
 | `complex-plane-transforms-v0` | promote the false real-part row only if the real-pair route is source-linked |
-| `coordinate-geometry-v0` | promote a collinearity/distance LRA row or mark as replay-only |
-| `finite-topology-v0` | add a Bool/CNF topology-axiom counterexample if source-level obvious |
-| `finite-measure-v0` | add a QF_LRA finite-additivity conflict or mark as replay-only |
-| `bounded-dynamics-v0` | promote a recurrence/invariant LRA row or mark as replay-only until invariants deepen |
-| `finite-operator-v0` | promote a finite norm/operator-bound row or mark as replay-only |
+
+Recently classified as explicit non-benchmark-horizon rows:
+
+| Pack | Upgrade Trigger |
+|---|---|
+| `bounded-dynamics-v0` | add a bounded safety or invariant-refutation row with a source-linked QF_LRA/BV artifact |
+| `complex-algebraic-v0` | add a false real-pair algebra or polynomial-root row with a source-linked LRA/NRA artifact |
+| `coordinate-geometry-v0` | add a false collinearity, midpoint, distance, or incidence row with a source-linked QF_LRA/NRA artifact |
+| `finite-measure-v0` | add a bad normalization, additivity, or complement row with a source-linked QF_LRA/Farkas artifact |
+| `finite-operator-v0` | add a false operator-bound, norm inequality, or recurrence row with a source-linked exact-rational artifact |
+| `finite-topology-v0` | add a malformed finite topology or metric-ball row with a source-linked Bool/CNF or QF_LRA artifact |
 
 Exit criteria:
 
@@ -217,16 +223,16 @@ Exit criteria:
 | `linear_algebra` | exact matrices, vector spaces, duals, modules, tensors, spectral rows | make matrix rows queryable by computation type and solver route | QF_LRA/Farkas, finite replay, QF_UF/Alethe |
 | `abstract_algebra` | finite groups/rings/fields, homomorphisms, ideals, modules, tensors | add narrower rows only when multiple packs reuse them | QF_UF/Alethe, QF_BV, finite replay |
 | `real_analysis` | bounded rational intervals, metric continuity, RCF shadows, calculus shadows | keep bounded shadows distinct from completeness/convergence theorems | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon |
-| `complex_analysis` | real-pair algebra and transformations | keep algebraic checks separate from holomorphic theory | real-pair LRA/NRA, finite replay, Lean horizon |
-| `topology` | finite topologies, compactness, connectedness, continuous maps, homology | promote finite topology axiom conflicts where compact; keep invariance theorem horizons | Bool/CNF, QF_UF/Alethe, QF_LIA, Lean horizon |
-| `measure_theory` | finite measures, product measure, integration, random variables | add finite-additivity and simple-function proof-route examples | QF_LRA/Farkas, finite replay, Lean horizon |
+| `complex_analysis` | real-pair algebra and transformations | keep algebraic replay rows non-benchmark until a checked real-pair contradiction exists | real-pair LRA/NRA, finite replay, Lean horizon |
+| `topology` | finite topologies, compactness, connectedness, continuous maps, homology | upgrade finite topology from non-benchmark only with a tiny source-level axiom conflict | Bool/CNF, QF_UF/Alethe, QF_LIA, Lean horizon |
+| `measure_theory` | finite measures, product measure, integration, random variables | upgrade finite-measure replay through a bad finite-additivity or complement certificate | QF_LRA/Farkas, finite replay, Lean horizon |
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians | add route notes from LP to Farkas and from Hessians to exact matrix checks | QF_LRA/Farkas, QF_NRA shadows |
-| `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms | add numerical-honesty notes and avoid floating-point proof claims | QF_LRA/Farkas, replay, Lean horizon |
-| `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | promote invariant/transition counterexamples; keep continuous ODE theory horizon | QF_LRA/Farkas, replay, Lean horizon |
-| `geometry` | coordinate, affine, orientation/area rational geometry | add incidence/rigidity only after current LRA geometry rows are promoted | QF_LRA/Farkas, finite replay |
-| `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | keep finite-dimensional operator checks separate from Banach/Hilbert theorems | QF_LRA/Farkas, replay, Lean horizon |
+| `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms | keep finite replay and numerical-honesty rows distinct from promoted exact residual/error certificates | QF_LRA/Farkas, replay, Lean horizon |
+| `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | upgrade bounded dynamics from non-benchmark only with checked invariant/transition counterexamples | QF_LRA/Farkas, replay, Lean horizon |
+| `geometry` | coordinate, affine, orientation/area rational geometry | upgrade coordinate geometry from non-benchmark only with source-linked incidence/distance conflicts | QF_LRA/Farkas, finite replay |
+| `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | keep finite-dimensional operator replay non-benchmark until a checked bad-bound row exists | QF_LRA/Farkas, replay, Lean horizon |
 
 ## Curriculum Node Build Ledger
 
@@ -243,7 +249,7 @@ Exit criteria:
 | `integers` | maintain | group common Diophantine obstructions |
 | `rationals` | maintain | exact rational order and Farkas conflicts are already the model |
 | `reals` | deepen | distinguish RCF shadows, LRA bounded deltas, and completeness horizon |
-| `complex` | classify | real-pair algebra first; analytic theory horizon |
+| `complex` | non-benchmark now | real-pair replay first; promote only after a checked algebraic contradiction |
 | `divisibility-and-euclid` | maintain | use gcd/Bezout rows as arithmetic-certificate examples |
 | `modular-arithmetic` | maintain | keep LIA nonunit and BV fixed-width residue routes distinct |
 | `groups` | maintain | table replay plus Alethe equality conflicts |
@@ -262,20 +268,25 @@ Pick one row per commit unless the change is purely navigational.
 
 1. Landed: promote the `proof-methods-refutation-v0` and `counting-v0`
    `PHP(3,2)` rows through source-linked DIMACS plus DRAT/LRAT regression.
-2. Classify the remaining replay-heavy unclassified packs as either promotion
-   candidates or explicit non-benchmark educational rows.
-3. Promote a finite-topology axiom conflict if the CNF stays source-level
-   readable.
-4. Promote a finite-measure additivity conflict through QF_LRA/Farkas.
-5. Promote a coordinate-geometry collinearity/distance conflict through
-   QF_LRA/Farkas.
-6. Promote a generating-function coefficient-convolution conflict through
+2. Landed: classify `bounded-dynamics-v0`, `complex-algebraic-v0`,
+   `coordinate-geometry-v0`, `finite-measure-v0`, `finite-operator-v0`, and
+   `finite-topology-v0` as explicit non-benchmark educational rows until they
+   gain negative, certificate-bearing examples.
+3. Promote or classify the remaining algebra/calculus/counting unclassified
+   packs, starting with coefficient conflicts where the source route is clear.
+4. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
+   CNF stays source-level readable.
+5. Upgrade finite-measure from non-benchmark with a finite-additivity or
+   complement conflict through QF_LRA/Farkas.
+6. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
+   conflict through QF_LRA/Farkas.
+7. Promote a generating-function coefficient-convolution conflict through
    QF_LIA or keep it replay-centered with a non-benchmark note.
-7. Add a proof-object learner page that follows one resource from source claim
+8. Add a proof-object learner page that follows one resource from source claim
    to emitted proof and corrupted-proof rejection.
-8. Add a generated or query-based audit for unclassified solver-reuse packs if
+9. Add a generated or query-based audit for unclassified solver-reuse packs if
    manual tracking starts to drift.
-9. Revisit the library boundary after unclassified packs are resolved and at
+10. Revisit the library boundary after unclassified packs are resolved and at
    least one non-doc consumer repeats resource parsing logic.
 
 ## Validation Checklist

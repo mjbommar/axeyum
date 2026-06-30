@@ -29,6 +29,17 @@
     "LRA (exact rationals)"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0",
+  "solver_reuse": {
+    "status": "non-benchmark-horizon",
+    "target": "finite topology replay educational row",
+    "pressure": "The current rows are satisfiable finite topology, closure/interior, and metric-ball witnesses; they teach finite set replay but do not yet contain a source-level Boolean contradiction.",
+    "evidence": [
+      "finite-topology-axioms",
+      "closure-interior-witness",
+      "metric-ball-witness"
+    ],
+    "next_step": "Promote only after adding a malformed finite topology or metric-ball row with a source-linked Bool/CNF or QF_LRA artifact; keep compactness, connectedness, continuity, and general topological-space facts in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",

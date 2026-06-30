@@ -29,6 +29,17 @@
     "NRA shadow"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0",
+  "solver_reuse": {
+    "status": "non-benchmark-horizon",
+    "target": "coordinate geometry exact replay educational row",
+    "pressure": "The current rows are satisfiable midpoint, collinearity, and squared-distance witnesses; they are useful exact replay examples but do not yet create a distinct solver-regression conflict.",
+    "evidence": [
+      "midpoint-witness",
+      "collinearity-witness",
+      "distance-squared-witness"
+    ],
+    "next_step": "Promote only after adding a false collinearity, midpoint, distance, or incidence row with a source-linked QF_LRA/NRA artifact; keep broad synthetic, projective, and differential geometry theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",

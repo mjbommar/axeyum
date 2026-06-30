@@ -31,6 +31,17 @@
     "bounded polynomial recurrence"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0",
+  "solver_reuse": {
+    "status": "non-benchmark-horizon",
+    "target": "finite-dimensional operator replay educational row",
+    "pressure": "The current rows are satisfiable finite norm, operator-bound, and Chebyshev-recurrence witnesses; they teach exact replay but do not yet contain a certificate-bearing bad bound.",
+    "evidence": [
+      "l1-triangle-witness",
+      "matrix-operator-bound",
+      "chebyshev-recurrence-witness"
+    ],
+    "next_step": "Promote only after adding a false operator-bound, norm inequality, or recurrence row with a source-linked exact-rational artifact; keep Banach-space, Hilbert-space, compact-operator, and general Chebyshev-space theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",

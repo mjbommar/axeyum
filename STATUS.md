@@ -375,16 +375,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   DIMACS artifacts and promoted `solver_reuse` metadata for their fixed
   `PHP(3,2)` rows. The `math_resource_boolean_routes` regression parses both
   CNF artifacts, emits DRAT, elaborates LRAT, and independently checks both
-  proof objects; generated dashboards move promoted solver-reuse packs to 66
-  and leave 18 unclassified packs.
+  proof objects; that promotion moved promoted solver-reuse packs to 66 before
+  the later replay-only classification batch split out non-benchmark rows.
+
+- **Replay-only solver-reuse classification batch landed.**
+  `bounded-dynamics-v0`, `complex-algebraic-v0`,
+  `coordinate-geometry-v0`, `finite-measure-v0`, `finite-operator-v0`, and
+  `finite-topology-v0` now carry explicit `non-benchmark-horizon`
+  `solver_reuse` metadata. These packs remain useful educational finite-replay
+  resources until they gain negative, certificate-bearing rows; generated
+  dashboards now report 66 promoted, 6 non-benchmark-horizon, and 12
+  unclassified solver-reuse packs.
 
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 66-promoted-pack review count. The
-  decision remains in-repo and JSON-first: the query consumer reads promoted
-  solver-reuse rows, but there is still no external consumer, repeated typed API
-  demand, or reusable encoder boundary that warrants a new crate or separate
-  repository.
+  now records the refreshed 66-promoted, 6 non-benchmark-horizon, and
+  12-unclassified solver-reuse counts. The decision remains in-repo and
+  JSON-first: the query consumer reads promoted solver-reuse rows, but there is
+  still no external consumer, repeated typed API demand, or reusable encoder
+  boundary that warrants a new crate or separate repository.
 
 - **Curriculum pressure by fragment landed.** The generated
   [`curriculum-pressure-by-fragment.md`](docs/foundational-resources/generated/curriculum-pressure-by-fragment.md)
@@ -11485,6 +11494,14 @@ plan is built and committed on the current branch:
   both certificates for the two PHP artifacts. The packs now carry promoted
   `solver_reuse` metadata, and generated dashboards report 66 promoted
   solver-reuse packs with 18 still unclassified.
+
+- **2026-06-30** — **Replay-only solver-reuse classification batch landed.**
+  Marked `bounded-dynamics-v0`, `complex-algebraic-v0`,
+  `coordinate-geometry-v0`, `finite-measure-v0`, `finite-operator-v0`, and
+  `finite-topology-v0` as explicit `non-benchmark-horizon` solver-reuse packs.
+  These rows remain learner-facing finite replay examples until they gain
+  negative, certificate-bearing source artifacts; generated dashboards now
+  report 66 promoted, 6 non-benchmark-horizon, and 12 unclassified packs.
 
 - **2026-06-29** — **Proof-cookbook math-example route sections landed.**
   Added `Math Examples Using This Route` sections to the six active proof
