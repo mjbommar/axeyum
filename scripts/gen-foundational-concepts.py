@@ -295,6 +295,10 @@ CURRICULUM_MAP = {
                 "bounded-monotone-sequence-v0",
                 "Finite monotone-prefix, supremum, tail-gap, and bad upper-bound checks.",
             ),
+            (
+                "finite-recurrence-prefix-v0",
+                "Finite recurrence-prefix, affine recurrence, companion-matrix, and bad value checks.",
+            ),
         ],
     },
     "counting": {
@@ -310,6 +314,10 @@ CURRICULUM_MAP = {
             (
                 "finite-group-actions-v0",
                 "Burnside fixed-point average and orbit counting for a finite group action.",
+            ),
+            (
+                "finite-recurrence-prefix-v0",
+                "Finite recurrence prefixes and companion-matrix replay for enumerative sequences.",
             ),
         ],
     },
@@ -348,6 +356,10 @@ CURRICULUM_MAP = {
             (
                 "multivariable-calculus-rational-v0",
                 "Exact Jacobian and Hessian matrix replay for fixed polynomial calculus rows.",
+            ),
+            (
+                "finite-recurrence-prefix-v0",
+                "Finite recurrence prefixes and companion-matrix state replay.",
             ),
         ],
     },
@@ -1972,6 +1984,10 @@ BRIDGE_CONCEPTS = [
             (
                 "bounded-monotone-sequence-v0",
                 "Finite monotone-prefix, finite supremum, and tail-gap checks for monotone-convergence shadows.",
+            ),
+            (
+                "finite-recurrence-prefix-v0",
+                "Finite recurrence prefixes and companion-matrix replay for recurrence-theory shadows.",
             ),
             (
                 "real-analysis-rational-v0",

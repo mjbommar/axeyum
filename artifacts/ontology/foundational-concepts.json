@@ -1424,6 +1424,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
           "notes": "Finite monotone-prefix, supremum, tail-gap, and bad upper-bound checks."
+        },
+        {
+          "id": "finite-recurrence-prefix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
+          "notes": "Finite recurrence-prefix, affine recurrence, companion-matrix, and bad value checks."
         }
       ],
       "proof_routes": [
@@ -1503,6 +1509,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-group-actions-v0",
           "notes": "Burnside fixed-point average and orbit counting for a finite group action."
+        },
+        {
+          "id": "finite-recurrence-prefix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
+          "notes": "Finite recurrence prefixes and companion-matrix replay for enumerative sequences."
         }
       ],
       "proof_routes": [
@@ -1672,6 +1684,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
           "notes": "Exact Jacobian and Hessian matrix replay for fixed polynomial calculus rows."
+        },
+        {
+          "id": "finite-recurrence-prefix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
+          "notes": "Finite recurrence prefixes and companion-matrix state replay."
         }
       ],
       "proof_routes": [
@@ -3525,6 +3543,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
           "notes": "Finite monotone-prefix, finite supremum, and tail-gap checks for monotone-convergence shadows."
+        },
+        {
+          "id": "finite-recurrence-prefix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
+          "notes": "Finite recurrence prefixes and companion-matrix replay for recurrence-theory shadows."
         },
         {
           "id": "real-analysis-rational-v0",
@@ -7716,6 +7740,12 @@
           "notes": "Finite Permutation Group Checks"
         },
         {
+          "id": "finite-recurrence-prefix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
+          "notes": "Finite Recurrence Prefix Checks"
+        },
+        {
           "id": "function-composition-v0",
           "status": "validated",
           "path": "artifacts/examples/math/function-composition-v0",
@@ -8177,6 +8207,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-operator-v0",
           "notes": "Finite-Dimensional Operator And Chebyshev Checks"
+        },
+        {
+          "id": "finite-recurrence-prefix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
+          "notes": "Finite Recurrence Prefix Checks"
         },
         {
           "id": "finite-simplicial-homology-v0",
@@ -8732,6 +8768,12 @@
           "notes": "Finite-Dimensional Operator And Chebyshev Checks"
         },
         {
+          "id": "finite-recurrence-prefix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
+          "notes": "Finite Recurrence Prefix Checks"
+        },
+        {
           "id": "inner-product-spaces-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/inner-product-spaces-rational-v0",
@@ -9224,6 +9266,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-random-variables-v0",
           "notes": "Finite Random Variable Checks"
+        },
+        {
+          "id": "finite-recurrence-prefix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
+          "notes": "Finite Recurrence Prefix Checks"
         },
         {
           "id": "finite-topology-v0",

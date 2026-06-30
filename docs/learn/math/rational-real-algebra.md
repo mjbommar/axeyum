@@ -16,6 +16,7 @@ Example packs:
 - [polynomial-identities-v0](../../../artifacts/examples/math/polynomial-identities-v0/)
 - [polynomial-factorization-rational-v0](../../../artifacts/examples/math/polynomial-factorization-rational-v0/)
 - [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
+- [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
@@ -34,7 +35,8 @@ fixed order facts, rational interval/ball inclusions, bounded epsilon-delta
 samples, ordered-field real witnesses, small nonlinear polynomial constraints,
 fixed-degree polynomial identities and roots, rational polynomial
 factorization/division/GCD/square-free replay, finite generating-function
-coefficient extraction and Cauchy-product replay, LP feasibility and
+coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
+companion-matrix replay, LP feasibility and
 infeasibility certificates, finite convexity and monotonicity checks, exact
 rational gradients, Jacobian chain-rule replay, Hessian minor checks,
 midpoints, collinearity determinants, squared distances, affine maps, signed
@@ -127,6 +129,17 @@ and separately checks a bounded Fibonacci prefix identity for
 `(1 - x - x^2)F(x) = x`; the bad finite Cauchy-product coefficient row now
 also carries a checked QF_LIA/Diophantine certificate.
 
+For a direct finite recurrence-prefix check, encode the prefix rather than the
+general theorem:
+
+```text
+F = [0, 1, 1, 2, 3, 5, 8]
+```
+
+The `finite-recurrence-prefix-v0` validator recomputes every listed Fibonacci
+step, checks an affine recurrence prefix, and checks a companion-matrix state
+trace. Its bad row rejects `F_6 = 9` after replay computes `F_6 = 8`.
+
 For a matrix-invariant check, encode a fixed matrix and its characteristic
 polynomial:
 
@@ -194,6 +207,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/po
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes polynomial_factorization_irreducible_quadratic_discriminant_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
@@ -219,7 +234,9 @@ polynomial replay, and a checked false-root Diophantine row, read
 factorization, division, and GCD replay, read
 [End To End: Rational Polynomial Factorization](polynomial-factorization-end-to-end.md).
 For finite coefficient extraction and convolution replay, read
-[End To End: Generating Functions](generating-functions-end-to-end.md).
+[End To End: Generating Functions](generating-functions-end-to-end.md). For
+finite recurrence-prefix replay, read
+[End To End: Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md).
 For matrix characteristic-polynomial replay, read
 [End To End: Matrix Invariants](matrix-invariants-end-to-end.md). For exact
 finite eigenpair and spectral-decomposition replay, read

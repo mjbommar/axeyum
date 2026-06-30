@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-recurrence-prefix-v0",
+  "witnesses": [
+    {
+      "id": "fibonacci-prefix",
+      "description": "A finite Fibonacci prefix from F_0 = 0 and F_1 = 1.",
+      "values": {
+        "initial": ["0", "1"],
+        "values": ["0", "1", "1", "2", "3", "5", "8"]
+      }
+    },
+    {
+      "id": "affine-plus-one-prefix",
+      "description": "A finite prefix of x_{n+1} = 2*x_n + 1 from x_0 = 0.",
+      "values": {
+        "initial": "0",
+        "multiplier": "2",
+        "increment": "1",
+        "steps": 4,
+        "values": ["0", "1", "3", "7", "15"]
+      }
+    },
+    {
+      "id": "fibonacci-companion-prefix",
+      "description": "A fixed companion-matrix trace for Fibonacci state vectors [F_{n+1}, F_n].",
+      "values": {
+        "matrix": [["1", "1"], ["1", "0"]],
+        "states": [["1", "0"], ["1", "1"], ["2", "1"], ["3", "2"], ["5", "3"], ["8", "5"]],
+        "steps": 5
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "fibonacci-prefix-replay",
+      "claim": "The listed prefix satisfies the Fibonacci recurrence through F_6.",
+      "expected_result": "sat",
+      "validation": "finite_fibonacci_prefix_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["fibonacci-prefix"],
+      "notes": "The validator checks the two initial values and every finite recurrence step."
+    },
+    {
+      "id": "affine-recurrence-prefix-replay",
+      "claim": "The listed prefix satisfies x_{n+1} = 2*x_n + 1 through four steps.",
+      "expected_result": "sat",
+      "validation": "finite_affine_recurrence_prefix_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["affine-plus-one-prefix"],
+      "notes": "The validator recomputes every exact rational affine recurrence transition."
+    },
+    {
+      "id": "companion-matrix-prefix-replay",
+      "claim": "The listed two-dimensional states follow the Fibonacci companion matrix.",
+      "expected_result": "sat",
+      "validation": "finite_companion_matrix_prefix_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["fibonacci-companion-prefix"],
+      "notes": "The validator multiplies each state by the fixed 2x2 matrix and checks the next state."
+    },
+    {
+      "id": "bad-fibonacci-value-rejected",
+      "claim": "The Fibonacci prefix has F_6 = 9.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_recurrence_value_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "fibonacci-prefix",
+        "witness_index": 6,
+        "computed_value": "8",
+        "claimed_value": "9",
+        "smt2_artifact": "artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-fibonacci-value-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes F_6 = 8; the source artifact checks that the same value cannot also be 9."
+    },
+    {
+      "id": "general-recurrence-theory-lean-horizon",
+      "claim": "General recurrence theorems require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "induction over all n, closed forms, asymptotic growth, recurrence solving, and stability/convergence theorems",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows check only listed prefixes and matrix steps; broad recurrence theory remains a proof-assistant horizon."
+    }
+  ]
+}

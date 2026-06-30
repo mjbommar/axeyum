@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "finite-recurrence-prefix-v0",
+  "title": "Finite Recurrence Prefix Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_sequences_and_limits",
+    "curriculum_counting",
+    "curriculum_linear_algebra",
+    "field_real_analysis",
+    "field_discrete_math",
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "bridge_bounded_theorem_shadow"
+  ],
+  "field_ids": [
+    "real_analysis",
+    "discrete_math",
+    "linear_algebra",
+    "numerical_analysis"
+  ],
+  "curriculum_nodes": [
+    "sequences-and-limits",
+    "counting",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite recurrence replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "finite matrices",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite recurrence-prefix bad value QF_LRA/Farkas regression seed",
+    "pressure": "Exact finite replay computes Fibonacci F_6 = 8 while the malformed row claims F_6 = 9.",
+    "evidence": [
+      "bad-fibonacci-value-rejected"
+    ],
+    "next_step": "Promote additional recurrence rows only when they add distinct prefix, matrix-state, invariant, or exact-sum solver pressure; keep closed forms, asymptotics, convergence, and stability theorems in the Lean-horizon lane."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/02-structures/sequences-and-limits.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/finite-recurrence-prefix-end-to-end.md",
+    "artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-fibonacci-value-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "fibonacci-prefix-replay",
+    "affine-recurrence-prefix-replay",
+    "companion-matrix-prefix-replay",
+    "bad-fibonacci-value-rejected",
+    "general-recurrence-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite recurrence prefixes and companion-matrix steps as deterministic exact-rational replay rows.",
+    "Replay finite recurrence witnesses through Axeyum model evaluation.",
+    "Route false finite recurrence-value claims through checked QF_LRA/Farkas evidence after replay computes the offending value.",
+    "Keep induction over all n, closed-form solving, asymptotics, convergence, and stability theorems marked Lean-horizon."
+  ]
+}

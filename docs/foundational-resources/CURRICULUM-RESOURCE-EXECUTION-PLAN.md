@@ -44,7 +44,7 @@ As of this plan, the math resource lane has:
   transform replay, finite inner-product/projection replay, finite
   operator/Chebyshev replay, and Lean horizons, plus five route-specific
   example families.
-- 88 non-template math example packs, plus the validating template pack.
+- 89 non-template math example packs, plus the validating template pack.
 - generated coverage, curriculum-status audit, field, proof-gap,
   learner/proof-upgrade, and curriculum-pressure dashboards under
   [generated/](generated/).
@@ -477,7 +477,7 @@ Next buildout:
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
    and learner/proof-upgrade dashboards. The curriculum-status audit now shows
    where source `planned` rows have validated resources and need a source DAG
-   decision. The curriculum-pressure view now groups the 88 non-template packs
+   decision. The curriculum-pressure view now groups the 89 non-template packs
    into overlapping Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
    Lean-horizon buckets for fragment-level planning.
    Candidate status: the first `solver_reuse` batch is now fully promoted:

@@ -12,6 +12,7 @@ Example packs:
 
 - [counting-v0](../../../artifacts/examples/math/counting-v0/)
 - [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
+- [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-permutation-groups-v0](../../../artifacts/examples/math/finite-permutation-groups-v0/)
 - [finite-group-actions-v0](../../../artifacts/examples/math/finite-group-actions-v0/)
 - [graph-coloring-v0](../../../artifacts/examples/math/graph-coloring-v0/)
@@ -29,6 +30,9 @@ pack checks fixed permutation and binomial counts, then exhaustively rejects an
 injection from three pigeons into two holes. The generating-functions pack
 checks finite coefficient extraction, Cauchy product convolution, a bounded
 Fibonacci generating-function identity, and a bad convolution coefficient. The
+finite-recurrence-prefix pack checks Fibonacci and affine recurrence prefixes,
+plus a companion-matrix state trace, and rejects a bad finite Fibonacci value
+with checked QF_LRA/Farkas evidence. The
 finite-permutation-groups pack adds symmetry data: it checks `S3` as bijective
 function tables, recomputes cycle lengths and parity signs, and replays the
 natural action's orbit and stabilizer. The finite-group-actions pack adds
@@ -90,6 +94,17 @@ The `generating-functions-v0` pack recomputes the Cauchy convolution exactly.
 It also checks a bounded Fibonacci prefix identity for
 `(1 - x - x^2)F(x) = x` through a fixed degree and rejects a product with one
 bad coefficient through a checked QF_LIA/Diophantine certificate.
+
+For finite recurrence prefixes, encode the sequence table directly:
+
+```text
+F = [0, 1, 1, 2, 3, 5, 8]
+x = [0, 1, 3, 7, 15]  where x_{n+1} = 2*x_n + 1
+```
+
+The `finite-recurrence-prefix-v0` pack recomputes each prefix and the
+Fibonacci companion-matrix trace. Its bad row rejects `F_6 = 9` after replay
+computes `F_6 = 8`.
 
 For orbit counting,
 first encode finite permutations as bijections:
@@ -219,6 +234,8 @@ Run the check from the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/counting-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-permutation-groups-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-group-actions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
@@ -240,7 +257,9 @@ For a fuller trace from data row to replay result and evidence status, read
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md), and
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md).
 For coefficient-level finite recurrence and convolution replay, read
-[End To End: Generating Functions](generating-functions-end-to-end.md).
+[End To End: Generating Functions](generating-functions-end-to-end.md). For
+finite recurrence-prefix and companion-matrix replay, read
+[End To End: Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md).
 
 ## Proof Upgrade Notes
 

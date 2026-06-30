@@ -43,6 +43,9 @@ const SEQUENCE_LIMIT_BOUNDED_CAUCHY: &str = include_str!(
 const BOUNDED_MONOTONE_SEQUENCE_BAD_UPPER_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-upper-bound-farkas-conflict.smt2"
 );
+const FINITE_RECURRENCE_PREFIX_BAD_VALUE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-fibonacci-value-farkas-conflict.smt2"
+);
 const MULTIVARIABLE_CALCULUS_BAD_GRADIENT: &str = include_str!(
     "../../../artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2"
 );
@@ -432,6 +435,14 @@ fn bounded_monotone_sequence_bad_upper_bound_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "bounded-monotone-sequence-v0 bad-upper-bound SMT-LIB artifact",
         BOUNDED_MONOTONE_SEQUENCE_BAD_UPPER_BOUND,
+    );
+}
+
+#[test]
+fn finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-recurrence-prefix-v0 bad-Fibonacci-value SMT-LIB artifact",
+        FINITE_RECURRENCE_PREFIX_BAD_VALUE,
     );
 }
 

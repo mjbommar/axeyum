@@ -16,6 +16,7 @@ Example packs:
 - [real-analysis-rational-v0](../../../artifacts/examples/math/real-analysis-rational-v0/)
 - [sequence-limit-shadow-v0](../../../artifacts/examples/math/sequence-limit-shadow-v0/)
 - [bounded-monotone-sequence-v0](../../../artifacts/examples/math/bounded-monotone-sequence-v0/)
+- [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
 - [metric-continuity-v0](../../../artifacts/examples/math/metric-continuity-v0/)
 - [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
@@ -47,8 +48,9 @@ monotonicity, finite union subadditivity, algebraic real shadows, finite
 simple-function integrals, bounded sequence tails and prefixes, finite
 product-measure tables, rectangle probabilities, finite Fubini sums,
 bounded rational interval/ball inclusions, finite monotone-prefix and
-tail-gap checks, finite generating-function coefficient and recurrence-prefix
-identities, finite epsilon-delta continuity checks, finite open-cover/subcover checks, finite clopen-subset and open
+tail-gap checks, finite recurrence-prefix and companion-matrix replay, finite
+generating-function coefficient identities, finite epsilon-delta continuity
+checks, finite open-cover/subcover checks, finite clopen-subset and open
 separation checks, finite continuous-map preimages and homeomorphism checks,
 finite simplicial-complex closure, oriented-boundary replay, boundary-matrix
 rank checks, fixed Betti-number replay, and bad boundary-sign rejection,
@@ -122,6 +124,21 @@ the displayed upper bound, the finite prefix supremum, and one finite tail gap
 to the proposed limit. Its bad row rejects the false claim that `5/6` is an
 upper bound after replay finds `a_6 = 6/7`. This is finite prefix evidence, not
 the monotone convergence theorem.
+
+For a finite recurrence-prefix shadow, encode only the displayed recurrence
+data:
+
+```text
+F = [0, 1, 1, 2, 3, 5, 8]
+x_{n+1} = 2*x_n + 1  with prefix  [0, 1, 3, 7, 15]
+A = [[1,1],[1,0]]
+```
+
+The `finite-recurrence-prefix-v0` validator checks the Fibonacci prefix, the
+affine recurrence, and the companion-matrix state trace. Its checked bad row
+rejects the false claim `F_6 = 9` after exact replay computes `F_6 = 8`. This
+is finite recurrence evidence, not a closed form, asymptotic estimate, or
+convergence theorem.
 
 For a finite generating-function shadow, encode a sequence prefix as a fixed
 coefficient list:
@@ -363,6 +380,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/se
 cargo test -p axeyum-solver --test math_resource_lra_routes sequence_limit_bounded_cauchy_tail_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-monotone-sequence-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_monotone_sequence_bad_upper_bound_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
@@ -400,6 +419,7 @@ replay, read
 [End To End: Bounded Rational Real Analysis](real-analysis-rational-end-to-end.md),
 [End To End: Sequence And Limit Shadows](sequence-limit-shadow-end-to-end.md),
 [End To End: Finite Calculus Shadows](calculus-shadows-end-to-end.md),
+[End To End: Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md),
 [End To End: Generating Functions](generating-functions-end-to-end.md),
 [End To End: Metric Continuity](metric-continuity-end-to-end.md),
 [End To End: Real Algebra RCF Shadow](reals-rcf-shadow-end-to-end.md),

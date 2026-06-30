@@ -8919,6 +8919,106 @@ def validate_bounded_monotone_sequence(expected: dict[str, Any]) -> None:
     require_string("monotone convergence future_checker", data.get("future_checker"))
 
 
+def validate_finite_recurrence_prefix(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    fibonacci = checks["fibonacci-prefix-replay"]
+    if fibonacci["expected_result"] != "sat":
+        fail("fibonacci-prefix-replay must expect sat")
+    values = single_witness_values(fibonacci, witnesses)
+    initial = require_fraction_vector("Fibonacci initial", values.get("initial"))
+    fibonacci_sequence = require_fraction_sequence("Fibonacci values", values.get("values"))
+    if initial != [Fraction(0), Fraction(1)]:
+        fail("fibonacci-prefix-replay must use F_0 = 0 and F_1 = 1")
+    if len(fibonacci_sequence) < 3:
+        fail("fibonacci-prefix-replay requires at least three values")
+    if fibonacci_sequence[:2] != initial:
+        fail("fibonacci-prefix-replay values must start with the initial pair")
+    for index in range(2, len(fibonacci_sequence)):
+        expected_value = fibonacci_sequence[index - 1] + fibonacci_sequence[index - 2]
+        if fibonacci_sequence[index] != expected_value:
+            fail(f"fibonacci-prefix-replay value {index} violates the recurrence")
+
+    affine = checks["affine-recurrence-prefix-replay"]
+    if affine["expected_result"] != "sat":
+        fail("affine-recurrence-prefix-replay must expect sat")
+    values = single_witness_values(affine, witnesses)
+    affine_initial = require_fraction("affine recurrence initial", values.get("initial"))
+    multiplier = require_fraction("affine recurrence multiplier", values.get("multiplier"))
+    increment = require_fraction("affine recurrence increment", values.get("increment"))
+    steps = require_nonnegative_int("affine recurrence steps", values.get("steps"))
+    affine_values = require_fraction_sequence("affine recurrence values", values.get("values"))
+    if len(affine_values) != steps + 1:
+        fail("affine-recurrence-prefix-replay values must contain steps + 1 entries")
+    if affine_values[0] != affine_initial:
+        fail("affine-recurrence-prefix-replay values must start at the initial value")
+    for index in range(steps):
+        expected_value = multiplier * affine_values[index] + increment
+        if affine_values[index + 1] != expected_value:
+            fail(f"affine-recurrence-prefix-replay transition {index}->{index + 1} is incorrect")
+
+    companion = checks["companion-matrix-prefix-replay"]
+    if companion["expected_result"] != "sat":
+        fail("companion-matrix-prefix-replay must expect sat")
+    values = single_witness_values(companion, witnesses)
+    matrix = require_fraction_matrix("companion matrix", values.get("matrix"))
+    states = require_fraction_matrix("companion states", values.get("states"))
+    steps = require_nonnegative_int("companion steps", values.get("steps"))
+    if len(matrix) != 2 or any(len(row) != 2 for row in matrix):
+        fail("companion-matrix-prefix-replay requires a 2x2 matrix")
+    if len(states) != steps + 1:
+        fail("companion-matrix-prefix-replay states must contain steps + 1 entries")
+    for index, state in enumerate(states):
+        if len(state) != 2:
+            fail(f"companion-matrix-prefix-replay state {index} must have length 2")
+    for index in range(steps):
+        require_mat_vec_shape("companion matrix step", matrix, states[index])
+        if mat_vec(matrix, states[index]) != states[index + 1]:
+            fail(f"companion-matrix-prefix-replay transition {index}->{index + 1} is incorrect")
+
+    bad = checks["bad-fibonacci-value-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-fibonacci-value-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "fibonacci-prefix":
+        fail("bad-fibonacci-value-rejected must cite the fibonacci-prefix source witness")
+    witness_index = require_nonnegative_int("bad Fibonacci witness_index", data.get("witness_index"))
+    computed_value = require_fraction("bad Fibonacci computed_value", data.get("computed_value"))
+    claimed_value = require_fraction("bad Fibonacci claimed_value", data.get("claimed_value"))
+    if witness_index >= len(fibonacci_sequence):
+        fail("bad-fibonacci-value-rejected witness_index is outside the source prefix")
+    if fibonacci_sequence[witness_index] != computed_value:
+        fail("bad-fibonacci-value-rejected computed_value does not match replay")
+    if claimed_value == computed_value:
+        fail("bad-fibonacci-value-rejected claimed value unexpectedly matches replay")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad Fibonacci smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-fibonacci-value-farkas-conflict.smt2"
+    ):
+        fail("bad-fibonacci-value-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad Fibonacci smt2_artifact", smt2_artifact)
+    farkas_regression = data.get("farkas_regression")
+    require_string("bad Fibonacci farkas_regression", farkas_regression)
+    if "finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas" not in farkas_regression:
+        fail("bad-fibonacci-value-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad Fibonacci certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-fibonacci-value-rejected certificate must document checked Farkas evidence")
+
+    horizon = checks["general-recurrence-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-recurrence-theory-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-recurrence-theory-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general recurrence target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general recurrence future_checker", data.get("future_checker"))
+
+
 def validate_calculus_algebraic_shadow(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -16354,6 +16454,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_dual_spaces(expected)
     if metadata["id"] == "finite-euler-method-v0":
         validate_finite_euler_method(expected)
+    if metadata["id"] == "finite-recurrence-prefix-v0":
+        validate_finite_recurrence_prefix(expected)
     if metadata["id"] == "function-composition-v0":
         validate_function_composition(expected)
     if metadata["id"] == "generating-functions-v0":

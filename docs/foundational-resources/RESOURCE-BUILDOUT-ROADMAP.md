@@ -39,12 +39,12 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 88 non-template math example packs.
-- 442 expected checks.
-- 208 checked proof/evidence rows.
-- 183 replay-only rows.
-- 51 Lean-horizon rows.
-- 88 promoted solver-reuse packs.
+- 89 non-template math example packs.
+- 447 expected checks.
+- 209 checked proof/evidence rows.
+- 186 replay-only rows.
+- 52 Lean-horizon rows.
+- 89 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -604,6 +604,7 @@ Current packs:
 - `real-analysis-rational-v0`
 - `sequence-limit-shadow-v0`
 - `bounded-monotone-sequence-v0`
+- `finite-recurrence-prefix-v0`
 - `metric-continuity-v0`
 - `calculus-algebraic-shadow-v0`
 - `calculus-riemann-sum-v0`
@@ -624,8 +625,10 @@ Build next:
 - Promote exact rational bad-bound rows through QF_LRA/Farkas.
 - Keep `sequence-limit-shadow-v0`'s promoted bounded Cauchy-tail row and
   `bounded-monotone-sequence-v0`'s bad upper-bound row tied to source
-  QF_LRA/Farkas artifacts, and keep general convergence, Cauchy completeness,
-  and monotone convergence in the Lean-horizon lane.
+  QF_LRA/Farkas artifacts; keep `finite-recurrence-prefix-v0`'s bad
+  finite-value row tied to its source QF_LRA/Farkas artifact; and keep general
+  convergence, Cauchy completeness, monotone convergence, closed-form
+  recurrence solving, asymptotics, and stability in the Lean-horizon lane.
 - Keep `calculus-riemann-sum-v0`'s promoted false-integral row tied to the
   source QF_LRA/Farkas artifact, and keep FTC/integrability statements in the
   Lean-horizon lane.
@@ -1164,56 +1167,59 @@ Pick one item per commit unless the change is purely navigational.
 33. Landed: add `bounded-monotone-sequence-v0` with finite monotone-prefix
     replay, finite prefix supremum replay, finite tail-gap replay, and a
     source-linked QF_LRA/Farkas regression for `bad-upper-bound-rejected`.
-34. Landed: promote `multivariable-calculus-rational-v0` through a
+34. Landed: add `finite-recurrence-prefix-v0` with Fibonacci prefix replay,
+    affine recurrence replay, companion-matrix state replay, and a
+    source-linked QF_LRA/Farkas regression for `bad-fibonacci-value-rejected`.
+35. Landed: promote `multivariable-calculus-rational-v0` through a
     source-linked QF_LRA/Farkas regression for `bad-gradient-rejected`. The
     artifact
     `artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas`.
-34. Landed: promote `calculus-algebraic-shadow-v0` through a source-linked
+36. Landed: promote `calculus-algebraic-shadow-v0` through a source-linked
     QF_LRA/Farkas regression for `false-derivative-value-rejected`. The artifact
     `artifacts/examples/math/calculus-algebraic-shadow-v0/smt2/false-derivative-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes calculus_algebraic_false_derivative_artifact_emits_checked_farkas`.
-35. Landed: promote `complex-plane-transforms-v0` through a source-linked
+37. Landed: promote `complex-plane-transforms-v0` through a source-linked
     QF_LRA/Farkas regression for `bad-unit-square-real-part-rejected`. The
     artifact
     `artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-unit-square-real-part-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas`.
-36. Landed: promote `induction-obligations-v0` through a source-linked
+38. Landed: promote `induction-obligations-v0` through a source-linked
     QF_LIA arithmetic-DPLL regression for `sum-formula-step-bounded`. The
     artifact
     `artifacts/examples/math/induction-obligations-v0/smt2/bounded-step-counterexample-count-lia-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lia_routes induction_obligations_bounded_step_count_emits_checked_lia_dpll_evidence`.
-37. Landed: promote `cardinality-principles-v0` through a source-linked
+39. Landed: promote `cardinality-principles-v0` through a source-linked
     QF_LIA/Diophantine regression for `overlap-additivity-count-conflict`. The
     artifact
     `artifacts/examples/math/cardinality-principles-v0/smt2/overlap-additivity-diophantine-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lia_routes cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence`.
-38. Landed: promote `polynomial-factorization-rational-v0` through a
+40. Landed: promote `polynomial-factorization-rational-v0` through a
     source-linked QF_LRA/Farkas regression for
     `irreducible-quadratic-discriminant-conflict`. The artifact
     `artifacts/examples/math/polynomial-factorization-rational-v0/smt2/irreducible-quadratic-discriminant-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes polynomial_factorization_irreducible_quadratic_discriminant_artifact_emits_checked_farkas`.
-39. Landed: promote `reals-rcf-shadow-v0` through a source-linked QF_LRA/Farkas
+41. Landed: promote `reals-rcf-shadow-v0` through a source-linked QF_LRA/Farkas
     regression for `negative-discriminant-farkas-conflict`. The artifact
     `artifacts/examples/math/reals-rcf-shadow-v0/smt2/negative-discriminant-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes reals_rcf_shadow_negative_discriminant_artifact_emits_checked_farkas`.
-40. Landed: promote `finite-measure-v0` through a source-linked QF_LRA/Farkas
+42. Landed: promote `finite-measure-v0` through a source-linked QF_LRA/Farkas
     regression for `bad-complement-measure-rejected`. The artifact
     `artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas`.
-41. Landed: add `finite-measure-monotonicity-v0` with normalized finite
+43. Landed: add `finite-measure-monotonicity-v0` with normalized finite
     measure-table replay, subset monotonicity, union subadditivity, checked
     QF_LRA/Farkas rejection of a false subset-measure row, and a focused
     learner page.
-42. Landed: add standalone finite topology and finite measure learner pages.
+44. Landed: add standalone finite topology and finite measure learner pages.
     `docs/learn/math/finite-topology-end-to-end.md` follows
     `finite-topology-v0` through finite topology axiom replay,
     closure/interior, metric-ball replay, and checked Bool/CNF
@@ -1221,48 +1227,48 @@ Pick one item per commit unless the change is purely navigational.
     follows `finite-measure-v0` through finite sigma-algebra replay, exact
     finite additivity, event complements, and checked QF_LRA/Farkas
     bad-complement rejection.
-43. Landed: add standalone linear optimization learner page.
+45. Landed: add standalone linear optimization learner page.
     `docs/learn/math/linear-optimization-end-to-end.md` follows
     `linear-optimization-v0` through exact LP feasible-point replay,
     objective-threshold replay, checked QF_LRA/Farkas infeasible-threshold
     evidence, and tampered-certificate rejection.
-43. Landed: add standalone finite probability mass-table learner page.
+46. Landed: add standalone finite probability mass-table learner page.
     `docs/learn/math/finite-probability-mass-tables-end-to-end.md` follows
     `finite-probability-v0` through exact PMF normalization, conditional
     probability replay, Bayes posterior replay, checked QF_LRA/Farkas
     bad-normalization rejection, and checked bad-posterior rejection.
-44. Landed: add standalone finite-operator learner page.
+47. Landed: add standalone finite-operator learner page.
     `docs/learn/math/finite-operator-end-to-end.md` follows
     `finite-operator-v0` through exact finite-dimensional `l1` norm replay,
     row-sum operator-bound replay, finite Chebyshev recurrence replay,
     checked QF_LRA/Farkas bad-bound evidence, and the
     Banach/Hilbert/compact-operator Lean horizon.
-45. Landed: add standalone bounded-dynamics learner page.
+48. Landed: add standalone bounded-dynamics learner page.
     `docs/learn/math/bounded-dynamics-end-to-end.md` follows
     `bounded-dynamics-v0` through exact recurrence trace replay, finite
     invariant checking, threshold reachability, checked QF_LRA/Farkas
     bad invariant-bound evidence, and the continuous-dynamics/ODE Lean
     horizon.
-46. Landed: add standalone finite-Euler learner page.
+49. Landed: add standalone finite-Euler learner page.
     `docs/learn/math/finite-euler-method-end-to-end.md` follows
     `finite-euler-method-v0` through exact explicit-Euler transition replay,
     finite polynomial-solution error tables, monotone invariant checking,
     checked QF_LRA/Farkas bad-step evidence, and the ODE/numerical-analysis
     Lean horizon.
-47. Landed: add field-level curriculum-readiness consumer queries.
+50. Landed: add field-level curriculum-readiness consumer queries.
     `scripts/query-foundational-resources.py fields --field probability_theory`
     summarizes pack counts, check counts, proof-status counts, proof-cookbook
     route counts, solver-reuse statuses, sample packs, and Lean-horizon packs
     from the committed JSON contract; the foundational resource smoke check now
     includes a probability/Farkas field-readiness query.
-48. Landed: add dynamics field-readiness consumer query coverage.
+51. Landed: add dynamics field-readiness consumer query coverage.
     `docs/foundational-resources/CONSUMER-QUERIES.md` now shows a
     `differential_equations_and_dynamical_systems` plus Farkas field-readiness
     query and a checked-row drill-down, tying the recent bounded-dynamics,
     finite-Euler, stochastic-kernel, and hitting-time resources to the public
     consumer boundary; the foundational resource smoke check now includes the
     dynamics/Farkas field-readiness query.
-49. Landed: add generated geometry and complex-analysis bridge concepts.
+52. Landed: add generated geometry and complex-analysis bridge concepts.
     `bridge_coordinate_orientation_geometry` groups the coordinate, affine,
     and orientation/area packs as a finite exact-rational geometry replay
     concept; `bridge_complex_real_pair_transform` groups complex algebraic,
@@ -1270,7 +1276,7 @@ Pick one item per commit unless the change is purely navigational.
     complex-analysis replay concept. The generated atlas now validates 42
     bridge rows and keeps broader synthetic/differential/analytic theorem
     claims in the Lean-horizon lane.
-50. Landed: add generated functional-analysis bridge concepts.
+53. Landed: add generated functional-analysis bridge concepts.
     `bridge_inner_product_projection` groups inner-product, projection,
     residual, least-squares, and dual-space finite replay; and
     `bridge_finite_operator_chebyshev` groups finite operator bounds,
@@ -1278,7 +1284,7 @@ Pick one item per commit unless the change is purely navigational.
     witnesses. That increment raised the generated atlas to 44 bridge rows and
     keeps Banach, Hilbert, compact-operator, minimax, and
     infinite-dimensional approximation claims in the Lean-horizon lane.
-51. Landed: add generated measure-theory bridge concepts.
+54. Landed: add generated measure-theory bridge concepts.
     `bridge_finite_measure_additivity` groups finite event-algebra,
     additivity, complement, monotonicity, subadditivity, and exact atom-sum replay; and
     `bridge_finite_product_integration` groups finite product tables,
@@ -1286,7 +1292,7 @@ Pick one item per commit unless the change is purely navigational.
     expectation replay. The generated atlas now validates 46 bridge rows and
     keeps Lebesgue measure, product-measure existence, convergence theorems,
     and almost-everywhere claims in the Lean-horizon lane.
-52. Landed: add measure-theory field-readiness consumer query coverage.
+55. Landed: add measure-theory field-readiness consumer query coverage.
     `docs/foundational-resources/CONSUMER-QUERIES.md` now shows
     measure/Farkas field readiness, measure bridge concept lookup, and checked
     measure-theory Farkas row drill-downs. The foundational resource smoke
@@ -1294,7 +1300,7 @@ Pick one item per commit unless the change is purely navigational.
     integration, random-variable, conditional-expectation, martingale, kernel,
     hitting-time, and concentration resources to the public JSON consumer
     boundary.
-53. Landed: add generated optimization/convexity bridge concepts.
+56. Landed: add generated optimization/convexity bridge concepts.
     `bridge_lp_objective_farkas` groups exact LP feasibility,
     objective-threshold witnesses, and checked Farkas threshold conflicts; and
     `bridge_rational_convexity_shadow` groups finite midpoint/Jensen shadows,
@@ -1302,7 +1308,7 @@ Pick one item per commit unless the change is purely navigational.
     least-squares normal-equation replay. The generated atlas now validates 48
     bridge rows and keeps duality, KKT sufficiency, SDP, and convergence claims
     in the Lean-horizon lane.
-54. Landed: add optimization/convexity field-readiness consumer query coverage.
+57. Landed: add optimization/convexity field-readiness consumer query coverage.
     `docs/foundational-resources/CONSUMER-QUERIES.md` now shows
     optimization/Farkas field readiness, LP-objective and convexity bridge
     lookup, and checked optimization/convexity Farkas row drill-downs. The
@@ -1310,13 +1316,13 @@ Pick one item per commit unless the change is purely navigational.
     LP thresholds, finite convexity shadows, least-squares normal equations,
     gradient/Hessian replay, residual bounds, and matrix witnesses to the
     public JSON consumer boundary.
-55. Landed: add `incidence-geometry-v0`.
+58. Landed: add `incidence-geometry-v0`.
     The new geometry pack validates exact line-equation replay, non-parallel
     line intersection, point-on-line replay, checked QF_LRA/Farkas rejection of
     a false incidence claim, and a projective/synthetic geometry Lean horizon.
     `bridge_coordinate_orientation_geometry` now includes the incidence pack,
     and the learner path includes a focused incidence end-to-end page.
-56. Landed: add `rigid-configuration-geometry-v0`.
+59. Landed: add `rigid-configuration-geometry-v0`.
     The new geometry pack validates exact triangle distance-table replay,
     translation isometry replay, congruent-triangle distance replay, checked
     QF_LRA/Farkas rejection of a false distance-table claim, and a

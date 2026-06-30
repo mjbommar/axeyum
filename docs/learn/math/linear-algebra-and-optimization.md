@@ -17,6 +17,7 @@ Example packs:
 - [finite-modules-v0](../../../artifacts/examples/math/finite-modules-v0/)
 - [finite-tensor-products-v0](../../../artifacts/examples/math/finite-tensor-products-v0/)
 - [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
+- [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
@@ -57,7 +58,9 @@ slice adds bilinear maps, finite universal-factorization shadows, Kronecker
 products, and checked QF_UF/Alethe bad-bilinear-map rejection over `F2`. The
 numerical-linear-algebra slice adds exact residual bounds, rational interval
 boxes for solutions, and a one-step Jacobi contraction check, with a checked
-QF_LRA/Farkas bad-bound certificate. The finite random-matrix slice adds exact
+QF_LRA/Farkas bad-bound certificate. The finite-recurrence-prefix slice adds
+Fibonacci and affine recurrence replay plus a companion-matrix state trace,
+with a checked QF_LRA/Farkas bad finite value certificate. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, rank distributions, and a checked QF_LRA/Farkas bad trace-square
 certificate. The spectral slice checks exact finite
@@ -261,6 +264,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/in
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-tensor-products-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
@@ -294,6 +299,7 @@ replay, read
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md),
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md),
 [End To End: Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md),
+[End To End: Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md),
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md),

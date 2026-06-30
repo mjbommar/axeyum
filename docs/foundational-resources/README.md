@@ -161,6 +161,10 @@ schemas, examples, and validation workflows.
   validates finite monotone-prefix replay, finite prefix supremum, finite tail
   gaps, checked rejection of a false upper-bound claim, and a monotone
   convergence Lean-horizon row.
+- [`artifacts/examples/math/finite-recurrence-prefix-v0/`](../../artifacts/examples/math/finite-recurrence-prefix-v0/)
+  validates Fibonacci prefix replay, affine recurrence replay,
+  companion-matrix state replay, checked rejection of a false finite
+  recurrence value, and a recurrence-theory Lean-horizon row.
 - [`artifacts/examples/math/metric-continuity-v0/`](../../artifacts/examples/math/metric-continuity-v0/)
   validates finite Lipschitz, epsilon-delta, and open-ball preimage checks
   with exact rational metrics, plus checked QF_LRA/Farkas rejection of an
@@ -415,6 +419,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/re
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/real-analysis-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-monotone-sequence-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0

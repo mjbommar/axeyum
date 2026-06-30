@@ -36,12 +36,12 @@ The committed resource query currently reports:
 - 18 field rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 88 non-template math packs.
-- 442 expected checks.
-- 208 checked proof/evidence rows.
-- 183 replay-only rows.
-- 51 Lean-horizon rows.
-- 88 promoted solver-reuse packs.
+- 89 non-template math packs.
+- 447 expected checks.
+- 209 checked proof/evidence rows.
+- 186 replay-only rows.
+- 52 Lean-horizon rows.
+- 89 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -257,7 +257,7 @@ Pick one row per commit unless the change is purely navigational.
    `coordinate-geometry-v0`, `finite-measure-v0`, `finite-operator-v0`, and
    initially `finite-topology-v0` as explicit non-benchmark educational rows
    until they gain negative, certificate-bearing examples. Finite topology has
-   since been promoted by item 17.
+   since been promoted by item 20.
 3. Landed: promote `generating-functions-v0` through a source-linked finite
    Cauchy-product coefficient QF_LIA/Diophantine artifact and route regression.
 4. Landed: promote `polynomial-identities-v0` through a source-linked false
@@ -271,58 +271,62 @@ Pick one row per commit unless the change is purely navigational.
 8. Landed: add `bounded-monotone-sequence-v0` with finite monotone-prefix,
    finite supremum, finite tail-gap replay, a checked bad upper-bound
    QF_LRA/Farkas artifact, and a monotone-convergence Lean-horizon row.
-9. Landed: promote `multivariable-calculus-rational-v0` through a source-linked
+9. Landed: add `finite-recurrence-prefix-v0` with Fibonacci prefix replay,
+   affine recurrence replay, companion-matrix state replay, a checked bad
+   finite-value QF_LRA/Farkas artifact, and a recurrence-theory Lean-horizon
+   row.
+10. Landed: promote `multivariable-calculus-rational-v0` through a source-linked
    bad-gradient QF_LRA/Farkas artifact and route regression.
-10. Landed: promote `calculus-algebraic-shadow-v0` through a source-linked
+11. Landed: promote `calculus-algebraic-shadow-v0` through a source-linked
    false-derivative QF_LRA/Farkas artifact and route regression.
-11. Landed: promote `complex-plane-transforms-v0` through a source-linked
+12. Landed: promote `complex-plane-transforms-v0` through a source-linked
    bad unit-square real-part QF_LRA/Farkas artifact and route regression.
-11. Landed: promote `induction-obligations-v0` through a source-linked bounded
+13. Landed: promote `induction-obligations-v0` through a source-linked bounded
    bad-step count QF_LIA arithmetic-DPLL artifact and route regression.
-12. Landed: promote `cardinality-principles-v0` through a source-linked
+14. Landed: promote `cardinality-principles-v0` through a source-linked
    overlap-additivity count QF_LIA/Diophantine artifact and route regression.
-13. Landed: promote `polynomial-factorization-rational-v0` through a
+15. Landed: promote `polynomial-factorization-rational-v0` through a
    source-linked irreducible-quadratic discriminant QF_LRA/Farkas artifact and
    route regression.
-14. Landed: promote `reals-rcf-shadow-v0` through a source-linked
+16. Landed: promote `reals-rcf-shadow-v0` through a source-linked
    negative-discriminant QF_LRA/Farkas artifact and route regression, closing
    the current unclassified solver-reuse queue.
-15. Landed: promote `finite-measure-v0` through a source-linked bad complement
+17. Landed: promote `finite-measure-v0` through a source-linked bad complement
    QF_LRA/Farkas artifact and route regression.
-16. Landed: add `finite-measure-monotonicity-v0` with normalized finite
+18. Landed: add `finite-measure-monotonicity-v0` with normalized finite
    measure-table replay, subset monotonicity, union subadditivity, a checked
    QF_LRA/Farkas bad subset-measure artifact, and a Lean-horizon row for
    countable/convergence measure theory.
-17. Promote or classify any newly added unclassified packs, starting with compact
+19. Promote or classify any newly added unclassified packs, starting with compact
    source-level conflicts where the route is clear.
-18. Landed: promote `finite-topology-v0` through a source-linked
+20. Landed: promote `finite-topology-v0` through a source-linked
    missing-empty-set Bool/CNF DIMACS artifact and DRAT/LRAT route regression.
-19. Landed: promote `coordinate-geometry-v0` through a source-linked bad
+21. Landed: promote `coordinate-geometry-v0` through a source-linked bad
    squared-distance QF_LRA/Farkas artifact and route regression.
-20. Landed: promote `finite-operator-v0` through a source-linked bad
+22. Landed: promote `finite-operator-v0` through a source-linked bad
    operator-bound QF_LRA/Farkas artifact and route regression.
-21. Landed: promote `complex-algebraic-v0` through a source-linked bad
+23. Landed: promote `complex-algebraic-v0` through a source-linked bad
    norm-squared QF_LRA/Farkas artifact and route regression.
-22. Landed: promote `bounded-dynamics-v0` through a source-linked bad
+24. Landed: promote `bounded-dynamics-v0` through a source-linked bad
    invariant-bound QF_LRA/Farkas artifact and route regression, closing the
    explicit non-benchmark-horizon queue.
-23. Landed: add `proof-object-anatomy-end-to-end.md`, following
+25. Landed: add `proof-object-anatomy-end-to-end.md`, following
    `proof-methods-refutation-v0` from the PHP(3,2) source claim through
    committed CNF, emitted DRAT/LRAT proof objects, and same-artifact
    corrupted-proof rejection.
-23. Landed: add `farkas-certificate-anatomy-end-to-end.md`, following
+26. Landed: add `farkas-certificate-anatomy-end-to-end.md`, following
    `linear-optimization-v0` from the exact LP threshold conflict through source
    SMT-LIB, emitted `UnsatFarkas` evidence, and same-artifact multiplier tamper
    rejection.
-24. Landed: add `alethe-certificate-anatomy-end-to-end.md`, following
+27. Landed: add `alethe-certificate-anatomy-end-to-end.md`, following
    `equivalence-classes-v0` from the quotient-map congruence conflict through
    source SMT-LIB, emitted zero-trust `UnsatAletheProof` evidence, and
    same-artifact truncated-proof rejection.
-25. Landed: add `diophantine-certificate-anatomy-end-to-end.md`, following
+28. Landed: add `diophantine-certificate-anatomy-end-to-end.md`, following
    `modular-arithmetic-v0` from the nonunit modular-inverse obstruction through
    source SMT-LIB, emitted `UnsatDiophantine` evidence, and same-artifact
    contradiction-row tamper rejection.
-26. Landed: add `qf-bv-bitblast-certificate-anatomy-end-to-end.md`, following
+29. Landed: add `qf-bv-bitblast-certificate-anatomy-end-to-end.md`, following
    `finite-fields-v0` from the fixed-width composite-modulus no-inverse row
    through source SMT-LIB, generated DIMACS/DRAT evidence, and same-artifact
    truncated-DRAT rejection.

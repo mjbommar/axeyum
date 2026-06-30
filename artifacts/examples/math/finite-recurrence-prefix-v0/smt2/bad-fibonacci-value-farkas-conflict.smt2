@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const f6 Real)
+(assert (= f6 8))
+(assert (= f6 9))
+(check-sat)
