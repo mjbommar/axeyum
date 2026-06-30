@@ -1298,7 +1298,7 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 104 atlas rows validate, including generated bridge-concept rows for
+  Status: 105 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows,
   refutation-as-query, finite proof-pattern replay, finite quantifier
   expansion, bounded induction obligations, Boolean CNF DRAT/LRAT anatomy,
@@ -1313,7 +1313,7 @@ Exit criteria:
   bijection/cardinality, cardinality theorem horizons, metric balls, bounded
   epsilon-delta shadows, compactness shadows, connectedness shadows,
   continuity-by-preimage, finite topology-operator/homeomorphism replay,
-  finite chain-complex/homology replay, LU
+  finite boundary-operator replay, finite chain-complex/homology replay, LU
   factorization replay, rank-nullity replay,
   residual bounds, eigenpair witnesses, characteristic-polynomial replay,
   finite random-matrix moments, finite measure additivity, finite probability
@@ -2020,13 +2020,14 @@ per-pack query families for coverage, equivalence, thresholds, caps,
 version-deltas, and monotonicity.
 The consumer query layer now also exposes topology readiness:
 `CONSUMER-QUERIES.md` shows the Boolean/Diophantine field summaries,
-compactness/preimage/closure/homeomorphism/homology bridge lookups, concept
-queries for finite topology-operator/homeomorphism and finite homology rows,
-and checked Boolean/Alethe/Diophantine topology row drill-downs. The
+compactness/preimage/closure/homeomorphism/boundary/homology bridge lookups,
+concept queries for finite topology-operator/homeomorphism, finite
+boundary-operator, and finite homology rows, and checked
+Boolean/Alethe/Diophantine topology row drill-downs. The
 foundational-resource smoke check runs those same queries so finite topology
 axioms, finite open-cover and connectedness refutations, closure/interior
 replay, finite homeomorphism replay, continuous-map preimage consistency,
-finite homology boundary checks, metric-ball examples, and bounded
+finite boundary-operator and homology checks, metric-ball examples, and bounded
 epsilon-delta shadows stay visible through the public JSON boundary without
 promoting arbitrary compactness, connectedness, homeomorphism invariance,
 homology invariance, exact sequences, or cohomology theorems.
@@ -2181,6 +2182,14 @@ topology closure/homeomorphism lookup plus concept-scoped Alethe route queries
 while keeping closure-operator theorems, homeomorphism invariance,
 compactness/connectedness preservation, homology invariance, and general
 topology in the horizon lane.
+The topology concept layer now also has
+`bridge_finite_boundary_operator_replay`. It groups oriented boundary
+coefficients, boundary-of-boundary cancellation, boundary-matrix shape, and
+checked bad-boundary coefficient evidence across
+`finite-simplicial-homology-v0`. The foundational-resource smoke check now
+exercises topology boundary lookup plus concept-scoped Diophantine route
+queries while keeping functoriality, exactness, homology invariance,
+cohomology, and general algebraic topology in the horizon lane.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

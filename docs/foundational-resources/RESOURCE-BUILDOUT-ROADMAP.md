@@ -40,7 +40,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 58 bridge-concept rows.
+- 59 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math example packs.
 - 516 expected checks.
@@ -718,9 +718,10 @@ Build next:
 
 - Landed concept rows for metric balls, compactness shadows, connectedness
   shadows, continuity-by-preimage, finite topology-operator/homeomorphism
-  replay, and finite chain-complex/homology replay. Add narrower rank/torsion,
-  cohomology, specialization-order, boundary-operator, or theorem-invariance
-  rows only when reuse or solver pressure justifies the split.
+  replay, finite boundary-operator replay, and finite chain-complex/homology
+  replay. Add narrower rank/torsion, cohomology, specialization-order, or
+  theorem-invariance rows only when reuse or solver pressure justifies the
+  split.
 - Keep `finite-topology-v0`'s promoted missing-empty-set row tied to the
   source DIMACS artifact and checked Bool/CNF DRAT/LRAT route.
 - Promote additional source-level-obvious bad topology rows to Bool/CNF, QF_UF,
@@ -1636,6 +1637,12 @@ Pick one item per commit unless the change is purely navigational.
     without promoting arbitrary closure-operator, homeomorphism-invariance,
     compactness-preservation, connectedness-preservation, homology-invariance,
     or general topology theorems.
+98. Landed: add `bridge_finite_boundary_operator_replay` plus topology
+    boundary lookup and concept-scoped Diophantine route smoke queries, making
+    oriented boundary coefficients, boundary-of-boundary cancellation,
+    boundary-matrix shape, and checked bad-boundary coefficient evidence
+    discoverable without promoting functoriality, exactness, homology
+    invariance, cohomology, or general algebraic topology.
 
 ## Validation Checklist
 

@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite boundary-operator bridge concept landed.**
+  `bridge_finite_boundary_operator_replay` now makes oriented boundary
+  coefficients, boundary-of-boundary cancellation, boundary-matrix shape, and
+  the checked QF_LIA/Diophantine bad boundary coefficient row queryable from
+  one shared atlas concept. The bridge keeps functoriality, exactness,
+  homology invariance, cohomology, and general algebraic-topology theorem
+  claims in the Lean-horizon lane. `CONSUMER-QUERIES.md`,
+  `FIELD-READINESS-QUERY-MATRIX.md`, and `check-foundational-resources.sh`
+  now exercise boundary lookup plus concept-scoped Diophantine route queries
+  through the public JSON/query boundary.
+
 - **Finite topology-operator/homeomorphism bridge concept landed.**
   `bridge_finite_topology_operator_homeomorphism` now makes finite
   topology-axiom replay, closure/interior replay, finite continuity by
@@ -377,12 +388,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 - **Topology consumer queries landed.**
   [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
   now shows public JSON queries for topology Boolean/Diophantine field
-  readiness, compactness/preimage/closure/homeomorphism/homology bridge
+  readiness, compactness/preimage/closure/homeomorphism/boundary/homology bridge
   lookups, concept-scoped finite topology-operator/homeomorphism and finite
-  chain-complex/homology queries, and checked Boolean/Alethe/Diophantine
-  topology rows across finite topology, compactness, connectedness,
-  continuous maps, homeomorphism replay, homology, metric balls, and bounded
-  epsilon-delta resources.
+  boundary-operator plus chain-complex/homology queries, and checked
+  Boolean/Alethe/Diophantine topology rows across finite topology, compactness,
+  connectedness, continuous maps, homeomorphism replay, boundary replay,
+  homology, metric balls, and bounded epsilon-delta resources.
   `check-foundational-resources.sh` now smoke-checks those queries without
   promoting arbitrary compactness, connectedness, homeomorphism, homology
   invariance, exact sequence, or cohomology claims.
@@ -1605,7 +1616,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the detailed operating plan for turning the curriculum and 18-field math
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
-  library splits. It now records the current committed baseline of 104 concept
+  library splits. It now records the current committed baseline of 105 concept
   rows, 102 non-template packs, 516 expected checks, 222 checked rows, 229
   replay-only rows, 65 Lean-horizon rows, and 102 promoted solver-reuse packs,
   then lays out field-by-field build plans plus a prioritized execution queue.
@@ -1660,7 +1671,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
-  is now generated with 58 bridge rows. The proof-methodology rows are
+  is now generated with 59 bridge rows. The proof-methodology rows are
   `bridge_finite_model_replay`, `bridge_counterexample_proof`,
   `bridge_refutation_query`, `bridge_finite_proof_pattern`,
   `bridge_finite_quantifier_expansion`,
@@ -1700,6 +1711,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   rows are `bridge_metric_ball`,
   `bridge_bounded_epsilon_delta_shadow`, `bridge_compactness_shadow`,
   `bridge_connectedness_shadow`, `bridge_continuity_preimage`, and
+  `bridge_finite_topology_operator_homeomorphism`,
+  `bridge_finite_boundary_operator_replay`, and
   `bridge_finite_chain_homology_replay`; the
   linear-algebra computation rows are `bridge_lu_replay`,
   `bridge_rank_nullity`, `bridge_residual_bound`, `bridge_eigenpair`,
@@ -1742,7 +1755,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   while keeping duality, KKT sufficiency, SDP strong duality, general
   separation, projected-gradient convergence, proximal-gradient convergence,
   and convergence theorems as Lean horizons. The
-  foundational resource consumer now reports 104 concept rows while
+  foundational resource consumer now reports 105 concept rows while
   preserving 23 curriculum rows and 18 field rows. Next resource work should
   add the next proof-frontier promotion or boundary evidence from a real
   repeated consumer, depending on which roadmap lane is being advanced.

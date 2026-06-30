@@ -16,6 +16,7 @@ Concept rows:
 - `bridge_lu_replay`, `bridge_rank_nullity`, `bridge_residual_bound`,
   `bridge_eigenpair`, `bridge_characteristic_polynomial`,
   `bridge_random_matrix_finite_moment`,
+  `bridge_finite_boundary_operator_replay`,
   `bridge_inner_product_projection`, `bridge_module_action`,
   `bridge_tensor_bilinearity`, and
   `bridge_finite_operator_chebyshev` in the

@@ -35,11 +35,12 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 104 atlas rows generated from curriculum, field data, 58 R1 bridge
+- 105 atlas rows generated from curriculum, field data, 59 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
-  finite topology-operator/homeomorphism replay, finite chain-complex/homology replay,
+  finite topology-operator/homeomorphism replay, finite boundary-operator
+  replay, finite chain-complex/homology replay,
   number-system exact-vs-floating, totality convention, gcd/divisibility
   witness, modular CRT/inverse witness, finite-counting replay vocabulary, and
   finite graph replay/obstruction and finite dynamics/Euler vocabulary,
@@ -433,7 +434,7 @@ Next buildout:
 | `abstract_algebra` | QF_UF/Alethe upgrades for table and homomorphism packs |
 | `real_analysis` | bounded-vs-general concept rows for limits, continuity, compactness, integration |
 | `complex_analysis` | real-pair algebra lessons now; analytic theorem rows as Lean horizon |
-| `topology` | standalone finite topology lesson landed; maintain granular finite topology-operator/homeomorphism and homology rows |
+| `topology` | standalone finite topology lesson landed; maintain granular finite topology-operator/homeomorphism, boundary-operator, and homology rows |
 | `measure_theory` | standalone finite measure and monotonicity lessons landed; keep Lebesgue/convergence theorem rows Lean-horizon |
 | `probability_theory` | standalone finite probability mass-table lesson landed; maintain stochastic-process path through kernels/Markov chains |
 | `statistics` | exact finite tests, regression, concentration, and explicit numerical-honesty status |
@@ -486,6 +487,10 @@ Next buildout:
    boundary-squared-zero, Betti-rank replay, and checked bad-boundary
    coefficient evidence queryable without promoting general algebraic-topology
    theorems.
+   A follow-up topology row, `bridge_finite_boundary_operator_replay`, now
+   makes oriented boundary coefficients, boundary-of-boundary cancellation,
+   boundary-matrix shape, and checked bad-boundary coefficient evidence
+   queryable as the reusable lower-level bridge for the chain/homology row.
 7. Landed: add bridge-concept rows for linear-algebra computation vocabulary:
    LU replay, rank/nullity replay, residual bounds, eigenpair witnesses,
    characteristic-polynomial replay, and finite random-matrix moments.

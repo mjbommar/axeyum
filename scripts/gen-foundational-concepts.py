@@ -3336,6 +3336,7 @@ BRIDGE_CONCEPTS = [
         "unlocks": [
             "bridge_compactness_shadow",
             "bridge_connectedness_shadow",
+            "bridge_finite_boundary_operator_replay",
             "bridge_finite_chain_homology_replay",
             "field_topology",
             "bridge_lean_horizon",
@@ -3413,7 +3414,7 @@ BRIDGE_CONCEPTS = [
         "open_gaps": [
             "Finite closure/interior replay checks one explicit topology and subset; it does not prove Kuratowski closure axioms or arbitrary closure/interior theorem schemas.",
             "Finite homeomorphism replay checks one finite bijection with continuity in both directions; it does not prove homeomorphism invariance of compactness, connectedness, homology, or other topological invariants.",
-            "Additional homeomorphism, closure-operator, boundary, or specialization-order rows should land only when they add distinct Boolean, EUF, or Lean-reconstruction pressure.",
+            "Additional homeomorphism, closure-operator, or specialization-order rows should land only when they add distinct Boolean, EUF, or Lean-reconstruction pressure.",
         ],
         "graduation": {
             "status": "validated",
@@ -3422,6 +3423,103 @@ BRIDGE_CONCEPTS = [
                 "The validator recomputes topology axioms, interior, closure, preimages, bijectivity, continuity, and inverse continuity exactly.",
                 "Bad topology or preimage rows link source artifacts and route regressions before claiming checked evidence.",
                 "General topology and homeomorphism-invariance theorem claims remain Lean-horizon until kernel-checked proof routes exist.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_boundary_operator_replay",
+        "title": "Finite Boundary Operator Replay",
+        "field_ids": [
+            "topology",
+            "set_theory_and_foundations",
+            "linear_algebra",
+            "abstract_algebra",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite boundary-operator rows state an explicit finite simplicial "
+            "complex, orientation convention, chain basis, and integer boundary "
+            "coefficients. The trusted object is exact replay of oriented face "
+            "coefficients, boundary-of-boundary cancellation, boundary-matrix "
+            "shape, or a checked QF_LIA/Diophantine certificate for a malformed "
+            "fixed boundary coefficient."
+        ),
+        "prerequisites": [
+            "bridge_finite_model_replay",
+            "bridge_finite_counting_replay",
+            "family_integer_diophantine",
+            "curriculum_sets",
+            "curriculum_relations_and_functions",
+            "curriculum_linear_algebra",
+        ],
+        "unlocks": [
+            "bridge_finite_chain_homology_replay",
+            "bridge_rank_nullity",
+            "field_topology",
+            "field_linear_algebra",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite simplicial complexes",
+            "oriented boundary operators",
+            "integer boundary matrices",
+            "boundary squared replay",
+            "QF_LIA / Diophantine",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-simplicial-homology-v0",
+                "Finite simplicial-complex closure, oriented-boundary replay, boundary^2 replay, boundary-matrix rank replay, and checked bad-boundary coefficient row.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite oriented-boundary replay plus QF_LIA/Diophantine coefficient certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lia_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/finite-simplicial-homology-end-to-end.md",
+                    "docs/learn/math/matrix-computation-index.md",
+                    "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+                ],
+                "notes": (
+                    "The pack validator recomputes the alternating oriented "
+                    "face sum, applies the boundary operator twice, and checks "
+                    "the malformed sign row only after the source-level integer "
+                    "coefficient contradiction has checked Diophantine evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-simplicial-homology-end-to-end.md",
+            "docs/learn/math/analysis-topology-proof-horizons.md",
+            "docs/learn/math/matrix-computation-index.md",
+            "artifacts/examples/math/finite-simplicial-homology-v0/smt2/bad-boundary-coefficient-diophantine-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite boundary replay checks fixed oriented simplices and fixed matrices; it does not prove functoriality, homology invariance, exactness, or topological invariance.",
+            "Boundary-matrix rank rows are exact finite computations, not a general theorem about chain complexes over arbitrary rings.",
+            "Additional torsion, cohomology, or chain-map rows should land only when they add distinct integer-linear or proof-reconstruction pressure.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite complex, orientation convention, chain basis, boundary coefficients, and the exact boundary claim being replayed.",
+                "The validator recomputes oriented faces, boundary coefficients, and boundary-of-boundary cancellation exactly.",
+                "Malformed fixed boundary rows link source artifacts or route regressions before claiming checked Diophantine evidence.",
+                "Functoriality, invariance, exact sequences, cohomology, and other algebraic-topology theorem claims remain Lean-horizon until kernel-checked proof routes exist.",
             ],
         },
     },
@@ -3445,6 +3543,7 @@ BRIDGE_CONCEPTS = [
         ),
         "prerequisites": [
             "bridge_finite_model_replay",
+            "bridge_finite_boundary_operator_replay",
             "bridge_rank_nullity",
             "bridge_finite_counting_replay",
             "family_integer_diophantine",

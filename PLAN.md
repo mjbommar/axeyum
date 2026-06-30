@@ -158,7 +158,7 @@ finite-martingales' bad conditional-expectation row now promoted after finite
 filtration replay computes the up-block expectation, and finite Markov-chain's
 existing bad stochastic-row artifact now explicitly promoted in solver-reuse
 metadata.
-The foundational concept atlas now also includes 58 generated R1 bridge
+The foundational concept atlas now also includes 59 generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 refutation-as-query, finite proof-pattern replay, finite quantifier expansion,
 bounded induction obligations, Boolean CNF DRAT/LRAT anatomy, QF_LRA Farkas
@@ -172,7 +172,7 @@ bijection/cardinality,
 cardinality theorem horizons, metric balls, bounded epsilon-delta shadows,
 compactness shadows, connectedness shadows, continuity-by-preimage, finite
 topology closure/interior and homeomorphism replay,
-finite chain-complex/homology replay, LU factorization replay, rank-nullity replay,
+finite boundary-operator replay, finite chain-complex/homology replay, LU factorization replay, rank-nullity replay,
 residual bounds, eigenpair witnesses, characteristic polynomial replay, finite
 random-matrix moments, finite measure additivity, finite probability mass
 tables, finite pushforward distributions, finite stochastic kernels, finite
@@ -192,14 +192,15 @@ Lebesgue measure, general product-measure existence, convergence theorems, and
 almost-everywhere reasoning in the Lean-horizon lane.
 The public foundational-resource consumer query layer now also exercises the
 topology lane: Boolean and Diophantine field readiness,
-compactness/preimage/closure/homeomorphism/homology bridge lookups,
+compactness/preimage/closure/homeomorphism/boundary/homology bridge lookups,
 concept-scoped finite topology-operator/homeomorphism and finite
-chain-complex/homology queries, and checked Boolean/Alethe/Diophantine rows for
-finite topology, compactness, connectedness, continuous maps, homeomorphism
-replay, homology, metric balls, and bounded epsilon-delta shadows are
-smoke-checked through the committed JSON contract, while arbitrary
-compactness, connectedness, homeomorphism invariance, homology invariance,
-exact sequences, and cohomology stay in the theorem-horizon lane.
+boundary-operator plus chain-complex/homology queries, and checked
+Boolean/Alethe/Diophantine rows for finite topology, compactness, connectedness,
+continuous maps, homeomorphism replay, boundary replay, homology, metric balls,
+and bounded epsilon-delta shadows are smoke-checked through the committed JSON
+contract, while arbitrary compactness, connectedness, homeomorphism invariance,
+homology invariance, exact sequences, and cohomology stay in the
+theorem-horizon lane.
 The public foundational-resource consumer query layer now also exercises the
 statistics lane: Farkas field readiness, finite-table/tail-count bridge
 lookups, and checked Farkas/Diophantine rows for exact finite tests,
