@@ -333,6 +333,115 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+For abstract algebra, query the Alethe route to keep equality-heavy finite
+groups, monoids, permutation groups, homomorphisms, ideals, modules, vector
+spaces, dual spaces, and tensor products grouped while leaving arbitrary
+algebraic structure theorems, isomorphism theorems, and infinite algebra in
+the theorem-horizon lane:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field abstract_algebra \
+  --route Alethe \
+  --require-any
+```
+
+Use atlas lookups for reusable algebra-map vocabulary:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field abstract_algebra \
+  --text homomorphism \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field abstract_algebra \
+  --text ideal \
+  --require-any
+```
+
+To display concrete checked algebra rows, drill into equality-heavy and
+fixed-width finite-algebra routes separately:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field abstract_algebra \
+  --route Alethe \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --field abstract_algebra \
+  --route qf-bv \
+  --proof-status checked \
+  --require-any
+```
+
+For number theory, query the Diophantine route to keep gcd/Bezout,
+nonunit modular inverse, integer interval obstruction, bounded induction
+parity, and bounded Diophantine witness rows grouped while leaving unbounded
+number-theory theorem claims in the Lean-horizon lane:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field number_theory \
+  --route Diophantine \
+  --require-any
+```
+
+Use the finite vocabulary lookup to expose the shared Diophantine and
+fixed-width residue families:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field number_theory \
+  --text finite \
+  --require-any
+```
+
+To display concrete checked integer-arithmetic rows, drill into checked
+Diophantine examples:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field number_theory \
+  --route Diophantine \
+  --proof-status checked \
+  --require-any
+```
+
+For graph theory, query the Boolean route to keep finite coloring,
+reachability, matching, cut, and d-separation refutations grouped while
+leaving asymptotic algorithm analysis and unbounded graph-theorem coverage in
+the proof-horizon lane:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field graph_theory \
+  --route boolean \
+  --require-any
+```
+
+Use the graph atlas lookup for the reusable Boolean CNF and fixed-width graph
+families:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field graph_theory \
+  --text graph \
+  --require-any
+```
+
+To display concrete checked graph rows, drill into checked Boolean examples:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field graph_theory \
+  --route boolean \
+  --proof-status checked \
+  --require-any
+```
+
 For optimization and convexity, query the Farkas route to keep exact LP
 thresholds, finite convexity shadows, regression normal equations, residual
 bounds, gradient/Hessian replay, finite KKT stationarity, finite SDP
@@ -509,15 +618,45 @@ python3 scripts/query-foundational-resources.py checks --field graph_theory --ex
 python3 scripts/query-foundational-resources.py concepts --kind example-family --format json --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field probability_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field differential_equations_and_dynamical_systems --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field topology --route boolean --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field topology --text compactness --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field topology --text preimage --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field topology --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field topology --route alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field measure_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field measure_theory --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field measure_theory --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field statistics --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field statistics --text tail --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field statistics --text finite --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field statistics --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field statistics --route Diophantine --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field linear_algebra --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field linear_algebra --route Alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field linear_algebra --text rank --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field linear_algebra --text projection --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field linear_algebra --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field linear_algebra --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field abstract_algebra --route Alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text homomorphism --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text ideal --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field abstract_algebra --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field abstract_algebra --route qf-bv --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field number_theory --route Diophantine --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field number_theory --text finite --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field number_theory --route Diophantine --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field graph_theory --route boolean --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field graph_theory --text graph --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field graph_theory --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field optimization_and_convexity --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text objective --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text convexity --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field optimization_and_convexity --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field geometry --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field geometry --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field functional_analysis_and_operator_theory --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field functional_analysis_and_operator_theory --text operator --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field functional_analysis_and_operator_theory --route Farkas --proof-status checked --require-any >/dev/null
 ```
 
 That keeps the examples on this page aligned with the committed data boundary

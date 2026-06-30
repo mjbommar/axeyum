@@ -371,7 +371,13 @@ Use one row per commit unless the change is purely navigational.
    residual/eigen/projection/rank vocabulary, finite vector/dual/module/tensor
    rows, and Farkas/Alethe proof routes visible through the public JSON
    contract.
-14. Add future rules/law crosswalk examples only by reusing existing
+14. Landed: add core algebra/number/graph consumer-query coverage through
+   [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
+   `scripts/check-foundational-resources.sh`, making abstract-algebra
+   Alethe/QF_BV rows, homomorphism/ideal bridge vocabulary, number-theory
+   Diophantine rows, finite-family vocabulary, graph-theory Boolean rows, and
+   graph-family vocabulary visible through the public JSON contract.
+15. Add future rules/law crosswalk examples only by reusing existing
    math-resource patterns; do not create a separate rule ontology until the
    current JSON boundary is exercised by more consumers.
 

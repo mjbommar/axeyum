@@ -2032,6 +2032,17 @@ modules, tensors, geometry dot products, finite SDP/KKT/active-set rows, and
 matrix-process equations stay visible through the public JSON boundary without
 promoting spectral-theorem, conditioning/stability, or general
 vector-space/module theorem claims.
+The consumer query layer now also exposes core algebra, number-theory, and
+graph-theory readiness: `CONSUMER-QUERIES.md` shows abstract-algebra Alethe
+field summaries, homomorphism/ideal bridge lookups, checked Alethe and
+fixed-width QF_BV finite-algebra rows, number-theory Diophantine field
+summaries with finite-family lookups and checked integer-arithmetic rows, and
+graph-theory Boolean field summaries with checked finite coloring,
+reachability, matching, cut, and d-separation rows. The foundational-resource
+smoke check runs those same queries so the core curriculum lanes are visible
+through the public JSON boundary without promoting arbitrary algebraic
+structure theorems, unbounded number-theory claims, asymptotic graph
+algorithms, or general graph theorems.
 The consumer query layer now also exposes optimization/convexity readiness:
 `CONSUMER-QUERIES.md` shows the Farkas field summary, LP-objective and
 convexity bridge lookups, and checked optimization/convexity Farkas row

@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Core algebra/number/graph consumer queries landed.**
+  [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
+  now shows public JSON queries for abstract-algebra Alethe readiness,
+  homomorphism/ideal bridge lookups, checked Alethe and fixed-width QF_BV
+  finite-algebra rows, number-theory Diophantine readiness, checked
+  integer-arithmetic rows, and graph-theory Boolean/CNF readiness with checked
+  finite coloring, reachability, matching, cut, and d-separation rows.
+  `check-foundational-resources.sh` smoke-checks those queries without
+  promoting arbitrary algebraic-structure theorems, unbounded number-theory
+  claims, asymptotic graph algorithms, or general graph theorems.
+
 - **Linear-algebra consumer queries landed.**
   [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
   now shows public JSON queries for linear-algebra Farkas/Alethe field

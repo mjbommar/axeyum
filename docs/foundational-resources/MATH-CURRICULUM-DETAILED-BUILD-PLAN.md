@@ -603,6 +603,15 @@ Pick one row per commit unless the change is purely navigational.
     equality-heavy finite vector-space, dual-space, module, and tensor rows,
     making the matrix/algebraic linear-algebra lane visible through the
     committed JSON contract.
+71. Landed: add core algebra/number/graph field-readiness consumer query
+    coverage. `CONSUMER-QUERIES.md` and `check-foundational-resources.sh` now
+    exercise abstract-algebra Alethe field readiness, homomorphism/ideal bridge
+    concept lookups, checked Alethe and fixed-width QF_BV finite-algebra rows,
+    number-theory Diophantine field readiness, finite-family lookups, checked
+    integer-arithmetic rows, graph-theory Boolean field readiness,
+    graph-family lookups, and checked finite coloring, reachability, matching,
+    cut, and d-separation rows, making those core lanes visible through the
+    committed JSON contract without promoting theorem-horizon claims.
 
 ## Validation Checklist
 

@@ -264,15 +264,20 @@ Build sequence:
    committed JSON data contract. The smoke set now covers probability/Farkas,
    dynamics/Farkas, topology/Boolean+Alethe, measure/Farkas,
    statistics/Farkas+Diophantine, linear-algebra/Farkas+Alethe,
-   optimization/Farkas, geometry/Farkas, and functional-analysis/operator
-   Farkas field-readiness examples, plus topology compactness/preimage bridge
-   lookups, measure bridge concept lookup, statistics finite-table/tail-count
-   bridge lookups, linear-algebra rank/projection bridge lookups,
+   abstract-algebra/Alethe+QF_BV, number-theory/Diophantine,
+   graph-theory/Boolean, optimization/Farkas, geometry/Farkas, and
+   functional-analysis/operator Farkas field-readiness examples, plus topology
+   compactness/preimage bridge lookups, measure bridge concept lookup,
+   statistics finite-table/tail-count bridge lookups, linear-algebra
+   rank/projection bridge lookups, abstract-algebra homomorphism/ideal bridge
+   lookups, number-theory finite-family lookup, graph-family lookup,
    LP-objective and convexity bridge concept lookup, operator bridge concept
    lookup, checked topology Boolean/Alethe rows, checked measure-theory Farkas
    rows, checked statistics Farkas/Diophantine rows, checked linear-algebra
-   Farkas/Alethe rows, checked optimization/convexity Farkas rows, checked
-   geometry Farkas rows, and checked functional-analysis/operator Farkas rows.
+   Farkas/Alethe rows, checked abstract-algebra Alethe/QF_BV rows, checked
+   number-theory Diophantine rows, checked graph-theory Boolean rows, checked
+   optimization/convexity Farkas rows, checked geometry Farkas rows, and
+   checked functional-analysis/operator Farkas rows.
 16. Negative example-pack validator fixtures now land through
     `scripts/check-foundational-negative-fixtures.py` and
     `artifacts/fixtures/foundational-example-pack-invalid/`, covering unknown
@@ -442,7 +447,16 @@ Build sequence:
     summaries, rank/projection bridge lookups, checked exact-rational matrix
     rows, and checked equality-heavy finite vector/module/tensor rows without
     promoting spectral, stability, or general vector-space theorem claims.
-50. Revisit crate/repo boundaries only after three real consumers or repeated
+50. Core algebra/number/graph field-readiness consumer queries now land in
+    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
+    `scripts/check-foundational-resources.sh`, covering abstract-algebra
+    Alethe readiness, homomorphism/ideal bridge lookups, checked Alethe and
+    fixed-width QF_BV finite-algebra rows, number-theory Diophantine
+    readiness, checked integer-arithmetic rows, and graph-theory Boolean
+    readiness with checked finite graph rows without promoting arbitrary
+    algebraic-structure, unbounded number-theory, asymptotic algorithm, or
+    general graph-theorem claims.
+51. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

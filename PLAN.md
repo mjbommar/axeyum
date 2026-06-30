@@ -194,6 +194,15 @@ dot-products, finite SDP/KKT/active-set rows, and matrix process equations are
 smoke-checked through the committed JSON contract, while spectral theorems,
 conditioning/stability, and general vector-space/module theorem claims stay in
 the horizon lanes.
+The public foundational-resource consumer query layer now also exercises the
+core algebra/number/graph lanes: abstract-algebra Alethe readiness,
+homomorphism/ideal bridge lookups, checked Alethe and fixed-width QF_BV rows;
+number-theory Diophantine readiness, finite-family lookups, and checked
+integer-arithmetic rows; and graph-theory Boolean readiness, graph-family
+lookups, and checked finite coloring/reachability/matching/cut/d-separation
+rows. These are smoke-checked through the committed JSON contract without
+promoting arbitrary algebraic-structure theorems, unbounded number-theory
+claims, asymptotic graph algorithms, or general graph theorems.
 The sequence/real-analysis lane now also splits bounded monotone sequence and
 finite recurrence-prefix, separation/root-finding, KKT, active-set QP, SDP, and gradient-descent checks into focused packs: finite monotone-prefix
 replay, finite prefix supremum, finite tail-gap replay, Fibonacci prefix

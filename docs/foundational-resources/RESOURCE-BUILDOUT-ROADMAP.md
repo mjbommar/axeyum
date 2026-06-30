@@ -1536,7 +1536,14 @@ Pick one item per commit unless the change is purely navigational.
     check, covering Farkas/Alethe field readiness, rank/projection bridge
     lookups, checked exact-rational matrix rows, and checked finite
     vector/dual/module/tensor equality rows.
-82. Continue proof-route promotions or consumer-query examples; revisit the
+82. Landed: add core algebra/number/graph field-readiness consumer queries
+    through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational
+    smoke check, covering abstract-algebra Alethe readiness,
+    homomorphism/ideal bridge lookups, checked Alethe and fixed-width QF_BV
+    finite-algebra rows, number-theory Diophantine readiness, finite-family
+    lookup, checked integer-arithmetic rows, graph-theory Boolean readiness,
+    graph-family lookup, and checked finite graph rows.
+83. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 
