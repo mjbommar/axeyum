@@ -81,6 +81,9 @@ Canonical examples:
 - [Finite Probability](../../../artifacts/examples/math/finite-probability-v0/)
   uses bad normalization and Bayes-posterior rows over exact probability
   tables.
+- [Finite Product Measure](../../../artifacts/examples/math/finite-product-measure-v0/)
+  uses a bad product-probability row after exact replay computes the product
+  mass.
 - [Finite Markov Chain](../../../artifacts/examples/math/finite-markov-chain-v0/)
   and [Finite Hitting Times](../../../artifacts/examples/math/finite-hitting-times-v0/)
   use malformed stochastic-row and expected-time equations.

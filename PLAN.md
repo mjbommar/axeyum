@@ -102,7 +102,9 @@ Current resource-buildout status (2026-06-29): the first QF_UF/Alethe proof
 upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
 finite group actions, with a topology/preimage extension for finite continuous
-maps.
+maps. The measure/probability QF_LRA/Farkas lane now also promotes finite
+product-measure's bad product-probability row through a source-linked exact
+linear contradiction after replay computes the product mass.
 The foundational concept atlas now also includes twenty-two generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 metric balls, bounded epsilon-delta shadows, compactness shadows,
@@ -207,13 +209,15 @@ negative-norm row, and spectral linear algebra now promoted for its bad
 eigenpair row, with matrix invariants now promoted for its bad characteristic
 polynomial row, and finite Chebyshev systems now promoted for the duplicate-node
 determinant conflict, metric continuity now promoted for the finite
-bad-delta output-bound conflict, and finite stochastic kernels now promoted for
-the bad kernel-row normalization conflict. The first secondary QF_LRA/Farkas
-target set is now covered, the initial equality-heavy QF_UF/Alethe secondary
-set is now covered including the finite-ideals quotient representative row, and
-finite group actions now promote a bad identity-action conflict through a
-checked QF_UF/Alethe regression, while finite continuous maps now promote a
-bad preimage-membership conflict through the same checked route. The first
+bad-delta output-bound conflict, finite stochastic kernels now promoted for
+the bad kernel-row normalization conflict, and finite product measure now
+promoted for the bad product-probability conflict. The first secondary
+QF_LRA/Farkas target set is now covered, the initial equality-heavy QF_UF/Alethe
+secondary set is now covered including the finite-ideals quotient
+representative row, and finite group actions now promote a bad identity-action
+conflict through a checked QF_UF/Alethe regression, while finite continuous maps
+now promote a bad preimage-membership conflict through the same checked route.
+The first
 QF_BV bit-blast/DRAT resource promotion now covers the
 finite-rings bad distributivity row, the finite-fields composite no-inverse row,
 and the graph-coloring one-bit triangle two-coloring obstruction, with bounded

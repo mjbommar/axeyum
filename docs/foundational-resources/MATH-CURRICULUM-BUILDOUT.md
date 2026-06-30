@@ -715,8 +715,8 @@ simple-function integrals, indicator integrals, integral linearity, checked
 rejection of a false expectation, and a Lebesgue-integration Lean-horizon row.
 `artifacts/examples/math/finite-product-measure-v0/` now validates exact
 finite product-measure tables, rectangle probabilities, left and right
-marginals, finite Fubini replay, checked rejection of a false product
-probability, and a Fubini/Tonelli Lean-horizon row.
+marginals, finite Fubini replay, checked QF_LRA/Farkas rejection of a false
+product probability, and a Fubini/Tonelli Lean-horizon row.
 `artifacts/examples/math/finite-random-variables-v0/` now validates exact
 finite random-variable pushforwards, expectation through pushforward
 distributions, finite independence checks, checked rejection of a false
@@ -1224,8 +1224,9 @@ QF_LIA/Diophantine bad-coefficient row, and a homology Lean-horizon row.
 `finite-integration-v0` now adds the exact finite
 simple-function integral bridge between finite measure, probability, and
 statistics. `finite-product-measure-v0` now adds the exact finite product
-measure, marginalization, and Fubini bridge toward general measure/probability
-theory. `finite-random-variables-v0` now adds the exact finite random-variable
+measure, marginalization, Fubini bridge, and checked QF_LRA/Farkas bad-product
+probability row toward general measure/probability theory.
+`finite-random-variables-v0` now adds the exact finite random-variable
 pushforward, expectation, and independence bridge toward probability/statistics
 and measure-theory semantics. `finite-conditional-expectation-v0` now adds the
 finite partition conditional-expectation, total-expectation, and tower-property

@@ -34,6 +34,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite product-measure bad probability QF_LRA/Farkas regression seed",
+    "pressure": "Malformed finite product-probability row where independent factor probabilities 1/2 and 1/3 force product mass 1/6 but the false table claims 1/5.",
+    "evidence": [
+      "bad-product-measure-rejected"
+    ],
+    "next_step": "Promote additional product-measure, marginal, or finite-integration rows only when they add distinct exact-linear solver pressure; keep general product-measure construction and Fubini/Tonelli in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -41,6 +50,9 @@
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/curriculum/02-structures/counting.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-measure-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
@@ -53,7 +65,7 @@
   "graduation_criteria": [
     "Encode finite product measures as exact rational Cartesian-product probability tables.",
     "Replay finite rectangle, marginalization, and iterated-integral witnesses through Axeyum model evaluation.",
-    "Emit checked finite counterexample evidence for rejected product-probability claims.",
+    "Emit checked finite counterexample evidence for rejected product-probability claims; the bad product-probability row now has checked QF_LRA/Farkas evidence.",
     "Keep general product-measure construction, Fubini/Tonelli, kernels, and almost-everywhere theorems marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

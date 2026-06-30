@@ -41,7 +41,7 @@ The current committed data boundary reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 18 promoted solver-reuse packs.
+- 19 promoted solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -995,7 +995,12 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_uf_routes finite_continuous_maps_bad_preimage_emits_checked_alethe`.
-14. Revisit the library boundary decision after the next five solver-reuse
+14. Landed: promote `finite-product-measure-v0` through a source-linked
+    QF_LRA/Farkas regression for `bad-product-measure-rejected`. The artifact
+    `artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-measure-farkas-conflict.smt2`
+    is checked by
+    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_product_measure_bad_probability_emits_checked_farkas`.
+15. Revisit the library boundary decision after the next four solver-reuse
     promotions and at least one downstream consumer use.
 
 ## Validation Checklist

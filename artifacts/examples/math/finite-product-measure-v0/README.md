@@ -28,7 +28,9 @@ The examples are:
 The validator checks normalized finite factor distributions, verifies that each
 product atom has probability `P(x) * Q(y)`, recomputes rectangle measures,
 recomputes left and right marginals, and checks that a direct finite integral
-matches both iterated finite sums. All arithmetic is exact rational arithmetic.
+matches both iterated finite sums. The false product-probability row is also
+mirrored by a QF_LRA/Farkas regression over the replay-computed product mass.
+All arithmetic is exact rational arithmetic.
 
 This pack is checked finite evidence for the bad product-probability row. It is
 not a proof of general product-measure construction, Fubini/Tonelli, measurably

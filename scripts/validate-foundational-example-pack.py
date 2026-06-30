@@ -13573,6 +13573,11 @@ def validate_finite_product_measure(expected: dict[str, Any]) -> None:
         fail("bad-product-measure-rejected actual_probability is incorrect")
     if claimed == actual:
         fail("bad-product-measure-rejected must document a false product probability")
+    require_string("bad product smt2_artifact", data.get("smt2_artifact"))
+    check_source("bad product smt2_artifact", data["smt2_artifact"])
+    require_string("bad product farkas_regression", data.get("farkas_regression"))
+    if "finite_product_measure_bad_probability_emits_checked_farkas" not in data["farkas_regression"]:
+        fail("bad-product-measure-rejected must link the Farkas regression")
 
     horizon = checks["fubini-tonelli-lean-horizon"]
     if horizon["expected_result"] != "not-run":

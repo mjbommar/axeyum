@@ -271,11 +271,14 @@ Build sequence:
 17. `finite-continuous-maps-v0` now links `bad-continuous-map-rejected` to
     `artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2`,
     checked by the `math_resource_uf_routes` QF_UF/Alethe regression.
-18. Route-specific tamper/rejection regressions now land for the active
+18. `finite-product-measure-v0` now links `bad-product-measure-rejected` to
+    `artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-measure-farkas-conflict.smt2`,
+    checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
+19. Route-specific tamper/rejection regressions now land for the active
     certificate routes: Boolean CNF/LRAT, QF_BV DRAT, QF_LRA/Farkas,
     QF_LIA/Diophantine, and QF_UF/Alethe all mutate emitted resource
     certificates and require independent checker rejection.
-19. Revisit crate/repo boundaries only after three real consumers or repeated
+20. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

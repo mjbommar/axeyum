@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const product_probability Real)
+(assert (= product_probability (/ 1 6)))
+(assert (= product_probability (/ 1 5)))
+(check-sat)

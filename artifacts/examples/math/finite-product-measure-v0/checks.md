@@ -27,7 +27,9 @@ iterated finite sums. All three values must equal `3`.
 Expected result: `unsat`.
 
 The validator rejects the claimed product probability `1/5` because the exact
-factor product for `(heads, one)` is `1/6`.
+factor product for `(heads, one)` is `1/6`. The source-linked QF_LRA artifact
+records the final exact-linear contradiction checked by the shared Farkas route
+regression.
 
 ## `fubini-tonelli-lean-horizon`
 

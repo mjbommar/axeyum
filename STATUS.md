@@ -223,6 +223,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   finite-topology openness failure stays in replay; generated dashboards move
   promoted solver-reuse packs to 18.
 
+- **Finite product-measure QF_LRA promotion landed.**
+  [`finite-product-measure-v0`](artifacts/examples/math/finite-product-measure-v0/)
+  now links `bad-product-measure-rejected` to a source-level QF_LRA artifact for
+  the malformed product-probability row. The shared `math_resource_lra_routes`
+  regression emits and independently rechecks Farkas evidence for
+  `product_probability = 1/6` versus `product_probability = 1/5`; generated
+  dashboards move promoted solver-reuse packs to 19.
+
 - **Curriculum pressure by fragment landed.** The generated
   [`curriculum-pressure-by-fragment.md`](docs/foundational-resources/generated/curriculum-pressure-by-fragment.md)
   dashboard groups the 84 non-template math packs into overlapping Bool/CNF,

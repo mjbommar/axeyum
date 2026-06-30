@@ -265,6 +265,20 @@ fn finite_probability_bad_bayes_posterior_emits_checked_farkas() {
 }
 
 #[test]
+fn finite_product_measure_bad_probability_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let product_probability = real(&mut arena, "product_probability");
+    let replay_computed_mass = eq_ratio(&mut arena, product_probability, 1, 6);
+    let false_claimed_mass = eq_ratio(&mut arena, product_probability, 1, 5);
+
+    assert_farkas_checked(
+        "finite-product-measure-v0 bad-product-measure-rejected",
+        &arena,
+        &[replay_computed_mass, false_claimed_mass],
+    );
+}
+
+#[test]
 fn finite_markov_chain_bad_stochastic_row_emits_checked_farkas() {
     let mut arena = TermArena::new();
     let p10 = real(&mut arena, "p10");

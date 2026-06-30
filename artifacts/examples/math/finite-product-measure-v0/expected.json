@@ -98,9 +98,11 @@
           "right": "one"
         },
         "claimed_probability": "1/5",
-        "actual_probability": "1/6"
+        "actual_probability": "1/6",
+        "smt2_artifact": "artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-measure-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_product_measure_bad_probability_emits_checked_farkas"
       },
-      "notes": "The validator rejects the claim because multiplying the factor probabilities gives 1/6, not 1/5."
+      "notes": "The validator rejects the claim because multiplying the factor probabilities gives 1/6, not 1/5; after replay computes the product mass, the Axeyum regression refutes product_probability = 1/6 and product_probability = 1/5 with rechecked Farkas evidence."
     },
     {
       "id": "fubini-tonelli-lean-horizon",
