@@ -60,6 +60,10 @@ implementation equivalence now have checked fixtures. They are checked by
 `cargo test -p axeyum-solver --test rules_as_code_examples`; benefit threshold
 and temporal-transition rows, authorization version-delta rows, and tax/benefit
 threshold-cliff and temporal-transition rows remain replayed witnesses.
+The generated
+[Rules Query Dashboard](generated/rules-query-dashboard.md) now reads the three
+pack JSON files and exposes 738 bounded sample rows plus per-pack coverage,
+equivalence, threshold, cap, version-delta, and monotonicity query families.
 
 The cross-resource reuse map is
 [Rules/Law Crosswalk For Foundational Resources](../foundational-resources/RULES-LAW-CROSSWALK.md).
@@ -229,6 +233,7 @@ Near-term documentation checks:
 just rules-as-code
 ./scripts/check-links.sh
 python3 scripts/validate-rules-as-code.py
+python3 scripts/gen-rules-as-code-dashboard.py
 ```
 
 Rule-pack solver checks:

@@ -365,6 +365,10 @@ thresholds, household-size adjustments, caps, active phase-out monotonicity,
 effective-date witnesses, and checked Bool/QF_LIA fixtures for non-negative
 benefit, cap, active phase-out monotonicity, and bounded implementation
 equivalence, with the validator replaying the full piecewise finite sample.
+The rules/law lane now also has a generated query dashboard that reads the
+three committed rule-pack JSON files and exposes 738 bounded sample rows plus
+coverage, equivalence, threshold, cap, version-delta, and monotonicity
+query-family counts without promoting the packs to legal or solver benchmarks.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, finite tensor products, and finite
 group actions now add secondary equality-heavy promotions for bad antisymmetry,

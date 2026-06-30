@@ -205,6 +205,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Rules/law generated-query dashboard landed.**
+  [`rules-query-dashboard.md`](docs/rules-as-code/generated/rules-query-dashboard.md)
+  is generated from the three committed rules-as-code packs and reports 738
+  bounded sample rows, 12 checked rows, 5 replayed rows, and per-pack query
+  families for coverage, equivalence, threshold, cap, version-delta, and
+  monotonicity checks. `just rules-as-code` now regenerates the dashboard and
+  fails on generated drift.
+
 - **Tax/benefit arithmetic rules/law pack landed.**
   [`tax-benefit-arithmetic-v0`](docs/rules-as-code/examples/tax-benefit-arithmetic-v0/README.md)
   is the third rules-as-code pack and reuses integer thresholds, household-size

@@ -1059,6 +1059,9 @@ Next work:
 - Use the completed `benefit-eligibility-v0`, `authorization-policy-v0`, and
   `tax-benefit-arithmetic-v0` Bool/QF_LIA proof harnesses as reference patterns
   for generated multi-row coverage/equivalence and threshold/cap queries.
+  Status: the generated
+  [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
+  now exposes the bounded row counts and query-family inventory.
 - Reuse pack schema ideas before creating law-specific schema fields.
 - Keep citations and source provenance mandatory for legal/policy examples.
 
@@ -1108,7 +1111,11 @@ Pick one item per commit unless the change is purely navigational.
 9. Landed: add `tax-benefit-arithmetic-v0` as the third rules/law pack, with
    source-linked Bool/QF_LIA proof fixtures for non-negative benefit, cap,
    active phase-out monotonicity, and bounded implementation equivalence.
-10. Landed: add a consumer-query recipe for "find all packs for a field and
+10. Landed: add the generated
+   [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
+   for bounded coverage, equivalence, threshold, cap, version-delta, and
+   monotonicity query-family counts across the current rule packs.
+11. Landed: add a consumer-query recipe for "find all packs for a field and
    route" through the `--route` filter in
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md).
@@ -1508,7 +1515,10 @@ Pick one item per commit unless the change is purely navigational.
     [`tax-benefit-arithmetic-v0`](../rules-as-code/examples/tax-benefit-arithmetic-v0/)
     as the third rules/law pack, reusing integer threshold, cap, phase-out,
     effective-date, finite replay, and Bool/QF_LIA proof-route patterns.
-77. Continue proof-route promotions or consumer-query examples; revisit the
+77. Landed: add
+    [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
+    as the generated bounded-query surface for the current rules/law packs.
+78. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

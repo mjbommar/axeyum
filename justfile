@@ -30,6 +30,8 @@ foundational-resources:
 
 rules-as-code:
     python3 scripts/validate-rules-as-code.py
+    python3 scripts/gen-rules-as-code-dashboard.py
+    git diff --exit-code docs/rules-as-code/generated/rules-query-dashboard.md
 
 deny:
     cargo deny check

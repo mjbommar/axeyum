@@ -408,7 +408,10 @@ Build sequence:
     now adds the third rules/law pack, reusing integer thresholds,
     household-size adjustments, caps, active phase-out monotonicity,
     effective-date witnesses, and checked Bool/QF_LIA proof fixtures.
-45. Revisit crate/repo boundaries only after three real consumers or repeated
+45. [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
+    now adds the first generated rules/law query surface, exposing bounded
+    sample rows and generated-query families from committed rule-pack JSON.
+46. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

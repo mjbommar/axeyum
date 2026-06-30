@@ -569,6 +569,12 @@ Pick one row per commit unless the change is purely navigational.
     household-size adjustments, caps, active phase-out monotonicity,
     effective-date witnesses, and checked Bool/QF_LIA proof fixtures while the
     rules validator replays the full piecewise finite sample.
+66. Landed: add the generated
+    [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
+    as the first rules/law generated-query surface. The dashboard reads the
+    committed rule-pack JSON and reports bounded sample rows plus generated
+    coverage, equivalence, threshold, cap, version-delta, and monotonicity
+    query-family counts.
 
 ## Validation Checklist
 

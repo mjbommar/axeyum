@@ -22,6 +22,8 @@ state the trust boundary.
 docs/rules-as-code/
   README.md
   ROADMAP.md
+  generated/
+    rules-query-dashboard.md
   examples/
     benefit-eligibility-v0/
     authorization-policy-v0/
@@ -46,6 +48,11 @@ The math-resource reuse plan lives in
 [Rules/Law Crosswalk For Foundational Resources](../foundational-resources/RULES-LAW-CROSSWALK.md).
 It maps finite predicates, arithmetic thresholds, graph reachability,
 precedence, and proof routes to concrete policy/rule checks.
+
+The generated bounded-query surface lives in
+[Rules Query Dashboard](generated/rules-query-dashboard.md). It reads the
+committed rule-pack JSON and counts the sample rows and generated-query families
+that can become coverage, equivalence, threshold, cap, and monotonicity checks.
 
 ## First Example Theme
 
@@ -76,5 +83,6 @@ Validate the current packs with:
 
 ```sh
 python3 scripts/validate-rules-as-code.py
+python3 scripts/gen-rules-as-code-dashboard.py
 cargo test -p axeyum-solver --test rules_as_code_examples
 ```

@@ -1999,6 +1999,11 @@ monotonicity, effective-date witnesses, and checked Bool/QF_LIA evidence for
 non-negative benefit, cap, active phase-out monotonicity, and bounded
 implementation equivalence, while the rules validator replays the full
 piecewise finite sample.
+The rules/law lane now also has a generated
+[`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
+that reads the committed rule-pack JSON and exposes 738 bounded sample rows plus
+per-pack query families for coverage, equivalence, thresholds, caps,
+version-deltas, and monotonicity.
 The consumer query layer now also exposes optimization/convexity readiness:
 `CONSUMER-QUERIES.md` shows the Farkas field summary, LP-objective and
 convexity bridge lookups, and checked optimization/convexity Farkas row

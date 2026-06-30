@@ -142,7 +142,12 @@ exists.
    reusing QF_LIA threshold, phase-out, cap, effective-date, and monotonicity
    patterns. Next: broaden the one-off active-slice fixtures into generated
    bounded income/date/household queries.
-4. Promote only those rows that have deterministic replay plus a source-linked
+4. Landed: add the generated
+   [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md),
+   which reads committed rule-pack JSON and counts the bounded query families
+   available for generated coverage, equivalence, threshold, cap, version-delta,
+   and monotonicity checks.
+5. Promote only those rows that have deterministic replay plus a source-linked
    regression or proof route.
 
 ## Non-Goals

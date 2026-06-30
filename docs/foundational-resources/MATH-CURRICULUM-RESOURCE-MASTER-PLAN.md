@@ -344,7 +344,11 @@ Use one row per commit unless the change is purely navigational.
    [`tax-benefit-arithmetic-v0`](../rules-as-code/examples/tax-benefit-arithmetic-v0/)
    rules/law pack by reusing integer threshold, cap, phase-out monotonicity,
    effective-date, finite replay, and Bool/QF_LIA proof-route patterns.
-9. Add future rules/law crosswalk examples only by reusing existing
+9. Landed: add the generated
+   [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
+   so the three rule packs expose bounded sample rows and generated-query
+   families before new law-specific schema fields are created.
+10. Add future rules/law crosswalk examples only by reusing existing
    math-resource patterns; do not create a separate rule ontology until the
    current JSON boundary is exercised by more consumers.
 
