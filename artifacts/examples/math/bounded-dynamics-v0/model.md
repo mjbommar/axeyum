@@ -27,6 +27,17 @@ The same trace is checked against the closed interval:
 
 for every listed state.
 
+## Bad Invariant Bound
+
+The same trace also supplies a checked negative row. Exact replay computes:
+
+```text
+max(0, 2, 4, 6, 8) = 8
+```
+
+so the malformed invariant upper bound `x(t) <= 6` is rejected by the
+source-linked QF_LRA/Farkas artifact.
+
 ## Reachability Witness
 
 For `initial = 0`, `delta = 3`, and `steps = 3`, the trace is:

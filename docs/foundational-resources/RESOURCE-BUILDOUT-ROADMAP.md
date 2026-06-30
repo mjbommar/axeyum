@@ -40,12 +40,12 @@ The current committed data boundary reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math example packs.
-- 421 expected checks.
-- 203 checked proof/evidence rows.
+- 422 expected checks.
+- 204 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 83 promoted solver-reuse packs.
-- 1 non-benchmark-horizon solver-reuse pack.
+- 84 promoted solver-reuse packs.
+- 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
@@ -836,6 +836,8 @@ Build next:
 - Add concept rows for recurrence trace, bounded invariant, threshold
   reachability, Euler transition, discrete flow, absorbing Markov chain, and
   existence/uniqueness horizon.
+- Keep `bounded-dynamics-v0`'s promoted bad invariant-bound row tied to exact
+  recurrence replay plus the source QF_LRA/Farkas artifact.
 - Promote bad finite transitions, expected-time equations, and invariant
   failures through LRA/LIA or replay according to source shape.
 - Keep continuous dynamics, PDEs, chaos, and existence/uniqueness theory as

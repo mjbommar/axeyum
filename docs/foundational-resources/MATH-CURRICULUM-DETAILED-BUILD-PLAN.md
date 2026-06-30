@@ -37,12 +37,12 @@ The committed resource query currently reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math packs.
-- 421 expected checks.
-- 203 checked proof/evidence rows.
+- 422 expected checks.
+- 204 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 83 promoted solver-reuse packs.
-- 1 non-benchmark-horizon solver-reuse pack.
+- 84 promoted solver-reuse packs.
+- 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -91,11 +91,13 @@ Goal: every current non-template pack has a deliberate R5 disposition:
 
 Current unclassified queue: empty.
 
-Recently classified as explicit non-benchmark-horizon rows:
+Current non-benchmark queue: empty.
+
+Last row closed:
 
 | Pack | Upgrade Trigger |
 |---|---|
-| `bounded-dynamics-v0` | add a bounded safety or invariant-refutation row with a source-linked QF_LRA/BV artifact |
+| `bounded-dynamics-v0` | promoted through a bad invariant-bound row with a source-linked QF_LRA/Farkas artifact and route regression |
 
 Exit criteria:
 
@@ -210,7 +212,7 @@ Exit criteria:
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians | add route notes from LP to Farkas and from Hessians to exact matrix checks | QF_LRA/Farkas, QF_NRA shadows |
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms | keep finite replay and numerical-honesty rows distinct from promoted exact residual/error certificates | QF_LRA/Farkas, replay, Lean horizon |
-| `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | upgrade bounded dynamics from non-benchmark only with checked invariant/transition counterexamples | QF_LRA/Farkas, replay, Lean horizon |
+| `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | keep bounded-dynamics and finite-Euler checked rows source-linked; add only distinct transition, reachability, invariant, stochastic, or finite-error pressure | QF_LRA/Farkas, replay, Lean horizon |
 | `geometry` | coordinate, affine, orientation/area rational geometry | coordinate geometry now has a checked bad squared-distance row; add only distinct incidence, collinearity, midpoint, or rigid-configuration pressure | QF_LRA/Farkas, finite replay |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now has a checked bad-bound row; add only distinct norm, recurrence, interpolation, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
 
@@ -291,11 +293,14 @@ Pick one row per commit unless the change is purely navigational.
    operator-bound QF_LRA/Farkas artifact and route regression.
 20. Landed: promote `complex-algebraic-v0` through a source-linked bad
    norm-squared QF_LRA/Farkas artifact and route regression.
-21. Add a proof-object learner page that follows one resource from source claim
+21. Landed: promote `bounded-dynamics-v0` through a source-linked bad
+   invariant-bound QF_LRA/Farkas artifact and route regression, closing the
+   explicit non-benchmark-horizon queue.
+22. Add a proof-object learner page that follows one resource from source claim
    to emitted proof and corrupted-proof rejection.
-22. Add a generated or query-based audit for unclassified solver-reuse packs if
+23. Add a generated or query-based audit for unclassified solver-reuse packs if
    manual tracking starts to drift.
-23. Revisit the library boundary after unclassified packs are resolved and at
+24. Revisit the library boundary after unclassified packs are resolved and at
    least one non-doc consumer repeats resource parsing logic.
 
 ## Validation Checklist

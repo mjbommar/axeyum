@@ -4,7 +4,7 @@
   "title": "Bounded Recurrence And Invariant Checks",
   "domain": "mathematics",
   "claim_status": "checked",
-  "trust_status": "replay-only",
+  "trust_status": "checked-evidence",
   "concept_ids": [
     "field_differential_equations_and_dynamical_systems",
     "field_numerical_analysis",
@@ -26,19 +26,18 @@
   "axeyum_fragments": [
     "finite transition systems",
     "bounded model checking",
-    "LRA (exact rationals)"
+    "LRA (exact rationals)",
+    "QF_LRA"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0",
   "solver_reuse": {
-    "status": "non-benchmark-horizon",
-    "target": "bounded recurrence replay educational row",
-    "pressure": "The current rows are satisfiable finite trace, invariant, and threshold-reachability witnesses; they teach replay but do not yet contain an UNSAT safety certificate or benchmarkable contradiction.",
+    "status": "promoted",
+    "target": "bounded recurrence bad-invariant QF_LRA/Farkas regression seed",
+    "pressure": "Malformed exact recurrence row where replay computes terminal/max state 8 but the row claims the invariant upper bound is 6.",
     "evidence": [
-      "linear-recurrence-trace",
-      "bounded-invariant-witness",
-      "unsafe-threshold-reachable"
+      "bad-invariant-bound-rejected"
     ],
-    "next_step": "Promote only after adding a bounded safety or invariant-refutation row with a source-linked QF_LRA/BV artifact; keep continuous-time existence, uniqueness, stability, chaos, and PDE theory in the Lean-horizon lane."
+    "next_step": "Promote additional dynamics rows only when they add distinct transition, reachability, invariant, or finite-error pressure; keep continuous-time existence, uniqueness, stability, chaos, and PDE theory in the Lean-horizon lane."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -47,17 +46,22 @@
     "docs/curriculum/03-destinations/linear-algebra.md",
     "docs/curriculum/02-structures/sequences-and-limits.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/bounded-dynamics-v0/smt2/bad-invariant-bound-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
     "linear-recurrence-trace",
     "bounded-invariant-witness",
-    "unsafe-threshold-reachable"
+    "unsafe-threshold-reachable",
+    "bad-invariant-bound-rejected"
   ],
   "graduation_criteria": [
     "Encode bounded recurrence traces as deterministic LRA/BV transition systems.",
     "Replay safe invariant witnesses through Axeyum model evaluation.",
-    "Add UNSAT safety proofs only after the certificate route for bounded transition systems is explicit.",
+    "Emit checked bad-invariant evidence for finite recurrence claims; the bad invariant-bound row now has checked QF_LRA/Farkas evidence after replay computes the terminal state.",
+    "Add broader bounded-model-checking rows only when they expose distinct transition-system pressure.",
     "Keep continuous-time existence, uniqueness, stability, chaos, and PDE theory marked Lean-horizon."
   ]
 }

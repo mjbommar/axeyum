@@ -22,6 +22,7 @@ Concept rows:
 | `linear-recurrence-trace` | `sat` | replay-only |
 | `bounded-invariant-witness` | `sat` | replay-only |
 | `unsafe-threshold-reachable` | `sat` | replay-only |
+| `bad-invariant-bound-rejected` | `unsat` | checked |
 | `linear-decay-euler-trace` | `sat` | replay-only |
 | `quadratic-forcing-error-replay` | `sat` | replay-only |
 | `nonnegative-monotone-invariant` | `sat` | replay-only |
@@ -63,6 +64,23 @@ constraint at every listed state:
 This is the finite, explicit version of an invariant proof. The future
 graduation route is to encode the same shape as a bounded model-checking
 obligation and replay the returned model against the original recurrence.
+
+The checked negative row uses the same trace but claims:
+
+```text
+x(t) <= 6
+```
+
+Exact replay computes the final and maximum state as `8`. The resource
+regression checks the bad invariant as `QF_LRA`:
+
+```text
+terminal_state = 8
+terminal_state <= 6
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
 
 ## Replay Threshold Reachability
 
@@ -208,6 +226,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-euler-method-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas
 ```
 
 Expected output for each command:
@@ -229,4 +248,5 @@ remaining horizon -> continuous ODE theory, convergence, stability, and PDEs
 The next practical graduation step is to lower fixed recurrence and Euler-step
 rows into deterministic QF_LRA or BV transition obligations, then replay SAT
 witnesses and checked refutations through Axeyum instead of pack-local Python
-alone. The bad fixed Euler step now exercises that QF_LRA/Farkas route.
+alone. The bad invariant-bound row and bad fixed Euler step now exercise that
+QF_LRA/Farkas route.

@@ -64,6 +64,25 @@
       "proof_status": "replay-only",
       "witnesses": ["plus-three-threshold"],
       "notes": "The validator replays the recurrence and checks the first threshold-reaching step."
+    },
+    {
+      "id": "bad-invariant-bound-rejected",
+      "claim": "The plus-two recurrence trace satisfies the upper invariant bound x(t) <= 6 through the four-step horizon.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_invariant_bound_refutation",
+      "proof_status": "checked",
+      "data": {
+        "initial": "0",
+        "delta": "2",
+        "steps": 4,
+        "trace": ["0", "2", "4", "6", "8"],
+        "computed_max_state": "8",
+        "claimed_upper_bound": "6",
+        "smt2_artifact": "artifacts/examples/math/bounded-dynamics-v0/smt2/bad-invariant-bound-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact recurrence replay computes the terminal and maximum state as 8, while the malformed row claims the trace stays at or below 6; the source QF_LRA artifact isolates that final bound conflict for Farkas checking."
     }
   ]
 }

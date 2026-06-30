@@ -52,6 +52,9 @@ const COORDINATE_GEOMETRY_BAD_DISTANCE_SQUARED: &str = include_str!(
 const FINITE_OPERATOR_BAD_OPERATOR_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/finite-operator-v0/smt2/bad-operator-bound-farkas-conflict.smt2"
 );
+const BOUNDED_DYNAMICS_BAD_INVARIANT_BOUND: &str = include_str!(
+    "../../../artifacts/examples/math/bounded-dynamics-v0/smt2/bad-invariant-bound-farkas-conflict.smt2"
+);
 const RATIONALS_TRICHOTOMY_NONLESS: &str = include_str!(
     "../../../artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-nonless-farkas-conflict.smt2"
 );
@@ -699,6 +702,14 @@ fn finite_euler_bad_step_emits_checked_farkas() {
             euler_step,
             false_next_state,
         ],
+    );
+}
+
+#[test]
+fn bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "bounded-dynamics-v0 bad-invariant-bound SMT-LIB artifact",
+        BOUNDED_DYNAMICS_BAD_INVARIANT_BOUND,
     );
 }
 

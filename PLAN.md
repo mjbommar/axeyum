@@ -215,8 +215,9 @@ tail-bound obstruction, with finite hitting times now source-linked and
 promoted for the bad expected-time equation; least-squares regression is now
 promoted for the bad coefficient row, and bounded rational real analysis for
 the bad linear-delta row, with finite conditional expectation now promoted for
-the bad high-block table and finite Euler method now source-linked and promoted
-for the bad fixed-step transition, and finite probability now promoted for a
+the bad high-block table, finite Euler method now source-linked and promoted
+for the bad fixed-step transition, bounded dynamics now promoted for its bad
+invariant-bound conflict, and finite probability now promoted for a
 bad Bayes-posterior
 conflict, with orientation/area geometry now promoted for its bad fixed
 orientation claim and numerical linear algebra now promoted for its bad
@@ -265,9 +266,10 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **83 promoted solver-reuse
-packs**, **1 non-benchmark-horizon pack**, and **0 unclassified packs** after
-the latest complex-algebraic bad norm-squared QF_LRA/Farkas promotion,
+the foundational resource dashboards now report **84 promoted solver-reuse
+packs**, **0 non-benchmark-horizon packs**, and **0 unclassified packs** after
+the latest bounded-dynamics bad invariant-bound QF_LRA/Farkas promotion,
+complex-algebraic bad norm-squared QF_LRA/Farkas promotion,
 finite-operator bad operator-bound QF_LRA/Farkas promotion,
 coordinate-geometry bad squared-distance QF_LRA/Farkas promotion,
 finite-topology missing-empty-set Bool/CNF DRAT/LRAT promotion,

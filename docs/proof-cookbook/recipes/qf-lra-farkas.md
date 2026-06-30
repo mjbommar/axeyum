@@ -140,6 +140,9 @@ Canonical examples:
 - [Finite Operator](../../../artifacts/examples/math/finite-operator-v0/)
   uses a bad operator-bound row after exact finite-dimensional matrix replay
   computes the image infinity norm.
+- [Bounded Dynamics](../../../artifacts/examples/math/bounded-dynamics-v0/)
+  uses a bad invariant-bound row after exact recurrence replay computes the
+  terminal and maximum state.
 
 The focused resource regression is
 `cargo test -p axeyum-solver --test math_resource_lra_routes`.

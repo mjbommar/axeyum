@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const terminal_state Real)
+(assert (= terminal_state 8))
+(assert (<= terminal_state 6))
+(check-sat)

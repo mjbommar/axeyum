@@ -15732,6 +15732,35 @@ def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
         if state >= threshold:
             fail(f"threshold reachability state {index} reaches before first_reaching_step")
 
+    bad_bound = checks["bad-invariant-bound-rejected"]
+    if bad_bound["expected_result"] != "unsat" or bad_bound.get("proof_status") != "checked":
+        fail("bad-invariant-bound-rejected must be a checked unsat row")
+    data = bad_bound.get("data", {})
+    trace = require_recurrence_trace("bad invariant bound", data)
+    computed_max_state = require_fraction(
+        "bad invariant bound computed_max_state",
+        data.get("computed_max_state"),
+    )
+    claimed_upper_bound = require_fraction(
+        "bad invariant bound claimed_upper_bound",
+        data.get("claimed_upper_bound"),
+    )
+    if max(trace) != computed_max_state:
+        fail("bad-invariant-bound-rejected computed_max_state is incorrect")
+    if computed_max_state <= claimed_upper_bound:
+        fail("bad-invariant-bound-rejected must claim a bound below the replayed max state")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad invariant bound smt2_artifact", smt2_artifact)
+    check_source("bad invariant bound smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad invariant bound farkas_regression", regression)
+    if "bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas" not in regression:
+        fail("bad-invariant-bound-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad invariant bound certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("bad-invariant-bound-rejected certificate must document checked Farkas evidence")
+
 
 def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) -> None:
     if metadata["id"] == "affine-geometry-v0":

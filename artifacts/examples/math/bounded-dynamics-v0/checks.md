@@ -21,3 +21,12 @@ Expected result: `sat`.
 The validator replays the trace for `x(t+1) = x(t) + 3`, starting from `0` for
 three steps, and checks that threshold `x(t) >= 7` first becomes true at step
 `3`.
+
+## `bad-invariant-bound-rejected`
+
+Expected result: `unsat`.
+
+The validator replays the plus-two trace and recomputes the maximum state as
+`8`. The malformed claim says every state stays below `6`; the source QF_LRA
+artifact isolates the contradiction `terminal_state = 8` and
+`terminal_state <= 6` for Farkas checking.

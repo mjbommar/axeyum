@@ -9,7 +9,9 @@ The examples are intentionally small:
 
 - a linear recurrence trace;
 - a bounded invariant witness over that trace;
-- a reachable threshold witness over a finite horizon.
+- a reachable threshold witness over a finite horizon;
+- a malformed invariant-bound row whose final exact state contradicts the
+  claimed upper bound and is checked through QF_LRA/Farkas evidence.
 
 ## Concepts
 
@@ -27,9 +29,12 @@ strings. It checks that each trace starts at the claimed initial state, follows
 the listed affine update `x(t+1) = x(t) + delta`, and satisfies the claimed
 bounded invariant or threshold reachability condition.
 
-This pack does not yet emit SMT-LIB or call Axeyum's bounded-model-checking
-route. Continuous-time dynamics, ODE existence and uniqueness, stability, chaos,
-and PDE theory remain proof-horizon material.
+The checked bad-invariant row emits a tiny source-linked QF_LRA artifact:
+replay computes the terminal state `8`, while the malformed invariant claims
+`x(t) <= 6`. The `math_resource_lra_routes` regression parses that artifact,
+emits `UnsatFarkas` evidence, and independently rechecks the certificate.
+Continuous-time dynamics, ODE existence and uniqueness, stability, chaos, and
+PDE theory remain proof-horizon material.
 
 Validation:
 

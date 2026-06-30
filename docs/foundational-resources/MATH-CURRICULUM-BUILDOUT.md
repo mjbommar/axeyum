@@ -760,8 +760,8 @@ Markov, Chebyshev, and union-bound replays over rational atom tables, checked
 rejection of a false tail bound, and a concentration/limit-theorem
 Lean-horizon row.
 `artifacts/examples/math/bounded-dynamics-v0/` now validates exact rational
-recurrence traces, bounded invariant witnesses, and threshold reachability
-replay.
+recurrence traces, bounded invariant witnesses, threshold reachability replay,
+and checked QF_LRA/Farkas rejection of a bad invariant-bound row.
 `artifacts/examples/math/finite-euler-method-v0/` now validates exact finite
 Euler-method traces, polynomial-solution error replay, invariant checks,
 checked QF_LRA/Farkas rejection of a bad Euler step, and an ODE-theory
@@ -1390,7 +1390,8 @@ sigma-algebra closure, exact finite additivity, event complements, checked
 QF_LRA/Farkas bad-complement rejection, and the topology/measure Lean horizon.
 `bounded-dynamics-v0` and `finite-euler-method-v0` now have a learner-facing
 end-to-end lesson for bounded recurrence traces, invariant replay, threshold
-reachability, explicit Euler replay, exact finite error tables, checked bad
+reachability, checked bad invariant-bound rejection with QF_LRA/Farkas
+evidence, explicit Euler replay, exact finite error tables, checked bad
 Euler-step rejection with QF_LRA/Farkas evidence, and the
 ODE/numerical-analysis Lean horizon.
 `complex-plane-transforms-v0` now has a learner-facing end-to-end lesson for
@@ -1525,6 +1526,10 @@ same CNF/DRAT/LRAT regression pattern on the contradiction row `p`, `p -> q`,
 `finite-sets-v0` now carries promoted solver-reuse metadata for the malformed
 distributive-law counterexample at element `c`, completing the first Boolean
 CNF/LRAT proof-upgrade target set.
+`bounded-dynamics-v0` now carries promoted solver-reuse metadata for the bad
+invariant-bound row: exact recurrence replay computes terminal/max state `8`,
+the malformed row claims upper bound `6`, and the source QF_LRA artifact is
+checked by `math_resource_lra_routes::bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas`.
 The QF_LRA/Farkas lane now has a source-linked solver-reuse promotion for
 `rationals-lra-v0`: fixed trichotomy impossible branches and the fixed
 order-transitivity violating branch carry SMT-LIB artifacts with Axeyum

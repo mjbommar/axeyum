@@ -560,9 +560,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
   83 promoted, 1 non-benchmark-horizon, and 0 unclassified solver-reuse packs.
 
+- **Bounded-dynamics QF_LRA/Farkas promotion landed.**
+  `bounded-dynamics-v0` now carries promoted `solver_reuse` metadata for its
+  bad invariant-bound row. The new source-level artifact
+  `bad-invariant-bound-farkas-conflict.smt2` isolates exact recurrence replay's
+  terminal/max state `8` against the malformed upper-bound claim `6`, and
+  `math_resource_lra_routes::bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas`
+  checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
+  84 promoted, 0 non-benchmark-horizon, and 0 unclassified solver-reuse packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 83-promoted, 1 non-benchmark-horizon, and
+  now records the refreshed 84-promoted, 0 non-benchmark-horizon, and
   0-unclassified solver-reuse counts. The decision remains in-repo and
   JSON-first: the query consumer reads promoted solver-reuse rows, but there is
   still no external consumer, repeated typed API demand, or reusable encoder
@@ -1027,8 +1036,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
   library splits. It now records the current committed baseline of 65 concept
-  rows, 84 non-template packs, 421 expected checks, 203 checked rows, 171
-  replay-only rows, 47 Lean-horizon rows, and 83 promoted solver-reuse packs,
+  rows, 84 non-template packs, 422 expected checks, 204 checked rows, 171
+  replay-only rows, 47 Lean-horizon rows, and 84 promoted solver-reuse packs,
   then lays out field-by-field build plans plus a prioritized execution queue.
   Linked it from
   `PLAN.md`, the foundational-resources index, mdBook summary, sibling-project
