@@ -188,6 +188,9 @@ The set/foundations bridge rows now make powerset/Boolean algebra,
 partition/equivalence roundtrips, image/preimage/inverse tables,
 finite bijection/cardinality checks, and infinite-cardinality theorem horizons
 queryable through the same R1 vocabulary.
+The learner spine now also splits the finite topology and finite measure
+first-principles stories into standalone end-to-end pages, leaving the combined
+topology/measure page as a cross-field bridge rather than the only entry point.
 The six active proof-cookbook routes for CNF/LRAT, QF_BV, QF_LIA, QF_LRA,
 QF_UF/Alethe, and Lean horizons now each name concrete math example packs that
 use the route.

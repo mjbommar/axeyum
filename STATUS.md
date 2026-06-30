@@ -676,6 +676,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   atlas now reports 83 rows total: 23 curriculum rows, 18 field rows, 40
   bridge rows, and 2 example-family rows.
 
+- **Standalone finite topology and finite measure lessons landed.**
+  [`finite-topology-end-to-end.md`](docs/learn/math/finite-topology-end-to-end.md)
+  now follows `finite-topology-v0` through topology axiom replay,
+  closure/interior replay, exact metric-ball replay, and checked Bool/CNF
+  bad-empty-open rejection.
+  [`finite-measure-end-to-end.md`](docs/learn/math/finite-measure-end-to-end.md)
+  now follows `finite-measure-v0` through finite sigma-algebra replay, exact
+  finite additivity, event complements, and checked QF_LRA/Farkas
+  bad-complement rejection. The combined topology/measure page remains as the
+  cross-field bridge.
+
 - **Curriculum status audit landed.** The generated
   [`curriculum-status-audit.md`](docs/foundational-resources/generated/curriculum-status-audit.md)
   dashboard separates source `curriculum_status` from generated
@@ -11827,6 +11838,16 @@ plan is built and committed on the current branch:
   ontology and dashboards; the foundational concept atlas now validates at
   83 rows: 23 curriculum rows, 18 field rows, 40 bridge rows, and 2
   example-family rows.
+
+- **2026-06-30** — **Standalone finite topology and finite measure lessons landed.**
+  Added
+  [`finite-topology-end-to-end.md`](docs/learn/math/finite-topology-end-to-end.md)
+  and
+  [`finite-measure-end-to-end.md`](docs/learn/math/finite-measure-end-to-end.md)
+  as focused first-principles learner pages for `finite-topology-v0` and
+  `finite-measure-v0`. Updated the learner index and topology/probability
+  cluster pages so the existing combined topology/measure page is a bridge
+  rather than the only entry point.
 
 - **2026-06-30** — **PHP Bool/CNF resource promotion landed.**
   Added source-level DIMACS artifacts for

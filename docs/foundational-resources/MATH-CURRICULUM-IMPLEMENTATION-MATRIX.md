@@ -203,8 +203,10 @@ Build sequence:
    bijection/cardinality, and cardinality theorem horizons.
 5. Landed: add "math example using this route" sections to the six active
    proof cookbook recipes.
-6. Finish learner audit so every non-template pack appears in a focused lesson
-   or a named combined lesson.
+6. Continue learner audit so every non-template pack appears in a focused
+   lesson or a named combined lesson; standalone finite topology and finite
+   measure pages now split those first-principles stories from the combined
+   topology/measure bridge.
 7. Continue QF_BV promotions only for fixed-width educational claims that are
    not better served by existing CNF/LRA/LIA routes; the first finite
    rings/fields/graph-coloring DRAT rows are covered.

@@ -206,8 +206,8 @@ Exit criteria:
 | `abstract_algebra` | finite groups/rings/fields, homomorphisms, ideals, modules, tensors | add narrower rows only when multiple packs reuse them | QF_UF/Alethe, QF_BV, finite replay |
 | `real_analysis` | bounded rational intervals, metric continuity, RCF shadows, calculus shadows | keep bounded shadows distinct from completeness/convergence theorems | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon |
 | `complex_analysis` | real-pair algebra and transformations | complex algebra now has a checked bad norm-squared row; add only distinct real-pair arithmetic, polynomial-root, or algebraic-identity pressure | real-pair LRA/NRA, finite replay, Lean horizon |
-| `topology` | finite topologies, compactness, connectedness, continuous maps, homology | finite topology now has a checked missing-empty-set Bool/CNF row; add only distinct closure, metric-ball, preimage, or finite-set pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, Lean horizon |
-| `measure_theory` | finite measures, product measure, integration, random variables | finite-measure now has a bad complement QF_LRA/Farkas row; promote only distinct finite-additivity, monotonicity, or measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
+| `topology` | finite topologies, compactness, connectedness, continuous maps, homology | standalone finite-topology lesson and checked missing-empty-set Bool/CNF row landed; add only distinct closure, metric-ball, preimage, or finite-set pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, Lean horizon |
+| `measure_theory` | finite measures, product measure, integration, random variables | standalone finite-measure lesson and bad-complement QF_LRA/Farkas row landed; promote only distinct finite-additivity, monotonicity, or measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians | add route notes from LP to Farkas and from Hessians to exact matrix checks | QF_LRA/Farkas, QF_NRA shadows |
@@ -340,6 +340,10 @@ Pick one row per commit unless the change is purely navigational.
    image/preimage/inverse tables, finite bijection/cardinality, and
    cardinality theorem horizons, making the finite/infinite set-theory boundary
    queryable as first-class atlas vocabulary.
+33. Landed: add standalone finite topology and finite measure learner pages,
+   splitting first-principles topology axiom replay and finite
+   sigma-algebra/measure replay out of the combined topology/measure bridge
+   lesson.
 
 ## Validation Checklist
 

@@ -350,8 +350,8 @@ Next buildout:
 | `abstract_algebra` | QF_UF/Alethe upgrades for table and homomorphism packs |
 | `real_analysis` | bounded-vs-general concept rows for limits, continuity, compactness, integration |
 | `complex_analysis` | real-pair algebra lessons now; analytic theorem rows as Lean horizon |
-| `topology` | standalone finite topology lesson and granular compactness/connectedness/homology rows |
-| `measure_theory` | standalone finite measure lesson; keep Lebesgue/convergence theorem rows Lean-horizon |
+| `topology` | standalone finite topology lesson landed; maintain granular compactness/connectedness/homology rows |
+| `measure_theory` | standalone finite measure lesson landed; keep Lebesgue/convergence theorem rows Lean-horizon |
 | `probability_theory` | standalone finite probability lesson and stochastic-process path through kernels/Markov chains |
 | `statistics` | exact finite tests, regression, concentration, and explicit numerical-honesty status |
 | `optimization_and_convexity` | standalone LP/Farkas lesson and convexity/gradient/Hessian bridge rows |
@@ -370,8 +370,15 @@ Next buildout:
    `planned`) rather than a historical seed marker.
 3. Add focused graph lessons for reachability, search runtime, matching, cuts,
    and d-separation.
-4. Add standalone finite probability and finite measure lessons.
-5. Add standalone linear optimization and finite topology lessons.
+4. Landed: add standalone finite probability and finite measure lessons. The
+   finite probability page was already focused; the new finite measure page now
+   follows finite sigma-algebra replay, exact finite additivity, event
+   complements, and checked QF_LRA/Farkas bad-complement rejection.
+5. Partially landed: add standalone linear optimization and finite topology
+   lessons. The finite topology page now follows topology axiom replay,
+   closure/interior replay, exact metric-ball replay, and checked Bool/CNF
+   missing-empty-set rejection; standalone linear optimization remains a future
+   split from the combined linear-system/LP page.
 6. Landed: add bridge-concept rows for finite model replay, proof by
    counterexample, bounded theorem shadows, metric balls, bounded epsilon-delta
    shadows, compactness shadows, connectedness shadows, continuity-by-preimage,

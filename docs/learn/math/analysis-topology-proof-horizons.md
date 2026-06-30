@@ -85,6 +85,8 @@ the empty set. The final contradiction `empty_is_open = false` and
 `empty_is_open = true` is checked through DRAT/LRAT evidence, while arbitrary
 topological-space axiomatization and theorem development remain Lean-horizon
 work.
+For a focused single-pack trace, read
+[End To End: Finite Topology](finite-topology-end-to-end.md).
 
 For a bounded sequence shadow, encode exact rational values and one fixed
 epsilon:
@@ -357,6 +359,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/mu
 cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_topology_bad_empty_open_emits_checked_drat_and_lrat
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
@@ -390,6 +394,8 @@ replay, read
 [End To End: Finite Connectedness](finite-connectedness-end-to-end.md),
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
+[End To End: Finite Topology](finite-topology-end-to-end.md),
+[End To End: Finite Measure](finite-measure-end-to-end.md),
 [End To End: Finite Integration](finite-integration-end-to-end.md),
 [End To End: Finite Product Measure](finite-product-measure-end-to-end.md),
 and [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end.md).

@@ -264,6 +264,10 @@ validated pack data and the repo-root command that replays it.
   checked Bayes-posterior refutation, random-variable, conditional-expectation,
   finite stochastic-kernel, concentration, finite martingale, product-measure,
   and simple-function integral replay.
+- [Finite Measure](finite-measure-end-to-end.md): follows finite
+  sigma-algebra replay, exact finite additivity, event-complement replay,
+  checked QF_LRA/Farkas bad-complement rejection, and the countable-measure
+  Lean horizon.
 - [Finite Topology And Measure](finite-topology-measure-end-to-end.md):
   follows finite topology replay, finite sigma-algebra replay, exact finite
   measure additivity, event complements, checked Bool/CNF bad-empty-open
@@ -306,6 +310,10 @@ validated pack data and the repo-root command that replays it.
 - [Finite Topology, Maps, Connectedness, And Measure](finite-structures-end-to-end.md):
   follows finite set-family, closure/interior, continuous-map, compactness,
   connectedness, and measure replay.
+- [Finite Topology](finite-topology-end-to-end.md): follows finite topology
+  axiom replay, closure/interior computation, exact metric-ball replay,
+  checked Bool/CNF missing-empty-set rejection, and the general-topology Lean
+  horizon.
 - [Finite Topology And Measure](finite-topology-measure-end-to-end.md):
   follows finite topology axioms, closure/interior, metric balls,
   checked missing-empty-set rejection, sigma-algebra closure, finite

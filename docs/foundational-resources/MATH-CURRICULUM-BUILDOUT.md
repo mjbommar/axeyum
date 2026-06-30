@@ -956,6 +956,9 @@ equations, plus coordinate/affine/oriented geometry replay for finite rational
 points, maps, areas, and barycentric coordinates, plus finite topology/measure
 replay for set-family axioms, metric balls, checked missing-empty-set rejection,
 sigma-algebras, additivity, and event complements.
+The finite topology and finite measure first-principles stories are now also
+split into focused standalone pages, while the combined topology/measure page
+remains the cross-field bridge.
 
 Deliverables:
 
@@ -1402,6 +1405,8 @@ end-to-end lesson for finite topology axioms, closure/interior, finite
 metric-ball replay, checked Bool/CNF bad-empty-open rejection, finite
 sigma-algebra closure, exact finite additivity, event complements, checked
 QF_LRA/Farkas bad-complement rejection, and the topology/measure Lean horizon.
+They now also have standalone finite-topology and finite-measure pages so
+learners can start from one pack before crossing the topology/measure boundary.
 `bounded-dynamics-v0` and `finite-euler-method-v0` now have a learner-facing
 end-to-end lesson for bounded recurrence traces, invariant replay, threshold
 reachability, checked bad invariant-bound rejection with QF_LRA/Farkas

@@ -258,6 +258,8 @@ For finite counting identities and the first pigeonhole refutation, read
 For finite DAG d-separation path replay, read
 [End To End: DAG D-Separation Checks](graph-d-separation-end-to-end.md).
 For finite sigma-algebras and exact measure tables, read
+[End To End: Finite Measure](finite-measure-end-to-end.md). For the
+topology-to-measure bridge, read
 [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end.md).
 
 ## Proof Upgrade Notes

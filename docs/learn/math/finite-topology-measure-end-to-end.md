@@ -5,6 +5,9 @@ replay to closure/interior, metric balls, finite sigma-algebras, exact finite
 measure additivity, and event complements. It uses
 [finite-topology-v0](../../../artifacts/examples/math/finite-topology-v0/)
 and [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/).
+For single-pack first-principles views, read
+[End To End: Finite Topology](finite-topology-end-to-end.md) and
+[End To End: Finite Measure](finite-measure-end-to-end.md).
 
 Concept rows:
 

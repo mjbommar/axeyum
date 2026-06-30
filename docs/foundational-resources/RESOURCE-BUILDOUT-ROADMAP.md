@@ -1188,7 +1188,15 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas`.
-40. Continue proof-route promotions or consumer-query examples; revisit the
+40. Landed: add standalone finite topology and finite measure learner pages.
+    `docs/learn/math/finite-topology-end-to-end.md` follows
+    `finite-topology-v0` through finite topology axiom replay,
+    closure/interior, metric-ball replay, and checked Bool/CNF
+    missing-empty-set rejection; `docs/learn/math/finite-measure-end-to-end.md`
+    follows `finite-measure-v0` through finite sigma-algebra replay, exact
+    finite additivity, event complements, and checked QF_LRA/Farkas
+    bad-complement rejection.
+41. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 
