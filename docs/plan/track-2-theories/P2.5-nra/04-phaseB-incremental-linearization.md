@@ -56,6 +56,44 @@ here requires a model-checkable witness — for transcendentals that usually mea
 deferring `sat` to `unknown` and only trusting the **UNSAT** direction (same
 discipline as ICP, Phase C).
 
+## Implementation path: reuse the `dpll_t` lazy-SMT loop (the #66 keystone)
+
+> **Code-grounded 2026-06-30.** The measurement showed the dominant QF_NRA gap is
+> **Boolean structure** — the CAD only sees flat conjunctions
+> ([08-evaluation §root cause](08-evaluation-and-soundness.md)). The good news from
+> reading the code: the lazy-SMT loop that handles Boolean structure **already
+> exists** in `crates/axeyum-solver/src/dpll_t.rs` (`check_with_lra_dpll_within`):
+>
+> 1. abstract each atom to a proposition; SAT-solve the Boolean skeleton;
+> 2. read the chosen atoms' truth into a **conjunction** `theory_lits`;
+> 3. **theory-check** that conjunction — *currently* `check_with_lra_within`;
+> 4. on a theory conflict, learn the blocking clause (the infeasible core);
+> 5. verified-sound: "neither the propositional nor the theory search can yield an
+>    unsound `sat`", and `certify_lra_dpll_unsat` lifts the Farkas certificate to
+>    arbitrary Boolean structure.
+>
+> **The conjunctive cube `theory_lits` is exactly what `decide_real_poly_constraint`
+> (the CAD) consumes.** So the keystone is not a new DPLL(T) — it is:
+>
+> - **B.0a** Generalize the `dpll_t` loop so the **theory-check step (3) is
+>   pluggable** (pass a `Fn(&[TermId], deadline) -> Result<CheckResult,_>` instead
+>   of hard-wiring `check_with_lra_within`). Pure refactor; the LRA path stays
+>   identical (regression-clean).
+> - **B.0b** Add `check_with_nra_dpll` that drives the same loop with a **nonlinear
+>   theory check**: try `decide_real_poly_constraint` (CAD) on the cube first, then
+>   the `nra.rs` relaxation; `unsat` cube → blocking clause, `sat` cube
+>   (replay-checked) → `sat`, `unknown` cube → bounded retry then `unknown`.
+> - **B.0c** Route `check_with_nra` to `check_with_nra_dpll` when the query has
+>   Boolean structure over nonlinear atoms (today it declines/relaxes). Re-measure.
+> - **Soundness:** the CAD theory-check is already sound (replay-checked `sat`,
+>   exact `unsat`); the `dpll_t` blocking-clause machinery is already verified. The
+>   conflict core for a nonlinear `unsat` cube is initially the whole cube
+>   (sound, coarser lemmas) — minimize later. Gate with `nra_differential_fuzz`.
+>
+> This is the measured highest-leverage NRA increment: it unlocks the existing
+> decision-complete CAD on real (Boolean-structured) benchmarks. It is also the
+> concrete first slice of the full [CDCL(T) loop (P1.5)](../../track-1-engine/P1.5-cdcl-t-loop.md).
+
 ## Tasks
 
 | id | task | size | exit |
