@@ -48,9 +48,12 @@
       "proof_status": "checked",
       "data": {
         "domain": ["p0", "p1", "p2", "p3"],
-        "codomain": ["h0", "h1", "h2"]
+        "codomain": ["h0", "h1", "h2"],
+        "cnf_artifact": "artifacts/examples/math/finite-cardinality-v0/cnf/no-injection-four-to-three.cnf",
+        "proof_regression": "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs::finite_cardinality_no_injection_four_to_three_emits_checked_drat_and_lrat",
+        "certificate": "The regression parses the source-linked 4-into-3 injective-function DIMACS artifact, emits a DRAT proof, elaborates it to LRAT, and independently checks both proof objects against the CNF."
       },
-      "notes": "The validator enumerates all 81 functions and confirms none is injective."
+      "notes": "The validator enumerates all 81 functions and confirms none is injective; the cargo regression checks the emitted DRAT/LRAT proof route for the matching DIMACS artifact."
     },
     {
       "id": "no-surjection-two-to-three",

@@ -5840,6 +5840,38 @@ def validate_finite_cardinality(expected: dict[str, Any]) -> None:
         fail("no-injection-four-to-three must use a larger domain than codomain")
     if has_injective_function(domain, codomain):
         fail("no-injection-four-to-three unexpectedly found an injective function")
+    if len(domain) != 4 or len(codomain) != 3:
+        fail("no-injection-four-to-three DIMACS artifact is fixed to a 4-into-3 instance")
+    expected_dimacs: list[list[str]] = []
+    for input_index in range(len(domain)):
+        expected_dimacs.append(
+            [str(input_index * len(codomain) + output_index + 1) for output_index in range(len(codomain))]
+        )
+    for input_index in range(len(domain)):
+        for left, right in combinations(range(len(codomain)), 2):
+            left_var = input_index * len(codomain) + left + 1
+            right_var = input_index * len(codomain) + right + 1
+            expected_dimacs.append([f"-{left_var}", f"-{right_var}"])
+    for output_index in range(len(codomain)):
+        for left, right in combinations(range(len(domain)), 2):
+            left_var = left * len(codomain) + output_index + 1
+            right_var = right * len(codomain) + output_index + 1
+            expected_dimacs.append([f"-{left_var}", f"-{right_var}"])
+    no_injection_data = no_injection.get("data", {})
+    require_dimacs_artifact(
+        "no-injection-four-to-three",
+        no_injection_data.get("cnf_artifact"),
+        "p cnf 12 34",
+        expected_dimacs,
+    )
+    proof_regression = no_injection_data.get("proof_regression")
+    require_string("no-injection-four-to-three proof_regression", proof_regression)
+    if "math_resource_boolean_routes.rs::finite_cardinality_no_injection" not in proof_regression:
+        fail("no-injection-four-to-three proof_regression must name the Boolean resource test")
+    certificate = no_injection_data.get("certificate")
+    require_string("no-injection-four-to-three certificate", certificate)
+    if "DRAT" not in certificate or "LRAT" not in certificate or "independently" not in certificate:
+        fail("no-injection-four-to-three certificate must document DRAT/LRAT independent checking")
 
     no_surjection = checks["no-surjection-two-to-three"]
     if no_surjection["expected_result"] != "unsat":
@@ -6814,6 +6846,34 @@ def require_cnf_clauses(context: str, value: Any) -> list[list[str]]:
     return clauses
 
 
+def require_dimacs_artifact(
+    context: str,
+    artifact: Any,
+    expected_header: str,
+    expected_clauses: list[list[str]],
+) -> None:
+    require_string(f"{context} cnf_artifact", artifact)
+    check_source(f"{context} cnf_artifact", artifact)
+    dimacs_path = ROOT / artifact
+    dimacs_header = None
+    dimacs_clauses: list[list[str]] = []
+    for raw_line in dimacs_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("c"):
+            continue
+        if line.startswith("p "):
+            dimacs_header = line
+            continue
+        parts = line.split()
+        if not parts or parts[-1] != "0":
+            fail(f"{context} DIMACS clauses must end with 0")
+        dimacs_clauses.append(parts[:-1])
+    if dimacs_header != expected_header:
+        fail(f"{context} DIMACS header must be {expected_header}")
+    if dimacs_clauses != expected_clauses:
+        fail(f"{context} DIMACS clauses do not match the documented CNF")
+
+
 def cnf_satisfied(clauses: list[list[str]], assignment: dict[str, bool]) -> bool:
     return all(any(eval_boolean_literal(literal, assignment) for literal in clause) for clause in clauses)
 
@@ -7176,27 +7236,12 @@ def validate_logic_basics(expected: dict[str, Any]) -> None:
     expected_clauses = [["p"], ["!p", "q"], ["!q"]]
     if clauses != expected_clauses:
         fail("tiny-cnf-refutation clauses must match the documented CNF")
-    cnf_artifact = data.get("cnf_artifact")
-    require_string("tiny-cnf-refutation cnf_artifact", cnf_artifact)
-    check_source("tiny-cnf-refutation cnf_artifact", cnf_artifact)
-    dimacs_path = ROOT / cnf_artifact
-    dimacs_header = None
-    dimacs_clauses: list[list[str]] = []
-    for raw_line in dimacs_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("c"):
-            continue
-        if line.startswith("p "):
-            dimacs_header = line
-            continue
-        parts = line.split()
-        if not parts or parts[-1] != "0":
-            fail("tiny-cnf-refutation DIMACS clauses must end with 0")
-        dimacs_clauses.append(parts[:-1])
-    if dimacs_header != "p cnf 2 3":
-        fail("tiny-cnf-refutation DIMACS header must be p cnf 2 3")
-    if dimacs_clauses != [["1"], ["-1", "2"], ["-2"]]:
-        fail("tiny-cnf-refutation DIMACS clauses do not match the documented CNF")
+    require_dimacs_artifact(
+        "tiny-cnf-refutation",
+        data.get("cnf_artifact"),
+        "p cnf 2 3",
+        [["1"], ["-1", "2"], ["-2"]],
+    )
     proof_regression = data.get("proof_regression")
     require_string("tiny-cnf-refutation proof_regression", proof_regression)
     if "math_resource_boolean_routes.rs::logic_basics_tiny_cnf_refutation" not in proof_regression:

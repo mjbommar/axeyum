@@ -354,20 +354,22 @@ Next buildout:
    Dashboard status: generated R0-R6 gate and next-gate columns now make
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
    and learner/proof-upgrade dashboards.
-   Candidate status: the first `solver_reuse` batch now has 9 remaining R4-to-R5
-   promotion candidates: finite cardinality, finite graph packs, integer LIA,
-   bounded natural arithmetic, and bounded number theory. `logic-basics-v0` has
-   moved from candidate to promoted for its source-linked `tiny-cnf-refutation`
-   DIMACS/DRAT/LRAT regression.
+   Candidate status: the first `solver_reuse` batch now has 8 remaining R4-to-R5
+   promotion candidates: finite graph packs, integer LIA, bounded natural
+   arithmetic, and bounded number theory. `logic-basics-v0` and
+   `finite-cardinality-v0` have moved from candidate to promoted for their
+   source-linked DIMACS/DRAT/LRAT regressions.
 9. Landed: add consumer-facing sample queries over the JSON data contract.
    `scripts/query-foundational-resources.py` now supports summary, pack, check,
    and concept queries, and `check-foundational-resources.sh` runs a small
    query smoke set.
 10. Promote selected packs into solver regression/fuzz corpora with back-links
    to the resource pack.
-   Status: first promotion landed for `logic-basics-v0` via
+   Status: first promotions landed for `logic-basics-v0` via
    `artifacts/examples/math/logic-basics-v0/cnf/tiny-cnf-refutation.cnf` and
-   `crates/axeyum-cnf/tests/math_resource_boolean_routes.rs`.
+   `finite-cardinality-v0` via
+   `artifacts/examples/math/finite-cardinality-v0/cnf/no-injection-four-to-three.cnf`;
+   both are checked from `crates/axeyum-cnf/tests/math_resource_boolean_routes.rs`.
 11. Add a rules/law reasoning resource plan that explicitly reuses finite
     predicates, graph reachability, optimization, and proof-route vocabulary.
 12. Add generated typed-consumer sketches only after at least one downstream

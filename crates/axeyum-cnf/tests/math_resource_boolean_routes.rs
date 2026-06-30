@@ -20,6 +20,9 @@ const FINITE_SETS_DISTRIBUTIVE_COUNTEREXAMPLE_CNF: &str = include_str!(
 );
 const LOGIC_BASICS_TINY_CNF_REFUTATION: &str =
     include_str!("../../../artifacts/examples/math/logic-basics-v0/cnf/tiny-cnf-refutation.cnf");
+const FINITE_CARDINALITY_NO_INJECTION_FOUR_TO_THREE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-cardinality-v0/cnf/no-injection-four-to-three.cnf"
+);
 
 fn assert_unsat_resource_cnf_checks(
     label: &str,
@@ -89,5 +92,15 @@ fn logic_basics_tiny_cnf_refutation_emits_checked_drat_and_lrat() {
         LOGIC_BASICS_TINY_CNF_REFUTATION,
         2,
         3,
+    );
+}
+
+#[test]
+fn finite_cardinality_no_injection_four_to_three_emits_checked_drat_and_lrat() {
+    assert_unsat_resource_cnf_checks(
+        "finite-cardinality-v0 no-injection-four-to-three",
+        FINITE_CARDINALITY_NO_INJECTION_FOUR_TO_THREE,
+        12,
+        34,
     );
 }

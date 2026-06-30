@@ -676,8 +676,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   learner/proof-upgrade dashboards now expose `Gate` / `Next Gate` columns so
   the resource lane can distinguish row-level R4 proof/evidence coverage from
   pack-level R6 consumer-boundary rows that already have source-linked solver
-  regressions. The current pack split is 43 `R6 consumer boundary` rows and
-  41 `R4 checked evidence` rows, making the remaining solver-reuse queue
+  regressions. The current pack split is 44 `R6 consumer boundary` rows and
+  40 `R4 checked evidence` rows, making the remaining solver-reuse queue
   explicit.
 
 - **Structured solver-reuse candidate tags landed.**
@@ -685,13 +685,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   now admits an optional `solver_reuse` metadata object with status, target,
   pressure, evidence rows, and next step. The example-pack validator checks
   that candidate evidence points only at deterministic checked/replay rows.
-  The first candidate batch now has 9 remaining `candidate` rows:
-  `finite-cardinality-v0`, `graph-reachability-v0`, `graph-matching-v0`,
-  `graph-cut-v0`, `graph-d-separation-v0`, `graph-search-runtime-v0`,
-  `integer-lia-v0`, `natural-arithmetic-v0`, and `number-theory-v0`.
-  Generated dashboards also show 1 `promoted` row for `logic-basics-v0`.
+  The first candidate batch now has 8 remaining `candidate` rows:
+  `graph-reachability-v0`, `graph-matching-v0`, `graph-cut-v0`,
+  `graph-d-separation-v0`, `graph-search-runtime-v0`, `integer-lia-v0`,
+  `natural-arithmetic-v0`, and `number-theory-v0`. Generated dashboards also
+  show 2 `promoted` rows for `logic-basics-v0` and `finite-cardinality-v0`.
 
-- **First solver-reuse candidate promoted.**
+- **First solver-reuse candidate promoted: logic basics.**
   [`logic-basics-v0`](artifacts/examples/math/logic-basics-v0/) now has a
   source-linked DIMACS artifact for `tiny-cnf-refutation`:
   [`tiny-cnf-refutation.cnf`](artifacts/examples/math/logic-basics-v0/cnf/tiny-cnf-refutation.cnf).
@@ -700,6 +700,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   checks both proof objects. The pack metadata now marks `solver_reuse.status`
   as `promoted` for that row only; the validator enforces the artifact path,
   exact DIMACS shape, regression name, and DRAT/LRAT trust-boundary note.
+
+- **Second solver-reuse candidate promoted: finite cardinality.**
+  [`finite-cardinality-v0`](artifacts/examples/math/finite-cardinality-v0/) now
+  has a source-linked DIMACS artifact for `no-injection-four-to-three`:
+  [`no-injection-four-to-three.cnf`](artifacts/examples/math/finite-cardinality-v0/cnf/no-injection-four-to-three.cnf).
+  The same Boolean resource regression parses the 4-into-3 injective-function
+  CNF, emits DRAT, elaborates to LRAT, and independently checks both proof
+  objects. The pack metadata now marks `solver_reuse.status` as `promoted` for
+  that row only; the validator enforces the fixed 4-into-3 DIMACS shape,
+  regression name, and DRAT/LRAT trust-boundary note.
 
 - **Consumer-facing foundational-resource queries landed.**
   [`query-foundational-resources.py`](scripts/query-foundational-resources.py)

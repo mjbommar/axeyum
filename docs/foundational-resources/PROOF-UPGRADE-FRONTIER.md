@@ -25,7 +25,7 @@ Candidate route totals:
 
 | Route | Pack Count | Meaning |
 |---|---:|---|
-| [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 3 | Boolean refutations that should carry checked CNF proof objects. |
+| [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 4 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 5 | Integer equalities, counts, modular constraints, and rank obstructions. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 23 | Exact rational infeasibility and linear inequality obligations. |
@@ -79,6 +79,10 @@ First targets:
 - [logic-basics-v0](../../artifacts/examples/math/logic-basics-v0/)
   (solver-reuse promotion landed for `tiny-cnf-refutation`: source-linked
   DIMACS artifact, DRAT emission, LRAT elaboration, and independent checks)
+- [finite-cardinality-v0](../../artifacts/examples/math/finite-cardinality-v0/)
+  (solver-reuse promotion landed for `no-injection-four-to-three`: source-linked
+  4-into-3 injective-function DIMACS artifact, DRAT emission, LRAT elaboration,
+  and independent checks)
 
 Expected artifact:
 
@@ -96,6 +100,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sets-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-patterns-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/logic-basics-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 ./scripts/check-foundational-resources.sh
 ```
 

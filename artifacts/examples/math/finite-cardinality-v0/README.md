@@ -14,6 +14,12 @@ The examples are exact finite artifacts:
 - record Cantor-style infinite cardinality as a Lean-horizon theorem, not a
   solver result.
 
+The `no-injection-four-to-three` row now also has a deterministic DIMACS
+artifact for the 4-into-3 injective total-function obstruction. The in-tree CNF
+regression emits DRAT, elaborates to LRAT, and checks both proof objects. The
+remaining finite witnesses stay replay-only examples unless they add distinct
+solver pressure, and the Cantor row remains theorem-prover horizon metadata.
+
 These checks do not claim countability, uncountability, Schroeder-Bernstein, or
 cardinal arithmetic over infinite sets.
 
@@ -29,7 +35,9 @@ cardinal arithmetic over infinite sets.
 
 The validator recomputes every finite witness from the explicit function graph.
 UNSAT rows are accepted only after enumerating the fixed finite function spaces
-named in `expected.json`.
+named in `expected.json`. The promoted no-injection row additionally exercises
+the untrusted CNF proof-emission path while accepting the result only after the
+small DRAT/LRAT checkers recheck the refutation.
 
 The infinite theorem row is metadata only: it must remain `lean-horizon` until a
 real Lean module and checker command exist.

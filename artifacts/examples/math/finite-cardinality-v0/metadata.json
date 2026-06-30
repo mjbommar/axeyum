@@ -29,16 +29,13 @@
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0",
   "solver_reuse": {
-    "status": "candidate",
-    "target": "finite function Bool/BV regression slice",
-    "pressure": "Finite injection, surjection, and bijection constraints with small SAT and UNSAT cases.",
+    "status": "promoted",
+    "target": "finite function Bool/CNF DRAT/LRAT regression seed",
+    "pressure": "Pigeonhole-style injective total-function obstruction with independent DRAT and LRAT rechecking.",
     "evidence": [
-      "finite-bijection-cardinality-witness",
-      "proper-subset-injection-witness",
-      "no-injection-four-to-three",
-      "no-surjection-two-to-three"
+      "no-injection-four-to-three"
     ],
-    "next_step": "Promote the finite injection/surjection rows to deterministic Bool or BV fixtures and keep Cantor-style infinite claims out of the corpus."
+    "next_step": "Promote the surjection obstruction only if it adds distinct finite-function regression pressure; keep Cantor-style infinite claims out of the corpus."
   },
   "source_refs": [
     "docs/curriculum/00-foundations/cardinality.md",
@@ -46,7 +43,10 @@
     "docs/curriculum/02-structures/counting.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/lean-horizon-template.md"
+    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-cardinality-v0/cnf/no-injection-four-to-three.cnf",
+    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
   ],
   "expected_results": [
     "finite-bijection-cardinality-witness",
