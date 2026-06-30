@@ -272,6 +272,8 @@ Run the checks from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sets-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/relations-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/equivalence-classes-v0
+cargo test -p axeyum-solver --test math_resource_uf_routes equivalence_classes_quotient_map_congruence_emits_checked_alethe
+cargo test -p axeyum-solver --test math_resource_uf_routes qf_uf_resource_route_rejects_tampered_alethe_certificate
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/function-composition-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-monoids-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-permutation-groups-v0
@@ -297,6 +299,7 @@ and measure replay, read
 [End To End: Finite Sets](finite-sets-end-to-end.md),
 [End To End: Relations And Functions](relations-functions-end-to-end.md),
 [End To End: Equivalence Classes](equivalence-classes-end-to-end.md),
+[End To End: Alethe Certificate Anatomy](alethe-certificate-anatomy-end-to-end.md),
 [End To End: Function Composition](function-composition-end-to-end.md),
 [End To End: Finite Monoids](finite-monoids-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md),
@@ -319,9 +322,11 @@ finite monoid, finite permutation-group, finite group-action, finite-order/latti
 cardinality-principles, topology, compactness-shadow, connectedness-shadow, continuous-map,
 finite-simplicial-homology, and measure packs are now checked finite artifacts.
 The finite-simplicial-homology pack now also carries a checked
-QF_LIA/Diophantine certificate for its bad boundary coefficient. The next
-finite-structure gaps are stronger EUF/Alethe evidence for congruence examples
-and Lean artifacts for infinite theorems. ZFC, ordinals, choice,
+QF_LIA/Diophantine certificate for its bad boundary coefficient. The Alethe
+certificate-anatomy page now shows the shared QF_UF proof-object boundary for
+quotient-map congruence and tamper rejection. The next finite-structure gaps
+are narrower EUF/Alethe anatomy for secondary algebra/topology packs and Lean
+artifacts for infinite theorems. ZFC, ordinals, choice,
 infinite cardinality, general monoid, permutation-group, and group-action theorems,
 complete-lattice fixed-point theorems, arbitrary
 topological spaces, general compactness, general connectedness,

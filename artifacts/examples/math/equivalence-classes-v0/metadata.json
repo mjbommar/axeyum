@@ -45,6 +45,7 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "docs/learn/math/alethe-certificate-anatomy-end-to-end.md",
     "artifacts/examples/math/equivalence-classes-v0/smt2/quotient-map-congruence-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
@@ -59,6 +60,6 @@
     "Replay finite equivalence relations and partitions from raw tables.",
     "Check that quotient-map fibers exactly match equivalence classes.",
     "Emit checked counterexample evidence for false equivalence-relation claims.",
-    "Keep the QF_UF quotient-map congruence artifact tied to a zero-trust Alethe proof regression before claiming proof-object coverage."
+    "Keep the QF_UF quotient-map congruence artifact tied to a zero-trust Alethe proof regression and tamper-rejection lesson before claiming proof-object coverage."
   ]
 }

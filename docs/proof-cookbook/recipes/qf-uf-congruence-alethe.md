@@ -83,6 +83,8 @@ Canonical examples:
 
 - [Equivalence Classes](../../../artifacts/examples/math/equivalence-classes-v0/)
   uses `quotient-map-congruence-conflict.smt2`.
+  The learner-facing proof-object path is
+  [Alethe Certificate Anatomy](../../learn/math/alethe-certificate-anatomy-end-to-end.md).
 - [Function Composition](../../../artifacts/examples/math/function-composition-v0/)
   uses a composition-application conflict over finite functions.
 - [Finite Algebra Homomorphisms](../../../artifacts/examples/math/finite-algebra-homomorphisms-v0/)

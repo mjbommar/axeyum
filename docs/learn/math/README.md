@@ -65,6 +65,10 @@ validated pack data and the repo-root command that replays it.
   equivalence-relation class replay, quotient-map fiber replay, partition
   round-trip checking, checked non-transitivity rejection, and the QF_UF/Alethe
   quotient congruence proof row.
+- [Alethe Certificate Anatomy](alethe-certificate-anatomy-end-to-end.md):
+  follows an equality-heavy quotient-map conflict through source SMT-LIB,
+  emitted zero-trust `UnsatAletheProof` evidence, and corrupted-certificate
+  rejection.
 - [Function Composition](function-composition-end-to-end.md): follows finite
   composition, image/preimage, inverse-table, associativity, and
   non-injective inverse-counterexample checks, plus a QF_UF/Alethe composition

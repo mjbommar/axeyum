@@ -304,9 +304,13 @@ Pick one row per commit unless the change is purely navigational.
    `linear-optimization-v0` from the exact LP threshold conflict through source
    SMT-LIB, emitted `UnsatFarkas` evidence, and same-artifact multiplier tamper
    rejection.
-24. Add a generated or query-based audit for unclassified solver-reuse packs if
+24. Landed: add `alethe-certificate-anatomy-end-to-end.md`, following
+   `equivalence-classes-v0` from the quotient-map congruence conflict through
+   source SMT-LIB, emitted zero-trust `UnsatAletheProof` evidence, and
+   same-artifact truncated-proof rejection.
+25. Add a generated or query-based audit for unclassified solver-reuse packs if
    manual tracking starts to drift.
-25. Revisit the library boundary after unclassified packs are resolved and at
+26. Revisit the library boundary after unclassified packs are resolved and at
    least one non-doc consumer repeats resource parsing logic.
 
 ## Validation Checklist

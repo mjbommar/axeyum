@@ -595,6 +595,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   which checks the genuine certificate first, zeroes a Farkas multiplier, and
   requires the corrupted certificate to reject.
 
+- **Alethe certificate anatomy learner page landed.**
+  [`alethe-certificate-anatomy-end-to-end.md`](docs/learn/math/alethe-certificate-anatomy-end-to-end.md)
+  now follows `equivalence-classes-v0` from a quotient-map congruence conflict
+  through source SMT-LIB, emitted zero-trust `UnsatAletheProof` evidence, and
+  same-artifact truncated-proof rejection. The UF route regression already
+  includes `qf_uf_resource_route_rejects_tampered_alethe_certificate`, which
+  checks the genuine proof first, removes the closing Alethe command, and
+  requires the corrupted certificate to reject.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
   now records the refreshed 84-promoted, 0 non-benchmark-horizon, and

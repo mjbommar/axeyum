@@ -1400,6 +1400,10 @@ proof objects, and same-artifact corrupted-proof rejection.
 `linear-optimization-v0` now has a Farkas certificate anatomy lesson that
 follows the exact LP threshold conflict through source SMT-LIB, emitted
 `UnsatFarkas` evidence, and same-artifact multiplier tamper rejection.
+`equivalence-classes-v0` now has an Alethe certificate anatomy lesson that
+follows the quotient-map congruence conflict through source SMT-LIB, emitted
+zero-trust `UnsatAletheProof` evidence, and same-artifact truncated-proof
+rejection.
 `complex-plane-transforms-v0` now has a learner-facing end-to-end lesson for
 unit-root cycle replay, conjugation over products, rational Mobius-transform
 replay, checked bad unit-square rejection, and the complex-analysis Lean

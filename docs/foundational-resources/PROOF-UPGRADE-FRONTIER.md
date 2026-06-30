@@ -356,7 +356,9 @@ Graduation:
 First targets:
 
 - [equivalence-classes-v0](../../artifacts/examples/math/equivalence-classes-v0/)
-  (resource-backed QF_UF/Alethe regression landed for quotient-map congruence)
+  (resource-backed QF_UF/Alethe regression landed for quotient-map congruence;
+  the route-anatomy lesson now follows this same source artifact through
+  zero-trust `UnsatAletheProof` checking and truncated-proof rejection)
 - [relations-functions-v0](../../artifacts/examples/math/relations-functions-v0/)
   (resource-backed QF_UF/Alethe regression landed for function single-valuedness)
 - [finite-groups-v0](../../artifacts/examples/math/finite-groups-v0/)
@@ -406,6 +408,7 @@ Validation:
 ```sh
 cargo test -p axeyum-solver --test math_resource_uf_routes
 cargo test -p axeyum-solver --test math_resource_uf_routes qf_uf_resource_route_rejects_tampered_alethe_certificate
+cargo test -p axeyum-solver --test math_resource_uf_routes equivalence_classes_quotient_map_congruence_emits_checked_alethe
 cargo test -p axeyum-solver --test evidence qf_ufbv_unsat_carries_a_zero_trust_alethe_certificate
 cargo test -p axeyum-solver --test evidence qf_uf_declared_sort_equality_unsat_carries_zero_trust_alethe_certificate
 cargo test -p axeyum-solver --test lean_crosscheck qf_uf_declared_sort_equality_checks_in_real_lean

@@ -162,6 +162,10 @@ The first Farkas certificate anatomy learner page now follows
 `linear-optimization-v0` from an exact LP threshold conflict through source
 SMT-LIB, emitted `UnsatFarkas` evidence, and same-artifact multiplier tamper
 rejection.
+The first Alethe certificate anatomy learner page now follows
+`equivalence-classes-v0` from a quotient-map congruence conflict through source
+SMT-LIB, emitted zero-trust `UnsatAletheProof` evidence, and same-artifact
+truncated-proof rejection.
 The six active proof-cookbook routes for CNF/LRAT, QF_BV, QF_LIA, QF_LRA,
 QF_UF/Alethe, and Lean horizons now each name concrete math example packs that
 use the route.
