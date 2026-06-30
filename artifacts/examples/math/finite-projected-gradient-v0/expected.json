@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-projected-gradient-v0",
+  "witnesses": [
+    {
+      "id": "quadratic-interval-projected-step",
+      "description": "One exact projected-gradient step for f(x)=(x-2)^2 over the interval [0,1].",
+      "values": {
+        "polynomial": ["4", "-4", "1"],
+        "lower_bound": "0",
+        "upper_bound": "1",
+        "start_x": "0",
+        "start_value": "4",
+        "gradient": "-4",
+        "step_size": "1/2",
+        "unconstrained_x": "2",
+        "projected_x": "1",
+        "projection_distance": "1",
+        "projected_value": "1",
+        "projected_decrease": "3"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "projected-gradient-gradient-replay",
+      "claim": "At x=0 for f(x)=(x-2)^2, the gradient is -4.",
+      "expected_result": "sat",
+      "validation": "finite_projected_gradient_gradient_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-interval-projected-step"],
+      "notes": "The validator differentiates the quadratic and checks that the start point is feasible."
+    },
+    {
+      "id": "unconstrained-step-replay",
+      "claim": "With step size 1/2, the unconstrained gradient step from x=0 is x=2.",
+      "expected_result": "sat",
+      "validation": "finite_projected_gradient_step_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-interval-projected-step"],
+      "notes": "The validator recomputes x - alpha * gradient over exact rationals."
+    },
+    {
+      "id": "interval-projection-replay",
+      "claim": "Projection of the trial point 2 onto the interval [0,1] is 1.",
+      "expected_result": "sat",
+      "validation": "finite_interval_projection_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-interval-projected-step"],
+      "notes": "The validator clamps the trial point to the exact rational interval and checks the listed distance."
+    },
+    {
+      "id": "projected-descent-replay",
+      "claim": "The projected point decreases the objective from 4 to 1.",
+      "expected_result": "sat",
+      "validation": "finite_projected_descent_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["quadratic-interval-projected-step"],
+      "notes": "The validator evaluates the quadratic at the start and projected point and recomputes the decrease."
+    },
+    {
+      "id": "bad-projected-point-rejected",
+      "claim": "The malformed projected point 3/2 is feasible for the interval [0,1].",
+      "expected_result": "unsat",
+      "validation": "finite_bad_projection_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "quadratic-interval-projected-step",
+        "computed_projected_x": "1",
+        "claimed_projected_x": "3/2",
+        "upper_bound": "1",
+        "feasibility_violation": "1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-projected-gradient-v0/smt2/bad-projection-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_projected_gradient_bad_projection_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes projected_x=1, so the malformed point 3/2 violates the upper interval bound and is rejected by checked Farkas evidence."
+    },
+    {
+      "id": "general-projected-gradient-convergence-lean-horizon",
+      "claim": "General projected-gradient convergence, constraint-qualification, and rate theorems require future Lean reconstruction.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Projected-gradient convergence theorems for closed convex sets and smooth convex objectives, plus rate statements under Lipschitz-gradient and strong-convexity assumptions",
+        "future_checker": "Lean module with no sorryAx dependencies plus exact rational certificate bridges for finite projected-gradient witnesses"
+      },
+      "notes": "The finite rows check only one rational interval-projection instance; projected-gradient theory remains proof-assistant work."
+    }
+  ]
+}

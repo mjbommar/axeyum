@@ -64,6 +64,9 @@ const FINITE_GRADIENT_DESCENT_BAD_DECREASE: &str = include_str!(
 const FINITE_LINE_SEARCH_BAD_ARMIJO: &str = include_str!(
     "../../../artifacts/examples/math/finite-line-search-v0/smt2/bad-armijo-farkas-conflict.smt2"
 );
+const FINITE_PROJECTED_GRADIENT_BAD_PROJECTION: &str = include_str!(
+    "../../../artifacts/examples/math/finite-projected-gradient-v0/smt2/bad-projection-farkas-conflict.smt2"
+);
 const MULTIVARIABLE_CALCULUS_BAD_GRADIENT: &str = include_str!(
     "../../../artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2"
 );
@@ -509,6 +512,14 @@ fn finite_line_search_bad_armijo_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-line-search-v0 bad-Armijo SMT-LIB artifact",
         FINITE_LINE_SEARCH_BAD_ARMIJO,
+    );
+}
+
+#[test]
+fn finite_projected_gradient_bad_projection_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-projected-gradient-v0 bad-projection SMT-LIB artifact",
+        FINITE_PROJECTED_GRADIENT_BAD_PROJECTION,
     );
 }
 

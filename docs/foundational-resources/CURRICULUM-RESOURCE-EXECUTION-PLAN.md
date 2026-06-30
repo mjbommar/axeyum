@@ -44,7 +44,7 @@ As of this plan, the math resource lane has:
   transform replay, finite inner-product/projection replay, finite
   operator/Chebyshev replay, and Lean horizons, plus five route-specific
   example families.
-- 95 non-template math example packs, plus the validating template pack.
+- 96 non-template math example packs, plus the validating template pack.
 - generated coverage, curriculum-status audit, field, proof-gap,
   learner/proof-upgrade, and curriculum-pressure dashboards under
   [generated/](generated/).
@@ -100,7 +100,8 @@ Concrete work:
   random-variable, conditional-expectation, and stochastic-process resources.
   Optimization/Farkas covers exact LP thresholds, finite convexity shadows,
   finite KKT stationarity replay, finite SDP objective/slack replay, finite
-  gradient-descent step replay, finite line-search replay,
+  gradient-descent step replay, finite line-search replay, finite
+  projected-gradient replay,
   least-squares normal equations, residual bounds, gradient/Hessian replay, and
   related matrix checks without promoting duality, KKT sufficiency, SDP strong
   duality, or convergence theorem claims.
@@ -152,6 +153,8 @@ High-priority focused lessons still worth auditing or adding:
   decrease, and descent-bound replay bridge.
 - finite line search now has a standalone exact Armijo trial rejection and
   accepted-backtrack replay bridge.
+- finite projected gradient now has a standalone exact interval-projection and
+  projected-descent replay bridge.
 
 Exit criteria:
 
@@ -227,8 +230,9 @@ Add bridge-concept or example-family rows for repeated subtopics:
   objective-threshold/Farkas replay and rational convexity/gradient shadows,
   backed by linear optimization, convexity, multivariable calculus,
   least-squares, residual, finite KKT, finite SDP, finite gradient descent,
-  finite line search, and real-algebra packs while leaving duality, KKT
-  sufficiency, SDP strong duality, and convergence claims as Lean horizons;
+  finite line search, finite projected gradient, and real-algebra packs while
+  leaving duality, KKT sufficiency, SDP strong duality, and convergence claims
+  as Lean horizons;
 - geometry/complex analysis: landed bridge rows for coordinate/incidence/
   rigid/oriented geometry replay and complex real-pair transform replay, backed by
   the coordinate, incidence, rigid-configuration, affine, orientation/area,
@@ -492,7 +496,7 @@ Next buildout:
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
    and learner/proof-upgrade dashboards. The curriculum-status audit now shows
    where source `planned` rows have validated resources and need a source DAG
-   decision. The curriculum-pressure view now groups the 95 non-template packs
+   decision. The curriculum-pressure view now groups the 96 non-template packs
    into overlapping Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
    Lean-horizon buckets for fragment-level planning.
    Candidate status: the first `solver_reuse` batch is now fully promoted:
@@ -515,9 +519,9 @@ Next buildout:
    optimization/convexity Farkas field readiness, LP-objective and convexity
    bridge lookups, and checked optimization Farkas rows, tying LP thresholds,
    convexity shadows, finite KKT stationarity, finite SDP objective/slack
-   replay, finite gradient-descent replay, finite line-search replay,
-   least-squares, gradients, residual bounds, and matrix witnesses to the same
-   boundary.
+   replay, finite gradient-descent replay, finite line-search replay, finite
+   projected-gradient replay, least-squares, gradients, residual bounds, and
+   matrix witnesses to the same boundary.
 13. Landed: add negative fixtures for the foundational example-pack schema.
    `scripts/check-foundational-negative-fixtures.py` now asserts that invalid
    packs with unknown fields, metadata/check id drift, and missing witness

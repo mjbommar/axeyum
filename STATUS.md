@@ -206,7 +206,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 ## Process/documentation lane (2026-06-27) — `WIP`
 
 - **Proof-upgrade frontier planned.** The learner path sweep is mechanically
-  complete for the current queue (95 focused math packs, 0 path-only links).
+  complete for the current queue (96 focused math packs, 0 path-only links).
   The next resource layer is
   [`PROOF-UPGRADE-FRONTIER.md`](docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md):
   classify the two `needs-proof-route` packs, then upgrade CNF/LRAT,
@@ -228,9 +228,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   lookups, and checked optimization/convexity Farkas row drill-downs. The
   foundational-resource smoke check runs the same commands so exact LP,
   convexity, finite SDP objective/slack, finite gradient-descent replay,
-  finite line-search replay,
+  finite line-search replay, finite projected-gradient replay,
   least-squares, gradient/Hessian, residual, eigenpair, and related matrix
   examples remain visible through the public JSON boundary.
+
+- **Finite projected-gradient resource landed.**
+  [`finite-projected-gradient-v0`](artifacts/examples/math/finite-projected-gradient-v0/README.md)
+  and
+  [`finite-projected-gradient-end-to-end.md`](docs/learn/math/finite-projected-gradient-end-to-end.md)
+  now add exact interval projected-gradient replay to the
+  optimization/convexity, numerical-analysis, real-analysis, calculus, and
+  linear-algebra resource paths. The pack validates gradient replay,
+  unconstrained-step replay, interval projection, projected objective-decrease
+  replay, a source-linked checked QF_LRA/Farkas rejection for a false projected
+  point, and a projected-gradient convergence Lean-horizon row. The generated
+  resource summary is now 96 promoted non-template packs, 483 checks, 216
+  checked rows, 208 replay-only rows, and 59 Lean-horizon rows.
 
 - **Finite line-search resource landed.**
   [`finite-line-search-v0`](artifacts/examples/math/finite-line-search-v0/README.md)
@@ -241,8 +254,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   paths. The pack validates descent-direction replay, rejected-trial Armijo
   replay, accepted backtracked-step replay, a source-linked checked
   QF_LRA/Farkas rejection for a false Armijo acceptance claim, and a
-  line-search convergence Lean-horizon row. The generated resource summary is
-  now 95 promoted non-template packs, 477 checks, 215 checked rows, 204
+  line-search convergence Lean-horizon row. At that point, the generated
+  resource summary was 95 promoted non-template packs, 477 checks, 215 checked rows, 204
   replay-only rows, and 58 Lean-horizon rows.
 
 - **Finite gradient-descent resource landed.**
@@ -717,7 +730,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Curriculum pressure by fragment landed.** The generated
   [`curriculum-pressure-by-fragment.md`](docs/foundational-resources/generated/curriculum-pressure-by-fragment.md)
-  dashboard groups the 95 non-template math packs into overlapping Bool/CNF,
+  dashboard groups the 96 non-template math packs into overlapping Bool/CNF,
   QF_BV, QF_LIA, QF_LRA, QF_UF, NRA/RCF, finite-replay, and Lean-horizon
   buckets. It is now part of `check-foundational-resources`, so stale fragment
   planning output fails the same gate as coverage and proof-gap dashboards.
@@ -725,7 +738,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 - **Solver-reuse disposition audit landed.** The generated
   [`solver-reuse-disposition-audit.md`](docs/foundational-resources/generated/solver-reuse-disposition-audit.md)
   dashboard audits every non-template math pack's `solver_reuse` disposition,
-  reporting 95 promoted, 0 non-benchmark-horizon, and 0 unclassified packs.
+  reporting 96 promoted, 0 non-benchmark-horizon, and 0 unclassified packs.
   It is now part of `check-foundational-resources`, so any newly added
   unclassified pack appears in a freshness-checked queue.
 
@@ -755,9 +768,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   stationarity/complementarity replay, the finite SDP pack contributes
   two-by-two PSD/objective/slack replay, the finite-gradient-descent pack
   contributes exact descent-step replay, and the finite-line-search pack
-  contributes Armijo rejection/acceptance replay, while KKT sufficiency,
-  duality, SDP strong duality, and algorithm-convergence theorem coverage
-  remain horizons.
+  contributes Armijo rejection/acceptance replay. The finite-projected-gradient
+  pack contributes interval-projection replay, while KKT sufficiency, duality,
+  SDP strong duality, projected-gradient convergence, and
+  algorithm-convergence theorem coverage remain horizons.
 
 - **Measure-theory field-readiness consumer query landed.**
   [`CONSUMER-QUERIES.md`](docs/foundational-resources/CONSUMER-QUERIES.md)
@@ -1231,8 +1245,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   from math pack metadata, `expected.json` proof statuses, cookbook recipe
   links, and explicit `docs/learn/math` pack references. The normal
   foundational-resource gate now fails if this dashboard is stale. Current
-  generated queue: 95 non-template packs, 95 focused learner links, 0 path-only
-  links, 0 missing learner links, and 84 packs with non-checked proof rows.
+  generated queue: 96 non-template packs, 96 focused learner links, 0 path-only
+  links, 0 missing learner links, and 85 packs with non-checked proof rows.
 
 - **Curriculum resource execution plan landed.** Added
   [`CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md)
@@ -1253,7 +1267,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Math curriculum detailed build ledger landed.** Added
   [`MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
-  as the execution ledger for the current 95-pack math resource surface. It
+  as the execution ledger for the current 96-pack math resource surface. It
   records the baseline counts, the R0-R6 gate contract, build waves, the empty
   unclassified solver-reuse queue, field-by-field next steps, curriculum-node
   next steps, and a commit-sized queue. Next resource work should continue
@@ -1266,8 +1280,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
   library splits. It now records the current committed baseline of 94 concept
-  rows, 95 non-template packs, 477 expected checks, 215 checked rows, 204
-  replay-only rows, 58 Lean-horizon rows, and 95 promoted solver-reuse packs,
+  rows, 96 non-template packs, 483 expected checks, 216 checked rows, 208
+  replay-only rows, 59 Lean-horizon rows, and 96 promoted solver-reuse packs,
   then lays out field-by-field build plans plus a prioritized execution queue.
   Linked it from
   `PLAN.md`, the foundational-resources index, mdBook summary, sibling-project
@@ -1372,9 +1386,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   monotonicity, gradient replay, Hessian-minor witnesses, least-squares
   normal-equation replay, finite root-finding, and finite hyperplane
   separation, plus finite KKT stationarity/complementarity replay, finite SDP
-  objective/slack replay, finite gradient-descent replay, and finite
-  line-search replay while keeping duality, KKT sufficiency, SDP strong
-  duality, general separation, and convergence theorems as Lean horizons. The
+  objective/slack replay, finite gradient-descent replay, finite line-search
+  replay, and finite projected-gradient replay while keeping duality, KKT
+  sufficiency, SDP strong duality, general separation, projected-gradient
+  convergence, and convergence theorems as Lean horizons. The
   foundational resource consumer now reports 94 concept rows while
   preserving 23 curriculum rows and 18 field rows. Next resource work should
   add the next proof-frontier promotion or boundary evidence from a real

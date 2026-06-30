@@ -185,6 +185,10 @@ schemas, examples, and validation workflows.
   validates exact Armijo descent-direction replay, trial-step rejection,
   accepted backtracked-step replay, checked rejection of a false Armijo
   acceptance claim, and a line-search convergence Lean-horizon row.
+- [`artifacts/examples/math/finite-projected-gradient-v0/`](../../artifacts/examples/math/finite-projected-gradient-v0/)
+  validates exact projected-gradient interval replay, unconstrained-step
+  arithmetic, projection onto `[0,1]`, checked rejection of a false projected
+  point, and a projected-gradient convergence Lean-horizon row.
 - [`artifacts/examples/math/metric-continuity-v0/`](../../artifacts/examples/math/metric-continuity-v0/)
   validates finite Lipschitz, epsilon-delta, and open-ball preimage checks
   with exact rational metrics, plus checked QF_LRA/Farkas rejection of an
@@ -346,6 +350,10 @@ schemas, examples, and validation workflows.
   validates exact one-variable Armijo line-search replay, trial rejection,
   accepted backtracking, checked bad-acceptance rejection, and a general
   line-search convergence Lean-horizon row.
+- [`artifacts/examples/math/finite-projected-gradient-v0/`](../../artifacts/examples/math/finite-projected-gradient-v0/)
+  validates exact one-variable projected-gradient replay over `[0,1]`,
+  unconstrained-step arithmetic, interval projection, checked bad-projection
+  rejection, and a general projected-gradient convergence Lean-horizon row.
 - [`artifacts/examples/math/coordinate-geometry-v0/`](../../artifacts/examples/math/coordinate-geometry-v0/)
   validates exact midpoint, collinearity, and squared-distance coordinate
   checks, plus checked rejection of a bad squared-distance claim.
@@ -499,6 +507,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-line-search-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-projected-gradient-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0

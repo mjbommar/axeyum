@@ -10693,6 +10693,137 @@ def validate_finite_line_search(expected: dict[str, Any]) -> None:
     require_string("line search future_checker", data.get("future_checker"))
 
 
+def validate_finite_projected_gradient(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    gradient_check = checks["projected-gradient-gradient-replay"]
+    if gradient_check["expected_result"] != "sat":
+        fail("projected-gradient-gradient-replay must expect sat")
+    values = single_witness_values(gradient_check, witnesses)
+    polynomial = require_quadratic("projected gradient polynomial", values.get("polynomial"))
+    lower_bound = require_fraction("projected gradient lower_bound", values.get("lower_bound"))
+    upper_bound = require_fraction("projected gradient upper_bound", values.get("upper_bound"))
+    start_x = require_fraction("projected gradient start_x", values.get("start_x"))
+    start_value = require_fraction("projected gradient start_value", values.get("start_value"))
+    gradient = require_fraction("projected gradient gradient", values.get("gradient"))
+    step_size = require_fraction("projected gradient step_size", values.get("step_size"))
+    unconstrained_x = require_fraction(
+        "projected gradient unconstrained_x",
+        values.get("unconstrained_x"),
+    )
+    projected_x = require_fraction("projected gradient projected_x", values.get("projected_x"))
+    projection_distance = require_fraction(
+        "projected gradient projection_distance",
+        values.get("projection_distance"),
+    )
+    projected_value = require_fraction(
+        "projected gradient projected_value",
+        values.get("projected_value"),
+    )
+    projected_decrease = require_fraction(
+        "projected gradient projected_decrease",
+        values.get("projected_decrease"),
+    )
+
+    if lower_bound > upper_bound:
+        fail("projected-gradient-gradient-replay interval bounds are reversed")
+    if not (lower_bound <= start_x <= upper_bound):
+        fail("projected-gradient-gradient-replay start point must be feasible")
+    if step_size <= 0:
+        fail("unconstrained-step-replay step_size must be positive")
+    if polynomial_eval(polynomial, start_x) != start_value:
+        fail("projected-gradient-gradient-replay start_value is incorrect")
+    if quadratic_derivative_value(polynomial, start_x) != gradient:
+        fail("projected-gradient-gradient-replay gradient is incorrect")
+
+    step = checks["unconstrained-step-replay"]
+    if step["expected_result"] != "sat":
+        fail("unconstrained-step-replay must expect sat")
+    step_values = single_witness_values(step, witnesses)
+    if step_values != values:
+        fail("unconstrained-step-replay must cite the projected-gradient witness")
+    if start_x - step_size * gradient != unconstrained_x:
+        fail("unconstrained-step-replay unconstrained_x is incorrect")
+
+    projection = checks["interval-projection-replay"]
+    if projection["expected_result"] != "sat":
+        fail("interval-projection-replay must expect sat")
+    projection_values = single_witness_values(projection, witnesses)
+    if projection_values != values:
+        fail("interval-projection-replay must cite the projected-gradient witness")
+    computed_projection = min(max(unconstrained_x, lower_bound), upper_bound)
+    if projected_x != computed_projection:
+        fail("interval-projection-replay projected_x is incorrect")
+    if abs(unconstrained_x - projected_x) != projection_distance:
+        fail("interval-projection-replay projection_distance is incorrect")
+    if not (lower_bound <= projected_x <= upper_bound):
+        fail("interval-projection-replay projected point must be feasible")
+
+    descent = checks["projected-descent-replay"]
+    if descent["expected_result"] != "sat":
+        fail("projected-descent-replay must expect sat")
+    descent_values = single_witness_values(descent, witnesses)
+    if descent_values != values:
+        fail("projected-descent-replay must cite the projected-gradient witness")
+    if polynomial_eval(polynomial, projected_x) != projected_value:
+        fail("projected-descent-replay projected_value is incorrect")
+    if start_value - projected_value != projected_decrease:
+        fail("projected-descent-replay projected_decrease is incorrect")
+    if projected_decrease <= 0:
+        fail("projected-descent-replay expected a positive finite decrease")
+
+    bad = checks["bad-projected-point-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-projected-point-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "quadratic-interval-projected-step":
+        fail("bad-projected-point-rejected must cite the quadratic-interval-projected-step witness")
+    computed_projected_x = require_fraction(
+        "bad projection computed_projected_x",
+        data.get("computed_projected_x"),
+    )
+    claimed_projected_x = require_fraction(
+        "bad projection claimed_projected_x",
+        data.get("claimed_projected_x"),
+    )
+    bad_upper_bound = require_fraction("bad projection upper_bound", data.get("upper_bound"))
+    feasibility_violation = require_fraction(
+        "bad projection feasibility_violation",
+        data.get("feasibility_violation"),
+    )
+    if computed_projected_x != projected_x:
+        fail("bad-projected-point-rejected computed_projected_x does not match replay")
+    if bad_upper_bound != upper_bound:
+        fail("bad-projected-point-rejected upper_bound does not match the interval")
+    if claimed_projected_x - upper_bound != feasibility_violation:
+        fail("bad-projected-point-rejected feasibility_violation is incorrect")
+    if feasibility_violation <= 0:
+        fail("bad-projected-point-rejected malformed point must exceed the upper bound")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad projection smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-projected-gradient-v0/smt2/bad-projection-farkas-conflict.smt2":
+        fail("bad-projected-point-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad projection smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad projection farkas_regression", regression)
+    if "finite_projected_gradient_bad_projection_artifact_emits_checked_farkas" not in regression:
+        fail("bad-projected-point-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad projection certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-projected-point-rejected certificate must document checked Farkas evidence")
+
+    horizon = checks["general-projected-gradient-convergence-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-projected-gradient-convergence-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-projected-gradient-convergence-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("projected gradient target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("projected gradient future_checker", data.get("future_checker"))
+
+
 def inner_product(
     gram_matrix: list[list[Fraction]],
     left: list[Fraction],
@@ -17264,6 +17395,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_gradient_descent(expected)
     if metadata["id"] == "finite-line-search-v0":
         validate_finite_line_search(expected)
+    if metadata["id"] == "finite-projected-gradient-v0":
+        validate_finite_projected_gradient(expected)
     if metadata["id"] == "finite-recurrence-prefix-v0":
         validate_finite_recurrence_prefix(expected)
     if metadata["id"] == "finite-root-finding-v0":

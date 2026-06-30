@@ -810,6 +810,12 @@
           "notes": "Finite exact Armijo line-search replay with checked bad-acceptance rejection."
         },
         {
+          "id": "finite-projected-gradient-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-projected-gradient-v0",
+          "notes": "Finite exact projected-gradient interval projection with checked bad-projection rejection."
+        },
+        {
           "id": "multivariable-calculus-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
@@ -1768,6 +1774,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-line-search-v0",
           "notes": "Exact Armijo trial rejection, backtracked-step acceptance, and bad-acceptance rejection."
+        },
+        {
+          "id": "finite-projected-gradient-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-projected-gradient-v0",
+          "notes": "Exact interval projection after a gradient step and bad-projection rejection."
         }
       ],
       "proof_routes": [
@@ -1871,6 +1883,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-line-search-v0",
           "notes": "Finite exact Armijo rejection/acceptance replay and convergence-theorem horizon rows."
+        },
+        {
+          "id": "finite-projected-gradient-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-projected-gradient-v0",
+          "notes": "Finite exact projected-gradient interval replay and convergence-theorem horizon rows."
         }
       ],
       "proof_routes": [
@@ -2800,7 +2818,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A rational convexity-shadow row checks fixed midpoint/Jensen instances, finite second differences, affine monotonicity, exact gradient replay, Hessian-minor witnesses, finite gradient-descent and line-search steps, finite KKT stationarity/complementarity, and finite SDP primal/dual slack rows over rational data while keeping general convex-analysis theorems separate.",
+      "summary": "A rational convexity-shadow row checks fixed midpoint/Jensen instances, finite second differences, affine monotonicity, exact gradient replay, Hessian-minor witnesses, finite gradient-descent, line-search, and projected-gradient steps, finite KKT stationarity/complementarity, and finite SDP primal/dual slack rows over rational data while keeping general convex-analysis theorems separate.",
       "prerequisites": [
         "bridge_lp_objective_farkas",
         "bridge_bounded_epsilon_delta_shadow",
@@ -2821,6 +2839,7 @@
         "finite grid replay",
         "finite gradient descent replay",
         "finite line search replay",
+        "finite projected gradient replay",
         "finite KKT replay",
         "finite SDP replay",
         "Farkas certificate",
@@ -2870,6 +2889,12 @@
           "notes": "Finite exact Armijo rejection/acceptance and bad-acceptance rows over exact rationals."
         },
         {
+          "id": "finite-projected-gradient-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-projected-gradient-v0",
+          "notes": "Finite exact projected-gradient interval projection and bad-projection rows over exact rationals."
+        },
+        {
           "id": "finite-sdp-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-sdp-v0",
@@ -2904,7 +2929,7 @@
             "docs/learn/math/linear-algebra-and-optimization.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "The finite checker recomputes midpoint values, grid differences, gradients, Jacobians, Hessian minors, and normal-equation residuals, finite gradient and Armijo line-search steps, finite KKT residuals, and two-by-two SDP slack/objective arithmetic exactly; false linearized claims use checked Farkas evidence when promoted."
+          "notes": "The finite checker recomputes midpoint values, grid differences, gradients, Jacobians, Hessian minors, and normal-equation residuals, finite gradient, Armijo line-search, and projected-gradient steps, finite KKT residuals, and two-by-two SDP slack/objective arithmetic exactly; false linearized claims use checked Farkas evidence when promoted."
         }
       ],
       "source_refs": [
@@ -8895,7 +8920,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, gradient-step, and line-search rational shadows."
+          "notes": "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, gradient-step, line-search, and projected-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -8944,6 +8969,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-operator-v0",
           "notes": "Finite-Dimensional Operator And Chebyshev Checks"
+        },
+        {
+          "id": "finite-projected-gradient-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-projected-gradient-v0",
+          "notes": "Finite Projected Gradient Checks"
         },
         {
           "id": "finite-recurrence-prefix-v0",
@@ -9102,6 +9133,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-line-search-v0",
           "notes": "Finite Armijo line-search replay with checked bad-acceptance rejection."
+        },
+        {
+          "id": "finite-projected-gradient-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-projected-gradient-v0",
+          "notes": "Finite projected-gradient interval replay with checked bad-projection rejection."
         },
         {
           "id": "finite-root-finding-v0",
@@ -9498,6 +9535,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-product-measure-v0",
           "notes": "Finite Product Measure And Fubini Checks"
+        },
+        {
+          "id": "finite-projected-gradient-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-projected-gradient-v0",
+          "notes": "Finite Projected Gradient Checks"
         },
         {
           "id": "finite-random-variables-v0",
