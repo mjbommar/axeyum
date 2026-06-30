@@ -205,6 +205,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Statistics consumer queries landed.**
+  [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
+  now shows public JSON queries for statistics Farkas field readiness,
+  finite-table/tail-count bridge lookups, checked exact-rational statistics
+  rows, and checked Diophantine count rows across exact finite tests,
+  contingency tables, regression, random matrices, finite probability/process
+  tables, concentration, and stochastic-kernel resources.
+  `check-foundational-resources.sh` now smoke-checks those queries without
+  promoting floating-point inference or asymptotic sampling claims.
+
 - **Topology consumer queries landed.**
   [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
   now shows public JSON queries for topology Boolean field readiness,

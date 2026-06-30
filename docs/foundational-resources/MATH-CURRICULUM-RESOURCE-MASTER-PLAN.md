@@ -359,7 +359,13 @@ Use one row per commit unless the change is purely navigational.
    compactness/connectedness shadows, continuous-map/preimage rows, homology
    boundary checks, and topology bridge rows visible through the public JSON
    contract.
-12. Add future rules/law crosswalk examples only by reusing existing
+12. Landed: add statistics consumer-query coverage through
+   [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
+   `scripts/check-foundational-resources.sh`, making exact finite tests,
+   contingency tables, finite probability/process rows, least-squares,
+   random-matrix moments, finite-table concepts, and tail-count obstructions
+   visible through the public JSON contract.
+13. Add future rules/law crosswalk examples only by reusing existing
    math-resource patterns; do not create a separate rule ontology until the
    current JSON boundary is exercised by more consumers.
 

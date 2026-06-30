@@ -233,6 +233,51 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+For statistics, query the Farkas route to keep exact finite tests,
+contingency tables, least-squares regression, random-matrix finite moments,
+finite probability/process tables, concentration rows, and stochastic-kernel
+checks grouped while leaving floating-point inference, asymptotic sampling,
+MCMC, VI, and model-calibration claims in numerical-honesty or proof-horizon
+lanes:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field statistics \
+  --route Farkas \
+  --require-any
+```
+
+Use atlas lookups for reusable finite-table and tail-count vocabulary:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field statistics \
+  --text tail \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field statistics \
+  --text finite \
+  --require-any
+```
+
+To display concrete checked statistics rows, drill into the exact-rational and
+integer-count routes separately:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field statistics \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --field statistics \
+  --route Diophantine \
+  --proof-status checked \
+  --require-any
+```
+
 For optimization and convexity, query the Farkas route to keep exact LP
 thresholds, finite convexity shadows, regression normal equations, residual
 bounds, gradient/Hessian replay, finite KKT stationarity, finite SDP

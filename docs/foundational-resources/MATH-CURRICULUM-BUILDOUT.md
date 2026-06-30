@@ -2013,6 +2013,15 @@ preimage consistency, finite homology boundary checks, metric-ball examples,
 and bounded epsilon-delta shadows stay visible through the public JSON boundary
 without promoting arbitrary compactness, connectedness, homeomorphism
 invariance, or homology-invariance theorems.
+The consumer query layer now also exposes statistics readiness:
+`CONSUMER-QUERIES.md` shows the Farkas field summary, finite-table and
+tail-count bridge lookups, and checked Farkas/Diophantine statistics row
+drill-downs. The foundational-resource smoke check runs those same queries so
+exact finite tests, contingency tables, least-squares regression,
+random-matrix finite moments, finite probability/process tables,
+concentration rows, and stochastic-kernel checks stay visible through the
+public JSON boundary without promoting floating-point inference, asymptotic
+sampling, MCMC, VI, or model-calibration claims.
 The consumer query layer now also exposes optimization/convexity readiness:
 `CONSUMER-QUERIES.md` shows the Farkas field summary, LP-objective and
 convexity bridge lookups, and checked optimization/convexity Farkas row

@@ -589,6 +589,13 @@ Pick one row per commit unless the change is purely navigational.
     topology, compactness, connectedness, continuous-map, homology, metric, and
     bounded epsilon-delta resources visible through the committed JSON
     contract.
+69. Landed: add statistics field-readiness consumer query coverage.
+    `CONSUMER-QUERIES.md` and `check-foundational-resources.sh` now exercise
+    the statistics Farkas field summary, finite-table and tail-count bridge
+    lookups, checked exact-rational statistics rows, and checked Diophantine
+    count rows, making exact finite tests, contingency tables, regression,
+    random-matrix, finite probability, process-table, and concentration
+    resources visible through the committed JSON contract.
 
 ## Validation Checklist
 

@@ -1526,7 +1526,12 @@ Pick one item per commit unless the change is purely navigational.
     [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational smoke
     check, covering Boolean field readiness, compactness/preimage bridge
     lookups, and checked Boolean/Alethe topology rows.
-80. Continue proof-route promotions or consumer-query examples; revisit the
+80. Landed: add statistics field-readiness consumer queries through
+    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational smoke
+    check, covering Farkas field readiness, finite-table/tail-count bridge
+    lookups, checked exact-rational statistics rows, and checked Diophantine
+    count rows.
+81. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

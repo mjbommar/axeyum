@@ -263,13 +263,15 @@ Build sequence:
    atlas concept lookup, and field-level curriculum readiness over the
    committed JSON data contract. The smoke set now covers probability/Farkas,
    dynamics/Farkas, topology/Boolean+Alethe, measure/Farkas,
-   optimization/Farkas, geometry/Farkas, and functional-analysis/operator
-   Farkas field-readiness examples, plus topology compactness/preimage bridge
-   lookups, measure bridge concept lookup, LP-objective and convexity bridge
-   concept lookup, operator bridge concept lookup, checked topology
-   Boolean/Alethe rows, checked measure-theory Farkas rows, checked
-   optimization/convexity Farkas rows, checked geometry Farkas rows, and
-   checked functional-analysis/operator Farkas rows.
+   statistics/Farkas+Diophantine, optimization/Farkas, geometry/Farkas, and
+   functional-analysis/operator Farkas field-readiness examples, plus topology
+   compactness/preimage bridge lookups, measure bridge concept lookup,
+   statistics finite-table/tail-count bridge lookups, LP-objective and
+   convexity bridge concept lookup, operator bridge concept lookup, checked
+   topology Boolean/Alethe rows, checked measure-theory Farkas rows, checked
+   statistics Farkas/Diophantine rows, checked optimization/convexity Farkas
+   rows, checked geometry Farkas rows, and checked functional-analysis/operator
+   Farkas rows.
 16. Negative example-pack validator fixtures now land through
     `scripts/check-foundational-negative-fixtures.py` and
     `artifacts/fixtures/foundational-example-pack-invalid/`, covering unknown
@@ -427,7 +429,13 @@ Build sequence:
     summary, compactness/preimage bridge lookups, and checked Boolean/Alethe
     topology rows without promoting arbitrary compactness, connectedness,
     homeomorphism, or homology-invariance theorems.
-48. Revisit crate/repo boundaries only after three real consumers or repeated
+48. Statistics field-readiness consumer queries now land in
+    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
+    `scripts/check-foundational-resources.sh`, covering the Farkas field
+    summary, finite-table/tail-count bridge lookups, checked exact-rational
+    statistics rows, and checked integer-count rows without promoting
+    floating-point inference or asymptotic sampling claims.
+49. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands
