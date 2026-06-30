@@ -265,7 +265,11 @@ Build sequence:
     `qf-uf-quotient-ring-representative-alethe` to
     `artifacts/examples/math/finite-ideals-v0/smt2/quotient-ring-representative-congruence-conflict.smt2`,
     checked by the `math_resource_uf_routes` QF_UF/Alethe regression.
-11. Revisit crate/repo boundaries only after three real consumers or repeated
+16. Route-specific tamper/rejection regressions now land for the active
+    certificate routes: Boolean CNF/LRAT, QF_BV DRAT, QF_LRA/Farkas,
+    QF_LIA/Diophantine, and QF_UF/Alethe all mutate emitted resource
+    certificates and require independent checker rejection.
+17. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

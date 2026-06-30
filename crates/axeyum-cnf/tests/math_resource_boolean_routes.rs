@@ -5,8 +5,8 @@
 //! acceptance path.
 
 use axeyum_cnf::{
-    ProofSolveOutcome, check_drat, check_lrat, elaborate_drat_to_lrat, parse_dimacs, parse_lrat,
-    solve_with_drat_proof, write_lrat,
+    LratStep, ProofSolveOutcome, check_drat, check_lrat, elaborate_drat_to_lrat, parse_dimacs,
+    parse_lrat, solve_with_drat_proof, write_lrat,
 };
 
 const TRIANGLE_NOT_2_COLORABLE_CNF: &str = include_str!(
@@ -179,5 +179,41 @@ fn graph_reachability_disconnected_no_path_emits_checked_drat_and_lrat() {
         GRAPH_REACHABILITY_DISCONNECTED_NO_PATH,
         16,
         41,
+    );
+}
+
+#[test]
+fn boolean_resource_route_rejects_tampered_drat_and_lrat() {
+    let formula =
+        parse_dimacs(LOGIC_BASICS_TINY_CNF_REFUTATION).expect("logic-basics-v0 tiny CNF parses");
+    let ProofSolveOutcome::Unsat(drat) = solve_with_drat_proof(&formula) else {
+        panic!("logic-basics-v0 tiny CNF must be unsat");
+    };
+    assert_eq!(check_drat(&formula, &drat), Ok(true));
+
+    let mut truncated_drat = drat.clone();
+    truncated_drat.pop();
+    assert_ne!(
+        check_drat(&formula, &truncated_drat),
+        Ok(true),
+        "removing the empty-clause DRAT step must not certify UNSAT"
+    );
+
+    let lrat = elaborate_drat_to_lrat(&formula, &drat).expect("DRAT elaborates to LRAT");
+    assert_eq!(check_lrat(&formula, &lrat), Ok(true));
+    let mut corrupted_lrat = lrat.clone();
+    let mut cleared_hints = false;
+    for step in &mut corrupted_lrat {
+        if let LratStep::Add { hints, .. } = step {
+            hints.clear();
+            cleared_hints = true;
+            break;
+        }
+    }
+    assert!(cleared_hints, "expected at least one LRAT addition");
+    assert_ne!(
+        check_lrat(&formula, &corrupted_lrat),
+        Ok(true),
+        "clearing LRAT hints must make the certificate reject"
     );
 }

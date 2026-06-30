@@ -981,7 +981,10 @@ Pick one item per commit unless the change is purely navigational.
     [generated/curriculum-status-audit.md](generated/curriculum-status-audit.md)
     so generated resource maturity is separate from source curriculum DAG
     status.
-11. Add one route-specific tamper/rejection test per proof certificate route.
+11. Landed: add one route-specific tamper/rejection test per active proof
+    certificate route. Boolean CNF/LRAT, QF_BV DRAT, QF_LRA/Farkas,
+    QF_LIA/Diophantine, and QF_UF/Alethe now each mutate an emitted resource
+    certificate and require checker rejection in the route regression suite.
 12. Revisit the library boundary decision after the next five solver-reuse
     promotions and at least one downstream consumer use.
 

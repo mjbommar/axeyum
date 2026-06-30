@@ -98,6 +98,34 @@ fn graph_search_bad_dfs_cost_bound_emits_checked_lia_dpll_evidence() {
     );
 }
 
+#[test]
+fn qf_lia_resource_route_rejects_tampered_diophantine_certificate() {
+    let script = parse_script(MODULAR_NONUNIT_DIOPHANTINE)
+        .expect("modular-arithmetic-v0 nonunit artifact parses");
+    let assertions = script.assertions.clone();
+    let report = produce_diophantine_evidence(&script.arena, &assertions)
+        .expect("Diophantine evidence production must not error")
+        .expect("resource obligation emits Diophantine evidence");
+    let Evidence::UnsatDiophantine {
+        equalities,
+        mut certificate,
+        lean_module,
+    } = report.evidence
+    else {
+        panic!("expected UnsatDiophantine evidence");
+    };
+    certificate.constant = certificate.constant.checked_add(1).unwrap();
+    let bogus = Evidence::UnsatDiophantine {
+        equalities,
+        certificate,
+        lean_module,
+    };
+    assert!(
+        !matches!(bogus.check(&script.arena, &assertions), Ok(true)),
+        "tampering the Diophantine contradiction row must make evidence reject"
+    );
+}
+
 fn assert_resource_diophantine(label: &str, smt2: &str) {
     let mut script = parse_script(smt2)
         .unwrap_or_else(|error| panic!("{label}: resource SMT-LIB artifact parses: {error}"));

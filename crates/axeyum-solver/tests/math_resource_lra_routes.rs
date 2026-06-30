@@ -4,7 +4,7 @@
 //! path: the pack-level replay remains useful, but an upgraded `unsat` row must
 //! also produce independently rechecked Farkas evidence.
 
-use axeyum_ir::{TermArena, TermId};
+use axeyum_ir::{Rational, TermArena, TermId};
 use axeyum_solver::{Evidence, TrustId, produce_lra_evidence};
 
 fn real(arena: &mut TermArena, name: &str) -> TermId {
@@ -38,6 +38,30 @@ fn assert_farkas_checked(label: &str, arena: &TermArena, assertions: &[TermId]) 
             .iter()
             .any(|step| step.id == TrustId::Farkas && step.certified),
         "{label}: missing certified Farkas trust step"
+    );
+}
+
+#[test]
+fn qf_lra_resource_route_rejects_tampered_farkas_certificate() {
+    let mut arena = TermArena::new();
+    let x = real(&mut arena, "x");
+    let zero = arena.real_ratio(0, 1);
+    let one = arena.real_ratio(1, 1);
+    let x_ge_one = arena.real_ge(x, one).unwrap();
+    let x_le_zero = arena.real_le(x, zero).unwrap();
+    let assertions = [x_ge_one, x_le_zero];
+
+    let report = produce_lra_evidence(&arena, &assertions).unwrap();
+    let Evidence::UnsatFarkas(mut certificate) = report.evidence else {
+        panic!("expected Farkas-certified unsat");
+    };
+    assert!(certificate.verify());
+
+    certificate.multipliers[0] = Rational::zero();
+    let bogus = Evidence::UnsatFarkas(certificate);
+    assert!(
+        !bogus.check(&arena, &assertions).unwrap(),
+        "tampering a Farkas multiplier must make evidence reject"
     );
 }
 

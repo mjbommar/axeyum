@@ -55,6 +55,26 @@ fn number_theory_quadratic_nonresidue_emits_checked_bv_drat() {
     );
 }
 
+#[test]
+fn qf_bv_resource_route_rejects_tampered_drat_certificate() {
+    let script = parse_script(FINITE_FIELDS_COMPOSITE_NONFIELD)
+        .expect("finite-fields-v0 composite-modulus artifact parses");
+    let assertions = script.assertions.clone();
+    let proof = match export_qf_bv_unsat_proof(&script.arena, &assertions) {
+        Ok(UnsatProofOutcome::Proved(proof)) => proof,
+        other => panic!("expected checked DRAT proof, got {other:?}"),
+    };
+    assert_eq!(proof.recheck(), Ok(true));
+
+    let mut tampered = proof.clone();
+    tampered.drat = remove_last_nonempty_line(&tampered.drat);
+    let evidence = Evidence::Unsat(Some(tampered));
+    assert!(
+        !matches!(evidence.check(&script.arena, &assertions), Ok(true)),
+        "removing the final DRAT step must make QF_BV evidence reject"
+    );
+}
+
 fn assert_resource_qf_bv_drat(label: &str, smt2: &str) {
     let mut script = parse_script(smt2)
         .unwrap_or_else(|error| panic!("{label}: resource SMT-LIB artifact parses: {error}"));
@@ -94,4 +114,17 @@ fn assert_resource_qf_bv_drat(label: &str, smt2: &str) {
         evidence.check(&script.arena, &assertions).unwrap(),
         "{label}: Evidence::check must independently re-run the DRAT checker"
     );
+}
+
+fn remove_last_nonempty_line(text: &str) -> String {
+    let mut lines: Vec<&str> = text.lines().collect();
+    while matches!(lines.last(), Some(line) if line.trim().is_empty()) {
+        lines.pop();
+    }
+    lines.pop();
+    let mut out = lines.join("\n");
+    if !out.is_empty() {
+        out.push('\n');
+    }
+    out
 }

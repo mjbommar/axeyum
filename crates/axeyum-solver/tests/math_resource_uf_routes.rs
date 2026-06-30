@@ -160,6 +160,25 @@ fn finite_tensor_products_bad_bilinear_emits_checked_alethe() {
     );
 }
 
+#[test]
+fn qf_uf_resource_route_rejects_tampered_alethe_certificate() {
+    let script = parse_script(EQUIVALENCE_CLASSES_QUOTIENT_CONGRUENCE)
+        .expect("equivalence-classes-v0 quotient congruence artifact parses");
+    let assertions = script.assertions.clone();
+    let proof = prove_qf_uf_unsat_alethe(&script.arena, &assertions)
+        .expect("resource obligation emits a pure EUF Alethe proof");
+    let evidence = Evidence::UnsatAletheProof(proof.clone());
+    assert!(evidence.check(&script.arena, &assertions).unwrap());
+
+    let mut tampered = proof;
+    tampered.pop();
+    let bogus = Evidence::UnsatAletheProof(tampered);
+    assert!(
+        !matches!(bogus.check(&script.arena, &assertions), Ok(true)),
+        "removing the closing Alethe command must make the certificate reject"
+    );
+}
+
 fn assert_resource_euf_alethe(label: &str, smt2: &str) {
     let mut script = parse_script(smt2)
         .unwrap_or_else(|error| panic!("{label}: resource SMT-LIB artifact parses: {error}"));

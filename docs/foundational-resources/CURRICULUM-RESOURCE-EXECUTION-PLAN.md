@@ -405,7 +405,11 @@ Next buildout:
    packs with unknown fields, metadata/check id drift, and missing witness
    references fail with expected diagnostics; `check-foundational-resources.sh`
    runs the negative-fixture check.
-14. Promote selected packs into solver regression/fuzz corpora with back-links
+14. Landed: add route-specific tamper/rejection regressions for the active
+   proof-certificate routes. Boolean CNF/LRAT, QF_BV DRAT, QF_LRA/Farkas,
+   QF_LIA/Diophantine, and QF_UF/Alethe now each mutate an emitted resource
+   certificate and require independent checker rejection.
+15. Promote selected packs into solver regression/fuzz corpora with back-links
    to the resource pack.
    Status: first promotions landed for `logic-basics-v0` via
    `artifacts/examples/math/logic-basics-v0/cnf/tiny-cnf-refutation.cnf` and

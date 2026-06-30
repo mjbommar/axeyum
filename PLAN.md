@@ -217,7 +217,11 @@ compactness now contributes checked DRAT/LRAT evidence for a bad open-cover row,
 finite connectedness now contributes checked DRAT/LRAT evidence for a bad
 connectedness row, and graph search runtime and natural arithmetic now
 contribute checked arithmetic-DPLL regressions for bad finite DFS cost and
-bounded-natural negativity; prefer the next
+bounded-natural negativity. The five active resource proof-certificate routes
+now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
+QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
+emitted resource certificate and require the independent checker to reject it;
+prefer the next
 proof-frontier lane or equality-heavy pack that can carry a small checked
 certificate and a resource-backed regression.
 

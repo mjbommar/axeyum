@@ -127,6 +127,7 @@ Validation:
 ```sh
 cargo test -p axeyum-cnf drat
 cargo test -p axeyum-cnf lrat
+cargo test -p axeyum-cnf --test math_resource_boolean_routes boolean_resource_route_rejects_tampered_drat_and_lrat
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sets-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-patterns-v0
@@ -228,6 +229,7 @@ Validation:
 ```sh
 cargo test -p axeyum-solver --test evidence lra_unsat_evidence_carries_a_recheckable_farkas_certificate
 cargo test -p axeyum-solver --test evidence tampered_farkas_evidence_fails_its_own_check
+cargo test -p axeyum-solver --test math_resource_lra_routes qf_lra_resource_route_rejects_tampered_farkas_certificate
 cargo test -p axeyum-solver --test lean_crosscheck certified_lra_interpolant_both_farkas_certs_checked_by_real_lean
 ./scripts/check-foundational-resources.sh
 ```
@@ -288,6 +290,7 @@ Validation:
 
 ```sh
 cargo test -p axeyum-solver --test math_resource_uf_routes
+cargo test -p axeyum-solver --test math_resource_uf_routes qf_uf_resource_route_rejects_tampered_alethe_certificate
 cargo test -p axeyum-solver --test evidence qf_ufbv_unsat_carries_a_zero_trust_alethe_certificate
 cargo test -p axeyum-solver --test evidence qf_uf_declared_sort_equality_unsat_carries_zero_trust_alethe_certificate
 cargo test -p axeyum-solver --test lean_crosscheck qf_uf_declared_sort_equality_checks_in_real_lean
@@ -351,6 +354,7 @@ Validation:
 ```sh
 cargo test -p axeyum-solver diophantine
 cargo test -p axeyum-solver certificate_tamper_is_rejected
+cargo test -p axeyum-solver --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
 cargo test -p axeyum-solver --test int_inequality_lean_reconstruct
 cargo test -p axeyum-solver --test math_resource_lia_routes
 ./scripts/check-foundational-resources.sh
@@ -399,6 +403,7 @@ Validation:
 
 ```sh
 cargo test -p axeyum-solver --test math_resource_bv_routes
+cargo test -p axeyum-solver --test math_resource_bv_routes qf_bv_resource_route_rejects_tampered_drat_certificate
 cargo test -p axeyum-solver --test evidence unsat_evidence_carries_a_recheckable_drat_certificate
 cargo test -p axeyum-solver --test evidence qf_bv_drat_unsat_reports_bitblast_tseitin_sat_steps
 ./scripts/check-foundational-resources.sh

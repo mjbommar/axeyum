@@ -199,6 +199,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   QF_LRA/Farkas, QF_UF/Alethe, QF_LIA/Diophantine, QF_BV bit-blast, and Lean
   horizons with explicit trust boundaries and route-specific checks.
 
+- **Route-specific tamper/rejection tests landed.** The five active resource
+  proof-certificate routes now each have a focused negative regression:
+  `math_resource_boolean_routes` truncates DRAT and clears LRAT hints,
+  `math_resource_bv_routes` truncates a QF_BV DRAT certificate,
+  `math_resource_lra_routes` tampers a Farkas multiplier,
+  `math_resource_lia_routes` tampers a Diophantine contradiction row, and
+  `math_resource_uf_routes` drops the closing Alethe command. Each test requires
+  the independent checker to reject the doctored certificate.
+
 - **Curriculum pressure by fragment landed.** The generated
   [`curriculum-pressure-by-fragment.md`](docs/foundational-resources/generated/curriculum-pressure-by-fragment.md)
   dashboard groups the 84 non-template math packs into overlapping Bool/CNF,
