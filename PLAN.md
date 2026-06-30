@@ -100,7 +100,8 @@ policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-06-29): the first QF_UF/Alethe proof
 upgrade wave now includes equivalence classes, relations/functions, finite
-groups, function composition, finite algebra homomorphisms, and finite monoids.
+groups, function composition, finite algebra homomorphisms, finite monoids, and
+finite group actions.
 The foundational concept atlas now also includes twenty-two generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 metric balls, bounded epsilon-delta shadows, compactness shadows,
@@ -172,11 +173,11 @@ upgrade targets; source-linked Bool/QF_LIA fixtures now check its consistency,
 coverage, fixed no-exception monotonicity, and active-threshold implementation
 equivalence obligations through the `rules_as_code_examples` solver regression.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
-dual spaces, finite modules, finite ideals, and finite tensor products now add
-secondary equality-heavy promotions for bad antisymmetry, bad nonbijection,
-bad subspace-closure, covector-additivity, submodule scalar-closure, ideal
-additive-closure plus quotient-ring representative congruence, and bilinear
-left-additivity rows.
+dual spaces, finite modules, finite ideals, finite tensor products, and finite
+group actions now add secondary equality-heavy promotions for bad antisymmetry,
+bad nonbijection, bad subspace-closure, covector-additivity, submodule
+scalar-closure, ideal additive-closure plus quotient-ring representative
+congruence, bilinear left-additivity, and bad identity-action rows.
 Continue the
 math-resource proof upgrades from
 [`docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md`](docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md),
@@ -209,7 +210,9 @@ bad-delta output-bound conflict, and finite stochastic kernels now promoted for
 the bad kernel-row normalization conflict. The first secondary QF_LRA/Farkas
 target set is now covered, the initial equality-heavy QF_UF/Alethe secondary
 set is now covered including the finite-ideals quotient representative row, and
-the first QF_BV bit-blast/DRAT resource promotion now covers the
+finite group actions now promote a bad identity-action conflict through a
+checked QF_UF/Alethe regression. The first QF_BV bit-blast/DRAT resource
+promotion now covers the
 finite-rings bad distributivity row, the finite-fields composite no-inverse row,
 and the graph-coloring one-bit triangle two-coloring obstruction, with bounded
 number theory now promoted for the modulo-7 quadratic nonresidue row; finite

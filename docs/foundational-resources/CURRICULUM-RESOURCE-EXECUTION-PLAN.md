@@ -409,7 +409,13 @@ Next buildout:
    proof-certificate routes. Boolean CNF/LRAT, QF_BV DRAT, QF_LRA/Farkas,
    QF_LIA/Diophantine, and QF_UF/Alethe now each mutate an emitted resource
    certificate and require independent checker rejection.
-15. Promote selected packs into solver regression/fuzz corpora with back-links
+15. Landed: promote `finite-group-actions-v0` through a source-linked
+   QF_UF/Alethe regression for the `bad-action-rejected` identity-action
+   conflict:
+   `artifacts/examples/math/finite-group-actions-v0/smt2/bad-identity-action-alethe-conflict.smt2`
+   is checked by
+   `cargo test -p axeyum-solver --test math_resource_uf_routes finite_group_actions_bad_identity_emits_checked_alethe`.
+16. Promote selected packs into solver regression/fuzz corpora with back-links
    to the resource pack.
    Status: first promotions landed for `logic-basics-v0` via
    `artifacts/examples/math/logic-basics-v0/cnf/tiny-cnf-refutation.cnf` and

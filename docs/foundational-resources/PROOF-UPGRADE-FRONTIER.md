@@ -29,7 +29,7 @@ Candidate route totals:
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 4 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 5 | Integer equalities, counts, modular constraints, and rank obstructions. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 25 | Exact rational infeasibility and linear inequality obligations. |
-| [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 13 | Equality-heavy finite structures and congruence conflicts. |
+| [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 14 | Equality-heavy finite structures and congruence conflicts. |
 | [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 54 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
@@ -273,12 +273,15 @@ First targets:
   additive-closure conflict and quotient-ring representative congruence)
 - [finite-tensor-products-v0](../../artifacts/examples/math/finite-tensor-products-v0/)
   (resource-backed QF_UF/Alethe regression landed for the bad bilinear left-additivity conflict)
+- [finite-group-actions-v0](../../artifacts/examples/math/finite-group-actions-v0/)
+  (resource-backed QF_UF/Alethe regression landed for the bad identity-action conflict)
 
 Secondary targets:
 
 - initial module/ideal/tensor equality-heavy secondary set is covered, including
-  the finite-ideals quotient representative congruence row; pick the next
-  equality-heavy pack only when it exposes a small fixed EUF certificate.
+  the finite-ideals quotient representative congruence row and the finite
+  group-action identity row; pick the next equality-heavy pack only when it
+  exposes a small fixed EUF certificate.
 
 Expected artifact:
 

@@ -21,6 +21,10 @@ The checker treats the group operation and action as finite tables. It
 recomputes identity action, compatibility `g.(h.x) = (g*h).x`, orbits,
 stabilizers, fixed-point counts, and the Burnside average.
 
+For the malformed identity-action row, the finite replay identifies the failing
+point and the linked QF_UF artifact checks the resulting `e.x = x` conflict with
+an Alethe certificate.
+
 General group actions, orbit-stabilizer, Burnside/Cauchy-Frobenius, and
 representation-theoretic results over arbitrary groups remain proof-assistant
 horizon material.

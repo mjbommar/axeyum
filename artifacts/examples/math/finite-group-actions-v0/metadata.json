@@ -28,9 +28,19 @@
     "finite functions",
     "finite counting",
     "finite table replay",
+    "QF_UF",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-group-actions-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite group-action bad identity QF_UF/Alethe regression seed",
+    "pressure": "The identity element of a fixed finite group action must fix every point; the EUF row refutes a malformed action table that maps a point to a distinct image under the identity.",
+    "evidence": [
+      "bad-action-rejected"
+    ],
+    "next_step": "Promote additional group-action rows only when they add distinct congruence pressure; keep orbit-stabilizer, Burnside/Cauchy-Frobenius, quotient actions, and representation theory in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/02-structures/groups.md",
     "docs/curriculum/00-foundations/relations-and-functions.md",
@@ -38,6 +48,9 @@
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "artifacts/examples/math/finite-group-actions-v0/smt2/bad-identity-action-alethe-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
@@ -50,7 +63,7 @@
   "graduation_criteria": [
     "Encode fixed finite group actions as deterministic table obligations.",
     "Replay action-law, orbit, stabilizer, orbit-stabilizer, and Burnside rows through Axeyum model evaluation over finite tables.",
-    "Add proof-object routes for finite action laws once finite-function/EUF evidence is promoted.",
+    "Route malformed finite identity-action rows through checked QF_UF/Alethe evidence once exact table replay identifies the failing point.",
     "Keep arbitrary group-action theorems, Burnside/Cauchy-Frobenius in full generality, group actions on algebraic/topological structures, and representation theory under Lean horizon until formal routes exist."
   ]
 }

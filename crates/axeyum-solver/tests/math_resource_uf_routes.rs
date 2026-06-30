@@ -50,6 +50,9 @@ const FINITE_IDEALS_QUOTIENT_REPRESENTATIVE_CONGRUENCE: &str = include_str!(
 const FINITE_TENSOR_PRODUCTS_BAD_BILINEAR: &str = include_str!(
     "../../../artifacts/examples/math/finite-tensor-products-v0/smt2/bad-bilinear-left-additivity-conflict.smt2"
 );
+const FINITE_GROUP_ACTIONS_BAD_IDENTITY: &str = include_str!(
+    "../../../artifacts/examples/math/finite-group-actions-v0/smt2/bad-identity-action-alethe-conflict.smt2"
+);
 
 #[test]
 fn equivalence_classes_quotient_map_congruence_emits_checked_alethe() {
@@ -157,6 +160,14 @@ fn finite_tensor_products_bad_bilinear_emits_checked_alethe() {
     assert_resource_euf_alethe(
         "finite-tensor-products-v0 bad bilinear map",
         FINITE_TENSOR_PRODUCTS_BAD_BILINEAR,
+    );
+}
+
+#[test]
+fn finite_group_actions_bad_identity_emits_checked_alethe() {
+    assert_resource_euf_alethe(
+        "finite-group-actions-v0 bad identity action",
+        FINITE_GROUP_ACTIONS_BAD_IDENTITY,
     );
 }
 

@@ -424,8 +424,8 @@ checked non-group operation plus a QF_UF/Alethe binary-operation congruence row.
 action orbit/stabilizer replay, checked QF_UF/Alethe bad-nonbijection
 rejection, and a general permutation-group Lean-horizon row. `finite-group-actions-v0` now
 validates finite action laws, orbit/stabilizer replay, orbit-stabilizer
-cardinality, Burnside fixed-point counting, checked bad-action rejection, and a
-general group-action Lean-horizon row. `finite-monoids-v0` now validates finite monoid
+cardinality, Burnside fixed-point counting, checked QF_UF/Alethe bad
+identity-action rejection, and a general group-action Lean-horizon row. `finite-monoids-v0` now validates finite monoid
 identity/associativity, transformation-composition table replay from finite
 functions, units/idempotents, a checked QF_UF/Alethe non-associative table
 rejection, and a general monoid Lean-horizon row. `finite-rings-v0` now validates finite ring tables,
@@ -1284,8 +1284,8 @@ annihilator recomputation, transpose-map replay, checked QF_UF/Alethe
 bad-covector rejection, and a duality/functional-analysis Lean-horizon row.
 `finite-group-actions-v0` now adds the exact finite group-action bridge:
 action-law replay, orbit/stabilizer recomputation, orbit-stabilizer
-cardinality, Burnside fixed-point counting, checked bad-action rejection, and
-a group-action Lean-horizon row.
+cardinality, Burnside fixed-point counting, checked QF_UF/Alethe bad
+identity-action rejection, and a group-action Lean-horizon row.
 `finite-monoids-v0` now adds the exact finite function/algebra bridge:
 monoid identity/associativity replay, transformation-composition table replay,
 unit and idempotent recomputation, checked QF_UF/Alethe non-associative table

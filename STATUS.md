@@ -208,6 +208,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_uf_routes` drops the closing Alethe command. Each test requires
   the independent checker to reject the doctored certificate.
 
+- **Finite group-action QF_UF promotion landed.**
+  [`finite-group-actions-v0`](artifacts/examples/math/finite-group-actions-v0/)
+  now links `bad-action-rejected` to a source-level QF_UF artifact for the
+  malformed identity-action row. The shared `math_resource_uf_routes`
+  regression emits and checks an Alethe certificate for that row, and the
+  generated dashboards move promoted solver-reuse packs to 17.
+
 - **Curriculum pressure by fragment landed.** The generated
   [`curriculum-pressure-by-fragment.md`](docs/foundational-resources/generated/curriculum-pressure-by-fragment.md)
   dashboard groups the 84 non-template math packs into overlapping Bool/CNF,
