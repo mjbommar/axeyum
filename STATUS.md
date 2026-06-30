@@ -338,9 +338,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   independently rechecked DIMACS/DRAT evidence; generated dashboards move
   promoted solver-reuse packs to 56 and leave 28 unclassified packs.
 
+- **Exact finite probability QF_LRA/Farkas promotion landed.**
+  `finite-probability-v0` now carries promoted `solver_reuse` metadata tied to
+  the checked bad-normalization and bad-Bayes posterior source SMT-LIB rows.
+  The focused `math_resource_lra_routes finite_probability` regression checks
+  both rows with independently rechecked Farkas evidence; generated dashboards
+  move promoted solver-reuse packs to 57 and leave 27 unclassified packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 56-promoted-pack review count. The
+  now records the refreshed 57-promoted-pack review count. The
   decision remains in-repo and JSON-first: the query consumer reads promoted
   solver-reuse rows, but there is still no external consumer, repeated typed API
   demand, or reusable encoder boundary that warrants a new crate or separate

@@ -29,6 +29,16 @@
     "finite enumeration"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "exact finite probability QF_LRA/Farkas regression seed",
+    "pressure": "Exact-rational probability conflicts for finite normalization and Bayes posterior equations: a fair coin total is forced to 1 and 3/2, while diagnostic-test odds force posterior 2/13 but the bad row asserts 1/5.",
+    "evidence": [
+      "bad-normalization-rejected",
+      "bad-bayes-posterior-rejected"
+    ],
+    "next_step": "Promote additional finite probability rows only when they add distinct exact-rational mass, conditioning, independence, or Bayes-rule solver pressure; keep continuous distributions, sampling claims, and numerical approximation guarantees in separate horizon lanes."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -38,6 +48,8 @@
     "docs/curriculum/00-foundations/sets.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/finite-probability-v0/smt2/bad-normalization-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-probability-v0/smt2/bad-bayes-posterior-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
