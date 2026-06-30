@@ -78,9 +78,12 @@
       "validation": "finite_predicate_valuation_enumeration",
       "proof_status": "checked",
       "data": {
-        "universe": ["a", "b"]
+        "universe": ["a", "b"],
+        "cnf_artifact": "artifacts/examples/math/finite-predicate-v0/cnf/forall-implies-exists.cnf",
+        "proof_regression": "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs::finite_predicate_forall_implies_exists_emits_checked_drat_and_lrat",
+        "certificate": "The regression parses the source-linked finite quantifier-expansion DIMACS artifact, emits a DRAT proof, elaborates it to LRAT, and independently checks both proof objects against the CNF."
       },
-      "notes": "The validator enumerates every unary predicate valuation over the non-empty finite universe and finds no counterexample."
+      "notes": "The validator enumerates every unary predicate valuation over the non-empty finite universe and finds no counterexample; the cargo regression checks the emitted DRAT/LRAT proof route for the matching DIMACS artifact."
     },
     {
       "id": "exists-not-forall-counterexample",

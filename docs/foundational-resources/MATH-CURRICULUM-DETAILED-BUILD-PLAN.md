@@ -41,9 +41,9 @@ The committed resource query currently reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 68 promoted solver-reuse packs.
+- 69 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 10 unclassified solver-reuse packs.
+- 9 unclassified solver-reuse packs.
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
 allowed only when they fill a clear curriculum/field hole that cannot be served
@@ -93,7 +93,6 @@ Current unclassified queue:
 
 | Pack | Practical Next Step |
 |---|---|
-| `finite-predicate-v0` | decide finite-expansion regression versus non-benchmark educational replay |
 | `induction-obligations-v0` | mark bounded obligations as non-benchmark or promote one QF_LIA bad-step row |
 | `cardinality-principles-v0` | choose a small inclusion-exclusion/double-counting proof route or mark theorem rows horizon |
 | `polynomial-factorization-rational-v0` | promote a rational coefficient obstruction or mark as replay-centered |
@@ -237,7 +236,7 @@ Exit criteria:
 | Node | Build Priority | Practical Work |
 |---|---|---|
 | `propositional-logic` | maintain | keep tiny CNF and tamper tests as the smallest trust story |
-| `predicate-logic` | classify | decide finite expansion as solver regression or non-benchmark replay |
+| `predicate-logic` | maintain | finite expansion now has a Bool/CNF proof-route regression; keep arbitrary-domain validity horizon explicit |
 | `proof-methods` | promote | PHP/refutation CNF artifact and proof-object lesson |
 | `induction` | horizon clarity | separate bounded obligations from Lean induction schema |
 | `sets` | maintain | keep finite set/lattice false claims checked and linked |
@@ -274,19 +273,21 @@ Pick one row per commit unless the change is purely navigational.
    Cauchy-product coefficient QF_LIA/Diophantine artifact and route regression.
 4. Landed: promote `polynomial-identities-v0` through a source-linked false
    rational-root QF_LIA/Diophantine artifact and route regression.
-5. Promote or classify the remaining algebra/calculus/counting unclassified
-   packs, starting with coefficient conflicts where the source route is clear.
-6. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
+5. Landed: promote `finite-predicate-v0` through a source-linked finite
+   quantifier-expansion Bool/CNF artifact and DRAT/LRAT route regression.
+6. Promote or classify the remaining unclassified packs, starting with compact
+   source-level conflicts where the route is clear.
+7. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
    CNF stays source-level readable.
-7. Upgrade finite-measure from non-benchmark with a finite-additivity or
+8. Upgrade finite-measure from non-benchmark with a finite-additivity or
    complement conflict through QF_LRA/Farkas.
-8. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
+9. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
    conflict through QF_LRA/Farkas.
-9. Add a proof-object learner page that follows one resource from source claim
+10. Add a proof-object learner page that follows one resource from source claim
    to emitted proof and corrupted-proof rejection.
-10. Add a generated or query-based audit for unclassified solver-reuse packs if
+11. Add a generated or query-based audit for unclassified solver-reuse packs if
    manual tracking starts to drift.
-11. Revisit the library boundary after unclassified packs are resolved and at
+12. Revisit the library boundary after unclassified packs are resolved and at
    least one non-doc consumer repeats resource parsing logic.
 
 ## Validation Checklist

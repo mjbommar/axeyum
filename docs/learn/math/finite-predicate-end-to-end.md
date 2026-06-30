@@ -112,6 +112,22 @@ P(a)=true,  P(b)=true
 None has all entries true while also having no true entry, so the
 counterexample search is checked `unsat`.
 
+The promoted solver-facing artifact records the same fixed expansion as CNF:
+
+```text
+P(a)
+P(b)
+not P(a)
+not P(b)
+```
+
+That source DIMACS lives at
+`artifacts/examples/math/finite-predicate-v0/cnf/forall-implies-exists.cnf`.
+Axeyum's Boolean resource regression parses it, emits a DRAT proof, elaborates
+that proof to LRAT, and checks both proof objects against the original CNF.
+This proves the finite counterexample search is empty for this concrete
+non-empty universe; it does not prove arbitrary-domain first-order validity.
+
 ## Replay Exists But Not Forall
 
 The counterexample row uses:
@@ -166,6 +182,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-predicate-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_predicate_forall_implies_exists_emits_checked_drat_and_lrat
 ```
 
 Expected output:
@@ -180,7 +197,7 @@ This lesson shows Axeyum's resource pattern for finite predicate logic:
 
 ```text
 untrusted fast search -> finite universe, predicate table, witness/counterexample
-trusted small checking -> finite quantifier expansion, valuation enumeration, relation replay
+trusted small checking -> finite quantifier expansion, valuation enumeration, relation replay, checked DRAT/LRAT for source CNF
 ```
 
 General first-order reasoning over arbitrary domains requires stronger proof

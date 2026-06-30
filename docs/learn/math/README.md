@@ -36,8 +36,8 @@ validated pack data and the repo-root command that replays it.
   and a tiny CNF refutation.
 - [Finite Predicate Logic](finite-predicate-end-to-end.md): follows finite
   universal/existential predicate replay, bounded quantifier implication
-  enumeration, relation symmetry counterexamples, and the first-order Lean
-  horizon.
+  enumeration with checked DRAT/LRAT evidence, relation symmetry
+  counterexamples, and the first-order Lean horizon.
 - [Proof By Refutation](proof-methods-refutation-end-to-end.md): follows a
   pigeonhole SAT control, checked `PHP(3,2)` CNF truth-table refutation, and
   checked DRAT/LRAT proof-object evidence for the source DIMACS artifact.

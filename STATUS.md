@@ -407,10 +407,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   report 68 promoted, 6 non-benchmark-horizon, and 10 unclassified
   solver-reuse packs.
 
+- **Finite-predicate Bool/CNF promotion landed.**
+  `finite-predicate-v0` now carries promoted `solver_reuse` metadata for its
+  finite `forall x. P(x) -> exists x. P(x)` no-counterexample row. The new
+  source-level artifact `forall-implies-exists.cnf` isolates the fixed
+  two-element quantifier expansion `P(a)`, `P(b)`, `not P(a)`, and `not P(b)`,
+  and
+  `math_resource_boolean_routes::finite_predicate_forall_implies_exists_emits_checked_drat_and_lrat`
+  checks emitted DRAT plus elaborated LRAT evidence. Generated dashboards now
+  report 69 promoted, 6 non-benchmark-horizon, and 9 unclassified solver-reuse
+  packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 68-promoted, 6 non-benchmark-horizon, and
-  10-unclassified solver-reuse counts. The decision remains in-repo and
+  now records the refreshed 69-promoted, 6 non-benchmark-horizon, and
+  9-unclassified solver-reuse counts. The decision remains in-repo and
   JSON-first: the query consumer reads promoted solver-reuse rows, but there is
   still no external consumer, repeated typed API demand, or reusable encoder
   boundary that warrants a new crate or separate repository.
@@ -11540,6 +11551,15 @@ plan is built and committed on the current branch:
   row records the checked `UnsatDiophantine` certificate path, and generated
   dashboards report 68 promoted, 6 non-benchmark-horizon, and 10 unclassified
   packs.
+
+- **2026-06-30** — **Finite-predicate Bool/CNF promotion landed.**
+  Added
+  `artifacts/examples/math/finite-predicate-v0/cnf/forall-implies-exists.cnf`
+  for the finite quantifier-expansion no-counterexample row and wired it into
+  `math_resource_boolean_routes`. The pack metadata now marks
+  `solver_reuse.status` as `promoted`, the expected row records the checked
+  DRAT/LRAT certificate path, and generated dashboards report 69 promoted,
+  6 non-benchmark-horizon, and 9 unclassified packs.
 
 - **2026-06-29** — **Proof-cookbook math-example route sections landed.**
   Added `Math Examples Using This Route` sections to the six active proof

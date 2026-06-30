@@ -25,7 +25,7 @@ Candidate route totals:
 
 | Route | Pack Count | Meaning |
 |---|---:|---|
-| [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 6 | Boolean refutations that should carry checked CNF proof objects. |
+| [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 7 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 6 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 29 | Exact rational infeasibility and linear inequality obligations. |
@@ -88,6 +88,10 @@ First targets:
 - [logic-basics-v0](../../artifacts/examples/math/logic-basics-v0/)
   (solver-reuse promotion landed for `tiny-cnf-refutation`: source-linked
   DIMACS artifact, DRAT emission, LRAT elaboration, and independent checks)
+- [finite-predicate-v0](../../artifacts/examples/math/finite-predicate-v0/)
+  (solver-reuse promotion landed for `forall-implies-exists-finite`:
+  source-linked finite quantifier-expansion DIMACS artifact, DRAT emission,
+  LRAT elaboration, and independent checks)
 - [finite-cardinality-v0](../../artifacts/examples/math/finite-cardinality-v0/)
   (solver-reuse promotion landed for `no-injection-four-to-three`: source-linked
   4-into-3 injective-function DIMACS artifact, DRAT emission, LRAT elaboration,

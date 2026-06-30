@@ -7388,14 +7388,31 @@ def validate_finite_predicate(expected: dict[str, Any]) -> None:
         fail("exists-predicate-finite-replay predicate table does not satisfy exists x. P(x)")
 
     implication = checks["forall-implies-exists-finite"]
-    if implication["expected_result"] != "unsat":
-        fail("forall-implies-exists-finite must expect unsat")
-    universe = require_string_list("forall-implies-exists-finite.universe", implication.get("data", {}).get("universe"))
+    if implication["expected_result"] != "unsat" or implication.get("proof_status") != "checked":
+        fail("forall-implies-exists-finite must be a checked unsat row")
+    implication_data = implication.get("data", {})
+    universe = require_string_list("forall-implies-exists-finite.universe", implication_data.get("universe"))
     if not universe:
         fail("forall-implies-exists-finite universe must be non-empty")
     for valuation in predicate_valuations(universe):
         if all(valuation[element] for element in universe) and not any(valuation[element] for element in universe):
             fail("forall-implies-exists-finite found a finite counterexample")
+    if universe != ["a", "b"]:
+        fail("forall-implies-exists-finite DIMACS artifact is fixed to universe [a, b]")
+    require_dimacs_artifact(
+        "forall-implies-exists-finite",
+        implication_data.get("cnf_artifact"),
+        "p cnf 2 4",
+        [["1"], ["2"], ["-1"], ["-2"]],
+    )
+    proof_regression = implication_data.get("proof_regression")
+    require_string("forall-implies-exists-finite proof_regression", proof_regression)
+    if "math_resource_boolean_routes.rs::finite_predicate_forall_implies_exists" not in proof_regression:
+        fail("forall-implies-exists-finite proof_regression must name the Boolean resource test")
+    certificate = implication_data.get("certificate")
+    require_string("forall-implies-exists-finite certificate", certificate)
+    if "DRAT" not in certificate or "LRAT" not in certificate or "independently" not in certificate:
+        fail("forall-implies-exists-finite certificate must document DRAT/LRAT independent checking")
 
     not_forall = checks["exists-not-forall-counterexample"]
     if not_forall["expected_result"] != "sat":

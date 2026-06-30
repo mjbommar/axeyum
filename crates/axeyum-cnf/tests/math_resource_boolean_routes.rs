@@ -30,6 +30,9 @@ const FINITE_CONNECTEDNESS_BAD_CONNECTED_CLAIM: &str = include_str!(
 );
 const LOGIC_BASICS_TINY_CNF_REFUTATION: &str =
     include_str!("../../../artifacts/examples/math/logic-basics-v0/cnf/tiny-cnf-refutation.cnf");
+const FINITE_PREDICATE_FORALL_IMPLIES_EXISTS: &str = include_str!(
+    "../../../artifacts/examples/math/finite-predicate-v0/cnf/forall-implies-exists.cnf"
+);
 const FINITE_CARDINALITY_NO_INJECTION_FOUR_TO_THREE: &str = include_str!(
     "../../../artifacts/examples/math/finite-cardinality-v0/cnf/no-injection-four-to-three.cnf"
 );
@@ -153,6 +156,16 @@ fn logic_basics_tiny_cnf_refutation_emits_checked_drat_and_lrat() {
         LOGIC_BASICS_TINY_CNF_REFUTATION,
         2,
         3,
+    );
+}
+
+#[test]
+fn finite_predicate_forall_implies_exists_emits_checked_drat_and_lrat() {
+    assert_unsat_resource_cnf_checks(
+        "finite-predicate-v0 forall-implies-exists-finite",
+        FINITE_PREDICATE_FORALL_IMPLIES_EXISTS,
+        2,
+        4,
     );
 }
 

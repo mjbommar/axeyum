@@ -93,7 +93,7 @@ The `finite-predicate-v0` validator checks that `exists x. P(x)` holds,
 `forall x. P(x)` fails, and a binary relation with `R(a,b)` but not `R(b,a)`
 violates symmetry. It also enumerates every unary predicate over a non-empty
 two-element universe to reject a counterexample to `forall x. P(x) -> exists
-x. P(x)`.
+x. P(x)`, and the matching source DIMACS row now checks through DRAT/LRAT.
 For induction, encode the finite obligations for a specific property:
 
 ```text
@@ -128,6 +128,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/pr
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-patterns-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
+cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_predicate_forall_implies_exists_emits_checked_drat_and_lrat
 ```
 
 For fuller traces, read:

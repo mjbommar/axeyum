@@ -44,9 +44,9 @@ The current committed data boundary reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 68 promoted solver-reuse packs.
+- 69 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 10 unclassified solver-reuse packs.
+- 9 unclassified solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -394,6 +394,9 @@ Build next:
 
 - Add concept rows for refutation, natural-deduction pattern, finite
   countermodel, bounded induction obligation, and Lean induction schema.
+- Keep `finite-predicate-v0`'s promoted finite quantifier-expansion row tied to
+  the source CNF/DRAT/LRAT route, and do not treat it as arbitrary-domain
+  first-order validity.
 - Add a proof-object anatomy lesson that starts from a tiny CNF, emits
   DRAT/LRAT, tampers with it, and shows checker rejection.
 - Promote one small proof-method contradiction row to the Boolean CNF route if
@@ -1062,7 +1065,12 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/polynomial-identities-v0/smt2/false-rational-root-diophantine-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lia_routes polynomial_identities_false_rational_root_emits_checked_diophantine_evidence`.
-25. Continue proof-route promotions or consumer-query examples; revisit the
+25. Landed: promote `finite-predicate-v0` through a source-linked Bool/CNF
+    DRAT/LRAT regression for `forall-implies-exists-finite`. The artifact
+    `artifacts/examples/math/finite-predicate-v0/cnf/forall-implies-exists.cnf`
+    is checked by
+    `cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_predicate_forall_implies_exists_emits_checked_drat_and_lrat`.
+26. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

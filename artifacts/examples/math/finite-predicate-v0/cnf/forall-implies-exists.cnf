@@ -1,0 +1,10 @@
+c finite-predicate-v0 forall-implies-exists-finite
+c Variables encode the unary predicate over U = {a,b}: P(a)=1 and P(b)=2.
+c Clauses 1 and 2 assert forall x. P(x). Clauses -1 and -2 assert that
+c exists x. P(x) fails. The finite universe is non-empty, so these constraints
+c are contradictory.
+p cnf 2 4
+1 0
+2 0
+-1 0
+-2 0

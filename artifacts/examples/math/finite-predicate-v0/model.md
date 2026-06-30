@@ -18,6 +18,16 @@ to:
 forall x. P(x) -> exists x. P(x)
 ```
 
+The promoted source CNF fixes `U = {a,b}` with variables `P(a)=1` and `P(b)=2`.
+The contradictory counterexample search is:
+
+```text
+P(a) and P(b) and not P(a) and not P(b)
+```
+
+The Boolean route emits DRAT, elaborates to LRAT, and checks both proof objects
+against that concrete CNF.
+
 The binary relation row treats a relation as a Boolean predicate
 `R(x, y)`. Symmetry is the finite condition:
 
@@ -29,4 +39,4 @@ The example relation contains `R(a, b)` but not `R(b, a)`, so it is a checked
 counterexample to symmetry.
 
 The final row is metadata only: general first-order validity over arbitrary or
-infinite domains is outside this finite replay model.
+infinite domains is outside this finite replay and CNF model.

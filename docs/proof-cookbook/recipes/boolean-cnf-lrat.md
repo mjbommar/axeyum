@@ -21,10 +21,8 @@ This is the proof route needed by small Boolean refutation resources such as
 pigeonhole and finite graph non-colorability.
 
 For very small teaching packs, deterministic truth-table enumeration can be a
-checked finite route before proof-object emission. The
-`proof-methods-refutation-v0` pigeonhole pack is currently in that state:
-`PHP(3,2)` is checked by enumerating its concrete CNF, while emitted LRAT/DRAT
-evidence remains the graduation target.
+checked finite route before proof-object emission. Promoted rows keep that
+finite replay but also tie the same source CNF to emitted DRAT/LRAT evidence.
 
 ## Solver Route
 
@@ -103,6 +101,9 @@ Canonical examples:
 
 - [Logic Basics](../../../artifacts/examples/math/logic-basics-v0/) uses
   `tiny-cnf-refutation` as the smallest checked Boolean contradiction.
+- [Finite Predicate Logic](../../../artifacts/examples/math/finite-predicate-v0/)
+  uses `forall-implies-exists-finite` as a source-linked finite quantifier
+  expansion refutation.
 - [Finite Cardinality](../../../artifacts/examples/math/finite-cardinality-v0/)
   uses `no-injection-four-to-three` as a finite pigeonhole-style CNF row.
 - [Graph Matching](../../../artifacts/examples/math/graph-matching-v0/),
@@ -131,6 +132,7 @@ Foundational resource examples that currently point at this route:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/logic-basics-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-predicate-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/proof-methods-refutation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 ```
@@ -141,5 +143,6 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 - [support matrix](../../research/08-planning/support-matrix.md)
 - [trust ledger](../../research/08-planning/trust-ledger.md)
 - [Logic Basics pack](../../../artifacts/examples/math/logic-basics-v0/)
+- [Finite Predicate Logic pack](../../../artifacts/examples/math/finite-predicate-v0/)
 - [Proof Methods By Refutation pack](../../../artifacts/examples/math/proof-methods-refutation-v0/)
 - [Graph Coloring pack](../../../artifacts/examples/math/graph-coloring-v0/)

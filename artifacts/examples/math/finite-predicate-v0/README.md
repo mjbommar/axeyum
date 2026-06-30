@@ -20,7 +20,8 @@ decidable without claiming general first-order validity.
 - A unary predicate table can witness `forall x. P(x)` over a finite universe.
 - A unary predicate table can witness `exists x. P(x)`.
 - Over a non-empty finite universe, `forall x. P(x)` implies
-  `exists x. P(x)`.
+  `exists x. P(x)`; the fixed two-element refutation row is also tied to a
+  source CNF with checked DRAT/LRAT evidence.
 - `exists x. P(x)` does not imply `forall x. P(x)`, and the validator replays a
   counterexample.
 - A finite binary predicate table can witness failure of relation symmetry.
@@ -35,8 +36,9 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 ```
 
 The validator checks the finite predicate tables against the listed universes,
-enumerates unary predicate valuations for the bounded UNSAT row, and keeps the
-general first-order theorem row marked `lean-horizon`.
+enumerates unary predicate valuations for the bounded UNSAT row, verifies the
+source DIMACS artifact for that row, and keeps the general first-order theorem
+row marked `lean-horizon`.
 
 ## Limitations
 
