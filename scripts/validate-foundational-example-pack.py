@@ -12330,6 +12330,30 @@ def validate_finite_measure(expected: dict[str, Any]) -> None:
     if measures[universe_set] != expected_total_measure:
         fail("event-complement witness total measure does not match universe")
 
+    bad_complement = checks["bad-complement-measure-rejected"]
+    if bad_complement["expected_result"] != "unsat" or bad_complement.get("proof_status") != "checked":
+        fail("bad-complement-measure-rejected must be a checked unsat row")
+    data = bad_complement.get("data", {})
+    if data.get("source_witness") != "event-complement":
+        fail("bad-complement-measure-rejected must cite the event-complement source witness")
+    claimed_complement_measure = require_fraction(
+        "bad complement claimed_complement_measure",
+        data.get("claimed_complement_measure"),
+    )
+    if claimed_complement_measure == measures[actual_complement]:
+        fail("bad-complement-measure-rejected must disagree with the replayed complement measure")
+    if measures[event] + claimed_complement_measure == measures[universe_set]:
+        fail("bad-complement-measure-rejected must contradict complement additivity")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad complement smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2":
+        fail("bad-complement-measure-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad complement smt2_artifact", smt2_artifact)
+    farkas_regression = data.get("farkas_regression")
+    require_string("bad complement farkas_regression", farkas_regression)
+    if "finite_measure_bad_complement_artifact_emits_checked_farkas" not in farkas_regression:
+        fail("bad-complement-measure-rejected must link the LRA route regression")
+
 
 def require_probability(context: str, value: Any) -> Fraction:
     probability = require_fraction(context, value)

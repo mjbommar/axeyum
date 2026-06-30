@@ -9,7 +9,8 @@ finite-set and LRA routes:
 
 - finite sigma-algebra axiom replay;
 - finite measure normalization and finite additivity;
-- event/complement probability replay.
+- event/complement probability replay;
+- a checked QF_LRA/Farkas rejection of a malformed complement-measure row.
 
 ## Concepts
 
@@ -26,11 +27,14 @@ The current validator checks the sigma-algebra by explicit finite set
 computation: empty/universe membership, complement closure, and pairwise union
 closure. It parses all measures exactly as rational strings and checks
 nonnegativity, `mu(empty) = 0`, normalization, and finite additivity for
-disjoint measurable sets. It does not claim anything about countable additivity
-or infinite measure spaces.
+disjoint measurable sets. The promoted bad-complement row then checks only the
+final exact-linear contradiction after finite replay has computed the event
+measure and total measure. It does not claim anything about countable
+additivity or infinite measure spaces.
 
 Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas
 ```

@@ -26,6 +26,7 @@ Concept rows:
 | `finite-sigma-algebra-axioms` | `sat` | replay-only |
 | `finite-measure-additivity` | `sat` | replay-only |
 | `event-complement-measure` | `sat` | replay-only |
+| `bad-complement-measure-rejected` | `unsat` | checked QF_LRA/Farkas |
 
 Every row is finite replay over explicit sets and exact rational values. These
 packs do not claim compactness, connectedness, continuity, countable additivity,
@@ -173,6 +174,24 @@ mu(E) + mu(E^c) = 1
 This is the finite probability shadow that later supports integration,
 conditional expectation, and stochastic-kernel packs.
 
+## Reject A Bad Complement Measure
+
+The promoted bad row keeps the finite-measure source object fixed but changes
+one claim:
+
+```text
+mu(E) = 1/3
+mu(U) = 1
+claimed mu(E^c) = 1/2
+mu(E) + mu(E^c) = mu(U)
+```
+
+The source artifact
+`artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2`
+checks the final linear contradiction through QF_LRA/Farkas evidence. The
+finite set replay computes the event and total measures; the Farkas checker
+only closes the resulting exact-rational conflict.
+
 ## Name The Lean Horizon
 
 The packs do not claim broad topology or measure theory:
@@ -196,9 +215,10 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas
 ```
 
-Expected output for each command:
+The validators print:
 
 ```text
 validated 1 foundational example pack(s)
@@ -210,7 +230,7 @@ This lesson shows Axeyum's current finite topology/measure resource pattern:
 
 ```text
 untrusted fast search -> set family, metric ball, measure, or complement row
-trusted small checking -> finite set operations and exact rational arithmetic
+trusted small checking -> finite set operations, exact rational arithmetic, checked QF_LRA certificate
 remaining horizon -> infinite topology, countable measure, and convergence
 ```
 

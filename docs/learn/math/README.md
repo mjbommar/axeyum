@@ -247,6 +247,10 @@ validated pack data and the repo-root command that replays it.
   checked Bayes-posterior refutation, random-variable, conditional-expectation,
   finite stochastic-kernel, concentration, finite martingale, product-measure,
   and simple-function integral replay.
+- [Finite Topology And Measure](finite-topology-measure-end-to-end.md):
+  follows finite topology replay, finite sigma-algebra replay, exact finite
+  measure additivity, event complements, and checked QF_LRA/Farkas
+  bad-complement rejection.
 - [Finite Integration](finite-integration-end-to-end.md): follows finite
   simple-function integrals, indicator integrals, integral linearity, checked
   bad-expectation rejection, and the Lebesgue-integration Lean horizon.

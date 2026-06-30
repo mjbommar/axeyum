@@ -717,8 +717,8 @@ simplicial-complex closure, oriented-boundary replay, the finite
 checked rejection of a bad boundary sign, a checked QF_LIA bad boundary
 coefficient obstruction, and a general homology Lean-horizon row.
 `artifacts/examples/math/finite-measure-v0/` now validates finite
-sigma-algebra axioms, exact finite additivity, and event/complement measure
-replay.
+sigma-algebra axioms, exact finite additivity, event/complement measure
+replay, and checked QF_LRA/Farkas rejection of a bad complement-measure row.
 `artifacts/examples/math/finite-integration-v0/` now validates exact finite
 simple-function integrals, indicator integrals, integral linearity, checked
 QF_LRA/Farkas rejection of a false expectation, and a Lebesgue-integration
@@ -830,7 +830,8 @@ Recommended order:
    finite incidence preservation, QF_LRA/Farkas false distance-preservation
    rejection, and QF_LRA/Farkas false orientation rejection.
 8. `finite-topology-v0`: finite closure/interior and metric-ball examples.
-9. `finite-measure-v0`: finite sigma-algebras and finite measure checks.
+9. `finite-measure-v0`: finite sigma-algebras, finite measure checks, and
+   QF_LRA/Farkas false complement-measure rejection.
 10. `bounded-dynamics-v0` and `finite-euler-method-v0`: recurrence systems,
    Euler step replay, finite error checks, invariants, and QF_LRA/Farkas bad
    fixed-step rejection.
@@ -1103,7 +1104,7 @@ Exit criteria:
 - At least 12 validated example packs.
   Status: 84 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 78 non-template packs have at least one `checked` expected-result row.
+  Status: 79 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -1376,7 +1377,8 @@ QF_LRA/Farkas bad-orientation, and general geometry Lean-horizon rows.
 `finite-topology-v0` and `finite-measure-v0` now have a learner-facing
 end-to-end lesson for finite topology axioms, closure/interior, finite
 metric-ball replay, finite sigma-algebra closure, exact finite additivity,
-event complements, and the topology/measure Lean horizon.
+event complements, checked QF_LRA/Farkas bad-complement rejection, and the
+topology/measure Lean horizon.
 `bounded-dynamics-v0` and `finite-euler-method-v0` now have a learner-facing
 end-to-end lesson for bounded recurrence traces, invariant replay, threshold
 reachability, explicit Euler replay, exact finite error tables, checked bad
@@ -1534,6 +1536,9 @@ checked Farkas evidence path after exact replay computes the atom total.
 It also routes a bad diagnostic-test Bayes posterior through the same checked
 Farkas evidence path after exact replay computes the disease-positive and
 evidence probabilities.
+`finite-measure-v0` now routes its bad complement-measure row through the same
+checked Farkas evidence path after finite replay computes `mu(A) = 1/3` and
+`mu(U) = 1`.
 `finite-markov-chain-v0` now routes its bad stochastic-row rejection through
 the same checked Farkas evidence path after exact replay computes the row sum.
 `finite-stochastic-kernels-v0` now routes its bad kernel-row rejection through

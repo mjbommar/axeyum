@@ -111,10 +111,11 @@ product-measure's bad product-probability row through a source-linked exact
 linear contradiction after replay computes the product mass, plus finite
 random-variables' bad pushforward row after replay computes the outcome mass
 and finite-integration's bad expectation row after replay computes the integral,
-with finite-martingales' bad conditional-expectation row now promoted after
-finite filtration replay computes the up-block expectation, and finite
-Markov-chain's existing bad stochastic-row artifact is now explicitly promoted
-in solver-reuse metadata.
+with finite-measure's bad complement row promoted after finite replay computes
+the event and total measures, finite-martingales' bad conditional-expectation
+row now promoted after finite filtration replay computes the up-block
+expectation, and finite Markov-chain's existing bad stochastic-row artifact now
+explicitly promoted in solver-reuse metadata.
 The foundational concept atlas now also includes twenty-two generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 metric balls, bounded epsilon-delta shadows, compactness shadows,
@@ -263,9 +264,10 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **78 promoted solver-reuse
-packs**, **6 non-benchmark-horizon packs**, and **0 unclassified packs** after
-the latest real-algebra RCF-shadow negative-discriminant QF_LRA/Farkas
+the foundational resource dashboards now report **79 promoted solver-reuse
+packs**, **5 non-benchmark-horizon packs**, and **0 unclassified packs** after
+the latest finite-measure bad-complement QF_LRA/Farkas promotion,
+real-algebra RCF-shadow negative-discriminant QF_LRA/Farkas
 promotion, polynomial-factorization discriminant QF_LRA/Farkas promotion,
 cardinality-principles overlap-additivity count QF_LIA/Diophantine
 promotion,
@@ -280,7 +282,7 @@ polynomial-identities false-root QF_LIA/Diophantine promotion,
 finite generating-functions QF_LIA/Diophantine coefficient-convolution
 promotion, PHP(3,2) counting/refutation Bool/CNF promotions, and the replay-only
 classification pass for bounded dynamics, complex algebra, coordinate geometry,
-finite measure, finite operators, and finite topology, plus the earlier
+finite operators, and finite topology, plus the earlier
 rational-order, gcd/Bezout, Bool/CNF finite-set/proof-method, QF_LRA
 linear-algebra/optimization/convexity, finite-probability, QF_UF, QF_LIA, and
 QF_BV source-metadata promotion batches;

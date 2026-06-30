@@ -30,8 +30,8 @@ Example packs:
 
 The statistics path is exact and finite. It checks probability mass tables,
 conditional probability, Bayes replay, finite sigma-algebra axioms, finite
-additivity, event complements, checked QF_LRA bad-normalization and bad-Bayes
-certificates,
+additivity, event complements, a checked QF_LRA bad-complement certificate,
+checked QF_LRA bad-normalization and bad-Bayes certificates,
 finite simple-function integrals, indicator
 integrals, finite random-variable pushforwards, expectations through
 pushforward distributions, independence checks, finite partition conditional
@@ -77,7 +77,10 @@ P(late | rain) = (1/10) / (1/10 + 1/5) = 1/3
 
 The validator recomputes the numerator, denominator, and quotient. For finite
 probability it also rejects a false normalization row, `1/2 + 1/2 = 3/2`, with
-checked `UnsatFarkas` evidence. For finite random variables, it checks
+checked `UnsatFarkas` evidence. For finite measure, the same route rejects a
+bad complement row where `mu(A)=1/3`, `mu(U)=1`, and the malformed claim
+requires `mu(A^c)=1/2` while preserving `mu(A)+mu(A^c)=mu(U)`.
+For finite random variables, it checks
 pushforwards and expectations such as:
 
 ```text
@@ -264,9 +267,10 @@ measures, Markov chains, d-separation rows, exact statistics, and random-matrix
 moments first use
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md):
 the validator recomputes exact atom-table sums and finite path conditions.
-Malformed probability normalization, Bayes-posterior rows, conditional
-expectation tables, stochastic rows, expected hitting-time equations, tail
-bounds, regression coefficients, and random-matrix moment rows graduate through
+Malformed probability normalization, Bayes-posterior rows, measure-complement
+rows, conditional expectation tables, stochastic rows, expected hitting-time
+equations, tail bounds, regression coefficients, and random-matrix moment rows
+graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
 Discrete count contradictions such as contingency totals and exact tail counts
 use

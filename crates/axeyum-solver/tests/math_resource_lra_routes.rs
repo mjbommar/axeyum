@@ -40,6 +40,9 @@ const SEQUENCE_LIMIT_BOUNDED_CAUCHY: &str = include_str!(
 const MULTIVARIABLE_CALCULUS_BAD_GRADIENT: &str = include_str!(
     "../../../artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2"
 );
+const FINITE_MEASURE_BAD_COMPLEMENT: &str = include_str!(
+    "../../../artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2"
+);
 const RATIONALS_TRICHOTOMY_NONLESS: &str = include_str!(
     "../../../artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-nonless-farkas-conflict.smt2"
 );
@@ -442,6 +445,14 @@ fn finite_product_measure_bad_probability_emits_checked_farkas() {
         "finite-product-measure-v0 bad-product-measure-rejected",
         &arena,
         &[replay_computed_mass, false_claimed_mass],
+    );
+}
+
+#[test]
+fn finite_measure_bad_complement_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-measure-v0 bad-complement SMT-LIB artifact",
+        FINITE_MEASURE_BAD_COMPLEMENT,
     );
 }
 

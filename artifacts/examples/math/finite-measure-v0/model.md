@@ -53,5 +53,17 @@ measurable sets.
 For event `A`, the complement has measure `2/3`, and the two measures sum to
 the total measure `1`.
 
+The promoted bad row preserves the finite-replay boundary:
+
+```text
+mu(A) = 1/3
+mu(U) = 1
+mu(A) + mu(A^c) = mu(U)
+claimed mu(A^c) = 1/2
+```
+
+QF_LRA/Farkas checks this final linear contradiction. The source artifact does
+not prove countable additivity, Lebesgue measure, or convergence theorems.
+
 These fixed checks are finite measure-table replay targets. They are not
 general measure theory.

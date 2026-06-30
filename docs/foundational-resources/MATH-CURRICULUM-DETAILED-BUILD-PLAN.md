@@ -37,12 +37,12 @@ The committed resource query currently reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math packs.
-- 416 expected checks.
-- 198 checked proof/evidence rows.
+- 417 expected checks.
+- 199 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 78 promoted solver-reuse packs.
-- 6 non-benchmark-horizon solver-reuse packs.
+- 79 promoted solver-reuse packs.
+- 5 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -98,7 +98,6 @@ Recently classified as explicit non-benchmark-horizon rows:
 | `bounded-dynamics-v0` | add a bounded safety or invariant-refutation row with a source-linked QF_LRA/BV artifact |
 | `complex-algebraic-v0` | add a false real-pair algebra or polynomial-root row with a source-linked LRA/NRA artifact |
 | `coordinate-geometry-v0` | add a false collinearity, midpoint, distance, or incidence row with a source-linked QF_LRA/NRA artifact |
-| `finite-measure-v0` | add a bad normalization, additivity, or complement row with a source-linked QF_LRA/Farkas artifact |
 | `finite-operator-v0` | add a false operator-bound, norm inequality, or recurrence row with a source-linked exact-rational artifact |
 | `finite-topology-v0` | add a malformed finite topology or metric-ball row with a source-linked Bool/CNF or QF_LRA artifact |
 
@@ -210,7 +209,7 @@ Exit criteria:
 | `real_analysis` | bounded rational intervals, metric continuity, RCF shadows, calculus shadows | keep bounded shadows distinct from completeness/convergence theorems | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon |
 | `complex_analysis` | real-pair algebra and transformations | keep algebraic replay rows non-benchmark until a checked real-pair contradiction exists | real-pair LRA/NRA, finite replay, Lean horizon |
 | `topology` | finite topologies, compactness, connectedness, continuous maps, homology | upgrade finite topology from non-benchmark only with a tiny source-level axiom conflict | Bool/CNF, QF_UF/Alethe, QF_LIA, Lean horizon |
-| `measure_theory` | finite measures, product measure, integration, random variables | upgrade finite-measure replay through a bad finite-additivity or complement certificate | QF_LRA/Farkas, finite replay, Lean horizon |
+| `measure_theory` | finite measures, product measure, integration, random variables | finite-measure now has a bad complement QF_LRA/Farkas row; promote only distinct finite-additivity, monotonicity, or measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians | add route notes from LP to Farkas and from Hessians to exact matrix checks | QF_LRA/Farkas, QF_NRA shadows |
@@ -283,12 +282,12 @@ Pick one row per commit unless the change is purely navigational.
 14. Landed: promote `reals-rcf-shadow-v0` through a source-linked
    negative-discriminant QF_LRA/Farkas artifact and route regression, closing
    the current unclassified solver-reuse queue.
-15. Promote or classify any newly added unclassified packs, starting with compact
+15. Landed: promote `finite-measure-v0` through a source-linked bad complement
+   QF_LRA/Farkas artifact and route regression.
+16. Promote or classify any newly added unclassified packs, starting with compact
    source-level conflicts where the route is clear.
-16. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
+17. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
    CNF stays source-level readable.
-17. Upgrade finite-measure from non-benchmark with a finite-additivity or
-   complement conflict through QF_LRA/Farkas.
 18. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
    conflict through QF_LRA/Farkas.
 19. Add a proof-object learner page that follows one resource from source claim

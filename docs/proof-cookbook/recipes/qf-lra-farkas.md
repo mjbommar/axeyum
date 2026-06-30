@@ -110,6 +110,9 @@ Canonical examples:
 - [Finite Markov Chain](../../../artifacts/examples/math/finite-markov-chain-v0/)
   and [Finite Hitting Times](../../../artifacts/examples/math/finite-hitting-times-v0/)
   use malformed stochastic-row and expected-time equations.
+- [Finite Measure](../../../artifacts/examples/math/finite-measure-v0/)
+  uses a bad complement-measure row after exact finite-measure replay computes
+  the event and total measures.
 - [Least Squares Regression](../../../artifacts/examples/math/least-squares-regression-v0/)
   uses a bad normal-equation coefficient row.
 - [Real Analysis Rational](../../../artifacts/examples/math/real-analysis-rational-v0/)

@@ -31,6 +31,7 @@ Concept rows:
 | `bad-continuous-map-rejected` | `unsat` | checked |
 | `finite-sigma-algebra-axioms` | `sat` | replay-only |
 | `event-complement-measure` | `sat` | replay-only |
+| `bad-complement-measure-rejected` | `unsat` | checked QF_LRA/Farkas |
 
 Every row is finite replay over explicit sets and exact rational measures.
 
@@ -101,7 +102,9 @@ mu({a,b}) + mu({c,d}) = 1/3 + 2/3 = 1
 ```
 
 It also checks nonnegativity, `mu({}) = 0`, `mu(universe) = 1`, and finite
-additivity over disjoint measurable sets.
+additivity over disjoint measurable sets. The bad complement row then holds the
+source event fixed, claims `mu({c,d}) = 1/2`, and uses QF_LRA/Farkas evidence to
+reject the final linear contradiction against `mu({a,b}) + mu({c,d}) = 1`.
 
 For compactness, the checker recomputes the cover union, checks the listed
 subcover, enumerates smaller subfamilies for the minimal-size row, and rejects
@@ -139,6 +142,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas
 ```
 
 Expected output for each command:
@@ -153,4 +157,5 @@ The trusted checker only manipulates finite sets and exact fractions. ZFC,
 infinite cardinality, arbitrary topological spaces, general compactness,
 general connectedness theorems, continuous-image and homeomorphism-invariance
 theorems, countable additivity, and Lebesgue integration remain proof-horizon
-material.
+material. The finite-measure UNSAT row trusts only the explicit finite replay
+and the independent Farkas certificate for the final exact-rational conflict.

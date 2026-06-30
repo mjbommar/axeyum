@@ -28,7 +28,7 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 7 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 9 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 33 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 35 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
 | [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 54 | General theorem statements that remain outside bounded SMT replay. |
 
@@ -190,6 +190,9 @@ First targets:
 - [finite-probability-v0](../../artifacts/examples/math/finite-probability-v0/)
   (resource-backed Farkas regressions landed for the bad normalization row and
   the bad Bayes-posterior row)
+- [finite-measure-v0](../../artifacts/examples/math/finite-measure-v0/)
+  (resource-backed Farkas regression landed for the bad complement-measure row
+  after exact finite-measure replay computes the event and total measures)
 - [finite-integration-v0](../../artifacts/examples/math/finite-integration-v0/)
   (resource-backed Farkas regression landed for the bad expectation row after
   exact finite weighted-sum replay computes the integral)
@@ -282,9 +285,12 @@ Secondary targets:
   pushforward-distribution regression with the same replay-then-Farkas boundary.
   Finite martingales now add the stochastic-process version of that pattern:
   replay a conditional expectation from a finite filtration, then let Farkas
-  check the contradictory martingale equality. Polynomial factorization now
-  contributes the algebra version of the same pattern: replay the discriminant
-  exactly, then let Farkas check the final nonnegative-discriminant conflict.
+  check the contradictory martingale equality. Finite measure now contributes
+  the base measure-table version of that pattern: replay the event and total
+  measures, then let Farkas check the false complement-additivity claim.
+  Polynomial factorization now contributes the algebra version of the same
+  pattern: replay the discriminant exactly, then let Farkas check the final
+  nonnegative-discriminant conflict.
   The RCF-shadow pack now contributes the real-algebra version of that same
   boundary: replay the fixed quadratic discriminant, then let Farkas check the
   nonnegative-discriminant contradiction while keeping general SOS/CAD/RCF
