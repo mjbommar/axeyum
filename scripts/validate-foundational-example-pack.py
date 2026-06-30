@@ -9019,6 +9019,132 @@ def validate_finite_recurrence_prefix(expected: dict[str, Any]) -> None:
     require_string("general recurrence future_checker", data.get("future_checker"))
 
 
+def validate_finite_root_finding(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    bisection = checks["bisection-bracket-replay"]
+    if bisection["expected_result"] != "sat":
+        fail("bisection-bracket-replay must expect sat")
+    values = single_witness_values(bisection, witnesses)
+    polynomial = require_polynomial("bisection polynomial", values.get("polynomial"))
+    left = require_fraction("bisection left", values.get("left"))
+    right = require_fraction("bisection right", values.get("right"))
+    midpoint = require_fraction("bisection midpoint", values.get("midpoint"))
+    f_left = require_fraction("bisection f_left", values.get("f_left"))
+    f_midpoint = require_fraction("bisection f_midpoint", values.get("f_midpoint"))
+    f_right = require_fraction("bisection f_right", values.get("f_right"))
+    selected_interval = require_fraction_vector(
+        "bisection selected_interval",
+        values.get("selected_interval"),
+    )
+    initial_width = require_fraction("bisection initial_width", values.get("initial_width"))
+    selected_width = require_fraction("bisection selected_width", values.get("selected_width"))
+    if not left < right:
+        fail("bisection-bracket-replay requires left < right")
+    if midpoint != (left + right) / 2:
+        fail("bisection-bracket-replay midpoint is incorrect")
+    if f_left != polynomial_eval(polynomial, left):
+        fail("bisection-bracket-replay f_left is incorrect")
+    if f_midpoint != polynomial_eval(polynomial, midpoint):
+        fail("bisection-bracket-replay f_midpoint is incorrect")
+    if f_right != polynomial_eval(polynomial, right):
+        fail("bisection-bracket-replay f_right is incorrect")
+    if f_left * f_right >= 0:
+        fail("bisection-bracket-replay initial interval must have a strict sign change")
+    if len(selected_interval) != 2:
+        fail("bisection-bracket-replay selected_interval must have two endpoints")
+    if f_left * f_midpoint < 0:
+        expected_interval = [left, midpoint]
+    elif f_midpoint * f_right < 0:
+        expected_interval = [midpoint, right]
+    else:
+        fail("bisection-bracket-replay midpoint does not choose a strict sign-changing subinterval")
+    if selected_interval != expected_interval:
+        fail("bisection-bracket-replay selected_interval does not match the sign-changing half")
+    if initial_width != right - left:
+        fail("bisection-bracket-replay initial_width is incorrect")
+    if selected_width != selected_interval[1] - selected_interval[0]:
+        fail("bisection-bracket-replay selected_width is incorrect")
+    if selected_width * 2 != initial_width:
+        fail("bisection-bracket-replay selected interval must halve the width")
+
+    newton = checks["newton-step-replay"]
+    if newton["expected_result"] != "sat":
+        fail("newton-step-replay must expect sat")
+    values = single_witness_values(newton, witnesses)
+    newton_polynomial = require_polynomial("Newton polynomial", values.get("polynomial"))
+    derivative = require_polynomial("Newton derivative", values.get("derivative"))
+    current = require_fraction("Newton current", values.get("current"))
+    f_current = require_fraction("Newton f_current", values.get("f_current"))
+    derivative_value = require_fraction("Newton derivative_value", values.get("derivative_value"))
+    next_value = require_fraction("Newton next", values.get("next"))
+    f_next = require_fraction("Newton f_next", values.get("f_next"))
+    if newton_polynomial != polynomial:
+        fail("newton-step-replay must use the same polynomial as the bisection row")
+    if polynomial_derivative(newton_polynomial) != derivative:
+        fail("newton-step-replay derivative polynomial is incorrect")
+    if f_current != polynomial_eval(newton_polynomial, current):
+        fail("newton-step-replay f_current is incorrect")
+    if derivative_value != polynomial_eval(derivative, current):
+        fail("newton-step-replay derivative_value is incorrect")
+    if derivative_value == 0:
+        fail("newton-step-replay derivative_value must be nonzero")
+    computed_next = current - f_current / derivative_value
+    if next_value != computed_next:
+        fail("newton-step-replay next iterate is incorrect")
+    if f_next != polynomial_eval(newton_polynomial, next_value):
+        fail("newton-step-replay f_next is incorrect")
+
+    residual = checks["residual-decrease-witness"]
+    if residual["expected_result"] != "sat":
+        fail("residual-decrease-witness must expect sat")
+    values = single_witness_values(residual, witnesses)
+    residual_before = require_fraction("Newton residual_before", values.get("residual_before"))
+    residual_after = require_fraction("Newton residual_after", values.get("residual_after"))
+    if residual_before != abs(f_current):
+        fail("residual-decrease-witness residual_before is incorrect")
+    if residual_after != abs(f_next):
+        fail("residual-decrease-witness residual_after is incorrect")
+    if not residual_after < residual_before:
+        fail("residual-decrease-witness must strictly decrease the residual")
+
+    bad = checks["bad-newton-step-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
+        fail("bad-newton-step-rejected must be a checked unsat row")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "sqrt-two-newton-step":
+        fail("bad-newton-step-rejected must cite the sqrt-two-newton-step source witness")
+    computed = require_fraction("bad Newton computed_next", data.get("computed_next"))
+    claimed = require_fraction("bad Newton claimed_next", data.get("claimed_next"))
+    if computed != next_value:
+        fail("bad-newton-step-rejected computed_next does not match replay")
+    if claimed == computed:
+        fail("bad-newton-step-rejected claimed next unexpectedly matches replay")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad Newton smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-root-finding-v0/smt2/bad-newton-step-farkas-conflict.smt2":
+        fail("bad-newton-step-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad Newton smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad Newton farkas_regression", regression)
+    if "finite_root_finding_bad_newton_step_artifact_emits_checked_farkas" not in regression:
+        fail("bad-newton-step-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad Newton certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-newton-step-rejected certificate must document checked Farkas evidence")
+
+    horizon = checks["general-root-finding-convergence-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-root-finding-convergence-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-root-finding-convergence-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("root finding target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("root finding future_checker", data.get("future_checker"))
+
+
 def validate_calculus_algebraic_shadow(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -16456,6 +16582,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_euler_method(expected)
     if metadata["id"] == "finite-recurrence-prefix-v0":
         validate_finite_recurrence_prefix(expected)
+    if metadata["id"] == "finite-root-finding-v0":
+        validate_finite_root_finding(expected)
     if metadata["id"] == "function-composition-v0":
         validate_function_composition(expected)
     if metadata["id"] == "generating-functions-v0":

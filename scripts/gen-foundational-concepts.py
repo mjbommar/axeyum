@@ -156,6 +156,10 @@ CURRICULUM_MAP = {
         "proof": "LRA/NRA replay and future SOS/RCF certificates.",
         "extra_packs": [
             (
+                "finite-root-finding-v0",
+                "Finite bisection/Newton root-finding replay and checked bad-step rejection.",
+            ),
+            (
                 "multivariable-calculus-rational-v0",
                 "Exact rational gradients, directional derivatives, Jacobian chain-rule replay, and Hessian minors.",
             ),
@@ -283,6 +287,10 @@ CURRICULUM_MAP = {
                 "generating-functions-v0",
                 "Finite coefficient extraction, Cauchy products, and recurrence/generating-function prefixes.",
             ),
+            (
+                "finite-root-finding-v0",
+                "Finite polynomial evaluation, bisection brackets, Newton steps, and bad-step rejection.",
+            ),
         ],
     },
     "sequences-and-limits": {
@@ -361,6 +369,10 @@ CURRICULUM_MAP = {
                 "finite-recurrence-prefix-v0",
                 "Finite recurrence prefixes and companion-matrix state replay.",
             ),
+            (
+                "finite-root-finding-v0",
+                "Exact rational root-finding iterations and bad Newton-step rejection.",
+            ),
         ],
     },
     "calculus": {
@@ -376,6 +388,10 @@ CURRICULUM_MAP = {
             (
                 "multivariable-calculus-rational-v0",
                 "Exact rational gradient, directional derivative, Jacobian chain-rule, and Hessian-minor replay.",
+            ),
+            (
+                "finite-root-finding-v0",
+                "Finite bisection/Newton root-finding replay and convergence-theorem horizon rows.",
             ),
         ],
     },
@@ -1988,6 +2004,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-recurrence-prefix-v0",
                 "Finite recurrence prefixes and companion-matrix replay for recurrence-theory shadows.",
+            ),
+            (
+                "finite-root-finding-v0",
+                "Finite bisection/Newton replay for root-finding theorem shadows.",
             ),
             (
                 "real-analysis-rational-v0",

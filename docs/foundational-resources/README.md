@@ -21,7 +21,7 @@ schemas, examples, and validation workflows.
   is the commit-sized build matrix for every curriculum node, math field,
   resource gate, and proof route.
 - [MATH-CURRICULUM-DETAILED-BUILD-PLAN.md](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
-  is the current execution ledger for stabilizing the existing 88 math packs,
+  is the current execution ledger for stabilizing the existing 90 math packs,
   resolving unclassified solver-reuse rows, completing learner paths, and
   deepening proof routes field by field.
 - [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md) is the detailed
@@ -165,6 +165,10 @@ schemas, examples, and validation workflows.
   validates Fibonacci prefix replay, affine recurrence replay,
   companion-matrix state replay, checked rejection of a false finite
   recurrence value, and a recurrence-theory Lean-horizon row.
+- [`artifacts/examples/math/finite-root-finding-v0/`](../../artifacts/examples/math/finite-root-finding-v0/)
+  validates exact bisection and Newton-step replay, fixed residual-decrease
+  checking, checked rejection of a false Newton iterate, and a
+  root-finding-convergence Lean-horizon row.
 - [`artifacts/examples/math/metric-continuity-v0/`](../../artifacts/examples/math/metric-continuity-v0/)
   validates finite Lipschitz, epsilon-delta, and open-ball preimage checks
   with exact rational metrics, plus checked QF_LRA/Farkas rejection of an
@@ -420,6 +424,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/re
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-monotone-sequence-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0

@@ -46,6 +46,9 @@ const BOUNDED_MONOTONE_SEQUENCE_BAD_UPPER_BOUND: &str = include_str!(
 const FINITE_RECURRENCE_PREFIX_BAD_VALUE: &str = include_str!(
     "../../../artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-fibonacci-value-farkas-conflict.smt2"
 );
+const FINITE_ROOT_FINDING_BAD_NEWTON_STEP: &str = include_str!(
+    "../../../artifacts/examples/math/finite-root-finding-v0/smt2/bad-newton-step-farkas-conflict.smt2"
+);
 const MULTIVARIABLE_CALCULUS_BAD_GRADIENT: &str = include_str!(
     "../../../artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2"
 );
@@ -443,6 +446,14 @@ fn finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-recurrence-prefix-v0 bad-Fibonacci-value SMT-LIB artifact",
         FINITE_RECURRENCE_PREFIX_BAD_VALUE,
+    );
+}
+
+#[test]
+fn finite_root_finding_bad_newton_step_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-root-finding-v0 bad-Newton-step SMT-LIB artifact",
+        FINITE_ROOT_FINDING_BAD_NEWTON_STEP,
     );
 }
 

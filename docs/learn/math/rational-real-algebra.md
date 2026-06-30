@@ -17,6 +17,7 @@ Example packs:
 - [polynomial-factorization-rational-v0](../../../artifacts/examples/math/polynomial-factorization-rational-v0/)
 - [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
+- [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
@@ -36,7 +37,7 @@ samples, ordered-field real witnesses, small nonlinear polynomial constraints,
 fixed-degree polynomial identities and roots, rational polynomial
 factorization/division/GCD/square-free replay, finite generating-function
 coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
-companion-matrix replay, LP feasibility and
+companion-matrix replay, finite bisection/Newton root-finding replay, LP feasibility and
 infeasibility certificates, finite convexity and monotonicity checks, exact
 rational gradients, Jacobian chain-rule replay, Hessian minor checks,
 midpoints, collinearity determinants, squared distances, affine maps, signed
@@ -140,6 +141,21 @@ The `finite-recurrence-prefix-v0` validator recomputes every listed Fibonacci
 step, checks an affine recurrence prefix, and checks a companion-matrix state
 trace. Its bad row rejects `F_6 = 9` after replay computes `F_6 = 8`.
 
+For finite root finding, keep the claim as one exact rational algorithm step:
+
+```text
+f(x) = x^2 - 2
+[1,2] -> [1,3/2] by one bisection step
+x_0 = 3/2 -> x_1 = 17/12 by one Newton step
+```
+
+The `finite-root-finding-v0` validator recomputes polynomial values, the
+sign-changing bisection half, the derivative, the Newton iterate, and the
+fixed residual decrease. Its bad row rejects the false claim `x_1 = 4/3`
+after exact replay computes `x_1 = 17/12`, then checks the final contradiction
+with QF_LRA/Farkas evidence. For a focused trace, read
+[End To End: Finite Root Finding](finite-root-finding-end-to-end.md).
+
 For a matrix-invariant check, encode a fixed matrix and its characteristic
 polynomial:
 
@@ -209,6 +225,8 @@ cargo test -p axeyum-solver --test math_resource_lra_routes polynomial_factoriza
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas

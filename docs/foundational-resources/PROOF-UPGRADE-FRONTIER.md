@@ -16,10 +16,10 @@ the route named in the pack metadata.
 
 Generated from the current math resource queue:
 
-- math example packs: 89
-- learner-linked packs: 89 focused links
-- packs with non-checked proof rows: 78
-- non-checked proof rows: 238
+- math example packs: 90
+- learner-linked packs: 90 focused links
+- packs with non-checked proof rows: 79
+- non-checked proof rows: 242
 
 Candidate route totals:
 
@@ -28,9 +28,9 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 8 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 9 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 44 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 45 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
-| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 59 | General theorem statements that remain outside bounded SMT replay. |
+| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 60 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
 
@@ -230,6 +230,9 @@ First targets:
 - [finite-recurrence-prefix-v0](../../artifacts/examples/math/finite-recurrence-prefix-v0/)
   (source-linked Farkas regression landed for the bad finite recurrence value
   after exact prefix replay computes `F_6 = 8`)
+- [finite-root-finding-v0](../../artifacts/examples/math/finite-root-finding-v0/)
+  (source-linked Farkas regression landed for the bad Newton-step row after
+  exact root-finding replay computes the next iterate `17/12`)
 - [finite-product-measure-v0](../../artifacts/examples/math/finite-product-measure-v0/)
   (resource-backed Farkas regression landed for the bad product-probability
   row after exact finite product replay computes the product mass)
@@ -326,6 +329,9 @@ Secondary targets:
   Finite operators now contribute the functional-analysis version of that
   boundary: exact replay computes the matrix image and infinity norm, then
   Farkas checks the final bad-bound inequality conflict.
+  Finite root finding now contributes the numerical-analysis version of that
+  boundary: exact replay computes the bisection/Newton data and the next
+  iterate, then Farkas checks the final bad-step equality conflict.
 
 Expected artifact:
 
@@ -341,6 +347,7 @@ cargo test -p axeyum-solver --test evidence tampered_farkas_evidence_fails_its_o
 cargo test -p axeyum-solver --test math_resource_lra_routes qf_lra_resource_route_rejects_tampered_farkas_certificate
 cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test lean_crosscheck certified_lra_interpolant_both_farkas_certs_checked_by_real_lean
 ./scripts/check-foundational-resources.sh

@@ -214,19 +214,19 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `naturals` | `number_theory`, `discrete_math` | `natural-arithmetic-v0` | Bounded Peano arithmetic and LIA/BV arithmetic identities. |
 | `integers` | `number_theory` | `integer-lia-v0` | Linear integer equations/inequalities and witnesses. |
 | `rationals` | `real_analysis`, `linear_algebra` | `rationals-lra-v0`, `polynomial-factorization-rational-v0` | Exact rational order/field facts, density, trichotomy, Farkas links, rational polynomial division, GCD, factorization replay, and a QF_LRA discriminant conflict. |
-| `reals` | `real_analysis`, `optimization_and_convexity` | `real-analysis-rational-v0`, `reals-rcf-shadow-v0`, `multivariable-calculus-rational-v0` | Bounded rational neighborhoods, algebraic real constraints through LRA/NRA, checked QF_LRA negative-discriminant shadow, exact rational gradients, and Hessian checks; completeness marked horizon. |
+| `reals` | `real_analysis`, `optimization_and_convexity` | `real-analysis-rational-v0`, `reals-rcf-shadow-v0`, `multivariable-calculus-rational-v0`, `finite-root-finding-v0` | Bounded rational neighborhoods, algebraic real constraints through LRA/NRA, checked QF_LRA negative-discriminant shadow, exact rational gradients, Hessian checks, and finite root-finding iteration replay; completeness and convergence marked horizon. |
 | `complex` | `complex_analysis`, `linear_algebra` | `complex-algebraic-v0`, `complex-plane-transforms-v0` | Complex arithmetic, unit-root cycles, conjugation, and rational transforms as real-pair algebraic constraints. |
 | `divisibility-and-euclid` | `number_theory` | `gcd-bezout-v0` | GCD, Bezout witness replay, divisibility checks. |
 | `modular-arithmetic` | `number_theory`, `abstract_algebra` | `modular-arithmetic-v0`, `finite-ideals-v0` | Congruences, inverses, CRT, fixed-modulus enumeration, QF_LIA nonunit Diophantine obstruction, modular ring ideals, and quotient rings. |
 | `groups` | `abstract_algebra` | `finite-groups-v0`, `finite-algebra-homomorphisms-v0`, `finite-monoids-v0`, `finite-permutation-groups-v0`, `finite-group-actions-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-modules-v0`, `finite-tensor-products-v0` | Cayley-table closure, identity, inverse, associativity, homomorphism, kernel/image, quotient, finite monoids, units/idempotents, finite permutation groups, cycle/sign replay, finite group actions, orbit/stabilizer replay, Burnside counting, vector-addition groups, dual-space additive groups, module-addition groups, finite tensor-product additive groups, and induced-map checks. |
 | `rings` | `abstract_algebra` | `finite-rings-v0`, `finite-algebra-homomorphisms-v0`, `finite-modules-v0`, `finite-ideals-v0` | Two-operation table checks, distributivity, zero divisors, ring-homomorphism preservation, ideals, quotient rings, and finite module actions over rings. |
 | `fields` | `abstract_algebra`, `number_theory` | `finite-fields-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-tensor-products-v0`, `polynomial-factorization-rational-v0` | Field axioms over small prime fields, composite modulus counterexamples, finite vector spaces over `F2`, covectors and dual bases, bilinear maps, tensor-product replay, and rational polynomial arithmetic over `Q[x]`. |
-| `polynomials` | `abstract_algebra`, `real_analysis`, `complex_analysis` | `polynomial-identities-v0`, `polynomial-factorization-rational-v0`, `generating-functions-v0` | Fixed-degree identities, factor theorem, root witness replay, rational factor products, polynomial division, Euclidean GCD, square-free decomposition, irreducible-quadratic rejection with QF_LRA/Farkas evidence, coefficient extraction, and finite convolution. |
+| `polynomials` | `abstract_algebra`, `real_analysis`, `complex_analysis` | `polynomial-identities-v0`, `polynomial-factorization-rational-v0`, `generating-functions-v0`, `finite-root-finding-v0` | Fixed-degree identities, factor theorem, root witness replay, rational factor products, polynomial division, Euclidean GCD, square-free decomposition, irreducible-quadratic rejection with QF_LRA/Farkas evidence, coefficient extraction, finite convolution, and exact polynomial evaluation inside bisection/Newton steps. |
 | `sequences-and-limits` | `real_analysis`, `topology` | `sequence-limit-shadow-v0`, `bounded-monotone-sequence-v0`, `finite-recurrence-prefix-v0`, `real-analysis-rational-v0`, `generating-functions-v0` | Bounded epsilon/N and epsilon-delta templates, algebraic sequence checks, finite monotone-prefix/supremum/tail-gap replay, finite recurrence-prefix and companion-matrix replay, and finite generating-function prefixes; general limits marked Lean-horizon. |
 | `counting` | `discrete_math`, `probability_theory` | `counting-v0`, `finite-permutation-groups-v0`, `finite-group-actions-v0`, `finite-recurrence-prefix-v0`, `generating-functions-v0` | Permutations, combinations, pigeonhole finite instances, finite cycle/sign replay, finite orbit counting, Burnside fixed-point averages, recurrence-prefix replay, coefficient extraction, and Cauchy-product counting prefixes. |
 | `number-theory` | `number_theory` | `number-theory-v0` | CRT, quadratic residues, sum of squares, bounded Diophantine checks. |
 | `linear-algebra` | `linear_algebra`, `numerical_analysis`, `optimization_and_convexity` | `linear-algebra-rational-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `inner-product-spaces-rational-v0`, `finite-modules-v0`, `finite-tensor-products-v0`, `multivariable-calculus-rational-v0` | Fixed rational matrices, finite vector spaces and modules, finite dual spaces, covectors, annihilators, transpose maps, exact rational inner products, Gram matrices, projections, Gram-Schmidt replay, finite tensor products, bilinear maps, LU replay, inverse checks, inconsistent systems, subspaces, linear maps, quotient modules, rank-nullity replay, Jacobians, and Hessians. |
-| `calculus` | `real_analysis`, `differential_equations_and_dynamical_systems`, `numerical_analysis` | `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, `multivariable-calculus-rational-v0`, `real-analysis-rational-v0` | Polynomial derivative identities, exact rational gradients/Jacobians/Hessians, finite Riemann sums, antiderivative endpoint replay, bounded epsilon-delta shadows, and algebraic inequalities; general integration marked Lean-horizon. |
+| `calculus` | `real_analysis`, `differential_equations_and_dynamical_systems`, `numerical_analysis` | `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, `multivariable-calculus-rational-v0`, `real-analysis-rational-v0`, `finite-root-finding-v0` | Polynomial derivative identities, exact rational gradients/Jacobians/Hessians, finite Riemann sums, antiderivative endpoint replay, bounded epsilon-delta shadows, finite root-finding iteration replay, and algebraic inequalities; general integration and convergence marked Lean-horizon. |
 
 ## Field Extensions Beyond The Current Curriculum
 
@@ -522,6 +522,10 @@ and a monotone-convergence Lean-horizon row. `finite-recurrence-prefix-v0` now
 validates Fibonacci prefix replay, affine recurrence replay,
 companion-matrix state replay, checked QF_LRA/Farkas rejection of a false
 finite recurrence value, and a recurrence-theory Lean-horizon row.
+`finite-root-finding-v0` now validates one exact bisection step, one exact
+Newton step, fixed residual-decrease replay, checked QF_LRA/Farkas rejection
+of a false Newton iterate, and a root-finding convergence/stability
+Lean-horizon row.
 `calculus-algebraic-shadow-v0` now
 validates polynomial derivative coefficient replay, a checked product-rule
 polynomial identity, tangent-line replay, convex quadratic critical-point
@@ -632,7 +636,10 @@ Recommended order:
 20. `finite-recurrence-prefix-v0` (landed): Fibonacci prefix replay, affine
     recurrence replay, companion-matrix state replay, checked bad finite-value
     QF_LRA/Farkas rejection, and recurrence-theory Lean-horizon metadata.
-21. `calculus-algebraic-shadow-v0` (landed),
+21. `finite-root-finding-v0` (landed): exact bisection and Newton-step
+    replay, fixed residual decrease, checked bad Newton-step QF_LRA/Farkas
+    rejection, and convergence/stability Lean-horizon metadata.
+22. `calculus-algebraic-shadow-v0` (landed),
     `calculus-riemann-sum-v0` (landed), and
     `multivariable-calculus-rational-v0` (landed): polynomial derivative
     replay, product-rule identity checks, tangent-line replay, critical-point
@@ -640,7 +647,7 @@ Recommended order:
     chain-rule replay, Hessian minors, finite Riemann sums, antiderivative
     endpoint replay, false derivative/integral rejection, and analytic
     calculus Lean-horizon metadata.
-22. `real-analysis-rational-v0` (landed): exact rational interval/ball
+23. `real-analysis-rational-v0` (landed): exact rational interval/ball
     inclusion, bounded epsilon-delta samples, squeeze-style polynomial side
     conditions, QF_LRA/Farkas bad-delta rejection, and general real-analysis
     Lean-horizon metadata.
@@ -815,6 +822,10 @@ complex-analysis Lean-horizon row.
 `artifacts/examples/math/numerical-linear-algebra-v0/` now validates exact
 residual bounds, rational solution boxes, Jacobi one-step contraction replay,
 and checked QF_LRA/Farkas rejection of a false residual bound.
+`artifacts/examples/math/finite-root-finding-v0/` now validates exact
+bisection and Newton-step replay, fixed residual decrease, checked
+QF_LRA/Farkas rejection of a false Newton iterate, and a
+root-finding-convergence/stability Lean-horizon row.
 `artifacts/examples/math/spectral-linear-algebra-v0/` now validates exact
 finite eigenpair replay, orthogonal eigenbasis checks, Rayleigh quotients,
 spectral decomposition replay, and checked QF_LRA/Farkas rejection of a false
@@ -935,6 +946,9 @@ Recommended order:
 32. `finite-chebyshev-systems-v0`: finite Vandermonde unisolvence,
     interpolation replay, alternating residual signs, and duplicate-node
     rejection.
+33. `finite-root-finding-v0`: exact bisection/Newton iteration replay,
+    residual-decrease checking, and checked QF_LRA/Farkas bad-step rejection,
+    while convergence and floating-point stability remain horizon claims.
 
 Exit criteria:
 
@@ -1176,9 +1190,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 89 non-template math example packs validate.
+  Status: 90 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 89 non-template packs have at least one `checked` expected-result row.
+  Status: 90 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -1698,6 +1712,9 @@ same checked Farkas evidence path after exact finite-prefix replay computes
 `finite-recurrence-prefix-v0` now routes its bad finite-value row through the
 same checked Farkas evidence path after exact recurrence replay computes
 `F_6 = 8`.
+`finite-root-finding-v0` now routes its bad Newton-step row through the same
+checked Farkas evidence path after exact replay computes the next iterate
+`17/12`.
 `polynomial-factorization-rational-v0` now routes its fixed
 irreducible-quadratic discriminant row through the same checked Farkas evidence
 path after exact replay computes `D = -4`.

@@ -18,6 +18,7 @@ Example packs:
 - [finite-tensor-products-v0](../../../artifacts/examples/math/finite-tensor-products-v0/)
 - [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
+- [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
@@ -60,7 +61,10 @@ numerical-linear-algebra slice adds exact residual bounds, rational interval
 boxes for solutions, and a one-step Jacobi contraction check, with a checked
 QF_LRA/Farkas bad-bound certificate. The finite-recurrence-prefix slice adds
 Fibonacci and affine recurrence replay plus a companion-matrix state trace,
-with a checked QF_LRA/Farkas bad finite value certificate. The finite random-matrix slice adds exact
+with a checked QF_LRA/Farkas bad finite value certificate. The
+finite-root-finding slice adds exact bisection/Newton iteration replay,
+residual-decrease checking, and a checked QF_LRA/Farkas bad Newton-step
+certificate. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, rank distributions, and a checked QF_LRA/Farkas bad trace-square
 certificate. The spectral slice checks exact finite
@@ -225,6 +229,20 @@ using exact rational arithmetic. Its bad-bound row also rejects the malformed
 claim `||A*x||_infty <= 2` after replay computes `||A*x||_infty = 3`, with the
 final inequality conflict checked by QF_LRA/Farkas evidence.
 
+For a finite root-finding example, the validator keeps the numerical method as
+an exact finite trace:
+
+```text
+f(x) = x^2 - 2
+[1,2] -> [1,3/2]
+3/2 -> 17/12 by Newton's rule
+```
+
+It recomputes the polynomial values, derivative, iterate, and residual
+decrease. The bad row rejects `17/12 = 4/3` through checked QF_LRA/Farkas
+evidence, making it useful for numerical-analysis lessons without claiming a
+general convergence theorem.
+
 For a Jacobian/Hessian bridge into optimization, encode:
 
 ```text
@@ -266,6 +284,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
@@ -300,6 +320,7 @@ replay, read
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md),
 [End To End: Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md),
 [End To End: Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md),
+[End To End: Finite Root Finding](finite-root-finding-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md),
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md),

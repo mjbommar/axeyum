@@ -774,6 +774,12 @@
           "notes": "Algebraic real constraints through LRA/NRA; completeness remains horizon."
         },
         {
+          "id": "finite-root-finding-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-root-finding-v0",
+          "notes": "Finite bisection/Newton root-finding replay and checked bad-step rejection."
+        },
+        {
           "id": "multivariable-calculus-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
@@ -1352,6 +1358,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/generating-functions-v0",
           "notes": "Finite coefficient extraction, Cauchy products, and recurrence/generating-function prefixes."
+        },
+        {
+          "id": "finite-root-finding-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-root-finding-v0",
+          "notes": "Finite polynomial evaluation, bisection brackets, Newton steps, and bad-step rejection."
         }
       ],
       "proof_routes": [
@@ -1690,6 +1702,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
           "notes": "Finite recurrence prefixes and companion-matrix state replay."
+        },
+        {
+          "id": "finite-root-finding-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-root-finding-v0",
+          "notes": "Exact rational root-finding iterations and bad Newton-step rejection."
         }
       ],
       "proof_routes": [
@@ -1769,6 +1787,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
           "notes": "Exact rational gradient, directional derivative, Jacobian chain-rule, and Hessian-minor replay."
+        },
+        {
+          "id": "finite-root-finding-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-root-finding-v0",
+          "notes": "Finite bisection/Newton root-finding replay and convergence-theorem horizon rows."
         }
       ],
       "proof_routes": [
@@ -3549,6 +3573,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
           "notes": "Finite recurrence prefixes and companion-matrix replay for recurrence-theory shadows."
+        },
+        {
+          "id": "finite-root-finding-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-root-finding-v0",
+          "notes": "Finite bisection/Newton replay for root-finding theorem shadows."
         },
         {
           "id": "real-analysis-rational-v0",
@@ -8774,6 +8804,12 @@
           "notes": "Finite Recurrence Prefix Checks"
         },
         {
+          "id": "finite-root-finding-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-root-finding-v0",
+          "notes": "Finite Root-Finding Checks"
+        },
+        {
           "id": "inner-product-spaces-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/inner-product-spaces-rational-v0",
@@ -8888,6 +8924,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/inner-product-spaces-rational-v0",
           "notes": "Exact rational projections, Gram matrices, and orthogonal residual checks."
+        },
+        {
+          "id": "finite-root-finding-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-root-finding-v0",
+          "notes": "Finite Root-Finding Checks"
         },
         {
           "id": "least-squares-regression-v0",
@@ -9272,6 +9314,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
           "notes": "Finite Recurrence Prefix Checks"
+        },
+        {
+          "id": "finite-root-finding-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-root-finding-v0",
+          "notes": "Finite Root-Finding Checks"
         },
         {
           "id": "finite-topology-v0",

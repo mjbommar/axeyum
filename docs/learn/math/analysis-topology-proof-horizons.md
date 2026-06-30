@@ -17,6 +17,7 @@ Example packs:
 - [sequence-limit-shadow-v0](../../../artifacts/examples/math/sequence-limit-shadow-v0/)
 - [bounded-monotone-sequence-v0](../../../artifacts/examples/math/bounded-monotone-sequence-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
+- [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
 - [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
 - [metric-continuity-v0](../../../artifacts/examples/math/metric-continuity-v0/)
 - [finite-compactness-v0](../../../artifacts/examples/math/finite-compactness-v0/)
@@ -49,7 +50,7 @@ simple-function integrals, bounded sequence tails and prefixes, finite
 product-measure tables, rectangle probabilities, finite Fubini sums,
 bounded rational interval/ball inclusions, finite monotone-prefix and
 tail-gap checks, finite recurrence-prefix and companion-matrix replay, finite
-generating-function coefficient identities, finite epsilon-delta continuity
+root-finding bisection/Newton replay, finite generating-function coefficient identities, finite epsilon-delta continuity
 checks, finite open-cover/subcover checks, finite clopen-subset and open
 separation checks, finite continuous-map preimages and homeomorphism checks,
 finite simplicial-complex closure, oriented-boundary replay, boundary-matrix
@@ -139,6 +140,22 @@ affine recurrence, and the companion-matrix state trace. Its checked bad row
 rejects the false claim `F_6 = 9` after exact replay computes `F_6 = 8`. This
 is finite recurrence evidence, not a closed form, asymptotic estimate, or
 convergence theorem.
+
+For a finite root-finding shadow, encode one exact bisection update and one
+Newton update:
+
+```text
+f(x) = x^2 - 2
+[1,2] -> [1,3/2]
+3/2 -> 17/12
+```
+
+The `finite-root-finding-v0` validator checks polynomial values, derivative
+values, the selected sign-changing interval, the Newton formula, and one fixed
+residual decrease. Its checked bad row rejects the false Newton iterate
+`4/3` after replay computes `17/12`. This is finite numerical evidence, not a
+bisection convergence theorem, Newton convergence theorem, or floating-point
+stability guarantee.
 
 For a finite generating-function shadow, encode a sequence prefix as a fixed
 coefficient list:
@@ -382,6 +399,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bo
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_monotone_sequence_bad_upper_bound_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
@@ -420,6 +439,7 @@ replay, read
 [End To End: Sequence And Limit Shadows](sequence-limit-shadow-end-to-end.md),
 [End To End: Finite Calculus Shadows](calculus-shadows-end-to-end.md),
 [End To End: Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md),
+[End To End: Finite Root Finding](finite-root-finding-end-to-end.md),
 [End To End: Generating Functions](generating-functions-end-to-end.md),
 [End To End: Metric Continuity](metric-continuity-end-to-end.md),
 [End To End: Real Algebra RCF Shadow](reals-rcf-shadow-end-to-end.md),

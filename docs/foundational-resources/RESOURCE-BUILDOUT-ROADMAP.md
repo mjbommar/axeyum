@@ -39,12 +39,12 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 89 non-template math example packs.
-- 447 expected checks.
-- 209 checked proof/evidence rows.
-- 186 replay-only rows.
-- 52 Lean-horizon rows.
-- 89 promoted solver-reuse packs.
+- 90 non-template math example packs.
+- 452 expected checks.
+- 210 checked proof/evidence rows.
+- 189 replay-only rows.
+- 53 Lean-horizon rows.
+- 90 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -187,7 +187,7 @@ Route plan:
 | Boolean CNF DRAT/LRAT | finite Boolean refutations, graph/search/set-family conflicts | Promote small topology and graph rows that are source-level obvious. |
 | QF_BV DRAT | fixed-width residue, bit-vector, and finite algebra conflicts | Promote only when width is part of the educational claim. |
 | QF_LIA/Diophantine | integer equations, counts, modular obstructions, rank coefficients | Group recurring gcd/divisibility obstructions as cookbook examples. |
-| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, probability tables | Continue promoting bad table and bad bound rows with independent Farkas checks. |
+| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, probability tables | Continue promoting bad table, bad bound, and bad iterate rows with independent Farkas checks. |
 | QF_UF/Alethe | equality-heavy finite functions, quotients, homomorphisms | Use table replay for objects, Alethe for congruence conflicts. |
 | Lean horizon | induction schemas, completeness, topology, measure, asymptotics | Record theorem shape and dependencies; do not benchmark as finite checks. |
 
@@ -605,6 +605,7 @@ Current packs:
 - `sequence-limit-shadow-v0`
 - `bounded-monotone-sequence-v0`
 - `finite-recurrence-prefix-v0`
+- `finite-root-finding-v0`
 - `metric-continuity-v0`
 - `calculus-algebraic-shadow-v0`
 - `calculus-riemann-sum-v0`
@@ -626,9 +627,12 @@ Build next:
 - Keep `sequence-limit-shadow-v0`'s promoted bounded Cauchy-tail row and
   `bounded-monotone-sequence-v0`'s bad upper-bound row tied to source
   QF_LRA/Farkas artifacts; keep `finite-recurrence-prefix-v0`'s bad
-  finite-value row tied to its source QF_LRA/Farkas artifact; and keep general
-  convergence, Cauchy completeness, monotone convergence, closed-form
-  recurrence solving, asymptotics, and stability in the Lean-horizon lane.
+  finite-value row tied to its source QF_LRA/Farkas artifact; keep
+  `finite-root-finding-v0`'s bad Newton-step row tied to its source
+  QF_LRA/Farkas artifact; and keep general convergence, Cauchy completeness,
+  monotone convergence, closed-form recurrence solving, root existence,
+  Newton/bisection convergence, asymptotics, and stability in the
+  Lean-horizon lane.
 - Keep `calculus-riemann-sum-v0`'s promoted false-integral row tied to the
   source QF_LRA/Farkas artifact, and keep FTC/integrability statements in the
   Lean-horizon lane.
@@ -791,14 +795,17 @@ Current packs:
 - `least-squares-regression-v0`
 - `multivariable-calculus-rational-v0`
 - `numerical-linear-algebra-v0`
+- `finite-root-finding-v0`
 
 Build next:
 
 - Landed bridge rows for LP objective-threshold/Farkas replay and rational
-  convexity/gradient shadows. Add narrower rows only when multiple packs need
+  convexity/gradient shadows. Finite root-finding now adds exact iterate and
+  residual-decrease replay. Add narrower rows only when multiple packs need
   distinct duality, KKT, separation, SDP, affine monotonicity, or convergence
   vocabulary.
-- Promote small infeasible LP/convexity rows through QF_LRA/Farkas.
+- Promote small infeasible LP/convexity/root-finding rows through
+  QF_LRA/Farkas.
 - Keep general convex analysis, SDP, KKT sufficiency, and algorithm convergence
   as Lean-horizon until proof support exists.
 
@@ -817,15 +824,17 @@ Current packs:
 - `matrix-invariants-v0`
 - `spectral-linear-algebra-v0`
 - `finite-operator-v0`
+- `finite-root-finding-v0`
 
 Build next:
 
 - Add concept rows for residual bound, solution box, iterative one-step
-  contraction, Euler step, fixed-step error, interval bound, stability horizon,
-  and floating-point honesty.
+  contraction, Euler step, fixed-step error, interval bound, root-finding
+  iteration, stability horizon, and floating-point honesty.
 - Use exact rational shadows where possible; treat floating-point rows as
   reproducibility checks with explicit tolerance/seed metadata.
-- Promote false residual/error rows through QF_LRA/Farkas when they are exact.
+- Promote false residual/error/iterate rows through QF_LRA/Farkas when they are
+  exact.
 
 Graduation:
 
@@ -1328,7 +1337,13 @@ Pick one item per commit unless the change is purely navigational.
     QF_LRA/Farkas rejection of a false distance-table claim, and a
     graph-rigidity/rigid-motion-classification Lean horizon. The geometry learner path
     now includes a focused rigid-configuration end-to-end page.
-57. Continue proof-route promotions or consumer-query examples; revisit the
+60. Landed: add `finite-root-finding-v0`.
+    The new numerical-analysis pack validates exact bisection and Newton-step
+    replay, fixed residual-decrease checking, checked QF_LRA/Farkas rejection
+    of a false Newton iterate, and a root-finding convergence/stability Lean
+    horizon. The learner path now includes a focused finite root-finding
+    end-to-end page.
+61. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 
