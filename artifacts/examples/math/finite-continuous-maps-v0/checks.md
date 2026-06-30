@@ -26,7 +26,9 @@ continuous inverse.
 Expected result: `unsat`.
 
 The validator rejects continuity for the map into the discrete topology because
-the codomain open set `{u}` has preimage `{0}`, which is not domain-open.
+the codomain open set `{u}` has preimage `{0}`, which is not domain-open. The
+linked QF_UF/Alethe artifact checks the smaller consistency obligation that
+membership in the preimage agrees with membership of the mapped point in `{u}`.
 
 ## `bad-homeomorphism-claim-rejected`
 

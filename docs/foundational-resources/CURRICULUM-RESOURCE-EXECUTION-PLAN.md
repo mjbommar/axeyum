@@ -380,7 +380,7 @@ Next buildout:
    Status: the first high-use learner-page route-note pass now names these
    routes and their trust boundaries; `family_finite_algebra_alethe` now groups
    the recurring checked finite-algebra EUF/Alethe conflicts, including the
-   finite-ideals quotient representative congruence row through the 14-case
+   finite-ideals quotient representative congruence row through the shared
    `math_resource_uf_routes` regression.
    Dashboard status: generated R0-R6 gate and next-gate columns now make
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
@@ -415,7 +415,13 @@ Next buildout:
    `artifacts/examples/math/finite-group-actions-v0/smt2/bad-identity-action-alethe-conflict.smt2`
    is checked by
    `cargo test -p axeyum-solver --test math_resource_uf_routes finite_group_actions_bad_identity_emits_checked_alethe`.
-16. Promote selected packs into solver regression/fuzz corpora with back-links
+16. Landed: promote `finite-continuous-maps-v0` through a source-linked
+   QF_UF/Alethe regression for the `bad-continuous-map-rejected`
+   preimage-membership conflict:
+   `artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2`
+   is checked by
+   `cargo test -p axeyum-solver --test math_resource_uf_routes finite_continuous_maps_bad_preimage_emits_checked_alethe`.
+17. Promote selected packs into solver regression/fuzz corpora with back-links
    to the resource pack.
    Status: first promotions landed for `logic-basics-v0` via
    `artifacts/examples/math/logic-basics-v0/cnf/tiny-cnf-refutation.cnf` and

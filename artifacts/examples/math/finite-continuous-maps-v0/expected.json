@@ -80,9 +80,13 @@
           "1": "v"
         },
         "failing_open": ["u"],
-        "preimage": ["0"]
+        "preimage": ["0"],
+        "alethe_preimage_claim": "0 in f^{-1}({u}) iff f(0) in {u}",
+        "smt2_artifact": "artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_continuous_maps_bad_preimage_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
       },
-      "notes": "The validator rejects continuity because the preimage of {u} is {0}, which is not open in the Sierpinski domain."
+      "notes": "The validator rejects continuity because the preimage of {u} is {0}, which is not open in the Sierpinski domain; the linked QF_UF artifact separately checks the preimage-membership consistency conflict with zero-trust Alethe evidence."
     },
     {
       "id": "bad-homeomorphism-claim-rejected",

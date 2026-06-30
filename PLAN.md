@@ -101,7 +101,8 @@ policy/rule checks is
 Current resource-buildout status (2026-06-29): the first QF_UF/Alethe proof
 upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
-finite group actions.
+finite group actions, with a topology/preimage extension for finite continuous
+maps.
 The foundational concept atlas now also includes twenty-two generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 metric balls, bounded epsilon-delta shadows, compactness shadows,
@@ -120,7 +121,7 @@ QF_UF/Alethe, and Lean horizons now each name concrete math example packs that
 use the route.
 The first example-family row now groups the recurring finite-algebra
 QF_UF/Alethe congruence conflicts under `family_finite_algebra_alethe`,
-backed by the 14-case `math_resource_uf_routes` regression.
+backed by the shared `math_resource_uf_routes` regression.
 The second example-family row now groups recurring exact-rational
 QF_LRA/Farkas infeasibility rows under `family_exact_rational_farkas`,
 backed by the 24-test `math_resource_lra_routes` regression and scoped to
@@ -211,8 +212,9 @@ the bad kernel-row normalization conflict. The first secondary QF_LRA/Farkas
 target set is now covered, the initial equality-heavy QF_UF/Alethe secondary
 set is now covered including the finite-ideals quotient representative row, and
 finite group actions now promote a bad identity-action conflict through a
-checked QF_UF/Alethe regression. The first QF_BV bit-blast/DRAT resource
-promotion now covers the
+checked QF_UF/Alethe regression, while finite continuous maps now promote a
+bad preimage-membership conflict through the same checked route. The first
+QF_BV bit-blast/DRAT resource promotion now covers the
 finite-rings bad distributivity row, the finite-fields composite no-inverse row,
 and the graph-coloring one-bit triangle two-coloring obstruction, with bounded
 number theory now promoted for the modulo-7 quadratic nonresidue row; finite

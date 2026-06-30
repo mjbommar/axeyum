@@ -28,9 +28,19 @@
     "finite topology",
     "finite functions",
     "Bool / enumeration",
+    "QF_UF",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite continuous-map bad preimage QF_UF/Alethe regression seed",
+    "pressure": "For a fixed finite function and codomain open set, preimage membership must agree with membership of the mapped point in the codomain set; the EUF row refutes a malformed preimage table before the finite topology replay checks openness.",
+    "evidence": [
+      "bad-continuous-map-rejected"
+    ],
+    "next_step": "Promote additional continuity rows only when they add distinct function/preimage congruence pressure; keep arbitrary continuous-image, compactness-preservation, connectedness-preservation, and homeomorphism-invariance theorems in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
@@ -38,6 +48,9 @@
     "docs/curriculum/01-number-systems/reals.md",
     "docs/curriculum/02-structures/sequences-and-limits.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+    "artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
@@ -51,7 +64,7 @@
   "graduation_criteria": [
     "Encode finite topological continuity as deterministic preimage-of-open-set enumeration.",
     "Replay finite continuous-map and homeomorphism witnesses through Axeyum model evaluation over finite functions.",
-    "Emit checked finite counterexample evidence for rejected continuity and homeomorphism claims.",
+    "Route malformed finite preimage-membership rows through checked QF_UF/Alethe evidence, then keep the finite topology open-set check in replay.",
     "Keep continuous-image, homeomorphism-invariance, compactness-preservation, and connectedness-preservation theorems marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

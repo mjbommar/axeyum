@@ -76,8 +76,8 @@ Downgrade behavior:
 ## Math Examples Using This Route
 
 Use this route when the mathematical object is a finite function, quotient,
-operation table, homomorphism, module, ideal, tensor map, or action law whose
-bad row reduces to an equality or congruence conflict.
+operation table, homomorphism, module, ideal, tensor map, action law, or
+preimage table whose bad row reduces to an equality or congruence conflict.
 
 Canonical examples:
 
@@ -99,6 +99,9 @@ Canonical examples:
   [Finite Tensor Products](../../../artifacts/examples/math/finite-tensor-products-v0/)
   provide the shared equality-heavy algebra family now grouped by
   `family_finite_algebra_alethe`.
+- [Finite Continuous Maps](../../../artifacts/examples/math/finite-continuous-maps-v0/)
+  uses a preimage-membership consistency conflict; the finite topology
+  open-set check remains finite replay.
 
 The focused resource regression is
 `cargo test -p axeyum-solver --test math_resource_uf_routes`.

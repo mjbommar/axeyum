@@ -699,8 +699,9 @@ Bool/CNF rejection of a false connectedness claim, and a connectedness
 Lean-horizon row.
 `artifacts/examples/math/finite-continuous-maps-v0/` now validates finite
 continuity by open-set preimage enumeration, finite homeomorphism replay,
-checked rejection of false continuity and homeomorphism claims, and a
-continuous-map Lean-horizon row.
+checked QF_UF/Alethe rejection of a bad preimage-membership row, checked
+rejection of false continuity and homeomorphism claims, and a continuous-map
+Lean-horizon row.
 `artifacts/examples/math/finite-simplicial-homology-v0/` now validates finite
 simplicial-complex closure, oriented-boundary replay, the finite
 `boundary^2 = 0` chain-complex identity, fixed Betti-rank replay over `Q`,
@@ -1215,7 +1216,8 @@ finite-intersection bridge to the compactness horizon.
 bridge to the connectedness horizon, with checked Bool/CNF evidence for the
 bad connectedness row. `finite-continuous-maps-v0` now adds the finite
 preimage/homeomorphism bridge connecting continuity to compactness and
-connectedness horizons. `finite-simplicial-homology-v0` now adds the exact
+connectedness horizons, with checked QF_UF/Alethe evidence for a bad
+preimage-membership row. `finite-simplicial-homology-v0` now adds the exact
 finite algebraic-topology bridge: simplicial closure, oriented boundaries,
 `boundary^2 = 0`, fixed Betti-rank replay, bad-boundary rejection, a checked
 QF_LIA/Diophantine bad-coefficient row, and a homology Lean-horizon row.
