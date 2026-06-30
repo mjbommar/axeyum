@@ -210,43 +210,46 @@ Build sequence:
    LP/Farkas story from the combined linear-system/LP bridge. Standalone
    finite probability mass tables now split the PMF/conditioning/Bayes story
    from the broader finite-probability process bridge.
-7. Continue QF_BV promotions only for fixed-width educational claims that are
-   not better served by existing CNF/LRA/LIA routes; the first finite
-   rings/fields/graph-coloring DRAT rows are covered.
+7. Recurring fixed-width finite algebra, residue, and one-bit graph
+   obstructions now have the `family_fixed_width_bv_drat` example-family row,
+   backed by the shared `math_resource_bv_routes` regression across finite
+   fields, finite rings, graph coloring, and bounded number-theory residue
+   packs. Continue QF_BV promotions only when fixed width is part of the
+   educational claim.
 8. First route-specific proof-upgrade note pass landed on the highest-use
    learner pages: logic/proof, graph/discrete, linear algebra/optimization,
    probability/statistics, and algebra/number theory.
-8. Recurring finite algebra equality conflicts now have the
+9. Recurring finite algebra equality conflicts now have the
    `family_finite_algebra_alethe` example-family row, backed by the shared
    `math_resource_uf_routes` regression.
-9. Recurring exact-rational infeasibility conflicts now have the
+10. Recurring exact-rational infeasibility conflicts now have the
    `family_exact_rational_farkas` example-family row, backed by the shared
    `math_resource_lra_routes` regression.
-10. Recurring finite Boolean refutations now have the
+11. Recurring finite Boolean refutations now have the
    `family_boolean_cnf_lrat` example-family row, backed by the shared
    `math_resource_boolean_routes` regression across logic, counting, graph,
    finite-set, and finite-topology packs.
-11. Recurring integer/count obstructions now have the
+12. Recurring integer/count obstructions now have the
    `family_integer_diophantine` example-family row, backed by the shared
    `math_resource_lia_routes` regression across number theory, induction,
    counting, statistics, graph-search, polynomial, and homology packs.
-12. Generated dashboard columns for R0-R6 gate level and "next gate" now land
+13. Generated dashboard columns for R0-R6 gate level and "next gate" now land
    in the coverage, field, proof-gap, and learner/proof-upgrade dashboards;
    the curriculum-status audit now separates source curriculum status from
    generated resource maturity.
-13. The first deterministic `solver_reuse` batch is now fully promoted; no pack
+14. The first deterministic `solver_reuse` batch is now fully promoted; no pack
    remains tagged `candidate` in that initial batch.
-14. Consumer-facing sample queries now land through
+15. Consumer-facing sample queries now land through
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md): summary counts, pack discovery,
    field-plus-proof-route discovery, checked-row mining, solver-reuse rows,
    atlas concept lookup, and field-level curriculum readiness over the
    committed JSON data contract.
-15. Negative example-pack validator fixtures now land through
+16. Negative example-pack validator fixtures now land through
     `scripts/check-foundational-negative-fixtures.py` and
     `artifacts/fixtures/foundational-example-pack-invalid/`, covering unknown
     fields, metadata/check id drift, and missing witness references.
-16. Rules/law transfer now lands through
+17. Rules/law transfer now lands through
    [RULES-LAW-CROSSWALK.md](RULES-LAW-CROSSWALK.md): finite predicates,
    arithmetic thresholds, graph reachability, precedence, and proof routes are
    mapped to concrete policy/rule checks before new rule packs are added.
@@ -256,7 +259,7 @@ Build sequence:
    `authorization-policy-v0` now adds the access-control slice with checked
    Bool/QF_LIA fixtures for tenant isolation, explicit deny precedence, admin
    tenant guarding, and bounded implementation equivalence.
-17. First solver-reuse promotions landed: `logic-basics-v0` now links
+18. First solver-reuse promotions landed: `logic-basics-v0` now links
     `tiny-cnf-refutation` to a DIMACS artifact, `finite-cardinality-v0` links
     `no-injection-four-to-three` to a DIMACS artifact, and
     `graph-matching-v0` links `triangle-no-perfect-matching` to a DIMACS
@@ -289,29 +292,29 @@ Build sequence:
     `qf-uf-quotient-ring-representative-alethe` to
     `artifacts/examples/math/finite-ideals-v0/smt2/quotient-ring-representative-congruence-conflict.smt2`,
     checked by the `math_resource_uf_routes` QF_UF/Alethe regression.
-16. `finite-group-actions-v0` now links `bad-action-rejected` to
+19. `finite-group-actions-v0` now links `bad-action-rejected` to
     `artifacts/examples/math/finite-group-actions-v0/smt2/bad-identity-action-alethe-conflict.smt2`,
     checked by the `math_resource_uf_routes` QF_UF/Alethe regression.
-17. `finite-continuous-maps-v0` now links `bad-continuous-map-rejected` to
+20. `finite-continuous-maps-v0` now links `bad-continuous-map-rejected` to
     `artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2`,
     checked by the `math_resource_uf_routes` QF_UF/Alethe regression.
-18. `finite-product-measure-v0` now links `bad-product-measure-rejected` to
+21. `finite-product-measure-v0` now links `bad-product-measure-rejected` to
     `artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-measure-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
-19. `finite-random-variables-v0` now links `bad-pushforward-rejected` to
+22. `finite-random-variables-v0` now links `bad-pushforward-rejected` to
     `artifacts/examples/math/finite-random-variables-v0/smt2/bad-pushforward-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
-20. `finite-integration-v0` now links `bad-expectation-rejected` to
+23. `finite-integration-v0` now links `bad-expectation-rejected` to
     `artifacts/examples/math/finite-integration-v0/smt2/bad-expectation-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
-21. `finite-martingales-v0` now links `bad-martingale-rejected` to
+24. `finite-martingales-v0` now links `bad-martingale-rejected` to
     `artifacts/examples/math/finite-martingales-v0/smt2/bad-martingale-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
-22. Route-specific tamper/rejection regressions now land for the active
+25. Route-specific tamper/rejection regressions now land for the active
     certificate routes: Boolean CNF/LRAT, QF_BV DRAT, QF_LRA/Farkas,
     QF_LIA/Diophantine, and QF_UF/Alethe all mutate emitted resource
     certificates and require independent checker rejection.
-23. Revisit crate/repo boundaries only after three real consumers or repeated
+26. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

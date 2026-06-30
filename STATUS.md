@@ -673,8 +673,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   generates five bridge rows for finite Boolean algebra, finite
   partition/relation roundtrips, finite image/preimage/inverse tables, finite
   bijection/cardinality checks, and cardinality theorem horizons. The concept
-  atlas now reports 85 rows total: 23 curriculum rows, 18 field rows, 40
-  bridge rows, and 4 example-family rows.
+  atlas now reports 86 rows total: 23 curriculum rows, 18 field rows, 40
+  bridge rows, and 5 example-family rows.
 
 - **Standalone finite topology and finite measure lessons landed.**
   [`finite-topology-end-to-end.md`](docs/learn/math/finite-topology-end-to-end.md)
@@ -1236,7 +1236,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   generated from
   [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) and
   point at existing validated packs plus proof-cookbook recipes. The
-  foundational resource consumer now reports 85 concept rows while preserving
+  foundational resource consumer now reports 86 concept rows while preserving
   23 curriculum rows and 18 field rows. Next resource work should add the next
   proof-frontier promotion or boundary evidence from a real repeated consumer,
   depending on which roadmap lane is being advanced.
@@ -1313,6 +1313,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   which parses committed SMT-LIB artifacts and requires either
   `UnsatDiophantine` or checked arithmetic-DPLL evidence before accepting the
   row.
+
+- **Fixed-width QF_BV/DRAT example-family row landed.**
+  [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
+  now includes `family_fixed_width_bv_drat`, a generated `example-family` row
+  for fixed-width finite algebra, residue, and one-bit graph contradictions
+  across finite fields, finite rings, graph coloring, and bounded
+  number-theory residue packs. The row is tied to
+  [`math_resource_bv_routes`](crates/axeyum-solver/tests/math_resource_bv_routes.rs),
+  which parses committed SMT-LIB artifacts, exports DIMACS/DRAT witnesses,
+  rechecks the proof route, and rejects truncated DRAT certificates.
 
 - **Generated R0-R6 gate columns landed.**
   [`gen-foundational-dashboards.py`](scripts/gen-foundational-dashboards.py)
@@ -11962,6 +11972,14 @@ plan is built and committed on the current branch:
   generating functions, polynomial identities, statistics, finite homology,
   and graph-search runtime packs, raising the atlas to 85 rows: 23 curriculum
   rows, 18 field rows, 40 bridge rows, and 4 example-family rows.
+
+- **2026-06-30** — **Fixed-width QF_BV/DRAT example-family row landed.**
+  Added generated `family_fixed_width_bv_drat` atlas row grouping fixed-width
+  finite algebra, residue, and one-bit graph contradictions. The family is
+  backed by `cargo test -p axeyum-solver --test math_resource_bv_routes`
+  across finite fields, finite rings, graph coloring, and bounded
+  number-theory residue packs, raising the atlas to 86 rows: 23 curriculum
+  rows, 18 field rows, 40 bridge rows, and 5 example-family rows.
 
 - **2026-06-30** — **PHP Bool/CNF resource promotion landed.**
   Added source-level DIMACS artifacts for

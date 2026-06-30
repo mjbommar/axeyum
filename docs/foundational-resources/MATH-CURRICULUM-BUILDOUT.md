@@ -1666,6 +1666,10 @@ Recurring integer/count obstructions now also have `family_integer_diophantine`,
 spanning number theory, induction, counting, statistics, graph-search,
 polynomial, and homology packs backed by the shared `math_resource_lia_routes`
 regression.
+Recurring fixed-width finite algebra, residue, and one-bit graph encodings now
+also have `family_fixed_width_bv_drat`, spanning finite fields, finite rings,
+graph coloring, and bounded number-theory residue packs backed by the shared
+`math_resource_bv_routes` regression.
 The rules/law transfer lane now also has its second concrete pack:
 `authorization-policy-v0` reuses finite predicates, tenant/resource relations,
 explicit deny precedence, bounded version-delta witnesses, and checked

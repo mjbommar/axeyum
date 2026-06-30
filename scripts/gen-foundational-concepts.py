@@ -4413,6 +4413,94 @@ EXAMPLE_FAMILIES = [
             ],
         },
     },
+    {
+        "id": "family_fixed_width_bv_drat",
+        "title": "Fixed-Width QF_BV DRAT Family",
+        "field_ids": ["abstract_algebra", "number_theory", "graph_theory"],
+        "resource_status": "validated",
+        "summary": (
+            "Recurring fixed-width finite algebra, residue, and one-bit graph "
+            "encoding contradictions that lower through QF_BV bit-blasting and "
+            "recheck with a generated DIMACS/DRAT certificate."
+        ),
+        "prerequisites": [
+            "bridge_counterexample_proof",
+            "bridge_qf_bv_bitblast_anatomy",
+            "curriculum_fields",
+            "curriculum_rings",
+            "curriculum_modular_arithmetic",
+            "curriculum_number_theory",
+        ],
+        "unlocks": [
+            "field_abstract_algebra",
+            "field_number_theory",
+            "field_graph_theory",
+        ],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "QF_BV",
+            "bit-blast lowering",
+            "DIMACS",
+            "DRAT proof checking",
+            "fixed-width finite encoding",
+        ],
+        "example_packs": [
+            (
+                "finite-fields-v0",
+                "Composite-modulus no-inverse row where fixed-width residues are the source concept.",
+            ),
+            (
+                "finite-rings-v0",
+                "Bad finite ring-table distributivity row checked through a fixed-width BV encoding.",
+            ),
+            (
+                "graph-coloring-v0",
+                "Triangle non-2-colorability row encoded as one-bit colors and checked by DRAT.",
+            ),
+            (
+                "number-theory-v0",
+                "Modulo-7 quadratic nonresidue row checked through a fixed-width residue encoding.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "QF_BV bit-blast DIMACS/DRAT family",
+                "status": "checked",
+                "checker": "cargo test -p axeyum-solver --test math_resource_bv_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+                    "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+                    "crates/axeyum-solver/tests/math_resource_bv_routes.rs",
+                ],
+                "notes": (
+                    "Each referenced pack keeps finite replay or source-level "
+                    "enumeration separate from the bit-vector proof artifact; "
+                    "the regression exports a DIMACS/DRAT proof, rechecks it, "
+                    "and rejects a truncated DRAT certificate."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+            "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_bv_routes.rs",
+        ],
+        "open_gaps": [
+            "The family certifies fixed-width bit-blasted CNF refutations, not arbitrary algebra, graph, or number-theory theorems.",
+            "New BV-resource packs should join this family only when bit width is part of the mathematical claim and a checked math_resource_bv_routes regression exists.",
+            "The bit-blast/Tseitin lowering remains an explicit trust step until Lean reconstruction covers the original formula.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Every family pack row links a committed SMT-LIB artifact and checked QF_BV/DRAT regression.",
+                "cargo test -p axeyum-solver --test math_resource_bv_routes passes.",
+                "Learner pages distinguish fixed-width finite encoding from unbounded arithmetic or theorem claims.",
+            ],
+        },
+    },
 ]
 
 

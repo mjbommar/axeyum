@@ -219,6 +219,10 @@ Diophantine and arithmetic-DPLL obstructions under
 `family_integer_diophantine`, backed by the shared `math_resource_lia_routes`
 regression across number-theory, induction, counting, statistics, graph-search,
 polynomial, and homology packs.
+The fifth example-family row now groups fixed-width QF_BV/DRAT obligations
+under `family_fixed_width_bv_drat`, backed by `math_resource_bv_routes` across
+finite fields, finite rings, graph coloring, and bounded number-theory residue
+packs.
 The generated coverage, field, proof-gap, learner/proof-upgrade, and
 curriculum-pressure dashboards now expose conservative R0-R6 gate/next-gate
 columns and overlapping fragment-pressure buckets, making R4-to-R5 solver-reuse

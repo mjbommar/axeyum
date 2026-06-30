@@ -192,8 +192,9 @@ Add bridge-concept or example-family rows for repeated subtopics:
 - proof-route families: landed example-family rows for finite algebra
   QF_UF/Alethe congruence, exact-rational QF_LRA/Farkas infeasibility, and
   finite Boolean CNF/LRAT refutations, plus integer/count QF_LIA Diophantine
-  and arithmetic-DPLL obstructions, each tied to a shared regression rather
-  than repeated prose in every pack;
+  and arithmetic-DPLL obstructions, and fixed-width QF_BV/DRAT finite
+  algebra/residue/one-bit graph obligations, each tied to a shared regression
+  rather than repeated prose in every pack;
 - topology/geometry: finite topologies, continuous maps, simplicial homology,
   affine maps, orientation/area.
 
