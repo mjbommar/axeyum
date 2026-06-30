@@ -1,38 +1,60 @@
-# P2.5 · Phase A — The algebraic core (`axeyum-poly`)
+# P2.5 · Phase A — The algebraic core (already in `axeyum-ir`)
 
-**Size:** XL (the long pole) · **Depends on:** — · **Blocks:** Phases B, C, D, E
-and QE (P2.6), SOS reconstruction (Track 3).
+> **Corrected 2026-06-30 — Phase A is largely DONE, and there is NO `axeyum-poly`
+> crate.** Per ADR-0044/0045/0046 the exact-poly + Sturm + resultant primitives and
+> the bignum `RealAlgebraic` already live in **`axeyum-ir`**
+> (`rational.rs`, `poly.rs`, `poly_big.rs`, `real_algebraic.rs`), with the CAD
+> elimination/isolation logic in `axeyum-solver/src/nra_real_root.rs`. The
+> code-inventory below is retained as a *map of what exists* and the *small
+> remaining additions* (McCallum/Hong projection; richer multivariate ops) — NOT a
+> from-scratch build. Do not create a crate (ADR-0001: reuse satisfies the
+> boundary). See [00-current-state.md](00-current-state.md) for the corrected
+> baseline.
 
-> Everything complete about nonlinear arithmetic rests on this. Build it in a
-> dedicated pure-Rust crate, test each layer to death (it's soundness-critical and
-> reused everywhere), and use the existing single-variable `nra_real_root.rs` as a
-> differential oracle. **No C/C++**: `num-bigint`/`num-rational` only (see
-> [01-literature.md §9](01-literature.md)).
+**Size:** ~~XL~~ → **mostly landed**; remaining = projection-quality + breadth ·
+**Depends on:** — · **Blocks:** Phases B, C, D, E and QE (P2.6), SOS (Track 3).
 
-## Why a new crate (`axeyum-poly`)
+## What already exists (inventory, 2026-06-30)
 
-The polynomial + real-algebraic-number core is consumed by NRA, NIA, quantifier
-elimination, and SOS proof reconstruction — four boundaries, so per ADR-0001 the
-boundary is proven by use. Keeping it out of `axeyum-solver` keeps the solver lean
-and the math independently testable and WASM-buildable.
+- `axeyum-ir::rational` — `Rational` (i128, `checked_*`, overflow-graceful).
+- `axeyum-ir::poly` — `RatVec` univariate: trim/degree/derivative/rem/gcd/monic/
+  exact-div/`squarefree_part`/eval; **Sturm** (`sturm_chain`, `sturm_sign_changes`,
+  `count_roots_in`); **resultant** (`sylvester_matrix`, `sylvester_determinant` by
+  eval-interpolation + a Leibniz oracle).
+- `axeyum-ir::poly_big` — bignum (`Vec<BigInt>`/`BigRational`) versions of all the
+  above + `big_bareiss_determinant`, `big_newton_interpolate`, and
+  `combine_retry` (the full α±β/α·β field-arithmetic pipeline). Caps:
+  `BIG_MAX_DEGREE = 24`, `BIG_MAX_SYLVESTER_DIM = 24`.
+- `axeyum-ir::real_algebraic` — `RealAlgebraic{poly:Vec<BigInt>, lo,hi:BigRational}`,
+  `sign_at`/`sign_at_big`, `compare_*`, `neg`/`add`/`mul` field arithmetic.
+- `axeyum-solver::nra_real_root` — Sturm root isolation (`isolate_roots`,
+  `sturm_isolate_rec`, `isolate_one`), bivariate resultant elimination
+  (`resultant_univariate`, `MultiPoly`), 2-var + N-var CAD
+  (`decide_*_cad_*`, `isolate_critical_values`, sign-invariant sections).
 
-**ADR-A0 (write first):** "axeyum-poly: a pure-Rust polynomial & real-algebraic
-core." Decide: bignum strategy (`num-bigint`/`num-rational` vs. own), the
-distributed-vs-recursive polynomial representation split, and the
-`forbid(unsafe_code)` + WASM build constraints.
+## Remaining Phase-A-ish additions (small, vs the original XL)
 
-## Tasks (dependency order)
+> The algebraic core is soundness-critical and reused everywhere, so any addition
+> is tested to death and differential-checked against the existing exact code.
+> **No C/C++**: `num-bigint`/`num-rational` only (already adopted; see
+> [01-literature.md §9](01-literature.md)). The only genuinely-open items are
+> interval arithmetic (for ICP) and a proper McCallum/Hong projection (performance).
 
-| id | task | key references | size | exit |
+| id | task | status | size | exit |
 |---|---|---|---|---|
-| T-A.1 | **Bignum foundation** — adopt `num-bigint`/`num-rational`; wrap as `axeyum-poly::{Int,Rat}`; reconcile with `axeyum_ir::Rational` (i128, overflow-guarded). Keep a fast i128 path, big fallback on overflow (fixes the [Rational-overflow panic class](../../../research/) by construction). | `num-bigint` docs | M | exact arithmetic, no panics on huge constants; WASM build green |
-| T-A.2 | **Multivariate polynomial** (`mpoly.rs`) — distributed sparse `Monomial→Coeff`; add/mul/eval, degree, variables, content/primitive part. | *Mathematics* 7(5):441 (2019) | M | round-trips IR real/int terms; property-tested vs. naive eval |
-| T-A.3 | **Univariate polynomial** (`upoly.rs`) — dense; gcd, pseudo-division, derivative, squarefree decomposition. | Ducos 2000 | M | gcd/squarefree property-tested |
-| T-A.4 | **Subresultant PRS + resultant + discriminant** (`resultant.rs`) — Ducos' optimized chain; Sylvester resultant; `disc = res(p,p')`. | Ducos 2000; Collins 1967 | L | resultants match a reference CAS on a fixed test set |
-| T-A.5 | **Real root isolation** (`sturm.rs`, `root_isolation.rs`) — Sturm sequences + (optionally) VCA/VAS; isolating intervals with refinement. Lift the existing `nra_real_root.rs` isolation to arbitrary precision. | Sturm; Collins–Akritas SYMSAC '76; Akritas et al. ESA 2006 | L | exact root count on test polys; differential vs. current single-var path |
-| T-A.6 | **Real algebraic numbers** (`algebraic.rs`) — `RealAlgebraic{defining_poly, interval}`; comparison by interval refinement; sum/product via resultants; `sign_at`. Generalize `Value::RealAlgebraic`. | Basu–Pollack–Roy 2006; Coste–Roy 1988 (Thom) | XL | α arithmetic + comparison property-tested; sign determination exact |
-| T-A.7 | **Interval arithmetic** (`interval.rs`) — correctly-rounded rational intervals (for ICP and root refinement). | — | S–M | sound containment property |
-| T-A.8 | **Projection operators** (`projection.rs`) — McCallum (default) + Lazard (optional); finest squarefree basis; required-coefficients. | McCallum 1998; Brown 2001; Lazard 1994 / Paunescu 2019 | XL | projection sets match reference on CAD test cases |
+| T-A.1 | Bignum foundation (`num-bigint`/`num-rational`, i128 fast path) | **DONE** — `poly_big.rs`, `RealAlgebraic` bignum (ADR-0045/0046) | — | landed |
+| T-A.2 | Multivariate polynomial | **DONE (enough)** — `MultiPoly` (`nra_real_root.rs`); richer sparse ops add as needed | S | as needed |
+| T-A.3 | Univariate gcd / squarefree / derivative | **DONE** — `poly.rs` / `poly_big.rs` | — | landed |
+| T-A.4 | Resultant + discriminant | **DONE** — `sylvester_*`, `big_bareiss_determinant`, discriminant via `Res(p,p')` | — | landed |
+| T-A.5 | Real root isolation (Sturm) | **DONE** — `isolate_roots`, `sturm_*` (fuzz-found 2 bugs, fixed) | — | landed |
+| T-A.6 | Real algebraic numbers + field arithmetic | **DONE** — `real_algebraic.rs` (`sign_at`, `compare`, `neg`/`add`/`mul`) | — | landed |
+| **T-A.7** | **Interval arithmetic** (correctly-rounded rational intervals) for ICP (Phase C) | TODO | S–M | sound containment property |
+| **T-A.8** | **McCallum/Hong projection** — replace resultant-elimination lifting; finest squarefree basis; required-coefficients | TODO (the real remaining Phase-A work — performance) | L | projection sets match a reference on CAD test cases; measured cell-count reduction |
+
+> Original references retained for T-A.7/T-A.8: McCallum 1998; Brown 2001; Lazard
+> 1994 / Paunescu 2019; Ducos 2000. The bignum-foundation/root-isolation/
+> algebraic-number rows (T-A.1–T-A.6) are **already shipped** — see ADR-0044/45/46
+> and `nra-cad-nlsat-plan.md`.
 
 ## Soundness method (this layer especially)
 
@@ -47,16 +69,17 @@ distributed-vs-recursive polynomial representation split, and the
   switch, not a panic and not a wrong answer (closes the Rational-overflow class
   for the nonlinear path).
 
-## Exit criteria for Phase A
+## Exit criteria for the remaining Phase-A work
 
-1. `axeyum-poly` builds on native + `wasm32-unknown-unknown`, `forbid(unsafe_code)`,
-   no C/C++ dependency, clippy `-D warnings` clean.
-2. Multivariate arithmetic, univariate gcd/squarefree, subresultant/resultant/
-   discriminant, real root isolation, real algebraic number arithmetic + sign
-   determination, and McCallum projection are all implemented and property-tested.
-3. On every single-variable instance, the new core agrees with `nra_real_root.rs`
-   (a CI differential test).
-4. ADR-A0 merged; the crate is referenced from the foundational DAG.
+1. **(T-A.7)** Interval arithmetic over exact rationals lands in `axeyum-ir`
+   (`forbid(unsafe_code)`, WASM-green, clippy `-D warnings`), with a sound
+   containment property test — the substrate Phase C (ICP) needs.
+2. **(T-A.8)** A McCallum/Hong projection operator replaces the resultant-
+   elimination lifting in the CAD path, property-tested against the existing
+   resultant code and a reference, with a **measured** cell-count / wall-clock
+   reduction on the public QF_NRA slice (no perf claim without the measurement).
+3. Both keep the four differential-fuzz gates (NRA/NIA/UFLIA/ABV) at DISAGREE=0.
 
-This phase ships **no new decide-rate by itself** — it is infrastructure. Phases B
-and C (built on it) deliver the first measured gains; D delivers completeness.
+T-A.1–T-A.6 are **already shipped** (ADR-0044/45/46). This phase no longer blocks
+the others — Phases B/C/D/E build on the existing core; T-A.8 is a *performance*
+upgrade that can land in parallel with them.

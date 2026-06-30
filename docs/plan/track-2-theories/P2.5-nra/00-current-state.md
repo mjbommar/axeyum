@@ -1,92 +1,104 @@
 # P2.5 · 00 — Current state: what axeyum's nonlinear engine decides today
 
-Accurate baseline (grounded in the solver source) so every later phase starts
-from facts, not aspiration.
+> **Corrected 2026-06-30.** An earlier draft of this doc (grounded only in the
+> solver-side `nra*.rs` files) badly *understated* the baseline. The authoritative
+> sources are **ADR-0038/0044/0045/0046**, **ADR-0039/0040** (SOS), and the
+> sequencing roadmap
+> [`docs/research/05-algorithms/nra-cad-nlsat-plan.md`](../../../research/05-algorithms/nra-cad-nlsat-plan.md).
+> The reality: **a substantial CAD decision procedure already exists** — and it
+> lives in `axeyum-ir` + `axeyum-solver`, **not** a future crate.
 
-## NRA — three layers, all sound, all narrow
+## The big correction: the CAD is largely built (decision side)
 
-### Layer A — single-variable real-root isolation (`crates/axeyum-solver/src/nra_real_root.rs`)
+axeyum does **not** merely decide single-variable problems + a heuristic
+≤2-cross-product fragment. Per the roadmap (each slice DONE, commit-cited,
+Z3-differential-fuzz-gated DISAGREE=0):
 
-- **Fires when** the whole query is a conjunction `C₁ ∧ … ∧ Cₘ` (flattened
-  top-level `and`) where **every** `Cᵢ` normalizes to `pᵢ(x) ⋈ᵢ 0` — a
-  **single-variable** real polynomial, the *same* variable `x` across all atoms.
-- **Comparators:** `{=, ≠, <, ≤, >, ≥}`.
-- **Decides:** equality by isolating real roots (exact rational or irrational
-  `RealAlgebraic`); inequalities by sign-cell decomposition (rational sample per
-  matching open interval); conjunctions by sign-cell decomposition over all roots.
-- **Witnesses:** `Value::Real(Rational)` (exact) or `Value::RealAlgebraic`
-  (defining polynomial + isolating interval, refined on comparison).
-- **Limits:** declines on ≥2 distinct variables, non-Real sorts, non-polynomial
-  ops (`div`, `RealToInt`), non-conjunctive top level (`or`, `=>`), degree > 64,
-  coefficient magnitude > 2⁴⁰, any `i128` overflow. **Every `sat` is replayed;
-  `unsat` is exact (roots + one sample per open interval cover ℝ).**
+- **Algebraic field arithmetic** (`α±β`, `α·β`, `−α`) on `Value::RealAlgebraic` —
+  ADR-0044, in `crates/axeyum-ir/src/real_algebraic.rs`. `eval` computes mixed
+  algebraic/rational arithmetic, so models with irrational witnesses replay.
+- **Bignum everywhere on the algebraic path** — ADR-0045 (resultant/Sturm
+  intermediates) + ADR-0046 (`Value::RealAlgebraic` stored as `Vec<BigInt>` /
+  `BigRational`). The i128 ceiling is gone; nested-radical coupled cases like
+  `x²+y²=4 ∧ x·y=1` decide **Sat** with replay.
+- **Exact Sylvester resultant** with evaluation-interpolation (`O(dim³)`,
+  differential-tested vs Leibniz over 3240 matrices).
+- **2-variable CAD — COMPLETE** for any-coordinate (rational *or* algebraic)
+  mixed / non-strict systems (slices a, b, b2).
+- **N-variable CAD — complete on the *decision* side** for any dimension and any
+  coordinate: strict (slice c) and algebraic critical-point lifting (slice c2),
+  routed `or_else` after the rational path so it only upgrades `Unknown→decide`,
+  never flips a verdict.
+- **Degree-2 SOS / PSD** refutation (ADR-0039) **with a kernel-checked Lean
+  proof** (ADR-0040/0041) — the only NRA route that currently carries a proof.
 
-### Layer B — linear abstraction + McCormick + branch-and-bound (`nra.rs`)
+The polynomial + Sturm + resultant primitives live in **`axeyum-ir/src/poly.rs`**
+(ADR-0044: one isolation implementation, shared by the IR value layer and the
+solver — *deliberately not a new crate*). The single-variable
+`nra_real_root.rs` reuses them and remains a fast pre-path + differential oracle.
 
-- **Fires when** Layer A declines. Abstracts each genuinely-nonlinear product
-  `a·b` (both operands non-constant) to a fresh variable `r`, yielding a pure-LRA
-  relaxation, then refines with **valid product lemmas** (sign, zero, monotonicity,
-  shrinking), **sum-of-squares** lemmas `(a±b)² ≥ 0`, **McCormick envelopes**, and
-  **spatial branch-and-bound** (split widest interval, depth ≤ 6), with an
-  **incremental-linearization point-lemma loop** (≤ 12 rounds).
-- **Hard cap:** ≤ 2 distinct-operand cross-products (squares exempt); > 2 →
-  `unknown(ResourceLimit)`. This cap exists because multivariate SOS coupling
-  drove exact-rational simplex to OOM (measured 3-variable blowup).
-- **Soundness:** relaxation only grows the model space ⇒ `unsat` is sound; `sat`
-  is replay-checked against originals (failed replay ⇒ decline, never false sat).
-  Incomplete by construction.
+## What that means for this program (plan correction)
 
-### Layer C — even-power refutation (`nra_even_power.rs`)
+1. **There is no `axeyum-poly` crate, and we should not create one** — ADR-0044
+   already decided the primitives live in `axeyum-ir` (ADR-0001: split only when a
+   boundary is exercised; reuse satisfies it). [02-architecture.md](02-architecture.md)
+   and [03-phaseA-algebraic-core.md](03-phaseA-algebraic-core.md) are corrected to
+   *extend `axeyum-ir`'s `poly`/`real_algebraic` modules*, not stand up a crate.
+2. **Phase A (the algebraic core) is largely DONE** — multivariate-enough
+   polynomials, bignum, Sturm isolation, resultants, real algebraic numbers, field
+   arithmetic all exist. Remaining Phase-A-ish work is *performance* (McCallum/Hong
+   projection to replace the current resultant-elimination lifting) and breadth,
+   not greenfield construction.
+3. **Phase D (the complete oracle) substantially exists as CAD**, not CAC. The
+   roadmap built CAD directly (projection-by-resultant + lifting + cell sampling).
+   The remaining Phase-D work is **(a) per-cell Positivstellensatz *evidence*** for
+   Lean parity (roadmap step 4 / "remaining (d)") and **(b) performance** (bound
+   cell blow-up; the cheaper front tier below).
 
-- Syntactic micro-decider: `∑(even-power terms) + nonneg-const < 0` ⇒ `unsat`.
-  Pattern-only, not integrated into the main loop.
+## The genuine remaining gaps (where the work actually is)
 
-## NIA — two layers
+| Gap | Status | Where it's addressed |
+|---|---|---|
+| **Cheap front tier** (incremental linearization CEGAR) so CAD is invoked sparingly | `nra.rs` has McCormick + ad-hoc point/SOS lemmas, **not** a principled lemma-on-demand loop | [Phase B](04-phaseB-incremental-linearization.md) |
+| **ICP** for transcendentals + box pruning | spatial B&B exists (depth ≤6); not interval contractors | [Phase C](05-phaseC-icp.md) |
+| **CAD performance** (projection quality, cell-count bound) | decision-complete but resultant-elimination lifting may be costly | [Phase D](06-phaseD-nlsat-cac.md) |
+| **Per-cell proof / evidence** (Lean parity for NRA) | only degree-2 SOS cells carry a proof | [Phase D](06-phaseD-nlsat-cac.md) §certificate + Track 3 |
+| **NIA UNSAT engine** (incremental linearization over UFLIA) | width-ladder = SAT finisher; `nia_square` = 1-var; NIA CAD-via-real-relax exists (slice c2 NIA fuzz clean) | [Phase E](07-phaseE-nia.md) |
+| **Measured decide-rate / PAR-2 vs Z3** on public QF_NRA/QF_NIA | **not yet measured for the CAD engine** — the binding next step | [08-evaluation](08-evaluation-and-soundness.md) |
 
-### Layer A — single-variable integer-polynomial decider (`nia_square.rs`)
+## NRA Layer-B / Layer-C (the heuristic relaxation, `nra.rs`) — still as described
 
-- **Fires when** the query is exactly **one** assertion `p(x) ⋈ 0` (single
-  variable, `Int`). Degree ≤ 2 by discriminant + convexity; degree ≥ 3 equality /
-  disequality by the rational-root theorem (divisor enumeration + Horner). Degree
-  ≥ 3 inequalities: declines. Witness `i128`; replay-checked; `unsat` exact.
+The linear-abstraction + McCormick + spatial-B&B relaxation (ADR-0024) and the
+even-power refutation remain, now as the *cheap tier below the CAD*: each product
+`a·b` → fresh var, valid product/SOS/McCormick lemmas, spatial B&B (depth ≤6),
+incremental point-lemma loop (≤12 rounds), ≤2-cross-product cap. Sound (relaxation
+only grows the model space; `sat` replay-checked), incomplete. Phase B upgrades
+this into a principled incremental-linearization tier.
 
-### Layer B — width-ladder bit-blasting (`auto.rs` nonlinear-int tail)
+## NIA — as before, plus the CAD reuse
 
-- `nia_square` → `int_real_relax` (relax Int→Real, NRA `unsat` only, sound) →
-  `decide_bounded_int_blast` (provably finite box → exact) →
-  `dispatch_int_blast_width_ladder` (try widths `[8,16,32,64]`; first width whose
-  SAT model replays is `sat`; else `unknown`). Narrow-first avoids modular
-  wrapping producing false models.
+- **`nia_square.rs`** — single-variable integer polynomial, exact (discriminant /
+  rational-root), replay-checked.
+- **Width-ladder bit-blast** (`auto.rs` tail) — SAT finisher; `int_real_relax`
+  short-circuits real-unsat.
+- **NIA via the N-variable CAD** (real relaxation + algebraic lifting, slice c2) —
+  the NIA differential fuzz is DISAGREE=0, so the CAD path already serves NIA.
 
-## Routing (`crates/axeyum-solver/src/auto.rs`)
+## The corrected one-sentence gap
 
-```
-Real:  decide_real_poly_constraint (Layer A) → check_with_nra (Layer B) → EUF combo / unknown
-Int:   linear refuters → nia_square → int_real_relax → bounded blast → width ladder → unknown
-```
+The complete multivariate QF_NRA **decision procedure is largely built and
+fuzz-sound**; the real remaining work is **(1) measuring it vs Z3**, **(2) a cheap
+incremental-linearization tier + ICP so it scales**, **(3) per-cell proof evidence
+for Lean parity**, and **(4) the NIA incremental-linearization UNSAT engine** —
+*not* building CAD from scratch.
 
-## Capability-vs-gap table
+## What we reuse / must not rebuild
 
-| Area | Decide today | Assurance | Boundary to close |
-|---|---|---|---|
-| NRA real-root | 1 variable, deg ≤ 64, conjunctions | replay + exact | **≥ 2 variables**, transcendental |
-| NRA abstraction | products (≤ 2 cross), bounded B&B | sound, incomplete | > 2 cross-products, unbounded vars, equational ideals |
-| NRA even-power | syntactic sums of even powers < 0 | sound | not integrated |
-| NIA 1-var | deg ≤ 2 all cmp; deg ≥ 3 eq/≠ | replay + exact | deg ≥ 3 inequalities, **≥ 2 variables** |
-| NIA blast | 8–64-bit ladder, finite box | sound, incomplete | genuine unbounded NIA |
-
-## The one-sentence gap
-
-We decide **single-variable** real/integer polynomial problems exactly and a
-**≤2-cross-product** multivariate fragment heuristically; the entire **complete
-multivariate QF_NRA decision procedure** (and its NIA descendants) is missing —
-that is what Phases A–E build.
-
-## What we can reuse (don't rebuild)
-
-- `axeyum_ir::Rational` (exact i128 rationals; overflow-guarded — see the
-  Rational-overflow note in memory) and `Value::RealAlgebraic` (defining poly +
-  isolating interval + refinement) **already exist**. Phase A generalizes them to
-  multivariate / arbitrary-precision, it does not start from zero.
-- The replay/decline discipline, the deadline plumbing, and the differential-fuzz
-  harness are all in place.
+- `axeyum-ir`'s `poly` + `real_algebraic` modules (bignum, Sturm, resultant, field
+  arithmetic) — **the foundation already exists; extend it**.
+- The CAD slices in the solver (`decide_nonstrict_cad_nvar_algebraic`,
+  `visit_all_cells_value`, `fiber_boundary_poly`, `multi_resultant`, …).
+- The four differential-fuzz gates (NRA/NIA/UFLIA/ABV), DISAGREE=0 — run before any
+  decider change.
+- ADR-0040's SOS→Lean ring normalizer — the seed for per-cell certificate
+  reconstruction.

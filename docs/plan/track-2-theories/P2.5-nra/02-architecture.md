@@ -75,50 +75,52 @@ The **long pole is the algebraic core** (Phase A): resultants, root isolation,
 and robust algebraic-number arithmetic. Everything in Tiers 1–3 is comparatively
 shallow once that core is solid and well-tested.
 
-## Crate / module layout
+## Crate / module layout — extend `axeyum-ir`, do NOT add a crate
 
-A new internal crate keeps the math core reusable (NIA, quantifier elimination,
-SOS reconstruction all consume it) and keeps `axeyum-solver` lean:
+> **Corrected per ADR-0044.** An earlier draft proposed a new `axeyum-poly` crate.
+> That contradicts the **accepted** ADR-0044, which deliberately put the exact-poly
+> + Sturm + resultant primitives in **`axeyum-ir/src/poly.rs`** (one isolation
+> implementation shared by the IR value layer and the solver) precisely because
+> `eval` — which lives in `axeyum-ir` and must replay-check algebraic models —
+> needs them, and ADR-0001 says split a crate only when a boundary is *exercised*
+> (reuse satisfies it). **We extend the existing modules.**
+
+The math core **already exists and is bignum-backed**:
 
 ```
-crates/axeyum-poly/                  (NEW — pure-Rust, no_std-friendly, no C/C++)
-  src/
-    rational.rs        # re-export / extend axeyum_ir::Rational; bigint fallback
-    monomial.rs        # Monomial = sorted (var,exp) vector; ordering
-    mpoly.rs           # sparse multivariate polynomial
-    upoly.rs           # dense univariate; GCD, pseudo-division
-    resultant.rs       # Sylvester resultant, subresultant (PSC) chain, discriminant
-    sturm.rs           # Sturm sequence, Descartes' rule, root counting
-    root_isolation.rs  # isolating intervals; refinement
-    algebraic.rs       # RealAlgebraic: defining poly + interval; cmp/arith/sign
-    interval.rs        # interval arithmetic (correctly rounded rationals)
-    projection.rs      # McCallum / Lazard projection operators
+crates/axeyum-ir/src/
+  poly.rs            # EXISTS: RatVec + exact-Rational poly helpers (trim/degree/
+                     #   deriv/rem/gcd/monic/exact-div/squarefree_part), Sturm core
+                     #   (sturm_chain/count_roots_in/isolate_roots_sturm),
+                     #   resultant_univariate / sylvester_determinant.  ADR-0044/0045.
+  real_algebraic.rs  # EXISTS: Value::RealAlgebraic (Vec<BigInt>/BigRational),
+                     #   sign_at, compare, field arithmetic α±β/α·β/−α.  ADR-0044/0046.
+  ── to ADD: McCallum/Hong projection; richer multivariate mpoly ops as needed.
 
-crates/axeyum-solver/src/nra/        (NEW module tree — replaces nra*.rs files)
-    mod.rs             # entry: tiered orchestrator (replaces check_with_nra)
-    abstract.rs        # nonlinear-atom → fresh-var abstraction (from nra.rs)
-    linearize.rs       # Tier 1: lemma-on-demand loop + lemma schemas
-    icp.rs             # Tier 2: interval constraint propagation
-    nlsat.rs           # Tier 3: model-constructing search + explain
-    cac.rs             # Tier 3 alt: cylindrical algebraic coverings
-    nia.rs             # Phase E: integer relax + branch-and-bound (absorbs nia_square)
+crates/axeyum-solver/src/
+  nra_real_root.rs   # EXISTS: single-variable exact decider (fast pre-path + oracle)
+  nra.rs             # EXISTS: linear-abstraction + McCormick + spatial B&B (the cheap
+                     #   tier; Phase B upgrades it into a principled incr-lin loop)
+  (CAD slices)       # EXIST: decide_nonstrict_cad_nvar_algebraic, visit_all_cells_value,
+                     #   fiber_boundary_poly, multi_resultant, cell_samples, …
+  ── to ADD: an incremental-linearization tier module (Phase B), an ICP module
+     (Phase C), a per-cell certificate emitter (Phase D §evidence), and the NIA
+     incr-lin UNSAT engine (Phase E).
 ```
 
-Existing `nra_real_root.rs` (single-variable, exact, already excellent) is
-retained as a **fast pre-path** and as a differential oracle for the new
-multivariate code on single-variable instances.
+So the build is **fill-in-the-gaps on an existing engine**, not greenfield. The
+"long pole" framing in Phase A is downgraded accordingly (see
+[00-current-state.md](00-current-state.md)).
 
-> **ADR required** before the crate lands: `axeyum-poly` as a new boundary
-> (per ADR-0001 "add crates only after a boundary is proven by use" — the
-> boundary is proven by NRA+NIA+QE+SOS all consuming it). Decide there: own
-> arbitrary-precision integers vs. a vetted pure-Rust bigint dep (must keep
-> `forbid(unsafe_code)` and WASM build green).
+## The Tier-3 choice is already made: we have CAD
 
-## The Tier-3 choice: NLSAT/MCSAT vs CAC
-
-Both are complete for QF_NRA; both need the same Phase-A core. Decision deferred
-to an ADR after Phase A, but the current lean (see
-[06-phaseD-nlsat-cac.md](06-phaseD-nlsat-cac.md)):
+> **Corrected.** This was framed as an open NLSAT-vs-CAC choice. In fact the
+> roadmap already **built CAD directly** (projection-by-resultant + lifting +
+> cell sampling; 2-var complete, N-var decision-complete, fuzz-gated). So Tier 3
+> exists. The remaining Tier-3 work is **performance** (McCallum/Hong projection
+> to cut cell blow-up) and **per-cell evidence** (Lean parity), not picking an
+> engine. The NLSAT-vs-CAC table below is retained only as background for a
+> possible future explanation-driven optimization.
 
 | | NLSAT/MCSAT (Z3) | Cylindrical Algebraic Coverings (cvc5) |
 |---|---|---|
