@@ -227,7 +227,9 @@ trapezoid_sum = 1/2
 The `calculus-riemann-sum-v0` validator recomputes left, right, midpoint, and
 trapezoid sums, checks polynomial antiderivative endpoint differences, brackets
 an exact integral between monotone lower and upper sums, and rejects a false
-integral claim.
+integral claim. The upgraded false-integral row routes the final exact-linear
+conflict `integral_value = 1/2` and `integral_value = 3/4` through a rechecked
+`UnsatFarkas` certificate.
 
 For a multivariable calculus shadow, encode a bivariate polynomial map and
 exact rational derivative data:
@@ -332,6 +334,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes calculus_riemann_sum_false_integral_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0

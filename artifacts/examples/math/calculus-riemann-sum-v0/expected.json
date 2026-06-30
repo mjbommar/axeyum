@@ -103,9 +103,11 @@
         "a": "0",
         "b": "1",
         "claimed_integral": "3/4",
-        "actual_integral": "1/2"
+        "actual_integral": "1/2",
+        "smt2_artifact": "artifacts/examples/math/calculus-riemann-sum-v0/smt2/false-integral-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes calculus_riemann_sum_false_integral_artifact_emits_checked_farkas"
       },
-      "notes": "The validator recomputes the exact polynomial integral and confirms the listed claim is false."
+      "notes": "The validator recomputes the exact polynomial integral and confirms the listed claim is false; the Axeyum regression checks the same actual-vs-claimed integral contradiction through QF_LRA/Farkas evidence."
     },
     {
       "id": "fundamental-theorem-lean-horizon",

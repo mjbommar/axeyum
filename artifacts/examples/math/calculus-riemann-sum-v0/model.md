@@ -23,6 +23,11 @@ trapezoid_sum = sum (f(x_i) + f(x_{i+1})) / 2 * (x_{i+1} - x_i)
 Exact integrals for polynomial rows are endpoint differences of the computed
 antiderivative.
 
+For the promoted false-integral row, replay computes the fixed value
+`integral_0^1 x dx = 1/2` before the source SMT-LIB artifact asks Axeyum to
+refute the contradictory claim `integral_value = 3/4` with QF_LRA/Farkas
+evidence.
+
 ## Limitations
 
 These rows are fixed finite rational calculations. They are useful for teaching

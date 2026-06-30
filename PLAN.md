@@ -136,7 +136,7 @@ QF_UF/Alethe congruence conflicts under `family_finite_algebra_alethe`,
 backed by the shared `math_resource_uf_routes` regression.
 The second example-family row now groups recurring exact-rational
 QF_LRA/Farkas infeasibility rows under `family_exact_rational_farkas`,
-backed by the 29-test `math_resource_lra_routes` regression and scoped to
+backed by the shared `math_resource_lra_routes` regression and scoped to
 the optimization/Farkas proof-route lane.
 The generated coverage, field, proof-gap, learner/proof-upgrade, and
 curriculum-pressure dashboards now expose conservative R0-R6 gate/next-gate
@@ -251,9 +251,10 @@ bounded-natural negativity. The five active resource proof-certificate routes
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **69 promoted solver-reuse
-packs**, **6 non-benchmark-horizon packs**, and **9 unclassified packs** after
-the latest finite-predicate Bool/CNF quantifier-expansion promotion,
+the foundational resource dashboards now report **70 promoted solver-reuse
+packs**, **6 non-benchmark-horizon packs**, and **8 unclassified packs** after
+the latest calculus Riemann-sum false-integral QF_LRA/Farkas promotion,
+finite-predicate Bool/CNF quantifier-expansion promotion,
 polynomial-identities false-root QF_LIA/Diophantine promotion,
 finite generating-functions QF_LIA/Diophantine coefficient-convolution
 promotion, PHP(3,2) counting/refutation Bool/CNF promotions, and the replay-only

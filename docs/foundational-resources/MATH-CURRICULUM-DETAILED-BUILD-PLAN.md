@@ -41,9 +41,9 @@ The committed resource query currently reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 69 promoted solver-reuse packs.
+- 70 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 9 unclassified solver-reuse packs.
+- 8 unclassified solver-reuse packs.
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
 allowed only when they fill a clear curriculum/field hole that cannot be served
@@ -99,7 +99,6 @@ Current unclassified queue:
 | `reals-rcf-shadow-v0` | keep RCF/NRA shadows explicit; promote only when the certificate route is ready |
 | `sequence-limit-shadow-v0` | promote one finite tail-bound LRA row or mark general convergence as Lean horizon |
 | `calculus-algebraic-shadow-v0` | promote a polynomial identity/refutation only if the chosen route checks the original claim |
-| `calculus-riemann-sum-v0` | choose exact finite-sum replay versus an LRA false-integral artifact |
 | `multivariable-calculus-rational-v0` | promote a bad-gradient/Jacobian row if it adds new solver pressure |
 | `complex-plane-transforms-v0` | promote the false real-part row only if the real-pair route is source-linked |
 
@@ -257,7 +256,7 @@ Exit criteria:
 | `counting` | promote | pigeonhole CNF/LRAT and coefficient-count rows |
 | `number-theory` | maintain | bounded residue and Diophantine families |
 | `linear-algebra` | deepen | matrix corpus notes and route-specific regression back-links |
-| `calculus` | classify | exact algebraic shadows now; theorem layer later |
+| `calculus` | deepen | Riemann-sum false integral now has a QF_LRA/Farkas regression; derivative and multivariable shadows still need route decisions |
 
 ## Commit-Sized Queue
 
@@ -275,19 +274,21 @@ Pick one row per commit unless the change is purely navigational.
    rational-root QF_LIA/Diophantine artifact and route regression.
 5. Landed: promote `finite-predicate-v0` through a source-linked finite
    quantifier-expansion Bool/CNF artifact and DRAT/LRAT route regression.
-6. Promote or classify the remaining unclassified packs, starting with compact
+6. Landed: promote `calculus-riemann-sum-v0` through a source-linked false
+   integral QF_LRA/Farkas artifact and route regression.
+7. Promote or classify the remaining unclassified packs, starting with compact
    source-level conflicts where the route is clear.
-7. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
+8. Upgrade finite-topology from non-benchmark with an axiom conflict only if the
    CNF stays source-level readable.
-8. Upgrade finite-measure from non-benchmark with a finite-additivity or
+9. Upgrade finite-measure from non-benchmark with a finite-additivity or
    complement conflict through QF_LRA/Farkas.
-9. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
+10. Upgrade coordinate-geometry from non-benchmark with a collinearity/distance
    conflict through QF_LRA/Farkas.
-10. Add a proof-object learner page that follows one resource from source claim
+11. Add a proof-object learner page that follows one resource from source claim
    to emitted proof and corrupted-proof rejection.
-11. Add a generated or query-based audit for unclassified solver-reuse packs if
+12. Add a generated or query-based audit for unclassified solver-reuse packs if
    manual tracking starts to drift.
-12. Revisit the library boundary after unclassified packs are resolved and at
+13. Revisit the library boundary after unclassified packs are resolved and at
    least one non-doc consumer repeats resource parsing logic.
 
 ## Validation Checklist

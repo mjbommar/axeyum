@@ -418,10 +418,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   report 69 promoted, 6 non-benchmark-horizon, and 9 unclassified solver-reuse
   packs.
 
+- **Calculus Riemann-sum QF_LRA/Farkas promotion landed.**
+  `calculus-riemann-sum-v0` now carries promoted `solver_reuse` metadata for
+  its false exact-integral row. The new source-level artifact
+  `false-integral-farkas-conflict.smt2` isolates the contradiction
+  `integral_value = 1/2` and `integral_value = 3/4`, and
+  `math_resource_lra_routes::calculus_riemann_sum_false_integral_artifact_emits_checked_farkas`
+  checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
+  70 promoted, 6 non-benchmark-horizon, and 8 unclassified solver-reuse packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 69-promoted, 6 non-benchmark-horizon, and
-  9-unclassified solver-reuse counts. The decision remains in-repo and
+  now records the refreshed 70-promoted, 6 non-benchmark-horizon, and
+  8-unclassified solver-reuse counts. The decision remains in-repo and
   JSON-first: the query consumer reads promoted solver-reuse rows, but there is
   still no external consumer, repeated typed API demand, or reusable encoder
   boundary that warrants a new crate or separate repository.
@@ -11560,6 +11569,15 @@ plan is built and committed on the current branch:
   `solver_reuse.status` as `promoted`, the expected row records the checked
   DRAT/LRAT certificate path, and generated dashboards report 69 promoted,
   6 non-benchmark-horizon, and 9 unclassified packs.
+
+- **2026-06-30** — **Calculus Riemann-sum QF_LRA promotion landed.**
+  Added
+  `artifacts/examples/math/calculus-riemann-sum-v0/smt2/false-integral-farkas-conflict.smt2`
+  for the false exact-integral row and wired it into `math_resource_lra_routes`.
+  The pack metadata now marks `solver_reuse.status` as `promoted`, the expected
+  row records the checked `UnsatFarkas` certificate path, and generated
+  dashboards report 70 promoted, 6 non-benchmark-horizon, and 8 unclassified
+  packs.
 
 - **2026-06-29** — **Proof-cookbook math-example route sections landed.**
   Added `Math Examples Using This Route` sections to the six active proof

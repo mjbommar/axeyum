@@ -124,7 +124,8 @@ validated pack data and the repo-root command that replays it.
 - [Finite Calculus Shadows](calculus-shadows-end-to-end.md): follows
   polynomial derivative replay, product-rule and tangent checks, finite
   Riemann sums, antiderivative endpoint replay, false derivative/integral
-  rejection, and the calculus Lean horizons.
+  rejection with a QF_LRA/Farkas false-integral certificate, and the calculus
+  Lean horizons.
 - [Metric Continuity](metric-continuity-end-to-end.md): follows finite metric
   table replay, finite Lipschitz checks, epsilon-delta containment,
   open-ball preimage replay, checked QF_LRA/Farkas bad-delta rejection, and

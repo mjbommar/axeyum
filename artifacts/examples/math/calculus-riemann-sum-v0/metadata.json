@@ -35,6 +35,15 @@
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite polynomial integral QF_LRA/Farkas regression seed",
+    "pressure": "Exact polynomial integration computes integral_0^1 x dx = 1/2, while the malformed row claims the same integral is 3/4.",
+    "evidence": [
+      "false-integral-claim-rejected"
+    ],
+    "next_step": "Promote additional finite calculus rows only when they add distinct exact-linear, polynomial-identity, derivative, or finite-partition solver pressure; keep Riemann integrability, arbitrary tagged-partition convergence, and the fundamental theorem of calculus in the Lean-horizon lane."
+  },
   "source_refs": [
     "docs/curriculum/03-destinations/calculus.md",
     "docs/curriculum/02-structures/sequences-and-limits.md",
@@ -43,6 +52,9 @@
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/calculus-riemann-sum-v0/smt2/false-integral-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
@@ -55,7 +67,7 @@
   ],
   "graduation_criteria": [
     "Replay finite rational partitions, sample values, Riemann sums, and antiderivative endpoint differences exactly.",
-    "Reject false polynomial integral claims by recomputing exact antiderivatives.",
+    "Keep the false integral row tied to source-linked QF_LRA/Farkas evidence for the exact polynomial-integral contradiction.",
     "Keep general Riemann integrability, arbitrary tagged-partition convergence, and the fundamental theorem of calculus under Lean horizon.",
     "Promote finite UNSAT variants only after proof-object evidence checks the same polynomial-integral refutations."
   ]

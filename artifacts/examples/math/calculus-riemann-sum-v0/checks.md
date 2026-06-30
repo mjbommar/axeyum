@@ -37,6 +37,17 @@ Expected result: `unsat`.
 The validator computes the exact integral of `x` on `[0, 1]` as `1/2` and
 rejects the listed claim `3/4`.
 
+The source SMT-LIB artifact records the same final contradiction:
+
+```text
+integral_value = 1/2
+integral_value = 3/4
+```
+
+The `math_resource_lra_routes` regression parses
+`smt2/false-integral-farkas-conflict.smt2`, emits `UnsatFarkas` evidence, and
+independently checks the certificate.
+
 ## `fundamental-theorem-lean-horizon`
 
 Expected result: `not-run`.

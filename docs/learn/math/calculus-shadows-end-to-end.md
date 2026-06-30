@@ -203,7 +203,18 @@ The validator recomputes the polynomial antiderivative endpoint difference:
 integral of x on [0, 1] = 1/2
 ```
 
-so the false integral claim is rejected.
+so the false integral claim is rejected. The promoted source artifact records
+the final exact-linear contradiction:
+
+```text
+integral_value = 1/2
+integral_value = 3/4
+```
+
+The `math_resource_lra_routes` regression parses
+`artifacts/examples/math/calculus-riemann-sum-v0/smt2/false-integral-farkas-conflict.smt2`,
+emits `UnsatFarkas` evidence, and checks the certificate independently. This is
+still a fixed polynomial-integral row, not the fundamental theorem of calculus.
 
 ## Why This Matters
 
@@ -212,7 +223,7 @@ without pretending to have full analysis:
 
 ```text
 untrusted search proposes derivative, tangent, partition, or integral data
-trusted checker recomputes exact rational/polynomial arithmetic
+trusted checker recomputes exact rational/polynomial arithmetic and Farkas certificates
 analytic theorems stay Lean-horizon
 ```
 
@@ -226,6 +237,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-algebraic-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/calculus-riemann-sum-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes calculus_riemann_sum_false_integral_artifact_emits_checked_farkas
 ```
 
 ## Trust Boundary
@@ -233,6 +245,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ca
 The validators check coefficient differentiation, fixed product-rule
 identities, tangent-line arithmetic, critical-point witnesses, rational
 partitions, finite Riemann sums, midpoint sums, lower/upper sums, and exact
-polynomial antiderivative endpoint differences. They do not prove the limit
-definition of derivative, arbitrary integrability, tagged-partition
-convergence, or the fundamental theorem of calculus.
+polynomial antiderivative endpoint differences. The promoted false-integral
+row also checks a source QF_LRA/Farkas certificate for the final exact-linear
+conflict. These resources do not prove the limit definition of derivative,
+arbitrary integrability, tagged-partition convergence, or the fundamental
+theorem of calculus.

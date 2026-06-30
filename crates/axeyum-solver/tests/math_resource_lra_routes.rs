@@ -19,6 +19,9 @@ const LINEAR_OPTIMIZATION_OBJECTIVE_THRESHOLD: &str = include_str!(
 const CONVEXITY_BAD_MIDPOINT: &str = include_str!(
     "../../../artifacts/examples/math/convexity-rational-v0/smt2/bad-midpoint-convexity-farkas-conflict.smt2"
 );
+const CALCULUS_RIEMANN_FALSE_INTEGRAL: &str = include_str!(
+    "../../../artifacts/examples/math/calculus-riemann-sum-v0/smt2/false-integral-farkas-conflict.smt2"
+);
 const RATIONALS_TRICHOTOMY_NONLESS: &str = include_str!(
     "../../../artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-nonless-farkas-conflict.smt2"
 );
@@ -278,6 +281,14 @@ fn convexity_bad_midpoint_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "convexity-rational-v0 bad-midpoint SMT-LIB artifact",
         CONVEXITY_BAD_MIDPOINT,
+    );
+}
+
+#[test]
+fn calculus_riemann_sum_false_integral_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "calculus-riemann-sum-v0 false-integral SMT-LIB artifact",
+        CALCULUS_RIEMANN_FALSE_INTEGRAL,
     );
 }
 

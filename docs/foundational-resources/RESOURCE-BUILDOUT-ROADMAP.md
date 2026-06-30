@@ -44,9 +44,9 @@ The current committed data boundary reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 69 promoted solver-reuse packs.
+- 70 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 9 unclassified solver-reuse packs.
+- 8 unclassified solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -609,6 +609,9 @@ Build next:
 - Add concept rows for rational interval, sequence tail, Cauchy shadow,
   squeeze shadow, derivative identity, and integration horizon.
 - Promote exact rational bad-bound rows through QF_LRA/Farkas.
+- Keep `calculus-riemann-sum-v0`'s promoted false-integral row tied to the
+  source QF_LRA/Farkas artifact, and keep FTC/integrability statements in the
+  Lean-horizon lane.
 - Keep completeness, Bolzano-Weierstrass, Heine-Borel, IVT, MVT, FTC, and
   general convergence as Lean-horizon.
 
@@ -1070,7 +1073,12 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/finite-predicate-v0/cnf/forall-implies-exists.cnf`
     is checked by
     `cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_predicate_forall_implies_exists_emits_checked_drat_and_lrat`.
-26. Continue proof-route promotions or consumer-query examples; revisit the
+26. Landed: promote `calculus-riemann-sum-v0` through a source-linked
+    QF_LRA/Farkas regression for `false-integral-claim-rejected`. The artifact
+    `artifacts/examples/math/calculus-riemann-sum-v0/smt2/false-integral-farkas-conflict.smt2`
+    is checked by
+    `cargo test -p axeyum-solver --test math_resource_lra_routes calculus_riemann_sum_false_integral_artifact_emits_checked_farkas`.
+27. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

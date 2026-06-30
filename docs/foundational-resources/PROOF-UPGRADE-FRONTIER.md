@@ -28,7 +28,7 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 7 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 6 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 29 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 30 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
 | [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 54 | General theorem statements that remain outside bounded SMT replay. |
 
@@ -193,6 +193,9 @@ First targets:
 - [finite-integration-v0](../../artifacts/examples/math/finite-integration-v0/)
   (resource-backed Farkas regression landed for the bad expectation row after
   exact finite weighted-sum replay computes the integral)
+- [calculus-riemann-sum-v0](../../artifacts/examples/math/calculus-riemann-sum-v0/)
+  (source-linked Farkas regression landed for the bad exact
+  polynomial-integral row after antiderivative replay computes the integral)
 - [finite-product-measure-v0](../../artifacts/examples/math/finite-product-measure-v0/)
   (resource-backed Farkas regression landed for the bad product-probability
   row after exact finite product replay computes the product mass)
@@ -249,6 +252,8 @@ Secondary targets:
   epsilon-delta exact-linear regression, and finite stochastic kernels now
   contribute a probability/statistics transition-row normalization regression.
   Finite integration now contributes a measure-theory expectation regression,
+  calculus Riemann sums now contribute a real-analysis/numerical-analysis
+  polynomial-integral regression,
   finite product measure contributes a product-probability exact-linear
   regression where the nonlinear product itself is replayed before Farkas checks
   the final contradictory masses, and finite random variables contribute a

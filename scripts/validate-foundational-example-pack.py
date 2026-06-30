@@ -8915,6 +8915,15 @@ def validate_calculus_riemann_sum(expected: dict[str, Any]) -> None:
         fail("false-integral-claim-rejected actual_integral is wrong")
     if claimed == actual:
         fail("false-integral-claim-rejected claim unexpectedly matches the exact integral")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("false integral smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/calculus-riemann-sum-v0/smt2/false-integral-farkas-conflict.smt2":
+        fail("false-integral-claim-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("false integral smt2_artifact", smt2_artifact)
+    farkas_regression = data.get("farkas_regression")
+    require_string("false integral farkas_regression", farkas_regression)
+    if "calculus_riemann_sum_false_integral_artifact_emits_checked_farkas" not in farkas_regression:
+        fail("false-integral-claim-rejected must link the Farkas regression")
 
     horizon = checks["fundamental-theorem-lean-horizon"]
     if horizon["expected_result"] != "not-run":

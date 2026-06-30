@@ -90,6 +90,9 @@ Canonical examples:
 - [Finite Integration](../../../artifacts/examples/math/finite-integration-v0/)
   uses a bad expectation row after exact finite weighted-sum replay computes
   the integral.
+- [Finite Calculus Shadows](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
+  uses a false polynomial-integral row after exact antiderivative replay
+  computes the integral.
 - [Finite Martingales](../../../artifacts/examples/math/finite-martingales-v0/)
   uses a bad conditional-expectation row after exact finite filtration replay.
 - [Finite Markov Chain](../../../artifacts/examples/math/finite-markov-chain-v0/)
@@ -134,3 +137,4 @@ cargo test -p axeyum-solver --test lean_crosscheck certified_lra_interpolant_bot
 - [trust ledger](../../research/08-planning/trust-ledger.md)
 - [dominance scoreboard](../../../bench-results/DOMINANCE.md)
 - [Real Algebra RCF Shadow pack](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
+- [Finite Calculus Shadows pack](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
