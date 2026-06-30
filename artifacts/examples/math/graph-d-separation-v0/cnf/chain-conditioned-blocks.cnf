@@ -1,0 +1,15 @@
+c graph-d-separation-v0 chain-conditioned-blocks
+c Variables:
+c 1 = the skeleton path a-b-c exists and is selected.
+c 2 = b is the middle non-collider on that path in a -> b -> c.
+c 3 = b is in the conditioning set.
+c 4 = the path is active, matching the rejected d-connected claim.
+c The last clause encodes the d-separation rule: a conditioned non-collider
+c blocks an otherwise selected path.
+p cnf 4 6
+1 0
+2 0
+3 0
+4 0
+-4 1 0
+-4 -2 -3 0

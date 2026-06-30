@@ -215,8 +215,9 @@ Build sequence:
     artifact. `graph-reachability-v0` now links `disconnected-no-path` to a
     bounded reachability fixed-point DIMACS artifact, and `graph-cut-v0` links
     `one-edge-cut-rejected` to a bounded post-removal reachability DIMACS
-    artifact. All are checked by the `math_resource_boolean_routes` DRAT/LRAT
-    regression.
+    artifact. `graph-d-separation-v0` now links `chain-conditioned-blocks` to
+    a conditioned non-collider blocking DIMACS artifact. All are checked by the
+    `math_resource_boolean_routes` DRAT/LRAT regression.
 11. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 

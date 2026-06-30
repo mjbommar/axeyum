@@ -61,9 +61,12 @@
         "conditioning_set": ["b"],
         "all_simple_paths": [
           ["a", "b", "c"]
-        ]
+        ],
+        "cnf_artifact": "artifacts/examples/math/graph-d-separation-v0/cnf/chain-conditioned-blocks.cnf",
+        "proof_regression": "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs::graph_d_separation_chain_conditioned_blocks_emits_checked_drat_and_lrat",
+        "certificate": "The Boolean resource regression emits a DRAT refutation, elaborates it to LRAT, and checks both proof objects independently."
       },
-      "notes": "The validator enumerates skeleton paths and confirms the only path is blocked by conditioning on the non-collider b."
+      "notes": "The validator enumerates skeleton paths, checks the conditioned non-collider DIMACS artifact, and the Rust regression confirms emitted DRAT and LRAT proof objects independently check."
     },
     {
       "id": "fork-conditioned-blocks",

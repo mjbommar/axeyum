@@ -8,7 +8,7 @@ blocking rules.
 The examples cover:
 
 - an active chain with no conditioning;
-- a chain blocked by conditioning on its middle non-collider;
+- a CNF-backed chain blocked by conditioning on its middle non-collider;
 - a fork blocked by conditioning on its middle non-collider;
 - an unconditioned collider that blocks a path;
 - a collider opened by conditioning on a descendant.
@@ -27,6 +27,9 @@ The examples cover:
 - Active-path witnesses are checked against the original DAG.
 - UNSAT d-connected claims are checked by enumerating all simple skeleton paths
   between the source and target.
+- The conditioned-chain blocking row also has a source-linked DIMACS artifact
+  and a Boolean regression that emits and independently checks DRAT and LRAT
+  proof objects.
 - Collider activation uses the finite descendant relation computed from the DAG.
 - General causal identification, do-calculus, and statistical semantics remain
   outside this pack.

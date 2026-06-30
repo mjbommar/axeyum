@@ -95,6 +95,10 @@ First targets:
   (solver-reuse promotion landed for `one-edge-cut-rejected`: source-linked
   bounded post-removal reachability DIMACS artifact, DRAT emission, LRAT
   elaboration, and independent checks)
+- [graph-d-separation-v0](../../artifacts/examples/math/graph-d-separation-v0/)
+  (solver-reuse promotion landed for `chain-conditioned-blocks`: source-linked
+  conditioned non-collider blocking DIMACS artifact, DRAT emission, LRAT
+  elaboration, and independent checks)
 
 Expected artifact:
 
@@ -116,6 +120,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-matching-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-reachability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-cut-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-d-separation-v0
 ./scripts/check-foundational-resources.sh
 ```
 

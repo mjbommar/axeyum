@@ -25,6 +25,9 @@ const FINITE_CARDINALITY_NO_INJECTION_FOUR_TO_THREE: &str = include_str!(
 );
 const GRAPH_CUT_ONE_EDGE_REJECTED: &str =
     include_str!("../../../artifacts/examples/math/graph-cut-v0/cnf/one-edge-cut-rejected.cnf");
+const GRAPH_D_SEPARATION_CHAIN_CONDITIONED_BLOCKS: &str = include_str!(
+    "../../../artifacts/examples/math/graph-d-separation-v0/cnf/chain-conditioned-blocks.cnf"
+);
 const GRAPH_MATCHING_TRIANGLE_NO_PERFECT_MATCHING: &str = include_str!(
     "../../../artifacts/examples/math/graph-matching-v0/cnf/triangle-no-perfect-matching.cnf"
 );
@@ -120,6 +123,16 @@ fn graph_cut_one_edge_rejected_emits_checked_drat_and_lrat() {
         GRAPH_CUT_ONE_EDGE_REJECTED,
         16,
         47,
+    );
+}
+
+#[test]
+fn graph_d_separation_chain_conditioned_blocks_emits_checked_drat_and_lrat() {
+    assert_unsat_resource_cnf_checks(
+        "graph-d-separation-v0 chain-conditioned-blocks",
+        GRAPH_D_SEPARATION_CHAIN_CONDITIONED_BLOCKS,
+        4,
+        6,
     );
 }
 

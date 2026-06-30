@@ -30,17 +30,13 @@
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-d-separation-v0",
   "solver_reuse": {
-    "status": "candidate",
-    "target": "finite DAG d-separation Bool regression slice",
-    "pressure": "Conditioned path activation/blocking cases over fixed finite DAGs.",
+    "status": "promoted",
+    "target": "finite DAG d-separation Bool/CNF DRAT/LRAT regression seed",
+    "pressure": "Conditioned non-collider blocking in a fixed chain with independent DRAT/LRAT rechecking.",
     "evidence": [
-      "chain-active-without-conditioning",
-      "chain-conditioned-blocks",
-      "fork-conditioned-blocks",
-      "collider-unconditioned-blocks",
-      "collider-descendant-opens"
+      "chain-conditioned-blocks"
     ],
-    "next_step": "Encode the finite active-path search as Bool fixtures without claiming general causal-identification coverage."
+    "next_step": "Promote collider or fork blocking rows only when they add distinct d-separation regression pressure; keep causal identification and do-calculus claims out of this finite Bool lane."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -49,7 +45,10 @@
     "docs/curriculum/00-foundations/sets.md",
     "docs/curriculum/00-foundations/relations-and-functions.md",
     "docs/curriculum/02-structures/counting.md",
-    "docs/proof-cookbook/recipes/finite-model-replay.md"
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+    "artifacts/examples/math/graph-d-separation-v0/cnf/chain-conditioned-blocks.cnf",
+    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
   ],
   "expected_results": [
     "chain-active-without-conditioning",

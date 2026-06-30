@@ -2104,7 +2104,41 @@ def validate_graph_d_separation(expected: dict[str, Any]) -> None:
     chain_blocked = checks["chain-conditioned-blocks"]
     if chain_blocked["expected_result"] != "unsat" or chain_blocked.get("proof_status") != "checked":
         fail("chain-conditioned-blocks must be a checked unsat row")
-    validate_blocked_dag_query("chain-conditioned-blocks", chain_blocked.get("data", {}))
+    chain_blocked_data = chain_blocked.get("data", {})
+    validate_blocked_dag_query("chain-conditioned-blocks", chain_blocked_data)
+    chain_vertices, chain_edges = require_directed_acyclic_graph("chain-conditioned-blocks", chain_blocked_data)
+    chain_source = require_graph_vertex("chain-conditioned-blocks.source", chain_blocked_data.get("source"), chain_vertices)
+    chain_target = require_graph_vertex("chain-conditioned-blocks.target", chain_blocked_data.get("target"), chain_vertices)
+    chain_conditioned = require_vertex_set(
+        "chain-conditioned-blocks.conditioning_set",
+        chain_blocked_data.get("conditioning_set", []),
+        chain_vertices,
+        nonempty=False,
+    )
+    chain_paths = chain_blocked_data.get("all_simple_paths")
+    if (
+        chain_vertices != ["a", "b", "c"]
+        or chain_edges != [("a", "b"), ("b", "c")]
+        or chain_source != "a"
+        or chain_target != "c"
+        or chain_conditioned != {"b"}
+        or chain_paths != [["a", "b", "c"]]
+    ):
+        fail("chain-conditioned-blocks DIMACS artifact is fixed to a -> b -> c conditioned on b")
+    require_dimacs_artifact(
+        "chain-conditioned-blocks",
+        chain_blocked_data.get("cnf_artifact"),
+        "p cnf 4 6",
+        [["1"], ["2"], ["3"], ["4"], ["-4", "1"], ["-4", "-2", "-3"]],
+    )
+    proof_regression = chain_blocked_data.get("proof_regression")
+    require_string("chain-conditioned-blocks proof_regression", proof_regression)
+    if "math_resource_boolean_routes.rs::graph_d_separation_chain_conditioned_blocks" not in proof_regression:
+        fail("chain-conditioned-blocks proof_regression must name the Boolean resource test")
+    certificate = chain_blocked_data.get("certificate")
+    require_string("chain-conditioned-blocks certificate", certificate)
+    if "DRAT" not in certificate or "LRAT" not in certificate or "independently" not in certificate:
+        fail("chain-conditioned-blocks certificate must document DRAT/LRAT independent checking")
 
     fork_blocked = checks["fork-conditioned-blocks"]
     if fork_blocked["expected_result"] != "unsat" or fork_blocked.get("proof_status") != "checked":

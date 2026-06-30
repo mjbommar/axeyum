@@ -111,14 +111,15 @@ The generated coverage, field, proof-gap, and learner/proof-upgrade dashboards
 now expose conservative R0-R6 gate and next-gate columns, making R4-to-R5
 solver-reuse candidates visible without hand-maintained scans.
 The first structured solver-reuse candidate batch is also tagged in pack
-metadata for graph d-separation/search-runtime,
+metadata for graph search runtime,
 integer LIA, bounded natural arithmetic, and bounded number theory; these remain
 R4 until promoted to actual regression or fuzz artifacts with pack back-links.
-`logic-basics-v0`, `finite-cardinality-v0`, `graph-matching-v0`, and
-`graph-reachability-v0`, and `graph-cut-v0` are the first promoted packs from
-that batch: `tiny-cnf-refutation`, `no-injection-four-to-three`,
-`triangle-no-perfect-matching`, `disconnected-no-path`, and
-`one-edge-cut-rejected` now have
+`logic-basics-v0`, `finite-cardinality-v0`, `graph-matching-v0`,
+`graph-reachability-v0`, `graph-cut-v0`, and `graph-d-separation-v0` are the
+first promoted packs from that batch: `tiny-cnf-refutation`,
+`no-injection-four-to-three`, `triangle-no-perfect-matching`,
+`disconnected-no-path`, `one-edge-cut-rejected`, and
+`chain-conditioned-blocks` now have
 source-linked DIMACS artifacts and the Boolean `math_resource_boolean_routes`
 regression checks emitted DRAT and LRAT proof objects.
 The first consumer-facing query layer over the committed foundational-resource
