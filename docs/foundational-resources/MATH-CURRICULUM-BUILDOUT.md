@@ -243,7 +243,7 @@ losing the curriculum anchor.
 | `optimization_and_convexity` | rationals, reals, linear algebra | `linear-optimization-v0`, `convexity-rational-v0`, `multivariable-calculus-rational-v0`, LP feasibility, dual/Farkas certificates, finite convexity, gradients, Hessian checks, and threshold checks. |
 | `numerical_analysis` | linear algebra, real algebra | `numerical-linear-algebra-v0`, `finite-euler-method-v0`, `multivariable-calculus-rational-v0`, LU replay, interval bounds, error recurrences, Jacobian/Hessian replay, and finite ODE step replay. |
 | `differential_equations_and_dynamical_systems` | calculus, linear algebra | `bounded-dynamics-v0`, `finite-euler-method-v0`, recurrence traces, Euler-method steps, finite error replay, and invariant checks before continuous theory. |
-| `geometry` | reals, polynomials, linear algebra | `coordinate-geometry-v0`, `incidence-geometry-v0`, `affine-geometry-v0`, `orientation-area-geometry-v0`, distance, midpoint, collinearity, line equations, affine maps, signed area, barycentric replay, and finite incidence preservation. |
+| `geometry` | reals, polynomials, linear algebra | `coordinate-geometry-v0`, `incidence-geometry-v0`, `rigid-configuration-geometry-v0`, `affine-geometry-v0`, `orientation-area-geometry-v0`, distance, midpoint, collinearity, line equations, distance tables, affine maps, signed area, barycentric replay, finite incidence preservation, and finite isometry shadows. |
 | `functional_analysis_and_operator_theory` | linear algebra, real analysis | `finite-operator-v0`, `inner-product-spaces-rational-v0`, `finite-chebyshev-systems-v0`, norms, inner products, projections, matrices as operators, Chebyshev polynomial slices, finite interpolation/sign-pattern checks. |
 
 ## Phased Build Plan
@@ -692,6 +692,10 @@ rejection of a bad squared-distance claim.
 line-equation replay, non-parallel line intersection, point-on-line replay,
 checked QF_LRA/Farkas rejection of a false incidence claim, and a
 projective/synthetic geometry Lean-horizon row.
+`artifacts/examples/math/rigid-configuration-geometry-v0/` now validates exact
+triangle distance-table replay, translation isometry replay, congruent-triangle
+distance replay, checked QF_LRA/Farkas rejection of a false distance-table
+claim, and a graph-rigidity/rigid-motion-classification Lean-horizon row.
 `artifacts/examples/math/affine-geometry-v0/` now validates exact affine
 point-image replay, midpoint preservation, collinearity preservation, checked
 QF_LRA/Farkas rejection of a false affine distance-preservation claim, and a
@@ -835,13 +839,15 @@ Recommended order:
    directional derivatives, Jacobian chain-rule replay, Hessian minors, and
    bad-gradient rejection for calculus, optimization, and numerical analysis.
 7. `coordinate-geometry-v0`, `incidence-geometry-v0`,
-   `affine-geometry-v0`, and `orientation-area-geometry-v0`: collinearity,
-   midpoint, distance constraints, line equations, point-on-line replay,
-   non-parallel intersections, affine maps, signed area/orientation,
-   barycentric replay, finite incidence preservation, QF_LRA/Farkas false
-   squared-distance rejection, QF_LRA/Farkas false incidence rejection,
-   QF_LRA/Farkas false distance-preservation rejection, and QF_LRA/Farkas
-   false orientation rejection.
+   `rigid-configuration-geometry-v0`, `affine-geometry-v0`, and
+   `orientation-area-geometry-v0`: collinearity, midpoint, distance
+   constraints, line equations, point-on-line replay, non-parallel
+   intersections, triangle distance tables, finite isometry shadows, affine
+   maps, signed area/orientation, barycentric replay, finite incidence
+   preservation, QF_LRA/Farkas false squared-distance rejection,
+   QF_LRA/Farkas false incidence rejection, QF_LRA/Farkas false
+   distance-table rejection, QF_LRA/Farkas false distance-preservation
+   rejection, and QF_LRA/Farkas false orientation rejection.
 8. `finite-topology-v0`: finite closure/interior, metric-ball examples, and
    checked Bool/CNF bad-empty-open rejection.
 9. `finite-measure-v0`: finite sigma-algebras, finite measure checks, and
@@ -958,7 +964,7 @@ plus finite Markov-chain transition/stationary replay and
 numerical-linear-algebra residual/solution-box/Jacobi replay from data row
 through replay result and proof/evidence status, and exact descriptive
 statistics/regression replay for finite samples, count tables, and normal
-equations, plus coordinate/incidence/affine/oriented geometry replay for
+equations, plus coordinate/incidence/rigid/affine/oriented geometry replay for
 finite rational points, line equations, maps, areas, and barycentric
 coordinates, plus finite topology/measure
 replay for set-family axioms, metric balls, checked missing-empty-set rejection,
@@ -1145,16 +1151,16 @@ Exit criteria:
   finite conditional expectations, finite product-measure/integration replay,
   finite tail/count obstructions, homomorphism preservation, kernel/image
   replay, quotient maps, ideal closure, module actions, tensor bilinearity,
-  finite group actions, coordinate/incidence/oriented geometry replay,
+  finite group actions, coordinate/incidence/rigid/oriented geometry replay,
   complex real-pair transform replay, finite inner-product/projection replay,
   finite operator/Chebyshev replay, and Lean horizons, plus example-family rows
   for recurring finite-algebra QF_UF/Alethe conflicts, exact-rational
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 85 non-template math example packs validate.
+  Status: 86 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 85 non-template packs have at least one `checked` expected-result row.
+  Status: 86 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -1314,6 +1320,11 @@ approximation-theory horizons.
 geometry: line-equation replay, non-parallel line intersection, point-on-line
 replay, checked QF_LRA/Farkas rejection of false incidence, and a
 projective/synthetic geometry Lean-horizon row.
+`rigid-configuration-geometry-v0` now adds the exact finite rigidity bridge for
+geometry: triangle distance-table replay, translation isometry replay,
+congruent-triangle distance replay, checked QF_LRA/Farkas rejection of false
+distance-table data, and a graph-rigidity/rigid-motion-classification
+Lean-horizon row.
 `affine-geometry-v0` now adds the exact finite affine-map bridge for geometry:
 point-image replay, midpoint preservation, collinearity preservation, checked
 QF_LRA/Farkas rejection of false distance preservation, and an affine-geometry
@@ -1423,13 +1434,15 @@ table margins, Simpson's paradox counts, least-squares normal equations,
 residual orthogonality, RSS comparison, checked QF_LRA/Farkas
 bad-coefficients rejection, and the statistical inference/numerical regression
 horizon.
-`coordinate-geometry-v0`, `incidence-geometry-v0`, `affine-geometry-v0`, and
+`coordinate-geometry-v0`, `incidence-geometry-v0`,
+`rigid-configuration-geometry-v0`, `affine-geometry-v0`, and
 `orientation-area-geometry-v0` now have learner-facing end-to-end lessons for
 exact midpoint, collinearity, squared-distance, line-equation, point-on-line,
-line-intersection, affine-map, signed-area, area-scaling, barycentric, checked
-QF_LRA/Farkas bad squared-distance, checked QF_LRA/Farkas bad incidence,
-checked QF_LRA/Farkas bad-distance-preservation, checked QF_LRA/Farkas
-bad-orientation, and general geometry Lean-horizon rows.
+line-intersection, triangle distance-table replay, finite isometry shadows,
+affine-map, signed-area, area-scaling, barycentric, checked QF_LRA/Farkas bad
+squared-distance, checked QF_LRA/Farkas bad incidence, checked QF_LRA/Farkas
+bad distance-table data, checked QF_LRA/Farkas bad-distance-preservation,
+checked QF_LRA/Farkas bad-orientation, and general geometry Lean-horizon rows.
 `finite-topology-v0` and `finite-measure-v0` now have a learner-facing
 end-to-end lesson for finite topology axioms, closure/interior, finite
 metric-ball replay, checked Bool/CNF bad-empty-open rejection, finite
@@ -1671,6 +1684,8 @@ its metadata promotes that row for solver reuse.
 the same checked Farkas evidence path after exact signed-area replay.
 `incidence-geometry-v0` now routes its bad point-on-line row through the same
 checked Farkas evidence path after exact line-value replay.
+`rigid-configuration-geometry-v0` now routes its bad distance-table row through
+the same checked Farkas evidence path after exact squared-distance replay.
 `numerical-linear-algebra-v0` now routes its bad residual-bound row through the
 same checked Farkas evidence path after exact residual-norm replay.
 `random-matrix-finite-v0` now routes its bad trace-square row through the same

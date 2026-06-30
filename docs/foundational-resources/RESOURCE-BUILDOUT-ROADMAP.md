@@ -39,12 +39,12 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 85 non-template math example packs.
-- 427 expected checks.
-- 205 checked proof/evidence rows.
-- 174 replay-only rows.
-- 48 Lean-horizon rows.
-- 85 promoted solver-reuse packs.
+- 86 non-template math example packs.
+- 432 expected checks.
+- 206 checked proof/evidence rows.
+- 177 replay-only rows.
+- 49 Lean-horizon rows.
+- 86 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -858,6 +858,7 @@ Current packs:
 
 - `coordinate-geometry-v0`
 - `incidence-geometry-v0`
+- `rigid-configuration-geometry-v0`
 - `affine-geometry-v0`
 - `orientation-area-geometry-v0`
 - `complex-plane-transforms-v0`
@@ -871,6 +872,8 @@ Build next:
   exact replay plus the source QF_LRA/Farkas artifact.
 - Keep `incidence-geometry-v0`'s promoted bad point-on-line row tied to exact
   replay plus the source QF_LRA/Farkas artifact.
+- Keep `rigid-configuration-geometry-v0`'s promoted bad distance-table row
+  tied to exact distance replay plus the source QF_LRA/Farkas artifact.
 - Promote additional false affine/distance/orientation/incidence claims through
   QF_LRA/Farkas or NRA when exact rational polynomial constraints suffice.
 - Keep differential geometry, algebraic geometry, global geometry, and
@@ -1303,7 +1306,13 @@ Pick one item per commit unless the change is purely navigational.
     a false incidence claim, and a projective/synthetic geometry Lean horizon.
     `bridge_coordinate_orientation_geometry` now includes the incidence pack,
     and the learner path includes a focused incidence end-to-end page.
-56. Continue proof-route promotions or consumer-query examples; revisit the
+56. Landed: add `rigid-configuration-geometry-v0`.
+    The new geometry pack validates exact triangle distance-table replay,
+    translation isometry replay, congruent-triangle distance replay, checked
+    QF_LRA/Farkas rejection of a false distance-table claim, and a
+    graph-rigidity/rigid-motion-classification Lean horizon. The geometry learner path
+    now includes a focused rigid-configuration end-to-end page.
+57. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

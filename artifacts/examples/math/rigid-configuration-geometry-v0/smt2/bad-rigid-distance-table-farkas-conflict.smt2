@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const distance_squared Real)
+(assert (= distance_squared 9))
+(assert (= distance_squared 10))
+(check-sat)

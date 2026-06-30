@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "pack_id": "rigid-configuration-geometry-v0",
+  "witnesses": [
+    {
+      "id": "triangle-distance-table",
+      "description": "The 3-4-5 right triangle has squared side lengths 9, 16, and 25.",
+      "values": {
+        "a": ["0", "0"],
+        "b": ["3", "0"],
+        "c": ["0", "4"],
+        "distances": {"ab": "9", "ac": "16", "bc": "25"}
+      }
+    },
+    {
+      "id": "translation-isometry",
+      "description": "Translation by (1,-2) preserves the triangle distance table.",
+      "values": {
+        "source_a": ["0", "0"],
+        "source_b": ["3", "0"],
+        "source_c": ["0", "4"],
+        "translation": ["1", "-2"],
+        "target_a": ["1", "-2"],
+        "target_b": ["4", "-2"],
+        "target_c": ["1", "2"],
+        "source_distances": {"ab": "9", "ac": "16", "bc": "25"},
+        "target_distances": {"ab": "9", "ac": "16", "bc": "25"}
+      }
+    },
+    {
+      "id": "congruent-triangles",
+      "description": "Two fixed triangles share the same squared distance table.",
+      "values": {
+        "left_a": ["0", "0"],
+        "left_b": ["3", "0"],
+        "left_c": ["0", "4"],
+        "right_a": ["1", "1"],
+        "right_b": ["1", "4"],
+        "right_c": ["5", "1"],
+        "left_distances": {"ab": "9", "ac": "16", "bc": "25"},
+        "right_distances": {"ab": "9", "ac": "16", "bc": "25"}
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "triangle-distance-table",
+      "claim": "The listed coordinates produce the listed triangle squared-distance table.",
+      "expected_result": "sat",
+      "validation": "exact_rational_rigid_configuration_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["triangle-distance-table"],
+      "notes": "The validator recomputes all three squared distances over exact rationals."
+    },
+    {
+      "id": "translation-isometry-witness",
+      "claim": "The listed translation preserves the triangle squared-distance table.",
+      "expected_result": "sat",
+      "validation": "exact_rational_rigid_configuration_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["translation-isometry"],
+      "notes": "The validator checks every target point equals source point plus the translation and that both distance tables match."
+    },
+    {
+      "id": "congruent-triangle-distance-witness",
+      "claim": "The listed triangles have the same squared-distance table.",
+      "expected_result": "sat",
+      "validation": "exact_rational_rigid_configuration_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["congruent-triangles"],
+      "notes": "The validator recomputes both nondegenerate triangle distance tables and compares them."
+    },
+    {
+      "id": "bad-rigid-distance-table-rejected",
+      "claim": "The segment from (0,0) to (3,0) has squared distance 10.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_rigid_distance_refutation",
+      "proof_status": "checked",
+      "data": {
+        "p": ["0", "0"],
+        "q": ["3", "0"],
+        "computed_distance_squared": "9",
+        "claimed_distance_squared": "10",
+        "farkas_distance_claim": "distance_squared = 10",
+        "smt2_artifact": "artifacts/examples/math/rigid-configuration-geometry-v0/smt2/bad-rigid-distance-table-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes rigid_configuration_bad_distance_table_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact distance replay computes 9, while the malformed distance table claims 10; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
+      "id": "general-rigidity-geometry-lean-horizon",
+      "claim": "General rigidity, rigid-motion classification, and synthetic rigidity theorems require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "graph rigidity, rigid-motion classification, and synthetic rigidity theorems over general point configurations",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked by exact rational distance-table replay; general rigidity theory remains a proof-assistant horizon."
+    }
+  ]
+}

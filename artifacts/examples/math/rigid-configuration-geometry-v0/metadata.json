@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "id": "rigid-configuration-geometry-v0",
+  "title": "Exact Rigid Configuration Geometry Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_geometry",
+    "field_linear_algebra",
+    "field_real_analysis",
+    "curriculum_reals",
+    "curriculum_linear_algebra",
+    "curriculum_polynomials",
+    "bridge_coordinate_orientation_geometry"
+  ],
+  "field_ids": [
+    "geometry",
+    "linear_algebra",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "reals",
+    "linear-algebra",
+    "polynomials"
+  ],
+  "axeyum_fragments": [
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "finite coordinate replay",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rigid-configuration-geometry-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "rigid configuration bad distance-table QF_LRA/Farkas regression seed",
+    "pressure": "Malformed triangle distance table where exact replay computes squared distance 9 between (0,0) and (3,0), but the row claims 10.",
+    "evidence": [
+      "bad-rigid-distance-table-rejected"
+    ],
+    "next_step": "Promote additional rigidity rows only when they add distinct distance-table, isometry, or polynomial-geometry solver pressure; keep graph rigidity and synthetic theorem claims in the Lean-horizon lane."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/rigid-configuration-geometry-end-to-end.md",
+    "artifacts/examples/math/rigid-configuration-geometry-v0/smt2/bad-rigid-distance-table-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "triangle-distance-table",
+    "translation-isometry-witness",
+    "congruent-triangle-distance-witness",
+    "bad-rigid-distance-table-rejected",
+    "general-rigidity-geometry-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode fixed finite point-configuration checks as deterministic exact-rational replay rows.",
+    "Replay SAT witnesses through exact pairwise squared-distance evaluation.",
+    "Route false distance-table claims through checked QF_LRA/Farkas evidence after exact replay computes the distance.",
+    "Keep graph rigidity, synthetic rigidity, and general rigid-motion classification theorems under Lean horizon until formal proof routes exist."
+  ]
+}

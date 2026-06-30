@@ -6016,7 +6016,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "Finite coordinate-geometry rows turn incidence, line equations, midpoint, collinearity, squared-distance, affine-map, and signed-area claims into exact rational replay obligations with checked Farkas conflicts for malformed linearized claims.",
+      "summary": "Finite coordinate-geometry rows turn incidence, line equations, rigid distance tables, midpoint, collinearity, squared-distance, affine-map, and signed-area claims into exact rational replay obligations with checked Farkas conflicts for malformed linearized claims.",
       "prerequisites": [
         "curriculum_reals",
         "curriculum_linear_algebra",
@@ -6054,6 +6054,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/incidence-geometry-v0",
           "notes": "Line equations, point-on-line replay, non-parallel intersections, and bad-incidence rows."
+        },
+        {
+          "id": "rigid-configuration-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/rigid-configuration-geometry-v0",
+          "notes": "Triangle distance tables, translation isometry replay, congruent-triangle distances, and bad-rigidity rows."
         },
         {
           "id": "affine-geometry-v0",
@@ -7885,7 +7891,7 @@
           "id": "coordinate-geometry-v0",
           "status": "validated",
           "path": "artifacts/examples/math/coordinate-geometry-v0",
-          "notes": "Incidence, line equations, distance, midpoint, collinearity, and rigid finite configurations."
+          "notes": "Incidence, line equations, distance tables, midpoint, collinearity, and rigid finite configurations."
         },
         {
           "id": "affine-geometry-v0",
@@ -7904,6 +7910,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/orientation-area-geometry-v0",
           "notes": "Exact Orientation And Area Geometry Checks"
+        },
+        {
+          "id": "rigid-configuration-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/rigid-configuration-geometry-v0",
+          "notes": "Exact Rigid Configuration Geometry Checks"
         }
       ],
       "proof_routes": [
@@ -8218,6 +8230,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/rationals-lra-v0",
           "notes": "Exact Rational LRA Witnesses"
+        },
+        {
+          "id": "rigid-configuration-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/rigid-configuration-geometry-v0",
+          "notes": "Exact Rigid Configuration Geometry Checks"
         },
         {
           "id": "spectral-linear-algebra-v0",
@@ -9235,6 +9253,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/reals-rcf-shadow-v0",
           "notes": "Real Algebra RCF Shadow"
+        },
+        {
+          "id": "rigid-configuration-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/rigid-configuration-geometry-v0",
+          "notes": "Exact Rigid Configuration Geometry Checks"
         },
         {
           "id": "sequence-limit-shadow-v0",

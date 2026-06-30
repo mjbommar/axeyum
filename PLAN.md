@@ -115,7 +115,7 @@ proof upgrades, solver feedback, and consumer boundaries is
 [`docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
 The commit-sized curriculum/resource work matrix is
 [`docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md`](docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
-The current execution ledger for stabilizing the 85 existing math packs,
+The current execution ledger for stabilizing the 86 existing math packs,
 resolving unclassified solver-reuse rows, completing learner paths, and
 deepening proof routes field by field is
 [`docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md).
@@ -158,7 +158,7 @@ distributions, finite stochastic kernels, finite conditional expectations,
 finite product-measure/integration replay, finite tail/count obstructions,
 homomorphism preservation, kernel/image replay, quotient maps,
 ideal closure, module actions, tensor bilinearity, finite group actions, and
-Lean horizons, plus coordinate/incidence/oriented geometry replay, complex real-pair
+Lean horizons, plus coordinate/incidence/rigid/oriented geometry replay, complex real-pair
 transform replay, finite inner-product/projection replay, and finite
 operator/Chebyshev replay, so resource packs can point at shared evidence and
 boundary vocabulary instead of repeating it locally.
@@ -203,7 +203,7 @@ partition/equivalence roundtrips, image/preimage/inverse tables,
 finite bijection/cardinality checks, and infinite-cardinality theorem horizons
 queryable through the same R1 vocabulary.
 The geometry and complex-analysis bridge rows now make finite coordinate,
-incidence, affine, oriented-area, and complex real-pair transform replay
+incidence, rigid-configuration, affine, oriented-area, and complex real-pair transform replay
 queryable without overstating synthetic, differential, global, or analytic
 theorem coverage.
 The learner spine now also splits the finite topology and finite measure
@@ -395,13 +395,14 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **85 promoted solver-reuse
+the foundational resource dashboards now report **86 promoted solver-reuse
 packs**, **0 non-benchmark-horizon packs**, and **0 unclassified packs** after
 the latest bounded-dynamics bad invariant-bound QF_LRA/Farkas promotion,
 complex-algebraic bad norm-squared QF_LRA/Farkas promotion,
 finite-operator bad operator-bound QF_LRA/Farkas promotion,
 coordinate-geometry bad squared-distance QF_LRA/Farkas promotion,
 incidence-geometry bad point-on-line QF_LRA/Farkas promotion,
+rigid-configuration bad distance-table QF_LRA/Farkas promotion,
 finite-topology missing-empty-set Bool/CNF DRAT/LRAT promotion,
 finite-measure bad-complement QF_LRA/Farkas promotion,
 real-algebra RCF-shadow negative-discriminant QF_LRA/Farkas

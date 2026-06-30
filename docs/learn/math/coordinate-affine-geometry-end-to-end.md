@@ -10,6 +10,10 @@ and
 For exact point-on-line and line-intersection replay, use
 [incidence-geometry-v0](../../../artifacts/examples/math/incidence-geometry-v0/)
 and [Incidence Geometry](incidence-geometry-end-to-end.md).
+For exact distance-table and finite isometry replay, use
+[rigid-configuration-geometry-v0](../../../artifacts/examples/math/rigid-configuration-geometry-v0/)
+and
+[Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md).
 
 Concept rows:
 

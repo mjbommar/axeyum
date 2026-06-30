@@ -10887,6 +10887,49 @@ def line_determinant(
     return left[0] * right[1] - right[0] * left[1]
 
 
+def point_add2(
+    left: tuple[Fraction, Fraction],
+    right: tuple[Fraction, Fraction],
+) -> tuple[Fraction, Fraction]:
+    return left[0] + right[0], left[1] + right[1]
+
+
+def triangle_distance_table(
+    a: tuple[Fraction, Fraction],
+    b: tuple[Fraction, Fraction],
+    c: tuple[Fraction, Fraction],
+) -> dict[str, Fraction]:
+    return {
+        "ab": distance_squared2(a, b),
+        "ac": distance_squared2(a, c),
+        "bc": distance_squared2(b, c),
+    }
+
+
+def require_triangle_distances(context: str, value: Any) -> dict[str, Fraction]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    required = {"ab", "ac", "bc"}
+    if set(value) != required:
+        missing = sorted(required - set(value))
+        extra = sorted(set(value) - required)
+        fail(f"{context} must contain exactly ab, ac, bc; missing={missing} extra={extra}")
+    return {
+        edge: require_fraction(f"{context}.{edge}", value.get(edge))
+        for edge in sorted(required)
+    }
+
+
+def require_nondegenerate_triangle(
+    context: str,
+    a: tuple[Fraction, Fraction],
+    b: tuple[Fraction, Fraction],
+    c: tuple[Fraction, Fraction],
+) -> None:
+    if collinearity_determinant(a, b, c) == 0:
+        fail(f"{context} must be nondegenerate")
+
+
 def validate_coordinate_geometry(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -11050,6 +11093,133 @@ def validate_incidence_geometry(expected: dict[str, Any]) -> None:
     data = horizon.get("data", {})
     require_string("general incidence geometry target_theorem_shape", data.get("target_theorem_shape"))
     require_string("general incidence geometry future_checker", data.get("future_checker"))
+
+
+def validate_rigid_configuration_geometry(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    distance_table = checks["triangle-distance-table"]
+    if distance_table["expected_result"] != "sat":
+        fail("triangle-distance-table must expect sat")
+    values = single_witness_values(distance_table, witnesses)
+    a = require_point2("rigid triangle a", values.get("a"))
+    b = require_point2("rigid triangle b", values.get("b"))
+    c = require_point2("rigid triangle c", values.get("c"))
+    distances = require_triangle_distances("rigid triangle distances", values.get("distances"))
+    require_nondegenerate_triangle("triangle-distance-table", a, b, c)
+    if triangle_distance_table(a, b, c) != distances:
+        fail("triangle-distance-table distances are incorrect")
+
+    translation = checks["translation-isometry-witness"]
+    if translation["expected_result"] != "sat":
+        fail("translation-isometry-witness must expect sat")
+    values = single_witness_values(translation, witnesses)
+    source_a = require_point2("rigid translation source_a", values.get("source_a"))
+    source_b = require_point2("rigid translation source_b", values.get("source_b"))
+    source_c = require_point2("rigid translation source_c", values.get("source_c"))
+    vector = require_point2("rigid translation vector", values.get("translation"))
+    target_a = require_point2("rigid translation target_a", values.get("target_a"))
+    target_b = require_point2("rigid translation target_b", values.get("target_b"))
+    target_c = require_point2("rigid translation target_c", values.get("target_c"))
+    source_distances = require_triangle_distances(
+        "rigid translation source_distances",
+        values.get("source_distances"),
+    )
+    target_distances = require_triangle_distances(
+        "rigid translation target_distances",
+        values.get("target_distances"),
+    )
+    require_nondegenerate_triangle("translation-isometry-witness source", source_a, source_b, source_c)
+    require_nondegenerate_triangle("translation-isometry-witness target", target_a, target_b, target_c)
+    if point_add2(source_a, vector) != target_a:
+        fail("translation-isometry-witness target_a is not source_a plus translation")
+    if point_add2(source_b, vector) != target_b:
+        fail("translation-isometry-witness target_b is not source_b plus translation")
+    if point_add2(source_c, vector) != target_c:
+        fail("translation-isometry-witness target_c is not source_c plus translation")
+    if triangle_distance_table(source_a, source_b, source_c) != source_distances:
+        fail("translation-isometry-witness source distances are incorrect")
+    if triangle_distance_table(target_a, target_b, target_c) != target_distances:
+        fail("translation-isometry-witness target distances are incorrect")
+    if source_distances != target_distances:
+        fail("translation-isometry-witness must preserve the full distance table")
+
+    congruent = checks["congruent-triangle-distance-witness"]
+    if congruent["expected_result"] != "sat":
+        fail("congruent-triangle-distance-witness must expect sat")
+    values = single_witness_values(congruent, witnesses)
+    left_a = require_point2("rigid congruent left_a", values.get("left_a"))
+    left_b = require_point2("rigid congruent left_b", values.get("left_b"))
+    left_c = require_point2("rigid congruent left_c", values.get("left_c"))
+    right_a = require_point2("rigid congruent right_a", values.get("right_a"))
+    right_b = require_point2("rigid congruent right_b", values.get("right_b"))
+    right_c = require_point2("rigid congruent right_c", values.get("right_c"))
+    left_distances = require_triangle_distances(
+        "rigid congruent left_distances",
+        values.get("left_distances"),
+    )
+    right_distances = require_triangle_distances(
+        "rigid congruent right_distances",
+        values.get("right_distances"),
+    )
+    require_nondegenerate_triangle("congruent-triangle-distance-witness left", left_a, left_b, left_c)
+    require_nondegenerate_triangle("congruent-triangle-distance-witness right", right_a, right_b, right_c)
+    if triangle_distance_table(left_a, left_b, left_c) != left_distances:
+        fail("congruent-triangle-distance-witness left distances are incorrect")
+    if triangle_distance_table(right_a, right_b, right_c) != right_distances:
+        fail("congruent-triangle-distance-witness right distances are incorrect")
+    if left_distances != right_distances:
+        fail("congruent-triangle-distance-witness must list matching distance tables")
+
+    bad_distance = checks["bad-rigid-distance-table-rejected"]
+    if bad_distance["expected_result"] != "unsat" or bad_distance.get("proof_status") != "checked":
+        fail("bad-rigid-distance-table-rejected must be a checked unsat row")
+    data = bad_distance.get("data", {})
+    p = require_point2("bad rigid distance p", data.get("p"))
+    q = require_point2("bad rigid distance q", data.get("q"))
+    computed = require_fraction(
+        "bad rigid computed_distance_squared",
+        data.get("computed_distance_squared"),
+    )
+    claimed = require_fraction(
+        "bad rigid claimed_distance_squared",
+        data.get("claimed_distance_squared"),
+    )
+    if distance_squared2(p, q) != computed:
+        fail("bad-rigid-distance-table-rejected computed distance is incorrect")
+    if computed == claimed:
+        fail("bad-rigid-distance-table-rejected must document a false distance claim")
+    farkas_distance_claim = data.get("farkas_distance_claim")
+    require_string("bad rigid farkas_distance_claim", farkas_distance_claim)
+    if farkas_distance_claim != "distance_squared = 10":
+        fail("bad-rigid-distance-table-rejected must document the Farkas distance claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad rigid smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/rigid-configuration-geometry-v0/smt2/"
+        "bad-rigid-distance-table-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-rigid-distance-table-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad rigid smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad rigid farkas_regression", regression)
+    if "rigid_configuration_bad_distance_table_artifact_emits_checked_farkas" not in regression:
+        fail("bad-rigid-distance-table-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad rigid certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("bad-rigid-distance-table-rejected certificate must document Farkas evidence")
+
+    horizon = checks["general-rigidity-geometry-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-rigidity-geometry-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-rigidity-geometry-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general rigidity geometry target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general rigidity geometry future_checker", data.get("future_checker"))
 
 
 def validate_affine_geometry(expected: dict[str, Any]) -> None:
@@ -15978,6 +16148,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_integer_lia(expected)
     if metadata["id"] == "inner-product-spaces-rational-v0":
         validate_inner_product_spaces_rational(expected)
+    if metadata["id"] == "rigid-configuration-geometry-v0":
+        validate_rigid_configuration_geometry(expected)
     if metadata["id"] == "polynomial-factorization-rational-v0":
         validate_polynomial_factorization_rational(expected)
     if metadata["id"] == "finite-probability-v0":

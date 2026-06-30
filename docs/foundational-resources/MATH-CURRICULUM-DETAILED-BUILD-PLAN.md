@@ -36,12 +36,12 @@ The committed resource query currently reports:
 - 18 field rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 85 non-template math packs.
-- 427 expected checks.
-- 205 checked proof/evidence rows.
-- 174 replay-only rows.
-- 48 Lean-horizon rows.
-- 85 promoted solver-reuse packs.
+- 86 non-template math packs.
+- 432 expected checks.
+- 206 checked proof/evidence rows.
+- 177 replay-only rows.
+- 49 Lean-horizon rows.
+- 86 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -84,7 +84,7 @@ good R2/R3 lesson while still not being a theorem.
 
 ## Build Waves
 
-### Wave 1: Stabilize The Existing 85 Packs
+### Wave 1: Stabilize The Existing 86 Packs
 
 Goal: every current non-template pack has a deliberate R5 disposition:
 `promoted`, `non-benchmark-horizon`, or a clear reason to remain unclassified.
@@ -216,7 +216,7 @@ Exit criteria:
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians | LP objective/Farkas and rational convexity/gradient bridge rows landed; add only distinct duality, KKT, separation, SDP, or convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms | keep finite replay and numerical-honesty rows distinct from promoted exact residual/error certificates | QF_LRA/Farkas, replay, Lean horizon |
 | `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | keep bounded-dynamics and finite-Euler checked rows source-linked; add only distinct transition, reachability, invariant, stochastic, or finite-error pressure | QF_LRA/Farkas, replay, Lean horizon |
-| `geometry` | coordinate, incidence, affine, orientation/area rational geometry | incidence geometry now has a checked bad point-on-line row; add only distinct collinearity, midpoint, or rigid-configuration pressure | QF_LRA/Farkas, finite replay |
+| `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area rational geometry | rigid-configuration geometry now has a checked bad distance-table row; add only distinct collinearity, midpoint, isometry, or polynomial-geometry pressure | QF_LRA/Farkas, finite replay |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now has a checked bad-bound row; add only distinct norm, recurrence, interpolation, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
 
 ## Curriculum Node Build Ledger
@@ -427,7 +427,13 @@ Pick one row per commit unless the change is purely navigational.
    geometry pack. The pack validates exact line-equation replay, non-parallel
    line intersection, point-on-line replay, checked QF_LRA/Farkas rejection of
    a false incidence claim, a focused learner page, and a bridge-row update so
-   geometry queries now expose four promoted packs.
+   geometry queries expose incidence as a first-class promoted pack.
+47. Landed: add `rigid-configuration-geometry-v0` as the next distinct
+   geometry pack. The pack validates exact triangle distance-table replay,
+   translation isometry replay, congruent-triangle distance replay, checked
+   QF_LRA/Farkas rejection of a false distance-table claim, a focused learner
+   page, and a bridge-row update so geometry queries now expose five promoted
+   packs.
 
 ## Validation Checklist
 
