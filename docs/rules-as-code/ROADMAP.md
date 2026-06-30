@@ -51,10 +51,10 @@ The local validator
 [validate-rules-as-code.py](../../scripts/validate-rules-as-code.py) checks the
 metadata shape, citation file references, expected check records, concrete
 witness replay, and finite-sample consistency/coverage/monotonicity. Solver
-proof integration has started: consistency and monotonicity now have
-source-linked Bool/QF_LIA fixtures checked by
-`cargo test -p axeyum-solver --test rules_as_code_examples`; coverage and
-implementation equivalence remain explicit proof gaps.
+proof integration has started: consistency, coverage, monotonicity, and bounded
+implementation equivalence now have source-linked Bool/QF_LIA fixtures checked
+by `cargo test -p axeyum-solver --test rules_as_code_examples`; threshold and
+temporal-transition rows remain replayed witnesses.
 
 The cross-resource reuse map is
 [Rules/Law Crosswalk For Foundational Resources](../foundational-resources/RULES-LAW-CROSSWALK.md).

@@ -924,9 +924,9 @@ shapes, source math packs, Axeyum fragments, proof routes, and the current
 
 Next work:
 
-- Extend the `benefit-eligibility-v0` Bool/QF_LIA proof harness from the landed
-  consistency and monotonicity fixtures to coverage and bounded implementation
-  equivalence.
+- Use the completed `benefit-eligibility-v0` Bool/QF_LIA proof harness as the
+  reference pattern for generated multi-row coverage/equivalence queries or for
+  the next authorization-policy pack.
 - Reuse pack schema ideas before creating law-specific schema fields.
 - Keep citations and source provenance mandatory for legal/policy examples.
 
@@ -967,13 +967,16 @@ Pick one item per commit unless the change is purely navigational.
 6. Landed: add a rules/law crosswalk doc that maps finite predicates,
    arithmetic thresholds, graph reachability, precedence, and proof routes to
    policy/rule checks.
-7. Add a consumer-query recipe for "find all packs for a field and route".
-8. Add negative validator fixtures for one resource schema once the schema
+7. Landed: complete the `benefit-eligibility-v0` Bool/QF_LIA proof harness for
+   consistency, coverage, fixed no-exception monotonicity, and active-threshold
+   implementation equivalence.
+8. Add a consumer-query recipe for "find all packs for a field and route".
+9. Add negative validator fixtures for one resource schema once the schema
    shape stops changing.
-9. Audit `planned` vs `covered` statuses in the curriculum DAG and generated
+10. Audit `planned` vs `covered` statuses in the curriculum DAG and generated
     dashboards so status means current resource maturity, not historical state.
-10. Add one route-specific tamper/rejection test per proof certificate route.
-11. Revisit the library boundary decision after the next five solver-reuse
+11. Add one route-specific tamper/rejection test per proof certificate route.
+12. Revisit the library boundary decision after the next five solver-reuse
     promotions and at least one downstream consumer use.
 
 ## Validation Checklist

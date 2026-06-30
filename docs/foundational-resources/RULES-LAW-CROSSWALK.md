@@ -69,11 +69,11 @@ pack already exercises the first slice of this crosswalk:
 | Pack Check | Current Evidence | Crosswalk Pattern | Next Axeyum Upgrade |
 |---|---|---|---|
 | `consistency` | source-linked Bool/QF_LIA fixture with checked Axeyum evidence | finite predicates plus Bool/QF_LIA | broaden from one fixed source-linked obligation to reusable generated consistency queries |
-| `coverage` | finite-sample replay | finite predicate totality | encode a no-output fact pattern and keep the finite-domain boundary explicit |
+| `coverage` | source-linked Bool/QF_LIA no-output fixture with checked Axeyum evidence, plus finite-sample replay | finite predicate totality | broaden to generated coverage queries over representative complete fact patterns |
 | `threshold_cliff` | concrete witnesses replay | integer thresholds | produce minimized QF_LIA witnesses at and just above active thresholds |
 | `monotonicity` | source-linked Bool/QF_LIA fixture with checked Axeyum evidence for the fixed no-exception obligation | arithmetic monotonicity | broaden to generated exception-aware monotonicity queries |
 | `temporal_transition` | concrete witnesses replay | versioned arithmetic dates | keep the old/new date split explicit and test both sides of the effective date |
-| `implementation_equivalence` | executable validator replay | bounded equivalence | add an existential mismatch query over the bounded sample domain |
+| `implementation_equivalence` | source-linked Bool/QF_LIA mismatch fixture with checked Axeyum evidence for the active-threshold slice, plus executable witness replay | bounded equivalence | broaden to generated mismatch queries over versioned/bounded domains |
 
 Validation for the current pack remains:
 
@@ -99,8 +99,10 @@ exists.
 ## Build Order
 
 1. Keep `benefit-eligibility-v0` as the reference pack. Landed: source-linked
-   Bool/QF_LIA fixtures for consistency and fixed no-exception monotonicity.
-   Next: add coverage and bounded implementation-equivalence fixtures.
+   Bool/QF_LIA fixtures for consistency, coverage, fixed no-exception
+   monotonicity, and active-threshold implementation equivalence. Next: broaden
+   those one-off fixtures into generated multi-row queries or move to the
+   authorization-policy pack.
 2. Add the authorization-policy pack from the
    [rules-as-code roadmap](../rules-as-code/ROADMAP.md) and reuse graph
    reachability plus finite order/lattice checks for tenant isolation and

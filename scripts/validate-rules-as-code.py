@@ -233,9 +233,19 @@ def validate_expected(metadata: dict[str, Any], expected: dict[str, Any]) -> Non
         "benefit_eligibility_consistency_emits_checked_evidence",
     )
     validate_solver_fixture(
+        checks["coverage"],
+        "coverage-bool-qf-lia-conflict.smt2",
+        "benefit_eligibility_coverage_emits_checked_evidence",
+    )
+    validate_solver_fixture(
         checks["monotonicity"],
         "monotonicity-bool-qf-lia-conflict.smt2",
         "benefit_eligibility_monotonicity_emits_checked_evidence",
+    )
+    validate_solver_fixture(
+        checks["implementation_equivalence"],
+        "implementation-equivalence-bool-qf-lia-conflict.smt2",
+        "benefit_eligibility_implementation_equivalence_emits_checked_evidence",
     )
     validate_finite_sample(expected["sample_domain"], params)
 

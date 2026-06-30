@@ -17,13 +17,13 @@ page renders the important witness and proof-gap information for review.
 Every row above is replayed by
 [validate-rules-as-code.py](../../../../scripts/validate-rules-as-code.py).
 
-## Proof Gaps
+## Check Evidence
 
 | Check | Expected | Current evidence |
 |---|---|---|
 | `consistency` | `unsat` | Source-linked Bool/QF_LIA fixture with checked Axeyum evidence. |
-| `coverage` | `unsat` | Finite-sample replay only; needs Bool/QF_LIA Axeyum proof harness. |
+| `coverage` | `unsat` | Source-linked Bool/QF_LIA fixture with checked Axeyum evidence, plus finite-sample replay. |
 | `threshold_cliff` | `sat` | Concrete witnesses replay. |
 | `monotonicity` | `unsat` | Source-linked Bool/QF_LIA fixture with checked Axeyum evidence for the fixed no-exception obligation. |
 | `temporal_transition` | `sat` | Concrete witnesses replay. |
-| `implementation_equivalence` | `sat` | Validator implementation agrees with documented witnesses; solver equivalence query is future work. |
+| `implementation_equivalence` | `unsat` | Source-linked Bool/QF_LIA mismatch query with checked Axeyum evidence for the active-threshold slice; documented witnesses still replay against the validator. |

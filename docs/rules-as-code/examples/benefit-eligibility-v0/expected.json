@@ -115,9 +115,14 @@
     {
       "id": "coverage",
       "expected_result": "unsat",
-      "validation": "finite_sample_replay",
-      "proof_status": "proof-gap",
-      "proof_gap": "No dedicated rules-as-code SMT harness yet; current validator checks complete fact patterns over the finite sample."
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 1(a)", "Example Rule 1(b)", "Example Rule 1(c)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/benefit-eligibility-v0/smt2/coverage-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples benefit_eligibility_coverage_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
     },
     {
       "id": "threshold_cliff",
@@ -147,10 +152,16 @@
     },
     {
       "id": "implementation_equivalence",
-      "expected_result": "sat",
-      "validation": "executable_replay",
-      "proof_status": "replayed",
-      "notes": "scripts/validate-rules-as-code.py is the executable model for the first pack; a separate Axeyum encoding is the next increment."
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 1(a)", "Example Rule 1(b)", "Example Rule 1(c)", "Example Rule 1(d)", "Example Rule 1(e)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/benefit-eligibility-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples benefit_eligibility_implementation_equivalence_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      },
+      "notes": "The SMT-LIB mismatch query encodes the rule model and executable interpretation for the active-threshold slice and asks for disagreement."
     }
   ]
 }

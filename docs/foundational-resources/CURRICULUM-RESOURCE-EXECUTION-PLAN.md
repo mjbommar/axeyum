@@ -434,10 +434,11 @@ Next buildout:
     [RULES-LAW-CROSSWALK.md](RULES-LAW-CROSSWALK.md), a rules/law reasoning
     resource plan that explicitly reuses finite predicates, arithmetic
     thresholds, graph reachability, precedence, optimization, and proof-route
-    vocabulary. The first source-linked Bool/QF_LIA fixtures now check
-    `benefit-eligibility-v0` consistency and fixed no-exception monotonicity
-    through `crates/axeyum-solver/tests/rules_as_code_examples.rs`; coverage
-    and bounded implementation equivalence are next.
+    vocabulary. Source-linked Bool/QF_LIA fixtures now check
+    `benefit-eligibility-v0` consistency, coverage, fixed no-exception
+    monotonicity, and active-threshold implementation equivalence through
+    `crates/axeyum-solver/tests/rules_as_code_examples.rs`; next work is
+    generated multi-row queries or the authorization/tax-benefit packs.
 12. Add generated typed-consumer sketches only after at least one downstream
     user needs them.
 13. Revisit the library boundary decision once consumers or repeated encoders

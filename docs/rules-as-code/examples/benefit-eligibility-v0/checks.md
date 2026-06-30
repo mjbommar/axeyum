@@ -21,11 +21,14 @@ Every complete fact pattern should produce either eligible or ineligible.
 
 Expected result: `unsat` for `not eligible and not ineligible`.
 
-Current validation: finite-sample replay.
+Current validation: source-linked Bool/QF_LIA fixture
+[coverage-bool-qf-lia-conflict.smt2](smt2/coverage-bool-qf-lia-conflict.smt2)
+checked by
+`cargo test -p axeyum-solver --test rules_as_code_examples`, plus finite-sample
+replay over the listed sample domain.
 
-Proof status: proof gap. This becomes trivial once `ineligible = not eligible`
-is encoded, but the pack still records it because coverage is a standard
-rules-as-code check.
+Proof status: checked. The fixture keeps the standard rules-as-code coverage
+shape visible by asserting a complete fact pattern with neither output assigned.
 
 ## Threshold Cliff
 
@@ -72,11 +75,17 @@ Proof status: replayed witness, not an unsat proof.
 
 ## Implementation Equivalence
 
-The executable replay function in the validator must agree with every expected
-witness in [expected.json](expected.json).
+The executable interpretation and the logical model should agree on the
+active-threshold rule slice.
 
-Expected result: `sat` in the sense that every documented witness is accepted by
-the implementation.
+Expected result: `unsat` for a mismatch between `model_eligible` and
+`implementation_eligible`.
 
-Proof status: replayed. A separate Axeyum-vs-implementation equivalence query is
-future work.
+Current validation: source-linked Bool/QF_LIA fixture
+[implementation-equivalence-bool-qf-lia-conflict.smt2](smt2/implementation-equivalence-bool-qf-lia-conflict.smt2)
+checked by
+`cargo test -p axeyum-solver --test rules_as_code_examples`, plus executable
+replay for the documented witnesses in [expected.json](expected.json).
+
+Proof status: checked for the active-threshold slice. Broader generated
+equivalence queries over versioned/bounded domains remain future work.

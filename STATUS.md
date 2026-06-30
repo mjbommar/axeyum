@@ -653,25 +653,27 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   threshold cliffs, graph reachability, precedence/lattices, temporal versions,
   implementation equivalence, and proof routes to current packs and expected
   rule-check shapes. `benefit-eligibility-v0` is now explicitly tied to
-  finite-sample replay today and Bool/QF_LIA proof-harness upgrades next. The
+  finite-sample replay plus checked Bool/QF_LIA proof-harness rows. The
   crosswalk is linked from the foundational-resource index, mdBook summary,
   rules-as-code README/roadmap, buildout roadmap, execution plan, and
   implementation matrix.
 
 - **Benefit-eligibility Bool/QF_LIA fixtures landed.**
   [`benefit-eligibility-v0`](docs/rules-as-code/examples/benefit-eligibility-v0/README.md)
-  now has source-linked SMT-LIB fixtures for consistency and fixed
-  no-exception monotonicity:
-  [`consistency-bool-qf-lia-conflict.smt2`](docs/rules-as-code/examples/benefit-eligibility-v0/smt2/consistency-bool-qf-lia-conflict.smt2)
+  now has source-linked SMT-LIB fixtures for consistency, coverage, fixed
+  no-exception monotonicity, and active-threshold implementation equivalence:
+  [`consistency-bool-qf-lia-conflict.smt2`](docs/rules-as-code/examples/benefit-eligibility-v0/smt2/consistency-bool-qf-lia-conflict.smt2),
+  [`coverage-bool-qf-lia-conflict.smt2`](docs/rules-as-code/examples/benefit-eligibility-v0/smt2/coverage-bool-qf-lia-conflict.smt2),
+  [`implementation-equivalence-bool-qf-lia-conflict.smt2`](docs/rules-as-code/examples/benefit-eligibility-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2),
   and
   [`monotonicity-bool-qf-lia-conflict.smt2`](docs/rules-as-code/examples/benefit-eligibility-v0/smt2/monotonicity-bool-qf-lia-conflict.smt2).
   The new
   [`rules_as_code_examples`](crates/axeyum-solver/tests/rules_as_code_examples.rs)
-  regression parses both obligations, requires `Unsat`, and accepts only
+  regression parses all four obligations, requires `Unsat`, and accepts only
   certified evidence that independently rechecks with `Evidence::check`. The
   rules validator now enforces the artifact paths, citation labels, regression
-  names, and checked-evidence contract. Coverage and bounded implementation
-  equivalence remain the next proof-harness gaps for this pack.
+  names, and checked-evidence contract. Next work is generated multi-row
+  coverage/equivalence queries or the next rules/law pack.
 
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)

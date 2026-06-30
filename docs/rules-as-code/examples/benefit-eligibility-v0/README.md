@@ -36,8 +36,9 @@ records, and every documented witness. It also exhaustively samples the listed
 age/income/date/Boolean domain to validate consistency, coverage, and income
 monotonicity for this toy pack.
 
-The consistency and monotonicity rows now also have source-linked Bool/QF_LIA
-fixtures under [smt2/](smt2/) and checked Axeyum evidence through:
+The consistency, coverage, monotonicity, and bounded implementation-equivalence
+rows now also have source-linked Bool/QF_LIA fixtures under [smt2/](smt2/) and
+checked Axeyum evidence through:
 
 ```sh
 cargo test -p axeyum-solver --test rules_as_code_examples

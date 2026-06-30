@@ -10,8 +10,14 @@ use axeyum_solver::{CheckResult, SolverConfig, check_auto, produce_evidence};
 const BENEFIT_ELIGIBILITY_CONSISTENCY: &str = include_str!(
     "../../../docs/rules-as-code/examples/benefit-eligibility-v0/smt2/consistency-bool-qf-lia-conflict.smt2"
 );
+const BENEFIT_ELIGIBILITY_COVERAGE: &str = include_str!(
+    "../../../docs/rules-as-code/examples/benefit-eligibility-v0/smt2/coverage-bool-qf-lia-conflict.smt2"
+);
 const BENEFIT_ELIGIBILITY_MONOTONICITY: &str = include_str!(
     "../../../docs/rules-as-code/examples/benefit-eligibility-v0/smt2/monotonicity-bool-qf-lia-conflict.smt2"
+);
+const BENEFIT_ELIGIBILITY_IMPLEMENTATION_EQUIVALENCE: &str = include_str!(
+    "../../../docs/rules-as-code/examples/benefit-eligibility-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2"
 );
 
 #[test]
@@ -23,10 +29,26 @@ fn benefit_eligibility_consistency_emits_checked_evidence() {
 }
 
 #[test]
+fn benefit_eligibility_coverage_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "benefit-eligibility-v0 coverage",
+        BENEFIT_ELIGIBILITY_COVERAGE,
+    );
+}
+
+#[test]
 fn benefit_eligibility_monotonicity_emits_checked_evidence() {
     assert_rule_unsat_evidence(
         "benefit-eligibility-v0 monotonicity",
         BENEFIT_ELIGIBILITY_MONOTONICITY,
+    );
+}
+
+#[test]
+fn benefit_eligibility_implementation_equivalence_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "benefit-eligibility-v0 implementation equivalence",
+        BENEFIT_ELIGIBILITY_IMPLEMENTATION_EQUIVALENCE,
     );
 }
 
