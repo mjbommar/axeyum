@@ -29,6 +29,12 @@ python3 scripts/query-foundational-resources.py concepts --field statistics --te
 python3 scripts/query-foundational-resources.py concepts --field statistics --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field statistics --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field statistics --route Diophantine --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field linear_algebra --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field linear_algebra --route Alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field linear_algebra --text rank --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field linear_algebra --text projection --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field linear_algebra --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field linear_algebra --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field optimization_and_convexity --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text objective --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text convexity --require-any >/dev/null

@@ -2022,6 +2022,16 @@ random-matrix finite moments, finite probability/process tables,
 concentration rows, and stochastic-kernel checks stay visible through the
 public JSON boundary without promoting floating-point inference, asymptotic
 sampling, MCMC, VI, or model-calibration claims.
+The consumer query layer now also exposes linear-algebra readiness:
+`CONSUMER-QUERIES.md` shows Farkas and Alethe field summaries, rank and
+projection bridge lookups, and checked exact-rational/equality-heavy
+linear-algebra row drill-downs. The foundational-resource smoke check runs
+those same queries so rational systems, residual bounds, least-squares,
+eigenpair checks, matrix invariants, finite vector spaces, dual spaces,
+modules, tensors, geometry dot products, finite SDP/KKT/active-set rows, and
+matrix-process equations stay visible through the public JSON boundary without
+promoting spectral-theorem, conditioning/stability, or general
+vector-space/module theorem claims.
 The consumer query layer now also exposes optimization/convexity readiness:
 `CONSUMER-QUERIES.md` shows the Farkas field summary, LP-objective and
 convexity bridge lookups, and checked optimization/convexity Farkas row

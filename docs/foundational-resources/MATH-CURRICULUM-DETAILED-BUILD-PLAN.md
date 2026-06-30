@@ -596,6 +596,13 @@ Pick one row per commit unless the change is purely navigational.
     count rows, making exact finite tests, contingency tables, regression,
     random-matrix, finite probability, process-table, and concentration
     resources visible through the committed JSON contract.
+70. Landed: add linear-algebra field-readiness consumer query coverage.
+    `CONSUMER-QUERIES.md` and `check-foundational-resources.sh` now exercise
+    linear-algebra Farkas and Alethe field summaries, rank and projection
+    bridge concept lookups, checked exact-rational matrix rows, and checked
+    equality-heavy finite vector-space, dual-space, module, and tensor rows,
+    making the matrix/algebraic linear-algebra lane visible through the
+    committed JSON contract.
 
 ## Validation Checklist
 

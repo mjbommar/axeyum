@@ -278,6 +278,61 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+For linear algebra, query the Farkas route to keep exact rational systems,
+residual bounds, least-squares normal equations, eigenpair checks,
+matrix-invariant rows, geometry dot-product rows, finite SDP/KKT/active-set
+rows, and finite dynamics/process matrix equations grouped while keeping
+spectral theorems, conditioning/stability, and general vector-space/module
+theorems in the proof-horizon or numerical-honesty lanes:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field linear_algebra \
+  --route Farkas \
+  --require-any
+```
+
+Use the Alethe route when the consumer wants finite vector-space, dual-space,
+module, tensor, and equality-heavy finite algebra rows:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field linear_algebra \
+  --route Alethe \
+  --require-any
+```
+
+Use atlas lookups for reusable matrix and functional vocabulary:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field linear_algebra \
+  --text rank \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field linear_algebra \
+  --text projection \
+  --require-any
+```
+
+To display concrete checked linear-algebra rows, drill into the exact-rational
+and equality-heavy routes separately:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field linear_algebra \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --field linear_algebra \
+  --route Alethe \
+  --proof-status checked \
+  --require-any
+```
+
 For optimization and convexity, query the Farkas route to keep exact LP
 thresholds, finite convexity shadows, regression normal equations, residual
 bounds, gradient/Hessian replay, finite KKT stationarity, finite SDP

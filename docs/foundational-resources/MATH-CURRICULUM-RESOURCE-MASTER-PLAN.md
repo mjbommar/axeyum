@@ -365,7 +365,13 @@ Use one row per commit unless the change is purely navigational.
    contingency tables, finite probability/process rows, least-squares,
    random-matrix moments, finite-table concepts, and tail-count obstructions
    visible through the public JSON contract.
-13. Add future rules/law crosswalk examples only by reusing existing
+13. Landed: add linear-algebra consumer-query coverage through
+   [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
+   `scripts/check-foundational-resources.sh`, making exact matrix rows,
+   residual/eigen/projection/rank vocabulary, finite vector/dual/module/tensor
+   rows, and Farkas/Alethe proof routes visible through the public JSON
+   contract.
+14. Add future rules/law crosswalk examples only by reusing existing
    math-resource patterns; do not create a separate rule ontology until the
    current JSON boundary is exercised by more consumers.
 

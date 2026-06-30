@@ -1531,7 +1531,12 @@ Pick one item per commit unless the change is purely navigational.
     check, covering Farkas field readiness, finite-table/tail-count bridge
     lookups, checked exact-rational statistics rows, and checked Diophantine
     count rows.
-81. Continue proof-route promotions or consumer-query examples; revisit the
+81. Landed: add linear-algebra field-readiness consumer queries through
+    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational smoke
+    check, covering Farkas/Alethe field readiness, rank/projection bridge
+    lookups, checked exact-rational matrix rows, and checked finite
+    vector/dual/module/tensor equality rows.
+82. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

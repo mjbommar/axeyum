@@ -205,6 +205,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Linear-algebra consumer queries landed.**
+  [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
+  now shows public JSON queries for linear-algebra Farkas/Alethe field
+  readiness, rank/projection bridge lookups, checked exact-rational matrix
+  rows, and checked equality-heavy finite vector-space, dual-space, module,
+  and tensor rows. `check-foundational-resources.sh` now smoke-checks those
+  queries without promoting spectral-theorem, conditioning/stability, or
+  general vector-space theorem claims.
+
 - **Statistics consumer queries landed.**
   [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
   now shows public JSON queries for statistics Farkas field readiness,

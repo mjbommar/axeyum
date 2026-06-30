@@ -186,6 +186,14 @@ concentration, and stochastic kernels are smoke-checked through the committed
 JSON contract, while floating-point inference, asymptotic sampling, MCMC, VI,
 and model-calibration claims stay in numerical-honesty or theorem-horizon
 lanes.
+The public foundational-resource consumer query layer now also exercises the
+linear-algebra lane: Farkas/Alethe field readiness, rank/projection bridge
+lookups, and checked rows for exact rational matrices, residual/eigen
+witnesses, finite vector spaces, dual spaces, modules, tensors, geometry
+dot-products, finite SDP/KKT/active-set rows, and matrix process equations are
+smoke-checked through the committed JSON contract, while spectral theorems,
+conditioning/stability, and general vector-space/module theorem claims stay in
+the horizon lanes.
 The sequence/real-analysis lane now also splits bounded monotone sequence and
 finite recurrence-prefix, separation/root-finding, KKT, active-set QP, SDP, and gradient-descent checks into focused packs: finite monotone-prefix
 replay, finite prefix supremum, finite tail-gap replay, Fibonacci prefix
