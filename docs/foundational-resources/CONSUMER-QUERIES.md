@@ -263,12 +263,36 @@ python3 scripts/query-foundational-resources.py fields \
 ```
 
 Use the finite atlas lookup for recurring finite bijection/cardinality,
-quantifier-expansion, Boolean CNF, and integer-obstruction families:
+quantifier-expansion, Boolean CNF, and integer-obstruction families. Use the
+counting lookup when a consumer wants permutation/Pascal rows, pigeonhole
+proofs, double-counting tables, coefficient extraction, orbit counts, and
+exact finite tail counts grouped as one curriculum theme:
 
 ```sh
 python3 scripts/query-foundational-resources.py concepts \
   --field discrete_math \
   --text finite \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field discrete_math \
+  --text counting \
+  --require-any
+```
+
+Concept-plus-route queries can then drill into the shared finite-counting
+bridge without hard-coding pack names:
+
+```sh
+python3 scripts/query-foundational-resources.py packs \
+  --concept bridge_finite_counting_replay \
+  --route boolean \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_counting_replay \
+  --route Diophantine \
+  --proof-status checked \
   --require-any
 ```
 
@@ -972,7 +996,10 @@ python3 scripts/query-foundational-resources.py concepts --field set_theory_and_
 python3 scripts/query-foundational-resources.py checks --field set_theory_and_foundations --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field discrete_math --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field discrete_math --text finite --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field discrete_math --text counting --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field discrete_math --route Diophantine --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_finite_counting_replay --route boolean --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_counting_replay --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field differential_equations_and_dynamical_systems --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field differential_equations_and_dynamical_systems --text stochastic --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field topology --route boolean --require-any >/dev/null

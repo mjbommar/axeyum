@@ -35,12 +35,12 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 98 atlas rows generated from curriculum, field data, 52 R1 bridge
+- 99 atlas rows generated from curriculum, field data, 53 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
   number-system exact-vs-floating, totality convention, gcd/divisibility
-  witness vocabulary, and modular CRT/inverse witness vocabulary,
+  witness, modular CRT/inverse witness, and finite-counting replay vocabulary,
   linear-algebra computation vocabulary, probability/statistics finite-table
   vocabulary, measure-theory additivity/product/integration vocabulary,
   optimization/convexity LP and finite-shadow vocabulary, algebra-map
@@ -629,9 +629,15 @@ Next buildout:
     contrasts, and the checked nonunit Diophantine certificate discoverable from
     the atlas without claiming the full Chinese remainder theorem or arbitrary
     field theory.
-13. Add generated typed-consumer sketches only after at least one downstream
+13. Landed: add the finite-counting replay bridge row and discrete-math
+    counting consumer smoke lookups, making permutation/Pascal rows,
+    pigeonhole proofs, double-counting tables, coefficient extraction, finite
+    orbit counts, and exact finite tail counts discoverable by concept and
+    route while keeping asymptotic counting and unbounded combinatorics in the
+    horizon lane.
+14. Add generated typed-consumer sketches only after at least one downstream
     user needs them.
-14. Current boundary review: promoted solver-reuse rows are now readable through
+15. Current boundary review: promoted solver-reuse rows are now readable through
     the dependency-free query consumer, but that still does not justify a Rust
     crate or separate repository. Revisit again once a non-repo consumer,
     repeated typed access call sites, or reusable encoders make in-repo

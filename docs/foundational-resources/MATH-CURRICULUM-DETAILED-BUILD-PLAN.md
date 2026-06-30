@@ -36,7 +36,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 52 bridge-concept rows.
+- 53 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math packs.
 - 516 expected checks.
@@ -206,7 +206,7 @@ Exit criteria:
 |---|---|---|---|
 | `logic_and_proof` | SAT, refutation, finite proof patterns, induction bounds | maintain proof-object anatomy bridge rows and PHP CNF promotions | Bool/CNF DRAT/LRAT, QF_LIA, Lean horizon |
 | `set_theory_and_foundations` | finite sets, relations, functions, quotients, lattices, cardinality | maintain landed finite Boolean algebra, partition/relation, image/preimage/inverse, finite cardinality, and cardinality-horizon bridge rows | finite replay, Bool/CNF, QF_UF/Alethe, Lean horizon |
-| `discrete_math` | counting, generating functions, graph resources, finite actions | maintain pigeonhole and coefficient-convolution examples; add new rows only for distinct counting pressure | Bool/CNF, QF_LIA, finite replay |
+| `discrete_math` | counting, generating functions, graph resources, finite actions | maintain landed finite-counting replay bridge and add new rows only for distinct counting, recurrence, or asymptotic-boundary pressure | Bool/CNF, QF_LIA, finite replay |
 | `graph_theory` | coloring, reachability, search runtime, matching, cuts, d-separation | keep one promoted representative per family; add asymptotic horizons only as proof targets | Bool/CNF, QF_BV, QF_LIA, finite replay |
 | `number_theory` | gcd, modular arithmetic, residues, bounded Diophantine checks | group recurring divisibility and residue obstructions | QF_LIA/Diophantine, QF_BV |
 | `linear_algebra` | exact matrices, vector spaces, duals, modules, tensors, spectral rows, active-set QP rows, SDP rows, descent-step rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | make matrix rows queryable by computation type and solver route | QF_LRA/Farkas, finite replay, QF_UF/Alethe |
@@ -246,7 +246,7 @@ Exit criteria:
 | `fields` | maintain | finite fields plus linear-algebra links; arbitrary-field facts horizon |
 | `polynomials` | deepen | polynomial identities now have a QF_LIA false-root regression; factorization has a QF_LRA/Farkas discriminant regression; root-finding has exact polynomial evaluation plus a QF_LRA/Farkas bad-step regression |
 | `sequences-and-limits` | deepen | bounded Cauchy-tail and bounded monotone-prefix bad-bound rows now have QF_LRA/Farkas regressions; convergence theorems stay Lean horizon |
-| `counting` | promote | pigeonhole CNF/LRAT and coefficient-count rows |
+| `counting` | maintain | finite-counting replay bridge now groups pigeonhole CNF/LRAT, coefficient-count, double-counting, finite orbit-count, and exact tail-count rows |
 | `number-theory` | maintain | bounded residue and Diophantine families |
 | `linear-algebra` | deepen | matrix corpus notes, dot-product/separator/KKT/active-set-QP/SDP/gradient-step/line-search/Wolfe/projected-gradient/proximal-gradient/circle-tangent/inversion rows, and route-specific regression back-links |
 | `calculus` | deepen | one-variable false derivative, Riemann-sum false integral, multivariable bad-gradient, finite root-finding bad-step, finite KKT bad-stationarity, finite active-set QP bad-free-gradient, finite gradient-descent bad-decrease, finite line-search bad-Armijo, finite Wolfe bad-curvature, finite projected-gradient bad-projection, and finite proximal-gradient bad-proximal-point rows now have QF_LRA/Farkas regressions |
@@ -673,8 +673,15 @@ Pick one row per commit unless the change is purely navigational.
     witnesses, modular inverse witnesses, fixed residue searches, finite-field
     unit/nonunit contrasts, quotient-ring-adjacent vocabulary, and the checked
     nonunit Diophantine certificate queryable from the atlas. The
-    number-theory consumer smoke now includes CRT concept lookup, and the atlas
-    now validates 52 bridge rows.
+    number-theory consumer smoke now includes CRT concept lookup, and that
+    increment raised the atlas to 52 bridge rows.
+80. Landed: add the finite-counting replay bridge row.
+    `bridge_finite_counting_replay` makes permutation/Pascal rows, pigeonhole
+    proof routes, double-counting tables, coefficient extraction, finite
+    orbit-count replay, and exact finite tail-count contradictions queryable
+    from the atlas. The discrete-math consumer smoke now includes counting
+    concept lookup and concept-scoped Boolean/Diophantine route queries, and
+    the atlas now validates 53 bridge rows.
 
 ## Validation Checklist
 

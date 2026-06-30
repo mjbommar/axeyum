@@ -40,7 +40,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 52 bridge-concept rows.
+- 53 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math example packs.
 - 516 expected checks.
@@ -462,8 +462,9 @@ Current packs:
 
 Build next:
 
-- Add concept rows for finite enumeration, pigeonhole, double counting,
-  coefficient extraction, recurrence prefix, and asymptotic horizon.
+- Landed finite-counting replay bridge row for finite enumeration, pigeonhole,
+  double counting, coefficient extraction, finite orbit counts, and exact
+  finite tail counts; add recurrence/asymptotic horizon rows only when reused.
 - Add one reusable "bounded family vs asymptotic theorem" bridge row for graph
   search and recurrences.
 - Promote finite counting contradictions through CNF/LRAT or LIA when they
@@ -1594,7 +1595,15 @@ Pick one item per commit unless the change is purely navigational.
     replay, fixed residue searches, finite-field unit/nonunit contrasts, and
     checked nonunit Diophantine evidence. The foundational smoke check now
     exercises number-theory CRT concept lookup.
-91. Continue proof-route promotions or consumer-query examples; revisit the
+91. Landed: add the finite-counting replay bridge row, tying `counting-v0`,
+    `proof-methods-refutation-v0`, `cardinality-principles-v0`,
+    `generating-functions-v0`, `finite-group-actions-v0`, and
+    `exact-statistical-tests-v0` to finite enumeration, pigeonhole proofs,
+    double-counting tables, coefficient extraction, finite orbit counts, and
+    exact finite tail counts. The foundational smoke check now exercises
+    discrete-math counting lookup plus concept-scoped Boolean and Diophantine
+    route queries.
+92. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

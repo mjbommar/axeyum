@@ -205,6 +205,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite counting replay bridge concept landed.**
+  `bridge_finite_counting_replay` now makes permutation/Pascal rows,
+  pigeonhole proof routes, double-counting tables, coefficient extraction,
+  finite orbit counts, and exact finite tail-count contradictions queryable
+  from the foundational concept atlas. `CONSUMER-QUERIES.md`,
+  `FIELD-READINESS-QUERY-MATRIX.md`, and
+  `check-foundational-resources.sh` now exercise discrete-math counting lookup
+  plus concept-scoped Boolean and Diophantine route queries through the public
+  JSON/query boundary.
+
 - **Modular CRT/inverse bridge concept landed.**
   `bridge_modular_crt_inverse_witness` now makes concrete CRT congruence
   witnesses, modular inverse witnesses, fixed residue searches, finite-field
@@ -1533,7 +1543,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the detailed operating plan for turning the curriculum and 18-field math
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
-  library splits. It now records the current committed baseline of 98 concept
+  library splits. It now records the current committed baseline of 99 concept
   rows, 102 non-template packs, 516 expected checks, 222 checked rows, 229
   replay-only rows, 65 Lean-horizon rows, and 102 promoted solver-reuse packs,
   then lays out field-by-field build plans plus a prioritized execution queue.
@@ -1588,7 +1598,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
-  is now generated with 52 bridge rows. The proof-methodology rows are
+  is now generated with 53 bridge rows. The proof-methodology rows are
   `bridge_finite_model_replay`, `bridge_counterexample_proof`,
   `bridge_refutation_query`, `bridge_finite_proof_pattern`,
   `bridge_finite_quantifier_expansion`,
@@ -1607,7 +1617,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   queryable; the modular row is `bridge_modular_crt_inverse_witness`, making
   concrete CRT congruence witnesses, modular inverse witnesses, fixed residue
   searches, finite-field unit/nonunit contrasts, and checked nonunit
-  Diophantine evidence queryable; the
+  Diophantine evidence queryable; the finite-counting row is
+  `bridge_finite_counting_replay`, making permutation/Pascal rows, pigeonhole
+  proof routes, double-counting tables, coefficient extraction, finite orbit
+  counts, and exact finite tail-count contradictions queryable; the
   optimization/convexity rows are `bridge_lp_objective_farkas` and
   `bridge_rational_convexity_shadow`; the
   set/foundations rows are `bridge_finite_boolean_algebra`,
@@ -1657,7 +1670,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   while keeping duality, KKT sufficiency, SDP strong duality, general
   separation, projected-gradient convergence, proximal-gradient convergence,
   and convergence theorems as Lean horizons. The
-  foundational resource consumer now reports 98 concept rows while
+  foundational resource consumer now reports 99 concept rows while
   preserving 23 curriculum rows and 18 field rows. Next resource work should
   add the next proof-frontier promotion or boundary evidence from a real
   repeated consumer, depending on which roadmap lane is being advanced.

@@ -45,7 +45,7 @@ As of 2026-06-30, the committed resource query reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 52 bridge-concept rows.
+- 53 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math packs.
 - 516 expected checks.
@@ -299,7 +299,7 @@ Next useful increments:
 |---|---|---|---|---|
 | `logic_and_proof` | SAT, finite predicates, refutation, proof patterns, induction bounds | proof-object walkthroughs, finite countermodel patterns, bounded induction warnings | Bool/CNF DRAT/LRAT, QF_LIA, QF_UF, Lean horizon | corrupted proof/certificate rejection appears in learner material |
 | `set_theory_and_foundations` | finite sets, functions, quotients, lattices, cardinality, topology/measure finite sets | stronger finite/infinite boundary rows and reusable quotient/image/preimage vocabulary | finite replay, Bool/CNF, QF_UF/Alethe, Lean horizon | infinite claims are never benchmarked as finite checks |
-| `discrete_math` | counting, generating functions, graph resources, finite actions | double-counting, recurrence/asymptotic boundary, reusable finite enumeration rows | Bool/CNF, QF_LIA, finite replay | each row names universe size and theorem horizon |
+| `discrete_math` | counting, generating functions, graph resources, finite actions | landed finite-counting replay bridge for finite enumeration, pigeonhole, double-counting, coefficient extraction, finite orbit counts, and exact tail counts; add recurrence/asymptotic rows only when reused | Bool/CNF, QF_LIA, finite replay | each row names universe size and theorem horizon |
 | `graph_theory` | coloring, reachability, search runtime, matching, cuts, d-separation | one representative proof regression per graph family; pathologies with explicit cost counters | Bool/CNF, QF_BV, QF_LIA, finite replay | graph resources query by route and source artifact |
 | `number_theory` | gcd, modular arithmetic, residues, finite fields, bounded Diophantine rows | recurring divisibility/CRT/residue obstructions and fixed-width contrasts | QF_LIA/Diophantine, QF_BV | bounded search and theorem claims are visibly separated |
 | `linear_algebra` | rational matrices, finite vector/dual/module/tensor, spectral, invariant, optimization/numerical rows | matrix-computation index plus matrix-corpus boundary by LU/rank/nullity/projection/residual/eigen/characteristic/random-moment | QF_LRA/Farkas, finite replay, QF_UF/Alethe | solver regressions cite source pack and pack cites regression before benchmark claims |
@@ -422,7 +422,12 @@ Use one row per commit unless the change is purely navigational.
    contrasts, and the checked nonunit Diophantine certificate queryable from
    the atlas while keeping full CRT, field, and quotient-ring theorems in the
    horizon lane.
-23. Add future rules/law crosswalk examples only by reusing existing
+23. Landed: add the finite-counting replay bridge row and discrete-math
+   counting consumer smoke lookups, making finite enumeration, pigeonhole
+   proofs, double-counting tables, coefficient extraction, finite orbit counts,
+   and exact finite tail counts queryable from the atlas while keeping
+   asymptotic counting and unbounded combinatorics in the horizon lane.
+24. Add future rules/law crosswalk examples only by reusing existing
    math-resource patterns; do not create a separate rule ontology until the
    current JSON boundary is exercised by more consumers.
 

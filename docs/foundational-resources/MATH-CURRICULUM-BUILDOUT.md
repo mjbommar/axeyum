@@ -1298,7 +1298,7 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 98 atlas rows validate, including generated bridge-concept rows for
+  Status: 99 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows,
   refutation-as-query, finite proof-pattern replay, finite quantifier
   expansion, bounded induction obligations, Boolean CNF DRAT/LRAT anatomy,
@@ -1306,7 +1306,7 @@ Exit criteria:
   objective-threshold replay, rational convexity/gradient shadows, QF_UF
   Alethe certificate anatomy, QF_BV bit-blast
   certificate anatomy, gcd/divisibility witnesses, modular CRT/inverse
-  witnesses, finite Boolean algebra, finite
+  witnesses, finite counting replay, finite Boolean algebra, finite
   partition/relation roundtrips, finite image/preimage/inverse tables, finite
   bijection/cardinality, cardinality theorem horizons, metric balls, bounded
   epsilon-delta shadows, compactness shadows, connectedness shadows,
@@ -2152,6 +2152,16 @@ Diophantine evidence across `modular-arithmetic-v0`, `number-theory-v0`,
 check now exercises the number-theory CRT concept lookup through the public
 JSON/query boundary while keeping full CRT, arbitrary field theory, and
 quotient-ring theorem claims in the horizon lane.
+The discrete/counting concept layer now also has
+`bridge_finite_counting_replay`. It groups permutation/Pascal rows,
+pigeonhole proof routes, double-counting tables, coefficient extraction,
+finite orbit-count replay, and exact finite tail-count contradictions across
+`counting-v0`, `proof-methods-refutation-v0`, `cardinality-principles-v0`,
+`generating-functions-v0`, `finite-group-actions-v0`, and
+`exact-statistical-tests-v0`. The foundational-resource smoke check now
+exercises discrete-math counting lookup plus concept-scoped Boolean and
+Diophantine route queries while keeping asymptotic counting and unbounded
+combinatorics in the horizon lane.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

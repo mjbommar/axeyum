@@ -2473,6 +2473,125 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_finite_counting_replay",
+        "title": "Finite Counting Replay",
+        "field_ids": [
+            "discrete_math",
+            "set_theory_and_foundations",
+            "logic_and_proof",
+            "probability_theory",
+            "statistics",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite counting rows state the universe, count expression, "
+            "incidence table, coefficient, or finite function space being "
+            "checked. The trusted object is exact replay of the finite count "
+            "or a checked Bool/CNF or QF_LIA certificate for a malformed "
+            "counting claim, not an asymptotic or unbounded combinatorics "
+            "theorem."
+        ),
+        "prerequisites": [
+            "bridge_finite_model_replay",
+            "bridge_finite_bijection_cardinality",
+            "bridge_boolean_cnf_lrat_anatomy",
+            "curriculum_counting",
+        ],
+        "unlocks": [
+            "bridge_tail_count_obstruction",
+            "bridge_probability_mass_table",
+            "family_boolean_cnf_lrat",
+            "family_integer_diophantine",
+            "field_discrete_math",
+        ],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "finite counting",
+            "finite enumeration",
+            "finite function spaces",
+            "Bool / CNF",
+            "DRAT / LRAT",
+            "QF_LIA / Diophantine",
+            "finite replay",
+        ],
+        "example_packs": [
+            (
+                "counting-v0",
+                "Permutation count, Pascal identity, finite pigeonhole enumeration, and source-linked PHP(3,2) DRAT/LRAT evidence.",
+            ),
+            (
+                "proof-methods-refutation-v0",
+                "Proof-by-refutation view of the same fixed PHP(3,2) Boolean contradiction.",
+            ),
+            (
+                "cardinality-principles-v0",
+                "Finite inclusion-exclusion, disjoint-union additivity, double counting, powerset cardinality, and overlap-additivity Diophantine evidence.",
+            ),
+            (
+                "generating-functions-v0",
+                "Fixed coefficient extraction, finite Cauchy-product replay, and checked coefficient-convolution contradiction.",
+            ),
+            (
+                "finite-group-actions-v0",
+                "Orbit-stabilizer and Burnside-style finite orbit-count replay with general group-action theorems kept as Lean horizon.",
+            ),
+            (
+                "exact-statistical-tests-v0",
+                "Exact finite binomial and hypergeometric count rows plus a checked tail-count contradiction.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite counting replay plus Bool/CNF and QF_LIA certificates",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py plus math_resource_boolean_routes and math_resource_lia_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+                    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+                    "docs/learn/math/counting-pigeonhole-end-to-end.md",
+                    "docs/learn/math/proof-object-anatomy-end-to-end.md",
+                    "docs/learn/math/cardinality-principles-end-to-end.md",
+                    "docs/learn/math/generating-functions-end-to-end.md",
+                    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+                    "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+                ],
+                "notes": (
+                    "Positive rows recompute finite counts, coefficients, or "
+                    "orbit tables. Negative rows graduate when the source "
+                    "artifact is parsed and independently checked by the "
+                    "Boolean DRAT/LRAT or integer Diophantine route."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+            "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+            "docs/learn/math/counting-pigeonhole-end-to-end.md",
+            "docs/learn/math/graph-and-discrete-reasoning.md",
+            "docs/learn/math/cardinality-principles-end-to-end.md",
+            "docs/learn/math/generating-functions-end-to-end.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+            "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite counting replay does not prove general binomial identities, recurrence schemas, asymptotic enumeration, or unbounded pigeonhole principles.",
+            "Statistical count rows remain exact finite-table checks; approximations, sampling asymptotics, and floating-point implementations need separate numerical-honesty resources.",
+            "General Burnside/Cauchy-Frobenius, generating-function extraction, and combinatorial theorem families remain Lean-horizon until kernel-checked proofs exist.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite carrier, count formula, table, coefficient, or function-space obligation being checked.",
+                "Malformed finite-count rows link a source artifact and route regression before claiming checked evidence.",
+                "Learner pages distinguish finite replay and finite proof certificates from unbounded combinatorics or asymptotic theorem claims.",
+            ],
+        },
+    },
+    {
         "id": "bridge_cardinality_theorem_horizon",
         "title": "Cardinality Theorem Horizon",
         "field_ids": ["set_theory_and_foundations", "logic_and_proof", "discrete_math"],

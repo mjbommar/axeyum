@@ -8,6 +8,8 @@ Concept rows:
 
 - `curriculum_counting` in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
+- `bridge_finite_counting_replay` in the
+  [Foundational Concept Atlas](../../../artifacts/ontology/foundational-concepts.json)
 - `field_discrete_math` and `field_probability_theory` in the
   [Foundational Concept Atlas](../../../artifacts/ontology/foundational-concepts.json)
 
@@ -112,6 +114,12 @@ The current pigeonhole evidence includes both checked finite enumeration and a
 checked CNF proof-object route. That gives two independent views of the same
 finite impossibility: direct replay of all placements, and a smaller
 certificate checked against the DIMACS formula.
+The shared `bridge_finite_counting_replay` row is the atlas vocabulary for this
+pattern across permutation counts, Pascal rows, pigeonhole proofs,
+double-counting tables, coefficient extraction, finite orbit counts, and exact
+finite statistical tail counts. It deliberately stops at fixed finite
+instances; asymptotic counting and unbounded combinatorial theorems remain
+proof-horizon work.
 
 ## Run It
 
