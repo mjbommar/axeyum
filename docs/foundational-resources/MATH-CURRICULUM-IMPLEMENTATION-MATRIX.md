@@ -222,23 +222,27 @@ Build sequence:
 9. Recurring exact-rational infeasibility conflicts now have the
    `family_exact_rational_farkas` example-family row, backed by the shared
    `math_resource_lra_routes` regression.
-10. Generated dashboard columns for R0-R6 gate level and "next gate" now land
+10. Recurring finite Boolean refutations now have the
+   `family_boolean_cnf_lrat` example-family row, backed by the shared
+   `math_resource_boolean_routes` regression across logic, counting, graph,
+   finite-set, and finite-topology packs.
+11. Generated dashboard columns for R0-R6 gate level and "next gate" now land
    in the coverage, field, proof-gap, and learner/proof-upgrade dashboards;
    the curriculum-status audit now separates source curriculum status from
    generated resource maturity.
-11. The first deterministic `solver_reuse` batch is now fully promoted; no pack
+12. The first deterministic `solver_reuse` batch is now fully promoted; no pack
    remains tagged `candidate` in that initial batch.
-12. Consumer-facing sample queries now land through
+13. Consumer-facing sample queries now land through
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md): summary counts, pack discovery,
    field-plus-proof-route discovery, checked-row mining, solver-reuse rows,
    atlas concept lookup, and field-level curriculum readiness over the
    committed JSON data contract.
-13. Negative example-pack validator fixtures now land through
+14. Negative example-pack validator fixtures now land through
     `scripts/check-foundational-negative-fixtures.py` and
     `artifacts/fixtures/foundational-example-pack-invalid/`, covering unknown
     fields, metadata/check id drift, and missing witness references.
-14. Rules/law transfer now lands through
+15. Rules/law transfer now lands through
    [RULES-LAW-CROSSWALK.md](RULES-LAW-CROSSWALK.md): finite predicates,
    arithmetic thresholds, graph reachability, precedence, and proof routes are
    mapped to concrete policy/rule checks before new rule packs are added.
@@ -248,7 +252,7 @@ Build sequence:
    `authorization-policy-v0` now adds the access-control slice with checked
    Bool/QF_LIA fixtures for tenant isolation, explicit deny precedence, admin
    tenant guarding, and bounded implementation equivalence.
-15. First solver-reuse promotions landed: `logic-basics-v0` now links
+16. First solver-reuse promotions landed: `logic-basics-v0` now links
     `tiny-cnf-refutation` to a DIMACS artifact, `finite-cardinality-v0` links
     `no-injection-four-to-three` to a DIMACS artifact, and
     `graph-matching-v0` links `triangle-no-perfect-matching` to a DIMACS

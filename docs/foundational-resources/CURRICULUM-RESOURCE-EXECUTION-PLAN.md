@@ -189,6 +189,10 @@ Add bridge-concept or example-family rows for repeated subtopics:
   expectation, and tail/count obstructions, backed by finite probability,
   random-variable, kernel, martingale, hitting-time, concentration, and exact
   test packs;
+- proof-route families: landed example-family rows for finite algebra
+  QF_UF/Alethe congruence, exact-rational QF_LRA/Farkas infeasibility, and
+  finite Boolean CNF/LRAT refutations, each tied to a shared regression rather
+  than repeated prose in every pack;
 - topology/geometry: finite topologies, continuous maps, simplicial homology,
   affine maps, orientation/area.
 

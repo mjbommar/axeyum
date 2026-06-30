@@ -1658,6 +1658,10 @@ The structured atlas now records these recurring exact-rational contradictions
 as `family_exact_rational_farkas`, scoped to the optimization/Farkas
 proof-route lane and backed by the shared
 `math_resource_lra_routes` regression.
+The structured atlas now also records recurring finite Boolean CNF/LRAT
+refutations as `family_boolean_cnf_lrat`, spanning logic, counting, graph,
+finite-set, and finite-topology packs backed by the shared
+`math_resource_boolean_routes` regression.
 The rules/law transfer lane now also has its second concrete pack:
 `authorization-policy-v0` reuses finite predicates, tenant/resource relations,
 explicit deny precedence, bounded version-delta witnesses, and checked

@@ -210,6 +210,10 @@ The second example-family row now groups recurring exact-rational
 QF_LRA/Farkas infeasibility rows under `family_exact_rational_farkas`,
 backed by the shared `math_resource_lra_routes` regression and scoped to
 the optimization/Farkas proof-route lane.
+The third example-family row now groups recurring finite Boolean CNF/LRAT
+refutations under `family_boolean_cnf_lrat`, backed by the shared
+`math_resource_boolean_routes` regression across logic, counting, graph,
+finite-set, and finite-topology packs.
 The generated coverage, field, proof-gap, learner/proof-upgrade, and
 curriculum-pressure dashboards now expose conservative R0-R6 gate/next-gate
 columns and overlapping fragment-pressure buckets, making R4-to-R5 solver-reuse

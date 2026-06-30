@@ -4149,6 +4149,145 @@ EXAMPLE_FAMILIES = [
             ],
         },
     },
+    {
+        "id": "family_boolean_cnf_lrat",
+        "title": "Boolean CNF/LRAT Refutation Family",
+        "field_ids": [
+            "logic_and_proof",
+            "discrete_math",
+            "graph_theory",
+            "set_theory_and_foundations",
+            "topology",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Recurring finite refutations that compile to small Boolean CNF "
+            "artifacts and recheck through generated DRAT proofs plus "
+            "elaborated LRAT certificates."
+        ),
+        "prerequisites": [
+            "bridge_counterexample_proof",
+            "bridge_refutation_query",
+            "bridge_boolean_cnf_lrat_anatomy",
+            "curriculum_propositional_logic",
+            "curriculum_proof_methods",
+            "curriculum_counting",
+            "curriculum_sets",
+        ],
+        "unlocks": [
+            "field_logic_and_proof",
+            "field_graph_theory",
+            "field_set_theory_and_foundations",
+        ],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "Bool / SAT",
+            "CNF",
+            "DRAT proof checking",
+            "LRAT proof checking",
+            "finite refutation",
+        ],
+        "example_packs": [
+            (
+                "logic-basics-v0",
+                "Tiny Boolean contradiction refutation with checked DRAT/LRAT evidence.",
+            ),
+            (
+                "proof-methods-refutation-v0",
+                "PHP(3,2) proof-by-refutation row with source-linked CNF evidence.",
+            ),
+            (
+                "proof-methods-patterns-v0",
+                "Contradiction proof pattern reduced to a small unsat CNF.",
+            ),
+            (
+                "counting-v0",
+                "Finite pigeonhole refutation reusing the same CNF proof route.",
+            ),
+            (
+                "finite-predicate-v0",
+                "Finite quantifier expansion row compiled to Boolean CNF.",
+            ),
+            (
+                "finite-sets-v0",
+                "Malformed finite set identity rejected by a source-linked CNF artifact.",
+            ),
+            (
+                "finite-cardinality-v0",
+                "No-injection finite cardinality row rechecked through CNF/LRAT.",
+            ),
+            (
+                "graph-coloring-v0",
+                "Triangle non-2-colorability as a compact Boolean refutation.",
+            ),
+            (
+                "graph-reachability-v0",
+                "Disconnected no-path row encoded as bounded reachability CNF.",
+            ),
+            (
+                "graph-matching-v0",
+                "Triangle no-perfect-matching row encoded as finite matching CNF.",
+            ),
+            (
+                "graph-cut-v0",
+                "Bad one-edge cut row encoded as post-removal reachability CNF.",
+            ),
+            (
+                "graph-d-separation-v0",
+                "Conditioned chain-blocking row encoded as finite DAG path CNF.",
+            ),
+            (
+                "finite-topology-v0",
+                "Missing-empty-open topology axiom row encoded as a one-variable CNF.",
+            ),
+            (
+                "finite-compactness-v0",
+                "Bad finite open-cover row encoded as a compact Boolean refutation.",
+            ),
+            (
+                "finite-connectedness-v0",
+                "Bad connectedness claim encoded as a checked Boolean refutation.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "Boolean CNF/DRAT/LRAT refutation family",
+                "status": "checked",
+                "checker": "cargo test -p axeyum-cnf --test math_resource_boolean_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+                    "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+                    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+                ],
+                "notes": (
+                    "Each referenced pack keeps the source finite object "
+                    "separate from the Boolean encoding; the regression parses "
+                    "the committed DIMACS artifact, emits DRAT, elaborates to "
+                    "LRAT, and checks that corrupted proof hints reject."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+            "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+        ],
+        "open_gaps": [
+            "The family certifies the committed finite CNF artifacts, not arbitrary graph, topology, set, or proof-method theorems.",
+            "New Boolean-resource packs should join this family only after they have a source-linked DIMACS artifact and a checked math_resource_boolean_routes regression.",
+            "Lean reconstruction remains partial at the family level until the Boolean CNF/LRAT route is kernel-checked back to the original finite claim.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Every family pack row links a committed DIMACS artifact and Boolean proof-route regression.",
+                "cargo test -p axeyum-cnf --test math_resource_boolean_routes passes.",
+                "Learner pages keep the source finite model separate from the checked DRAT/LRAT certificate.",
+            ],
+        },
+    },
 ]
 
 

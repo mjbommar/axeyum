@@ -673,8 +673,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   generates five bridge rows for finite Boolean algebra, finite
   partition/relation roundtrips, finite image/preimage/inverse tables, finite
   bijection/cardinality checks, and cardinality theorem horizons. The concept
-  atlas now reports 83 rows total: 23 curriculum rows, 18 field rows, 40
-  bridge rows, and 2 example-family rows.
+  atlas now reports 84 rows total: 23 curriculum rows, 18 field rows, 40
+  bridge rows, and 3 example-family rows.
 
 - **Standalone finite topology and finite measure lessons landed.**
   [`finite-topology-end-to-end.md`](docs/learn/math/finite-topology-end-to-end.md)
@@ -1236,7 +1236,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   generated from
   [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) and
   point at existing validated packs plus proof-cookbook recipes. The
-  foundational resource consumer now reports 83 concept rows while preserving
+  foundational resource consumer now reports 84 concept rows while preserving
   23 curriculum rows and 18 field rows. Next resource work should add the next
   proof-frontier promotion or boundary evidence from a real repeated consumer,
   depending on which roadmap lane is being advanced.
@@ -1288,6 +1288,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   and records the certified Farkas trust step. It is scoped to
   `optimization_and_convexity` as the LP/Farkas proof-route lane rather than
   claiming full subject-field coverage for every referenced pack.
+
+- **Boolean CNF/LRAT example-family row landed.**
+  [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
+  now includes `family_boolean_cnf_lrat`, a generated `example-family` row for
+  recurring finite Boolean refutations across logic, proof methods, counting,
+  finite predicates, finite sets, finite cardinality, graph, and finite
+  topology packs. The row is tied to
+  [`math_resource_boolean_routes`](crates/axeyum-cnf/tests/math_resource_boolean_routes.rs),
+  which parses the committed DIMACS artifacts, emits DRAT, elaborates LRAT,
+  checks both proof objects, and rejects corrupted proof hints. It is scoped to
+  the fields where the Boolean encoding is part of the educational proof route,
+  not as a broad claim about graph or topology theorem coverage.
 
 - **Generated R0-R6 gate columns landed.**
   [`gen-foundational-dashboards.py`](scripts/gen-foundational-dashboards.py)
@@ -11918,6 +11930,15 @@ plan is built and committed on the current branch:
   multiple packs and validate pack-specific finite replay. Extended
   [`rules_as_code_examples`](crates/axeyum-solver/tests/rules_as_code_examples.rs)
   with the four authorization proof-route regressions.
+
+- **2026-06-30** — **Boolean CNF/LRAT example-family row landed.**
+  Added generated `family_boolean_cnf_lrat` atlas row grouping recurring finite
+  Boolean refutations across logic, proof-method, counting, finite-set,
+  finite-cardinality, graph, finite-predicate, and finite-topology packs. The
+  family is backed by the shared
+  `cargo test -p axeyum-cnf --test math_resource_boolean_routes` regression and
+  raises the atlas to 84 rows: 23 curriculum rows, 18 field rows, 40 bridge
+  rows, and 3 example-family rows.
 
 - **2026-06-30** — **PHP Bool/CNF resource promotion landed.**
   Added source-level DIMACS artifacts for
