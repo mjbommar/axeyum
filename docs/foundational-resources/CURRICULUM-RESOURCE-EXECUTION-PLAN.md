@@ -35,13 +35,13 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 100 atlas rows generated from curriculum, field data, 54 R1 bridge
+- 101 atlas rows generated from curriculum, field data, 55 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
   number-system exact-vs-floating, totality convention, gcd/divisibility
   witness, modular CRT/inverse witness, finite-counting replay vocabulary, and
-  finite graph replay/obstruction vocabulary,
+  finite graph replay/obstruction and finite dynamics/Euler vocabulary,
   linear-algebra computation vocabulary, probability/statistics finite-table
   vocabulary, measure-theory additivity/product/integration vocabulary,
   optimization/convexity LP and finite-shadow vocabulary, algebra-map

@@ -36,7 +36,10 @@ python3 scripts/query-foundational-resources.py checks --field discrete_math --r
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_counting_replay --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_counting_replay --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field differential_equations_and_dynamical_systems --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field differential_equations_and_dynamical_systems --text Euler --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field differential_equations_and_dynamical_systems --text stochastic --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_finite_dynamics_euler_replay --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field topology --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text compactness --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text preimage --require-any >/dev/null

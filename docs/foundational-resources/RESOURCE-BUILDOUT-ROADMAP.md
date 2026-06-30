@@ -40,7 +40,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 54 bridge-concept rows.
+- 55 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math example packs.
 - 516 expected checks.
@@ -1554,7 +1554,12 @@ Pick one item per commit unless the change is purely navigational.
     reachability and concept-scoped Boolean route smoke queries, making finite
     coloring, traversal, matching, cut, and d-separation resources discoverable
     without promoting graph theorem, causal, or asymptotic-runtime claims.
-84. Landed: add analysis/numerical/complex field-readiness consumer queries
+84. Landed: add `bridge_finite_dynamics_euler_replay` plus Euler lookup and
+    concept-scoped Farkas route smoke queries, making finite recurrence-prefix,
+    bounded-dynamics, explicit-Euler, invariant, threshold, and finite-error
+    rows discoverable without promoting ODE, stability, convergence-rate,
+    stiffness, chaos, or PDE claims.
+85. Landed: add analysis/numerical/complex field-readiness consumer queries
     through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational
     smoke check, covering real-analysis Farkas readiness, epsilon/gradient
     bridge lookups, checked bounded-analysis rows, numerical-analysis Farkas

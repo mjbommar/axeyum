@@ -36,7 +36,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 54 bridge-concept rows.
+- 55 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math packs.
 - 516 expected checks.
@@ -218,8 +218,8 @@ Exit criteria:
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | standalone finite probability mass-table lesson landed; keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | LP objective/Farkas, rational convexity/gradient bridge rows, finite root-finding step replay, finite hyperplane-separation replay, finite KKT replay, finite active-set QP face/slack replay, finite SDP primal/dual replay, finite gradient-descent replay, finite Armijo line-search replay, finite Wolfe line-search replay, finite projected-gradient interval replay, and finite proximal-gradient replay landed; add only distinct duality, degenerate active-set variants, working-set pivots, higher-dimensional SDP, strong-Wolfe/nonconvex line-search, box-plus-L1, or stochastic/convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
-| `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | keep finite replay and numerical-honesty rows distinct from promoted exact residual/error certificates | QF_LRA/Farkas, replay, Lean horizon |
-| `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | keep bounded-dynamics and finite-Euler checked rows source-linked; add only distinct transition, reachability, invariant, stochastic, or finite-error pressure | QF_LRA/Farkas, replay, Lean horizon |
+| `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | maintain landed finite dynamics/Euler bridge and keep numerical-honesty rows distinct from promoted exact residual/error certificates | QF_LRA/Farkas, replay, Lean horizon |
+| `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | maintain landed finite dynamics/Euler bridge; add only distinct transition, reachability, invariant, stochastic, or finite-error pressure | QF_LRA/Farkas, replay, Lean horizon |
 | `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, circle, inversion, and cyclic rational geometry | finite cyclic geometry now has checked bad diagonal-intersection replay; add only distinct circle-line correspondence, angle variants beyond the square witness, Ptolemy shadows, or higher-degree polynomial-geometry pressure | QF_LRA/Farkas, finite replay |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now has a checked bad-bound row; add only distinct norm, recurrence, interpolation, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
 
@@ -688,7 +688,14 @@ Pick one row per commit unless the change is purely navigational.
     from the atlas while preserving the boundary around graph theorems,
     causal claims, and asymptotic traversal complexity. The graph-theory
     consumer smoke now includes reachability lookup and concept-scoped Boolean
-    route queries, and the atlas now validates 54 bridge rows.
+    route queries, and that increment raised the atlas to 54 bridge rows.
+82. Landed: add the finite dynamics/Euler replay bridge row.
+    `bridge_finite_dynamics_euler_replay` makes finite recurrence-prefix,
+    bounded-dynamics, and explicit-Euler packs queryable from the atlas while
+    preserving the boundary around ODE theory, stability, convergence rates,
+    stiffness, chaos, and PDE claims. The dynamics consumer smoke now includes
+    Euler lookup and concept-scoped Farkas route queries, and the atlas now
+    validates 55 bridge rows.
 
 ## Validation Checklist
 

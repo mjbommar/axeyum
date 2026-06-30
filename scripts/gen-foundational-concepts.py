@@ -4135,6 +4135,113 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_finite_dynamics_euler_replay",
+        "title": "Finite Dynamics And Euler Replay",
+        "field_ids": [
+            "differential_equations_and_dynamical_systems",
+            "numerical_analysis",
+            "real_analysis",
+            "linear_algebra",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite dynamics rows state an initial state, transition rule, "
+            "horizon, trace, invariant, threshold, Euler step, or finite error "
+            "table over exact rational data. The trusted object is replay of "
+            "the listed finite transition data or a checked QF_LRA/Farkas "
+            "certificate for a malformed fixed trace, invariant, recurrence "
+            "value, or Euler update."
+        ),
+        "prerequisites": [
+            "bridge_finite_model_replay",
+            "bridge_qf_lra_farkas_anatomy",
+            "bridge_bounded_theorem_shadow",
+            "curriculum_sequences_and_limits",
+            "curriculum_calculus",
+            "curriculum_linear_algebra",
+        ],
+        "unlocks": [
+            "bridge_stochastic_kernel",
+            "bridge_residual_bound",
+            "bridge_finite_operator_chebyshev",
+            "field_differential_equations_and_dynamical_systems",
+            "field_numerical_analysis",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite transition systems",
+            "bounded model checking",
+            "finite recurrence replay",
+            "explicit Euler replay",
+            "finite matrices",
+            "QF_LRA",
+            "Farkas certificate",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-recurrence-prefix-v0",
+                "Fibonacci prefix, affine recurrence, companion-matrix prefix, and checked bad finite-value rows.",
+            ),
+            (
+                "bounded-dynamics-v0",
+                "Bounded recurrence traces, finite invariants, threshold reachability, and checked bad invariant-bound rows.",
+            ),
+            (
+                "finite-euler-method-v0",
+                "Exact explicit-Euler transitions, finite error tables, monotone invariant replay, and checked bad Euler-step rows.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite transition replay plus QF_LRA/Farkas certificates",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/learn/math/finite-recurrence-prefix-end-to-end.md",
+                    "docs/learn/math/bounded-dynamics-end-to-end.md",
+                    "docs/learn/math/finite-euler-method-end-to-end.md",
+                    "docs/learn/math/finite-dynamics-euler-end-to-end.md",
+                    "docs/learn/math/analysis-dynamics-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "Positive rows recompute each finite transition, matrix "
+                    "state update, invariant, threshold, or Euler step exactly. "
+                    "Negative rows graduate only when the source SMT-LIB or "
+                    "route regression yields rechecked Farkas evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/learn/math/finite-recurrence-prefix-end-to-end.md",
+            "docs/learn/math/bounded-dynamics-end-to-end.md",
+            "docs/learn/math/finite-euler-method-end-to-end.md",
+            "docs/learn/math/finite-dynamics-euler-end-to-end.md",
+            "docs/learn/math/analysis-dynamics-end-to-end.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite dynamics replay does not prove continuous-time existence, uniqueness, stability, chaos, stiffness behavior, PDE theory, or convergence-rate theorems.",
+            "A bounded invariant row proves only the listed horizon unless a separate induction or Lean proof route is supplied.",
+            "Euler rows are exact rational numerical shadows; floating-point implementations, adaptive methods, and asymptotic error theory stay in numerical-honesty or Lean-horizon lanes.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the transition rule, horizon, initial condition, trace, invariant/threshold, and exact rational data.",
+                "The validator recomputes each finite transition, matrix state, Euler update, and finite error value.",
+                "Malformed finite dynamics rows link source artifacts or route regressions before claiming checked Farkas evidence.",
+            ],
+        },
+    },
+    {
         "id": "bridge_stochastic_kernel",
         "title": "Finite Stochastic Kernel",
         "field_ids": [

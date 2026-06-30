@@ -23,7 +23,7 @@ committed data contract:
 
 The smoke coverage lives in
 [`scripts/check-foundational-resources.sh`](../../scripts/check-foundational-resources.sh).
-At the time this matrix was written, the public summary reports 100 concept
+At the time this matrix was written, the public summary reports 101 concept
 rows, 102 non-template packs, 516 expected checks, 222 checked rows, 229
 replay-only rows, 65 Lean-horizon rows, and 102 promoted solver-reuse packs.
 
@@ -60,7 +60,7 @@ checked rows a learner page, catalog card, or downstream app can display.
 | `statistics` | 14 / 68 | `fields --field statistics --route Farkas` | `concepts --field statistics --text tail`; `concepts --field statistics --text finite` | `checks --field statistics --route Farkas --proof-status checked`; `checks --field statistics --route Diophantine --proof-status checked` | Floating-point inference, asymptotic sampling, MCMC, VI, or model-calibration claims. |
 | `optimization_and_convexity` | 19 / 99 | `fields --field optimization_and_convexity --route Farkas` | `concepts --field optimization_and_convexity --text objective`; `concepts --field optimization_and_convexity --text convexity` | `checks --field optimization_and_convexity --route Farkas --proof-status checked` | Duality, KKT sufficiency, SDP strong duality, or algorithm convergence theorems. |
 | `numerical_analysis` | 21 / 108 | `fields --field numerical_analysis --route Farkas` | `concepts --field numerical_analysis --text residual`; `concepts --field numerical_analysis --text operator`; `concepts --field numerical_analysis --text floating` | `checks --field numerical_analysis --route Farkas --proof-status checked` | Floating-point roundoff, conditioning/stability, asymptotic error analysis, or convergence theorems. |
-| `differential_equations_and_dynamical_systems` | 7 / 36 | `fields --field differential_equations_and_dynamical_systems --route Farkas` | `concepts --field differential_equations_and_dynamical_systems --text stochastic` | `checks --field differential_equations_and_dynamical_systems --route Farkas --proof-status checked` | Existence/uniqueness, continuous dynamics, chaos, PDE theory, or continuous-time stability. |
+| `differential_equations_and_dynamical_systems` | 7 / 36 | `fields --field differential_equations_and_dynamical_systems --route Farkas` | `concepts --field differential_equations_and_dynamical_systems --text Euler`; `concepts --field differential_equations_and_dynamical_systems --text stochastic` | `checks --field differential_equations_and_dynamical_systems --route Farkas --proof-status checked` | Existence/uniqueness, continuous dynamics, chaos, PDE theory, or continuous-time stability. |
 | `geometry` | 8 / 39 | `fields --field geometry --route Farkas` | `concepts --field geometry --text coordinate` | `checks --field geometry --route Farkas --proof-status checked` | Synthetic, projective, differential, global, or higher-degree algebraic geometry theorems. |
 | `functional_analysis_and_operator_theory` | 5 / 27 | `fields --field functional_analysis_and_operator_theory --route Farkas` | `concepts --field functional_analysis_and_operator_theory --text operator` | `checks --field functional_analysis_and_operator_theory --route Farkas --proof-status checked` | Banach/Hilbert-space theorems, topological duals, compact operators, minimax, or infinite-dimensional approximation theory. |
 

@@ -18,6 +18,8 @@ Concept rows:
   `field_numerical_analysis`, `field_real_analysis`, and
   `field_linear_algebra` in the
   [Foundational Concept Atlas](../../../artifacts/ontology/foundational-concepts.json)
+- `bridge_finite_dynamics_euler_replay` in the
+  [Foundational Concept Atlas](../../../artifacts/ontology/foundational-concepts.json)
 
 ## Claim Shape
 
@@ -36,6 +38,10 @@ Concept rows:
 These rows are finite transition-system checks over exact rationals. They do
 not claim continuous-time existence, uniqueness, stability, convergence rates,
 stiffness behavior, chaos, or PDE theory.
+The shared `bridge_finite_dynamics_euler_replay` row is the atlas vocabulary
+for this pattern across recurrence prefixes, bounded dynamics, finite
+invariants, threshold reachability, explicit Euler steps, and finite error
+tables.
 
 ## Replay A Bounded Recurrence
 

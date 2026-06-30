@@ -205,6 +205,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite dynamics/Euler bridge concept landed.**
+  `bridge_finite_dynamics_euler_replay` now makes finite recurrence-prefix,
+  bounded-dynamics, and explicit-Euler rows queryable from one shared atlas
+  concept, with exact finite replay and checked QF_LRA/Farkas bad-value,
+  bad-invariant, and bad-step rows kept separate from ODE, stability,
+  convergence-rate, stiffness, chaos, and PDE claims. `CONSUMER-QUERIES.md`,
+  `FIELD-READINESS-QUERY-MATRIX.md`, and
+  `check-foundational-resources.sh` now exercise Euler lookup plus
+  concept-scoped Farkas route queries through the public JSON/query boundary.
+
 - **Finite graph replay bridge concept landed.**
   `bridge_finite_graph_replay_obstruction` now makes finite coloring,
   reachability/traversal, matching, cut, and d-separation rows queryable from
@@ -1553,7 +1563,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the detailed operating plan for turning the curriculum and 18-field math
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
-  library splits. It now records the current committed baseline of 100 concept
+  library splits. It now records the current committed baseline of 101 concept
   rows, 102 non-template packs, 516 expected checks, 222 checked rows, 229
   replay-only rows, 65 Lean-horizon rows, and 102 promoted solver-reuse packs,
   then lays out field-by-field build plans plus a prioritized execution queue.
@@ -1608,7 +1618,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
-  is now generated with 54 bridge rows. The proof-methodology rows are
+  is now generated with 55 bridge rows. The proof-methodology rows are
   `bridge_finite_model_replay`, `bridge_counterexample_proof`,
   `bridge_refutation_query`, `bridge_finite_proof_pattern`,
   `bridge_finite_quantifier_expansion`,
@@ -1633,7 +1643,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   counts, and exact finite tail-count contradictions queryable; the finite
   graph row is `bridge_finite_graph_replay_obstruction`, making coloring,
   reachability/traversal, matching, cut, and d-separation resources queryable
-  across finite replay, Bool/CNF, QF_BV, and QF_LIA routes; the
+  across finite replay, Bool/CNF, QF_BV, and QF_LIA routes; the finite
+  dynamics row is `bridge_finite_dynamics_euler_replay`, making finite
+  recurrence-prefix, bounded-dynamics, explicit-Euler, invariant, threshold,
+  and finite-error rows queryable across finite replay and QF_LRA/Farkas
+  routes; the
   optimization/convexity rows are `bridge_lp_objective_farkas` and
   `bridge_rational_convexity_shadow`; the
   set/foundations rows are `bridge_finite_boolean_algebra`,
@@ -1683,7 +1697,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   while keeping duality, KKT sufficiency, SDP strong duality, general
   separation, projected-gradient convergence, proximal-gradient convergence,
   and convergence theorems as Lean horizons. The
-  foundational resource consumer now reports 100 concept rows while
+  foundational resource consumer now reports 101 concept rows while
   preserving 23 curriculum rows and 18 field rows. Next resource work should
   add the next proof-frontier promotion or boundary evidence from a real
   repeated consumer, depending on which roadmap lane is being advanced.
