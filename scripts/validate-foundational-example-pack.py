@@ -8635,10 +8635,44 @@ def validate_sequence_limit_shadow(expected: dict[str, Any]) -> None:
     sequence = require_fraction_sequence("bounded cauchy values", data.get("values"))
     if epsilon <= 0:
         fail("bounded-cauchy-tail-no-counterexample epsilon must be positive")
+    if not sequence:
+        fail("bounded-cauchy-tail-no-counterexample values must be nonempty")
+    max_pair_distance = Fraction(0)
     for left in sequence:
         for right in sequence:
-            if abs(left - right) >= epsilon:
+            distance = abs(left - right)
+            if distance > max_pair_distance:
+                max_pair_distance = distance
+            if distance >= epsilon:
                 fail("bounded-cauchy-tail-no-counterexample found a finite pairwise counterexample")
+    documented_max = require_fraction(
+        "bounded cauchy max_pair_distance",
+        data.get("max_pair_distance"),
+    )
+    if documented_max != max_pair_distance:
+        fail("bounded-cauchy-tail-no-counterexample max_pair_distance is wrong")
+    documented_pair = require_fraction_vector(
+        "bounded cauchy farthest_pair",
+        data.get("farthest_pair"),
+    )
+    if len(documented_pair) != 2:
+        fail("bounded-cauchy-tail-no-counterexample farthest_pair must have length 2")
+    if abs(documented_pair[0] - documented_pair[1]) != max_pair_distance:
+        fail("bounded-cauchy-tail-no-counterexample farthest_pair does not realize max_pair_distance")
+    if documented_pair[0] not in sequence or documented_pair[1] not in sequence:
+        fail("bounded-cauchy-tail-no-counterexample farthest_pair values must come from the finite tail")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bounded cauchy smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/sequence-limit-shadow-v0/smt2/bounded-cauchy-tail-farkas-conflict.smt2"
+    ):
+        fail("bounded-cauchy-tail-no-counterexample smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bounded cauchy smt2_artifact", smt2_artifact)
+    farkas_regression = data.get("farkas_regression")
+    require_string("bounded cauchy farkas_regression", farkas_regression)
+    if "sequence_limit_bounded_cauchy_tail_artifact_emits_checked_farkas" not in farkas_regression:
+        fail("bounded-cauchy-tail-no-counterexample must link the Farkas regression")
 
     horizon = checks["general-limit-lean-horizon"]
     if horizon["expected_result"] != "not-run":

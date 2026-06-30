@@ -232,7 +232,9 @@ integration now promoted for the bad expectation conflict, and finite
 martingales now promoted for the bad conditional-expectation conflict, with
 finite Markov chains carrying explicit promoted solver-reuse metadata for the
 existing bad stochastic-row conflict and finite concentration carrying a
-source-linked promoted bad tail-bound conflict. The first secondary QF_LRA/Farkas
+source-linked promoted bad tail-bound conflict, while sequence-limit shadows
+now promote a bounded Cauchy-tail max-distance threshold conflict. The first
+secondary QF_LRA/Farkas
 target set is now covered, the initial equality-heavy QF_UF/Alethe
 secondary set is now covered including the finite-ideals quotient
 representative row, and finite group actions now promote a bad identity-action
@@ -251,9 +253,10 @@ bounded-natural negativity. The five active resource proof-certificate routes
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **70 promoted solver-reuse
-packs**, **6 non-benchmark-horizon packs**, and **8 unclassified packs** after
-the latest calculus Riemann-sum false-integral QF_LRA/Farkas promotion,
+the foundational resource dashboards now report **71 promoted solver-reuse
+packs**, **6 non-benchmark-horizon packs**, and **7 unclassified packs** after
+the latest sequence-limit bounded Cauchy-tail QF_LRA/Farkas promotion,
+calculus Riemann-sum false-integral QF_LRA/Farkas promotion,
 finite-predicate Bool/CNF quantifier-expansion promotion,
 polynomial-identities false-root QF_LIA/Diophantine promotion,
 finite generating-functions QF_LIA/Diophantine coefficient-convolution

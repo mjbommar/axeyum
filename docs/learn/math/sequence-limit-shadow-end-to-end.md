@@ -120,6 +120,24 @@ values = 1/3, 1/4, 1/5, 1/6, 1/7
 The validator checks every pair in this finite tail. It finds no pair at
 distance at least `1/2`, so the counterexample claim is rejected.
 
+It also computes the maximum pair distance:
+
+```text
+max_pair_distance = 1/3 - 1/7 = 4/21
+```
+
+The source SMT-LIB artifact
+`artifacts/examples/math/sequence-limit-shadow-v0/smt2/bounded-cauchy-tail-farkas-conflict.smt2`
+checks the final contradiction:
+
+```text
+max_pair_distance = 4/21
+max_pair_distance >= 1/2
+```
+
+Axeyum emits and independently checks `UnsatFarkas` evidence for that
+exact-rational threshold conflict.
+
 That `unsat` row is still bounded. It says no bad pair exists in the listed
 finite tail for one epsilon, not that the sequence is Cauchy.
 
@@ -142,11 +160,13 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes sequence_limit_bounded_cauchy_tail_artifact_emits_checked_farkas
 ```
 
 ## Trust Boundary
 
 The validator checks exact rational sequence values, finite epsilon-tail
 inequalities, finite monotone-prefix inequalities, one geometric partial-sum
-identity, and every pair in one finite Cauchy-tail row. The full epsilon-N
-definition and completeness theorems remain future Lean work.
+identity, and every pair in one finite Cauchy-tail row. The Farkas route checks
+the final exact-rational max-distance threshold contradiction. The full
+epsilon-N definition and completeness theorems remain future Lean work.

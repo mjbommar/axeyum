@@ -93,6 +93,9 @@ Canonical examples:
 - [Finite Calculus Shadows](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
   uses a false polynomial-integral row after exact antiderivative replay
   computes the integral.
+- [Sequence And Limit Shadows](../../../artifacts/examples/math/sequence-limit-shadow-v0/)
+  uses a bounded Cauchy-tail row after exact finite replay computes the maximum
+  pairwise distance.
 - [Finite Martingales](../../../artifacts/examples/math/finite-martingales-v0/)
   uses a bad conditional-expectation row after exact finite filtration replay.
 - [Finite Markov Chain](../../../artifacts/examples/math/finite-markov-chain-v0/)
@@ -138,3 +141,4 @@ cargo test -p axeyum-solver --test lean_crosscheck certified_lra_interpolant_bot
 - [dominance scoreboard](../../../bench-results/DOMINANCE.md)
 - [Real Algebra RCF Shadow pack](../../../artifacts/examples/math/reals-rcf-shadow-v0/)
 - [Finite Calculus Shadows pack](../../../artifacts/examples/math/calculus-riemann-sum-v0/)
+- [Sequence And Limit Shadows pack](../../../artifacts/examples/math/sequence-limit-shadow-v0/)

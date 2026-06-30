@@ -22,6 +22,9 @@ const CONVEXITY_BAD_MIDPOINT: &str = include_str!(
 const CALCULUS_RIEMANN_FALSE_INTEGRAL: &str = include_str!(
     "../../../artifacts/examples/math/calculus-riemann-sum-v0/smt2/false-integral-farkas-conflict.smt2"
 );
+const SEQUENCE_LIMIT_BOUNDED_CAUCHY: &str = include_str!(
+    "../../../artifacts/examples/math/sequence-limit-shadow-v0/smt2/bounded-cauchy-tail-farkas-conflict.smt2"
+);
 const RATIONALS_TRICHOTOMY_NONLESS: &str = include_str!(
     "../../../artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-nonless-farkas-conflict.smt2"
 );
@@ -289,6 +292,14 @@ fn calculus_riemann_sum_false_integral_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "calculus-riemann-sum-v0 false-integral SMT-LIB artifact",
         CALCULUS_RIEMANN_FALSE_INTEGRAL,
+    );
+}
+
+#[test]
+fn sequence_limit_bounded_cauchy_tail_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "sequence-limit-shadow-v0 bounded-Cauchy-tail SMT-LIB artifact",
+        SEQUENCE_LIMIT_BOUNDED_CAUCHY,
     );
 }
 

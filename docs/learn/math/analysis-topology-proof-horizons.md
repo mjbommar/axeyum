@@ -94,6 +94,11 @@ checks a finite counterexample to a proposed limit, a monotone bounded prefix,
 a fixed geometric partial-sum identity, and a finite Cauchy-tail
 no-counterexample row.
 
+For the Cauchy-tail row, replay computes the largest listed pairwise distance
+as `4/21`; the source QF_LRA artifact rejects the malformed threshold claim
+`max_pair_distance >= 1/2` with checked `UnsatFarkas` evidence. This is still a
+finite tail fact, not Cauchy completeness.
+
 For a finite generating-function shadow, encode a sequence prefix as a fixed
 coefficient list:
 
@@ -326,6 +331,7 @@ Run the checks from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/reals-rcf-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/real-analysis-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes sequence_limit_bounded_cauchy_tail_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0

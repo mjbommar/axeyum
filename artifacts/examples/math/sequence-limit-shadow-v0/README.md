@@ -21,7 +21,8 @@ general epsilon-N theorem.
 - A constant sequence has a finite counterexample to the proposed limit `0`.
 - A finite prefix can be checked for monotonicity and an upper bound.
 - A fixed geometric partial sum can be checked against its closed form.
-- A fixed finite tail can have no Cauchy counterexample for one epsilon.
+- A fixed finite tail can have no Cauchy counterexample for one epsilon, with
+  source-linked QF_LRA/Farkas evidence for the final threshold contradiction.
 - General convergence theorems remain Lean-horizon.
 
 ## Validation
@@ -35,7 +36,10 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/se
 The validator uses exact rational arithmetic. It checks the listed reciprocal
 sequence values, finite epsilon-tail inequalities, monotone-prefix inequalities,
 the geometric partial-sum identity, and every pair in the finite Cauchy-tail
-row.
+row. For the checked Cauchy-tail row, it also recomputes the maximum pair
+distance `4/21` and links the rejected `>= 1/2` counterexample claim to
+`smt2/bounded-cauchy-tail-farkas-conflict.smt2`, which Axeyum checks with
+`UnsatFarkas` evidence.
 
 ## Limitations
 

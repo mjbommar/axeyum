@@ -119,8 +119,8 @@ validated pack data and the repo-root command that replays it.
   Lean horizon.
 - [Sequence And Limit Shadows](sequence-limit-shadow-end-to-end.md): follows
   finite epsilon-tail replay, a proposed-limit counterexample, monotone-prefix
-  checks, geometric partial sums, finite Cauchy-tail enumeration, and the
-  general limit Lean horizon.
+  checks, geometric partial sums, finite Cauchy-tail enumeration with a
+  QF_LRA/Farkas max-distance certificate, and the general limit Lean horizon.
 - [Finite Calculus Shadows](calculus-shadows-end-to-end.md): follows
   polynomial derivative replay, product-rule and tangent checks, finite
   Riemann sums, antiderivative endpoint replay, false derivative/integral

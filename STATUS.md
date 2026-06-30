@@ -427,10 +427,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
   70 promoted, 6 non-benchmark-horizon, and 8 unclassified solver-reuse packs.
 
+- **Sequence-limit QF_LRA/Farkas promotion landed.**
+  `sequence-limit-shadow-v0` now carries promoted `solver_reuse` metadata for
+  its bounded Cauchy-tail no-counterexample row. The new source-level artifact
+  `bounded-cauchy-tail-farkas-conflict.smt2` isolates replay's maximum pair
+  distance `4/21` against the malformed threshold `>= 1/2`, and
+  `math_resource_lra_routes::sequence_limit_bounded_cauchy_tail_artifact_emits_checked_farkas`
+  checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
+  71 promoted, 6 non-benchmark-horizon, and 7 unclassified solver-reuse packs.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 70-promoted, 6 non-benchmark-horizon, and
-  8-unclassified solver-reuse counts. The decision remains in-repo and
+  now records the refreshed 71-promoted, 6 non-benchmark-horizon, and
+  7-unclassified solver-reuse counts. The decision remains in-repo and
   JSON-first: the query consumer reads promoted solver-reuse rows, but there is
   still no external consumer, repeated typed API demand, or reusable encoder
   boundary that warrants a new crate or separate repository.
@@ -11578,6 +11587,15 @@ plan is built and committed on the current branch:
   row records the checked `UnsatFarkas` certificate path, and generated
   dashboards report 70 promoted, 6 non-benchmark-horizon, and 8 unclassified
   packs.
+
+- **2026-06-30** — **Sequence-limit QF_LRA promotion landed.**
+  Added
+  `artifacts/examples/math/sequence-limit-shadow-v0/smt2/bounded-cauchy-tail-farkas-conflict.smt2`
+  for the bounded Cauchy-tail no-counterexample row and wired it into
+  `math_resource_lra_routes`. The pack metadata now marks
+  `solver_reuse.status` as `promoted`, the expected row records the checked
+  `UnsatFarkas` certificate path, and generated dashboards report 71 promoted,
+  6 non-benchmark-horizon, and 7 unclassified packs.
 
 - **2026-06-29** — **Proof-cookbook math-example route sections landed.**
   Added `Math Examples Using This Route` sections to the six active proof

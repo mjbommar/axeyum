@@ -44,9 +44,9 @@ The current committed data boundary reports:
 - 195 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 70 promoted solver-reuse packs.
+- 71 promoted solver-reuse packs.
 - 6 non-benchmark-horizon solver-reuse packs.
-- 8 unclassified solver-reuse packs.
+- 7 unclassified solver-reuse packs.
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -609,6 +609,9 @@ Build next:
 - Add concept rows for rational interval, sequence tail, Cauchy shadow,
   squeeze shadow, derivative identity, and integration horizon.
 - Promote exact rational bad-bound rows through QF_LRA/Farkas.
+- Keep `sequence-limit-shadow-v0`'s promoted bounded Cauchy-tail row tied to
+  the source QF_LRA/Farkas artifact, and keep general convergence and Cauchy
+  completeness in the Lean-horizon lane.
 - Keep `calculus-riemann-sum-v0`'s promoted false-integral row tied to the
   source QF_LRA/Farkas artifact, and keep FTC/integrability statements in the
   Lean-horizon lane.
@@ -1078,7 +1081,13 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/calculus-riemann-sum-v0/smt2/false-integral-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes calculus_riemann_sum_false_integral_artifact_emits_checked_farkas`.
-27. Continue proof-route promotions or consumer-query examples; revisit the
+27. Landed: promote `sequence-limit-shadow-v0` through a source-linked
+    QF_LRA/Farkas regression for `bounded-cauchy-tail-no-counterexample`. The
+    artifact
+    `artifacts/examples/math/sequence-limit-shadow-v0/smt2/bounded-cauchy-tail-farkas-conflict.smt2`
+    is checked by
+    `cargo test -p axeyum-solver --test math_resource_lra_routes sequence_limit_bounded_cauchy_tail_artifact_emits_checked_farkas`.
+28. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 
