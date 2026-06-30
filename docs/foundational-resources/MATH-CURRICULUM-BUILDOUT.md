@@ -1089,9 +1089,10 @@ Exit criteria:
   and example-pack JSON files directly without importing generator or validator
   internals. `scripts/query-foundational-resources.py` now adds sample
   consumer-facing queries over that same committed data boundary for summary
-  counts, pack discovery, checked-row mining, solver-reuse rows, and atlas
-  concept lookup. Generated dashboards expose gate/next-gate status and
-  fragment-pressure buckets derived from the same files.
+  counts, pack discovery, field-plus-proof-route discovery, checked-row mining,
+  solver-reuse rows, and atlas concept lookup. Generated dashboards expose
+  gate/next-gate status and fragment-pressure buckets derived from the same
+  files.
 
 ## First Ten Commits To Make
 

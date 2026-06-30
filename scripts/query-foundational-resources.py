@@ -50,7 +50,58 @@ def contains_text(values: list[str], needle: str | None) -> bool:
     if needle is None:
         return True
     lowered = needle.lower()
-    return any(lowered in value.lower() for value in values)
+    normalized = lowered.replace("_", "-")
+    return any(
+        lowered in value.lower() or normalized in value.lower().replace("_", "-")
+        for value in values
+    )
+
+
+def flatten_strings(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, (int, float, bool)):
+        return [str(value)]
+    if isinstance(value, list):
+        flattened: list[str] = []
+        for item in value:
+            flattened.extend(flatten_strings(item))
+        return flattened
+    if isinstance(value, dict):
+        flattened = []
+        for key, item in value.items():
+            flattened.append(str(key))
+            flattened.extend(flatten_strings(item))
+        return flattened
+    return [str(value)]
+
+
+def check_route_text(check: dict[str, Any]) -> list[str]:
+    return flatten_strings(
+        {
+            "id": check.get("id", ""),
+            "claim": check.get("claim", ""),
+            "validation": check.get("validation", ""),
+            "proof_status": check.get("proof_status", ""),
+            "expected_result": check.get("expected_result", ""),
+            "data": check.get("data", {}),
+            "notes": check.get("notes", ""),
+        }
+    )
+
+
+def metadata_route_text(metadata: dict[str, Any]) -> list[str]:
+    return flatten_strings(
+        {
+            "fragments": metadata.get("axeyum_fragments", []),
+            "source_refs": metadata.get("source_refs", []),
+            "trust_status": metadata.get("trust_status", ""),
+            "solver_reuse": metadata.get("solver_reuse", {}),
+            "graduation_criteria": metadata.get("graduation_criteria", []),
+        }
+    )
 
 
 def shorten(value: str, width: int = 90) -> str:
@@ -252,6 +303,15 @@ def command_packs(args: argparse.Namespace) -> int:
             check.get("expected_result") == args.expected_result for check in checks
         ):
             continue
+        route_matches = [
+            check
+            for check in checks
+            if contains_text(check_route_text(check), args.route)
+        ]
+        if args.route and not route_matches and not contains_text(
+            metadata_route_text(metadata), args.route
+        ):
+            continue
         if not contains_text(metadata["axeyum_fragments"], args.fragment):
             continue
         if args.text:
@@ -268,10 +328,32 @@ def command_packs(args: argparse.Namespace) -> int:
             ]
             if not contains_text(haystack, args.text):
                 continue
+        if args.route:
+            row["route_checks"] = [check["id"] for check in route_matches] or [
+                "pack-metadata"
+            ]
+            row["route_validations"] = sorted(
+                {
+                    check.get("validation", "")
+                    for check in route_matches
+                    if check.get("validation")
+                }
+            )
         rows.append(clean_row(row))
+    columns = ["pack", "fields", "trust", "results", "proof", "solver_reuse", "path"]
+    if args.route:
+        columns = [
+            "pack",
+            "fields",
+            "route_checks",
+            "route_validations",
+            "trust",
+            "solver_reuse",
+            "path",
+        ]
     return emit(
         rows,
-        ["pack", "fields", "trust", "results", "proof", "solver_reuse", "path"],
+        columns,
         args,
     )
 
@@ -292,6 +374,8 @@ def command_checks(args: argparse.Namespace) -> int:
         if args.expected_result and row["result"] != args.expected_result:
             continue
         if args.validation and args.validation.lower() not in row["validation"].lower():
+            continue
+        if args.route and not contains_text(check_route_text(check), args.route):
             continue
         if not contains_text(metadata["axeyum_fragments"], args.fragment):
             continue
@@ -368,6 +452,10 @@ def build_parser() -> argparse.ArgumentParser:
     packs.add_argument("--field", help="exact field id, such as graph_theory")
     packs.add_argument("--curriculum-node", help="exact curriculum node id")
     packs.add_argument("--fragment", help="case-insensitive fragment substring")
+    packs.add_argument(
+        "--route",
+        help="case-insensitive proof/evidence route substring, such as Farkas or qf-bv",
+    )
     packs.add_argument("--proof-status", help="pack has at least one check with this status")
     packs.add_argument("--expected-result", help="pack has at least one sat/unsat/unknown row")
     packs.add_argument(
@@ -382,6 +470,10 @@ def build_parser() -> argparse.ArgumentParser:
     checks.add_argument("--pack", help="exact example-pack id")
     checks.add_argument("--field", help="exact field id")
     checks.add_argument("--fragment", help="case-insensitive fragment substring")
+    checks.add_argument(
+        "--route",
+        help="case-insensitive proof/evidence route substring, such as Farkas or qf-bv",
+    )
     checks.add_argument("--proof-status", help="exact proof_status")
     checks.add_argument("--expected-result", help="exact expected_result")
     checks.add_argument("--validation", help="case-insensitive validation substring")

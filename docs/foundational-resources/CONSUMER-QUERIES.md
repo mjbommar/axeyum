@@ -73,6 +73,38 @@ python3 scripts/query-foundational-resources.py packs \
   --format json
 ```
 
+## Field And Proof-Route Discovery
+
+```sh
+python3 scripts/query-foundational-resources.py packs \
+  --field probability_theory \
+  --route Farkas \
+  --require-any
+```
+
+This answers: "Which probability packs use or point at the exact-rational
+Farkas route?" The route filter is a case-insensitive substring over public
+route-bearing fields: fragments, proof-cookbook source refs, validation labels,
+proof statuses, solver-reuse metadata, evidence metadata, and route notes. Pack
+rows include `route_checks` and `route_validations` when a specific check row
+matches; `pack-metadata` means the pack advertises that route at the metadata
+level even if no individual check label contains the substring.
+Hyphen and underscore spellings are normalized for substring search, so
+`qf-bv` and `QF_BV` match the same route text.
+
+For a narrower row-level view, query checks directly:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field graph_theory \
+  --route qf-bv \
+  --expected-result unsat \
+  --require-any
+```
+
+Use this when a consumer needs concrete rows to display as checked examples,
+rather than a list of route-relevant packs.
+
 ## Proof And Check Mining
 
 ```sh
@@ -141,6 +173,7 @@ runs a small query smoke set after validating concepts and packs:
 ```sh
 python3 scripts/query-foundational-resources.py summary >/dev/null
 python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --field probability_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --expected-result unsat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --kind example-family --format json --require-any >/dev/null
 ```

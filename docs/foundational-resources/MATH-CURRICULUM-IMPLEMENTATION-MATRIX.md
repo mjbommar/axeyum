@@ -217,8 +217,8 @@ Build sequence:
 12. Consumer-facing sample queries now land through
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md): summary counts, pack discovery,
-   checked-row mining, solver-reuse rows, and atlas concept lookup over
-   the committed JSON data contract.
+   field-plus-proof-route discovery, checked-row mining, solver-reuse rows,
+   and atlas concept lookup over the committed JSON data contract.
 13. Rules/law transfer now lands through
    [RULES-LAW-CROSSWALK.md](RULES-LAW-CROSSWALK.md): finite predicates,
    arithmetic thresholds, graph reachability, precedence, and proof routes are

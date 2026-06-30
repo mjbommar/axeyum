@@ -154,8 +154,9 @@ by the `math_resource_bv_routes` DRAT regression.
 The first consumer-facing query layer over the committed foundational-resource
 JSON contract has landed in `scripts/query-foundational-resources.py` and
 `docs/foundational-resources/CONSUMER-QUERIES.md`, covering summary counts,
-pack discovery, checked-row mining, solver-reuse rows, and atlas concept
-lookup without importing validators or generators.
+pack discovery, field-plus-proof-route discovery, checked-row mining,
+solver-reuse rows, and atlas concept lookup without importing validators or
+generators.
 The rules/law transfer lane now has a crosswalk from math resources to concrete
 policy/rule checks, with `benefit-eligibility-v0` mapped to finite predicates,
 Bool/QF_LIA thresholds, temporal versioning, replayed witnesses, and proof-route

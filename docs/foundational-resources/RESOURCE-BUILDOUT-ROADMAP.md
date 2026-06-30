@@ -970,7 +970,10 @@ Pick one item per commit unless the change is purely navigational.
 7. Landed: complete the `benefit-eligibility-v0` Bool/QF_LIA proof harness for
    consistency, coverage, fixed no-exception monotonicity, and active-threshold
    implementation equivalence.
-8. Add a consumer-query recipe for "find all packs for a field and route".
+8. Landed: add a consumer-query recipe for "find all packs for a field and
+   route" through the `--route` filter in
+   `scripts/query-foundational-resources.py` and
+   [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md).
 9. Add negative validator fixtures for one resource schema once the schema
    shape stops changing.
 10. Audit `planned` vs `covered` statuses in the curriculum DAG and generated

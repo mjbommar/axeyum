@@ -218,8 +218,9 @@ Near-term boundary:
 - `scripts/consume-foundational-resources.py` is the smoke test.
 - `scripts/query-foundational-resources.py` plus
   [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) are the consumer-facing sample
-  query layer for summary counts, pack discovery, checked-row mining,
-  solver-reuse candidates, and atlas concept lookup.
+  query layer for summary counts, pack discovery, field-plus-proof-route
+  discovery, checked-row mining, solver-reuse candidates, and atlas concept
+  lookup.
 - No Rust crate or separate repository until at least one real consumer needs
   typed APIs, release cadence, or large external corpora.
 
@@ -390,8 +391,8 @@ Next buildout:
    candidate to promoted for their source-linked regression artifacts.
 12. Landed: add consumer-facing sample queries over the JSON data contract.
    `scripts/query-foundational-resources.py` now supports summary, pack, check,
-   and concept queries, and `check-foundational-resources.sh` runs a small
-   query smoke set.
+   and concept queries including field-plus-proof-route discovery, and
+   `check-foundational-resources.sh` runs a small query smoke set.
 13. Promote selected packs into solver regression/fuzz corpora with back-links
    to the resource pack.
    Status: first promotions landed for `logic-basics-v0` via

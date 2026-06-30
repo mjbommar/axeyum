@@ -880,11 +880,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   is a dependency-free read-only consumer over the committed atlas,
   `metadata.json`, and `expected.json` data contract. It supports `summary`,
   `packs`, `checks`, and `concepts` queries for pack discovery, checked-row
-  mining, solver-reuse rows, and atlas concept lookup, with examples in
+  mining, field-plus-proof-route discovery, solver-reuse rows, and atlas
+  concept lookup, with examples in
   [`CONSUMER-QUERIES.md`](docs/foundational-resources/CONSUMER-QUERIES.md).
   `check-foundational-resources.sh` now runs a small query smoke set for
-  summary output, promoted solver-reuse rows, graph-theory UNSAT rows, and
-  example-family atlas rows.
+  summary output, promoted solver-reuse rows, probability/Farkas route pack
+  discovery, graph-theory UNSAT rows, and example-family atlas rows.
 
 - **First QF_BV resource proof-route row landed.**
   [`finite-rings-v0`](artifacts/examples/math/finite-rings-v0/) now has a
