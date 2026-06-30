@@ -37,12 +37,12 @@ The committed resource query currently reports:
 - 22 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math packs.
-- 420 expected checks.
-- 202 checked proof/evidence rows.
+- 421 expected checks.
+- 203 checked proof/evidence rows.
 - 171 replay-only rows.
 - 47 Lean-horizon rows.
-- 82 promoted solver-reuse packs.
-- 2 non-benchmark-horizon solver-reuse packs.
+- 83 promoted solver-reuse packs.
+- 1 non-benchmark-horizon solver-reuse pack.
 - 0 unclassified solver-reuse packs.
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -96,7 +96,6 @@ Recently classified as explicit non-benchmark-horizon rows:
 | Pack | Upgrade Trigger |
 |---|---|
 | `bounded-dynamics-v0` | add a bounded safety or invariant-refutation row with a source-linked QF_LRA/BV artifact |
-| `complex-algebraic-v0` | add a false real-pair algebra or polynomial-root row with a source-linked LRA/NRA artifact |
 
 Exit criteria:
 
@@ -204,7 +203,7 @@ Exit criteria:
 | `linear_algebra` | exact matrices, vector spaces, duals, modules, tensors, spectral rows | make matrix rows queryable by computation type and solver route | QF_LRA/Farkas, finite replay, QF_UF/Alethe |
 | `abstract_algebra` | finite groups/rings/fields, homomorphisms, ideals, modules, tensors | add narrower rows only when multiple packs reuse them | QF_UF/Alethe, QF_BV, finite replay |
 | `real_analysis` | bounded rational intervals, metric continuity, RCF shadows, calculus shadows | keep bounded shadows distinct from completeness/convergence theorems | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon |
-| `complex_analysis` | real-pair algebra and transformations | keep algebraic replay rows non-benchmark until a checked real-pair contradiction exists | real-pair LRA/NRA, finite replay, Lean horizon |
+| `complex_analysis` | real-pair algebra and transformations | complex algebra now has a checked bad norm-squared row; add only distinct real-pair arithmetic, polynomial-root, or algebraic-identity pressure | real-pair LRA/NRA, finite replay, Lean horizon |
 | `topology` | finite topologies, compactness, connectedness, continuous maps, homology | finite topology now has a checked missing-empty-set Bool/CNF row; add only distinct closure, metric-ball, preimage, or finite-set pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, Lean horizon |
 | `measure_theory` | finite measures, product measure, integration, random variables | finite-measure now has a bad complement QF_LRA/Farkas row; promote only distinct finite-additivity, monotonicity, or measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
@@ -290,11 +289,13 @@ Pick one row per commit unless the change is purely navigational.
    squared-distance QF_LRA/Farkas artifact and route regression.
 19. Landed: promote `finite-operator-v0` through a source-linked bad
    operator-bound QF_LRA/Farkas artifact and route regression.
-20. Add a proof-object learner page that follows one resource from source claim
+20. Landed: promote `complex-algebraic-v0` through a source-linked bad
+   norm-squared QF_LRA/Farkas artifact and route regression.
+21. Add a proof-object learner page that follows one resource from source claim
    to emitted proof and corrupted-proof rejection.
-21. Add a generated or query-based audit for unclassified solver-reuse packs if
+22. Add a generated or query-based audit for unclassified solver-reuse packs if
    manual tracking starts to drift.
-22. Revisit the library boundary after unclassified packs are resolved and at
+23. Revisit the library boundary after unclassified packs are resolved and at
    least one non-doc consumer repeats resource parsing logic.
 
 ## Validation Checklist

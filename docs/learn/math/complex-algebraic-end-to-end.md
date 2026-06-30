@@ -22,11 +22,12 @@ Concept rows:
 |---|---|---|
 | `complex-arithmetic-replay` | `sat` | replay-only |
 | `conjugate-norm-replay` | `sat` | replay-only |
+| `bad-norm-squared-rejected` | `unsat` | checked |
 | `quadratic-root-witness` | `sat` | replay-only |
 
-All rows are exact witness replays over rational real-pair data. The pack does
-not yet carry solver-level proof artifacts, so its evidence status remains
-`replay-only`.
+The satisfiable rows are exact witness replays over rational real-pair data.
+The malformed norm-squared row is checked by QF_LRA/Farkas after exact replay
+computes the norm.
 
 ## Encode Complex Numbers As Pairs
 
@@ -84,6 +85,24 @@ norm_squared = 25
 
 This is exact algebra over rational pairs, not numerical approximation.
 
+## Reject A Bad Norm Claim
+
+The bad row reuses the same source object:
+
+```text
+z = 3 + 4i
+|z|^2 = 25
+```
+
+but claims:
+
+```text
+|z|^2 = 26
+```
+
+The validator recomputes the norm exactly, and the source QF_LRA artifact
+checks the final equality conflict with Farkas evidence.
+
 ## Replay A Quadratic Root
 
 The polynomial row records the complex number `i`:
@@ -119,6 +138,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas
 ```
 
 Expected output:
@@ -133,8 +153,8 @@ This lesson shows Axeyum's current complex-number resource pattern:
 
 ```text
 untrusted fast search -> complex arithmetic or root witness
-trusted small checking -> exact rational real-pair replay
-remaining gap -> solver/proof evidence and complex-analysis theorem routes
+trusted small checking -> exact rational real-pair replay plus Farkas evidence
+remaining gap -> analytic complex-analysis theorem routes
 ```
 
 The graduation target is deterministic NRA-style real-pair obligations plus

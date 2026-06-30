@@ -548,12 +548,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `bad-operator-bound-farkas-conflict.smt2` isolates exact replay's computed
   image norm `3` against the malformed upper-bound claim `2`, and
   `math_resource_lra_routes::finite_operator_bad_operator_bound_artifact_emits_checked_farkas`
-  checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
+  checks the emitted `UnsatFarkas` certificate. Generated dashboards then reported
   82 promoted, 2 non-benchmark-horizon, and 0 unclassified solver-reuse packs.
+
+- **Complex-algebraic QF_LRA/Farkas promotion landed.**
+  `complex-algebraic-v0` now carries promoted `solver_reuse` metadata for its
+  bad norm-squared row. The new source-level artifact
+  `bad-norm-squared-farkas-conflict.smt2` isolates exact real-pair replay's
+  computed norm squared `25` against the malformed claim `26`, and
+  `math_resource_lra_routes::complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas`
+  checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
+  83 promoted, 1 non-benchmark-horizon, and 0 unclassified solver-reuse packs.
 
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the refreshed 82-promoted, 2 non-benchmark-horizon, and
+  now records the refreshed 83-promoted, 1 non-benchmark-horizon, and
   0-unclassified solver-reuse counts. The decision remains in-repo and
   JSON-first: the query consumer reads promoted solver-reuse rows, but there is
   still no external consumer, repeated typed API demand, or reusable encoder
@@ -1018,8 +1027,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   taxonomy into ontology rows, example packs, learner pages, proof routes,
   solver-reuse artifacts, consumer boundaries, rules/law transfer, and future
   library splits. It now records the current committed baseline of 65 concept
-  rows, 84 non-template packs, 420 expected checks, 202 checked rows, 171
-  replay-only rows, 47 Lean-horizon rows, and 82 promoted solver-reuse packs,
+  rows, 84 non-template packs, 421 expected checks, 203 checked rows, 171
+  replay-only rows, 47 Lean-horizon rows, and 83 promoted solver-reuse packs,
   then lays out field-by-field build plans plus a prioritized execution queue.
   Linked it from
   `PLAN.md`, the foundational-resources index, mdBook summary, sibling-project
@@ -11804,7 +11813,15 @@ plan is built and committed on the current branch:
   for the bad operator-bound row and wired it into `math_resource_lra_routes`.
   The pack metadata now marks `solver_reuse.status` as `promoted`, the expected
   row records the checked `UnsatFarkas` certificate path, and generated
-  dashboards report 82 promoted, 2 non-benchmark-horizon, and 0 unclassified
+  dashboards then reported 82 promoted, 2 non-benchmark-horizon, and 0 unclassified
+  packs.
+
+- **2026-06-30** — **Complex-algebraic QF_LRA promotion landed.** Added
+  `artifacts/examples/math/complex-algebraic-v0/smt2/bad-norm-squared-farkas-conflict.smt2`
+  for the bad norm-squared row and wired it into `math_resource_lra_routes`.
+  The pack metadata now marks `solver_reuse.status` as `promoted`, the expected
+  row records the checked `UnsatFarkas` certificate path, and generated
+  dashboards report 83 promoted, 1 non-benchmark-horizon, and 0 unclassified
   packs.
 
 - **2026-06-29** — **Proof-cookbook math-example route sections landed.**

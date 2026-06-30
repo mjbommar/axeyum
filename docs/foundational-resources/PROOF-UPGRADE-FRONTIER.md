@@ -28,7 +28,7 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 8 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 9 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 37 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 38 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
 | [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 54 | General theorem statements that remain outside bounded SMT replay. |
 
@@ -211,6 +211,9 @@ First targets:
 - [complex-plane-transforms-v0](../../artifacts/examples/math/complex-plane-transforms-v0/)
   (source-linked Farkas regression landed for the bad unit-square real-part
   row after exact real-pair replay computes `i^2 = -1`)
+- [complex-algebraic-v0](../../artifacts/examples/math/complex-algebraic-v0/)
+  (source-linked Farkas regression landed for the bad norm-squared row after
+  exact real-pair replay computes `|3 + 4i|^2 = 25`)
 - [multivariable-calculus-rational-v0](../../artifacts/examples/math/multivariable-calculus-rational-v0/)
   (source-linked Farkas regression landed for the bad gradient-component row
   after exact bivariate polynomial derivative replay computes the gradient)
@@ -290,7 +293,8 @@ Secondary targets:
   calculus algebraic shadows now contribute a real-analysis/numerical-analysis
   derivative-value regression, calculus Riemann sums now contribute a
   real-analysis/numerical-analysis polynomial-integral regression, and complex
-  plane transforms now contribute a real-pair algebra exact-linear regression,
+  algebraic plus complex plane transforms now contribute real-pair algebra
+  exact-linear regressions,
   finite product measure contributes a product-probability exact-linear
   regression where the nonlinear product itself is replayed before Farkas checks
   the final contradictory masses, and finite random variables contribute a
@@ -328,6 +332,7 @@ cargo test -p axeyum-solver --test evidence tampered_farkas_evidence_fails_its_o
 cargo test -p axeyum-solver --test math_resource_lra_routes qf_lra_resource_route_rejects_tampered_farkas_certificate
 cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test lean_crosscheck certified_lra_interpolant_both_farkas_certs_checked_by_real_lean
 ./scripts/check-foundational-resources.sh
 ```

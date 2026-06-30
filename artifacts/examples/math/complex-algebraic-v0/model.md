@@ -33,6 +33,15 @@ conjugate(z) = 3 - 4i
 z * conjugate(z) = 25 + 0i
 ```
 
+The bad norm row reuses the same exact source object but claims:
+
+```text
+norm_squared(3 + 4i) = 26
+```
+
+Exact replay computes `25`, so the final equality is a small QF_LRA/Farkas
+contradiction.
+
 ## Polynomial Root Witness
 
 For `z = i`:

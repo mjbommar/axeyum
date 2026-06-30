@@ -10311,6 +10311,41 @@ def validate_complex_algebraic(expected: dict[str, Any]) -> None:
     if product_value != (norm_squared, Fraction(0)):
         fail("conjugate norm product must be norm_squared + 0i")
 
+    bad_norm = checks["bad-norm-squared-rejected"]
+    if bad_norm["expected_result"] != "unsat" or bad_norm.get("proof_status") != "checked":
+        fail("bad-norm-squared-rejected must be a checked unsat row")
+    data = bad_norm.get("data", {})
+    z_value = require_complex_pair("bad complex norm z", data.get("z"))
+    computed_norm = require_fraction(
+        "bad complex computed_norm_squared",
+        data.get("computed_norm_squared"),
+    )
+    claimed_norm = require_fraction(
+        "bad complex claimed_norm_squared",
+        data.get("claimed_norm_squared"),
+    )
+    if complex_norm_squared(z_value) != computed_norm:
+        fail("bad-norm-squared-rejected computed norm is incorrect")
+    if computed_norm == claimed_norm:
+        fail("bad-norm-squared-rejected must document a false norm claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad complex smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/complex-algebraic-v0/smt2/"
+        "bad-norm-squared-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-norm-squared-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad complex smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad complex farkas_regression", regression)
+    if "complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas" not in regression:
+        fail("bad-norm-squared-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad complex certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("bad-norm-squared-rejected certificate must document Farkas evidence")
+
     root = checks["quadratic-root-witness"]
     if root["expected_result"] != "sat":
         fail("quadratic-root-witness must expect sat")

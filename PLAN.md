@@ -265,9 +265,10 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **82 promoted solver-reuse
-packs**, **2 non-benchmark-horizon packs**, and **0 unclassified packs** after
-the latest finite-operator bad operator-bound QF_LRA/Farkas promotion,
+the foundational resource dashboards now report **83 promoted solver-reuse
+packs**, **1 non-benchmark-horizon pack**, and **0 unclassified packs** after
+the latest complex-algebraic bad norm-squared QF_LRA/Farkas promotion,
+finite-operator bad operator-bound QF_LRA/Farkas promotion,
 coordinate-geometry bad squared-distance QF_LRA/Farkas promotion,
 finite-topology missing-empty-set Bool/CNF DRAT/LRAT promotion,
 finite-measure bad-complement QF_LRA/Farkas promotion,
@@ -285,7 +286,7 @@ finite-predicate Bool/CNF quantifier-expansion promotion,
 polynomial-identities false-root QF_LIA/Diophantine promotion,
 finite generating-functions QF_LIA/Diophantine coefficient-convolution
 promotion, PHP(3,2) counting/refutation Bool/CNF promotions, and the replay-only
-classification pass for bounded dynamics and complex algebra, plus the earlier
+classification pass for bounded dynamics, plus the earlier
 rational-order, gcd/Bezout, Bool/CNF finite-set/proof-method, QF_LRA
 linear-algebra/optimization/convexity, finite-probability, QF_UF, QF_LIA, and
 QF_BV source-metadata promotion batches;

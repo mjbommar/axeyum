@@ -779,8 +779,8 @@ finite Vandermonde unisolvence, interpolation matrix replay, alternating
 residual sign patterns, checked QF_LRA/Farkas rejection of a duplicate-node
 determinant conflict, and a general Chebyshev-system Lean-horizon row.
 `artifacts/examples/math/complex-algebraic-v0/` now validates exact complex
-arithmetic, conjugate/norm replay, and a fixed polynomial-root witness using
-real-pair algebra.
+arithmetic, conjugate/norm replay, checked QF_LRA/Farkas rejection of a bad
+norm-squared row, and a fixed polynomial-root witness using real-pair algebra.
 `artifacts/examples/math/complex-plane-transforms-v0/` now validates exact
 unit-root cycles, conjugation/product replay, rational Mobius-transform
 replay, checked rejection of a false unit-square real-part claim, and a
@@ -846,8 +846,9 @@ Recommended order:
    projections, Gram-Schmidt replay, QF_LRA/Farkas bad-bound and bad-norm
    rejections, and Chebyshev polynomial examples.
 12. `complex-algebraic-v0` and `complex-plane-transforms-v0`: complex
-    arithmetic, unit-root cycles, conjugation/product replay, and rational
-    Mobius transforms as real-pair algebra.
+    arithmetic, unit-root cycles, conjugation/product replay, QF_LRA/Farkas
+    bad norm/unit-square rejections, and rational Mobius transforms as
+    real-pair algebra.
 13. `numerical-linear-algebra-v0`: residual bounds, rational solution boxes,
     and exact iterative-method error replay.
 14. `random-matrix-finite-v0`: finite matrix-valued probability tables,

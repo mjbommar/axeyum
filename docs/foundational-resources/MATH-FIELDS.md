@@ -237,8 +237,9 @@ one of:
 22. `artifacts/examples/math/complex-algebraic-v0/`
     - Fields: `complex_analysis`, `linear_algebra`, `real_analysis`,
       `abstract_algebra`.
-    - Checks: real-pair complex arithmetic, conjugate norm replay, fixed
-      polynomial-root witness.
+    - Checks: real-pair complex arithmetic, conjugate norm replay, checked
+      QF_LRA/Farkas bad norm-squared rejection, and fixed polynomial-root
+      witness.
 23. `artifacts/examples/math/finite-simplicial-homology-v0/`
     - Fields: `topology`, `set_theory_and_foundations`, `linear_algebra`,
       `abstract_algebra`.

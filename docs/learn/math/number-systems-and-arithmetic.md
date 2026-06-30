@@ -126,13 +126,15 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/mo
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-plane-transforms-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas
 ```
 
 For fuller traces through bounded natural arithmetic, signed integer LIA,
 gcd/Bezout replay, modular congruence replay, bounded number theory, exact
-rational replay, complex real-pair replay, prime-field residue replay, and
+rational replay, complex real-pair replay with a checked bad norm-squared
+certificate, prime-field residue replay, and
 modular quotient-ring replay, read
 [End To End: Natural Arithmetic](natural-arithmetic-end-to-end.md),
 [End To End: Integer Linear Arithmetic](integer-lia-end-to-end.md),

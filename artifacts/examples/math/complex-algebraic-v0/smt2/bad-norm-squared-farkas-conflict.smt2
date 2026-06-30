@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const norm_squared Real)
+(assert (= norm_squared 25))
+(assert (= norm_squared 26))
+(check-sat)
