@@ -11,10 +11,11 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 
 ## Project reality check (2026-06-28)
 
-**Honest status vs the [north star](PLAN.md#where-we-are-vs-the-north-star--measured-reality-check-2026-06-28):
-NOT complete; NOT an A+ replacement of Z3/cvc5/Lean.** Sound everywhere measured,
-dominant on a growing fragment set, far behind on decide-rate/performance/proof
-coverage.
+**Measured status vs the [north star](PLAN.md#where-we-are-vs-the-north-star--measured-reality-check-2026-06-28):
+soundness holding, parity not yet reached, the road there fully mapped.** Sound
+everywhere measured, dominant on a growing fragment set, with the remaining
+decide-rate / performance / proof-coverage work decomposed into sized,
+exit-criteria'd tracks we advance one increment at a time.
 - **Soundness:** `DISAGREE = 0` across all 35 measured baselines (611
   oracle-compared) — *holding*. (Two consumer-app wrong-safes found by new fuzzes
   + fixed this session.)
@@ -27,11 +28,18 @@ coverage.
 - **Dominance:** **23 fragments** with audited `dominant%` — the real, defensible
   claim.
 
-**Where to continue (toward the mission):** Track 1 decide-rate + *committed*
-head-to-head PAR-2; Track 3 reduction certs → Lean (ledger → 0) + the e-graph and
-Alethe-emitter keystones; Track 2 theory depth. The consumer track (below) is
-mature + fuzz-hardened but **does not move the core decide-rate** — its role is
-demand-pull (filed U6/U7/U8) and shipping certifying user-facing value.
+**Where to continue (toward the mission) — next focus = the two theory
+frontiers:** **Track 2 strings (P2.7) and nonlinear (P2.5)** are the largest
+remaining decide-rate gaps and now have full top-down build programs
+([`docs/plan/track-2-theories/P2.7-strings/`](docs/plan/track-2-theories/P2.7-strings/),
+[`docs/plan/track-2-theories/P2.5-nra/`](docs/plan/track-2-theories/P2.5-nra/));
+the first increments are **P2.5 Phase A** (the pure-Rust `axeyum-poly` algebraic
+core) and **P2.7 Phase A** (first-class `Seq`/`String` IR sort + String+LIA over
+`len`, which also closes `str.len`-unsat). In parallel: Track 1 decide-rate +
+*committed* head-to-head PAR-2; Track 3 reduction certs → Lean (ledger → 0) + the
+e-graph and Alethe-emitter keystones. The consumer track (below) is mature +
+fuzz-hardened; its role is demand-pull (filed U6/U7/U8) and certifying
+user-facing value, not core decide-rate.
 
 ## Consumer-track integration lane (2026-06-27) — `WIP`
 
@@ -577,6 +585,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `proof_methods_refutation_php_3_2_rejects_tampered_drat_and_lrat`, which
   checks the good proof first, removes the final DRAT empty-clause step, clears
   LRAT hints, and requires both corrupted certificates to reject.
+
+- **Farkas certificate anatomy learner page landed.**
+  [`farkas-certificate-anatomy-end-to-end.md`](docs/learn/math/farkas-certificate-anatomy-end-to-end.md)
+  now follows `linear-optimization-v0` from the exact LP threshold conflict
+  through source SMT-LIB, emitted `UnsatFarkas` evidence, and same-artifact
+  multiplier tamper rejection. The LRA route regression now includes
+  `linear_optimization_objective_threshold_rejects_tampered_farkas_certificate`,
+  which checks the genuine certificate first, zeroes a Farkas multiplier, and
+  requires the corrupted certificate to reject.
 
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
@@ -2930,6 +2947,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   the docs hub, the contributor guide, and the mdBook summary.
 
 ## Current focus
+
+- **Session 2026-06-30 — Next focus set: the two theory frontiers (strings + nonlinear).**
+  The two largest remaining decide-rate gaps vs Z3/cvc5 now have full top-down
+  build programs (committed `688c7882`), each decomposed current state →
+  literature survey (verified citations) → architecture → phased build (A–E) →
+  evaluation, under
+  [`docs/plan/track-2-theories/P2.5-nra/`](docs/plan/track-2-theories/P2.5-nra/)
+  (nonlinear: incremental linearization → ICP → Cylindrical Algebraic Coverings
+  on a new pure-Rust `axeyum-poly` core; NIA portfolio) and
+  [`docs/plan/track-2-theories/P2.7-strings/`](docs/plan/track-2-theories/P2.7-strings/)
+  (word-level length-aware DPLL(T) core + symbolic-derivative regex + pure-Rust
+  automata fallback). **Next concrete increments:** P2.5 Phase A (the
+  `axeyum-poly` algebraic core — the long pole that unlocks complete NRA *and* the
+  NIA UNSAT engine) and P2.7 Phase A (first-class `Seq`/`String` IR sort +
+  String+LIA over `len`, which also closes the `str.len`-unsat gap). Both keep
+  DISAGREE=0, `unknown`-first, and the measured-scoreboard discipline. Source
+  grounding from `references/cvc5` + `references/z3` internals and verified
+  SOTA literature; no C/C++ (rules out libpoly/MATA — everything pure Rust).
 
 - **Session 2026-06-27 — Warm direct array-equality admission.**
   The retained warm array-select abstraction now also accepts direct equality

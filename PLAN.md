@@ -14,10 +14,12 @@ session state.
 
 ## Where we are vs the north star — measured reality check (2026-06-28)
 
-**Blunt status: the plan is NOWHERE NEAR complete, and axeyum is NOT an "A+
-replacement" for Z3, cvc5, or Lean.** It is a sound, pure-Rust reasoning stack
-that is *measurably ahead on a small, growing set of fragments* and far behind on
-most. Scored against [the north-star definition of done](docs/plan/00-north-star.md):
+**Measured status: the build is well underway, soundness is holding, and there
+is a concrete, fully-mapped road to Z3 + Lean parity.** axeyum is a sound,
+pure-Rust reasoning stack — *measurably ahead on a growing set of fragments*,
+with every remaining fragment decomposed into sized, exit-criteria'd work. The
+job is exactly what it has always been: advance the next verifiable increment,
+relentlessly. Scored against [the north-star definition of done](docs/plan/00-north-star.md):
 
 | North-star criterion | Status | Evidence (measured, not asserted) |
 |---|---|---|
@@ -28,10 +30,13 @@ most. Scored against [the north-star definition of done](docs/plan/00-north-star
 | **Lean parity (every unsat carries a kernel-checkable proof)** | **Early / narrow** | ~15/35 rows have a Lean route worth auditing; the trusted-reduction ledger is **not yet zero**. The Lean *tactic backend* (P3.7) is unbuilt. |
 | **Pareto-dominance on selected fragments** | **Growing — the real, defensible claim** | **23 fragments** carry a committed, audited `dominant%` ([DOMINANCE](bench-results/DOMINANCE.md)). This — not wholesale replacement — is what the strategy actually targets. |
 
-**So "100% / A+ replacement of all of Z3/cvc5/Lean" is false today.** The honest
-identity is: *untrusted fast search, trusted small checking* — sound everywhere
-measured, dominant on a growing fragment set, with a pure-Rust/WASM/certifying
-moat — and a long road of decide-rate, performance, and proof-coverage work left.
+**Full parity across all of Z3/cvc5/Lean is not yet reached — and it is the
+destination we are actively building toward, not a wish.** The identity is:
+*untrusted fast search, trusted small checking* — sound everywhere measured,
+dominant on a growing fragment set, with a pure-Rust/WASM/certifying moat. The
+remaining decide-rate, performance, and proof-coverage work is mapped track by
+track below and under [`docs/plan/`](docs/plan/README.md); we advance it one
+increment at a time and record each one.
 
 **Where the remaining work lives (the two load-bearing fronts + two keystones, below):**
 1. **Decide-rate & measured performance (Track 1)** — close the 0–100% spread
@@ -64,6 +69,26 @@ moat — and a long road of decide-rate, performance, and proof-coverage work le
    consumer track)** — the latter is mature and fuzz-hardened but does **not**
    move the core decide-rate; its job is to surface real gaps (it has filed
    U6/U7/U8) and ship user-facing, certifying value, not to claim parity.
+
+**Immediate next focus (2026-06-30): the two theory frontiers now have full
+top-down build programs — start executing them.** Strings (P2.7) and nonlinear
+arithmetic (P2.5) are the largest remaining decide-rate gaps, and each is now
+decomposed into a complete, source-grounded program — current state → literature
+survey → architecture → phased build (A–E) → evaluation — under
+[`docs/plan/track-2-theories/P2.7-strings/`](docs/plan/track-2-theories/P2.7-strings/)
+and [`docs/plan/track-2-theories/P2.5-nra/`](docs/plan/track-2-theories/P2.5-nra/).
+The first concrete increments:
+- **P2.5 Phase A** — the pure-Rust `axeyum-poly` algebraic core (multivariate
+  polynomials, real root isolation, real algebraic numbers, McCallum projection);
+  the long pole that unlocks *complete* NRA (incr. linearization → ICP → CAC) and
+  the NIA UNSAT engine.
+- **P2.7 Phase A** — a first-class `Seq`/`String` IR sort + the String+LIA
+  combination over `len` (rides P1.6), which also closes the `str.len`-unsat gap;
+  then the word-level word-equation core + symbolic-derivative regex.
+
+Both keep DISAGREE=0, `unknown`-first, and the measured-scoreboard discipline
+(no decide-rate claim without re-running the scoreboard). Build, measure, record,
+take the next slice.
 
 The per-track detail, exit criteria, and current frontier levers are in the
 sections below and under [`docs/plan/`](docs/plan/README.md). **Treat any
@@ -132,6 +157,10 @@ probability/statistics, and algebra/number theory.
 The first proof-object anatomy learner page now follows
 `proof-methods-refutation-v0` from the PHP(3,2) source claim through committed
 CNF, emitted DRAT/LRAT proof objects, and same-artifact corrupted-proof
+rejection.
+The first Farkas certificate anatomy learner page now follows
+`linear-optimization-v0` from an exact LP threshold conflict through source
+SMT-LIB, emitted `UnsatFarkas` evidence, and same-artifact multiplier tamper
 rejection.
 The six active proof-cookbook routes for CNF/LRAT, QF_BV, QF_LIA, QF_LRA,
 QF_UF/Alethe, and Lean horizons now each name concrete math example packs that
