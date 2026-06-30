@@ -274,9 +274,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `tail_probability <= 1/8`; generated dashboards move promoted solver-reuse
   packs to 24.
 
+- **Finite conditional-expectation QF_LRA promotion landed.**
+  [`finite-conditional-expectation-v0`](artifacts/examples/math/finite-conditional-expectation-v0/)
+  now carries promoted `solver_reuse` metadata for its existing source-level
+  QF_LRA artifact. The shared `math_resource_lra_routes` regression emits and
+  independently rechecks Farkas evidence for
+  `(1/2) * high_block_expectation = 3` and
+  `high_block_expectation = 5`; generated dashboards move promoted
+  solver-reuse packs to 25.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
-  now records the post-23-promoted-pack review and refreshed 24-pack count. The
+  now records the post-23-promoted-pack review and refreshed 25-pack count. The
   decision remains in-repo and JSON-first: the query consumer reads promoted
   solver-reuse rows, but there is still no external consumer, repeated typed API
   demand, or reusable encoder boundary that warrants a new crate or separate

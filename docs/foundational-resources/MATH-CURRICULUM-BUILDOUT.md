@@ -1531,8 +1531,8 @@ same checked Farkas evidence path using the first failed normal equation.
 `real-analysis-rational-v0` now routes its bad linear-delta row through the
 same checked Farkas evidence path using the final output-bound contradiction.
 `finite-conditional-expectation-v0` now routes its bad high-block table through
-the same checked Farkas evidence path using the denominator-cleared block
-average contradiction.
+a source-linked checked Farkas evidence path using the denominator-cleared block
+average contradiction, and its metadata promotes that row for solver reuse.
 `finite-euler-method-v0` now routes its bad fixed-step transition through the
 same checked Farkas evidence path after exact derivative replay.
 `orientation-area-geometry-v0` now routes its bad fixed-orientation row through

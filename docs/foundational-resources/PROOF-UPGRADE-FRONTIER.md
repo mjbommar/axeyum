@@ -196,7 +196,7 @@ First targets:
   (resource-backed Farkas regression landed for the finite metric-space
   bad-delta row)
 - [finite-conditional-expectation-v0](../../artifacts/examples/math/finite-conditional-expectation-v0/)
-  (resource-backed Farkas regression landed for the bad high-block table)
+  (source-linked solver-reuse promotion landed for the bad high-block table)
 - [finite-stochastic-kernels-v0](../../artifacts/examples/math/finite-stochastic-kernels-v0/)
   (resource-backed Farkas regression landed for the bad kernel-row
   normalization conflict)
