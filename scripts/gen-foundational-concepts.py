@@ -2592,6 +2592,128 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_finite_graph_replay_obstruction",
+        "title": "Finite Graph Replay And Obstruction",
+        "field_ids": [
+            "graph_theory",
+            "discrete_math",
+            "logic_and_proof",
+            "probability_theory",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite graph rows state the vertex set, edge relation, ordering, "
+            "witness object, and bounded search space being checked. The "
+            "trusted object is replay of coloring, reachability, traversal, "
+            "matching, cut, or d-separation data, or a checked Boolean/CNF, "
+            "QF_BV, or QF_LIA certificate for a fixed malformed graph claim."
+        ),
+        "prerequisites": [
+            "bridge_finite_model_replay",
+            "bridge_finite_counting_replay",
+            "bridge_boolean_cnf_lrat_anatomy",
+            "curriculum_sets",
+            "curriculum_relations_and_functions",
+        ],
+        "unlocks": [
+            "family_boolean_cnf_lrat",
+            "bridge_qf_bv_bitblast_anatomy",
+            "bridge_lean_horizon",
+            "field_graph_theory",
+            "field_discrete_math",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite graphs",
+            "finite relation replay",
+            "Bool / CNF",
+            "DRAT / LRAT",
+            "QF_BV fixed-width encodings",
+            "QF_LIA counters",
+            "finite enumeration",
+        ],
+        "example_packs": [
+            (
+                "graph-coloring-v0",
+                "Finite coloring witness replay, triangle non-2-colorability Bool/CNF proof route, and one-bit QF_BV/DRAT route.",
+            ),
+            (
+                "graph-reachability-v0",
+                "BFS distance, deterministic DFS traversal, disconnected no-path CNF proof, and edge-cut separation replay.",
+            ),
+            (
+                "graph-search-runtime-v0",
+                "Finite BFS/DFS visited-count replay and checked QF_LIA arithmetic-DPLL rejection of a false DFS cost bound.",
+            ),
+            (
+                "graph-matching-v0",
+                "Finite matching replay, augmenting-path flip replay, and triangle no-perfect-matching CNF proof route.",
+            ),
+            (
+                "graph-cut-v0",
+                "Finite edge/vertex cut certificates, non-cut rejection, and bounded post-removal reachability CNF proof route.",
+            ),
+            (
+                "graph-d-separation-v0",
+                "Finite DAG d-separation path enumeration with conditioned-chain CNF proof route.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite graph replay plus Boolean, QF_BV, and QF_LIA certificates",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py plus math_resource_boolean_routes, math_resource_bv_routes, and math_resource_lia_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+                    "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+                    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+                    "docs/learn/math/graph-and-discrete-reasoning.md",
+                    "docs/learn/math/graph-coloring-end-to-end.md",
+                    "docs/learn/math/graph-reachability-end-to-end.md",
+                    "docs/learn/math/graph-search-runtime-end-to-end.md",
+                    "docs/learn/math/graph-matching-end-to-end.md",
+                    "docs/learn/math/graph-cut-end-to-end.md",
+                    "docs/learn/math/graph-d-separation-end-to-end.md",
+                    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+                    "crates/axeyum-solver/tests/math_resource_bv_routes.rs",
+                    "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+                ],
+                "notes": (
+                    "SAT rows replay explicit finite graph witnesses. UNSAT "
+                    "rows graduate only when the source artifact is checked by "
+                    "the relevant proof route; general graph theory and "
+                    "asymptotic runtime remain theorem-horizon work."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+            "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+            "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+            "docs/learn/math/graph-and-discrete-reasoning.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+            "crates/axeyum-solver/tests/math_resource_bv_routes.rs",
+            "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite graph rows do not prove chromatic-number theorems, max-flow/min-cut, matching duality, graph minors, extremal graph theory, or unbounded graph-family claims.",
+            "Traversal-cost rows are fixed finite counterexamples; asymptotic BFS/DFS complexity and average-case runtime remain Lean-horizon.",
+            "D-separation rows are finite graph-theoretic checks and do not claim causal identification, do-calculus, or probabilistic graphical-model semantics.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state vertices, edges, direction/order conventions, witness object, and the bounded search space.",
+                "Malformed graph rows link source CNF/SMT-LIB artifacts and route regressions before claiming checked evidence.",
+                "Learner pages keep finite graph replay separate from graph-theorem, causal, and asymptotic-runtime claims.",
+            ],
+        },
+    },
+    {
         "id": "bridge_cardinality_theorem_horizon",
         "title": "Cardinality Theorem Horizon",
         "field_ids": ["set_theory_and_foundations", "logic_and_proof", "discrete_math"],

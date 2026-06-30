@@ -4,6 +4,9 @@ Concept rows:
 
 - `field_graph_theory`, `field_discrete_math`, and `field_logic_and_proof` in
   the [Foundational Concept Atlas](../../../artifacts/ontology/foundational-concepts.json)
+- `bridge_finite_counting_replay` and
+  `bridge_finite_graph_replay_obstruction` in the
+  [Foundational Concept Atlas](../../../artifacts/ontology/foundational-concepts.json)
 - `curriculum_counting`, `curriculum_sets`, and
   `curriculum_relations_and_functions` in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
@@ -66,6 +69,11 @@ active path, but the checker recomputes every simple path and applies the
 collider/non-collider blocking rules. For cuts, the search can propose a cut
 set and a partition; the checker removes edges or vertices, recomputes
 reachability, and enumerates smaller cuts.
+The shared `bridge_finite_graph_replay_obstruction` row is the atlas vocabulary
+for this finite graph pattern across coloring, reachability, traversal,
+matching, cut, and d-separation resources. It is deliberately finite: graph
+minors, max-flow/min-cut theorems, matching duality, causal identification,
+and asymptotic traversal complexity stay in proof-horizon resources.
 
 ## Encode / Check Walkthrough
 

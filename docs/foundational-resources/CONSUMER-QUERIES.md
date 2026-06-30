@@ -660,12 +660,34 @@ python3 scripts/query-foundational-resources.py fields \
 ```
 
 Use the graph atlas lookup for the reusable Boolean CNF and fixed-width graph
-families:
+families, plus reachability lookup for the shared finite graph replay bridge:
 
 ```sh
 python3 scripts/query-foundational-resources.py concepts \
   --field graph_theory \
   --text graph \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field graph_theory \
+  --text reachability \
+  --require-any
+```
+
+Concept-plus-route queries can find graph packs and checked rows without
+hard-coding whether the row came from coloring, reachability, matching, cut, or
+d-separation:
+
+```sh
+python3 scripts/query-foundational-resources.py packs \
+  --concept bridge_finite_graph_replay_obstruction \
+  --route boolean \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_graph_replay_obstruction \
+  --route boolean \
+  --proof-status checked \
   --require-any
 ```
 
@@ -1038,7 +1060,10 @@ python3 scripts/query-foundational-resources.py concepts --field number_theory -
 python3 scripts/query-foundational-resources.py checks --field number_theory --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field graph_theory --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field graph_theory --text graph --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field graph_theory --text reachability --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_finite_graph_replay_obstruction --route boolean --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_graph_replay_obstruction --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field real_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text epsilon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text gradient --require-any >/dev/null

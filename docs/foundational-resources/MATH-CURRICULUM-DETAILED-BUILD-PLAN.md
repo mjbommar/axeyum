@@ -36,7 +36,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 53 bridge-concept rows.
+- 54 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math packs.
 - 516 expected checks.
@@ -207,7 +207,7 @@ Exit criteria:
 | `logic_and_proof` | SAT, refutation, finite proof patterns, induction bounds | maintain proof-object anatomy bridge rows and PHP CNF promotions | Bool/CNF DRAT/LRAT, QF_LIA, Lean horizon |
 | `set_theory_and_foundations` | finite sets, relations, functions, quotients, lattices, cardinality | maintain landed finite Boolean algebra, partition/relation, image/preimage/inverse, finite cardinality, and cardinality-horizon bridge rows | finite replay, Bool/CNF, QF_UF/Alethe, Lean horizon |
 | `discrete_math` | counting, generating functions, graph resources, finite actions | maintain landed finite-counting replay bridge and add new rows only for distinct counting, recurrence, or asymptotic-boundary pressure | Bool/CNF, QF_LIA, finite replay |
-| `graph_theory` | coloring, reachability, search runtime, matching, cuts, d-separation | keep one promoted representative per family; add asymptotic horizons only as proof targets | Bool/CNF, QF_BV, QF_LIA, finite replay |
+| `graph_theory` | coloring, reachability, search runtime, matching, cuts, d-separation | maintain landed finite graph replay/obstruction bridge; add theorem/asymptotic horizons only as proof targets | Bool/CNF, QF_BV, QF_LIA, finite replay |
 | `number_theory` | gcd, modular arithmetic, residues, bounded Diophantine checks | group recurring divisibility and residue obstructions | QF_LIA/Diophantine, QF_BV |
 | `linear_algebra` | exact matrices, vector spaces, duals, modules, tensors, spectral rows, active-set QP rows, SDP rows, descent-step rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | make matrix rows queryable by computation type and solver route | QF_LRA/Farkas, finite replay, QF_UF/Alethe |
 | `abstract_algebra` | finite groups/rings/fields, homomorphisms, ideals, modules, tensors | add narrower rows only when multiple packs reuse them | QF_UF/Alethe, QF_BV, finite replay |
@@ -681,7 +681,14 @@ Pick one row per commit unless the change is purely navigational.
     orbit-count replay, and exact finite tail-count contradictions queryable
     from the atlas. The discrete-math consumer smoke now includes counting
     concept lookup and concept-scoped Boolean/Diophantine route queries, and
-    the atlas now validates 53 bridge rows.
+    that increment raised the atlas to 53 bridge rows.
+81. Landed: add the finite graph replay/obstruction bridge row.
+    `bridge_finite_graph_replay_obstruction` makes finite coloring,
+    reachability/traversal, matching, cut, and d-separation packs queryable
+    from the atlas while preserving the boundary around graph theorems,
+    causal claims, and asymptotic traversal complexity. The graph-theory
+    consumer smoke now includes reachability lookup and concept-scoped Boolean
+    route queries, and the atlas now validates 54 bridge rows.
 
 ## Validation Checklist
 

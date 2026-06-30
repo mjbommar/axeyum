@@ -35,12 +35,13 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 99 atlas rows generated from curriculum, field data, 53 R1 bridge
+- 100 atlas rows generated from curriculum, field data, 54 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
   number-system exact-vs-floating, totality convention, gcd/divisibility
-  witness, modular CRT/inverse witness, and finite-counting replay vocabulary,
+  witness, modular CRT/inverse witness, finite-counting replay vocabulary, and
+  finite graph replay/obstruction vocabulary,
   linear-algebra computation vocabulary, probability/statistics finite-table
   vocabulary, measure-theory additivity/product/integration vocabulary,
   optimization/convexity LP and finite-shadow vocabulary, algebra-map
@@ -448,8 +449,10 @@ Next buildout:
    validated resources are surfaced for review; generated `resource_status`
    now reflects resource maturity (`validated`, `proof-horizon`, or
    `planned`) rather than a historical seed marker.
-3. Add focused graph lessons for reachability, search runtime, matching, cuts,
-   and d-separation.
+3. Landed: focused graph lessons and the shared finite graph
+   replay/obstruction bridge now cover reachability, search runtime, matching,
+   cuts, and d-separation while keeping asymptotic and theorem-level graph
+   claims in the proof-horizon lane.
 4. Landed: add standalone finite probability and finite measure lessons. The
    finite probability mass-table page now follows exact PMF normalization,
    conditional probability replay, Bayes posterior replay, checked QF_LRA/Farkas

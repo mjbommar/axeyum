@@ -45,7 +45,7 @@ As of 2026-06-30, the committed resource query reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 53 bridge-concept rows.
+- 54 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math packs.
 - 516 expected checks.
@@ -300,7 +300,7 @@ Next useful increments:
 | `logic_and_proof` | SAT, finite predicates, refutation, proof patterns, induction bounds | proof-object walkthroughs, finite countermodel patterns, bounded induction warnings | Bool/CNF DRAT/LRAT, QF_LIA, QF_UF, Lean horizon | corrupted proof/certificate rejection appears in learner material |
 | `set_theory_and_foundations` | finite sets, functions, quotients, lattices, cardinality, topology/measure finite sets | stronger finite/infinite boundary rows and reusable quotient/image/preimage vocabulary | finite replay, Bool/CNF, QF_UF/Alethe, Lean horizon | infinite claims are never benchmarked as finite checks |
 | `discrete_math` | counting, generating functions, graph resources, finite actions | landed finite-counting replay bridge for finite enumeration, pigeonhole, double-counting, coefficient extraction, finite orbit counts, and exact tail counts; add recurrence/asymptotic rows only when reused | Bool/CNF, QF_LIA, finite replay | each row names universe size and theorem horizon |
-| `graph_theory` | coloring, reachability, search runtime, matching, cuts, d-separation | one representative proof regression per graph family; pathologies with explicit cost counters | Bool/CNF, QF_BV, QF_LIA, finite replay | graph resources query by route and source artifact |
+| `graph_theory` | coloring, reachability, search runtime, matching, cuts, d-separation | landed finite graph replay/obstruction bridge across the graph packs; add theorem/asymptotic rows only when reused | Bool/CNF, QF_BV, QF_LIA, finite replay | graph resources query by route, bridge concept, and source artifact |
 | `number_theory` | gcd, modular arithmetic, residues, finite fields, bounded Diophantine rows | recurring divisibility/CRT/residue obstructions and fixed-width contrasts | QF_LIA/Diophantine, QF_BV | bounded search and theorem claims are visibly separated |
 | `linear_algebra` | rational matrices, finite vector/dual/module/tensor, spectral, invariant, optimization/numerical rows | matrix-computation index plus matrix-corpus boundary by LU/rank/nullity/projection/residual/eigen/characteristic/random-moment | QF_LRA/Farkas, finite replay, QF_UF/Alethe | solver regressions cite source pack and pack cites regression before benchmark claims |
 | `abstract_algebra` | finite groups, rings, fields, monoids, actions, homomorphisms, ideals, modules, tensors | narrower rows only for reused concepts: orbit/stabilizer, Burnside, units/idempotents, representation horizons | QF_UF/Alethe, QF_BV, finite replay, Lean horizon | table replay remains distinct from structure-theorem proof |
@@ -378,7 +378,11 @@ Use one row per commit unless the change is purely navigational.
    Alethe/QF_BV rows, homomorphism/ideal bridge vocabulary, number-theory
    Diophantine rows, finite-family vocabulary, graph-theory Boolean rows, and
    graph-family vocabulary visible through the public JSON contract.
-15. Landed: add analysis/numerical/complex consumer-query coverage through
+15. Landed: add `bridge_finite_graph_replay_obstruction` and graph concept
+   smoke queries so finite coloring, reachability/traversal, matching, cut, and
+   d-separation packs can be found by one shared bridge concept without
+   promoting graph theorems or asymptotic-runtime claims.
+16. Landed: add analysis/numerical/complex consumer-query coverage through
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
    `scripts/check-foundational-resources.sh`, making bounded real-analysis
    Farkas rows, epsilon/gradient bridge vocabulary, exact numerical residual

@@ -92,7 +92,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `logic_and_proof` | foundations layer | proof-object lessons and proof-pattern atlas rows | CNF/LRAT, Alethe, Lean reconstruction |
 | `set_theory_and_foundations` | sets, relations, cardinality | quotients, lattices, finite/infinite boundary rows | QF_UF/Alethe, finite replay, Lean horizon |
 | `discrete_math` | counting, relations | graph search, matching, cuts, generating functions, asymptotic horizons | SAT/CNF, finite replay, Lean horizon |
-| `graph_theory` | sets, relations, counting | extend graph lessons and proof routes beyond coloring into reachability, search runtime, matching, cuts, and d-separation | SAT/CNF, QF_BV for fixed color encodings, BV/LIA counters, model replay |
+| `graph_theory` | sets, relations, counting | maintain landed finite graph replay/obstruction bridge across coloring, reachability, search runtime, matching, cuts, and d-separation; add theorem/asymptotic rows only when reused | SAT/CNF, QF_BV for fixed color encodings, BV/LIA counters, model replay |
 | `number_theory` | divisibility, modular, fields | bounded Diophantine and residue-family packs | QF_LIA, QF_BV |
 | `linear_algebra` | fields, polynomials, relations | LU, rank/nullity, residual, spectral, tensor and module rows | QF_LRA/Farkas, finite-field replay |
 | `abstract_algebra` | groups, rings, fields | homomorphisms, ideals, quotients, modules, tensor products | QF_UF/Alethe, QF_BV |

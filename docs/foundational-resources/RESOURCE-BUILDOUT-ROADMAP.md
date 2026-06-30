@@ -40,7 +40,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 53 bridge-concept rows.
+- 54 bridge-concept rows.
 - 5 example-family rows.
 - 102 non-template math example packs.
 - 516 expected checks.
@@ -488,8 +488,9 @@ Current packs:
 
 Build next:
 
-- Add concept rows for coloring, reachability, BFS/DFS traversal, matching,
-  cut, separation, d-separation, and graph-counterexample replay.
+- Maintain the landed `bridge_finite_graph_replay_obstruction` row for
+  coloring, reachability, BFS/DFS traversal, matching, cut, separation,
+  d-separation, and graph-counterexample replay.
 - Promote one representative bad row per graph family into a small regression
   artifact if it produces a compact CNF/LIA/BV check.
 - Add proof-route notes for when graph claims are Boolean SAT, finite replay,
@@ -1549,7 +1550,11 @@ Pick one item per commit unless the change is purely navigational.
     finite-algebra rows, number-theory Diophantine readiness, finite-family
     lookup, checked integer-arithmetic rows, graph-theory Boolean readiness,
     graph-family lookup, and checked finite graph rows.
-83. Landed: add analysis/numerical/complex field-readiness consumer queries
+83. Landed: add `bridge_finite_graph_replay_obstruction` plus graph
+    reachability and concept-scoped Boolean route smoke queries, making finite
+    coloring, traversal, matching, cut, and d-separation resources discoverable
+    without promoting graph theorem, causal, or asymptotic-runtime claims.
+84. Landed: add analysis/numerical/complex field-readiness consumer queries
     through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational
     smoke check, covering real-analysis Farkas readiness, epsilon/gradient
     bridge lookups, checked bounded-analysis rows, numerical-analysis Farkas
