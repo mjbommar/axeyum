@@ -23,7 +23,9 @@ Concept rows:
 | `general-continuity-lean-horizon` | `not-run` | lean-horizon |
 
 Every checked row is finite replay over exact rational distances and function
-values. The pack does not prove general continuity on real metric spaces.
+values. The bad-delta row also has a checked `UnsatFarkas` certificate for the
+final strict output-bound contradiction. The pack does not prove general
+continuity on real metric spaces.
 
 ## Encode A Finite Metric Slice
 
@@ -152,6 +154,16 @@ d(p0,p2) = 1/2 < 3/4
 The candidate delta is untrusted; the small checker validates the counterexample
 with exact rational arithmetic.
 
+The resource regression also checks the final contradiction as `QF_LRA`:
+
+```text
+output_distance = 1
+output_distance < 1
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
+
 ## Name The Lean Horizon
 
 The finite pack checks:
@@ -182,6 +194,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes metric_continuity_bad_delta_emits_checked_farkas
 ```
 
 Expected output:
@@ -196,10 +209,10 @@ This lesson shows Axeyum's current metric-continuity resource pattern:
 
 ```text
 untrusted fast search -> finite metric, delta, preimage, or counterexample row
-trusted small checking -> exact rational distances and finite enumeration
+trusted small checking -> exact rational distances, finite enumeration, and a Farkas certificate for the linear bad-delta refutation
 remaining horizon -> fully quantified real metric-space continuity
 ```
 
 The graduation target is to encode finite epsilon-delta and open-ball preimage
-checks as deterministic exact-rational obligations, then replay witnesses and
-bad-delta refutations through Axeyum instead of pack-local Python alone.
+checks as deterministic exact-rational obligations, then expand only the
+bounded linear refutations that can carry checked solver evidence.

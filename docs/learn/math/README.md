@@ -127,8 +127,8 @@ validated pack data and the repo-root command that replays it.
   rejection, and the calculus Lean horizons.
 - [Metric Continuity](metric-continuity-end-to-end.md): follows finite metric
   table replay, finite Lipschitz checks, epsilon-delta containment,
-  open-ball preimage replay, bad-delta rejection, and the continuity Lean
-  horizon.
+  open-ball preimage replay, checked QF_LRA/Farkas bad-delta rejection, and
+  the continuity Lean horizon.
 - [Real Algebra RCF Shadow](reals-rcf-shadow-end-to-end.md): follows ordered
   field and nonlinear product witnesses, a quadratic root replay, square
   nonnegativity, negative-discriminant rejection, and the completeness horizon.

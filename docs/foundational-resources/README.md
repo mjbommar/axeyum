@@ -136,7 +136,8 @@ schemas, examples, and validation workflows.
   finite Cauchy-tail check, and a general convergence Lean-horizon row.
 - [`artifacts/examples/math/metric-continuity-v0/`](../../artifacts/examples/math/metric-continuity-v0/)
   validates finite Lipschitz, epsilon-delta, and open-ball preimage checks
-  with exact rational metrics, plus checked rejection of an overlarge delta.
+  with exact rational metrics, plus checked QF_LRA/Farkas rejection of an
+  overlarge delta.
 - [`artifacts/examples/math/finite-compactness-v0/`](../../artifacts/examples/math/finite-compactness-v0/)
   validates finite open-cover/subcover checks, minimal subcover enumeration,
   finite-intersection families, bad-cover rejection, and a compactness

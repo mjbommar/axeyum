@@ -28,7 +28,7 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 4 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 4 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 5 | Integer equalities, counts, modular constraints, and rank obstructions. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 23 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 24 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 13 | Equality-heavy finite structures and congruence conflicts. |
 | [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 54 | General theorem statements that remain outside bounded SMT replay. |
 
@@ -161,6 +161,9 @@ First targets:
   (resource-backed Farkas regression landed for the bad coefficient row)
 - [real-analysis-rational-v0](../../artifacts/examples/math/real-analysis-rational-v0/)
   (resource-backed Farkas regression landed for the bad linear-delta row)
+- [metric-continuity-v0](../../artifacts/examples/math/metric-continuity-v0/)
+  (resource-backed Farkas regression landed for the finite metric-space
+  bad-delta row)
 - [finite-conditional-expectation-v0](../../artifacts/examples/math/finite-conditional-expectation-v0/)
   (resource-backed Farkas regression landed for the bad high-block table)
 - [finite-euler-method-v0](../../artifacts/examples/math/finite-euler-method-v0/)
@@ -190,7 +193,8 @@ Secondary targets:
 
 - first secondary QF_LRA/Farkas target set covered; finite Chebyshev-system
   determinant replay now contributes a functional-analysis/numerical-analysis
-  exact-linear regression.
+  exact-linear regression, and metric-continuity now contributes a topology /
+  epsilon-delta exact-linear regression.
 
 Expected artifact:
 

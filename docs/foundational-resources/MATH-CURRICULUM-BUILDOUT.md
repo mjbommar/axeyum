@@ -674,7 +674,7 @@ orientation claim, and a general oriented-geometry Lean-horizon row.
 axioms, closure/interior computation, and exact finite metric-ball replay.
 `artifacts/examples/math/metric-continuity-v0/` now validates finite
 Lipschitz, epsilon-delta, and open-ball preimage checks with exact rational
-metrics, plus checked rejection of an overlarge delta.
+metrics, plus checked QF_LRA/Farkas rejection of an overlarge delta.
 `artifacts/examples/math/finite-compactness-v0/` now validates finite
 open-cover/subcover checks, minimal subcover enumeration,
 finite-intersection-family replay, bad-cover rejection, and a compactness
@@ -830,7 +830,8 @@ Recommended order:
     roots, Cayley-Hamilton replay, finite eigenvalue intervals, and
     QF_LRA/Farkas bad-characteristic-polynomial rejection.
 19. `metric-continuity-v0`: finite Lipschitz, epsilon-delta, open-ball
-    preimage, and bad-delta checks over exact rational metric spaces.
+    preimage, and checked QF_LRA/Farkas bad-delta checks over exact rational
+    metric spaces.
 20. `finite-compactness-v0`: finite open covers, minimal subcover
     enumeration, finite-intersection families, and bad-cover rejection.
 21. `finite-connectedness-v0`: finite connected spaces, open separations,
@@ -1333,8 +1334,8 @@ Fisher tail replay, checked bad p-value rejection, a checked QF_LIA bad
 tail-count certificate, and the statistical numerical-honesty horizon.
 `metric-continuity-v0` now has a learner-facing end-to-end lesson for finite
 metric-table replay, finite Lipschitz checks, epsilon-delta containment,
-open-ball preimage replay, checked bad-delta rejection, and the continuity Lean
-horizon.
+open-ball preimage replay, checked QF_LRA/Farkas bad-delta rejection, and the
+continuity Lean horizon.
 `finite-compactness-v0` now has a learner-facing end-to-end lesson for finite
 open-cover replay, subcover replay, minimal-subcover enumeration,
 finite-intersection-family replay, checked bad-cover rejection, and the

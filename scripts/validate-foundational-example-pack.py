@@ -11829,8 +11829,8 @@ def validate_metric_continuity(expected: dict[str, Any]) -> None:
         fail("open-ball-preimage-witness preimage should match the listed domain ball")
 
     bad_delta = checks["bad-delta-rejected"]
-    if bad_delta["expected_result"] != "unsat":
-        fail("bad-delta-rejected must expect unsat")
+    if bad_delta["expected_result"] != "unsat" or bad_delta.get("proof_status") != "checked":
+        fail("bad-delta-rejected must be a checked unsat row")
     data = bad_delta.get("data", {})
     points = require_string_list("bad delta points", data.get("points"))
     distances = require_metric_distances("bad delta distances", data.get("distances"), points)
@@ -11855,6 +11855,23 @@ def validate_metric_continuity(expected: dict[str, Any]) -> None:
         fail("bad-delta-rejected counterexample is not inside the claimed delta ball")
     if output_distance < epsilon:
         fail("bad-delta-rejected counterexample unexpectedly satisfies epsilon")
+    output_claim = data.get("farkas_output_claim")
+    require_string("bad delta farkas_output_claim", output_claim)
+    if output_claim != "output_distance < epsilon":
+        fail("bad-delta-rejected must document the Farkas output claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad delta smt2_artifact", smt2_artifact)
+    check_source("bad delta smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/metric-continuity-v0/smt2/bad-delta-farkas-conflict.smt2":
+        fail("bad-delta-rejected smt2_artifact must name the checked QF_LRA artifact")
+    regression = data.get("farkas_regression")
+    require_string("bad delta farkas_regression", regression)
+    if "metric_continuity_bad_delta_emits_checked_farkas" not in regression:
+        fail("bad-delta-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad delta certificate", certificate)
+    if "UnsatFarkas" not in certificate or "Evidence::check" not in certificate:
+        fail("bad-delta-rejected certificate must document checked Farkas evidence")
 
     horizon = checks["general-continuity-lean-horizon"]
     if horizon["expected_result"] != "not-run":

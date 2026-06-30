@@ -65,4 +65,12 @@ but it is not inside the output epsilon ball:
 |f(p2) - f(p0)| = 1 >= 1
 ```
 
-This is a finite exact refutation, not a proof of any general theorem.
+The final false output-bound claim is linear:
+
+```text
+output_distance = 1
+output_distance < 1
+```
+
+The pack keeps this contradiction on the checked `UnsatFarkas` route. This is
+a finite exact refutation, not a proof of any general theorem.

@@ -72,6 +72,8 @@ The `real-analysis-rational-v0` validator checks that `1/4 < 1/3`, recomputes
 the finite `delta`-ball from the listed samples, checks the linear output
 distances, and rejects the false claim that `delta = 3/4` works using
 `x = 2/3`, with checked `UnsatFarkas` evidence for the final output bound.
+The adjacent `metric-continuity-v0` pack now carries the same checked
+QF_LRA/Farkas route for a finite metric-space bad-delta row.
 
 For a small real-algebra shadow, encode a nonlinear witness or a one-variable
 quadratic obstruction:

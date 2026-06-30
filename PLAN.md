@@ -166,11 +166,12 @@ distance-preservation row and inner-product spaces now promoted for its bad
 negative-norm row, and spectral linear algebra now promoted for its bad
 eigenpair row, with matrix invariants now promoted for its bad characteristic
 polynomial row, and finite Chebyshev systems now promoted for the duplicate-node
-determinant conflict. The first secondary QF_LRA/Farkas target set is now covered,
-the initial equality-heavy QF_UF/Alethe secondary set is now covered, and the
-first QF_BV bit-blast/DRAT resource promotion now covers the finite-rings bad
-distributivity row, the finite-fields composite no-inverse row, and the
-graph-coloring one-bit triangle two-coloring obstruction, with bounded number
+determinant conflict, and metric continuity now promoted for the finite
+bad-delta output-bound conflict. The first secondary QF_LRA/Farkas target set
+is now covered, the initial equality-heavy QF_UF/Alethe secondary set is now
+covered, and the first QF_BV bit-blast/DRAT resource promotion now covers the
+finite-rings bad distributivity row, the finite-fields composite no-inverse row,
+and the graph-coloring one-bit triangle two-coloring obstruction, with bounded number
 theory now promoted for the modulo-7 quadratic nonresidue row; graph search
 runtime and natural arithmetic now contribute checked arithmetic-DPLL
 regressions for bad finite DFS cost and bounded-natural negativity; prefer the next

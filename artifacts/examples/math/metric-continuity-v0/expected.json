@@ -89,9 +89,13 @@
         "claimed_delta": "3/4",
         "counterexample": "p2",
         "domain_distance": "1/2",
-        "output_distance": "1"
+        "output_distance": "1",
+        "farkas_output_claim": "output_distance < epsilon",
+        "smt2_artifact": "artifacts/examples/math/metric-continuity-v0/smt2/bad-delta-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes metric_continuity_bad_delta_emits_checked_farkas",
+        "certificate": "produce_lra_evidence emits Evidence::UnsatFarkas checked by Evidence::check for output_distance = 1 together with the false strict claim output_distance < 1"
       },
-      "notes": "The validator checks the documented counterexample by exact rational metric and output-distance arithmetic."
+      "notes": "The validator checks the documented counterexample by exact rational metric and output-distance arithmetic. The SMT-LIB artifact isolates the false strict output-bound claim, and Axeyum emits checked Farkas evidence."
     },
     {
       "id": "general-continuity-lean-horizon",

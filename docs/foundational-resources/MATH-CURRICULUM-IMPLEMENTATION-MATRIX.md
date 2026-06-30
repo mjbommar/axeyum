@@ -65,7 +65,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `naturals` | `natural-arithmetic-v0` | Add totality/Peano-shadow concept rows and BV-vs-LIA encoding notes. | Bounded replay, QF_LIA, QF_BV where fixed width is educationally relevant. | Width and finite prefix limits are visible in metadata and lesson text. |
 | `integers` | `integer-lia-v0` | Promote common linear-obstruction patterns into shared Diophantine examples. | QF_LIA/Diophantine. | Bad linear rows carry checked integer evidence or a named missing route. |
 | `rationals` | `rationals-lra-v0`, rational polynomial pack | Add exact-vs-floating arithmetic row and density/order learner split. | QF_LRA/Farkas for impossible rational inequalities. | Farkas-backed rows recheck independently of solver search. |
-| `reals` | RCF shadow, bounded real analysis, metric continuity | Add concept rows for balls, limits, continuity, compactness, and completeness horizons. | QF_LRA/NRA for algebraic shadows; Lean horizon for completeness/general topology. | Each epsilon-delta pack says fixed rational instance vs theorem. |
+| `reals` | RCF shadow, bounded real analysis, metric continuity | Add concept rows for balls, limits, continuity, compactness, and completeness horizons. | QF_LRA/Farkas for bounded bad-delta rows, QF_LRA/NRA for algebraic shadows; Lean horizon for completeness/general topology. | Each epsilon-delta pack says fixed rational instance vs theorem, and metric-continuity now has a checked finite bad-delta route. |
 | `complex` | complex algebraic and transform packs | Add real-pair encoding note and analytic-horizon rows. | NRA/LRA real-pair replay; Lean horizon for holomorphic theory. | Algebraic complex checks avoid claiming analytic coverage. |
 | `divisibility-and-euclid` | `gcd-bezout-v0` | Add reusable gcd/divisibility witness schema for number-theory and algebra packs. | Computed witness replay; QF_LIA for divisibility obstructions. | Bezout rows validate both gcd and coefficient identity. |
 | `modular-arithmetic` | modular arithmetic and finite ideals | Add quotient-ring and CRT bridge rows. | QF_LIA/Diophantine and QF_BV fixed-width finite residues. | Nonunit inverse rows carry checked arithmetic evidence. |
@@ -90,7 +90,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `number_theory` | divisibility, modular, fields | bounded Diophantine and residue-family packs | QF_LIA, QF_BV |
 | `linear_algebra` | fields, polynomials, relations | LU, rank/nullity, residual, spectral, tensor and module rows | QF_LRA/Farkas, finite-field replay |
 | `abstract_algebra` | groups, rings, fields | homomorphisms, ideals, quotients, modules, tensor products | QF_UF/Alethe, QF_BV |
-| `real_analysis` | rationals, reals, sequences, calculus | balls, bounded epsilon-delta, compactness/continuity horizons | QF_LRA/NRA, Lean horizon |
+| `real_analysis` | rationals, reals, sequences, calculus | balls, bounded epsilon-delta, compactness/continuity horizons | QF_LRA/Farkas, QF_LRA/NRA, Lean horizon |
 | `complex_analysis` | complex, reals, polynomials | real-pair algebra now; analytic rows later | NRA/LRA, Lean horizon |
 | `topology` | sets, reals, linear algebra | finite topologies, continuous maps, compactness, connectedness, homology | finite replay, QF_LIA/LRA, Lean horizon |
 | `measure_theory` | sets, probability, reals | finite sigma-algebras, product measure, simple integration | finite replay, QF_LRA, Lean horizon |

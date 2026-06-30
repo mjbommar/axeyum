@@ -327,6 +327,21 @@ fn real_analysis_bad_linear_delta_emits_checked_farkas() {
 }
 
 #[test]
+fn metric_continuity_bad_delta_emits_checked_farkas() {
+    let mut arena = TermArena::new();
+    let output_distance = real(&mut arena, "output_distance");
+    let output_distance_is_epsilon = eq_ratio(&mut arena, output_distance, 1, 1);
+    let epsilon = arena.real_ratio(1, 1);
+    let false_output_bound = arena.real_lt(output_distance, epsilon).unwrap();
+
+    assert_farkas_checked(
+        "metric-continuity-v0 bad-delta-rejected",
+        &arena,
+        &[output_distance_is_epsilon, false_output_bound],
+    );
+}
+
+#[test]
 fn finite_conditional_expectation_bad_table_emits_checked_farkas() {
     let mut arena = TermArena::new();
     let high_block_expectation = real(&mut arena, "high_block_expectation");

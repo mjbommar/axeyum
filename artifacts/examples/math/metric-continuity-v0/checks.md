@@ -29,6 +29,10 @@ The validator checks the counterexample `p2`: it is within the claimed
 `delta = 3/4` of `p0`, but its output is at distance `1`, not strictly less
 than `epsilon = 1`.
 
+The resource-backed Axeyum regression checks the final strict output-bound
+contradiction as `QF_LRA`: `output_distance = 1` and
+`output_distance < 1`, requiring rechecked `UnsatFarkas` evidence.
+
 ## `general-continuity-lean-horizon`
 
 Expected result: `not-run`.

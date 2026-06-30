@@ -864,8 +864,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   The `math_resource_lra_routes` regression checks the exact rational
   contradiction `determinant = 0` and `determinant = 1` with
   `Evidence::UnsatFarkas` plus independent `Evidence::check` rechecking. The
+  pack metadata marks `solver_reuse.status` as `promoted`.
+
+- **Metric-continuity Farkas promotion landed.**
+  [`metric-continuity-v0`](artifacts/examples/math/metric-continuity-v0/)
+  now has a source-linked SMT-LIB artifact for the finite metric-space
+  bad-delta output-bound conflict:
+  [`bad-delta-farkas-conflict.smt2`](artifacts/examples/math/metric-continuity-v0/smt2/bad-delta-farkas-conflict.smt2).
+  The `math_resource_lra_routes` regression checks the exact rational
+  contradiction `output_distance = 1` and `output_distance < 1` with
+  `Evidence::UnsatFarkas` plus independent `Evidence::check` rechecking. The
   pack metadata marks `solver_reuse.status` as `promoted`; generated resource
-  summary now reports `solver_reuse=promoted:11,unclassified:73`.
+  summary now reports `solver_reuse=promoted:12,unclassified:72`.
 
 - **Finite-Markov-chain end-to-end lesson landed.** Added
   [`finite-markov-chain-end-to-end.md`](docs/learn/math/finite-markov-chain-end-to-end.md)

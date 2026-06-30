@@ -135,7 +135,10 @@ delta = 1/2
 
 The `metric-continuity-v0` validator checks the finite metric table,
 pairwise Lipschitz bounds, the `delta`-ball around `p0`, the output
-`epsilon`-ball around `f(p0)`, and a checked bad-delta counterexample.
+`epsilon`-ball around `f(p0)`, and a checked bad-delta counterexample. The
+upgraded row also routes the final strict output-bound conflict
+`output_distance = 1` and `output_distance < 1` through a rechecked
+`UnsatFarkas` certificate.
 
 For a finite compactness shadow, encode an explicit finite topology, an open
 cover, and a listed subcover:
