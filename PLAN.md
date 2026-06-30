@@ -125,6 +125,10 @@ The detailed operating roadmap for building the math-curriculum resource system
 across ontology rows, example packs, learner pages, proof routes, solver reuse,
 rules/law transfer, consumer boundaries, and eventual library splits is
 [`docs/foundational-resources/RESOURCE-BUILDOUT-ROADMAP.md`](docs/foundational-resources/RESOURCE-BUILDOUT-ROADMAP.md).
+The compact all-field consumer readiness table is
+[`docs/foundational-resources/FIELD-READINESS-QUERY-MATRIX.md`](docs/foundational-resources/FIELD-READINESS-QUERY-MATRIX.md);
+it records the smoke-checked route, bridge lookup, checked-row drilldown, and
+theorem boundary for all 18 math fields.
 The rules/law transfer crosswalk that maps finite predicates, arithmetic
 thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
@@ -407,6 +411,12 @@ representative bridge lookups and checked-row drilldowns for the active
 Boolean, Alethe, Diophantine, Farkas, and QF_BV routes; there is still no
 external consumer or repeated typed API need that would justify a crate or repo
 split.
+The compact
+[`FIELD-READINESS-QUERY-MATRIX.md`](docs/foundational-resources/FIELD-READINESS-QUERY-MATRIX.md)
+now turns that full-field smoke layer into a single consumer-facing table:
+one row per math field with pack/check counts, the primary readiness route,
+bridge lookup terms, checked-row drilldown, and the theorem claims that remain
+out of scope.
 The foundational example-pack validator now also has committed negative
 fixtures for unknown fields, metadata/check drift, and missing witness
 references, and `check-foundational-resources.sh` requires those invalid packs

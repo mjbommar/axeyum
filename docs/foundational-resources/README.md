@@ -46,6 +46,10 @@ schemas, examples, and validation workflows.
   the committed JSON data contract for pack discovery, checked-row mining,
   solver-reuse rows, atlas concept lookup, and curriculum field-readiness
   summaries.
+- [FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md) is the
+  compact 18-field map of the smoke-checked readiness route, bridge lookup,
+  checked-row drilldown, and theorem-horizon boundary for downstream
+  consumers.
 - [RULES-LAW-CROSSWALK.md](RULES-LAW-CROSSWALK.md) maps the math-resource
   patterns into rules/law checks for finite predicates, thresholds, graph
   reachability, precedence, proof routes, and current rules-as-code packs,

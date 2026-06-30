@@ -1559,7 +1559,12 @@ Pick one item per commit unless the change is purely navigational.
     readiness, finite-family lookups, checked counting/coefficient/tail-count
     rows, probability-theory Farkas readiness, probability-table lookups, and
     checked finite probability/process rows.
-85. Continue proof-route promotions or consumer-query examples; revisit the
+85. Landed: add
+    [FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md) as the
+    compact all-field R6 consumer matrix, summarizing pack/check counts,
+    smoke-checked route, bridge lookup, checked-row drilldown, and
+    theorem-horizon boundary for all 18 math fields.
+86. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

@@ -486,7 +486,13 @@ Build sequence:
     finite probability/process rows without promoting proof automation,
     ZFC/infinite set theory, asymptotic combinatorics, continuous probability,
     stochastic-process limits, or theorem-level probability claims.
-53. Revisit crate/repo boundaries only after three real consumers or repeated
+53. [FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md) now
+    lands as the compact R6 consumer map for all 18 math fields. It records
+    pack/check counts, the primary smoke-checked route, bridge lookup terms,
+    checked-row drilldown, and theorem-horizon boundary for each field while
+    keeping the public boundary as committed JSON plus
+    `query-foundational-resources.py`.
+54. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

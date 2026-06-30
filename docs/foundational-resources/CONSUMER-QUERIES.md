@@ -14,6 +14,10 @@ The script reads only committed JSON files. It does not import validators,
 generators, solver crates, or dashboard code, so it acts like a small external
 consumer would.
 
+For a compact all-field map of the current smoke-checked readiness routes,
+bridge lookups, checked-row drilldowns, and theorem boundaries, see
+[FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md).
+
 ## Contract Summary
 
 ```sh
@@ -279,8 +283,19 @@ python3 scripts/query-foundational-resources.py fields \
 
 That gives a compact readiness row for recurrence traces, Euler-step examples,
 stochastic-kernel/hitting-time equations, and invariant-bound conflicts without
-requiring a consumer to know which pack owns each topic. To display concrete
-checked rows for a lesson or catalog card, drill into the check table:
+requiring a consumer to know which pack owns each topic.
+
+Use the atlas lookup for stochastic-kernel/process bridge vocabulary:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field differential_equations_and_dynamical_systems \
+  --text stochastic \
+  --require-any
+```
+
+To display concrete checked rows for a lesson or catalog card, drill into the
+check table:
 
 ```sh
 python3 scripts/query-foundational-resources.py checks \
@@ -744,6 +759,15 @@ python3 scripts/query-foundational-resources.py fields \
   --require-any
 ```
 
+Use the atlas lookup for shared coordinate/orientation geometry vocabulary:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field geometry \
+  --text coordinate \
+  --require-any
+```
+
 To display concrete checked geometry rows, drill into checked Farkas examples:
 
 ```sh
@@ -872,6 +896,7 @@ python3 scripts/query-foundational-resources.py fields --field discrete_math --r
 python3 scripts/query-foundational-resources.py concepts --field discrete_math --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field discrete_math --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field differential_equations_and_dynamical_systems --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field differential_equations_and_dynamical_systems --text stochastic --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field topology --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text compactness --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field topology --text preimage --require-any >/dev/null
@@ -918,6 +943,7 @@ python3 scripts/query-foundational-resources.py concepts --field optimization_an
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text convexity --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field optimization_and_convexity --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field geometry --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field geometry --text coordinate --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field geometry --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field functional_analysis_and_operator_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field functional_analysis_and_operator_theory --text operator --require-any >/dev/null

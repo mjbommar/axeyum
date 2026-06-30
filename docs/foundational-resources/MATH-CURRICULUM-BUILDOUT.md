@@ -28,6 +28,8 @@ rules/law transfer, and future library splits, use the
 For the concrete rules/law transfer map from math-resource patterns into
 policy and legal-rule checks, use the
 [Rules/Law Crosswalk](RULES-LAW-CROSSWALK.md).
+For the compact all-field consumer query surface, use the
+[Field Readiness Query Matrix](FIELD-READINESS-QUERY-MATRIX.md).
 This file remains the phase contract and landed-history log.
 
 The product is not a textbook and not a formal-library clone. It is a set of
@@ -2068,6 +2070,14 @@ curriculum and finite-probability lanes are visible through the public JSON
 boundary without promoting proof automation, ZFC/infinite set theory,
 asymptotic combinatorics, continuous probability, stochastic-process limits, or
 theorem-level probability claims.
+The consumer-boundary layer now also has
+[`FIELD-READINESS-QUERY-MATRIX.md`](FIELD-READINESS-QUERY-MATRIX.md), a compact
+18-field table for downstream consumers. Each row records the current
+pack/check counts, the smoke-checked readiness route, bridge lookup terms,
+checked-row drilldown, and the theorem-horizon boundary to avoid overclaiming.
+This is still a documentation layer over committed JSON and
+`query-foundational-resources.py`, not a new crate, typed API, or repository
+split.
 The consumer query layer now also exposes optimization/convexity readiness:
 `CONSUMER-QUERIES.md` shows the Farkas field summary, LP-objective and
 convexity bridge lookups, and checked optimization/convexity Farkas row

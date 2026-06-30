@@ -391,7 +391,13 @@ Use one row per commit unless the change is purely navigational.
    discrete-math Diophantine rows, finite-family vocabulary,
    probability-theory Farkas rows, and probability-table vocabulary visible
    through the public JSON contract.
-17. Add future rules/law crosswalk examples only by reusing existing
+17. Landed: add
+   [FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md) as the
+   compact all-field consumer map over the same JSON/query boundary: one row
+   per math field with current pack/check counts, the primary smoke-checked
+   readiness route, bridge lookup terms, checked-row drilldown, and theorem
+   horizon boundary.
+18. Add future rules/law crosswalk examples only by reusing existing
    math-resource patterns; do not create a separate rule ontology until the
    current JSON boundary is exercised by more consumers.
 

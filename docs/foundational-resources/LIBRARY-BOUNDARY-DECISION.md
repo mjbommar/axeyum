@@ -25,7 +25,9 @@ The stable consumer surface is validated by
 which reads only the committed JSON/metadata paths and imports none of the
 generator or validator internals. Common consumer lookups are demonstrated by
 [`scripts/query-foundational-resources.py`](../../scripts/query-foundational-resources.py)
-and [Foundational Resource Consumer Queries](CONSUMER-QUERIES.md).
+and [Foundational Resource Consumer Queries](CONSUMER-QUERIES.md). The compact
+[Field Readiness Query Matrix](FIELD-READINESS-QUERY-MATRIX.md) summarizes the
+same public query surface across all 18 math fields.
 
 The 2026-06-30 review keeps the same decision. The consumer-query layer now
 reads promoted solver-reuse metadata directly, including the promoted
@@ -34,6 +36,8 @@ integer-count and coefficient QF_LIA/Diophantine rows, plus fixed-width
 QF_BV/DRAT rows. It also exposes field-level curriculum-readiness summaries
 over the same JSON files, but this is still an in-repository
 downstream-consumer stand-in rather than an external release consumer.
+The all-field matrix is documentation over that same stand-in; it improves
+navigability but does not create a new API boundary.
 
 ## Evidence
 
@@ -46,6 +50,7 @@ The Phase M8 threshold is met for size and repeated structure:
 | At least 6 packs with checked proof/evidence routes | 102 non-template packs contain at least one `checked` expected-result row. |
 | At least one consumer can read the data without repository-internal knowledge | `scripts/consume-foundational-resources.py` reads the atlas and example-pack JSON directly and cross-checks pack coverage; `scripts/query-foundational-resources.py` answers summary, pack, check, concept, and field-readiness queries without importing validators or generators. |
 | At least one consumer can read promoted solver-reuse rows | `scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any` is part of `scripts/check-foundational-resources.sh` and currently finds 102 promoted packs. |
+| At least one documentation surface maps consumer queries by field | `FIELD-READINESS-QUERY-MATRIX.md` records the smoke-checked route, bridge lookup, checked-row drilldown, and theorem boundary for all 18 math fields without adding a typed API. |
 
 The current pack-level evidence mix is still intentionally conservative:
 

@@ -633,6 +633,12 @@ Pick one row per commit unless the change is purely navigational.
     lookups, and checked finite probability/process rows, making those early
     curriculum and probability lanes visible through the committed JSON
     contract without promoting theorem-horizon claims.
+74. Landed: add the all-field readiness query matrix.
+    [FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md) now
+    gives downstream consumers a compact 18-field table of pack/check counts,
+    primary readiness routes, bridge lookup terms, checked-row drilldowns, and
+    theorem-horizon boundaries, while preserving the JSON-first R6 boundary and
+    avoiding a premature typed API, crate, or repo split.
 
 ## Validation Checklist
 

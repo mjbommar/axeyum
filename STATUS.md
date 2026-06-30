@@ -205,6 +205,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **All-field readiness query matrix landed.**
+  [FIELD-READINESS-QUERY-MATRIX.md](docs/foundational-resources/FIELD-READINESS-QUERY-MATRIX.md)
+  now gives downstream consumers a compact 18-field map: pack/check counts,
+  the smoke-checked primary route, bridge lookup terms, checked-row drilldown,
+  and theorem-horizon boundary for each math field. It links from
+  [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md) and
+  keeps the boundary JSON-first without introducing a crate, typed API, or
+  separate repo.
+
 - **Foundations/discrete/probability consumer queries landed.**
   [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
   now shows public JSON queries for logic/proof Boolean readiness,
