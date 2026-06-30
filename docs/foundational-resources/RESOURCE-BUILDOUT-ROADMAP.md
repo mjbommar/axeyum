@@ -1522,7 +1522,11 @@ Pick one item per commit unless the change is purely navigational.
     through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational
     smoke check, covering Farkas field readiness, the operator bridge lookup,
     and checked finite-operator, inner-product, Chebyshev, and spectral rows.
-79. Continue proof-route promotions or consumer-query examples; revisit the
+79. Landed: add topology field-readiness consumer queries through
+    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational smoke
+    check, covering Boolean field readiness, compactness/preimage bridge
+    lookups, and checked Boolean/Alethe topology rows.
+80. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

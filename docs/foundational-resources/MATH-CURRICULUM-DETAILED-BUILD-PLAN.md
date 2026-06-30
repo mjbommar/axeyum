@@ -582,6 +582,13 @@ Pick one row per commit unless the change is purely navigational.
     operator bridge concept lookup, and checked finite-operator,
     inner-product, Chebyshev, and spectral Farkas rows, making that field's
     finite-dimensional resources visible through the committed JSON contract.
+68. Landed: add topology field-readiness consumer query coverage.
+    `CONSUMER-QUERIES.md` and `check-foundational-resources.sh` now exercise
+    the topology Boolean field summary, compactness and preimage bridge
+    concept lookups, and checked topology Boolean/Alethe rows, making finite
+    topology, compactness, connectedness, continuous-map, homology, metric, and
+    bounded epsilon-delta resources visible through the committed JSON
+    contract.
 
 ## Validation Checklist
 

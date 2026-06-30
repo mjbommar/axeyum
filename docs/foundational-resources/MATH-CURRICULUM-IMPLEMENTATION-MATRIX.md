@@ -262,13 +262,14 @@ Build sequence:
    field-plus-proof-route discovery, checked-row mining, solver-reuse rows,
    atlas concept lookup, and field-level curriculum readiness over the
    committed JSON data contract. The smoke set now covers probability/Farkas,
-   dynamics/Farkas, measure/Farkas, and optimization/Farkas field-readiness
-   examples, geometry/Farkas readiness, and functional-analysis/operator
-   Farkas readiness, plus measure bridge concept lookup, LP-objective and
-   convexity bridge concept lookup, operator bridge concept lookup, checked
-   measure-theory Farkas rows, checked optimization/convexity Farkas rows,
-   checked geometry Farkas rows, and checked functional-analysis/operator
-   Farkas rows.
+   dynamics/Farkas, topology/Boolean+Alethe, measure/Farkas,
+   optimization/Farkas, geometry/Farkas, and functional-analysis/operator
+   Farkas field-readiness examples, plus topology compactness/preimage bridge
+   lookups, measure bridge concept lookup, LP-objective and convexity bridge
+   concept lookup, operator bridge concept lookup, checked topology
+   Boolean/Alethe rows, checked measure-theory Farkas rows, checked
+   optimization/convexity Farkas rows, checked geometry Farkas rows, and
+   checked functional-analysis/operator Farkas rows.
 16. Negative example-pack validator fixtures now land through
     `scripts/check-foundational-negative-fixtures.py` and
     `artifacts/fixtures/foundational-example-pack-invalid/`, covering unknown
@@ -420,7 +421,13 @@ Build sequence:
     summary, operator bridge lookup, and checked finite-operator,
     inner-product, Chebyshev, and spectral rows without promoting
     infinite-dimensional theorem claims.
-47. Revisit crate/repo boundaries only after three real consumers or repeated
+47. Topology field-readiness consumer queries now land in
+    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
+    `scripts/check-foundational-resources.sh`, covering the Boolean field
+    summary, compactness/preimage bridge lookups, and checked Boolean/Alethe
+    topology rows without promoting arbitrary compactness, connectedness,
+    homeomorphism, or homology-invariance theorems.
+48. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

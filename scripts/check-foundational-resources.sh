@@ -16,6 +16,11 @@ python3 scripts/query-foundational-resources.py checks --field graph_theory --ex
 python3 scripts/query-foundational-resources.py concepts --kind example-family --format json --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field probability_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field differential_equations_and_dynamical_systems --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field topology --route boolean --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field topology --text compactness --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field topology --text preimage --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field topology --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field topology --route alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field measure_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field measure_theory --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field measure_theory --route Farkas --proof-status checked --require-any >/dev/null

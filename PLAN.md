@@ -171,6 +171,13 @@ complement, monotonicity, subadditivity, product-table, marginal, finite
 Fubini-style sum, and simple-function integral replay queryable while keeping
 Lebesgue measure, general product-measure existence, convergence theorems, and
 almost-everywhere reasoning in the Lean-horizon lane.
+The public foundational-resource consumer query layer now also exercises the
+topology lane: Boolean field readiness, compactness/preimage bridge lookups,
+and checked Boolean/Alethe rows for finite topology, compactness,
+connectedness, continuous maps, homology, metric balls, and bounded
+epsilon-delta shadows are smoke-checked through the committed JSON contract,
+while arbitrary compactness, connectedness, homeomorphism invariance, and
+homology invariance stay in the theorem-horizon lane.
 The sequence/real-analysis lane now also splits bounded monotone sequence and
 finite recurrence-prefix, separation/root-finding, KKT, active-set QP, SDP, and gradient-descent checks into focused packs: finite monotone-prefix
 replay, finite prefix supremum, finite tail-gap replay, Fibonacci prefix

@@ -353,7 +353,13 @@ Use one row per commit unless the change is purely navigational.
    `scripts/check-foundational-resources.sh`, making finite operator bounds,
    inner-product positivity, Chebyshev grids, spectral/eigenpair witnesses, and
    operator bridge rows visible through the public JSON contract.
-11. Add future rules/law crosswalk examples only by reusing existing
+11. Landed: add topology consumer-query coverage through
+   [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
+   `scripts/check-foundational-resources.sh`, making finite topology axioms,
+   compactness/connectedness shadows, continuous-map/preimage rows, homology
+   boundary checks, and topology bridge rows visible through the public JSON
+   contract.
+12. Add future rules/law crosswalk examples only by reusing existing
    math-resource patterns; do not create a separate rule ontology until the
    current JSON boundary is exercised by more consumers.
 

@@ -205,6 +205,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Topology consumer queries landed.**
+  [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
+  now shows public JSON queries for topology Boolean field readiness,
+  compactness/preimage bridge lookups, and checked Boolean/Alethe topology rows
+  across finite topology, compactness, connectedness, continuous maps,
+  homology, metric balls, and bounded epsilon-delta resources.
+  `check-foundational-resources.sh` now smoke-checks those queries without
+  promoting arbitrary compactness, connectedness, homeomorphism, or homology
+  invariance claims.
+
 - **Functional-analysis/operator consumer queries landed.**
   [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
   now shows public JSON queries for the

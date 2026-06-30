@@ -156,6 +156,51 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+For topology, query the Boolean route to keep finite topology axioms,
+finite open-cover refutations, connectedness counterexamples, finite
+continuous-map/preimage rows, finite homology boundary checks, metric-ball
+examples, and bounded epsilon-delta shadows grouped while leaving arbitrary
+compactness, connectedness, homeomorphism invariance, and homology invariance
+in the proof-horizon lane:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field topology \
+  --route boolean \
+  --require-any
+```
+
+Use atlas lookups for the reusable topology bridge concepts:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field topology \
+  --text compactness \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field topology \
+  --text preimage \
+  --require-any
+```
+
+To display concrete checked topology rows, drill into the Boolean and Alethe
+routes separately:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field topology \
+  --route boolean \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --field topology \
+  --route alethe \
+  --proof-status checked \
+  --require-any
+```
+
 For measure theory, use the same field-readiness query to keep finite
 event-algebra, product-measure, integration, random-variable, conditioning, and
 stochastic-process examples grouped without treating the finite rows as
