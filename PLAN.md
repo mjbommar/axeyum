@@ -204,6 +204,10 @@ stochastic-process bridge.
 page for exact trace replay, finite invariant checking, threshold reachability,
 and checked QF_LRA/Farkas bad invariant-bound evidence, leaving the combined
 finite-dynamics/Euler page as the numerical-step bridge.
+`finite-euler-method-v0` now also has a standalone finite Euler method page
+for exact explicit-Euler transition replay, finite polynomial-solution error
+tables, monotone invariant checks, checked QF_LRA/Farkas bad-step evidence,
+and the ODE/numerical-analysis Lean horizon.
 `finite-operator-v0` now also has a standalone finite-dimensional operator
 page for exact `l1` norm replay, row-sum operator-bound replay, finite
 Chebyshev recurrence replay, and checked QF_LRA/Farkas bad-bound evidence,

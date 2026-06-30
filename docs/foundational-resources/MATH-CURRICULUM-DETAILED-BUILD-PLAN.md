@@ -364,6 +364,11 @@ Pick one row per commit unless the change is purely navigational.
    recurrence trace replay, finite invariant checking, threshold reachability,
    and checked QF_LRA/Farkas bad invariant-bound evidence out of the combined
    finite dynamics/Euler bridge lesson.
+38. Landed: add standalone finite-Euler learner page, splitting exact
+   explicit-Euler transition replay, finite polynomial-solution error tables,
+   monotone invariant checking, checked QF_LRA/Farkas bad-step evidence, and
+   the ODE/numerical-analysis Lean horizon out of the combined finite
+   dynamics/Euler bridge lesson.
 
 ## Validation Checklist
 

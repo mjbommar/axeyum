@@ -6,6 +6,8 @@ checked transition replay. It uses
 [finite-euler-method-v0](../../../artifacts/examples/math/finite-euler-method-v0/).
 For the bounded recurrence and invariant slice alone, read
 [End To End: Bounded Recurrence Dynamics](bounded-dynamics-end-to-end.md).
+For the explicit Euler and finite error-table slice alone, read
+[End To End: Finite Euler Method](finite-euler-method-end-to-end.md).
 
 Concept rows:
 

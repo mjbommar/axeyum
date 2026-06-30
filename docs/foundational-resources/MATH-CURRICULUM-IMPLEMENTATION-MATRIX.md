@@ -213,7 +213,9 @@ Build sequence:
    operators now split the norm/operator-bound story from the broad
    bounded-dynamics/operator bridge. Standalone bounded dynamics now splits
    recurrence traces, finite invariants, and threshold reachability from the
-   finite dynamics/Euler bridge.
+   finite dynamics/Euler bridge. Standalone finite Euler now splits
+   explicit-Euler transition replay, finite error tables, and bad-step
+   evidence from the same bridge.
 7. Recurring fixed-width finite algebra, residue, and one-bit graph
    obstructions now have the `family_fixed_width_bv_drat` example-family row,
    backed by the shared `math_resource_bv_routes` regression across finite

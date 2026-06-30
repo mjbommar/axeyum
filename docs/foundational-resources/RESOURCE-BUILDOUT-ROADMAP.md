@@ -1221,13 +1221,19 @@ Pick one item per commit unless the change is purely navigational.
     invariant checking, threshold reachability, checked QF_LRA/Farkas
     bad invariant-bound evidence, and the continuous-dynamics/ODE Lean
     horizon.
-46. Landed: add field-level curriculum-readiness consumer queries.
+46. Landed: add standalone finite-Euler learner page.
+    `docs/learn/math/finite-euler-method-end-to-end.md` follows
+    `finite-euler-method-v0` through exact explicit-Euler transition replay,
+    finite polynomial-solution error tables, monotone invariant checking,
+    checked QF_LRA/Farkas bad-step evidence, and the ODE/numerical-analysis
+    Lean horizon.
+47. Landed: add field-level curriculum-readiness consumer queries.
     `scripts/query-foundational-resources.py fields --field probability_theory`
     summarizes pack counts, check counts, proof-status counts, proof-cookbook
     route counts, solver-reuse statuses, sample packs, and Lean-horizon packs
     from the committed JSON contract; the foundational resource smoke check now
     includes a probability/Farkas field-readiness query.
-47. Continue proof-route promotions or consumer-query examples; revisit the
+48. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

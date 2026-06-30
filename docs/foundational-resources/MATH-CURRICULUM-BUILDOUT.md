@@ -1426,6 +1426,10 @@ ODE/numerical-analysis Lean horizon.
 lesson for exact trace replay, finite invariant checking, threshold
 reachability, checked QF_LRA/Farkas bad invariant-bound rejection, and the
 continuous-dynamics/ODE Lean horizon.
+`finite-euler-method-v0` now also has a standalone finite Euler method lesson
+for exact explicit-Euler transition replay, finite polynomial-solution error
+tables, monotone invariant checking, checked QF_LRA/Farkas bad-step rejection,
+and the ODE/numerical-analysis Lean horizon.
 `finite-operator-v0` now also has a standalone finite-dimensional operator
 lesson for exact `l1` norm replay, row-sum operator-bound replay, finite
 Chebyshev recurrence replay, checked QF_LRA/Farkas bad operator-bound

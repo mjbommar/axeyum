@@ -1709,6 +1709,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Lean horizon. The lesson is linked from the math learning index plus the
   finite dynamics/Euler and bounded-dynamics/operator bridge pages.
 
+- **Finite-Euler-method end-to-end lesson landed.** Added
+  [`finite-euler-method-end-to-end.md`](docs/learn/math/finite-euler-method-end-to-end.md)
+  as the learner-facing trace for the finite-Euler pack: exact explicit-Euler
+  transition replay, finite polynomial-solution error tables, monotone
+  invariant checking, checked QF_LRA/Farkas bad-step rejection, and the
+  ODE/numerical-analysis Lean horizon. The lesson is linked from the math
+  learning index plus the finite dynamics/Euler and bounded-dynamics/operator
+  bridge pages.
+
 - **Finite-operator end-to-end lesson landed.** Added
   [`finite-operator-end-to-end.md`](docs/learn/math/finite-operator-end-to-end.md)
   as the learner-facing trace for the finite-operator pack:
@@ -12012,6 +12021,14 @@ plan is built and committed on the current branch:
   reachability, checked QF_LRA/Farkas bad invariant-bound evidence, and the
   continuous-dynamics/ODE Lean horizon out of the combined finite
   dynamics/Euler bridge.
+
+- **2026-06-30** — **Finite-Euler-method end-to-end lesson landed.**
+  Added
+  [`finite-euler-method-end-to-end.md`](docs/learn/math/finite-euler-method-end-to-end.md)
+  to split exact explicit-Euler transition replay, finite polynomial-solution
+  error tables, monotone invariant checking, checked QF_LRA/Farkas bad-step
+  evidence, and the ODE/numerical-analysis Lean horizon out of the combined
+  finite dynamics/Euler bridge.
 
 - **2026-06-30** — **PHP Bool/CNF resource promotion landed.**
   Added source-level DIMACS artifacts for
