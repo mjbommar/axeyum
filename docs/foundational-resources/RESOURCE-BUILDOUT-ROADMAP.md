@@ -37,7 +37,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 46 bridge-concept rows.
+- 48 bridge-concept rows.
 - 5 example-family rows.
 - 84 non-template math example packs.
 - 422 expected checks.
@@ -788,9 +788,10 @@ Current packs:
 
 Build next:
 
-- Add concept rows for LP feasibility, Farkas certificate, objective threshold,
-  rational midpoint convexity, affine monotonicity, gradient, Hessian minor,
-  KKT horizon, and duality horizon.
+- Landed bridge rows for LP objective-threshold/Farkas replay and rational
+  convexity/gradient shadows. Add narrower rows only when multiple packs need
+  distinct duality, KKT, separation, SDP, affine monotonicity, or convergence
+  vocabulary.
 - Promote small infeasible LP/convexity rows through QF_LRA/Farkas.
 - Keep general convex analysis, SDP, KKT sufficiency, and algorithm convergence
   as Lean-horizon until proof support exists.
@@ -1277,7 +1278,15 @@ Pick one item per commit unless the change is purely navigational.
     integration, random-variable, conditional-expectation, martingale, kernel,
     hitting-time, and concentration resources to the public JSON consumer
     boundary.
-53. Continue proof-route promotions or consumer-query examples; revisit the
+53. Landed: add generated optimization/convexity bridge concepts.
+    `bridge_lp_objective_farkas` groups exact LP feasibility,
+    objective-threshold witnesses, and checked Farkas threshold conflicts; and
+    `bridge_rational_convexity_shadow` groups finite midpoint/Jensen shadows,
+    affine monotonicity, exact gradient replay, Hessian-minor witnesses, and
+    least-squares normal-equation replay. The generated atlas now validates 48
+    bridge rows and keeps duality, KKT sufficiency, SDP, and convergence claims
+    in the Lean-horizon lane.
+54. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

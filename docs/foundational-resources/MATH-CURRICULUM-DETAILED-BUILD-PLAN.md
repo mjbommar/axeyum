@@ -34,7 +34,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 46 bridge-concept rows.
+- 48 bridge-concept rows.
 - 5 example-family rows.
 - 84 non-template math packs.
 - 422 expected checks.
@@ -213,7 +213,7 @@ Exit criteria:
 | `measure_theory` | finite measures, product measure, integration, random variables | finite measure/additivity and finite product/integration bridge rows landed; promote only distinct monotonicity, convergence-horizon, or measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | standalone finite probability mass-table lesson landed; keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
-| `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians | standalone LP/Farkas lesson landed; add only distinct duality, KKT, convexity, gradient, or Hessian pressure next | QF_LRA/Farkas, QF_NRA shadows |
+| `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians | LP objective/Farkas and rational convexity/gradient bridge rows landed; add only distinct duality, KKT, separation, SDP, or convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms | keep finite replay and numerical-honesty rows distinct from promoted exact residual/error certificates | QF_LRA/Farkas, replay, Lean horizon |
 | `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | keep bounded-dynamics and finite-Euler checked rows source-linked; add only distinct transition, reachability, invariant, stochastic, or finite-error pressure | QF_LRA/Farkas, replay, Lean horizon |
 | `geometry` | coordinate, affine, orientation/area rational geometry | coordinate geometry now has a checked bad squared-distance row; add only distinct incidence, collinearity, midpoint, or rigid-configuration pressure | QF_LRA/Farkas, finite replay |
@@ -408,6 +408,14 @@ Pick one row per commit unless the change is purely navigational.
    integration, random-variable, conditional-expectation, martingale, kernel,
    hitting-time, and concentration resources discoverable from the committed
    JSON contract.
+44. Landed: add generated optimization/convexity bridge-concept rows.
+   `bridge_lp_objective_farkas` makes exact LP feasibility, objective-threshold
+   witnesses, and checked Farkas conflicts queryable as a shared optimization
+   concept; `bridge_rational_convexity_shadow` makes finite midpoint/Jensen
+   shadows, affine monotonicity, gradient replay, Hessian-minor witnesses, and
+   least-squares normal-equation replay queryable as a shared convexity
+   concept. The atlas now validates 48 bridge rows while keeping duality, KKT
+   sufficiency, SDP, and convergence theorem coverage in the Lean-horizon lane.
 
 ## Validation Checklist
 

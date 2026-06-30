@@ -1024,6 +1024,7 @@ BRIDGE_CONCEPTS = [
             "curriculum_linear_algebra",
         ],
         "unlocks": [
+            "bridge_lp_objective_farkas",
             "bridge_residual_bound",
             "bridge_probability_mass_table",
             "bridge_eigenpair",
@@ -1097,6 +1098,206 @@ BRIDGE_CONCEPTS = [
                 "Rows link to a committed SMT-LIB artifact or exact linear source constraints.",
                 "The route regression emits UnsatFarkas evidence and rechecks it against the source assertions.",
                 "A tamper test changes a multiplier or certificate row and the checker rejects it.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_lp_objective_farkas",
+        "title": "LP Objective Threshold Replay",
+        "field_ids": ["optimization_and_convexity", "linear_algebra", "real_analysis"],
+        "resource_status": "validated",
+        "summary": (
+            "An LP objective-threshold row checks a fixed exact-rational "
+            "linear program, feasible witness replay, objective lower or "
+            "upper thresholds, and infeasible threshold claims through "
+            "checked QF_LRA/Farkas evidence."
+        ),
+        "prerequisites": [
+            "bridge_qf_lra_farkas_anatomy",
+            "bridge_counterexample_proof",
+            "curriculum_linear_algebra",
+            "curriculum_rationals",
+        ],
+        "unlocks": [
+            "bridge_rational_convexity_shadow",
+            "bridge_residual_bound",
+            "family_exact_rational_farkas",
+            "field_optimization_and_convexity",
+        ],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "QF_LRA",
+            "exact rational LP",
+            "Farkas certificate",
+            "finite model replay",
+            "objective threshold",
+        ],
+        "example_packs": [
+            (
+                "linear-optimization-v0",
+                "LP feasible-point replay, objective-threshold witness, and checked infeasible-threshold Farkas row.",
+            ),
+            (
+                "linear-algebra-rational-v0",
+                "Exact rational linear-system feasibility and infeasibility rows that supply the matrix vocabulary.",
+            ),
+            (
+                "least-squares-regression-v0",
+                "Normal-equation and bad-coefficient rows that reduce a fixed least-squares claim to exact linear constraints.",
+            ),
+            (
+                "numerical-linear-algebra-v0",
+                "Residual-bound and solution-box rows that reuse exact linear feasibility vocabulary.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "LP replay plus QF_LRA/Farkas objective-threshold certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/learn/math/linear-optimization-end-to-end.md",
+                    "docs/learn/math/farkas-certificate-anatomy-end-to-end.md",
+                    "docs/learn/math/linear-algebra-and-optimization.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker first replays the LP witness or "
+                    "objective arithmetic; false threshold claims graduate "
+                    "only when the exact linear conflict carries checked "
+                    "Farkas evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/learn/math/linear-optimization-end-to-end.md",
+            "docs/learn/math/farkas-certificate-anatomy-end-to-end.md",
+            "docs/learn/math/linear-algebra-and-optimization.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Fixed LP threshold replay is not general linear-programming duality, strong duality, sensitivity analysis, or algorithm convergence.",
+            "Primal-dual certificates, KKT sufficiency, and convex optimization theorems remain Lean-horizon until explicit kernel-checked artifacts exist.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the exact rational constraints, objective, threshold direction, and source arithmetic domain.",
+                "The validator replays feasible witnesses and objective values from the source LP.",
+                "Bad threshold rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_rational_convexity_shadow",
+        "title": "Rational Convexity Gradient Shadow",
+        "field_ids": [
+            "optimization_and_convexity",
+            "real_analysis",
+            "linear_algebra",
+            "numerical_analysis",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "A rational convexity-shadow row checks fixed midpoint/Jensen "
+            "instances, finite second differences, affine monotonicity, exact "
+            "gradient replay, and Hessian-minor witnesses over rational data "
+            "while keeping general convex-analysis theorems separate."
+        ),
+        "prerequisites": [
+            "bridge_lp_objective_farkas",
+            "bridge_bounded_epsilon_delta_shadow",
+            "curriculum_reals",
+            "curriculum_linear_algebra",
+        ],
+        "unlocks": [
+            "bridge_inner_product_projection",
+            "bridge_lean_horizon",
+            "field_optimization_and_convexity",
+            "field_real_analysis",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "QF_LRA",
+            "NRA / polynomial constraints",
+            "exact rational derivatives",
+            "finite grid replay",
+            "Farkas certificate",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "convexity-rational-v0",
+                "Finite midpoint-convexity, second-difference, affine-threshold, and bad midpoint-convexity rows.",
+            ),
+            (
+                "multivariable-calculus-rational-v0",
+                "Exact gradient, directional derivative, Jacobian, Hessian-minor, and bad-gradient rows.",
+            ),
+            (
+                "least-squares-regression-v0",
+                "Normal-equation, residual-orthogonality, and regression coefficient rows over exact rationals.",
+            ),
+            (
+                "reals-rcf-shadow-v0",
+                "Real-algebra shadow rows that separate bounded polynomial checks from full real-closed-field theorem coverage.",
+            ),
+            (
+                "inner-product-spaces-rational-v0",
+                "Projection, Gram matrix, and norm rows used by finite convex quadratic examples.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite convexity/gradient replay plus QF_LRA/Farkas bad-shadow certificates",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/convexity-rational-end-to-end.md",
+                    "docs/learn/math/multivariable-calculus-end-to-end.md",
+                    "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
+                    "docs/learn/math/linear-algebra-and-optimization.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker recomputes midpoint values, grid "
+                    "differences, gradients, Jacobians, Hessian minors, and "
+                    "normal-equation residuals exactly; false linearized "
+                    "claims use checked Farkas evidence when promoted."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/convexity-rational-end-to-end.md",
+            "docs/learn/math/multivariable-calculus-end-to-end.md",
+            "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
+            "docs/learn/math/linear-algebra-and-optimization.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite rational convexity shadows do not prove Jensen's theorem, separation theorems, KKT sufficiency, SDP duality, or algorithm convergence.",
+            "Positive-definite Hessian minors and finite midpoint checks are bounded witnesses, not general differentiable-convexity theorems unless a Lean route reconstructs the theorem.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite rational sample points, polynomial/function values, derivative data, or normal equations.",
+                "The validator recomputes midpoint inequalities, second differences, gradients, Hessian minors, and residual equations exactly.",
+                "General convex analysis, KKT, duality, and convergence claims are linked as Lean-horizon rows instead of counted as finite solver evidence.",
             ],
         },
     },

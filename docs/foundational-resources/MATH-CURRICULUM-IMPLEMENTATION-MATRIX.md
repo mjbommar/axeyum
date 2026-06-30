@@ -100,7 +100,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `measure_theory` | sets, probability, reals | landed finite measure/additivity and finite product/integration bridge rows; add narrower convergence or monotonicity rows only when reused | finite replay, QF_LRA, Lean horizon |
 | `probability_theory` | counting, rationals, measure | probability tables, kernels, Markov chains, hitting times, concentration | QF_LRA, QF_LIA counts, replay |
 | `statistics` | probability, linear algebra | exact tests, regression, finite sampling tables, numerical-honesty rows | QF_LRA, QF_LIA, replay |
-| `optimization_and_convexity` | rationals, reals, linear algebra | standalone LP/Farkas lesson, convexity, gradients, Hessians | QF_LRA/Farkas, NRA shadows |
+| `optimization_and_convexity` | rationals, reals, linear algebra | landed LP objective/Farkas and rational convexity/gradient bridge rows; add narrower duality, KKT, SDP, or convergence rows only when reused | QF_LRA/Farkas, NRA shadows |
 | `numerical_analysis` | linear algebra, calculus | residual bounds, Euler steps, interval boxes, exact error recurrences | QF_LRA, replay, numerical-honesty metadata |
 | `differential_equations_and_dynamical_systems` | calculus, linear algebra | bounded recurrences, Euler traces, invariant checks | QF_LRA, BV/LIA counters, Lean horizon |
 | `geometry` | reals, polynomials, linear algebra | coordinate, affine, oriented-area, incidence, rigidity shadows | QF_LRA/NRA, replay |
@@ -198,6 +198,7 @@ Build sequence:
    actions, tensor bilinearity, and finite group actions.
 4. R1 bridge-concept rows landed for probability/statistics finite-table
    vocabulary, measure-theory finite additivity/product/integration
+   vocabulary, optimization/convexity LP objective and convexity-shadow
    vocabulary, proof/logic vocabulary, proof-object anatomy vocabulary, and
    set/foundations vocabulary, including finite Boolean algebra,
    partition/relation roundtrips, image/preimage/inverse tables, finite
@@ -206,7 +207,8 @@ Build sequence:
    real-pair transform replay, plus finite inner-product/projection and finite
    operator/Chebyshev replay, keeping those field-specific finite shadows
    queryable without overstating synthetic, differential, analytic, Lebesgue,
-   convergence, Banach, Hilbert, compact-operator, minimax, or
+   optimization duality, KKT, SDP, convergence, Banach, Hilbert,
+   compact-operator, minimax, or
    infinite-dimensional theorem coverage.
 5. Landed: add "math example using this route" sections to the six active
    proof cookbook recipes.

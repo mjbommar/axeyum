@@ -141,11 +141,12 @@ the event and total measures, finite-martingales' bad conditional-expectation
 row now promoted after finite filtration replay computes the up-block
 expectation, and finite Markov-chain's existing bad stochastic-row artifact now
 explicitly promoted in solver-reuse metadata.
-The foundational concept atlas now also includes 46 generated R1 bridge
+The foundational concept atlas now also includes 48 generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 refutation-as-query, finite proof-pattern replay, finite quantifier expansion,
 bounded induction obligations, Boolean CNF DRAT/LRAT anatomy, QF_LRA Farkas
-certificate anatomy, QF_UF Alethe certificate anatomy, QF_BV bit-blast
+certificate anatomy, LP objective-threshold replay, rational
+convexity/gradient shadows, QF_UF Alethe certificate anatomy, QF_BV bit-blast
 certificate anatomy, finite Boolean algebra, finite partition/relation
 roundtrips, finite image/preimage/inverse tables, finite bijection/cardinality,
 cardinality theorem horizons, metric balls, bounded epsilon-delta shadows,
@@ -166,6 +167,11 @@ complement, product-table, marginal, finite Fubini-style sum, and
 simple-function integral replay queryable while keeping Lebesgue measure,
 general product-measure existence, convergence theorems, and almost-everywhere
 reasoning in the Lean-horizon lane.
+The optimization/convexity bridge rows now make exact LP feasibility,
+objective-threshold Farkas replay, finite midpoint/Jensen shadows, affine
+monotonicity, gradient replay, Hessian-minor witnesses, and least-squares
+normal-equation replay queryable while keeping duality, KKT sufficiency, SDP,
+and algorithm-convergence claims in the Lean-horizon lane.
 The first route-note pass has also landed on the high-use learner cluster
 pages for logic/proof, graph/discrete reasoning, linear algebra/optimization,
 probability/statistics, and algebra/number theory.

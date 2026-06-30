@@ -661,6 +661,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   simple-function integral replay queryable without overstating Lebesgue,
   convergence-theorem, or almost-everywhere coverage.
 
+- **Optimization/convexity bridge concepts landed.**
+  [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) now
+  generates `bridge_lp_objective_farkas` and
+  `bridge_rational_convexity_shadow`, making exact LP feasibility,
+  objective-threshold Farkas replay, finite midpoint/Jensen shadows, affine
+  monotonicity, gradient replay, Hessian-minor witnesses, and least-squares
+  normal-equation replay queryable without overstating duality, KKT, SDP, or
+  algorithm-convergence theorem coverage.
+
 - **Measure-theory field-readiness consumer query landed.**
   [`CONSUMER-QUERIES.md`](docs/foundational-resources/CONSUMER-QUERIES.md)
   now shows measure/Farkas field readiness, measure bridge concept lookup, and
@@ -1223,7 +1232,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **R1 bridge-concept atlas rows expanded.**
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
-  is now generated with 46 bridge rows. The proof-methodology rows are
+  is now generated with 48 bridge rows. The proof-methodology rows are
   `bridge_finite_model_replay`, `bridge_counterexample_proof`,
   `bridge_refutation_query`, `bridge_finite_proof_pattern`,
   `bridge_finite_quantifier_expansion`,
@@ -1231,6 +1240,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `bridge_lean_horizon`; the proof-object anatomy rows are
   `bridge_boolean_cnf_lrat_anatomy`, `bridge_qf_lra_farkas_anatomy`,
   `bridge_qf_uf_alethe_anatomy`, and `bridge_qf_bv_bitblast_anatomy`; the
+  optimization/convexity rows are `bridge_lp_objective_farkas` and
+  `bridge_rational_convexity_shadow`; the
   set/foundations rows are `bridge_finite_boolean_algebra`,
   `bridge_partition_relation_roundtrip`,
   `bridge_finite_image_preimage_inverse`,
@@ -1268,7 +1279,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   now add finite event-algebra, additivity, complement, product-table,
   marginal, finite Fubini-style sum, and simple-function integral replay while
   keeping Lebesgue, convergence, and almost-everywhere theorems as Lean
-  horizons. The foundational resource consumer now reports 92 concept rows while
+  horizons. The optimization/convexity bridge rows now add LP feasibility,
+  objective-threshold Farkas replay, finite midpoint/Jensen shadows, affine
+  monotonicity, gradient replay, Hessian-minor witnesses, and least-squares
+  normal-equation replay while keeping duality, KKT, SDP, and convergence
+  theorems as Lean horizons. The foundational resource consumer now reports 94 concept rows while
   preserving 23 curriculum rows and 18 field rows. Next resource work should
   add the next proof-frontier promotion or boundary evidence from a real
   repeated consumer, depending on which roadmap lane is being advanced.
@@ -12031,6 +12046,18 @@ plan is built and committed on the current branch:
   product-measure, integration, random-variable, conditional-expectation,
   martingale, kernel, hitting-time, and concentration resources visible through
   the public JSON consumer boundary.
+
+- **2026-06-30** — **Optimization/convexity bridge concepts landed.**
+  Extended
+  [`gen-foundational-concepts.py`](scripts/gen-foundational-concepts.py) with
+  `bridge_lp_objective_farkas` and
+  `bridge_rational_convexity_shadow`. The generated atlas now validates 94
+  concept rows: 23 curriculum rows, 18 field rows, 48 bridge rows, and 5
+  example-family rows. Optimization/convexity field queries now expose exact LP
+  feasibility, objective-threshold Farkas replay, finite midpoint/Jensen
+  shadows, affine monotonicity, gradient replay, Hessian-minor witnesses, and
+  least-squares normal-equation replay while keeping duality, KKT sufficiency,
+  SDP, and convergence claims in the Lean-horizon lane.
 
 - **2026-06-30** — **Geometry and complex bridge concepts landed.**
   Extended

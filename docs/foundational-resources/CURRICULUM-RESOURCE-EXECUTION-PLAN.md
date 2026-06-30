@@ -33,16 +33,16 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 92 atlas rows generated from curriculum, field data, 46 R1 bridge
+- 94 atlas rows generated from curriculum, field data, 48 R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
   set/foundations vocabulary, analysis/topology boundary vocabulary,
   linear-algebra computation vocabulary, probability/statistics finite-table
   vocabulary, measure-theory additivity/product/integration vocabulary,
-  algebra-map vocabulary, coordinate/oriented geometry replay, complex
-  real-pair transform replay, finite inner-product/projection replay, finite
-  operator/Chebyshev replay, and Lean horizons, plus five route-specific
-  example families.
+  optimization/convexity LP and finite-shadow vocabulary, algebra-map
+  vocabulary, coordinate/oriented geometry replay, complex real-pair transform
+  replay, finite inner-product/projection replay, finite operator/Chebyshev
+  replay, and Lean horizons, plus five route-specific example families.
 - 84 non-template math example packs, plus the validating template pack.
 - generated coverage, curriculum-status audit, field, proof-gap,
   learner/proof-upgrade, and curriculum-pressure dashboards under
@@ -203,6 +203,11 @@ Add bridge-concept or example-family rows for repeated subtopics:
   simple-function integral replay, backed by finite measure, product-measure,
   integration, random-variable, conditional-expectation, and martingale packs
   while leaving Lebesgue/convergence/almost-everywhere claims as Lean horizons;
+- optimization/convexity: landed bridge rows for exact LP
+  objective-threshold/Farkas replay and rational convexity/gradient shadows,
+  backed by linear optimization, convexity, multivariable calculus,
+  least-squares, residual, and real-algebra packs while leaving duality, KKT,
+  SDP, and convergence claims as Lean horizons;
 - geometry/complex analysis: landed bridge rows for coordinate/oriented
   geometry replay and complex real-pair transform replay, backed by the
   coordinate, affine, orientation/area, complex algebraic, and complex-plane
