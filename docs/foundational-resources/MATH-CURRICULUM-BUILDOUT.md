@@ -1408,6 +1408,9 @@ rejection.
 follows the nonunit inverse obstruction through source SMT-LIB, emitted
 `UnsatDiophantine` evidence, and same-artifact contradiction-row tamper
 rejection.
+`finite-fields-v0` now has a QF_BV bit-blast certificate anatomy lesson that
+follows the fixed-width composite-modulus no-inverse row through source SMT-LIB,
+generated DIMACS/DRAT evidence, and same-artifact truncated-DRAT rejection.
 `complex-plane-transforms-v0` now has a learner-facing end-to-end lesson for
 unit-root cycle replay, conjugation over products, rational Mobius-transform
 replay, checked bad unit-square rejection, and the complex-analysis Lean

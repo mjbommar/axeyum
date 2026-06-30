@@ -170,6 +170,10 @@ The first Diophantine certificate anatomy learner page now follows
 `modular-arithmetic-v0` from a nonunit modular-inverse obstruction through
 source SMT-LIB, emitted `UnsatDiophantine` evidence, and same-artifact
 contradiction-row tamper rejection.
+The first QF_BV bit-blast certificate anatomy learner page now follows
+`finite-fields-v0` from a fixed-width composite-modulus no-inverse row through
+source SMT-LIB, generated DIMACS/DRAT evidence, and same-artifact truncated-DRAT
+rejection.
 The six active proof-cookbook routes for CNF/LRAT, QF_BV, QF_LIA, QF_LRA,
 QF_UF/Alethe, and Lean horizons now each name concrete math example packs that
 use the route.

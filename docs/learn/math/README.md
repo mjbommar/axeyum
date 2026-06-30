@@ -247,6 +247,9 @@ validated pack data and the repo-root command that replays it.
 - [Finite Fields](finite-fields-end-to-end.md): follows `F_7` inverse-table
   replay, exhaustive no-distributivity-counterexample checking in `F_5`, and
   checked no-inverse rejection for `2 mod 6`.
+- [QF_BV Bit-Blast Certificate Anatomy](qf-bv-bitblast-certificate-anatomy-end-to-end.md):
+  follows a fixed-width composite-modulus no-inverse row through source
+  SMT-LIB, generated DIMACS/DRAT evidence, and corrupted-certificate rejection.
 - [Finite Algebra Homomorphisms](finite-algebra-homomorphisms-end-to-end.md):
   follows parity-map preservation, kernel/image recomputation,
   quotient/induced-map replay, ring-homomorphism replay, QF_UF/Alethe

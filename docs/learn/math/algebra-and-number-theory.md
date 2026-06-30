@@ -359,6 +359,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gc
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-fields-v0
+cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
+cargo test -p axeyum-solver --test math_resource_bv_routes qf_bv_resource_route_rejects_tampered_drat_certificate
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes polynomial_factorization_irreducible_quadratic_discriminant_artifact_emits_checked_farkas
@@ -388,6 +390,7 @@ data through replay, read
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md),
 [End To End: Finite Rings](finite-rings-end-to-end.md),
 [End To End: Finite Fields](finite-fields-end-to-end.md),
+[End To End: QF_BV Bit-Blast Certificate Anatomy](qf-bv-bitblast-certificate-anatomy-end-to-end.md),
 [End To End: Finite Algebra Homomorphisms](finite-algebra-homomorphisms-end-to-end.md),
 [End To End: Finite Ideals And Quotient Rings](finite-ideals-quotient-rings-end-to-end.md),
 [End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md),

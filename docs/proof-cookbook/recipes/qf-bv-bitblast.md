@@ -86,6 +86,8 @@ Canonical examples:
 - [Finite Fields](../../../artifacts/examples/math/finite-fields-v0/) uses
   `composite-modulus-nonfield-bitblast-conflict.smt2` to show why a composite
   residue system is not a field at the chosen width.
+  The learner-facing proof-object path is
+  [QF_BV Bit-Blast Certificate Anatomy](../../learn/math/qf-bv-bitblast-certificate-anatomy-end-to-end.md).
 - [Graph Coloring](../../../artifacts/examples/math/graph-coloring-v0/) uses a
   one-bit triangle two-coloring obstruction where the bit-vector encoding is
   the educational object.

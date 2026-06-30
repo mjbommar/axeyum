@@ -44,6 +44,7 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+    "docs/learn/math/qf-bv-bitblast-certificate-anatomy-end-to-end.md",
     "artifacts/examples/math/finite-fields-v0/smt2/composite-modulus-nonfield-bitblast-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_bv_routes.rs"
   ],
@@ -56,6 +57,7 @@
   "graduation_criteria": [
     "Encode fixed prime-field operations as deterministic BV formulas or finite tables; the first composite-modulus no-inverse row now has a checked QF_BV/DRAT artifact.",
     "Replay inverse-table witnesses through Axeyum model evaluation.",
+    "Keep the composite-modulus QF_BV row tied to a source artifact, checked DRAT regression, and tamper-rejection learner page before claiming proof-object coverage.",
     "Continue emitting checked BV/CNF evidence for exhaustive no-counterexample and no-inverse rows.",
     "Keep field extensions, algebraic closure, and quantification over all fields marked Lean-horizon."
   ]

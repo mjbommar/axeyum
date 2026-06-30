@@ -614,6 +614,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   checks the genuine certificate first, changes the recorded constant, and
   requires the corrupted certificate to reject.
 
+- **QF_BV bit-blast certificate anatomy learner page landed.**
+  [`qf-bv-bitblast-certificate-anatomy-end-to-end.md`](docs/learn/math/qf-bv-bitblast-certificate-anatomy-end-to-end.md)
+  now follows `finite-fields-v0` from the fixed-width composite-modulus
+  no-inverse row through source SMT-LIB, generated DIMACS/DRAT evidence, and
+  same-artifact truncated-DRAT rejection. The BV route regression already
+  includes `qf_bv_resource_route_rejects_tampered_drat_certificate`, which
+  checks the genuine proof first, removes the final DRAT step, and requires the
+  corrupted certificate to reject.
+
 - **Foundational resource boundary review refreshed.**
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)
   now records the refreshed 84-promoted, 0 non-benchmark-horizon, and

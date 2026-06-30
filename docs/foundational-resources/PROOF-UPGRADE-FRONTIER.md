@@ -530,7 +530,8 @@ First targets:
   (resource-backed QF_BV/DRAT regression landed for the bad distributivity row)
 - [finite-fields-v0](../../artifacts/examples/math/finite-fields-v0/)
   (resource-backed QF_BV/DRAT regression landed for the composite-modulus
-  no-inverse row)
+  no-inverse row; the route-anatomy lesson now follows this same source
+  artifact through DIMACS/DRAT checking and truncated-proof rejection)
 - [graph-coloring-v0](../../artifacts/examples/math/graph-coloring-v0/)
   (resource-backed QF_BV/DRAT regression landed for the one-bit triangle
   two-coloring obstruction)
@@ -557,6 +558,7 @@ Validation:
 ```sh
 cargo test -p axeyum-solver --test math_resource_bv_routes
 cargo test -p axeyum-solver --test math_resource_bv_routes qf_bv_resource_route_rejects_tampered_drat_certificate
+cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
 cargo test -p axeyum-solver --test evidence unsat_evidence_carries_a_recheckable_drat_certificate
 cargo test -p axeyum-solver --test evidence qf_bv_drat_unsat_reports_bitblast_tseitin_sat_steps
 ./scripts/check-foundational-resources.sh

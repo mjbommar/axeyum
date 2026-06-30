@@ -312,9 +312,13 @@ Pick one row per commit unless the change is purely navigational.
    `modular-arithmetic-v0` from the nonunit modular-inverse obstruction through
    source SMT-LIB, emitted `UnsatDiophantine` evidence, and same-artifact
    contradiction-row tamper rejection.
-26. Add a generated or query-based audit for unclassified solver-reuse packs if
+26. Landed: add `qf-bv-bitblast-certificate-anatomy-end-to-end.md`, following
+   `finite-fields-v0` from the fixed-width composite-modulus no-inverse row
+   through source SMT-LIB, generated DIMACS/DRAT evidence, and same-artifact
+   truncated-DRAT rejection.
+27. Add a generated or query-based audit for unclassified solver-reuse packs if
    manual tracking starts to drift.
-27. Revisit the library boundary after unclassified packs are resolved and at
+28. Revisit the library boundary after unclassified packs are resolved and at
    least one non-doc consumer repeats resource parsing logic.
 
 ## Validation Checklist
