@@ -103,7 +103,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `optimization_and_convexity` | rationals, reals, linear algebra | landed LP objective/Farkas and rational convexity/gradient bridge rows; add narrower duality, KKT, SDP, or convergence rows only when reused | QF_LRA/Farkas, NRA shadows |
 | `numerical_analysis` | linear algebra, calculus | residual bounds, Euler steps, interval boxes, exact error recurrences | QF_LRA, replay, numerical-honesty metadata |
 | `differential_equations_and_dynamical_systems` | calculus, linear algebra | bounded recurrences, Euler traces, invariant checks | QF_LRA, BV/LIA counters, Lean horizon |
-| `geometry` | reals, polynomials, linear algebra | coordinate, affine, oriented-area, incidence, rigidity shadows | QF_LRA/NRA, replay |
+| `geometry` | reals, polynomials, linear algebra | landed coordinate, incidence, affine, and oriented-area shadows; add rigidity rows only when reused | QF_LRA/NRA, replay |
 | `functional_analysis_and_operator_theory` | linear algebra, real analysis | finite operators, inner products, Chebyshev-system slices | QF_LRA, finite replay, Lean horizon |
 
 ## Route-Specific Build Plan
@@ -203,7 +203,7 @@ Build sequence:
    set/foundations vocabulary, including finite Boolean algebra,
    partition/relation roundtrips, image/preimage/inverse tables, finite
    bijection/cardinality, and cardinality theorem horizons. R1 bridge-concept
-   rows now also land for coordinate/oriented geometry replay and complex
+   rows now also land for coordinate/incidence/oriented geometry replay and complex
    real-pair transform replay, plus finite inner-product/projection and finite
    operator/Chebyshev replay, keeping those field-specific finite shadows
    queryable without overstating synthetic, differential, analytic, Lebesgue,
@@ -333,7 +333,11 @@ Build sequence:
     certificate routes: Boolean CNF/LRAT, QF_BV DRAT, QF_LRA/Farkas,
     QF_LIA/Diophantine, and QF_UF/Alethe all mutate emitted resource
     certificates and require independent checker rejection.
-26. Revisit crate/repo boundaries only after three real consumers or repeated
+26. `incidence-geometry-v0` now lands as the next geometry pack: exact
+    line-equation replay, non-parallel line intersection, point-on-line replay,
+    checked QF_LRA/Farkas bad-incidence rejection, a focused learner page, and
+    a bridge-row update under `bridge_coordinate_orientation_geometry`.
+27. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

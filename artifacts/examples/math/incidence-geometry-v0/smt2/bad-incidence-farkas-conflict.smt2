@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const line_value Real)
+(assert (= line_value 3))
+(assert (= line_value 0))
+(check-sat)

@@ -10859,6 +10859,34 @@ def distance_squared2(left: tuple[Fraction, Fraction], right: tuple[Fraction, Fr
     return dx * dx + dy * dy
 
 
+def require_line2(context: str, value: Any) -> tuple[Fraction, Fraction, Fraction]:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    required = {"a", "b", "c"}
+    if set(value) != required:
+        missing = sorted(required - set(value))
+        extra = sorted(set(value) - required)
+        fail(f"{context} must contain exactly a, b, c; missing={missing} extra={extra}")
+    a_value = require_fraction(f"{context}.a", value.get("a"))
+    b_value = require_fraction(f"{context}.b", value.get("b"))
+    c_value = require_fraction(f"{context}.c", value.get("c"))
+    if a_value == 0 and b_value == 0:
+        fail(f"{context} must have a nonzero linear part")
+    return a_value, b_value, c_value
+
+
+def line_value(line: tuple[Fraction, Fraction, Fraction], point: tuple[Fraction, Fraction]) -> Fraction:
+    a_value, b_value, c_value = line
+    return a_value * point[0] + b_value * point[1] + c_value
+
+
+def line_determinant(
+    left: tuple[Fraction, Fraction, Fraction],
+    right: tuple[Fraction, Fraction, Fraction],
+) -> Fraction:
+    return left[0] * right[1] - right[0] * left[1]
+
+
 def validate_coordinate_geometry(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -10929,6 +10957,99 @@ def validate_coordinate_geometry(expected: dict[str, Any]) -> None:
     require_string("bad coordinate certificate", certificate)
     if "UnsatFarkas" not in certificate:
         fail("bad-distance-squared-rejected certificate must document Farkas evidence")
+
+
+def validate_incidence_geometry(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    through_points = checks["line-equation-through-two-points"]
+    if through_points["expected_result"] != "sat":
+        fail("line-equation-through-two-points must expect sat")
+    values = single_witness_values(through_points, witnesses)
+    line = require_line2("incidence line through points line", values.get("line"))
+    p_point = require_point2("incidence line through points p", values.get("p"))
+    q_point = require_point2("incidence line through points q", values.get("q"))
+    if p_point == q_point:
+        fail("line-equation-through-two-points requires two distinct points")
+    if line_value(line, p_point) != 0:
+        fail("line-equation-through-two-points first point is not on the line")
+    if line_value(line, q_point) != 0:
+        fail("line-equation-through-two-points second point is not on the line")
+
+    intersection = checks["line-intersection-witness"]
+    if intersection["expected_result"] != "sat":
+        fail("line-intersection-witness must expect sat")
+    values = single_witness_values(intersection, witnesses)
+    line_a = require_line2("incidence intersection line_a", values.get("line_a"))
+    line_b = require_line2("incidence intersection line_b", values.get("line_b"))
+    determinant = require_fraction("incidence intersection determinant", values.get("determinant"))
+    point = require_point2("incidence intersection point", values.get("point"))
+    if line_determinant(line_a, line_b) != determinant:
+        fail("line-intersection-witness determinant is incorrect")
+    if determinant == 0:
+        fail("line-intersection-witness requires non-parallel lines")
+    if line_value(line_a, point) != 0:
+        fail("line-intersection-witness point is not on line_a")
+    if line_value(line_b, point) != 0:
+        fail("line-intersection-witness point is not on line_b")
+
+    point_on_line = checks["point-on-line-witness"]
+    if point_on_line["expected_result"] != "sat":
+        fail("point-on-line-witness must expect sat")
+    values = single_witness_values(point_on_line, witnesses)
+    line = require_line2("incidence point-on-line line", values.get("line"))
+    point = require_point2("incidence point-on-line point", values.get("point"))
+    listed_value = require_fraction("incidence point-on-line line_value", values.get("line_value"))
+    if line_value(line, point) != listed_value:
+        fail("point-on-line-witness listed line value is incorrect")
+    if listed_value != 0:
+        fail("point-on-line-witness must list a point on the line")
+
+    bad_incidence = checks["bad-incidence-rejected"]
+    if bad_incidence["expected_result"] != "unsat" or bad_incidence.get("proof_status") != "checked":
+        fail("bad-incidence-rejected must be a checked unsat row")
+    data = bad_incidence.get("data", {})
+    line = require_line2("bad incidence line", data.get("line"))
+    point = require_point2("bad incidence point", data.get("point"))
+    computed = require_fraction("bad incidence computed_line_value", data.get("computed_line_value"))
+    claimed = require_fraction("bad incidence claimed_line_value", data.get("claimed_line_value"))
+    if line_value(line, point) != computed:
+        fail("bad-incidence-rejected computed line value is incorrect")
+    if computed == claimed:
+        fail("bad-incidence-rejected must document a false incidence claim")
+    if claimed != 0:
+        fail("bad-incidence-rejected claimed line value must be zero")
+    farkas_incidence_claim = data.get("farkas_incidence_claim")
+    require_string("bad incidence farkas_incidence_claim", farkas_incidence_claim)
+    if farkas_incidence_claim != "line_value = 0":
+        fail("bad-incidence-rejected must document the Farkas incidence claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad incidence smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/incidence-geometry-v0/smt2/"
+        "bad-incidence-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-incidence-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad incidence smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad incidence farkas_regression", regression)
+    if "incidence_geometry_bad_point_on_line_artifact_emits_checked_farkas" not in regression:
+        fail("bad-incidence-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad incidence certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("bad-incidence-rejected certificate must document Farkas evidence")
+
+    horizon = checks["general-incidence-geometry-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-incidence-geometry-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-incidence-geometry-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general incidence geometry target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general incidence geometry future_checker", data.get("future_checker"))
 
 
 def validate_affine_geometry(expected: dict[str, Any]) -> None:
@@ -15851,6 +15972,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_induction_obligations(expected)
     if metadata["id"] == "induction-patterns-v0":
         validate_induction_patterns(expected)
+    if metadata["id"] == "incidence-geometry-v0":
+        validate_incidence_geometry(expected)
     if metadata["id"] == "integer-lia-v0":
         validate_integer_lia(expected)
     if metadata["id"] == "inner-product-spaces-rational-v0":

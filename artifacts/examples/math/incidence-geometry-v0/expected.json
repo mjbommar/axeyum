@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "pack_id": "incidence-geometry-v0",
+  "witnesses": [
+    {
+      "id": "line-through-two-points",
+      "description": "The line 2x - y + 1 = 0 contains (0,1) and (2,5).",
+      "values": {
+        "line": {"a": "2", "b": "-1", "c": "1"},
+        "p": ["0", "1"],
+        "q": ["2", "5"]
+      }
+    },
+    {
+      "id": "line-intersection",
+      "description": "The lines x + y - 3 = 0 and x - y - 1 = 0 intersect at (2,1).",
+      "values": {
+        "line_a": {"a": "1", "b": "1", "c": "-3"},
+        "line_b": {"a": "1", "b": "-1", "c": "-1"},
+        "determinant": "-2",
+        "point": ["2", "1"]
+      }
+    },
+    {
+      "id": "point-on-line",
+      "description": "The point (3,7) lies on 2x - y + 1 = 0.",
+      "values": {
+        "line": {"a": "2", "b": "-1", "c": "1"},
+        "point": ["3", "7"],
+        "line_value": "0"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "line-equation-through-two-points",
+      "claim": "The listed line contains both fixed points.",
+      "expected_result": "sat",
+      "validation": "exact_rational_incidence_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["line-through-two-points"],
+      "notes": "The validator evaluates a*x + b*y + c at both points over exact rationals."
+    },
+    {
+      "id": "line-intersection-witness",
+      "claim": "The listed non-parallel lines intersect at the fixed point.",
+      "expected_result": "sat",
+      "validation": "exact_rational_incidence_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["line-intersection"],
+      "notes": "The validator checks the determinant is nonzero and evaluates both line equations at the listed point."
+    },
+    {
+      "id": "point-on-line-witness",
+      "claim": "The listed point lies on the listed line.",
+      "expected_result": "sat",
+      "validation": "exact_rational_incidence_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["point-on-line"],
+      "notes": "The validator recomputes the line value at the point and requires zero."
+    },
+    {
+      "id": "bad-incidence-rejected",
+      "claim": "The point (2,2) lies on the line 2x - y + 1 = 0.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_incidence_refutation",
+      "proof_status": "checked",
+      "data": {
+        "line": {"a": "2", "b": "-1", "c": "1"},
+        "point": ["2", "2"],
+        "computed_line_value": "3",
+        "claimed_line_value": "0",
+        "farkas_incidence_claim": "line_value = 0",
+        "smt2_artifact": "artifacts/examples/math/incidence-geometry-v0/smt2/bad-incidence-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes incidence_geometry_bad_point_on_line_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact incidence replay computes line value 3, while the malformed row claims line value 0; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
+      "id": "general-incidence-geometry-lean-horizon",
+      "claim": "General incidence and projective-geometry theorems require future Lean resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "synthetic incidence, projective duality, and configuration theorems over general fields or planes",
+        "future_checker": "Lean module with no sorryAx dependencies"
+      },
+      "notes": "The finite rows are checked by exact rational replay; general incidence geometry remains a proof-assistant horizon."
+    }
+  ]
+}

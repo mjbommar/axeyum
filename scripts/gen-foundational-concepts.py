@@ -385,7 +385,7 @@ FIELD_PACKS = {
     ],
     "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, and rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."),
-    "geometry": ("coordinate-geometry-v0", "Incidence, distance, midpoint, collinearity, and rigid finite configurations."),
+    "geometry": ("coordinate-geometry-v0", "Incidence, line equations, distance, midpoint, collinearity, and rigid finite configurations."),
     "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
 }
 
@@ -4214,10 +4214,10 @@ BRIDGE_CONCEPTS = [
         "field_ids": ["geometry", "linear_algebra", "real_analysis"],
         "resource_status": "validated",
         "summary": (
-            "Finite coordinate-geometry rows turn midpoint, collinearity, "
-            "squared-distance, affine-map, and signed-area claims into exact "
-            "rational replay obligations with checked Farkas conflicts for "
-            "malformed linearized claims."
+            "Finite coordinate-geometry rows turn incidence, line equations, "
+            "midpoint, collinearity, squared-distance, affine-map, and "
+            "signed-area claims into exact rational replay obligations with "
+            "checked Farkas conflicts for malformed linearized claims."
         ),
         "prerequisites": [
             "curriculum_reals",
@@ -4246,6 +4246,10 @@ BRIDGE_CONCEPTS = [
             (
                 "orientation-area-geometry-v0",
                 "Signed double-area orientation, polygon area, barycentric coordinate, and bad-orientation rows.",
+            ),
+            (
+                "incidence-geometry-v0",
+                "Line equations, point-on-line replay, non-parallel intersections, and bad-incidence rows.",
             ),
             (
                 "affine-geometry-v0",

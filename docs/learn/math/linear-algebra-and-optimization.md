@@ -25,6 +25,7 @@ Example packs:
 - [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
 - [convexity-rational-v0](../../../artifacts/examples/math/convexity-rational-v0/)
+- [incidence-geometry-v0](../../../artifacts/examples/math/incidence-geometry-v0/)
 - [affine-geometry-v0](../../../artifacts/examples/math/affine-geometry-v0/)
 - [orientation-area-geometry-v0](../../../artifacts/examples/math/orientation-area-geometry-v0/)
 - [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
@@ -76,7 +77,9 @@ affine threshold monotonicity, and bad midpoint-convexity rejection over exact
 rational data. The finite
 Chebyshev-system slice checks Vandermonde unisolvence, interpolation replay,
 alternating residual signs, and duplicate-node rejection over exact rational
-sample grids.
+sample grids. The incidence-geometry slice checks line equations and
+non-parallel line intersections as tiny exact linear systems, then rejects a
+bad point-on-line row through QF_LRA/Farkas evidence.
 
 This is a strong resource path because the trusted checker can be small: matrix
 multiplication, vector norms, linear inequalities, and certificate arithmetic.
@@ -263,6 +266,8 @@ cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calcul
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_rejects_tampered_farkas_certificate
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/incidence-geometry-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes incidence_geometry_bad_point_on_line_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
@@ -287,6 +292,7 @@ replay, read
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md),
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md),
 [End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md),
+[End To End: Incidence Geometry](incidence-geometry-end-to-end.md),
 [End To End: Rational Inner Product Spaces](inner-product-spaces-end-to-end.md),
 [End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md),
 [End To End: Finite Dual Spaces](finite-dual-spaces-end-to-end.md), and

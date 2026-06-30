@@ -6016,7 +6016,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "Finite coordinate-geometry rows turn midpoint, collinearity, squared-distance, affine-map, and signed-area claims into exact rational replay obligations with checked Farkas conflicts for malformed linearized claims.",
+      "summary": "Finite coordinate-geometry rows turn incidence, line equations, midpoint, collinearity, squared-distance, affine-map, and signed-area claims into exact rational replay obligations with checked Farkas conflicts for malformed linearized claims.",
       "prerequisites": [
         "curriculum_reals",
         "curriculum_linear_algebra",
@@ -6048,6 +6048,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/orientation-area-geometry-v0",
           "notes": "Signed double-area orientation, polygon area, barycentric coordinate, and bad-orientation rows."
+        },
+        {
+          "id": "incidence-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/incidence-geometry-v0",
+          "notes": "Line equations, point-on-line replay, non-parallel intersections, and bad-incidence rows."
         },
         {
           "id": "affine-geometry-v0",
@@ -7879,13 +7885,19 @@
           "id": "coordinate-geometry-v0",
           "status": "validated",
           "path": "artifacts/examples/math/coordinate-geometry-v0",
-          "notes": "Incidence, distance, midpoint, collinearity, and rigid finite configurations."
+          "notes": "Incidence, line equations, distance, midpoint, collinearity, and rigid finite configurations."
         },
         {
           "id": "affine-geometry-v0",
           "status": "validated",
           "path": "artifacts/examples/math/affine-geometry-v0",
           "notes": "Exact Affine Geometry Checks"
+        },
+        {
+          "id": "incidence-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/incidence-geometry-v0",
+          "notes": "Exact Incidence Geometry Checks"
         },
         {
           "id": "orientation-area-geometry-v0",
@@ -8146,6 +8158,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-vector-spaces-v0",
           "notes": "Exact Finite Vector Space Checks"
+        },
+        {
+          "id": "incidence-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/incidence-geometry-v0",
+          "notes": "Exact Incidence Geometry Checks"
         },
         {
           "id": "inner-product-spaces-rational-v0",
@@ -9151,6 +9169,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/generating-functions-v0",
           "notes": "Exact Generating Function Checks"
+        },
+        {
+          "id": "incidence-geometry-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/incidence-geometry-v0",
+          "notes": "Exact Incidence Geometry Checks"
         },
         {
           "id": "inner-product-spaces-rational-v0",

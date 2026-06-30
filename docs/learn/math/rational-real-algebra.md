@@ -21,6 +21,7 @@ Example packs:
 - [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/)
 - [convexity-rational-v0](../../../artifacts/examples/math/convexity-rational-v0/)
 - [coordinate-geometry-v0](../../../artifacts/examples/math/coordinate-geometry-v0/)
+- [incidence-geometry-v0](../../../artifacts/examples/math/incidence-geometry-v0/)
 - [affine-geometry-v0](../../../artifacts/examples/math/affine-geometry-v0/)
 - [orientation-area-geometry-v0](../../../artifacts/examples/math/orientation-area-geometry-v0/)
 
@@ -36,7 +37,8 @@ coefficient extraction and Cauchy-product replay, LP feasibility and
 infeasibility certificates, finite convexity and monotonicity checks, exact
 rational gradients, Jacobian chain-rule replay, Hessian minor checks,
 midpoints, collinearity determinants, squared distances, affine maps, signed
-areas, affine area scaling, and barycentric point-inside checks. The
+areas, line-incidence equations, non-parallel line intersections, affine area
+scaling, and barycentric point-inside checks. The
 matrix-invariants pack adds a fixed characteristic polynomial, root evaluation,
 Cayley-Hamilton replay, and exact eigenvalue interval checks.
 
@@ -169,6 +171,17 @@ squared-distance claim: exact replay computes `25` for `(1,1)` to `(4,5)`,
 while the source QF_LRA artifact checks the malformed claim `26` with
 `UnsatFarkas` evidence.
 
+For an incidence-geometry check, encode a line as exact rational coefficients:
+
+```text
+2x - y + 1 = 0
+```
+
+The incidence checker evaluates `a*x + b*y + c` at each listed point. The bad
+row computes line value `3` for `(2,2)` but the malformed point-on-line claim
+requires `0`; the source QF_LRA artifact checks that final conflict with
+`UnsatFarkas` evidence.
+
 Run the checks from the repository root:
 
 ```sh
@@ -185,6 +198,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/mu
 cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/incidence-geometry-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes incidence_geometry_bad_point_on_line_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
@@ -212,8 +227,9 @@ For exact LP feasibility and Farkas threshold evidence, read
 [End To End: Linear Optimization](linear-optimization-end-to-end.md).
 For exact finite convexity replay, read
 [End To End: Rational Convexity](convexity-rational-end-to-end.md). For exact
-finite coordinate, affine, and oriented geometry replay, read
-[End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md).
+finite coordinate, incidence, affine, and oriented geometry replay, read
+[End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md)
+and [End To End: Incidence Geometry](incidence-geometry-end-to-end.md).
 
 ## Horizon
 

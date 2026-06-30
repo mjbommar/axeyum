@@ -7,6 +7,9 @@ coordinates, and checked false geometry claims. It uses
 [affine-geometry-v0](../../../artifacts/examples/math/affine-geometry-v0/),
 and
 [orientation-area-geometry-v0](../../../artifacts/examples/math/orientation-area-geometry-v0/).
+For exact point-on-line and line-intersection replay, use
+[incidence-geometry-v0](../../../artifacts/examples/math/incidence-geometry-v0/)
+and [Incidence Geometry](incidence-geometry-end-to-end.md).
 
 Concept rows:
 

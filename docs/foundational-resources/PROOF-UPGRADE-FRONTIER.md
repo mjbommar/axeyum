@@ -16,8 +16,8 @@ the route named in the pack metadata.
 
 Generated from the current math resource queue:
 
-- math example packs: 84
-- learner-linked packs: 84 focused links
+- math example packs: 85
+- learner-linked packs: 85 focused links
 - packs with non-checked proof rows: 73
 - non-checked proof rows: 218
 
