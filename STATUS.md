@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Analysis/numerical/complex consumer queries landed.**
+  [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
+  now shows public JSON queries for real-analysis Farkas readiness,
+  epsilon/gradient bridge lookups, checked bounded-analysis rows,
+  numerical-analysis Farkas readiness, residual/operator bridge lookups,
+  checked exact numerical rows, complex-analysis Farkas readiness, real-pair
+  bridge lookup, and checked algebraic complex rows. The smoke check exercises
+  those queries without promoting completeness, convergence, floating-point
+  stability, holomorphic, analytic-continuation, or theorem-level calculus
+  claims.
+
 - **Core algebra/number/graph consumer queries landed.**
   [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
   now shows public JSON queries for abstract-algebra Alethe readiness,

@@ -265,19 +265,24 @@ Build sequence:
    dynamics/Farkas, topology/Boolean+Alethe, measure/Farkas,
    statistics/Farkas+Diophantine, linear-algebra/Farkas+Alethe,
    abstract-algebra/Alethe+QF_BV, number-theory/Diophantine,
-   graph-theory/Boolean, optimization/Farkas, geometry/Farkas, and
+   graph-theory/Boolean, real-analysis/Farkas, numerical-analysis/Farkas,
+   complex-analysis/Farkas, optimization/Farkas, geometry/Farkas, and
    functional-analysis/operator Farkas field-readiness examples, plus topology
    compactness/preimage bridge lookups, measure bridge concept lookup,
    statistics finite-table/tail-count bridge lookups, linear-algebra
    rank/projection bridge lookups, abstract-algebra homomorphism/ideal bridge
    lookups, number-theory finite-family lookup, graph-family lookup,
+   real-analysis epsilon/gradient bridge lookups, numerical-analysis
+   residual/operator bridge lookups, complex-analysis real-pair bridge lookup,
    LP-objective and convexity bridge concept lookup, operator bridge concept
    lookup, checked topology Boolean/Alethe rows, checked measure-theory Farkas
    rows, checked statistics Farkas/Diophantine rows, checked linear-algebra
    Farkas/Alethe rows, checked abstract-algebra Alethe/QF_BV rows, checked
    number-theory Diophantine rows, checked graph-theory Boolean rows, checked
-   optimization/convexity Farkas rows, checked geometry Farkas rows, and
-   checked functional-analysis/operator Farkas rows.
+   real-analysis Farkas rows, checked numerical-analysis Farkas rows, checked
+   complex-analysis Farkas rows, checked optimization/convexity Farkas rows,
+   checked geometry Farkas rows, and checked functional-analysis/operator
+   Farkas rows.
 16. Negative example-pack validator fixtures now land through
     `scripts/check-foundational-negative-fixtures.py` and
     `artifacts/fixtures/foundational-example-pack-invalid/`, covering unknown
@@ -456,7 +461,16 @@ Build sequence:
     readiness with checked finite graph rows without promoting arbitrary
     algebraic-structure, unbounded number-theory, asymptotic algorithm, or
     general graph-theorem claims.
-51. Revisit crate/repo boundaries only after three real consumers or repeated
+51. Analysis/numerical/complex field-readiness consumer queries now land in
+    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
+    `scripts/check-foundational-resources.sh`, covering real-analysis Farkas
+    readiness, epsilon/gradient bridge lookups, checked bounded-analysis rows,
+    numerical-analysis Farkas readiness, residual/operator bridge lookups,
+    checked exact numerical rows, complex-analysis Farkas readiness, real-pair
+    bridge lookup, and checked algebraic complex rows without promoting
+    completeness, convergence, floating-point stability, holomorphic,
+    analytic-continuation, or theorem-level calculus claims.
+52. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

@@ -2043,6 +2043,18 @@ smoke check runs those same queries so the core curriculum lanes are visible
 through the public JSON boundary without promoting arbitrary algebraic
 structure theorems, unbounded number-theory claims, asymptotic graph
 algorithms, or general graph theorems.
+The consumer query layer now also exposes analysis, numerical-analysis, and
+complex-analysis readiness: `CONSUMER-QUERIES.md` shows real-analysis Farkas
+field summaries, epsilon/gradient bridge lookups, checked bounded-analysis
+row drill-downs, numerical-analysis Farkas field summaries, residual/operator
+bridge lookups, checked exact numerical row drill-downs, complex-analysis
+Farkas field summaries, real-pair bridge lookup, and checked algebraic complex
+row drill-downs. The foundational-resource smoke check runs those same
+queries so bounded real-analysis shadows, exact derivative/integral and
+root-finding rows, residual/Euler/operator/recurrence/optimization-step rows,
+and real-pair complex algebra stay visible through the public JSON boundary
+without promoting completeness, convergence, floating-point stability,
+holomorphic, analytic-continuation, or theorem-level calculus claims.
 The consumer query layer now also exposes optimization/convexity readiness:
 `CONSUMER-QUERIES.md` shows the Farkas field summary, LP-objective and
 convexity bridge lookups, and checked optimization/convexity Farkas row

@@ -442,6 +442,115 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+For real analysis, query the Farkas route to keep bounded epsilon-delta
+shadows, rational interval/ball rows, finite sequence-prefix rows, exact
+derivative and integral shadows, root-finding iterations, geometry rows, and
+optimization-step rows grouped while leaving completeness, IVT/MVT/FTC,
+general convergence, compactness, and theorem-level calculus in the
+Lean-horizon lane:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field real_analysis \
+  --route Farkas \
+  --require-any
+```
+
+Use atlas lookups for reusable bounded-analysis vocabulary:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field real_analysis \
+  --text epsilon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field real_analysis \
+  --text gradient \
+  --require-any
+```
+
+To display concrete checked real-analysis rows, drill into checked Farkas
+examples:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field real_analysis \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+```
+
+For numerical analysis, query the Farkas route to keep exact residual bounds,
+Euler-step rows, recurrence traces, root-finding iterations, finite operator
+checks, and finite optimization-step rows grouped while leaving floating-point
+roundoff, conditioning/stability, asymptotic error analysis, and convergence
+theorems in numerical-honesty or proof-horizon lanes:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field numerical_analysis \
+  --route Farkas \
+  --require-any
+```
+
+Use atlas lookups for reusable numerical vocabulary:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field numerical_analysis \
+  --text residual \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field numerical_analysis \
+  --text operator \
+  --require-any
+```
+
+To display concrete checked numerical-analysis rows, drill into checked
+Farkas examples:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field numerical_analysis \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+```
+
+For complex analysis, query the Farkas route to keep exact real-pair complex
+arithmetic, norm, unit-circle transform, and polynomial-discriminant rows
+grouped while leaving holomorphic, contour-integral, analytic-continuation,
+and general complex-analysis theorems in the Lean-horizon lane:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field complex_analysis \
+  --route Farkas \
+  --require-any
+```
+
+Use the atlas lookup for the reusable real-pair encoding boundary:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field complex_analysis \
+  --text real-pair \
+  --require-any
+```
+
+To display concrete checked complex-analysis rows, drill into checked Farkas
+examples:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field complex_analysis \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+```
+
 For optimization and convexity, query the Farkas route to keep exact LP
 thresholds, finite convexity shadows, regression normal equations, residual
 bounds, gradient/Hessian replay, finite KKT stationarity, finite SDP
@@ -648,6 +757,17 @@ python3 scripts/query-foundational-resources.py checks --field number_theory --r
 python3 scripts/query-foundational-resources.py fields --field graph_theory --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field graph_theory --text graph --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field real_analysis --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field real_analysis --text epsilon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field real_analysis --text gradient --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field real_analysis --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field numerical_analysis --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text residual --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text operator --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field numerical_analysis --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field complex_analysis --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field complex_analysis --text real-pair --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field complex_analysis --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field optimization_and_convexity --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text objective --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text convexity --require-any >/dev/null

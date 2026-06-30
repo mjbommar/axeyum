@@ -203,6 +203,16 @@ lookups, and checked finite coloring/reachability/matching/cut/d-separation
 rows. These are smoke-checked through the committed JSON contract without
 promoting arbitrary algebraic-structure theorems, unbounded number-theory
 claims, asymptotic graph algorithms, or general graph theorems.
+The public foundational-resource consumer query layer now also exercises the
+analysis/numerical/complex lanes: real-analysis Farkas readiness,
+epsilon/gradient bridge lookups, and checked bounded-analysis rows;
+numerical-analysis Farkas readiness, residual/operator bridge lookups, and
+checked exact residual, Euler, operator, recurrence, and optimization-step
+rows; and complex-analysis Farkas readiness, real-pair bridge lookup, and
+checked algebraic complex rows. These are smoke-checked through the committed
+JSON contract without promoting completeness, convergence, floating-point
+stability, holomorphic, analytic-continuation, or theorem-level calculus
+claims.
 The sequence/real-analysis lane now also splits bounded monotone sequence and
 finite recurrence-prefix, separation/root-finding, KKT, active-set QP, SDP, and gradient-descent checks into focused packs: finite monotone-prefix
 replay, finite prefix supremum, finite tail-gap replay, Fibonacci prefix

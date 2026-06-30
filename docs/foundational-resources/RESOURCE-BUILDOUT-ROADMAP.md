@@ -1543,7 +1543,14 @@ Pick one item per commit unless the change is purely navigational.
     finite-algebra rows, number-theory Diophantine readiness, finite-family
     lookup, checked integer-arithmetic rows, graph-theory Boolean readiness,
     graph-family lookup, and checked finite graph rows.
-83. Continue proof-route promotions or consumer-query examples; revisit the
+83. Landed: add analysis/numerical/complex field-readiness consumer queries
+    through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational
+    smoke check, covering real-analysis Farkas readiness, epsilon/gradient
+    bridge lookups, checked bounded-analysis rows, numerical-analysis Farkas
+    readiness, residual/operator bridge lookups, checked exact numerical rows,
+    complex-analysis Farkas readiness, real-pair bridge lookup, and checked
+    algebraic complex rows.
+84. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

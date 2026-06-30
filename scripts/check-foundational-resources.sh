@@ -46,6 +46,17 @@ python3 scripts/query-foundational-resources.py checks --field number_theory --r
 python3 scripts/query-foundational-resources.py fields --field graph_theory --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field graph_theory --text graph --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field real_analysis --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field real_analysis --text epsilon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field real_analysis --text gradient --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field real_analysis --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field numerical_analysis --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text residual --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text operator --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field numerical_analysis --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field complex_analysis --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field complex_analysis --text real-pair --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field complex_analysis --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field optimization_and_convexity --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text objective --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text convexity --require-any >/dev/null

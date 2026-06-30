@@ -612,6 +612,16 @@ Pick one row per commit unless the change is purely navigational.
     graph-family lookups, and checked finite coloring, reachability, matching,
     cut, and d-separation rows, making those core lanes visible through the
     committed JSON contract without promoting theorem-horizon claims.
+72. Landed: add analysis/numerical/complex field-readiness consumer query
+    coverage. `CONSUMER-QUERIES.md` and `check-foundational-resources.sh` now
+    exercise real-analysis Farkas field readiness, epsilon/gradient bridge
+    concept lookups, checked bounded-analysis rows, numerical-analysis Farkas
+    field readiness, residual/operator bridge concept lookups, checked exact
+    numerical rows, complex-analysis Farkas field readiness, real-pair bridge
+    lookup, and checked algebraic complex rows, making those analysis lanes
+    visible through the committed JSON contract without promoting
+    completeness, convergence, floating-point stability, holomorphic,
+    analytic-continuation, or theorem-level calculus claims.
 
 ## Validation Checklist
 

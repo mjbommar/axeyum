@@ -377,7 +377,14 @@ Use one row per commit unless the change is purely navigational.
    Alethe/QF_BV rows, homomorphism/ideal bridge vocabulary, number-theory
    Diophantine rows, finite-family vocabulary, graph-theory Boolean rows, and
    graph-family vocabulary visible through the public JSON contract.
-15. Add future rules/law crosswalk examples only by reusing existing
+15. Landed: add analysis/numerical/complex consumer-query coverage through
+   [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
+   `scripts/check-foundational-resources.sh`, making bounded real-analysis
+   Farkas rows, epsilon/gradient bridge vocabulary, exact numerical residual
+   and operator rows, numerical-analysis bridge vocabulary, real-pair complex
+   algebra rows, and complex-analysis bridge vocabulary visible through the
+   public JSON contract.
+16. Add future rules/law crosswalk examples only by reusing existing
    math-resource patterns; do not create a separate rule ontology until the
    current JSON boundary is exercised by more consumers.
 
