@@ -298,6 +298,10 @@ Related checked integer-arithmetic solver-reuse promotion:
   (resource-backed `UnsatArithDpll` regression landed for the bad finite DFS
   cost-bound row; this is a Boolean-structured LIA refutation, not a
   Diophantine-equality certificate)
+- [natural-arithmetic-v0](../../artifacts/examples/math/natural-arithmetic-v0/)
+  (resource-backed `UnsatArithDpll` regression landed for the bad bounded
+  negative-domain row; this is a bounded-domain LIA refutation, not a
+  Diophantine-equality certificate)
 
 Reference packs already on the route:
 

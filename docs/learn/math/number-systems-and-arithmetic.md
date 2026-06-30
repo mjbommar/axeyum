@@ -49,7 +49,9 @@ S(5 + 7) = 13
 
 The `natural-arithmetic-v0` validator replays those rows with exact
 nonnegative integer arithmetic and rejects bounded counterexamples to successor
-injectivity, a predecessor of zero, and a negative element in `0..7`.
+injectivity, a predecessor of zero, and a negative element in `0..7`. The
+negative-domain row now also emits checked QF_LIA arithmetic-DPLL evidence from
+the same `0 <= n <= 7` and `n < 0` contradiction.
 
 For signed integer arithmetic, encode fixed comparisons and linear equations:
 

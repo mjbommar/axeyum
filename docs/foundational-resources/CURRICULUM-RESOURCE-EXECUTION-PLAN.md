@@ -352,13 +352,13 @@ Next buildout:
    Dashboard status: generated R0-R6 gate and next-gate columns now make
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
    and learner/proof-upgrade dashboards.
-   Candidate status: the first `solver_reuse` batch now has 2 remaining
-   R4-to-R5 promotion candidates: bounded natural arithmetic and bounded
-   number theory. `logic-basics-v0`,
+   Candidate status: the first `solver_reuse` batch now has 1 remaining
+   R4-to-R5 promotion candidate: bounded number theory. `logic-basics-v0`,
    `finite-cardinality-v0`, `graph-matching-v0`, `graph-reachability-v0`,
    `graph-cut-v0`, `graph-d-separation-v0`, and
-   `graph-search-runtime-v0`, and `integer-lia-v0` have moved from candidate
-   to promoted for their source-linked regression artifacts.
+   `graph-search-runtime-v0`, `integer-lia-v0`, and
+   `natural-arithmetic-v0` have moved from candidate to promoted for their
+   source-linked regression artifacts.
 9. Landed: add consumer-facing sample queries over the JSON data contract.
    `scripts/query-foundational-resources.py` now supports summary, pack, check,
    and concept queries, and `check-foundational-resources.sh` runs a small
@@ -385,6 +385,9 @@ Next buildout:
    `crates/axeyum-solver/tests/math_resource_lia_routes.rs`.
    `integer-lia-v0` now adds
    `artifacts/examples/math/integer-lia-v0/smt2/diophantine-gcd-obstruction-conflict.smt2`,
+   checked from the same LIA resource regression.
+   `natural-arithmetic-v0` now adds
+   `artifacts/examples/math/natural-arithmetic-v0/smt2/bounded-natural-negative-lia-conflict.smt2`,
    checked from the same LIA resource regression.
 11. Add a rules/law reasoning resource plan that explicitly reuses finite
     predicates, graph reachability, optimization, and proof-route vocabulary.

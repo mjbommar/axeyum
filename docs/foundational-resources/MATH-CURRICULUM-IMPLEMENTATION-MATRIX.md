@@ -201,7 +201,7 @@ Build sequence:
 7. Generated dashboard columns for R0-R6 gate level and "next gate" now land
    in the coverage, field, proof-gap, and learner/proof-upgrade dashboards.
 8. Selected deterministic R4 packs now have structured `solver_reuse`
-   candidate tags: bounded natural arithmetic and bounded number theory.
+   candidate tags: bounded number theory.
 9. Consumer-facing sample queries now land through
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md): summary counts, pack discovery,
@@ -223,6 +223,9 @@ Build sequence:
     `integer-lia-v0` now links `diophantine-gcd-obstruction` to
     `artifacts/examples/math/integer-lia-v0/smt2/diophantine-gcd-obstruction-conflict.smt2`,
     checked by the `math_resource_lia_routes` Diophantine regression.
+    `natural-arithmetic-v0` now links `bounded-natural-negative-rejected` to
+    `artifacts/examples/math/natural-arithmetic-v0/smt2/bounded-natural-negative-lia-conflict.smt2`,
+    checked by the `math_resource_lia_routes` arithmetic-DPLL regression.
 11. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 

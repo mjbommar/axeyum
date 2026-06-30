@@ -89,7 +89,8 @@ validated pack data and the repo-root command that replays it.
   descendant-opened collider replay.
 - [Natural Arithmetic](natural-arithmetic-end-to-end.md): follows successor
   arithmetic, fixed addition and multiplication replay, bounded successor
-  no-counterexample enumeration, and the universal Nat theorem horizon.
+  no-counterexample enumeration, a checked QF_LIA negative-domain refutation,
+  and the universal Nat theorem horizon.
 - [Integer Linear Arithmetic](integer-lia-end-to-end.md): follows signed order
   replay, integer ring and linear-equation witnesses, interval infeasibility,
   and a checked QF_LIA/Diophantine gcd refutation.

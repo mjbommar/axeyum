@@ -28,9 +28,14 @@ The validator recomputes every SAT witness with exact integer arithmetic over
 nonnegative values. UNSAT rows are accepted only after enumerating the fixed
 bounded natural domain named in `expected.json`.
 
-This pack does not yet emit Axeyum BV/LIA formulas or proof artifacts. The
-graduation route is deterministic QF_BV/QF_LIA lowering plus checked evidence
-for bounded no-counterexample rows.
+The negative-domain row is also a solver-backed resource. Its SMT-LIB artifact
+is
+[`smt2/bounded-natural-negative-lia-conflict.smt2`](smt2/bounded-natural-negative-lia-conflict.smt2):
+it encodes `0 <= n <= 7` and `n < 0` as a tiny `QF_LIA` contradiction. The
+`math_resource_lia_routes` regression requires Axeyum to emit checked
+arithmetic-DPLL evidence and independently re-check the proof object. The
+successor-injectivity and zero-not-successor rows remain finite replay until a
+bounded BV/CNF encoding adds distinct proof pressure.
 
 Validation:
 

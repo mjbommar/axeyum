@@ -6716,6 +6716,22 @@ def validate_natural_arithmetic(expected: dict[str, Any]) -> None:
     for value in range(max_value + 1):
         if value < 0:
             fail("bounded-natural-negative-rejected found a negative natural")
+    if max_value != 7:
+        fail("bounded-natural-negative-rejected solver promotion is fixed to domain 0..7")
+    data = nonnegative.get("data", {})
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bounded natural negative smt2_artifact", smt2_artifact)
+    check_source("bounded natural negative smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/natural-arithmetic-v0/smt2/bounded-natural-negative-lia-conflict.smt2":
+        fail("bounded-natural-negative-rejected smt2_artifact must name the checked QF_LIA artifact")
+    proof_regression = data.get("proof_regression")
+    require_string("bounded natural negative proof_regression", proof_regression)
+    if "natural_arithmetic_bounded_negative_emits_checked_lia_dpll_evidence" not in proof_regression:
+        fail("bounded-natural-negative-rejected proof_regression must name the LIA resource test")
+    certificate = data.get("certificate")
+    require_string("bounded natural negative certificate", certificate)
+    if "UnsatArithDpll" not in certificate or "Evidence::check" not in certificate:
+        fail("bounded-natural-negative-rejected certificate must document checked arithmetic-DPLL evidence")
 
 
 def require_bool(context: str, value: Any) -> bool:

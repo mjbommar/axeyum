@@ -26,25 +26,22 @@
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/natural-arithmetic-v0",
   "solver_reuse": {
-    "status": "candidate",
-    "target": "bounded natural QF_BV/QF_LIA regression slice",
-    "pressure": "Small natural arithmetic identities and bounded no-counterexample rows.",
+    "status": "promoted",
+    "target": "bounded natural QF_LIA arithmetic-DPLL regression seed",
+    "pressure": "Rejected negative element in the fixed natural domain 0..7 with checked arithmetic-DPLL evidence.",
     "evidence": [
-      "successor-addition-replay",
-      "addition-commutativity-fixed",
-      "multiplication-distributivity-fixed",
-      "successor-injective-bounded",
-      "zero-not-successor-bounded",
       "bounded-natural-negative-rejected"
     ],
-    "next_step": "Encode the fixed-width natural rows as BV or LIA fixtures with explicit width and finite-prefix metadata."
+    "next_step": "Promote successor injectivity or zero-not-successor only when a bounded BV/CNF encoding adds distinct fixed-width regression pressure."
   },
   "source_refs": [
     "docs/curriculum/01-number-systems/naturals.md",
     "docs/curriculum/00-foundations/induction.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
-    "docs/proof-cookbook/recipes/qf-bv-bitblast.md"
+    "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
+    "artifacts/examples/math/natural-arithmetic-v0/smt2/bounded-natural-negative-lia-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
   ],
   "expected_results": [
     "successor-addition-replay",

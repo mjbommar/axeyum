@@ -24,5 +24,16 @@ nonnegative domain:  no n < 0 in 0..max
 ## Axeyum Route
 
 The intended Axeyum route is `QF_BV` for fixed bit-width finite domains or
-`QF_LIA` with explicit nonnegative bounds. The current pack stays at independent
-finite replay.
+`QF_LIA` with explicit nonnegative bounds.
+
+The promoted negative-domain row now uses the `QF_LIA` route:
+
+```text
+0 <= n
+n <= 7
+n < 0
+```
+
+The finite replay justifies the bounded natural-domain constants. The SMT-LIB
+artifact then exercises Axeyum's arithmetic-DPLL evidence route for the
+extracted integer contradiction.

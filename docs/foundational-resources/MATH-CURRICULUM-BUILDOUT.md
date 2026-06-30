@@ -1434,7 +1434,8 @@ The QF_LIA/Diophantine proof-upgrade lane now also has
 `descriptive-statistics-v0` promoted for its bad contingency total row, with
 `integer-lia-v0` now promoted for its gcd divisibility obstruction. The
 related LIA arithmetic-DPLL solver-reuse lane also has
-`graph-search-runtime-v0` promoted for its bad finite DFS cost-bound row.
+`graph-search-runtime-v0` promoted for its bad finite DFS cost-bound row and
+`natural-arithmetic-v0` promoted for its bad bounded negative-domain row.
 The Boolean proof-upgrade lane has its first concrete resource-backed proof
 regression: `graph-coloring-v0` now carries a DIMACS CNF artifact for triangle
 non-2-colorability, and the CNF crate test emits DRAT, elaborates LRAT, and

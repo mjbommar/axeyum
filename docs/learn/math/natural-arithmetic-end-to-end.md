@@ -24,8 +24,9 @@ Concept rows:
 | `bounded-natural-negative-rejected` | `unsat` | checked |
 
 The `sat` rows are exact witness replays. The `unsat` rows are bounded
-enumerations over the finite natural domain `0..7`. None of these rows claims
-a universal theorem over all natural numbers.
+enumerations over the finite natural domain `0..7`. The negative-domain row is
+also promoted into a checked `QF_LIA` arithmetic-DPLL regression. None of these
+rows claims a universal theorem over all natural numbers.
 
 ## Replay Successor Addition
 
@@ -89,6 +90,19 @@ a negative element in 0..7
 The validator enumerates the finite domain, recomputes each successor, and
 finds no counterexample. These rows are checked `unsat` inside the named bound.
 
+For the negative-domain row, the promoted SMT-LIB artifact keeps the extracted
+integer contradiction in solver form:
+
+```text
+0 <= n
+n <= 7
+n < 0
+```
+
+The `math_resource_lia_routes` regression requires checked
+`Evidence::UnsatArithDpll` evidence and rechecks the proof object against the
+original assertion.
+
 ## Name The Lean Horizon
 
 The pack's graduation criteria keep the universal natural-number theorems out
@@ -126,6 +140,8 @@ untrusted fast search -> fixed witness or bounded counterexample candidate
 trusted small checking -> exact integer replay and finite-domain enumeration
 ```
 
-The next graduation step is deterministic QF_BV or QF_LIA lowering with
-checked evidence for the bounded no-counterexample rows, while universal Nat
-facts remain under the theorem-prover horizon.
+The negative-domain obstruction has graduated to deterministic QF_LIA plus
+checked arithmetic-DPLL evidence. The successor-injectivity and
+zero-not-successor rows remain bounded finite replay until a BV/CNF encoding
+adds distinct proof pressure, while universal Nat facts remain under the
+theorem-prover horizon.
