@@ -12779,6 +12779,167 @@ def validate_coordinate_geometry(expected: dict[str, Any]) -> None:
         fail("bad-distance-squared-rejected certificate must document Farkas evidence")
 
 
+def validate_finite_circle_geometry(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    point_check = checks["point-on-circle-witness"]
+    if point_check["expected_result"] != "sat":
+        fail("point-on-circle-witness must expect sat")
+    values = single_witness_values(point_check, witnesses)
+    center = require_point2("circle point center", values.get("center"))
+    point = require_point2("circle point point", values.get("point"))
+    radius_squared = require_fraction("circle point radius_squared", values.get("radius_squared"))
+    point_radius_squared = require_fraction(
+        "circle point point_radius_squared",
+        values.get("point_radius_squared"),
+    )
+    if radius_squared <= 0:
+        fail("point-on-circle-witness radius_squared must be positive")
+    if distance_squared2(center, point) != point_radius_squared:
+        fail("point-on-circle-witness point_radius_squared is incorrect")
+    if point_radius_squared != radius_squared:
+        fail("point-on-circle-witness point must lie on the circle")
+
+    tangent = checks["tangent-line-witness"]
+    if tangent["expected_result"] != "sat":
+        fail("tangent-line-witness must expect sat")
+    tangent_values = single_witness_values(tangent, witnesses)
+    if tangent_values != values:
+        fail("tangent-line-witness must cite the unit-circle-tangent witness")
+    radius_vector = require_point2("circle tangent radius_vector", values.get("radius_vector"))
+    tangent_line = require_line2("circle tangent tangent_line", values.get("tangent_line"))
+    tangent_point_line_value = require_fraction(
+        "circle tangent tangent_point_line_value",
+        values.get("tangent_point_line_value"),
+    )
+    tangent_direction = require_point2(
+        "circle tangent tangent_direction",
+        values.get("tangent_direction"),
+    )
+    tangent_dot_radius = require_fraction(
+        "circle tangent tangent_dot_radius",
+        values.get("tangent_dot_radius"),
+    )
+    if radius_vector != (point[0] - center[0], point[1] - center[1]):
+        fail("tangent-line-witness radius_vector is incorrect")
+    if tangent_line[0:2] != radius_vector:
+        fail("tangent-line-witness line normal must be the radius vector")
+    if center != (Fraction(0), Fraction(0)):
+        fail("tangent-line-witness currently expects an origin-centered circle")
+    if tangent_line[2] != -radius_squared:
+        fail("tangent-line-witness tangent constant must be -radius_squared")
+    if line_value(tangent_line, point) != tangent_point_line_value:
+        fail("tangent-line-witness point line value is incorrect")
+    if tangent_point_line_value != 0:
+        fail("tangent-line-witness tangent line must pass through the point")
+    computed_dot = tangent_direction[0] * radius_vector[0] + tangent_direction[1] * radius_vector[1]
+    if computed_dot != tangent_dot_radius:
+        fail("tangent-line-witness tangent dot radius is incorrect")
+    if tangent_dot_radius != 0:
+        fail("tangent-line-witness tangent direction must be perpendicular to the radius")
+
+    chord = checks["chord-midpoint-perpendicular-witness"]
+    if chord["expected_result"] != "sat":
+        fail("chord-midpoint-perpendicular-witness must expect sat")
+    chord_values = single_witness_values(chord, witnesses)
+    chord_center = require_point2("circle chord center", chord_values.get("center"))
+    chord_radius_squared = require_fraction(
+        "circle chord radius_squared",
+        chord_values.get("radius_squared"),
+    )
+    raw_endpoints = chord_values.get("endpoints")
+    if not isinstance(raw_endpoints, list) or len(raw_endpoints) != 2:
+        fail("chord-midpoint-perpendicular-witness endpoints must contain two points")
+    endpoints = [
+        require_point2(f"circle chord endpoints[{index}]", endpoint)
+        for index, endpoint in enumerate(raw_endpoints)
+    ]
+    endpoint_radius_squared = require_fraction_vector(
+        "circle chord endpoint_radius_squared",
+        chord_values.get("endpoint_radius_squared"),
+    )
+    require_vector_length("circle chord endpoint_radius_squared", endpoint_radius_squared, 2)
+    midpoint = require_point2("circle chord midpoint", chord_values.get("midpoint"))
+    chord_direction = require_point2(
+        "circle chord chord_direction",
+        chord_values.get("chord_direction"),
+    )
+    radius_to_midpoint = require_point2(
+        "circle chord radius_to_midpoint",
+        chord_values.get("radius_to_midpoint"),
+    )
+    perpendicular_dot = require_fraction(
+        "circle chord perpendicular_dot",
+        chord_values.get("perpendicular_dot"),
+    )
+    for index, endpoint in enumerate(endpoints):
+        if distance_squared2(chord_center, endpoint) != endpoint_radius_squared[index]:
+            fail("chord-midpoint-perpendicular-witness endpoint radius is incorrect")
+        if endpoint_radius_squared[index] != chord_radius_squared:
+            fail("chord-midpoint-perpendicular-witness endpoint must lie on the circle")
+    if midpoint2(endpoints[0], endpoints[1]) != midpoint:
+        fail("chord-midpoint-perpendicular-witness midpoint is incorrect")
+    computed_chord_direction = (
+        endpoints[1][0] - endpoints[0][0],
+        endpoints[1][1] - endpoints[0][1],
+    )
+    if computed_chord_direction != chord_direction:
+        fail("chord-midpoint-perpendicular-witness chord_direction is incorrect")
+    if radius_to_midpoint != (midpoint[0] - chord_center[0], midpoint[1] - chord_center[1]):
+        fail("chord-midpoint-perpendicular-witness radius_to_midpoint is incorrect")
+    computed_perpendicular_dot = (
+        radius_to_midpoint[0] * chord_direction[0]
+        + radius_to_midpoint[1] * chord_direction[1]
+    )
+    if computed_perpendicular_dot != perpendicular_dot:
+        fail("chord-midpoint-perpendicular-witness perpendicular_dot is incorrect")
+    if perpendicular_dot != 0:
+        fail("chord-midpoint-perpendicular-witness radius and chord must be perpendicular")
+
+    bad_radius = checks["bad-circle-radius-rejected"]
+    if bad_radius["expected_result"] != "unsat" or bad_radius.get("proof_status") != "checked":
+        fail("bad-circle-radius-rejected must be a checked unsat row")
+    data = bad_radius.get("data", {})
+    bad_center = require_point2("bad circle center", data.get("center"))
+    bad_point = require_point2("bad circle point", data.get("point"))
+    computed_radius_squared = require_fraction(
+        "bad circle computed_radius_squared",
+        data.get("computed_radius_squared"),
+    )
+    claimed_radius_squared = require_fraction(
+        "bad circle claimed_radius_squared",
+        data.get("claimed_radius_squared"),
+    )
+    if distance_squared2(bad_center, bad_point) != computed_radius_squared:
+        fail("bad-circle-radius-rejected computed radius is incorrect")
+    if computed_radius_squared == claimed_radius_squared:
+        fail("bad-circle-radius-rejected must document a false radius claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad circle smt2_artifact", smt2_artifact)
+    expected_smt2 = "artifacts/examples/math/finite-circle-geometry-v0/smt2/bad-radius-farkas-conflict.smt2"
+    if smt2_artifact != expected_smt2:
+        fail("bad-circle-radius-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad circle smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad circle farkas_regression", regression)
+    if "finite_circle_geometry_bad_radius_artifact_emits_checked_farkas" not in regression:
+        fail("bad-circle-radius-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad circle certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-circle-radius-rejected certificate must document checked Farkas evidence")
+
+    horizon = checks["general-circle-geometry-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-circle-geometry-lean-horizon must be not-run")
+    if horizon["proof_status"] != "lean-horizon":
+        fail("general-circle-geometry-lean-horizon must remain lean-horizon")
+    data = horizon.get("data", {})
+    require_string("general circle geometry target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("general circle geometry future_checker", data.get("future_checker"))
+
+
 def validate_incidence_geometry(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -18013,6 +18174,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_cardinality_principles(expected)
     if metadata["id"] == "finite-chebyshev-systems-v0":
         validate_finite_chebyshev_systems(expected)
+    if metadata["id"] == "finite-circle-geometry-v0":
+        validate_finite_circle_geometry(expected)
     if metadata["id"] == "finite-compactness-v0":
         validate_finite_compactness(expected)
     if metadata["id"] == "finite-connectedness-v0":

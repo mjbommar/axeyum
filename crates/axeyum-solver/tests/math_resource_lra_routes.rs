@@ -88,6 +88,9 @@ const FINITE_MEASURE_MONOTONICITY_BAD_SUBSET_MEASURE: &str = include_str!(
 const COORDINATE_GEOMETRY_BAD_DISTANCE_SQUARED: &str = include_str!(
     "../../../artifacts/examples/math/coordinate-geometry-v0/smt2/bad-distance-squared-farkas-conflict.smt2"
 );
+const FINITE_CIRCLE_GEOMETRY_BAD_RADIUS: &str = include_str!(
+    "../../../artifacts/examples/math/finite-circle-geometry-v0/smt2/bad-radius-farkas-conflict.smt2"
+);
 const INCIDENCE_GEOMETRY_BAD_POINT_ON_LINE: &str = include_str!(
     "../../../artifacts/examples/math/incidence-geometry-v0/smt2/bad-incidence-farkas-conflict.smt2"
 );
@@ -569,6 +572,14 @@ fn coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "coordinate-geometry-v0 bad-distance-squared SMT-LIB artifact",
         COORDINATE_GEOMETRY_BAD_DISTANCE_SQUARED,
+    );
+}
+
+#[test]
+fn finite_circle_geometry_bad_radius_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-circle-geometry-v0 bad-radius SMT-LIB artifact",
+        FINITE_CIRCLE_GEOMETRY_BAD_RADIUS,
     );
 }
 

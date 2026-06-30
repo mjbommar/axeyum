@@ -234,6 +234,28 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+For geometry, use the Farkas route to keep finite coordinate, incidence,
+rigid-configuration, affine, oriented-area, and circle-geometry replay together
+while leaving synthetic, projective, circle-theorem, and differential geometry
+claims in the proof-horizon lane:
+
+```sh
+python3 scripts/query-foundational-resources.py fields \
+  --field geometry \
+  --route Farkas \
+  --require-any
+```
+
+To display concrete checked geometry rows, drill into checked Farkas examples:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field geometry \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+```
+
 ## Proof And Check Mining
 
 ```sh
@@ -315,6 +337,8 @@ python3 scripts/query-foundational-resources.py fields --field optimization_and_
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text objective --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text convexity --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field optimization_and_convexity --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field geometry --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field geometry --route Farkas --proof-status checked --require-any >/dev/null
 ```
 
 That keeps the examples on this page aligned with the committed data boundary

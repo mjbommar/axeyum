@@ -14,6 +14,9 @@ For exact distance-table and finite isometry replay, use
 [rigid-configuration-geometry-v0](../../../artifacts/examples/math/rigid-configuration-geometry-v0/)
 and
 [Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md).
+For exact circle point, tangent-line, and chord-midpoint replay, use
+[finite-circle-geometry-v0](../../../artifacts/examples/math/finite-circle-geometry-v0/)
+and [Finite Circle Geometry](finite-circle-geometry-end-to-end.md).
 
 Concept rows:
 
@@ -39,11 +42,16 @@ Concept rows:
 | `affine-area-scaling` | `sat` | replay-only |
 | `barycentric-point-inside` | `sat` | replay-only |
 | `bad-orientation-rejected` | `unsat` | checked |
+| `point-on-circle-witness` | `sat` | replay-only |
+| `tangent-line-witness` | `sat` | replay-only |
+| `chord-midpoint-perpendicular-witness` | `sat` | replay-only |
+| `bad-circle-radius-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-affine-geometry-lean-horizon` | `not-run` | lean-horizon |
 | `general-oriented-geometry-lean-horizon` | `not-run` | lean-horizon |
+| `general-circle-geometry-lean-horizon` | `not-run` | lean-horizon |
 
 Every row uses exact rational coordinates. The packs do not claim general
-Euclidean, affine, or oriented-geometry theorems.
+Euclidean, affine, oriented-geometry, or circle-geometry theorems.
 
 ## Replay Coordinate Facts
 
@@ -257,11 +265,12 @@ synthetic geometry translations
 oriented manifolds
 general barycentric-coordinate theorems
 diagrammatic incidence reasoning
+power-of-a-point, inversion, and cyclic quadrilateral theorems
 ```
 
 Those require Lean-backed geometry resources or explicitly scoped algebraic
 proof certificates. These packs only check finite exact-rational coordinate,
-affine, determinant, and barycentric obligations.
+affine, determinant, barycentric, and circle obligations.
 
 ## Run It
 
@@ -272,6 +281,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-circle-geometry-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geometry_bad_radius_artifact_emits_checked_farkas
 ```
 
 Expected output for each command:
@@ -285,10 +296,10 @@ validated 1 foundational example pack(s)
 This lesson shows Axeyum's current finite geometry resource pattern:
 
 ```text
-untrusted fast search -> point, map, area, barycentric, or counterexample row
-trusted small checking -> exact rational coordinate and determinant replay
-proof upgrade -> QF_LRA/Farkas certificates for false distance/orientation rows
-remaining horizon -> general affine, Euclidean, and oriented geometry proofs
+untrusted fast search -> point, map, area, circle, barycentric, or counterexample row
+trusted small checking -> exact rational coordinate, determinant, and dot-product replay
+proof upgrade -> QF_LRA/Farkas certificates for false distance/orientation/radius rows
+remaining horizon -> general affine, Euclidean, oriented, and circle geometry proofs
 ```
 
 The graduation route is deterministic exact-rational replay plus checked proof

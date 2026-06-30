@@ -23,6 +23,8 @@ python3 scripts/query-foundational-resources.py fields --field optimization_and_
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text objective --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text convexity --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field optimization_and_convexity --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field geometry --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field geometry --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/gen-foundational-dashboards.py
 
 git diff --exit-code -- \

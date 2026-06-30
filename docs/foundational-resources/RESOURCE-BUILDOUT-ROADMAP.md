@@ -39,12 +39,12 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 48 bridge-concept rows.
 - 5 example-family rows.
-- 99 non-template math example packs.
-- 501 expected checks.
-- 219 checked proof/evidence rows.
-- 220 replay-only rows.
-- 62 Lean-horizon rows.
-- 99 promoted solver-reuse packs.
+- 100 non-template math example packs.
+- 506 expected checks.
+- 220 checked proof/evidence rows.
+- 223 replay-only rows.
+- 63 Lean-horizon rows.
+- 100 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -921,6 +921,7 @@ Current packs:
 - `rigid-configuration-geometry-v0`
 - `affine-geometry-v0`
 - `orientation-area-geometry-v0`
+- `finite-circle-geometry-v0`
 - `complex-plane-transforms-v0`
 
 Build next:
@@ -934,8 +935,11 @@ Build next:
   replay plus the source QF_LRA/Farkas artifact.
 - Keep `rigid-configuration-geometry-v0`'s promoted bad distance-table row
   tied to exact distance replay plus the source QF_LRA/Farkas artifact.
-- Promote additional false affine/distance/orientation/incidence claims through
-  QF_LRA/Farkas or NRA when exact rational polynomial constraints suffice.
+- Keep `finite-circle-geometry-v0`'s promoted bad radius row tied to exact
+  circle-coordinate replay plus the source QF_LRA/Farkas artifact.
+- Promote additional false affine/distance/orientation/incidence/circle claims
+  through QF_LRA/Farkas or NRA only when they add distinct exact-rational
+  polynomial-geometry pressure.
 - Keep differential geometry, algebraic geometry, global geometry, and
   topology-heavy geometry as Lean-horizon.
 
@@ -1446,7 +1450,13 @@ Pick one item per commit unless the change is purely navigational.
     stationarity/complementarity, checked QF_LRA/Farkas rejection of a false
     free-gradient claim, and an active-set-method Lean horizon. The learner path
     now includes a focused finite active-set QP end-to-end page.
-70. Continue proof-route promotions or consumer-query examples; revisit the
+70. Landed: add `finite-circle-geometry-v0`.
+    The new geometry, linear-algebra, and real-analysis pack validates exact
+    point-on-circle replay, tangent-line/radius perpendicularity,
+    chord-midpoint perpendicularity, checked QF_LRA/Farkas rejection of a false
+    radius claim, and a circle-geometry Lean horizon. The learner path now
+    includes a focused finite circle-geometry end-to-end page.
+71. Continue proof-route promotions or consumer-query examples; revisit the
     boundary again only when a non-repo consumer, three duplicated typed access
     call sites, or repeated reusable encoders exist.
 

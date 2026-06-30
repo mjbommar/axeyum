@@ -40,6 +40,7 @@ Example packs:
 - [rigid-configuration-geometry-v0](../../../artifacts/examples/math/rigid-configuration-geometry-v0/)
 - [affine-geometry-v0](../../../artifacts/examples/math/affine-geometry-v0/)
 - [orientation-area-geometry-v0](../../../artifacts/examples/math/orientation-area-geometry-v0/)
+- [finite-circle-geometry-v0](../../../artifacts/examples/math/finite-circle-geometry-v0/)
 - [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
 - [finite-chebyshev-systems-v0](../../../artifacts/examples/math/finite-chebyshev-systems-v0/)
 
@@ -120,6 +121,10 @@ bad point-on-line row through QF_LRA/Farkas evidence. The
 rigid-configuration slice treats pairwise squared-distance tables as finite
 matrix-like data, checks translation and congruent-triangle witnesses, and
 rejects a bad distance-table row through QF_LRA/Farkas evidence.
+The finite circle-geometry slice checks point-on-circle equations,
+tangent-line/radius perpendicularity, and chord-midpoint perpendicularity as
+small exact vector calculations, then rejects a bad radius row through
+QF_LRA/Farkas evidence.
 
 This is a strong resource path because the trusted checker can be small: matrix
 multiplication, vector norms, linear inequalities, and certificate arithmetic.
@@ -324,6 +329,24 @@ the final nonpositive-error contradiction is checked through QF_LRA/Farkas
 evidence. For a focused trace, read
 [End To End: Finite Active-Set QP Checks](finite-active-set-qp-end-to-end.md).
 
+For a finite circle-geometry example, encode a point, tangent direction, and
+chord as exact rational vectors:
+
+```text
+P = (3/5,4/5)
+radius = (3/5,4/5)
+tangent_direction = (-4/5,3/5)
+A = (3,4), B = (3,-4), midpoint = (3,0)
+```
+
+The `finite-circle-geometry-v0` validator recomputes the unit-circle equation,
+the tangent-line value, the tangent/radius dot product, both chord endpoint
+radii, the midpoint, and the radius/chord dot product. Its bad row claims
+`(1,1)` lies on the unit circle; exact replay computes squared radius `2`, and
+the final `2 = 1` conflict is checked through QF_LRA/Farkas evidence. For a
+focused trace, read
+[End To End: Finite Circle Geometry](finite-circle-geometry-end-to-end.md).
+
 For a finite SDP example, encode a two-by-two trace-one PSD matrix and dual
 slack:
 
@@ -511,6 +534,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ri
 cargo test -p axeyum-solver --test math_resource_lra_routes rigid_configuration_bad_distance_table_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-circle-geometry-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geometry_bad_radius_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
@@ -544,6 +569,7 @@ replay, read
 [End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md),
 [End To End: Incidence Geometry](incidence-geometry-end-to-end.md),
 [End To End: Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md),
+[End To End: Finite Circle Geometry](finite-circle-geometry-end-to-end.md),
 [End To End: Rational Inner Product Spaces](inner-product-spaces-end-to-end.md),
 [End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md),
 [End To End: Finite Dual Spaces](finite-dual-spaces-end-to-end.md), and

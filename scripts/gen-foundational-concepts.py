@@ -528,7 +528,16 @@ FIELD_PACKS = {
     ],
     "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."),
-    "geometry": ("coordinate-geometry-v0", "Incidence, line equations, distance tables, midpoint, collinearity, and rigid finite configurations."),
+    "geometry": [
+        (
+            "coordinate-geometry-v0",
+            "Incidence, line equations, distance tables, midpoint, collinearity, and rigid finite configurations.",
+        ),
+        (
+            "finite-circle-geometry-v0",
+            "Finite circle point, tangent-line, chord-midpoint, and bad-radius replay over exact rational coordinates.",
+        ),
+    ],
     "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
 }
 
@@ -4431,9 +4440,9 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "Finite coordinate-geometry rows turn incidence, line equations, "
             "rigid distance tables, midpoint, collinearity, squared-distance, "
-            "affine-map, and signed-area claims into exact rational replay "
-            "obligations with checked Farkas conflicts for malformed "
-            "linearized claims."
+            "affine-map, signed-area, circle-point, tangent-line, and "
+            "chord-midpoint claims into exact rational replay obligations "
+            "with checked Farkas conflicts for malformed linearized claims."
         ),
         "prerequisites": [
             "curriculum_reals",
@@ -4452,6 +4461,7 @@ BRIDGE_CONCEPTS = [
             "finite coordinate replay",
             "signed-area determinants",
             "affine map tables",
+            "finite circle-geometry replay",
             "Lean horizon",
         ],
         "example_packs": [
@@ -4475,6 +4485,10 @@ BRIDGE_CONCEPTS = [
                 "affine-geometry-v0",
                 "Affine map composition, barycentric interpolation, fixed coordinate transforms, and bad distance-preservation rows.",
             ),
+            (
+                "finite-circle-geometry-v0",
+                "Point-on-circle, tangent-line, chord-midpoint perpendicularity, and bad-radius rows over exact rational coordinates.",
+            ),
         ],
         "proof_routes": [
             {
@@ -4487,6 +4501,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
                     "docs/learn/math/coordinate-affine-geometry-end-to-end.md",
+                    "docs/learn/math/finite-circle-geometry-end-to-end.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
@@ -4503,11 +4518,13 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/coordinate-affine-geometry-end-to-end.md",
+            "docs/learn/math/finite-circle-geometry-end-to-end.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
             "The finite coordinate rows do not prove synthetic Euclidean, projective, differential, or global geometry theorems.",
             "Polynomial distance and incidence claims are replayed only when the source pack reduces them to exact finite arithmetic with an explicit proof route.",
+            "General circle theorems, inversion, cyclic quadrilaterals, and power-of-a-point remain Lean-horizon until kernel-checked proof routes exist.",
             "General geometric theorem statements remain Lean-horizon until a kernel-checked route exists.",
         ],
         "graduation": {

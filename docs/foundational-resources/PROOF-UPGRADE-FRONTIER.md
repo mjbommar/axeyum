@@ -28,9 +28,9 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 8 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 3 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 9 | Integer equalities, counts, modular constraints, coefficient convolutions, and rank obstructions. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 51 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 52 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 15 | Equality-heavy finite structures and congruence conflicts. |
-| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 66 | General theorem statements that remain outside bounded SMT replay. |
+| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 67 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
 
@@ -302,6 +302,9 @@ First targets:
 - [coordinate-geometry-v0](../../artifacts/examples/math/coordinate-geometry-v0/)
   (source-linked Farkas regression landed for the bad squared-distance row
   after exact coordinate replay computes the squared distance)
+- [finite-circle-geometry-v0](../../artifacts/examples/math/finite-circle-geometry-v0/)
+  (source-linked Farkas regression landed for the bad radius row after exact
+  coordinate replay computes the squared radius)
 - [finite-operator-v0](../../artifacts/examples/math/finite-operator-v0/)
   (source-linked Farkas regression landed for the bad operator-bound row after
   exact matrix/operator replay computes the image infinity norm)

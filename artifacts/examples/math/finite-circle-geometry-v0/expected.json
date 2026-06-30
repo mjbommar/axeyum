@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-circle-geometry-v0",
+  "witnesses": [
+    {
+      "id": "unit-circle-tangent",
+      "description": "A rational point on the unit circle with its tangent line.",
+      "values": {
+        "center": ["0", "0"],
+        "radius_squared": "1",
+        "point": ["3/5", "4/5"],
+        "point_radius_squared": "1",
+        "radius_vector": ["3/5", "4/5"],
+        "tangent_line": {
+          "a": "3/5",
+          "b": "4/5",
+          "c": "-1"
+        },
+        "tangent_point_line_value": "0",
+        "tangent_direction": ["-4/5", "3/5"],
+        "tangent_dot_radius": "0"
+      }
+    },
+    {
+      "id": "vertical-chord-midpoint",
+      "description": "A vertical chord of the radius-five circle with midpoint perpendicular to the radius.",
+      "values": {
+        "center": ["0", "0"],
+        "radius_squared": "25",
+        "endpoints": [
+          ["3", "4"],
+          ["3", "-4"]
+        ],
+        "endpoint_radius_squared": ["25", "25"],
+        "midpoint": ["3", "0"],
+        "chord_direction": ["0", "-8"],
+        "radius_to_midpoint": ["3", "0"],
+        "perpendicular_dot": "0"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "point-on-circle-witness",
+      "claim": "The point (3/5,4/5) lies on the unit circle centered at the origin.",
+      "expected_result": "sat",
+      "validation": "exact_circle_point_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["unit-circle-tangent"],
+      "notes": "The validator recomputes (3/5)^2 + (4/5)^2 = 1 exactly."
+    },
+    {
+      "id": "tangent-line-witness",
+      "claim": "The tangent line at (3/5,4/5) is perpendicular to the radius and contains the point.",
+      "expected_result": "sat",
+      "validation": "exact_circle_tangent_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["unit-circle-tangent"],
+      "notes": "The validator checks the tangent line value, radius vector, and dot product with the tangent direction."
+    },
+    {
+      "id": "chord-midpoint-perpendicular-witness",
+      "claim": "The radius through the midpoint of the chord from (3,4) to (3,-4) is perpendicular to the chord.",
+      "expected_result": "sat",
+      "validation": "exact_chord_midpoint_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["vertical-chord-midpoint"],
+      "notes": "The validator checks both endpoints lie on x^2+y^2=25, recomputes the midpoint, and checks a zero dot product."
+    },
+    {
+      "id": "bad-circle-radius-rejected",
+      "claim": "The point (1,1) lies on the unit circle centered at the origin.",
+      "expected_result": "unsat",
+      "validation": "exact_bad_circle_radius_refutation",
+      "proof_status": "checked",
+      "data": {
+        "center": ["0", "0"],
+        "point": ["1", "1"],
+        "computed_radius_squared": "2",
+        "claimed_radius_squared": "1",
+        "smt2_artifact": "artifacts/examples/math/finite-circle-geometry-v0/smt2/bad-radius-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geometry_bad_radius_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact coordinate replay computes squared radius 2 for (1,1), while the malformed row claims squared radius 1; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
+      "id": "general-circle-geometry-lean-horizon",
+      "claim": "General Euclidean circle geometry, tangent theorems, power-of-a-point, and inversion require future Lean reconstruction.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Coordinate-free circle theorems including tangent-radius perpendicularity, chord perpendicular bisectors, power of a point, cyclic quadrilaterals, and inversion",
+        "future_checker": "Lean module with no sorryAx dependencies plus exact coordinate certificate bridges for finite circle witnesses"
+      },
+      "notes": "The finite rows check fixed rational coordinate witnesses; general Euclidean circle theorems remain proof-assistant work."
+    }
+  ]
+}

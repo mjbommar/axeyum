@@ -36,6 +36,7 @@ Example packs:
 - [rigid-configuration-geometry-v0](../../../artifacts/examples/math/rigid-configuration-geometry-v0/)
 - [affine-geometry-v0](../../../artifacts/examples/math/affine-geometry-v0/)
 - [orientation-area-geometry-v0](../../../artifacts/examples/math/orientation-area-geometry-v0/)
+- [finite-circle-geometry-v0](../../../artifacts/examples/math/finite-circle-geometry-v0/)
 
 ## What Axeyum Checks
 
@@ -56,7 +57,8 @@ infeasibility certificates, finite convexity and monotonicity checks, exact
 rational gradients, Jacobian chain-rule replay, Hessian minor checks,
 midpoints, collinearity determinants, squared distances, affine maps, signed
 areas, line-incidence equations, non-parallel line intersections, affine area
-scaling, and barycentric point-inside checks. The
+scaling, barycentric point-inside checks, point-on-circle rows, tangent-line
+perpendicularity, and chord-midpoint perpendicularity. The
 matrix-invariants pack adds a fixed characteristic polynomial, root evaluation,
 Cayley-Hamilton replay, and exact eigenvalue interval checks.
 
@@ -385,6 +387,23 @@ row computes line value `3` for `(2,2)` but the malformed point-on-line claim
 requires `0`; the source QF_LRA artifact checks that final conflict with
 `UnsatFarkas` evidence.
 
+For a finite circle-geometry check, encode one rational circle point and its
+tangent:
+
+```text
+C = (0,0)
+P = (3/5,4/5)
+r^2 = 1
+tangent line = (3/5)x + (4/5)y - 1 = 0
+```
+
+The validator recomputes `|P-C|^2 = 1`, checks that `P` lies on the tangent
+line, and checks that tangent direction `(-4/5,3/5)` has dot product `0` with
+the radius vector. The bad row claims `(1,1)` lies on the unit circle; exact
+replay computes squared radius `2`, while the source QF_LRA artifact asserts
+the malformed value `1` and checks that final equality conflict with
+`UnsatFarkas` evidence.
+
 Run the checks from the repository root:
 
 ```sh
@@ -429,6 +448,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ri
 cargo test -p axeyum-solver --test math_resource_lra_routes rigid_configuration_bad_distance_table_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-circle-geometry-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geometry_bad_radius_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 ```
@@ -468,6 +489,8 @@ finite coordinate, incidence, rigid-configuration, affine, and oriented geometry
 [End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md)
 [End To End: Incidence Geometry](incidence-geometry-end-to-end.md), and
 [End To End: Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md).
+For finite circle point, tangent, and chord replay, read
+[End To End: Finite Circle Geometry](finite-circle-geometry-end-to-end.md).
 
 ## Horizon
 
