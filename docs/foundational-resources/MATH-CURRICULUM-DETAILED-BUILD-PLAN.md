@@ -34,7 +34,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 35 bridge-concept rows.
+- 40 bridge-concept rows.
 - 2 example-family rows.
 - 84 non-template math packs.
 - 422 expected checks.
@@ -198,7 +198,7 @@ Exit criteria:
 | Field | Current Role | Next Resource Work | Evidence Route |
 |---|---|---|---|
 | `logic_and_proof` | SAT, refutation, finite proof patterns, induction bounds | maintain proof-object anatomy bridge rows and PHP CNF promotions | Bool/CNF DRAT/LRAT, QF_LIA, Lean horizon |
-| `set_theory_and_foundations` | finite sets, relations, functions, quotients, lattices, cardinality | tighten finite/infinite boundaries and quotient/image/preimage vocabulary | finite replay, Bool/CNF, QF_UF/Alethe, Lean horizon |
+| `set_theory_and_foundations` | finite sets, relations, functions, quotients, lattices, cardinality | maintain landed finite Boolean algebra, partition/relation, image/preimage/inverse, finite cardinality, and cardinality-horizon bridge rows | finite replay, Bool/CNF, QF_UF/Alethe, Lean horizon |
 | `discrete_math` | counting, generating functions, graph resources, finite actions | maintain pigeonhole and coefficient-convolution examples; add new rows only for distinct counting pressure | Bool/CNF, QF_LIA, finite replay |
 | `graph_theory` | coloring, reachability, search runtime, matching, cuts, d-separation | keep one promoted representative per family; add asymptotic horizons only as proof targets | Bool/CNF, QF_BV, QF_LIA, finite replay |
 | `number_theory` | gcd, modular arithmetic, residues, bounded Diophantine checks | group recurring divisibility and residue obstructions | QF_LIA/Diophantine, QF_BV |
@@ -334,6 +334,11 @@ Pick one row per commit unless the change is purely navigational.
 31. Landed: add generated proof-object anatomy bridge rows for Boolean
    CNF DRAT/LRAT, QF_LRA Farkas, QF_UF Alethe, and QF_BV bit-blast
    certificates, making the existing certificate lessons and route regressions
+   queryable as first-class atlas vocabulary.
+32. Landed: add generated set/foundations bridge rows for finite Boolean
+   algebra, finite partition/relation roundtrips, finite
+   image/preimage/inverse tables, finite bijection/cardinality, and
+   cardinality theorem horizons, making the finite/infinite set-theory boundary
    queryable as first-class atlas vocabulary.
 
 ## Validation Checklist

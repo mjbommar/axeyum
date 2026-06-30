@@ -64,8 +64,8 @@ Every new or upgraded resource should answer these questions before it lands:
 | `proof-methods` | `proof-methods-refutation-v0`, `proof-methods-patterns-v0` | Turn direct/contrapositive/cases/contradiction into reusable proof-pattern rows. | CNF/LRAT for refutation examples; Lean horizon for natural deduction. | Learner page can trace proof method -> solver query -> checked evidence. |
 | `induction` | `induction-obligations-v0`, `induction-patterns-v0` | Split bounded base/step checks from induction-schema reconstruction targets. | QF_LIA for finite obstructions; Lean horizon for general induction. | No pack claims full induction from bounded prefixes. |
 | `sets` | finite sets, lattices, cardinality/topology packs | Add concept rows for Boolean algebra, finite lattice laws, compactness shadows, and counterexample replay. | CNF/LRAT for Boolean refutations including finite open-cover misses; QF_UF/Alethe for lattice/order conflicts. | Every false set/lattice/topology identity has either evidence or an explicit route gap. |
-| `relations-and-functions` | relation/function, equivalence, composition, monoid, permutation, action packs | Landed bridge rows for quotient maps and finite group actions; next add image/preimage and inverse-table rows only when multiple packs need them. | QF_UF/Alethe for function consistency and congruence conflicts. | Equality-heavy rows use checked Alethe where available. |
-| `cardinality` | finite cardinality and cardinality-principles packs | Add bridge rows for injection, surjection, bijection, powerset, and infinite horizon. | finite replay/CNF for bounded no-map rows; Lean horizon for Cantor/infinite facts. | Infinite claims are never benchmarked as finite checks. |
+| `relations-and-functions` | relation/function, equivalence, composition, monoid, permutation, action packs | Landed bridge rows for quotient maps, finite group actions, finite partition/relation roundtrips, and image/preimage/inverse tables. | QF_UF/Alethe for function consistency and congruence conflicts. | Equality-heavy rows use checked Alethe where available. |
+| `cardinality` | finite cardinality and cardinality-principles packs | Landed bridge rows for finite Boolean algebra, finite bijection/cardinality, powerset cardinality, and infinite cardinality theorem horizons. | finite replay/CNF for bounded no-map rows; Lean horizon for Cantor/infinite facts. | Infinite claims are never benchmarked as finite checks. |
 | `naturals` | `natural-arithmetic-v0` | Add totality/Peano-shadow concept rows and BV-vs-LIA encoding notes. | Bounded replay, QF_LIA, QF_BV where fixed width is educationally relevant. | Width and finite prefix limits are visible in metadata and lesson text. |
 | `integers` | `integer-lia-v0` | Promote common linear-obstruction patterns into shared Diophantine examples. | QF_LIA/Diophantine. | Bad linear rows carry checked integer evidence or a named missing route. |
 | `rationals` | `rationals-lra-v0`, rational polynomial pack | Add exact-vs-floating arithmetic row and density/order learner split. | QF_LRA/Farkas for impossible rational inequalities. | Farkas-backed rows recheck independently of solver search. |
@@ -196,11 +196,16 @@ Build sequence:
 3. R1 bridge-concept rows landed for algebra-map vocabulary: homomorphism
    preservation, kernel/image replay, quotient maps, ideal closure, module
    actions, tensor bilinearity, and finite group actions.
-4. Landed: add "math example using this route" sections to the six active
+4. R1 bridge-concept rows landed for probability/statistics finite-table
+   vocabulary, proof/logic vocabulary, proof-object anatomy vocabulary, and
+   set/foundations vocabulary, including finite Boolean algebra,
+   partition/relation roundtrips, image/preimage/inverse tables, finite
+   bijection/cardinality, and cardinality theorem horizons.
+5. Landed: add "math example using this route" sections to the six active
    proof cookbook recipes.
-5. Finish learner audit so every non-template pack appears in a focused lesson
+6. Finish learner audit so every non-template pack appears in a focused lesson
    or a named combined lesson.
-6. Continue QF_BV promotions only for fixed-width educational claims that are
+7. Continue QF_BV promotions only for fixed-width educational claims that are
    not better served by existing CNF/LRA/LIA routes; the first finite
    rings/fields/graph-coloring DRAT rows are covered.
 7. First route-specific proof-upgrade note pass landed on the highest-use

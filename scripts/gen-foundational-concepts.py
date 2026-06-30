@@ -1288,6 +1288,449 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_finite_boolean_algebra",
+        "title": "Finite Boolean Algebra",
+        "field_ids": ["set_theory_and_foundations", "discrete_math", "logic_and_proof"],
+        "resource_status": "validated",
+        "summary": (
+            "Finite Boolean-algebra rows make powerset operations explicit: "
+            "membership, subset order, union, intersection, complement, "
+            "meet/join tables, and small malformed identities are replayed or "
+            "refuted over a finite carrier."
+        ),
+        "prerequisites": [
+            "bridge_finite_model_replay",
+            "curriculum_sets",
+            "curriculum_cardinality",
+        ],
+        "unlocks": [
+            "bridge_partition_relation_roundtrip",
+            "bridge_finite_bijection_cardinality",
+            "field_topology",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite sets",
+            "finite Boolean algebra",
+            "Bool / CNF",
+            "finite lattices",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-sets-v0",
+                "Union, intersection, subset, and malformed distributive-law rows over finite carriers.",
+            ),
+            (
+                "finite-order-lattices-v0",
+                "Powerset lattice, meet/join table replay, distributive replay, and monotone-map rows.",
+            ),
+            (
+                "cardinality-principles-v0",
+                "Finite powerset-cardinality row checked by explicit subset enumeration.",
+            ),
+            (
+                "finite-topology-v0",
+                "Finite topology open-set families reuse powerset and finite set-family vocabulary.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite Boolean-algebra replay plus Bool/CNF bad-identity certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-cnf --test math_resource_boolean_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+                    "docs/learn/math/finite-sets-end-to-end.md",
+                    "docs/learn/math/finite-order-lattices-end-to-end.md",
+                    "docs/learn/math/cardinality-principles-end-to-end.md",
+                    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+                ],
+                "notes": (
+                    "Positive rows replay finite set operations directly. "
+                    "Negative rows become solver-reuse candidates only when "
+                    "the Bool/CNF source artifact and certificate are linked."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+            "docs/learn/math/finite-sets-end-to-end.md",
+            "docs/learn/math/finite-order-lattices-end-to-end.md",
+            "docs/learn/math/cardinality-principles-end-to-end.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+        ],
+        "open_gaps": [
+            "These rows cover explicit finite powerset and set-family tables, not arbitrary Boolean-algebra or complete-lattice theorems.",
+            "Any infinite set-theory claim must remain a theorem horizon until a proof-assistant route lands.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite carrier and encode set membership without implicit universe changes.",
+                "The validator recomputes the Boolean operation or order relation from the row data.",
+                "Malformed identities with solver evidence link to source Bool/CNF artifacts and checked certificates.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_partition_relation_roundtrip",
+        "title": "Finite Partition Relation Roundtrip",
+        "field_ids": ["set_theory_and_foundations", "discrete_math"],
+        "resource_status": "validated",
+        "summary": (
+            "A finite partition can be checked as an equivalence relation, "
+            "and a finite equivalence relation can be checked by reconstructing "
+            "its blocks, quotient map, and relation table."
+        ),
+        "prerequisites": [
+            "bridge_finite_boolean_algebra",
+            "bridge_finite_quantifier_expansion",
+            "curriculum_relations_and_functions",
+        ],
+        "unlocks": [
+            "bridge_quotient_map",
+            "bridge_qf_uf_alethe_anatomy",
+            "curriculum_cardinality",
+        ],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "finite partitions",
+            "equivalence relations",
+            "finite functions",
+            "QF_UF",
+            "finite replay",
+        ],
+        "example_packs": [
+            (
+                "equivalence-classes-v0",
+                "Equivalence, quotient-map fiber, partition-roundtrip, bad-equivalence, and QF_UF congruence rows.",
+            ),
+            (
+                "relations-functions-v0",
+                "Relation-table and function-table rows that share finite law replay vocabulary.",
+            ),
+            (
+                "finite-cardinality-v0",
+                "Finite function and bijection rows that depend on explicit domain and codomain partitions.",
+            ),
+            (
+                "function-composition-v0",
+                "Composition and inverse-table rows that consume quotient and relation-table vocabulary.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite partition/relation replay with optional QF_UF conflict certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+                    "docs/learn/math/equivalence-classes-end-to-end.md",
+                    "docs/learn/math/sets-relations-and-finite-structures.md",
+                    "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+                ],
+                "notes": (
+                    "The roundtrip itself is a finite checker computation. "
+                    "Alethe evidence is reserved for isolated equality or "
+                    "congruence conflicts extracted from the finite table."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/learn/math/equivalence-classes-end-to-end.md",
+            "docs/learn/math/sets-relations-and-finite-structures.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite partition roundtrips do not prove arbitrary quotient construction theorems.",
+            "Rows must keep the explicit carrier, relation table, and quotient-map table together so evidence can be replayed.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows include enough finite data to rebuild the partition from the relation and the relation from the partition.",
+                "Bad rows identify the exact missing reflexive, symmetric, transitive, or quotient-consistency condition.",
+                "Any QF_UF promotion links the source conflict and checked Alethe artifact separately from table replay.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_image_preimage_inverse",
+        "title": "Finite Image, Preimage, and Inverse Tables",
+        "field_ids": ["set_theory_and_foundations", "discrete_math", "topology"],
+        "resource_status": "validated",
+        "summary": (
+            "Finite function rows can replay image and preimage tables, "
+            "check inverse tables for bijections, and reject claimed inverses "
+            "for non-injective or non-surjective maps."
+        ),
+        "prerequisites": [
+            "bridge_partition_relation_roundtrip",
+            "bridge_finite_bijection_cardinality",
+            "curriculum_relations_and_functions",
+        ],
+        "unlocks": [
+            "bridge_continuity_preimage",
+            "bridge_qf_uf_alethe_anatomy",
+            "field_topology",
+        ],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "finite functions",
+            "image/preimage replay",
+            "inverse tables",
+            "QF_UF",
+            "finite topology",
+        ],
+        "example_packs": [
+            (
+                "function-composition-v0",
+                "Image/preimage replay, bijection inverse table, non-injective inverse rejection, and composition Alethe rows.",
+            ),
+            (
+                "relations-functions-v0",
+                "Function totality, single-valuedness, and bijection-table witness rows.",
+            ),
+            (
+                "equivalence-classes-v0",
+                "Quotient-map fiber rows that reuse preimage language.",
+            ),
+            (
+                "finite-continuous-maps-v0",
+                "Continuity-by-preimage rows over finite topological spaces.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite image/preimage/inverse replay with QF_UF conflict route",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+                    "docs/learn/math/function-composition-end-to-end.md",
+                    "docs/learn/math/relations-functions-end-to-end.md",
+                    "docs/learn/math/finite-topology-measure-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+                ],
+                "notes": (
+                    "Images, preimages, and inverse tables are recomputed from "
+                    "the finite function graph. QF_UF evidence checks only the "
+                    "small equality conflict attached to promoted bad rows."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/learn/math/function-composition-end-to-end.md",
+            "docs/learn/math/relations-functions-end-to-end.md",
+            "docs/learn/math/finite-topology-measure-end-to-end.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+        ],
+        "open_gaps": [
+            "Rows cover explicit finite maps; general inverse-function, quotient, or continuity theorems require a theorem route.",
+            "Topology rows must still prove that the preimage family is open in the finite topology, not only that a set table was computed.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows record domain, codomain, function graph, and claimed image, preimage, or inverse table.",
+                "The validator recomputes the table and rejects non-total, multi-valued, or non-bijective claims as appropriate.",
+                "Promoted conflicts link to checked QF_UF/Alethe evidence when equality reasoning is the reusable solver route.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_bijection_cardinality",
+        "title": "Finite Bijection and Cardinality",
+        "field_ids": ["set_theory_and_foundations", "discrete_math", "logic_and_proof"],
+        "resource_status": "validated",
+        "summary": (
+            "Finite cardinality rows turn injection, surjection, bijection, "
+            "and pigeonhole-style obstructions into explicit finite function "
+            "tables or finite Bool/CNF conflicts."
+        ),
+        "prerequisites": [
+            "bridge_finite_quantifier_expansion",
+            "bridge_boolean_cnf_lrat_anatomy",
+            "curriculum_cardinality",
+        ],
+        "unlocks": [
+            "bridge_cardinality_theorem_horizon",
+            "curriculum_counting",
+            "bridge_finite_image_preimage_inverse",
+        ],
+        "decidability": "decidable",
+        "axeyum_fragments": [
+            "finite cardinality",
+            "finite functions",
+            "Bool / CNF",
+            "DRAT / LRAT",
+            "finite replay",
+        ],
+        "example_packs": [
+            (
+                "finite-cardinality-v0",
+                "Bijection, proper-subset injection, no-injection, no-surjection, and Cantor-diagonal horizon rows.",
+            ),
+            (
+                "cardinality-principles-v0",
+                "Inclusion-exclusion, disjoint union, double counting, powerset cardinality, and overlap-conflict rows.",
+            ),
+            (
+                "relations-functions-v0",
+                "Bijection-table witness row for finite function cardinality.",
+            ),
+            (
+                "function-composition-v0",
+                "Bijection inverse-table row using the same finite function vocabulary.",
+            ),
+            (
+                "counting-v0",
+                "Counting identities that reuse finite cardinality and explicit combinatorial enumeration.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite function-space replay plus Bool/CNF pigeonhole certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-cnf --test math_resource_boolean_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+                    "docs/learn/math/finite-cardinality-end-to-end.md",
+                    "docs/learn/math/cardinality-principles-end-to-end.md",
+                    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+                ],
+                "notes": (
+                    "Positive cardinality rows replay explicit maps or counts. "
+                    "Negative finite obstructions graduate when the function "
+                    "space is encoded with a source-linked checked certificate."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+            "docs/learn/math/finite-cardinality-end-to-end.md",
+            "docs/learn/math/cardinality-principles-end-to-end.md",
+            "docs/learn/math/sets-relations-and-finite-structures.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite bijection/cardinality rows do not prove infinite cardinal arithmetic or choice-sensitive statements.",
+            "The row must state whether it is checking a concrete witness, rejecting a malformed witness, or proving a finite obstruction.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state domain size, codomain size, and the exact injection/surjection/bijection obligation.",
+                "Witness rows replay the table; obstruction rows link to checked Bool/CNF evidence.",
+                "Learner pages explicitly separate finite finite-domain cardinality from infinite theorem horizons.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_cardinality_theorem_horizon",
+        "title": "Cardinality Theorem Horizon",
+        "field_ids": ["set_theory_and_foundations", "logic_and_proof", "discrete_math"],
+        "resource_status": "validated",
+        "summary": (
+            "Finite cardinality examples can be replayed or certified today, "
+            "while arbitrary infinite-cardinality theorems remain Lean-horizon "
+            "items that need proof-assistant reconstruction."
+        ),
+        "prerequisites": [
+            "bridge_finite_bijection_cardinality",
+            "bridge_bounded_theorem_shadow",
+            "curriculum_cardinality",
+        ],
+        "unlocks": [
+            "bridge_lean_horizon",
+            "field_set_theory_and_foundations",
+        ],
+        "decidability": "proof-horizon",
+        "axeyum_fragments": [
+            "Lean horizon",
+            "finite cardinality",
+            "theorem boundary",
+            "proof assistant",
+        ],
+        "example_packs": [
+            (
+                "finite-cardinality-v0",
+                "Cantor-diagonal horizon row adjacent to finite bijection and pigeonhole checks.",
+            ),
+            (
+                "cardinality-principles-v0",
+                "Cantor-Schroeder-Bernstein horizon row adjacent to finite cardinality-principle checks.",
+            ),
+            (
+                "relations-functions-v0",
+                "Finite function-table rows that define the checked side of the boundary.",
+            ),
+            (
+                "finite-sets-v0",
+                "Finite set rows that provide the explicit-carrier side of set-theory education.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite replay boundary plus Lean horizon metadata",
+                "status": "replay-only",
+                "checker": "scripts/validate-foundational-example-pack.py",
+                "lean_status": "required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/finite-cardinality-end-to-end.md",
+                    "docs/learn/math/cardinality-principles-end-to-end.md",
+                    "docs/learn/math/sets-relations-and-finite-structures.md",
+                ],
+                "notes": (
+                    "Finite rows stay useful as executable examples and "
+                    "solver regressions. Infinite-cardinality theorem claims "
+                    "must be represented as Lean-horizon rows until the proof route exists."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/finite-cardinality-end-to-end.md",
+            "docs/learn/math/cardinality-principles-end-to-end.md",
+            "docs/learn/math/sets-relations-and-finite-structures.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        ],
+        "open_gaps": [
+            "No arbitrary infinite cardinality theorem is checked until a Lean route lands.",
+            "Finite solver evidence must not be presented as a proof of Cantor, Cantor-Schroeder-Bernstein, choice, or cardinal arithmetic.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows label the finite checked artifact and the infinite theorem horizon separately.",
+                "The learner page names the missing proof assistant route for each infinite-cardinality theorem.",
+                "Any future promotion adds a source theorem statement and proof-checking route before changing the horizon status.",
+            ],
+        },
+    },
+    {
         "id": "bridge_bounded_theorem_shadow",
         "title": "Bounded Theorem Shadow",
         "field_ids": ["logic_and_proof"],

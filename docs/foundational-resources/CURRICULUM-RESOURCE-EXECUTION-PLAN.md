@@ -33,13 +33,14 @@ As of this plan, the math resource lane has:
 
 - 23 curriculum nodes in the source DAG.
 - 18 university-style field rows in [MATH-FIELDS.md](MATH-FIELDS.md).
-- 78 atlas rows generated from curriculum, field data, thirty-five R1 bridge
+- 83 atlas rows generated from curriculum, field data, forty R1 bridge
   concepts for finite replay, counterexample proof, bounded theorem shadows,
   proof-method and finite-logic vocabulary, proof-object anatomy vocabulary,
-  analysis/topology boundary vocabulary, linear-algebra computation vocabulary,
-  probability/statistics finite-table vocabulary, algebra-map vocabulary, and
-  Lean horizons, plus the finite-algebra QF_UF/Alethe and exact-rational
-  QF_LRA/Farkas example families.
+  set/foundations vocabulary, analysis/topology boundary vocabulary,
+  linear-algebra computation vocabulary, probability/statistics finite-table
+  vocabulary, algebra-map vocabulary, and Lean horizons, plus the
+  finite-algebra QF_UF/Alethe and exact-rational QF_LRA/Farkas example
+  families.
 - 84 non-template math example packs, plus the validating template pack.
 - generated coverage, curriculum-status audit, field, proof-gap,
   learner/proof-upgrade, and curriculum-pressure dashboards under
@@ -168,8 +169,9 @@ Add bridge-concept or example-family rows for repeated subtopics:
 - proof objects: landed bridge rows for Boolean CNF DRAT/LRAT anatomy,
   QF_LRA Farkas certificate anatomy, QF_UF Alethe certificate anatomy, and
   QF_BV bit-blast certificate anatomy;
-- set theory: equivalence classes, quotients, lattices, finite cardinal
-  inequalities;
+- set theory: landed bridge rows for finite Boolean algebra, finite
+  partition/relation roundtrips, finite image/preimage/inverse tables, finite
+  bijection/cardinality, and cardinality theorem horizons;
 - algebra: landed bridge rows for homomorphism preservation, kernel/image
   replay, quotient maps, ideal closure, module actions, tensor bilinearity,
   and finite group actions;
@@ -389,9 +391,13 @@ Next buildout:
 11. Landed: add bridge-concept rows for proof-object anatomy vocabulary:
    Boolean CNF DRAT/LRAT anatomy, QF_LRA Farkas certificate anatomy, QF_UF
    Alethe certificate anatomy, and QF_BV bit-blast certificate anatomy.
-12. Landed: add "math example using this route" sections to the six active proof
+12. Landed: add bridge-concept rows for set/foundations vocabulary: finite
+   Boolean algebra, finite partition/relation roundtrips, finite
+   image/preimage/inverse tables, finite bijection/cardinality, and
+   cardinality theorem horizons.
+13. Landed: add "math example using this route" sections to the six active proof
    cookbook recipes so proof-route docs point back to concrete packs.
-13. Add QF_LRA/Farkas upgrade rows for rational, LP, convexity, concentration,
+14. Add QF_LRA/Farkas upgrade rows for rational, LP, convexity, concentration,
    linear-system, and probability/statistics table examples.
    Status: `family_exact_rational_farkas` now groups the recurring checked
    exact-rational infeasibility rows and ties them to the shared
@@ -399,7 +405,7 @@ Next buildout:
    conditional expectation, finite hitting times, finite Euler method, and
    finite stochastic kernels now add source-linked probability/statistics and
    dynamics/numerics seeds to that route.
-14. Add QF_UF/Alethe upgrade rows for equivalence, function, and finite algebra
+15. Add QF_UF/Alethe upgrade rows for equivalence, function, and finite algebra
    examples.
    Status: the first high-use learner-page route-note pass now names these
    routes and their trust boundaries; `family_finite_algebra_alethe` now groups
