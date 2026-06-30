@@ -115,6 +115,11 @@ metadata for Boolean basics, finite cardinality, graph reachability/matching/
 cuts/d-separation/search-runtime, integer LIA, bounded natural arithmetic, and
 bounded number theory; these remain R4 until promoted to actual regression or
 fuzz artifacts with pack back-links.
+The first consumer-facing query layer over the committed foundational-resource
+JSON contract has landed in `scripts/query-foundational-resources.py` and
+`docs/foundational-resources/CONSUMER-QUERIES.md`, covering summary counts,
+pack discovery, checked-row mining, solver-reuse candidates, and atlas concept
+lookup without importing validators or generators.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, and finite tensor products now add
 secondary equality-heavy promotions for bad antisymmetry, bad nonbijection,

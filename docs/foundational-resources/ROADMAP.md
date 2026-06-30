@@ -151,6 +151,7 @@ artifacts/examples/math/
 scripts/
   gen-foundational-concepts.py
   consume-foundational-resources.py
+  query-foundational-resources.py
   validate-foundational-concepts.py
   gen-foundational-dashboards.py
   validate-foundational-example-pack.py

@@ -691,6 +691,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   10 `candidate` rows while keeping all of them at `R4 checked evidence` until
   actual regression/fuzz/corpus back-links exist.
 
+- **Consumer-facing foundational-resource queries landed.**
+  [`query-foundational-resources.py`](scripts/query-foundational-resources.py)
+  is a dependency-free read-only consumer over the committed atlas,
+  `metadata.json`, and `expected.json` data contract. It supports `summary`,
+  `packs`, `checks`, and `concepts` queries for pack discovery, checked-row
+  mining, solver-reuse candidates, and atlas concept lookup, with examples in
+  [`CONSUMER-QUERIES.md`](docs/foundational-resources/CONSUMER-QUERIES.md).
+  `check-foundational-resources.sh` now runs a small query smoke set for
+  summary output, solver-reuse candidates, graph-theory UNSAT rows, and
+  example-family atlas rows.
+
 - **First QF_BV resource proof-route row landed.**
   [`finite-rings-v0`](artifacts/examples/math/finite-rings-v0/) now has a
   source-linked SMT-LIB artifact for its bad distributivity row:

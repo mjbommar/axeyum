@@ -203,7 +203,11 @@ Build sequence:
 8. Selected deterministic R4 packs now have structured `solver_reuse`
    candidate tags: Boolean basics, finite cardinality, finite graph packs,
    integer LIA, bounded natural arithmetic, and bounded number theory.
-9. Add consumer-facing sample queries over the JSON data contract.
+9. Consumer-facing sample queries now land through
+   `scripts/query-foundational-resources.py` and
+   [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md): summary counts, pack discovery,
+   checked-row mining, solver-reuse candidates, and atlas concept lookup over
+   the committed JSON data contract.
 10. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 

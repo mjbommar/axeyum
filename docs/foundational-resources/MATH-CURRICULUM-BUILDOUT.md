@@ -71,6 +71,8 @@ scripts/
   validate-foundational-concepts.py
   validate-foundational-example-pack.py
   gen-foundational-dashboards.py
+  consume-foundational-resources.py
+  query-foundational-resources.py
 ```
 
 Defer new crates until at least three example packs duplicate enough logic to
@@ -1025,11 +1027,13 @@ Status: initial decision landed in
 [Foundational Resource Library Boundary Decision](LIBRARY-BOUNDARY-DECISION.md).
 The resource lane stays in-repo for now. The stable boundary is the committed
 JSON/schema/metadata contract plus generated dashboards, smoke-tested by
-`scripts/consume-foundational-resources.py`. The generated dashboards now also
-surface conservative R0-R6 gate and next-gate columns, so pack-level
-solver-reuse and consumer-boundary progress is visible without manual scans;
-crates or repo splits are deferred until external consumers, generated typed
-APIs, or shared encoders require them.
+`scripts/consume-foundational-resources.py` and exercised through sample
+consumer queries in `scripts/query-foundational-resources.py` and
+[Foundational Resource Consumer Queries](CONSUMER-QUERIES.md). The generated
+dashboards now also surface conservative R0-R6 gate and next-gate columns, so
+pack-level solver-reuse and consumer-boundary progress is visible without
+manual scans; crates or repo splits are deferred until external consumers,
+generated typed APIs, or shared encoders require them.
 
 Possible boundaries:
 
@@ -1054,8 +1058,11 @@ Exit criteria:
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
   and example-pack JSON files directly without importing generator or validator
-  internals, and generated dashboards expose gate/next-gate status derived from
-  that same committed data boundary.
+  internals. `scripts/query-foundational-resources.py` now adds sample
+  consumer-facing queries over that same committed data boundary for summary
+  counts, pack discovery, checked-row mining, solver-reuse candidates, and atlas
+  concept lookup. Generated dashboards expose gate/next-gate status derived
+  from the same files.
 
 ## First Ten Commits To Make
 

@@ -19,7 +19,9 @@ The current boundary is a data contract:
 The stable consumer surface is validated by
 [`scripts/consume-foundational-resources.py`](../../scripts/consume-foundational-resources.py),
 which reads only the committed JSON/metadata paths and imports none of the
-generator or validator internals.
+generator or validator internals. Common consumer lookups are demonstrated by
+[`scripts/query-foundational-resources.py`](../../scripts/query-foundational-resources.py)
+and [Foundational Resource Consumer Queries](CONSUMER-QUERIES.md).
 
 ## Evidence
 
@@ -27,17 +29,17 @@ The Phase M8 threshold is met for size and repeated structure:
 
 | Requirement | Current Evidence |
 |---|---|
-| At least 40 validated concept rows | 41 atlas rows: 23 curriculum rows and 18 field rows. |
+| At least 40 validated concept rows | 47 atlas rows: 23 curriculum rows, 18 field rows, 4 bridge-concept rows, and 2 example-family rows. |
 | At least 12 validated example packs | 84 non-template math packs are listed through the atlas data contract. |
-| At least 6 packs with checked proof/evidence routes | 72 non-template packs contain at least one `checked` expected-result row. |
-| At least one consumer can read the data without repository-internal knowledge | `scripts/consume-foundational-resources.py` reads the atlas and example-pack JSON directly and cross-checks pack coverage. |
+| At least 6 packs with checked proof/evidence routes | 78 non-template packs contain at least one `checked` expected-result row. |
+| At least one consumer can read the data without repository-internal knowledge | `scripts/consume-foundational-resources.py` reads the atlas and example-pack JSON directly and cross-checks pack coverage; `scripts/query-foundational-resources.py` answers summary, pack, check, and concept queries without importing validators or generators. |
 
 The current pack-level evidence mix is still intentionally conservative:
 
-- `checked`: 174 expected-result rows
-- `replay-only`: 175 expected-result rows
+- `checked`: 193 expected-result rows
+- `replay-only`: 171 expected-result rows
 - `lean-horizon`: 47 expected-result rows
-- `proof-gap`: 1 expected-result row
+- `not-run`: 47 expected-result rows
 
 That distribution argues for keeping the resource lane close to the proof
 cookbook, validators, and solver evidence work. A premature crate would mostly
@@ -81,6 +83,8 @@ boring and auditable:
 
 1. Keep `scripts/check-foundational-resources.sh` as the required freshness gate.
 2. Keep `scripts/consume-foundational-resources.py` small and dependency-free.
-3. Add generated schema examples only when a real consumer asks for them.
-4. Promote repeated replay logic into library code only after it becomes an
+3. Keep `scripts/query-foundational-resources.py` as a sample consumer, not a
+   validator or typed API layer.
+4. Add generated schema examples only when a real consumer asks for them.
+5. Promote repeated replay logic into library code only after it becomes an
    encoder or checker used by multiple non-test consumers.

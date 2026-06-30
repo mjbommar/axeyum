@@ -31,6 +31,9 @@ schemas, examples, and validation workflows.
   current Phase M8 decision: keep the resources in-repo, expose a stable JSON
   data contract, and defer crates or repo splits until real consumers require
   them.
+- [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) gives copyable sample queries over
+  the committed JSON data contract for pack discovery, checked-row mining,
+  solver-reuse candidates, and atlas concept lookup.
 - [ROADMAP.md](ROADMAP.md) is the implementation roadmap.
 - [../learn/math/README.md](../learn/math/README.md) is the learner-facing
   math path built from the curriculum, concept atlas, and validated packs.
@@ -48,7 +51,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/ontology/foundational-concepts.schema.json`](../../artifacts/ontology/foundational-concepts.schema.json)
   defines the seed concept-atlas row shape.
 - [`artifacts/ontology/foundational-concepts.json`](../../artifacts/ontology/foundational-concepts.json)
-  currently contains 23 curriculum rows and 18 math-field rows.
+  currently contains curriculum, math-field, bridge-concept, and example-family
+  rows generated from the current resource data.
 - [`scripts/gen-foundational-concepts.py`](../../scripts/gen-foundational-concepts.py)
   regenerates the seed atlas from the curriculum DAG and field/buildout maps.
 - [`scripts/validate-foundational-concepts.py`](../../scripts/validate-foundational-concepts.py)
@@ -59,6 +63,9 @@ schemas, examples, and validation workflows.
 - [`scripts/consume-foundational-resources.py`](../../scripts/consume-foundational-resources.py)
   is a dependency-free downstream-consumer smoke test for the public atlas and
   example-pack JSON contract.
+- [`scripts/query-foundational-resources.py`](../../scripts/query-foundational-resources.py)
+  is a dependency-free consumer query helper for common pack, check, and concept
+  lookups over the same committed JSON contract.
 - [`artifacts/ontology/foundational-example-pack.schema.json`](../../artifacts/ontology/foundational-example-pack.schema.json)
   defines the example-pack metadata and expected-result shape.
 - [`scripts/validate-foundational-example-pack.py`](../../scripts/validate-foundational-example-pack.py)

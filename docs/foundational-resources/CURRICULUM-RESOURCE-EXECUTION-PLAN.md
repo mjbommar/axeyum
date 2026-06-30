@@ -206,6 +206,10 @@ Near-term boundary:
 
 - JSON schemas and dashboards are the public contract.
 - `scripts/consume-foundational-resources.py` is the smoke test.
+- `scripts/query-foundational-resources.py` plus
+  [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) are the consumer-facing sample
+  query layer for summary counts, pack discovery, checked-row mining,
+  solver-reuse candidates, and atlas concept lookup.
 - No Rust crate or separate repository until at least one real consumer needs
   typed APIs, release cadence, or large external corpora.
 
@@ -327,7 +331,7 @@ Next buildout:
 | `geometry` | keep combined coordinate/affine/orientation lesson; add incidence/rigidity rows later |
 | `functional_analysis_and_operator_theory` | finite operator and Chebyshev-system lessons; keep Banach/Hilbert theorems Lean-horizon |
 
-## First Twelve Increments From Here
+## Forward Increments From Here
 
 1. Add generated learner-coverage and proof-upgrade gap views.
 2. Normalize concept-atlas statuses so `planned` means a real remaining gap.
@@ -353,13 +357,17 @@ Next buildout:
    Candidate status: the first 10-pack `solver_reuse` batch now tags Boolean
    basics, finite cardinality, finite graph packs, integer LIA, bounded natural
    arithmetic, and bounded number theory as R4-to-R5 promotion candidates.
-9. Promote selected packs into solver regression/fuzz corpora with back-links to
-   the resource pack.
-10. Add a rules/law reasoning resource plan that explicitly reuses finite
+9. Landed: add consumer-facing sample queries over the JSON data contract.
+   `scripts/query-foundational-resources.py` now supports summary, pack, check,
+   and concept queries, and `check-foundational-resources.sh` runs a small
+   query smoke set.
+10. Promote selected packs into solver regression/fuzz corpora with back-links
+   to the resource pack.
+11. Add a rules/law reasoning resource plan that explicitly reuses finite
     predicates, graph reachability, optimization, and proof-route vocabulary.
-11. Add generated typed-consumer sketches only after at least one downstream
+12. Add generated typed-consumer sketches only after at least one downstream
     user needs them.
-12. Revisit the library boundary decision once consumers or repeated encoders
+13. Revisit the library boundary decision once consumers or repeated encoders
     make in-repo docs/scripts insufficient.
 
 Each increment should be small, validate independently, update
