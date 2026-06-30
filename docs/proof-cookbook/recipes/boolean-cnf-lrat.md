@@ -94,6 +94,30 @@ Downgrade behavior:
 - if a proof cannot be produced or checked, a resource must keep the route as a
   proof gap or report `unknown`, not a proved `unsat`.
 
+## Math Examples Using This Route
+
+Use this route when the mathematical claim is already a finite Boolean
+refutation after a small, inspectable encoding.
+
+Canonical examples:
+
+- [Logic Basics](../../../artifacts/examples/math/logic-basics-v0/) uses
+  `tiny-cnf-refutation` as the smallest checked Boolean contradiction.
+- [Finite Cardinality](../../../artifacts/examples/math/finite-cardinality-v0/)
+  uses `no-injection-four-to-three` as a finite pigeonhole-style CNF row.
+- [Graph Matching](../../../artifacts/examples/math/graph-matching-v0/),
+  [Graph Reachability](../../../artifacts/examples/math/graph-reachability-v0/),
+  [Graph Cut](../../../artifacts/examples/math/graph-cut-v0/), and
+  [Graph D-Separation](../../../artifacts/examples/math/graph-d-separation-v0/)
+  provide small graph refutations where the graph-to-CNF meaning stays visible.
+- [Finite Compactness](../../../artifacts/examples/math/finite-compactness-v0/)
+  and [Finite Connectedness](../../../artifacts/examples/math/finite-connectedness-v0/)
+  use Boolean certificates for finite topology counterexamples, while the
+  general compactness and connectedness theorems remain Lean horizons.
+
+The focused resource regression is
+`cargo test -p axeyum-cnf --test math_resource_boolean_routes`.
+
 ## Commands
 
 Focused CNF checker tests:

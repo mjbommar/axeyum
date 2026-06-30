@@ -110,6 +110,9 @@ locally.
 The first route-note pass has also landed on the high-use learner cluster
 pages for logic/proof, graph/discrete reasoning, linear algebra/optimization,
 probability/statistics, and algebra/number theory.
+The six active proof-cookbook routes for CNF/LRAT, QF_BV, QF_LIA, QF_LRA,
+QF_UF/Alethe, and Lean horizons now each name concrete math example packs that
+use the route.
 The first example-family row now groups the recurring finite-algebra
 QF_UF/Alethe congruence conflicts under `family_finite_algebra_alethe`,
 backed by the 13-case `math_resource_uf_routes` regression.

@@ -194,8 +194,8 @@ Build sequence:
 3. R1 bridge-concept rows landed for algebra-map vocabulary: homomorphism
    preservation, kernel/image replay, quotient maps, ideal closure, module
    actions, tensor bilinearity, and finite group actions.
-4. Add "math example using this route" sections to the six active proof
-   cookbook recipes.
+4. Landed: add "math example using this route" sections to the six active
+   proof cookbook recipes.
 5. Finish learner audit so every non-template pack appears in a focused lesson
    or a named combined lesson.
 6. Continue QF_BV promotions only for fixed-width educational claims that are

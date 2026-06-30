@@ -91,6 +91,40 @@ Downgrade behavior:
 - if a proposed Lean artifact uses `sorryAx`, keep `lean-horizon`;
 - if the finite shadow fails replay, mark the finite resource invalid too.
 
+## Math Examples Using This Route
+
+Use this template when the resource has useful finite shadows today but the
+actual theorem is unbounded, schematic, analytic, or structure-theoretic.
+
+Canonical examples:
+
+- [Induction Patterns](../../../artifacts/examples/math/induction-patterns-v0/)
+  can replay finite base/step or parity rows, but full induction schemas stay
+  under this template.
+- [Real Analysis Rational](../../../artifacts/examples/math/real-analysis-rational-v0/),
+  [Sequence Limit Shadow](../../../artifacts/examples/math/sequence-limit-shadow-v0/),
+  and [Metric Continuity](../../../artifacts/examples/math/metric-continuity-v0/)
+  validate bounded rational shadows while completeness, limits, and fully
+  quantified continuity remain Lean horizons.
+- [Finite Compactness](../../../artifacts/examples/math/finite-compactness-v0/),
+  [Finite Connectedness](../../../artifacts/examples/math/finite-connectedness-v0/),
+  [Finite Topology](../../../artifacts/examples/math/finite-topology-v0/), and
+  [Finite Continuous Maps](../../../artifacts/examples/math/finite-continuous-maps-v0/)
+  teach topology over explicit finite spaces without proving general topology.
+- [Finite Measure](../../../artifacts/examples/math/finite-measure-v0/),
+  [Finite Integration](../../../artifacts/examples/math/finite-integration-v0/),
+  [Finite Martingales](../../../artifacts/examples/math/finite-martingales-v0/),
+  and [Finite Concentration](../../../artifacts/examples/math/finite-concentration-v0/)
+  are finite probability/measure shadows, not countable-additivity or
+  convergence-theorem proofs.
+- [Finite Chebyshev Systems](../../../artifacts/examples/math/finite-chebyshev-systems-v0/)
+  and [Finite Operator](../../../artifacts/examples/math/finite-operator-v0/)
+  resources expose functional-analysis slices while Banach/Hilbert-space
+  theorem families remain future Lean work.
+
+The current route checks are metadata, finite-shadow replay, and docs links.
+Graduation requires a concrete Lean command with no `sorryAx`.
+
 ## Commands
 
 Current resource checks:

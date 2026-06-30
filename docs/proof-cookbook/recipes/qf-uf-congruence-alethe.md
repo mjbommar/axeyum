@@ -73,6 +73,36 @@ Downgrade behavior:
 - if the route cannot build or check the proof, it must not upgrade the answer
   to a certified proof claim.
 
+## Math Examples Using This Route
+
+Use this route when the mathematical object is a finite function, quotient,
+operation table, homomorphism, module, ideal, tensor map, or action law whose
+bad row reduces to an equality or congruence conflict.
+
+Canonical examples:
+
+- [Equivalence Classes](../../../artifacts/examples/math/equivalence-classes-v0/)
+  uses `quotient-map-congruence-conflict.smt2`.
+- [Function Composition](../../../artifacts/examples/math/function-composition-v0/)
+  uses a composition-application conflict over finite functions.
+- [Finite Algebra Homomorphisms](../../../artifacts/examples/math/finite-algebra-homomorphisms-v0/)
+  uses `homomorphism-preservation-congruence-conflict.smt2`.
+- [Finite Groups](../../../artifacts/examples/math/finite-groups-v0/) and
+  [Finite Monoids](../../../artifacts/examples/math/finite-monoids-v0/) use
+  operation-congruence and associativity-table conflicts.
+- [Finite Order Lattices](../../../artifacts/examples/math/finite-order-lattices-v0/),
+  [Finite Permutation Groups](../../../artifacts/examples/math/finite-permutation-groups-v0/),
+  [Finite Vector Spaces](../../../artifacts/examples/math/finite-vector-spaces-v0/),
+  [Finite Dual Spaces](../../../artifacts/examples/math/finite-dual-spaces-v0/),
+  [Finite Modules](../../../artifacts/examples/math/finite-modules-v0/),
+  [Finite Ideals](../../../artifacts/examples/math/finite-ideals-v0/), and
+  [Finite Tensor Products](../../../artifacts/examples/math/finite-tensor-products-v0/)
+  provide the shared equality-heavy algebra family now grouped by
+  `family_finite_algebra_alethe`.
+
+The focused resource regression is
+`cargo test -p axeyum-solver --test math_resource_uf_routes`.
+
 ## Commands
 
 Focused:

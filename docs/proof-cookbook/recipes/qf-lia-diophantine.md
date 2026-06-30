@@ -87,6 +87,33 @@ Downgrade behavior:
 - if the certificate cannot be produced or checked, the result stays
   replay-only, proof-gap, or `unknown` depending on the caller.
 
+## Math Examples Using This Route
+
+Use this route when a finite mathematical obstruction is genuinely an integer
+linear divisibility, parity, count, or coefficient contradiction.
+
+Canonical examples:
+
+- [Integer LIA](../../../artifacts/examples/math/integer-lia-v0/) uses
+  `diophantine-gcd-obstruction-conflict.smt2` for a direct gcd obstruction.
+- [Modular Arithmetic](../../../artifacts/examples/math/modular-arithmetic-v0/)
+  promotes a nonunit inverse obstruction into checked integer evidence.
+- [Exact Statistical Tests](../../../artifacts/examples/math/exact-statistical-tests-v0/)
+  uses an impossible binomial tail-count row as a small count contradiction.
+- [Finite Simplicial Homology](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
+  uses a bad boundary coefficient row where the inconsistency is linear over
+  integer coefficients.
+- [Induction Patterns](../../../artifacts/examples/math/induction-patterns-v0/)
+  uses a finite even-product parity obstruction without claiming full
+  induction-schema proof.
+- [Graph Search Runtime](../../../artifacts/examples/math/graph-search-runtime-v0/)
+  and [Natural Arithmetic](../../../artifacts/examples/math/natural-arithmetic-v0/)
+  use arithmetic-DPLL-backed LIA rows for finite DFS cost and bounded-natural
+  negativity.
+
+The focused resource regression is
+`cargo test -p axeyum-solver --test math_resource_lia_routes`.
+
 ## Commands
 
 Focused certificate tests:

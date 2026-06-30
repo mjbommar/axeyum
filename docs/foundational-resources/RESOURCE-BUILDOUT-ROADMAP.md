@@ -950,8 +950,8 @@ Pick one item per commit unless the change is purely navigational.
    random-matrix finite moment.
 2. Landed: add concept rows for algebra maps: homomorphism, kernel/image,
    quotient, ideal, module, tensor bilinearity, and group action.
-3. Add "math example using this route" sections to the six active proof
-   cookbook recipes.
+3. Landed: add "math example using this route" sections to the six active
+   proof cookbook recipes.
 4. Promote one QF_LRA/Farkas probability/statistics row that has a small exact
    rational contradiction and strong learner value.
 5. Promote one QF_UF/Alethe algebra row that exercises homomorphism or quotient

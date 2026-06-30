@@ -264,6 +264,11 @@ Every recipe should eventually point to:
 - [trust ledger](../research/08-planning/trust-ledger.md)
 - [dominance scoreboard](../../bench-results/DOMINANCE.md)
 
+Current status: the six active curriculum-facing recipes for Boolean CNF/LRAT,
+QF_BV bit-blast, QF_LIA/Diophantine, QF_LRA/Farkas, QF_UF/Alethe, and Lean
+horizons now each include a `Math Examples Using This Route` section linking
+the proof route back to concrete foundational math packs.
+
 ## Graduation Criteria
 
 The cookbook graduates from "incubator" when:

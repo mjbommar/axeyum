@@ -360,7 +360,7 @@ Next buildout:
 8. Landed: add bridge-concept rows for algebra-map vocabulary: homomorphism
    preservation, kernel/image replay, quotient maps, ideal closure, module
    actions, tensor bilinearity, and finite group actions.
-9. Add "math example using this route" sections to the six active proof
+9. Landed: add "math example using this route" sections to the six active proof
    cookbook recipes so proof-route docs point back to concrete packs.
 10. Add QF_LRA/Farkas upgrade rows for rational, LP, convexity, concentration,
    and linear-system examples.

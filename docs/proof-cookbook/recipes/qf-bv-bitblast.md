@@ -72,6 +72,30 @@ Downgrade behavior:
 - if evidence cannot be produced or checked, the route must not report a proved
   result.
 
+## Math Examples Using This Route
+
+Use this route only when the fixed bit width is part of the mathematical
+example. If the same lesson is naturally an unbounded integer, rational, or
+finite-table claim, prefer the LIA, LRA, UF, or replay route instead.
+
+Canonical examples:
+
+- [Finite Rings](../../../artifacts/examples/math/finite-rings-v0/) uses
+  `non-distributive-table-bitblast-conflict.smt2` for a fixed finite ring-table
+  contradiction.
+- [Finite Fields](../../../artifacts/examples/math/finite-fields-v0/) uses
+  `composite-modulus-nonfield-bitblast-conflict.smt2` to show why a composite
+  residue system is not a field at the chosen width.
+- [Graph Coloring](../../../artifacts/examples/math/graph-coloring-v0/) uses a
+  one-bit triangle two-coloring obstruction where the bit-vector encoding is
+  the educational object.
+- [Number Theory](../../../artifacts/examples/math/number-theory-v0/) uses
+  `quadratic-nonresidue-mod7-bitblast-conflict.smt2` for a bounded residue
+  obstruction.
+
+The focused resource regression is
+`cargo test -p axeyum-solver --test math_resource_bv_routes`.
+
 ## Commands
 
 Focused:

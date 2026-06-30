@@ -68,6 +68,38 @@ Downgrade behavior:
 - if the certificate fails to check, Axeyum must not report the unsat result as
   proved.
 
+## Math Examples Using This Route
+
+Use this route when the false mathematical claim reduces to exact rational
+linear equalities or inequalities. The route is not floating-point analysis and
+not a nonlinear theorem prover.
+
+Canonical examples:
+
+- [Linear Algebra Rational](../../../artifacts/examples/math/linear-algebra-rational-v0/)
+  uses a singular inconsistent linear-system row.
+- [Finite Probability](../../../artifacts/examples/math/finite-probability-v0/)
+  uses bad normalization and Bayes-posterior rows over exact probability
+  tables.
+- [Finite Markov Chain](../../../artifacts/examples/math/finite-markov-chain-v0/)
+  and [Finite Hitting Times](../../../artifacts/examples/math/finite-hitting-times-v0/)
+  use malformed stochastic-row and expected-time equations.
+- [Least Squares Regression](../../../artifacts/examples/math/least-squares-regression-v0/)
+  uses a bad normal-equation coefficient row.
+- [Real Analysis Rational](../../../artifacts/examples/math/real-analysis-rational-v0/)
+  and [Metric Continuity](../../../artifacts/examples/math/metric-continuity-v0/)
+  use bounded exact-rational epsilon-delta shadows, not general continuity
+  theorems.
+- [Numerical Linear Algebra](../../../artifacts/examples/math/numerical-linear-algebra-v0/),
+  [Random Matrix Finite](../../../artifacts/examples/math/random-matrix-finite-v0/),
+  [Spectral Linear Algebra](../../../artifacts/examples/math/spectral-linear-algebra-v0/),
+  and [Matrix Invariants](../../../artifacts/examples/math/matrix-invariants-v0/)
+  use bad residual, trace-moment, eigenpair, and characteristic-polynomial rows
+  where the final contradiction is exact rational linear arithmetic.
+
+The focused resource regression is
+`cargo test -p axeyum-solver --test math_resource_lra_routes`.
+
 ## Commands
 
 Focused:
