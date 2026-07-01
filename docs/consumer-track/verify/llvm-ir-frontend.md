@@ -78,3 +78,27 @@ but pin the fixtures regardless.
 - L3: reflect `clamp` from the **C** `.ll` and the **Rust** `.ll`; prove each
   `<= 100` and prove the two reflected terms **equivalent** — one front end, two
   languages. Benchmark.
+
+## M — the if-conversion finding, and mixed width (measured 2026-06-30)
+
+Probing what `-O` LLVM IR real branchy code produces changed the CFG plan:
+
+- **`-O` if-converts branches to `select`.** `fn classify(x){ if x<10 {1} else if
+  x<100 {2} else {3} }` → *nested `icmp`+`select`* (no `br`/`phi`). A `match`
+  (`fn day`) → `icmp` + `add` + `select` (the switch vanished into arithmetic).
+  So **the L2 single-block reflector already handles if-converted branchy leaf
+  functions** — the "multi-block CFG" gap is largely illusory at `-O`. True
+  `br`/`switch`/`phi` blocks appear with **loops** (back-edges), which are the
+  **PDR / transition-system** path (unbounded, deferred), *not* acyclic reflection.
+- **The real gap is mixed width.** `fn be16(hi:u8, lo:u8)->u16{ ((hi as u16)<<8) |
+  (lo as u16) }` → `zext i8 %hi to i16`, `shl nuw i16 …`, `zext`, `or`. Packet /
+  header code is width-mixed throughout (byte↔word↔dword field packing), so
+  `zext`/`sext`/`trunc` are the high-value, network-relevant addition:
+  `zext iA→iB` = `zero_ext(B−A, x)`, `sext` = `sign_ext`, `trunc iA→iB` =
+  `extract(B−1, 0, x)`.
+
+**M plan:** add `zext`/`sext`/`trunc`; verify a real **byte↔word field round-trip**
+(`be16`: extracting the two bytes back from the packed word equals the inputs),
+plus `classify` (nested selects → range property) and `day` (match-as-arithmetic
+→ bound) — demonstrating the reflector already spans straight-line + if-converted
++ mixed-width leaf functions, the bulk of a protocol parser's per-field code.
