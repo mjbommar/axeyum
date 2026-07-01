@@ -148,6 +148,37 @@ collapse; + a nested-UF projection crash). The new code is far larger surface �
 **expand the fuzzers** to generate multivariate polynomials, transcendental atoms,
 and `iand` constraints as those land.
 
+### Known completeness gap — free real division `/0` witnesses (tracked follow-up)
+
+There is a genuine **semantic divergence** on real division by zero that the
+solver currently reconciles to a sound `unknown`, at the cost of decide-rate:
+
+- **axeyum's ground evaluator commits to `x/0 = 0`** (a totality convention, like
+  SMT-LIB `bvudiv x 0 = all-ones`), tested by `axeyum-ir`'s
+  `real_division_evaluates_exactly`. Because the evaluator is the trusted anchor
+  for every `sat` replay (and for the `nra_differential_fuzz` `Replay::Violated`
+  gate), any model that requires `x/0 ≠ 0` is refused.
+- **Z3/SMT-LIB leave real `/0` unspecified** — a free value the solver may choose.
+  `eliminate_real_div` already models this faithfully (fresh `r`, `(y=0) ∨ (x=r·y)`,
+  + **complete** Ackermann div-congruence), so the eliminated form is
+  equisatisfiable with Z3's semantics.
+
+Net: on a query that *forces* `y=0` and constrains `x/y` to a nonzero value (e.g.
+`y=0 ∧ x=5 ∧ x/y=100`), Z3 says `sat` but axeyum cannot emit a model its own
+`/0=0` evaluator accepts, and a definite `unsat` would be a wrong-unsat vs Z3. The
+only verdict sound under both commitments is **`unknown`** (see
+`crates/axeyum-solver/tests/nra.rs::real_division_by_zero_is_sound_unknown`).
+The `check_with_nra` replay guard (`b38c0439`) + in-engine replay retarget
+(`a06dc46a`) enforce this; they close a real congruence-gap wrong-sat.
+
+**Recovery route (decide-rate follow-up, not a soundness bug):** make free-division
+witnesses first-class — the returned `Model` carries the solver's chosen value for
+each `(/ a b)` term (the internal `r`), and the evaluator/replay consult it for the
+`b=0` case instead of the fixed `0`. Then these promote from `unknown` to `sat`,
+matching Z3, while the congruence axioms keep multi-occurrence `x/0` consistent.
+This is the div analogue of a first-class uninterpreted-function interpretation in
+the model; scope it alongside the Phase-B lemma work.
+
 ## Per-phase soundness obligations
 
 | Phase | `sat` checkable by | `unsat` certified by | `unknown` triggers |
