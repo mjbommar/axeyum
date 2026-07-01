@@ -1394,7 +1394,7 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 118 atlas rows validate, including generated bridge-concept rows for
+  Status: 119 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows,
   refutation-as-query, finite proof-pattern replay, finite quantifier
   expansion, bounded induction obligations, Boolean CNF DRAT/LRAT anatomy,
@@ -1403,7 +1403,8 @@ Exit criteria:
   Alethe certificate anatomy, QF_BV bit-blast
   certificate anatomy, gcd/divisibility witnesses, modular CRT/inverse
   witnesses, finite counting replay, finite graph replay/obstruction, finite
-  dynamics/Euler replay, bounded-family/asymptotic boundaries, finite Boolean algebra, finite
+  dynamics/Euler replay, bounded-family/asymptotic boundaries, polynomial
+  coefficient/factor replay, finite Boolean algebra, finite
   partition/relation roundtrips, finite
   image/preimage/inverse tables, finite
   bijection/cardinality, cardinality theorem horizons, metric balls, bounded
@@ -2580,6 +2581,13 @@ dynamics traces, and finite Euler error rows under one queryable concept. It
 keeps exact finite replay plus checked LIA/Farkas rows separate from
 asymptotic runtime, closed-form recurrence, convergence-rate, and limiting
 theorem claims.
+The concept atlas now also has a polynomial coefficient/factor replay bridge:
+`bridge_polynomial_coefficient_factor_replay` groups fixed coefficient tuples,
+division and factor witnesses, finite coefficient windows, root-finding steps,
+derivative shadows, and rational polynomial-geometry obligations under one
+queryable concept. Concept-scoped Diophantine and Farkas queries now return
+checked rows while general factorization, algebraic closure, root distribution,
+and generating-function convergence remain proof-horizon work.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

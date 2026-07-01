@@ -14,9 +14,12 @@ Which checked algebra packs match this finite structure family and proof route?
 The current algebra surface is finite and route-explicit: function-table
 congruence, finite groups and actions, monoids, homomorphisms, ideals, quotient
 representatives, modules, vector spaces, dual spaces, tensor bilinearity, and
-fixed-width residue/field rows. General isomorphism theorems, classification
-theorems, category-level universal properties, infinite algebra, and arbitrary
-field/ring/module facts remain in the proof-horizon lane.
+fixed-width residue/field rows. Polynomial rows cover fixed coefficient tuples,
+division/factor witnesses, finite coefficient windows, and checked root or
+discriminant obstructions. General isomorphism theorems, classification
+theorems, category-level universal properties, infinite algebra, arbitrary
+field/ring/module facts, general factorization, and algebraic closure remain in
+the proof-horizon lane.
 
 ## Query Shape
 
@@ -63,6 +66,7 @@ needs concrete checked rows to display.
 | Modules, vector spaces, dual spaces, and tensor bilinearity | `bridge_module_action`; `bridge_tensor_bilinearity` | `Alethe` | `checks --concept bridge_module_action --route Alethe --proof-status checked`; `packs --concept bridge_tensor_bilinearity --route Alethe` |
 | Modular inverses, CRT witnesses, and finite-field nonunits | `bridge_modular_crt_inverse_witness` | `qf-bv` | `checks --concept bridge_modular_crt_inverse_witness --route qf-bv --proof-status checked` |
 | GCD, Bezout, divisibility, and integer obstructions | `bridge_gcd_divisibility_witness` | `Diophantine` | `checks --concept bridge_gcd_divisibility_witness --route Diophantine --proof-status checked` |
+| Fixed polynomial coefficients, factors, roots, and coefficient windows | `bridge_polynomial_coefficient_factor_replay` | `Diophantine`; `Farkas` | `checks --concept bridge_polynomial_coefficient_factor_replay --route Diophantine --proof-status checked`; `checks --concept bridge_polynomial_coefficient_factor_replay --route Farkas --proof-status checked` |
 
 ## Copyable Examples
 
@@ -160,6 +164,28 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Display checked fixed polynomial coefficient, factor, root, and coefficient
+window rows:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field abstract_algebra \
+  --text polynomial \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_polynomial_coefficient_factor_replay \
+  --route Diophantine \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_polynomial_coefficient_factor_replay \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+```
+
 ## Current Boundary
 
 These queries prove discoverability of finite checked algebra rows, not
@@ -175,6 +201,8 @@ They do not prove:
 - infinite algebra or arbitrary-field reasoning;
 - quotient, kernel/image, or module theorem schemas beyond the finite replayed
   rows;
+- general polynomial factorization, algebraic closure, root distribution, or
+  convergence of generating functions;
 - benchmark performance, PAR-2, or Z3/cvc5 parity.
 
 Those claims need new proof-horizon rows, theorem-prover reconstruction, or

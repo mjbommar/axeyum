@@ -2596,6 +2596,148 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_polynomial_coefficient_factor_replay",
+        "title": "Polynomial Coefficient And Factor Replay",
+        "field_ids": [
+            "abstract_algebra",
+            "real_analysis",
+            "complex_analysis",
+            "discrete_math",
+            "numerical_analysis",
+            "geometry",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Polynomial replay rows fix a coefficient domain, degree bound, "
+            "coefficient tuple, evaluation point, divisor, factor witness, or "
+            "coefficient window. Axeyum can replay the finite arithmetic and "
+            "check malformed coefficient, root, discriminant, product, or "
+            "step claims through finite replay, QF_LIA/Diophantine, or "
+            "QF_LRA/Farkas evidence; general polynomial theory stays in the "
+            "Lean or algebraic-reasoning horizon."
+        ),
+        "prerequisites": [
+            "curriculum_polynomials",
+            "bridge_finite_model_replay",
+            "bridge_finite_counting_replay",
+            "bridge_bounded_family_asymptotic_boundary",
+        ],
+        "unlocks": [
+            "bridge_characteristic_polynomial",
+            "bridge_derivative_identity_shadow",
+            "bridge_finite_circle_inversion_cyclic_replay",
+            "bridge_complex_real_pair_transform",
+            "bridge_lean_horizon",
+            "field_abstract_algebra",
+            "field_real_analysis",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "fixed-degree polynomials",
+            "coefficient replay",
+            "factor witness replay",
+            "finite coefficient extraction",
+            "QF_LIA / Diophantine",
+            "QF_LRA / Farkas",
+            "NRA / RCF shadow",
+            "finite replay",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "polynomial-identities-v0",
+                "Fixed-degree identities, factor theorem rows, rational-root replay, and checked false-root Diophantine evidence.",
+            ),
+            (
+                "polynomial-factorization-rational-v0",
+                "Rational polynomial division, factor products, Euclidean GCD, square-free replay, and checked discriminant obstruction.",
+            ),
+            (
+                "generating-functions-v0",
+                "Finite coefficient extraction, coefficient windows, and checked Cauchy-product convolution evidence.",
+            ),
+            (
+                "finite-root-finding-v0",
+                "Exact polynomial evaluation, bisection brackets, Newton steps, and checked bad-step plus bad-width rows.",
+            ),
+            (
+                "calculus-algebraic-shadow-v0",
+                "Fixed polynomial derivative replay and checked false-derivative row.",
+            ),
+            (
+                "finite-circle-geometry-v0",
+                "Circle-line and distance-product rows that consume fixed polynomial/rational coordinate equations.",
+            ),
+            (
+                "finite-inversion-geometry-v0",
+                "Inversion product rows over rational coordinates and fixed polynomial side conditions.",
+            ),
+            (
+                "finite-cyclic-geometry-v0",
+                "Ptolemy-style rational product rows with polynomial equality obligations.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "fixed polynomial replay plus QF_LIA/Diophantine and QF_LRA/Farkas certificates",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py plus math_resource_lia_routes and math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/polynomial-identities-end-to-end.md",
+                    "docs/learn/math/polynomial-factorization-end-to-end.md",
+                    "docs/learn/math/generating-functions-end-to-end.md",
+                    "docs/learn/math/finite-root-finding-end-to-end.md",
+                    "docs/learn/math/calculus-shadows-end-to-end.md",
+                    "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "Positive rows recompute coefficients, products, "
+                    "remainders, GCD/factor witnesses, roots, or finite "
+                    "coefficient windows. Negative rows graduate only when the "
+                    "source artifact is checked by the integer Diophantine or "
+                    "exact-rational Farkas route."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/polynomial-identities-end-to-end.md",
+            "docs/learn/math/polynomial-factorization-end-to-end.md",
+            "docs/learn/math/generating-functions-end-to-end.md",
+            "docs/learn/math/finite-root-finding-end-to-end.md",
+            "docs/learn/math/calculus-shadows-end-to-end.md",
+            "docs/learn/math/finite-circle-geometry-end-to-end.md",
+            "docs/learn/math/finite-inversion-geometry-end-to-end.md",
+            "docs/learn/math/finite-cyclic-geometry-end-to-end.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Fixed-degree replay does not prove unique factorization, algebraic closure, arbitrary polynomial GCD correctness, or root-distribution theorems.",
+            "Generating-function rows are finite coefficient windows; convergence and formal power-series theorem families remain Lean-horizon resources.",
+            "Geometry and calculus rows reuse polynomial arithmetic only for fixed rational obligations, not global analytic or synthetic geometry theorems.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state coefficient domain, degree bound, coefficient tuple, evaluation point, divisor, factor witness, or coefficient window.",
+                "Validators recompute evaluation, product, remainder, GCD/factor witness, derivative, or coefficient extraction before trusting a solver result.",
+                "Malformed polynomial rows link source SMT-LIB artifacts and checked Diophantine or Farkas route regressions before solver reuse is claimed.",
+                "General polynomial, analytic, and algebraic-closure claims stay linked to Lean-horizon or RCF/NRA resources.",
+            ],
+        },
+    },
+    {
         "id": "bridge_finite_graph_replay_obstruction",
         "title": "Finite Graph Replay And Obstruction",
         "field_ids": [

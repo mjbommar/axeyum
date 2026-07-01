@@ -16,10 +16,12 @@ The current surface is finite and exact-rational: metric balls, bounded
 epsilon-delta shadows, bounded sequence tails, algebraic derivative and
 integral replay, Newton/root-finding steps, finite recurrence and Euler rows,
 residual/solution-box/Jacobi rows, exact-vs-floating boundary rows, and complex
-numbers as real-pair algebra. Completeness, IVT/MVT/FTC, uniform convergence,
-analytic continuation, holomorphicity, contour integration, numerical
-stability, and floating-point error guarantees remain in the proof-horizon or
-numerical-honesty lanes.
+numbers as real-pair algebra. Polynomial rows are fixed coefficient, factor,
+root, discriminant, derivative, and coefficient-window checks, not general
+analytic theory. Completeness, IVT/MVT/FTC, uniform convergence, analytic
+continuation, holomorphicity, contour integration, general factorization,
+algebraic closure, numerical stability, and floating-point error guarantees
+remain in the proof-horizon or numerical-honesty lanes.
 
 ## Query Shape
 
@@ -69,6 +71,7 @@ needs concrete checked rows to display.
 | Derivative identities and integration horizons | `bridge_derivative_identity_shadow`; `bridge_integration_horizon` | `Farkas`; Lean horizon | `concepts --field real_analysis --text "Derivative Identity"`; `concepts --field real_analysis --text "Integration Horizon"` |
 | Metric balls and bounded epsilon-delta rows | `bridge_metric_ball`; `bridge_bounded_epsilon_delta_shadow` | `Farkas` | `checks --concept bridge_bounded_epsilon_delta_shadow --route Farkas --proof-status checked` |
 | Algebraic derivative and Riemann-sum shadows | packs `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0` | `Farkas` | `checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked`; `checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked` |
+| Polynomial coefficients, factors, roots, and coefficient windows | `bridge_polynomial_coefficient_factor_replay` | `Diophantine`; `Farkas` | `checks --concept bridge_polynomial_coefficient_factor_replay --route Diophantine --proof-status checked`; `checks --concept bridge_polynomial_coefficient_factor_replay --route Farkas --proof-status checked` |
 | Root-finding and Newton-step rows | pack `finite-root-finding-v0`; concept `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --pack finite-root-finding-v0 --route Farkas --proof-status checked` |
 | Finite dynamics, recurrence, and Euler replay | `bridge_finite_dynamics_euler_replay` | `Farkas` | `checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked` |
 | Residuals, solution boxes, Jacobi steps, and numerical linear algebra | `bridge_residual_bound`; `bridge_lu_replay` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked --text solution` |
@@ -148,6 +151,23 @@ python3 scripts/query-foundational-resources.py checks \
 Display checked algebraic derivative, integral, and root-finding rows:
 
 ```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field real_analysis \
+  --text polynomial \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_polynomial_coefficient_factor_replay \
+  --route Diophantine \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_polynomial_coefficient_factor_replay \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
 python3 scripts/query-foundational-resources.py checks \
   --pack calculus-algebraic-shadow-v0 \
   --route Farkas \

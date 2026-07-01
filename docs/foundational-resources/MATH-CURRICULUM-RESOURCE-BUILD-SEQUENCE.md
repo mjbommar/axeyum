@@ -30,7 +30,7 @@ is checked, what is trusted, and what remains a theorem/proof horizon.
 
 The committed public query boundary currently reports:
 
-- 118 concept rows: 23 curriculum nodes, 18 field rows, 72 bridge concepts, and
+- 119 concept rows: 23 curriculum nodes, 18 field rows, 73 bridge concepts, and
   5 example-family rows.
 - 108 non-template math example packs.
 - 632 expected checks: 334 `sat`, 227 `unsat`, and 71 `not-run`.
@@ -388,7 +388,11 @@ Pick one item per commit unless the change is purely navigational.
    `finite-order-lattices-v0` through Bool/CNF DRAT/LRAT after exact relation
    replay identifies `B !<= A` while the bad claim that `A` is top requires
    `B <= A`.
-10. Add the next rules/law example only by reusing an existing math proof
+10. Landed: add `bridge_polynomial_coefficient_factor_replay` so fixed
+    polynomial identities, factor/division witnesses, coefficient windows,
+    root-finding steps, derivative shadows, and polynomial geometry obligations
+    are discoverable through concept-scoped Diophantine and Farkas queries.
+11. Add the next rules/law example only by reusing an existing math proof
     shape and the current JSON boundary.
 
 ## Maintenance Commands

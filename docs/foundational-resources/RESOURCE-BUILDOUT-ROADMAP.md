@@ -47,7 +47,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 72 bridge-concept rows.
+- 73 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
 - 632 expected checks.
@@ -345,9 +345,11 @@ Build next:
 - Split algebra concepts into kernels/images, quotients, ideals, modules,
   tensor universal-property shadows, orbit-stabilizer, Burnside, unit/idempotent
   replay, and homomorphism preservation.
-- Add polynomial concept rows for coefficient extraction, division with
-  remainder, GCD, square-free decomposition, factor theorem, and generating
-  functions.
+- Landed: use `bridge_polynomial_coefficient_factor_replay` for coefficient
+  extraction, division/factor witnesses, GCD/square-free/factor-theorem replay,
+  root-finding steps, finite coefficient windows, and polynomial geometry
+  obligations. Add narrower resultant or irreducibility rows only when a new
+  pack creates distinct solver/proof pressure.
 - Promote equality-heavy conflicts through QF_UF/Alethe and fixed-width
   algebra conflicts through QF_BV only when the encoding matches the concept.
 - Keep arbitrary group/ring/field theory, general factorization, and full
@@ -2037,6 +2039,14 @@ Pick one item per commit unless the change is purely navigational.
      Concept-scoped LIA and Farkas queries now return checked rows while
      asymptotic runtime, closed-form recurrence, convergence-rate, and
      limiting theorem claims remain proof-horizon work.
+140. Landed: add the generated polynomial coefficient/factor replay bridge row.
+     `bridge_polynomial_coefficient_factor_replay` makes fixed polynomial
+     identities, factor/division witnesses, finite coefficient windows,
+     root-finding steps, derivative shadows, and rational polynomial-geometry
+     obligations discoverable by one concept. Concept-scoped Diophantine and
+     Farkas queries now return checked rows while general factorization,
+     algebraic closure, root distribution, and generating-function convergence
+     remain proof-horizon work.
 
 ## Validation Checklist
 

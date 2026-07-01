@@ -175,6 +175,9 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_module_a
 python3 scripts/query-foundational-resources.py checks --concept bridge_ideal_closure --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_quotient_map --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_tensor_bilinearity --route Alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text polynomial --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_polynomial_coefficient_factor_replay --route Diophantine --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_polynomial_coefficient_factor_replay --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field abstract_algebra --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_modular_crt_inverse_witness --route qf-bv --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_modular_crt_inverse_witness --route qf-bv --proof-status checked --require-any >/dev/null
@@ -219,6 +222,7 @@ python3 scripts/query-foundational-resources.py concepts --field real_analysis -
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text "Squeeze Shadow" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text "Derivative Identity" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text "Integration Horizon" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field real_analysis --text polynomial --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field real_analysis --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_metric_ball --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_metric_ball --route Farkas --proof-status checked --require-any >/dev/null
@@ -234,12 +238,14 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_finite_d
 python3 scripts/query-foundational-resources.py fields --field numerical_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text residual --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text operator --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text polynomial --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text floating --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field numerical_analysis --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked --text solution --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked --text Jacobi --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field complex_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field complex_analysis --text real-pair --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field complex_analysis --text polynomial --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field complex_analysis --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack complex-plane-transforms-v0 --route Farkas --proof-status checked --text conjugation --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_complex_real_pair_transform --route Farkas --require-any >/dev/null
@@ -275,6 +281,7 @@ python3 scripts/query-foundational-resources.py checks --pack finite-proximal-gr
 python3 scripts/query-foundational-resources.py fields --field geometry --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field geometry --text coordinate --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field geometry --text circle --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field geometry --text polynomial --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field geometry --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_coordinate_orientation_geometry --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_coordinate_orientation_geometry --route Farkas --proof-status checked --require-any >/dev/null

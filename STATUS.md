@@ -205,6 +205,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Polynomial coefficient/factor bridge row landed.**
+  The generated concept atlas now includes
+  `bridge_polynomial_coefficient_factor_replay`, grouping fixed coefficient
+  tuples, division and factor witnesses, coefficient windows, root-finding
+  steps, derivative shadows, and polynomial geometry obligations under one
+  reusable concept. Concept-scoped Diophantine and Farkas queries now return
+  checked rows from polynomial identities, rational factorization, generating
+  functions, root finding, calculus shadows, and rational geometry while
+  keeping general factorization, algebraic closure, root distribution, and
+  generating-function convergence in the proof-horizon lane. The public summary
+  now reports 119 concept rows: 23 curriculum nodes, 18 field rows, 73 bridge
+  concepts, and 5 example-family rows; pack and check counts remain 108 packs,
+  632 expected checks, 309 checked rows, 252 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Bounded-family/asymptotic bridge row landed.**
   The generated concept atlas now includes
   `bridge_bounded_family_asymptotic_boundary`, grouping finite BFS/DFS runtime
@@ -212,8 +227,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   dynamics traces, and finite Euler error rows under one reusable concept.
   The row makes existing checked LIA and Farkas rows queryable by concept while
   keeping asymptotic runtime, closed-form recurrence, convergence-rate, and
-  limiting theorem claims in the Lean-horizon lane. The public summary now
-  reports 118 concept rows: 23 curriculum nodes, 18 field rows, 72 bridge
+  limiting theorem claims in the Lean-horizon lane. For that increment, the
+  public summary reported 118 concept rows: 23 curriculum nodes, 18 field rows, 72 bridge
   concepts, and 5 example-family rows; pack and check counts remain 108 packs,
   632 expected checks, 309 checked rows, 252 replay-only rows, and 71
   Lean-horizon rows.

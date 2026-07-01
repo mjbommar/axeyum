@@ -639,7 +639,13 @@ Build sequence:
     and finite Euler rows, with concept-scoped LIA and Farkas checked-row
     queries and theorem-scale runtime/convergence/asymptotic claims kept in the
     Lean-horizon lane.
-66. Revisit crate/repo boundaries only after three real consumers or repeated
+66. Landed: add the polynomial coefficient/factor replay bridge row.
+    `bridge_polynomial_coefficient_factor_replay` groups fixed identities,
+    factor/division witnesses, finite coefficient windows, root-finding steps,
+    derivative shadows, and rational polynomial-geometry obligations, with
+    concept-scoped Diophantine and Farkas checked-row queries and general
+    factorization/algebraic-closure claims kept in the Lean-horizon lane.
+67. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

@@ -225,7 +225,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-118 concept rows, 108 non-template packs, 632 expected checks (334 `sat`,
+119 concept rows, 108 non-template packs, 632 expected checks (334 `sat`,
 227 `unsat`, 71 `not-run`), 309 checked rows, 252 replay-only rows, and 71
 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
@@ -251,7 +251,11 @@ boundary lane now also makes finite BFS/DFS runtime counters, finite recurrence
 prefixes, fixed coefficient windows, bounded dynamics traces, and finite Euler
 error rows queryable as one bridge concept while keeping asymptotic runtime,
 closed-form recurrence, convergence-rate, and limiting theorem claims in the
-Lean-horizon lane. The finite
+Lean-horizon lane. The polynomial bridge lane now also makes fixed coefficient
+tuples, division/factor witnesses, coefficient windows, root-finding steps,
+derivative shadows, and polynomial geometry obligations queryable by one
+concept while keeping general factorization, algebraic closure, root
+distribution, and generating-function convergence as proof horizons. The finite
 order/lattice lane now also promotes the false Boolean-lattice top-element row
 through Bool/CNF DRAT/LRAT after exact relation replay isolates `B !<= A`
 while the bad claim that `A` is top requires `B <= A`. The modular-arithmetic

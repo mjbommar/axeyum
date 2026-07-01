@@ -41,7 +41,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 72 bridge-concept rows.
+- 73 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
 - 632 expected checks.
@@ -249,7 +249,7 @@ Exit criteria:
 | `groups` | maintain | table replay plus Alethe equality conflicts |
 | `rings` | maintain | BV fixed finite rings only when width is conceptually relevant |
 | `fields` | maintain | finite fields plus linear-algebra links; arbitrary-field facts horizon |
-| `polynomials` | deepen | polynomial identities now have a QF_LIA false-root regression; factorization has a QF_LRA/Farkas discriminant regression; root-finding has exact polynomial evaluation plus QF_LRA/Farkas bad-step and bad-width regressions |
+| `polynomials` | deepen | generated `bridge_polynomial_coefficient_factor_replay` now groups fixed identities, factor/division witnesses, finite coefficient windows, root-finding steps, derivative shadows, and rational polynomial-geometry obligations; polynomial identities have a QF_LIA false-root regression, factorization has a QF_LRA/Farkas discriminant regression, and root-finding has exact polynomial evaluation plus QF_LRA/Farkas bad-step and bad-width regressions |
 | `sequences-and-limits` | deepen | bounded Cauchy-tail, bad reciprocal-tail, and bounded monotone-prefix bad-bound rows now have QF_LRA/Farkas regressions; convergence theorems stay Lean horizon |
 | `counting` | maintain | finite-counting replay bridge now groups pigeonhole CNF/LRAT, coefficient-count, double-counting, finite orbit-count, and exact tail-count rows |
 | `number-theory` | maintain | bounded residue and Diophantine families |

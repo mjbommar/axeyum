@@ -45,7 +45,7 @@ with prose, fix the JSON, metadata, generator, or prose source.
 
 As of 2026-07-01, the public resource query reports:
 
-- 118 concept rows: 23 curriculum nodes, 18 math fields, 72 bridge concepts, and
+- 119 concept rows: 23 curriculum nodes, 18 math fields, 73 bridge concepts, and
   5 example families.
 - 108 non-template math packs.
 - 632 expected checks: 334 `sat`, 227 `unsat`, and 71 `not-run`.
@@ -465,11 +465,15 @@ Prefer one row, page, route upgrade, or query surface per commit.
    bounded examples.
 9. Deepen algebra by adding equality/certificate rows only when table replay
    and congruence proof tell different useful stories.
-10. Add rules/law examples only by reusing existing math proof shapes and the
+10. Landed: add `bridge_polynomial_coefficient_factor_replay` for fixed
+    polynomial coefficients, factor/division witnesses, coefficient windows,
+    root-finding steps, derivative shadows, and polynomial geometry obligations;
+    keep general factorization and algebraic closure as proof horizons.
+11. Add rules/law examples only by reusing existing math proof shapes and the
     current JSON boundary.
-11. Add schema fields only after validators and query scripts show repeated
+12. Add schema fields only after validators and query scripts show repeated
     awkwardness.
-12. Revisit crate/repo boundaries after consumer scripts have at least three
+13. Revisit crate/repo boundaries after consumer scripts have at least three
     duplicated access patterns.
 
 ## Validation Protocol
