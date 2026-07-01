@@ -16,7 +16,9 @@ Asks for `resident` and `in_state` to be equivalent while the same
 `emergency_housing` priority function returns different results. The intended
 QF_UF/Alethe route should reject this by congruence.
 
-Evidence today: explicit proof gap with source-linked QF_UF SMT-LIB artifact
+Evidence today: checked QF_UF/Alethe evidence emitted by
+`prove_qf_uf_unsat_alethe` and independently checked by `Evidence::check`,
+using the source-linked SMT-LIB artifact
 [`smt2/equivalent-categories-same-priority-qf-uf-conflict.smt2`](smt2/equivalent-categories-same-priority-qf-uf-conflict.smt2).
 
 ## `implementation_equivalence_qf_uf_gap`
@@ -25,5 +27,7 @@ Asks for the formal model and implementation to disagree after both respect
 the same category equivalence. This is the rules/law implementation-equivalence
 shape that needs QF_UF/Alethe rather than only Bool/QF_LIA or QF_LRA/Farkas.
 
-Evidence today: explicit proof gap with source-linked QF_UF SMT-LIB artifact
+Evidence today: checked QF_UF/Alethe evidence emitted by
+`prove_qf_uf_unsat_alethe` and independently checked by `Evidence::check`,
+using the source-linked SMT-LIB artifact
 [`smt2/implementation-equivalence-qf-uf-conflict.smt2`](smt2/implementation-equivalence-qf-uf-conflict.smt2).

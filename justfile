@@ -41,7 +41,7 @@ rules-as-code:
     python3 scripts/query-rules-as-code.py families --pack grant_allocation_v0 --text balanced --require-any
     python3 scripts/query-rules-as-code.py rows --pack grant_allocation_v0 --family balanced_budget_allocations --text 1/2 --limit 3 --require-any
     python3 scripts/query-rules-as-code.py packs --pack category_equivalence_v0 --require-any
-    python3 scripts/query-rules-as-code.py checks --pack category_equivalence_v0 --validation qf_uf_alethe_gap --proof-status proof-gap --require-any
+    python3 scripts/query-rules-as-code.py checks --pack category_equivalence_v0 --validation qf_uf_alethe_solver_regression --proof-status checked --require-any
     python3 scripts/query-rules-as-code.py families --pack category_equivalence_v0 --text equivalence --require-any
     python3 scripts/query-rules-as-code.py rows --pack category_equivalence_v0 --family equivalence_pair_rows --text emergency_housing --limit 3 --require-any
     python3 scripts/query-rules-as-code.py checks --text monotonicity --require-any

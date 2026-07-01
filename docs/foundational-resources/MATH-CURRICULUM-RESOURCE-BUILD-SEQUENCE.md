@@ -427,11 +427,11 @@ Pick one item per commit unless the change is purely navigational.
 16. Landed: add `category-equivalence-v0` as the role/category-equivalence
     rules/law example, reusing finite equivalence classes, category
     normalization, generated equivalence-pair rows, and source-linked
-    QF_UF/Alethe proof-gap artifacts through the current JSON boundary.
+    checked QF_UF/Alethe artifacts through the current JSON boundary.
 17. Add the next rules/law example only if it exercises a distinct current
-    math proof shape or a repeated consumer need, such as checked QF_UF/Alethe
-    evidence for category maps, graph reachability over workflow states, pure
-    Boolean CNF/LRAT coverage certificates, or multi-period allocation.
+    math proof shape or a repeated consumer need, such as richer category-map
+    congruence, graph reachability over workflow states, pure Boolean CNF/LRAT
+    coverage certificates, or multi-period allocation.
 
 ## Maintenance Commands
 

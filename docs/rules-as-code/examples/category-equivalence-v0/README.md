@@ -36,9 +36,8 @@ The bounded model samples three categories and two programs.
   executable category-normalization model in
   `scripts/validate-rules-as-code.py`.
 - The category-congruence and implementation-equivalence obligations are
-  source-linked QF_UF/Alethe proof gaps today. The SMT-LIB artifacts under
-  [`smt2/`](smt2/) are intentionally committed, but the rules/law harness does
-  not yet check them through a `rules_as_code_examples` Alethe regression.
+  source-linked QF_UF/Alethe rows checked through the
+  `rules_as_code_examples` regression harness with `Evidence::check`.
 - The pack does not prove anything about real benefits, housing programs, or
   statutory classification.
 
@@ -57,4 +56,5 @@ The bounded model samples three categories and two programs.
 python3 scripts/gen-rules-as-code-dashboard.py
 python3 scripts/validate-rules-as-code.py
 python3 scripts/query-rules-as-code.py packs --pack category_equivalence_v0 --require-any
+cargo test -p axeyum-solver --test rules_as_code_examples category_equivalence
 ```

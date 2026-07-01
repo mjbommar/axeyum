@@ -125,8 +125,8 @@ allocation shape.
 
 The sixth pack,
 [Category Equivalence V0](examples/category-equivalence-v0/README.md), reuses
-equivalence classes, finite functions, category normalization, and explicit
-QF_UF/Alethe proof-gap rows for a role/category classification shape.
+equivalence classes, finite functions, category normalization, and checked
+QF_UF/Alethe rows for a role/category classification shape.
 
 Validate the current packs with:
 

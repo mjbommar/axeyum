@@ -32,7 +32,7 @@ rule_packs=6
 bounded_sample_rows=1013
 generated_query_rows=1774
 check_results={'sat': 8, 'unsat': 24}
-proof_statuses={'checked': 22, 'proof-gap': 2, 'replayed': 8}
+proof_statuses={'checked': 24, 'replayed': 8}
 ```
 
 ## Find Packs By Pattern
@@ -110,20 +110,19 @@ implementation-equivalence rows. Each row points back through
 `expected.json` to an SMT-LIB artifact under the pack and a focused
 `rules_as_code_examples` regression.
 
-Category-equivalence QF_UF/Alethe proof gaps:
+Category-equivalence checked QF_UF/Alethe obligations:
 
 ```sh
 python3 scripts/query-rules-as-code.py checks \
   --pack category_equivalence_v0 \
-  --proof-status proof-gap \
-  --validation qf_uf_alethe_gap \
+  --proof-status checked \
+  --validation qf_uf_alethe_solver_regression \
   --require-any
 ```
 
-These rows are intentionally not counted as checked evidence yet. They expose
-source-linked QF_UF SMT-LIB artifacts that should graduate when the
-`rules_as_code_examples` harness emits and checks Alethe evidence for rule-pack
-category maps.
+These rows expose source-linked QF_UF SMT-LIB artifacts that the
+`rules_as_code_examples` harness proves with `prove_qf_uf_unsat_alethe` and
+checks with `Evidence::check`.
 
 ## Find Generated Query Families
 
@@ -262,7 +261,7 @@ python3 scripts/query-rules-as-code.py checks --pack grant_allocation_v0 --valid
 python3 scripts/query-rules-as-code.py families --pack grant_allocation_v0 --text balanced --require-any
 python3 scripts/query-rules-as-code.py rows --pack grant_allocation_v0 --family balanced_budget_allocations --text 1/2 --limit 3 --require-any
 python3 scripts/query-rules-as-code.py packs --pack category_equivalence_v0 --require-any
-python3 scripts/query-rules-as-code.py checks --pack category_equivalence_v0 --proof-status proof-gap --validation qf_uf_alethe_gap --require-any
+python3 scripts/query-rules-as-code.py checks --pack category_equivalence_v0 --proof-status checked --validation qf_uf_alethe_solver_regression --require-any
 python3 scripts/query-rules-as-code.py families --pack category_equivalence_v0 --text equivalence --require-any
 python3 scripts/query-rules-as-code.py rows --pack category_equivalence_v0 --family equivalence_pair_rows --text emergency_housing --limit 3 --require-any
 ```

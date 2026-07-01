@@ -29,5 +29,5 @@ both programs.
 | Check | Expected Result | Proof Status |
 |---|---|---|
 | `category_witnesses` | `sat` | finite witness replay |
-| `equivalent_categories_same_priority` | `unsat` | QF_UF/Alethe proof gap |
-| `implementation_equivalence_qf_uf_gap` | `unsat` | QF_UF/Alethe proof gap |
+| `equivalent_categories_same_priority` | `unsat` | checked QF_UF/Alethe evidence |
+| `implementation_equivalence_qf_uf_gap` | `unsat` | checked QF_UF/Alethe evidence |

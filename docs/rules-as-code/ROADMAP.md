@@ -65,7 +65,7 @@ late submission, bid-cap, score-monotonicity, and bounded implementation
 equivalence checks also have checked fixtures. Grant allocation budget-balance,
 minimum-share, administrative-cap, and bounded implementation-equivalence
 checks now have source-linked QF_LRA/Farkas fixtures. Category equivalence now
-has finite replay plus source-linked QF_UF/Alethe proof-gap artifacts for
+has finite replay plus source-linked checked QF_UF/Alethe artifacts for
 category congruence and implementation-equivalence rows. Checked fixtures are
 checked by
 `cargo test -p axeyum-solver --test rules_as_code_examples`; benefit threshold
@@ -310,7 +310,7 @@ allocation-style policy checks.
 
 Status: landed as
 [Category Equivalence V0](examples/category-equivalence-v0/README.md), with
-finite category/program replay plus source-linked QF_UF/Alethe proof-gap
+finite category/program replay plus source-linked checked QF_UF/Alethe
 artifacts for equivalent-category congruence and implementation equivalence.
 
 Model a tiny category-normalization rule:
@@ -325,12 +325,12 @@ Checks:
 
 - representative category/program witnesses replay over the finite sample;
 - equivalent categories cannot disagree on priority review for the same
-  program once QF_UF/Alethe evidence is connected;
-- implementation equivalence needs the same category-function congruence route.
+  program, checked through QF_UF/Alethe evidence;
+- implementation equivalence uses the same category-function congruence route.
 
 This pack exercises finite equivalence classes, category normalization,
-function congruence, and the explicit QF_UF/Alethe proof gap for rules/law
-category maps.
+function congruence, and checked QF_UF/Alethe evidence for rules/law category
+maps.
 
 ## Validation Checks
 
@@ -343,7 +343,7 @@ python3 scripts/gen-rules-as-code-dashboard.py
 python3 scripts/validate-rules-as-code.py
 python3 scripts/query-rules-as-code.py summary
 python3 scripts/query-rules-as-code.py packs --pack category_equivalence_v0 --require-any
-python3 scripts/query-rules-as-code.py checks --pack category_equivalence_v0 --proof-status proof-gap --require-any
+python3 scripts/query-rules-as-code.py checks --pack category_equivalence_v0 --proof-status checked --validation qf_uf_alethe_solver_regression --require-any
 python3 scripts/query-rules-as-code.py checks --text monotonicity --require-any
 python3 scripts/query-rules-as-code.py families --text adjacent --require-any
 ```

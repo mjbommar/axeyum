@@ -756,10 +756,12 @@ def validate_solver_fixture(pack_dir: Path, check: dict[str, Any]) -> None:
     if check["validation"] not in {
         "bool_qf_lia_solver_regression",
         "qf_lra_farkas_solver_regression",
+        "qf_uf_alethe_solver_regression",
     }:
         fail(
             f"{check_id} must use bool_qf_lia_solver_regression "
-            "or qf_lra_farkas_solver_regression validation"
+            "or qf_lra_farkas_solver_regression "
+            "or qf_uf_alethe_solver_regression validation"
         )
     data = check.get("data")
     if not isinstance(data, dict):
@@ -776,6 +778,11 @@ def validate_solver_fixture(pack_dir: Path, check: dict[str, Any]) -> None:
     certificate = require_string(f"{check_id}.data.certificate", data.get("certificate"))
     if "certified evidence" not in certificate or "Evidence::check" not in certificate:
         fail(f"{check_id}.data.certificate must document checked evidence")
+    if check["validation"] == "qf_uf_alethe_solver_regression":
+        if "prove_qf_uf_unsat_alethe" not in certificate:
+            fail(f"{check_id}.data.certificate must name prove_qf_uf_unsat_alethe")
+        if "checked_alethe" not in regression:
+            fail(f"{check_id}.data.proof_regression must name the Alethe regression")
 
 
 def validate_qf_uf_gap_fixture(pack_dir: Path, check: dict[str, Any]) -> None:

@@ -157,8 +157,8 @@ crosswalk:
 | Pack Check | Current Evidence | Crosswalk Pattern | Next Axeyum Upgrade |
 |---|---|---|---|
 | `category_witnesses` | concrete category/program witnesses replay | finite equivalence classes and category normalization | add minimized witness rendering for category-map edge cases if the domain grows |
-| `equivalent_categories_same_priority` | source-linked QF_UF SMT-LIB artifact marked proof-gap | equivalent categories and function congruence | emit and check QF_UF/Alethe evidence through `rules_as_code_examples` |
-| `implementation_equivalence_qf_uf_gap` | source-linked QF_UF SMT-LIB artifact marked proof-gap | model/implementation equivalence for category functions | graduate to checked QF_UF/Alethe once the rules/law harness supports that route |
+| `equivalent_categories_same_priority` | source-linked QF_UF/Alethe fixture with checked Axeyum evidence | equivalent categories and function congruence | add broader category-map variants only when they introduce distinct congruence pressure |
+| `implementation_equivalence_qf_uf_gap` | source-linked QF_UF/Alethe mismatch fixture with checked Axeyum evidence | model/implementation equivalence for category functions | reuse when later packs need category-function equivalence rather than arithmetic equivalence |
 
 ## Proof Route Reuse
 
@@ -219,8 +219,8 @@ exists.
 8. Landed: add
    [`category-equivalence-v0`](../rules-as-code/examples/category-equivalence-v0/),
    reusing finite equivalence classes, category normalization, generated
-   equivalence-pair rows, and source-linked QF_UF/Alethe proof-gap artifacts
-   for congruence and implementation-equivalence obligations.
+   equivalence-pair rows, and source-linked checked QF_UF/Alethe artifacts for
+   congruence and implementation-equivalence obligations.
 9. Promote only those rows that have deterministic replay plus a source-linked
    regression or proof route.
 

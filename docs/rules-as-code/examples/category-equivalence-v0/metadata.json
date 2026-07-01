@@ -28,6 +28,6 @@
     "equivalent_categories_same_priority",
     "implementation_equivalence_qf_uf_gap"
   ],
-  "axeyum_fragments": ["QF_UF", "finite replay", "Alethe horizon"],
-  "proof_expectation": "Representative category/program rows replay today. Category congruence and implementation equivalence are source-linked QF_UF/Alethe proof gaps until the rules/law harness has a checked Alethe regression."
+  "axeyum_fragments": ["QF_UF", "finite replay", "Alethe"],
+  "proof_expectation": "Representative category/program rows replay today. Category congruence and implementation equivalence are source-linked QF_UF/Alethe rows checked by the rules/law harness."
 }

@@ -280,7 +280,7 @@ def category_equivalence_metrics(
         ("bounded category/program rows", rows),
         ("equivalence-pair congruence rows", pair_rows),
         ("category replay witnesses", witness_count(expected, {"category_witnesses"})),
-        ("QF_UF/Alethe proof-gap fixtures", check_counts(expected)["proof-gap"]),
+        ("checked QF_UF/Alethe fixtures", check_counts(expected)["checked"]),
     ]
     return rows, families, "Generate category-normalization and equivalence-pair query rows across the bounded policy domain."
 
@@ -825,7 +825,7 @@ def render(packs: list[dict[str, Any]]) -> str:
         "benchmark; it records which finite rule domains can be expanded into",
         "generated coverage, equivalence, threshold, cap, or monotonicity checks.",
         "It now also includes rational-allocation rows for QF_LRA/Farkas and",
-        "category-equivalence rows that expose the QF_UF/Alethe proof gap.",
+        "checked category-equivalence rows for QF_UF/Alethe.",
         "",
         "## Summary",
         "",

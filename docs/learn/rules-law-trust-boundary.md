@@ -26,7 +26,7 @@ rule_packs=6
 bounded_sample_rows=1013
 generated_query_rows=1774
 check_results={'sat': 8, 'unsat': 24}
-proof_statuses={'checked': 22, 'proof-gap': 2, 'replayed': 8}
+proof_statuses={'checked': 24, 'replayed': 8}
 ```
 
 The six packs are deliberately small:
@@ -38,7 +38,7 @@ The six packs are deliberately small:
 | [tax benefit arithmetic](../rules-as-code/examples/tax-benefit-arithmetic-v0/README.md) | caps, phase-outs, monotone integer formulas | threshold/date witnesses replay; nonnegativity, cap, phase-out monotonicity, and equivalence obligations are checked |
 | [procurement scoring](../rules-as-code/examples/procurement-scoring-v0/README.md) | exclusions, deadlines, bid caps, score monotonicity | bonus-threshold witnesses replay; exclusion, deadline, cap, score monotonicity, and equivalence obligations are checked |
 | [grant allocation](../rules-as-code/examples/grant-allocation-v0/README.md) | exact rational shares, budget balance, minimum floors, administrative caps | allocation witnesses replay; budget, floor, cap, and equivalence obligations are checked through QF_LRA/Farkas |
-| [category equivalence](../rules-as-code/examples/category-equivalence-v0/README.md) | equivalent categories, normalization, priority program | category/program witnesses replay; category congruence and equivalence obligations are explicit QF_UF/Alethe proof gaps |
+| [category equivalence](../rules-as-code/examples/category-equivalence-v0/README.md) | equivalent categories, normalization, priority program | category/program witnesses replay; category congruence and equivalence obligations are checked QF_UF/Alethe rows |
 
 The model and evidence boundary is recorded in three places:
 
@@ -103,8 +103,8 @@ Representative checked shapes:
 | deny-over-permit | authorization `explicit_deny_precedence` | finite orders and Boolean replay |
 | bad threshold or cap | tax `cap_respected`, procurement `bid_cap_respected`, grant `admin_cap_respected` | QF_LIA for integer caps; QF_LRA/Farkas for rational shares |
 | bad monotonicity | benefit income, tax phase-out, procurement quality score | exact arithmetic monotonicity |
-| category congruence | category equivalence priority rows | finite equivalence classes; QF_UF/Alethe proof gap |
-| model vs implementation mismatch | checked in the Bool/QF_LIA and QF_LRA/Farkas packs; proof-gap for category equivalence | bounded equivalence and executable replay; QF_UF/Alethe when category functions are the issue |
+| category congruence | category equivalence priority rows | finite equivalence classes; checked QF_UF/Alethe |
+| model vs implementation mismatch | checked in the Bool/QF_LIA, QF_LRA/Farkas, and category-equivalence QF_UF packs | bounded equivalence and executable replay; QF_UF/Alethe when category functions are the issue |
 
 ## How To Read A Rule Pack
 
@@ -123,7 +123,7 @@ python3 scripts/gen-rules-as-code-dashboard.py
 python3 scripts/validate-rules-as-code.py
 python3 scripts/query-rules-as-code.py checks --text monotonicity --require-any
 python3 scripts/query-rules-as-code.py checks --pack grant_allocation_v0 --validation qf_lra_farkas_solver_regression --proof-status checked --require-any
-python3 scripts/query-rules-as-code.py checks --pack category_equivalence_v0 --proof-status proof-gap --require-any
+python3 scripts/query-rules-as-code.py checks --pack category_equivalence_v0 --proof-status checked --validation qf_uf_alethe_solver_regression --require-any
 python3 scripts/query-rules-as-code.py families --text adjacent --require-any
 cargo test -p axeyum-solver --test rules_as_code_examples
 ```
@@ -136,7 +136,7 @@ exercises a distinct proof shape or repeated consumer need:
 | Needed Shape | Why It Would Be New | Likely Route |
 |---|---|---|
 | workflow reachability | policy state transitions and forbidden paths, not just scalar facts | Boolean CNF/LRAT or finite graph replay |
-| checked role/category equivalence | the category pack now has source-linked QF_UF artifacts, but not checked Alethe evidence | QF_UF/Alethe |
+| additional role/category equivalence variants | the category pack now has checked QF_UF/Alethe evidence; add another only for a distinct classification or implementation-equivalence shape | QF_UF/Alethe |
 | pure Boolean coverage certificate | tiny coverage/consistency rows that should show proof-object anatomy | Boolean CNF/LRAT |
 | multi-period allocation | repeated rational budgets with carryover/state transitions | QF_LRA/Farkas plus finite transition replay |
 

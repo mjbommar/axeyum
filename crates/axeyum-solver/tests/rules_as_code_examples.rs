@@ -5,7 +5,9 @@
 //! must independently re-check against the parsed SMT-LIB obligation.
 
 use axeyum_smtlib::parse_script;
-use axeyum_solver::{CheckResult, SolverConfig, check_auto, produce_evidence};
+use axeyum_solver::{
+    CheckResult, Evidence, SolverConfig, check_auto, produce_evidence, prove_qf_uf_unsat_alethe,
+};
 
 const BENEFIT_ELIGIBILITY_CONSISTENCY: &str = include_str!(
     "../../../docs/rules-as-code/examples/benefit-eligibility-v0/smt2/consistency-bool-qf-lia-conflict.smt2"
@@ -72,6 +74,12 @@ const GRANT_ALLOCATION_ADMIN_CAP: &str = include_str!(
 );
 const GRANT_ALLOCATION_IMPLEMENTATION_EQUIVALENCE: &str = include_str!(
     "../../../docs/rules-as-code/examples/grant-allocation-v0/smt2/implementation-equivalence-farkas-conflict.smt2"
+);
+const CATEGORY_EQUIVALENCE_SAME_PRIORITY: &str = include_str!(
+    "../../../docs/rules-as-code/examples/category-equivalence-v0/smt2/equivalent-categories-same-priority-qf-uf-conflict.smt2"
+);
+const CATEGORY_EQUIVALENCE_IMPLEMENTATION_EQUIVALENCE: &str = include_str!(
+    "../../../docs/rules-as-code/examples/category-equivalence-v0/smt2/implementation-equivalence-qf-uf-conflict.smt2"
 );
 
 #[test]
@@ -250,6 +258,22 @@ fn grant_allocation_implementation_equivalence_emits_checked_evidence() {
     );
 }
 
+#[test]
+fn category_equivalence_same_priority_emits_checked_alethe() {
+    assert_rule_qf_uf_alethe(
+        "category-equivalence-v0 equivalent categories same priority",
+        CATEGORY_EQUIVALENCE_SAME_PRIORITY,
+    );
+}
+
+#[test]
+fn category_equivalence_implementation_equivalence_emits_checked_alethe() {
+    assert_rule_qf_uf_alethe(
+        "category-equivalence-v0 implementation equivalence",
+        CATEGORY_EQUIVALENCE_IMPLEMENTATION_EQUIVALENCE,
+    );
+}
+
 fn assert_rule_unsat_evidence(label: &str, smt2: &str) {
     let mut script = parse_script(smt2)
         .unwrap_or_else(|error| panic!("{label}: rule SMT-LIB artifact parses: {error}"));
@@ -271,5 +295,26 @@ fn assert_rule_unsat_evidence(label: &str, smt2: &str) {
     assert!(
         report.evidence.check(&script.arena, &assertions).unwrap(),
         "{label}: evidence must independently re-check"
+    );
+}
+
+fn assert_rule_qf_uf_alethe(label: &str, smt2: &str) {
+    let mut script = parse_script(smt2)
+        .unwrap_or_else(|error| panic!("{label}: rule SMT-LIB artifact parses: {error}"));
+    let assertions = script.assertions.clone();
+
+    assert_eq!(
+        check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap(),
+        CheckResult::Unsat,
+        "{label}: rule obligation must be unsat"
+    );
+
+    let proof = prove_qf_uf_unsat_alethe(&script.arena, &assertions)
+        .unwrap_or_else(|| panic!("{label}: rule obligation emits a pure EUF Alethe proof"));
+    let evidence = Evidence::UnsatAletheProof(proof);
+    assert!(evidence.is_certified());
+    assert!(
+        evidence.check(&script.arena, &assertions).unwrap(),
+        "{label}: Alethe certificate must independently re-check"
     );
 }

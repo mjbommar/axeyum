@@ -1133,7 +1133,7 @@ shapes, source math packs, Axeyum fragments, proof routes, and the current
 `tax-benefit-arithmetic-v0` mappings, plus the
 `procurement-scoring-v0` exclusion/deadline/bid-cap/bonus mapping and the
 `grant-allocation-v0` rational-share/budget/cap mapping, plus the
-`category-equivalence-v0` category-normalization and QF_UF/Alethe proof-gap
+`category-equivalence-v0` category-normalization and checked QF_UF/Alethe
 mapping.
 
 Next work:
@@ -1144,11 +1144,11 @@ Next work:
   reference patterns for generated multi-row coverage/equivalence and
   threshold/cap/deadline queries. Use `grant-allocation-v0` as the QF_LRA/Farkas
   reference for rational allocation, exact shares, and budget-balance queries.
-  Use `category-equivalence-v0` as the QF_UF/Alethe proof-gap reference for
+  Use `category-equivalence-v0` as the checked QF_UF/Alethe reference for
   role/category equivalence and quotient-like classification queries.
   Status: the deterministic generated query-row JSON under
   [`../rules-as-code/generated/queries/`](../rules-as-code/generated/queries/)
-  now materializes 1,774 replayed/proof-gap rows from the six current rule
+  now materializes 1,774 bounded generated rows from the six current rule
   packs, and
   the generated
   [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
@@ -1227,9 +1227,9 @@ Pick one item per commit unless the change is purely navigational.
    to 1,766 replayed rows across five packs.
 14. Landed: add `category-equivalence-v0` as the sixth rules/law pack, with
    finite category/program replay, generated equivalence-pair rows, and
-   source-linked QF_UF/Alethe proof-gap artifacts for category congruence and
+   source-linked checked QF_UF/Alethe artifacts for category congruence and
    implementation equivalence. The generated query-row JSON now brings the
-   rules/law surface to 1,774 replayed/proof-gap rows across six packs.
+   rules/law surface to 1,774 bounded generated rows across six packs.
 15. Landed: add
    [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) plus
    `scripts/query-rules-as-code.py` so downstream consumers can query rule
@@ -1712,8 +1712,9 @@ Pick one item per commit unless the change is purely navigational.
     [`category-equivalence-v0`](../rules-as-code/examples/category-equivalence-v0/)
     as a category-normalization rules/law pack that reuses finite equivalence
     classes, generated equivalence-pair rows, and source-linked QF_UF/Alethe
-    proof-gap artifacts. The generated rules query surface now reports 1,013
-    bounded sample rows and 1,774 generated query rows across six packs.
+    checked artifacts. The generated rules query surface now reports 1,013
+    bounded sample rows, 1,774 generated query rows, and 24 checked obligations
+    across six packs.
 77e. Landed: add
     [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) plus
     `scripts/query-rules-as-code.py` as the rules/law consumer query surface,

@@ -1,9 +1,8 @@
-; QF_UF implementation-equivalence gap for category-equivalence-v0.
+; QF_UF implementation-equivalence check for category-equivalence-v0.
 ;
 ; The model and implementation both respect the same category equivalence. A
 ; mismatch across equivalent categories for the same program is inconsistent by
-; congruence, but this rules/law row is still a proof-gap until the harness
-; checks QF_UF/Alethe evidence for rule packs.
+; congruence and is checked by the rules/law QF_UF/Alethe regression.
 (set-logic QF_UF)
 (declare-sort Category 0)
 (declare-sort Program 0)

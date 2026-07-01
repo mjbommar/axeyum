@@ -256,8 +256,8 @@ Current resource-buildout status (2026-07-01): the public JSON layer reports
 120 concept rows, 108 non-template packs, 647 expected checks (336 `sat`,
 240 `unsat`, 71 `not-run`), 322 checked rows, 254 replay-only rows, and 71
 Lean-horizon rows. The rules/law JSON layer now reports 6 packs, 1,013
-bounded sample rows, 1,774 generated query rows, 22 checked obligations, 8
-replayed witness rows, and 2 explicit QF_UF/Alethe proof-gap rows. The learner
+bounded sample rows, 1,774 generated query rows, 24 checked obligations, and
+8 replayed witness rows. The learner
 coverage audit records all 108 non-template packs as focused-lesson linked,
 with no path-only, index-only, or missing learner buckets. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite

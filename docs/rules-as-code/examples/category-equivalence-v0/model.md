@@ -41,9 +41,9 @@ This pack reuses current math-resource proof shapes:
 
 - finite replay over a bounded category/program table;
 - equivalence-class and finite-function concepts for category normalization;
-- QF_UF/Alethe as the intended route for congruence conflicts where equivalent
-  categories are assigned different results.
+- checked QF_UF/Alethe evidence for congruence conflicts where equivalent
+  categories are assigned different priority-status results.
 
-The QF_UF/Alethe rows remain proof gaps in the rules/law harness until the
-source-linked SMT-LIB artifacts are connected to a checked
-`rules_as_code_examples` Alethe regression.
+The QF_UF/Alethe rows use a small `PriorityStatus` result sort in the SMT-LIB
+artifacts so the source-level Bool decision is represented as an equality
+conflict that the pure EUF proof emitter can certify.
