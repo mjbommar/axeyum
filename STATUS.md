@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Convexity rational bad affine-threshold QF_LRA row landed.**
+  `convexity-rational-v0` now includes a checked rejection for a malformed
+  affine-threshold sample: exact replay computes `g(1/2) = -1/2` for
+  `g(x)=3x-2`, so the claimed threshold output `1` has shortfall `3/2`. The
+  validator pins the source witness, exact shortfall arithmetic, SMT-LIB
+  artifact, regression, and independently checked `UnsatFarkas` certificate.
+  The shared `math_resource_lra_routes` regression parses the artifact and
+  checks the Farkas evidence. Generated dashboards and the public query summary
+  now report 111 concept rows, 108 non-template packs, 612 expected checks, 289
+  checked rows, 252 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite-proximal-gradient box-plus-L1 QF_LRA row landed.**
   `finite-proximal-gradient-v0` now includes a box-constrained L1 proximal
   replay row: exact replay computes the ordinary trial point `3/2`, the
@@ -216,7 +227,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   artifact, and regression; the shared `math_resource_lra_routes` regression
   parses the artifact and checks `UnsatFarkas` evidence. Generated dashboards
   and the public query summary now report 111 concept rows, 108 non-template
-  packs, 611 expected checks, 288 checked rows, 252 replay-only rows, and 71
+  packs, 612 expected checks, 289 checked rows, 252 replay-only rows, and 71
   Lean-horizon rows.
 
 - **Finite-active-set degenerate multiplier QF_LRA row landed.**
@@ -2195,9 +2206,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Convexity QF_LRA/Farkas regression landed.**
   [`convexity-rational-v0`](artifacts/examples/math/convexity-rational-v0/)
-  now binds its bad midpoint-convexity row to Axeyum's evidence path. The
-  shared LRA resource regression builds the division-free inequality
-  `2*f(midpoint) <= f(left)+f(right)` over the fixed values, requires
+  now binds its bad midpoint-convexity and bad affine-threshold rows to
+  Axeyum's evidence path. The shared LRA resource regression builds the
+  division-free inequality `2*f(midpoint) <= f(left)+f(right)` over the fixed
+  values and parses the threshold-shortfall SMT-LIB artifact, requires
   `UnsatFarkas` evidence, and rechecks the certificate independently.
 
 - **Finite-concentration QF_LRA/Farkas regression landed.**
@@ -3287,9 +3299,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`convexity-rational-end-to-end.md`](docs/learn/math/convexity-rational-end-to-end.md)
   as the learner-facing trace for the convexity pack: exact midpoint Jensen
   replay, finite-grid second differences, affine threshold monotonicity,
-  checked bad midpoint-convexity rejection, and the Lean horizon for general
-  convex analysis. The lesson is linked from the math learning index plus the
-  rational/real and linear-algebra/optimization paths.
+  checked bad midpoint-convexity and affine-threshold rejections, and the Lean
+  horizon for general convex analysis. The lesson is linked from the math
+  learning index plus the rational/real and linear-algebra/optimization paths.
 
 - **Rational multivariable-calculus end-to-end lesson landed.** Added
   [`multivariable-calculus-end-to-end.md`](docs/learn/math/multivariable-calculus-end-to-end.md)
@@ -3898,8 +3910,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`convexity-rational-v0`](artifacts/examples/math/convexity-rational-v0/README.md)
   as the exact finite convexity bridge for the optimization-and-convexity
   field. The pack validates midpoint Jensen replay for `x^2`, finite-grid
-  second differences, affine threshold monotonicity, checked rejection of a bad
-  midpoint-convexity claim, and a general convex-analysis Lean-horizon row.
+  second differences, affine threshold monotonicity, checked rejection of bad
+  midpoint-convexity and affine-threshold claims, and a general
+  convex-analysis Lean-horizon row.
   The foundational example-pack validator now checks exact rational midpoint
   averages, equal-spaced convex grids, affine threshold samples, and finite
   convexity counterexamples.
@@ -14064,8 +14077,9 @@ plan is built and committed on the current branch:
   Added
   [`artifacts/examples/math/convexity-rational-v0/`](artifacts/examples/math/convexity-rational-v0/)
   with exact rational midpoint Jensen replay, finite-grid second differences,
-  affine threshold monotonicity, checked bad midpoint-convexity rejection, and
-  a general convex-analysis Lean-horizon row. Extended
+  affine threshold monotonicity, checked bad midpoint-convexity and
+  affine-threshold rejections, and a general convex-analysis Lean-horizon row.
+  Extended
   [`validate-foundational-example-pack.py`](scripts/validate-foundational-example-pack.py)
   to check exact rational convexity grids, midpoint averages, affine threshold
   samples, and finite convexity counterexamples.

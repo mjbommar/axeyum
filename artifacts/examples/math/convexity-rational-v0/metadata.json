@@ -33,12 +33,13 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "bad midpoint-convexity QF_LRA/Farkas regression seed",
-    "pressure": "Division-free midpoint-convexity conflict where f(-1)=0, f(0)=1, and f(1)=0 force the false inequality 2*f(0) <= f(-1)+f(1).",
+    "target": "bad midpoint-convexity and bad affine-threshold QF_LRA/Farkas regression seeds",
+    "pressure": "Division-free midpoint-convexity conflict where f(-1)=0, f(0)=1, and f(1)=0 force the false inequality 2*f(0) <= f(-1)+f(1), plus an affine threshold shortfall where g(1/2) = -1/2 cannot satisfy g(x) >= 1.",
     "evidence": [
-      "bad-midpoint-convexity-rejected"
+      "bad-midpoint-convexity-rejected",
+      "bad-affine-threshold-rejected"
     ],
-    "next_step": "Promote additional convexity rows only when they add distinct exact-rational midpoint, separation, or threshold pressure; keep general Jensen, separation, SDP, and convergence theorems in the Lean-horizon lane."
+    "next_step": "Promote additional convexity rows only when they add distinct exact-rational midpoint families, separation, epigraph/feasibility, or threshold variants beyond the current affine row; keep general Jensen, separation, SDP, and convergence theorems in the Lean-horizon lane."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -50,6 +51,7 @@
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "artifacts/examples/math/convexity-rational-v0/smt2/bad-midpoint-convexity-farkas-conflict.smt2",
+    "artifacts/examples/math/convexity-rational-v0/smt2/bad-affine-threshold-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
@@ -57,12 +59,13 @@
     "finite-convex-grid-second-differences",
     "affine-monotone-threshold-witness",
     "bad-midpoint-convexity-rejected",
+    "bad-affine-threshold-rejected",
     "general-convex-analysis-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite convexity, monotonicity, and threshold checks as exact rational obligations.",
     "Replay midpoint and grid convexity witnesses without floating-point tolerances.",
-    "Keep the bad midpoint-convexity row on Axeyum's checked Farkas evidence path.",
+    "Keep the bad midpoint-convexity and bad affine-threshold rows on Axeyum's checked Farkas evidence path.",
     "Keep general convex analysis, separation theorems, SDP, and convergence proofs marked Lean-horizon until proof artifacts exist."
   ]
 }

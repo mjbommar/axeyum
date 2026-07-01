@@ -790,8 +790,8 @@ coefficient claims, and a regression-statistics Lean-horizon row.
 witnesses, objective-threshold replay, and a tiny checked Farkas certificate.
 `artifacts/examples/math/convexity-rational-v0/` now validates exact rational
 midpoint convexity, finite-grid second differences, affine monotonicity
-threshold replay, checked rejection of a bad midpoint-convexity claim, and a
-general convex-analysis Lean-horizon row.
+threshold replay, checked rejection of bad midpoint-convexity and
+affine-threshold claims, and a general convex-analysis Lean-horizon row.
 `artifacts/examples/math/multivariable-calculus-rational-v0/` now validates
 exact rational gradient/value replay, directional-derivative dot products,
 Jacobian chain-rule matrix replay, Hessian positive-definiteness by principal
@@ -1015,7 +1015,8 @@ Recommended order:
    rejection.
 4. `linear-optimization-v0`: LP feasibility, threshold cliffs, Farkas links.
 5. `convexity-rational-v0`: midpoint convexity, finite second differences,
-   monotonicity thresholds, and bad midpoint-convexity rejection.
+   monotonicity thresholds, and checked bad midpoint-convexity plus
+   affine-threshold rejection.
 6. `multivariable-calculus-rational-v0`: exact rational gradients,
    directional derivatives, Jacobian chain-rule replay, Hessian minors, and
    bad-gradient rejection for calculus, optimization, and numerical analysis.
@@ -1522,7 +1523,8 @@ non-injective inverse counterexample, a QF_UF/Alethe composition-application
 proof row, and general function-law Lean-horizon examples.
 `convexity-rational-v0` now adds the first exact finite convexity bridge for
 optimization learners: midpoint Jensen replay, finite second differences,
-affine threshold monotonicity, and bad midpoint-convexity rejection.
+affine threshold monotonicity, and checked bad midpoint-convexity plus
+affine-threshold rejection.
 `spectral-linear-algebra-v0` now adds the first exact finite
 spectral-linear-algebra slice for eigenpair, Rayleigh quotient, and
 decomposition replay, with checked QF_LRA/Farkas false-eigenpair rejection.
@@ -1689,7 +1691,8 @@ minor checks for local convexity, checked bad-gradient rejection, and a
 multivariable-analysis Lean-horizon row.
 `convexity-rational-v0` now has a learner-facing end-to-end lesson for exact
 midpoint Jensen replay, finite second-difference checks, affine threshold
-monotonicity, checked bad midpoint-convexity rejection, and the general
+monotonicity, checked bad midpoint-convexity and affine-threshold rejections,
+and the general
 convex-analysis Lean horizon.
 `finite-kkt-v0` now has a learner-facing end-to-end lesson for exact
 constrained-quadratic grid replay, KKT stationarity and complementary
@@ -1990,7 +1993,9 @@ through a source-linked Axeyum `UnsatFarkas` artifact rather than only
 pack-local multiplier replay.
 `convexity-rational-v0` now routes its bad midpoint-convexity row through the
 same source-linked checked Farkas evidence path after reducing the midpoint
-inequality to division-free linear form.
+inequality to division-free linear form, and now routes a bad affine-threshold
+row through the same path after exact replay computes the shortfall
+`1 - g(1/2) = 3/2`.
 `finite-concentration-v0` now routes its bad finite tail-bound and bad
 union-bound rows through source-linked checked Farkas evidence paths after
 finite replay computes the tail probability and the exact event-union

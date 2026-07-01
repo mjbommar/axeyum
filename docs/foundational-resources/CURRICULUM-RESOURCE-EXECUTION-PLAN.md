@@ -258,7 +258,8 @@ Add bridge-concept or example-family rows for repeated subtopics:
   integration, random-variable, conditional-expectation, and martingale packs
   while leaving Lebesgue/convergence/almost-everywhere claims as Lean horizons;
 - optimization/convexity: landed bridge rows for exact LP
-  objective-threshold/Farkas replay and rational convexity/gradient shadows,
+  objective-threshold/Farkas replay and rational convexity/gradient shadows
+  with checked bad midpoint and affine-threshold evidence,
   backed by linear optimization, convexity, multivariable calculus,
   least-squares, residual, finite KKT, finite active-set QP, finite SDP, finite
   gradient descent, finite line search, finite Wolfe line search, finite

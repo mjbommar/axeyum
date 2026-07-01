@@ -543,6 +543,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geomet
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_ptolemy_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes convexity_bad_
 ```
 
 For fuller traces through exact fraction replay, bounded rational

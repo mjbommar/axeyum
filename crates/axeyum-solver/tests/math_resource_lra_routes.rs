@@ -22,6 +22,9 @@ const LINEAR_OPTIMIZATION_OBJECTIVE_THRESHOLD: &str = include_str!(
 const CONVEXITY_BAD_MIDPOINT: &str = include_str!(
     "../../../artifacts/examples/math/convexity-rational-v0/smt2/bad-midpoint-convexity-farkas-conflict.smt2"
 );
+const CONVEXITY_BAD_AFFINE_THRESHOLD: &str = include_str!(
+    "../../../artifacts/examples/math/convexity-rational-v0/smt2/bad-affine-threshold-farkas-conflict.smt2"
+);
 const DESCRIPTIVE_STATS_BAD_VARIANCE: &str = include_str!(
     "../../../artifacts/examples/math/descriptive-statistics-v0/smt2/bad-variance-farkas-conflict.smt2"
 );
@@ -550,6 +553,14 @@ fn convexity_bad_midpoint_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "convexity-rational-v0 bad-midpoint SMT-LIB artifact",
         CONVEXITY_BAD_MIDPOINT,
+    );
+}
+
+#[test]
+fn convexity_bad_affine_threshold_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "convexity-rational-v0 bad-affine-threshold SMT-LIB artifact",
+        CONVEXITY_BAD_AFFINE_THRESHOLD,
     );
 }
 

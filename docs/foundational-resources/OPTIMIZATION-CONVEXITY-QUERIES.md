@@ -56,6 +56,7 @@ needs concrete checked rows to display.
 |---|---|---|---|
 | LP objective thresholds and Farkas anatomy | `bridge_lp_objective_farkas` | `Farkas` | `checks --concept bridge_lp_objective_farkas --route Farkas --proof-status checked` |
 | Convexity, separation, KKT, QP, SDP, and finite first-order method shadows | `bridge_rational_convexity_shadow` | `Farkas` | `checks --concept bridge_rational_convexity_shadow --route Farkas --proof-status checked` |
+| Affine-threshold convexity display row | pack `convexity-rational-v0`, text `threshold` | `Farkas` | `checks --pack convexity-rational-v0 --route Farkas --proof-status checked --text threshold` |
 | Inner-product projection and least-squares optimality rows | `bridge_inner_product_projection` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked` |
 | Residual bounds and regression/numerical optimization rows | `bridge_residual_bound` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked` |
 | Exact arithmetic and numerical-honesty rows | `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked` |
@@ -104,6 +105,17 @@ python3 scripts/query-foundational-resources.py checks \
   --concept bridge_rational_convexity_shadow \
   --route Farkas \
   --proof-status checked \
+  --require-any
+```
+
+Display the checked convexity threshold conflict row:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack convexity-rational-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text threshold \
   --require-any
 ```
 

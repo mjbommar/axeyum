@@ -91,6 +91,24 @@
       "notes": "The validator rejects the claim because the midpoint value is greater than the endpoint average; the Axeyum regression refutes the division-free inequality 2*f(midpoint) <= f(left)+f(right) with rechecked Farkas evidence."
     },
     {
+      "id": "bad-affine-threshold-rejected",
+      "claim": "For g(x) = 3x - 2, the malformed sample x = 1/2 is an admissible threshold sample with g(x) >= 1.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_affine_threshold_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "affine-threshold",
+        "claimed_input": "1/2",
+        "computed_value": "-1/2",
+        "threshold_output": "1",
+        "threshold_shortfall": "3/2",
+        "smt2_artifact": "artifacts/examples/math/convexity-rational-v0/smt2/bad-affine-threshold-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes convexity_bad_affine_threshold_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes g(1/2) = -1/2, below the required threshold output 1; the Axeyum regression refutes the nonpositive-shortfall claim with rechecked Farkas evidence."
+    },
+    {
       "id": "general-convex-analysis-lean-horizon",
       "claim": "General convex-analysis theorems require future Lean resources.",
       "expected_result": "not-run",

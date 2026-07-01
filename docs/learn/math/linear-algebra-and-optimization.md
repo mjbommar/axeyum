@@ -126,8 +126,8 @@ universal-coefficient shadow slice dualizes a one-entry integer boundary
 matrix, replays `H^1 = Z/2`, checks the fixed degree-one Hom/Ext row, and
 rejects a bad `H^1 = 0` identity with QF_UF/Alethe evidence. The finite
 convexity slice checks midpoint Jensen replay, finite-grid second differences,
-affine threshold monotonicity, and bad midpoint-convexity rejection over exact
-rational data. The finite
+affine threshold monotonicity, and bad midpoint-convexity plus affine-threshold
+rejections over exact rational data. The finite
 Chebyshev-system slice checks Vandermonde unisolvence, interpolation replay,
 alternating residual signs, duplicate-node rejection, and a checked bad
 interpolation sample plus a checked bad alternation-magnitude claim over exact

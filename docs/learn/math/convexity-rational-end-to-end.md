@@ -2,7 +2,7 @@
 
 This lesson follows one exact rational convexity resource from midpoint Jensen
 replay to finite second differences, affine threshold monotonicity, and a
-checked bad midpoint-convexity rejection. It uses the
+checked bad midpoint-convexity and affine-threshold rejection. It uses the
 [convexity-rational-v0](../../../artifacts/examples/math/convexity-rational-v0/)
 pack.
 
@@ -23,11 +23,12 @@ Concept rows:
 | `finite-convex-grid-second-differences` | `sat` | replay-only |
 | `affine-monotone-threshold-witness` | `sat` | replay-only |
 | `bad-midpoint-convexity-rejected` | `unsat` | checked |
+| `bad-affine-threshold-rejected` | `unsat` | checked |
 | `general-convex-analysis-lean-horizon` | `not-run` | lean-horizon |
 
-The positive rows replay finite exact-rational inequalities. The negative row
-is a checked counterexample to a false midpoint-convexity claim. The pack does
-not claim general convex analysis.
+The positive rows replay finite exact-rational inequalities. The negative rows
+are checked counterexamples to false midpoint-convexity and threshold claims.
+The pack does not claim general convex analysis.
 
 ## Replay Midpoint Jensen
 
@@ -133,6 +134,23 @@ right_value = 0
 The search result is not trusted by itself. The trusted part is the independent
 Farkas certificate check over exact rational multipliers.
 
+## Reject A Bad Affine Threshold Claim
+
+The threshold witness says `g(x) = 3*x - 2` reaches output `1` at input `1`.
+A malformed row claims the sample `x = 1/2` is admissible and still satisfies
+`g(x) >= 1`.
+
+Exact replay computes:
+
+```text
+g(1/2) = 3/2 - 2 = -1/2
+threshold shortfall = 1 - (-1/2) = 3/2
+```
+
+The source SMT-LIB artifact asserts both `threshold_shortfall = 3/2` and
+`threshold_shortfall <= 0`. Axeyum may search for the contradiction, but the
+trusted part is again the independently checked `UnsatFarkas` certificate.
+
 ## Name The Lean Horizon
 
 The final row records the theorem-prover boundary:
@@ -156,7 +174,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes convexity_bad_midpoint_claim_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes convexity_bad_
 ```
 
 Expected output:

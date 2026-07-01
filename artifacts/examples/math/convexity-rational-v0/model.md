@@ -79,3 +79,25 @@ right_value = 0
 
 The final inequality would force `2 <= 0`, so the `QF_LRA` route emits
 `UnsatFarkas` evidence and rechecks the certificate independently.
+
+## Bad Affine Threshold Claim
+
+The bad threshold row reuses:
+
+```text
+g(x) = 3x - 2
+threshold output = 1
+claimed input = 1/2
+```
+
+Exact replay computes:
+
+```text
+g(1/2) = 3/2 - 2 = -1/2
+1 - g(1/2) = 3/2
+```
+
+The malformed row claims the shortfall is nonpositive. The SMT-LIB artifact
+asserts both `threshold_shortfall = 3/2` and `threshold_shortfall <= 0`, so the
+`QF_LRA` route emits `UnsatFarkas` evidence and rechecks the certificate
+independently.

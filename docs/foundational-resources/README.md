@@ -444,7 +444,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/convexity-rational-v0/`](../../artifacts/examples/math/convexity-rational-v0/)
   validates exact rational midpoint convexity, finite-grid second
   differences, affine threshold monotonicity, checked bad midpoint-convexity
-  rejection, and a general convex-analysis Lean-horizon row.
+  and affine-threshold rejections, and a general convex-analysis Lean-horizon
+  row.
 - [`artifacts/examples/math/finite-kkt-v0/`](../../artifacts/examples/math/finite-kkt-v0/)
   validates exact constrained-quadratic grid replay, KKT stationarity,
   complementary slackness, checked bad-stationarity rejection, and a general

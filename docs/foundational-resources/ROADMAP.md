@@ -597,8 +597,8 @@ validates exact LP feasibility witnesses, objective-threshold replay, and a
 tiny checked Farkas infeasibility certificate.
 [`convexity-rational-v0`](../../artifacts/examples/math/convexity-rational-v0/)
 validates exact rational midpoint convexity, finite-grid second differences,
-affine threshold monotonicity, checked bad midpoint-convexity rejection, and a
-general convex-analysis Lean-horizon row.
+affine threshold monotonicity, checked bad midpoint-convexity and
+affine-threshold rejections, and a general convex-analysis Lean-horizon row.
 [`coordinate-geometry-v0`](../../artifacts/examples/math/coordinate-geometry-v0/)
 validates exact midpoint, collinearity, squared-distance coordinate checks, and
 checked rejection of bad midpoint-coordinate and squared-distance claims.

@@ -3024,7 +3024,7 @@
           "id": "convexity-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/convexity-rational-v0",
-          "notes": "Finite midpoint-convexity, second-difference, affine-threshold, and bad midpoint-convexity rows."
+          "notes": "Finite midpoint-convexity, second-difference, affine-threshold, bad midpoint-convexity, and bad affine-threshold rows."
         },
         {
           "id": "multivariable-calculus-rational-v0",
@@ -11230,7 +11230,7 @@
           "id": "convexity-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/convexity-rational-v0",
-          "notes": "Finite midpoint convexity, second differences, affine threshold monotonicity, and bad midpoint-convexity rejection."
+          "notes": "Finite midpoint convexity, second differences, affine threshold monotonicity, and checked bad midpoint-convexity plus affine-threshold rejection."
         },
         {
           "id": "multivariable-calculus-rational-v0",

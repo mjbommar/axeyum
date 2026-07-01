@@ -513,7 +513,7 @@ FIELD_PACKS = {
     "statistics": ("descriptive-statistics-v0", "Mean/variance identities, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, and Simpson witnesses."),
     "optimization_and_convexity": [
         ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
-        ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and bad midpoint-convexity rejection."),
+        ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and checked bad midpoint-convexity plus affine-threshold rejection."),
         ("multivariable-calculus-rational-v0", "Exact gradients, directional derivatives, Hessian minors, and local convexity shadows."),
         ("inner-product-spaces-rational-v0", "Exact rational projections, Gram matrices, and orthogonal residual checks."),
         ("finite-separation-v0", "Finite convex-hull and hyperplane-separation replay with checked bad-separator rejection."),
@@ -1515,7 +1515,7 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "convexity-rational-v0",
-                "Finite midpoint-convexity, second-difference, affine-threshold, and bad midpoint-convexity rows.",
+                "Finite midpoint-convexity, second-difference, affine-threshold, bad midpoint-convexity, and bad affine-threshold rows.",
             ),
             (
                 "multivariable-calculus-rational-v0",

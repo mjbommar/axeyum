@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 611 expected checks.
-- 288 checked proof/evidence rows.
+- 612 expected checks.
+- 289 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -880,11 +880,12 @@ Build next:
   search now adds sufficient-decrease and curvature replay. Finite projected
   gradient now adds interval projection after a trial step. Finite proximal
   gradient now adds L1 soft-threshold and box-plus-L1 constrained replay after
-  a trial step. Add narrower
+  a trial step. Convexity rational rows now include checked bad midpoint and
+  affine-threshold evidence. Add narrower
   rows only when multiple packs need distinct duality, working-set pivots,
   higher-dimensional SDP, strong-Wolfe/nonconvex
-  line-search, group-lasso proximal, affine monotonicity, or stochastic convergence
-  vocabulary.
+  line-search, group-lasso proximal, affine-threshold variants beyond the
+  current row, or stochastic convergence vocabulary.
 - Promote small infeasible LP/convexity/root-finding/separation/KKT/active-set
   QP/SDP/descent, line-search, Wolfe-line-search, projected-gradient, and
   proximal-gradient rows through QF_LRA/Farkas.

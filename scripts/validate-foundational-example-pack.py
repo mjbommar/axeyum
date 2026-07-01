@@ -13883,6 +13883,52 @@ def validate_convexity_rational(expected: dict[str, Any]) -> None:
     if midpoint_value <= convex_combination:
         fail("bad-midpoint-convexity-rejected midpoint inequality unexpectedly holds")
 
+    bad_threshold = checks["bad-affine-threshold-rejected"]
+    if bad_threshold["expected_result"] != "unsat" or bad_threshold.get("proof_status") != "checked":
+        fail("bad-affine-threshold-rejected must be a checked unsat row")
+    data = bad_threshold.get("data", {})
+    source_witness = data.get("source_witness")
+    require_string("bad affine threshold source_witness", source_witness)
+    if source_witness != "affine-threshold":
+        fail("bad-affine-threshold-rejected must cite the affine-threshold witness")
+    claimed_input = require_fraction("bad affine threshold claimed_input", data.get("claimed_input"))
+    computed_value = require_fraction("bad affine threshold computed_value", data.get("computed_value"))
+    bad_threshold_output = require_fraction(
+        "bad affine threshold threshold_output",
+        data.get("threshold_output"),
+    )
+    threshold_shortfall = require_fraction(
+        "bad affine threshold threshold_shortfall",
+        data.get("threshold_shortfall"),
+    )
+    if claimed_input >= threshold_input:
+        fail("bad-affine-threshold-rejected must document a below-threshold input")
+    if bad_threshold_output != threshold_output:
+        fail("bad-affine-threshold-rejected threshold_output must match the affine witness")
+    if linear_fraction_value(slope, intercept, claimed_input) != computed_value:
+        fail("bad-affine-threshold-rejected computed_value is incorrect")
+    if bad_threshold_output - computed_value != threshold_shortfall:
+        fail("bad-affine-threshold-rejected threshold_shortfall is incorrect")
+    if threshold_shortfall <= 0:
+        fail("bad-affine-threshold-rejected must document a positive threshold shortfall")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad affine threshold smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/convexity-rational-v0/smt2/"
+        "bad-affine-threshold-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-affine-threshold-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad affine threshold smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad affine threshold farkas_regression", regression)
+    if "convexity_bad_affine_threshold_artifact_emits_checked_farkas" not in regression:
+        fail("bad-affine-threshold-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad affine threshold certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-affine-threshold-rejected certificate must document independently checked Farkas evidence")
+
     horizon = checks["general-convex-analysis-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-convex-analysis-lean-horizon must be not-run")

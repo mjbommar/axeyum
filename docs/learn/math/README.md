@@ -320,8 +320,8 @@ Companion maps:
   `UnsatFarkas` evidence, and corrupted-certificate rejection.
 - [Rational Convexity](convexity-rational-end-to-end.md): follows exact
   midpoint Jensen replay, finite second differences, affine threshold
-  monotonicity, bad midpoint-convexity rejection, and the convex-analysis
-  Lean horizon.
+  monotonicity, checked bad midpoint-convexity and affine-threshold
+  rejections, and the convex-analysis Lean horizon.
 - [Rational Inner Product Spaces](inner-product-spaces-end-to-end.md):
   follows exact Gram-matrix replay, fixed Cauchy-Schwarz, orthogonal
   projection, Gram-Schmidt, and QF_LRA/Farkas bad-inner-product plus

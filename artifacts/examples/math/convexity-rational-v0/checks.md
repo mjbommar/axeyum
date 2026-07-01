@@ -22,6 +22,14 @@ The resource-backed Axeyum regression reduces the same fixed row to the linear
 inequality `2*f(midpoint) <= f(left)+f(right)`, parses the matching source
 SMT-LIB artifact, and requires rechecked `UnsatFarkas` evidence.
 
+## `bad-affine-threshold-rejected`
+
+Rejects a false affine-threshold sample with a checked exact-rational
+counterexample. The resource-backed Axeyum regression parses the matching
+SMT-LIB artifact for `threshold_shortfall = 3/2` and requires rechecked
+`UnsatFarkas` evidence for the contradictory claim
+`threshold_shortfall <= 0`.
+
 ## `general-convex-analysis-lean-horizon`
 
 Records that general convex analysis, duality, separation, SDP, and algorithm
