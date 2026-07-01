@@ -42,8 +42,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 570 expected checks.
-- 252 checked proof/evidence rows.
+- 571 expected checks.
+- 253 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -549,10 +549,11 @@ Pick one row per commit unless the change is purely navigational.
 62. Landed: add
     [`matrix-computation-index.md`](../learn/math/matrix-computation-index.md)
     as the route-oriented learner index for LU, rank/nullity, residual,
-    projection, eigenpair, characteristic-polynomial, finite random-matrix,
-    chain-complex, operator, module, and tensor rows. The index groups existing
-    validated packs by replay, QF_LRA/Farkas, QF_UF/Alethe, QF_LIA/Diophantine,
-    Lean-horizon, and numerical-honesty boundaries.
+    projection, eigenpair, characteristic-polynomial, checked trace-invariant,
+    finite random-matrix, chain-complex, operator, module, and tensor rows.
+    The index groups existing validated packs by replay, QF_LRA/Farkas,
+    QF_UF/Alethe, QF_LIA/Diophantine, Lean-horizon, and numerical-honesty
+    boundaries.
 63. Landed: add
     [`analysis-calculus-theorem-horizon-map.md`](../learn/math/analysis-calculus-theorem-horizon-map.md)
     as the theorem-horizon map for analysis/calculus-adjacent resources. The
@@ -908,6 +909,12 @@ Pick one row per commit unless the change is purely navigational.
      same product entry is `4`; the shared QF_LRA/Farkas route now checks this
      decomposition arithmetic conflict alongside the existing singular-system
      conflict without claiming pivoting, existence, or numerical-stability
+     coverage.
+108. Landed: extend `matrix-invariants-v0` with a checked bad trace-invariant
+     row. Exact replay computes `trace([[2,1],[1,2]]) = 4`, while the malformed
+     source SMT-LIB artifact claims the same trace is `5`; the shared
+     QF_LRA/Farkas route now checks both trace arithmetic and characteristic
+     polynomial conflicts without claiming general spectral-invariant theorem
      coverage.
 
 ## Validation Checklist

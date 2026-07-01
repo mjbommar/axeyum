@@ -32,8 +32,8 @@ The committed public query boundary currently reports:
 - 111 concept rows: 23 curriculum nodes, 18 field rows, 65 bridge concepts, and
   5 example-family rows.
 - 108 non-template math example packs.
-- 570 expected checks: 329 `sat`, 170 `unsat`, and 71 `not-run`.
-- 252 checked proof/evidence rows, 247 replay-only rows, and 71 Lean-horizon
+- 571 expected checks: 329 `sat`, 171 `unsat`, and 71 `not-run`.
+- 253 checked proof/evidence rows, 247 replay-only rows, and 71 Lean-horizon
   rows.
 - 108 promoted solver-reuse packs.
 - 0 unclassified solver-reuse packs.
@@ -208,7 +208,8 @@ Build next:
 
 - keep the matrix index current for LU replay plus checked product-entry rows,
   rank/nullity, residual, projection, eigenpair, characteristic-polynomial,
-  tensor/module, chain/cochain, operator, Chebyshev, and random-matrix rows;
+  checked trace-invariant, tensor/module, chain/cochain, operator,
+  Chebyshev, and random-matrix rows;
 - add matrix-corpus rows only after the educational pack links the regression
   and the regression links the source pack;
 - add finite-field and module linear-algebra rows when they exercise Alethe or
@@ -373,7 +374,8 @@ Pick one item per commit unless the change is purely navigational.
 6. Landed: add Chebyshev/operator learner and query coverage only where the
    finite operator/Chebyshev bridge replays exact operator bounds,
    interpolation matrices, sign alternation, recurrence values, residual rows,
-   spectral rows, or characteristic-polynomial arithmetic.
+   spectral rows, characteristic-polynomial arithmetic, or checked trace
+   invariants.
 7. Landed: add random-matrix learner and query coverage only as exact finite
    matrix-valued atom tables, moment replay, expected Gram replay,
    rank-mixture replay, and checked QF_LRA/Farkas bad-moment rows before any

@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Matrix-invariants bad trace QF_LRA row landed.**
+  `matrix-invariants-v0` now has a second checked Farkas row: exact replay
+  computes `trace([[2,1],[1,2]]) = 4`, then rejects the malformed claim that
+  the same trace is `5`. The new source SMT-LIB artifact isolates the final
+  equality conflict, the shared `math_resource_lra_routes` regression parses it
+  and checks `UnsatFarkas` evidence, and the validator pins the matrix, computed
+  trace, claimed trace, artifact path, regression, and certificate note.
+  Generated dashboards and the public query summary now report 111 concept
+  rows, 108 non-template packs, 571 expected checks, 253 checked rows, 247
+  replay-only rows, and 71 Lean-horizon rows.
+
 - **Linear algebra bad LU product-entry QF_LRA row landed.**
   `linear-algebra-rational-v0` now has a second checked Farkas row: exact
   replay multiplies `L=[[1,0],[2,1]]` and `U=[[2,1],[0,1]]`, computes
@@ -213,9 +224,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   conflict, the shared `math_resource_lra_routes` regression parses it and
   checks `UnsatFarkas` evidence, and the validator pins the matrices, selected
   entry, computed/claimed values, artifact path, regression, and certificate
-  note. Generated dashboards and the public query summary now report 111
-  concept rows, 108 non-template packs, 570 expected checks, 252 checked rows,
-  247 replay-only rows, and 71 Lean-horizon rows.
+  note. This advanced the generated dashboard and public query-summary counters
+  by one checked row.
 
 - **Spectral bad Rayleigh-quotient QF_LRA row landed.**
   `spectral-linear-algebra-v0` now has a second checked Farkas row: exact

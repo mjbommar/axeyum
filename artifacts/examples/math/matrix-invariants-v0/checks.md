@@ -28,6 +28,15 @@ Expected result: `sat`.
 The validator recomputes row centers, row radii, exact intervals, and confirms
 that each listed eigenvalue lies inside at least one interval.
 
+## `bad-trace-invariant-rejected`
+
+Expected result: `unsat`.
+
+The validator recomputes `trace([[2,1],[1,2]]) = 4`, so the malformed claim
+that the fixed matrix has trace `5` is rejected by exact arithmetic. The trace
+value conflict is also checked by a linked `QF_LRA` artifact and a
+resource-backed `UnsatFarkas` regression.
+
 ## `bad-characteristic-polynomial-rejected`
 
 Expected result: `unsat`.

@@ -65,6 +65,24 @@ row 1: center 2, radius 1, interval [1,3]
 The listed eigenvalues `1` and `3` are checked to lie in the union of these
 intervals.
 
+## Bad Trace Certificate
+
+For the rejected trace claim, exact replay checks:
+
+```text
+trace(A) = 2 + 2 = 4
+```
+
+The linked proof artifact records the resulting exact-rational contradiction:
+
+```text
+matrix_trace = 4
+matrix_trace = 5
+```
+
+The pack ties that `QF_LRA` contradiction to a resource-backed
+`UnsatFarkas` regression.
+
 ## Bad Characteristic Polynomial Certificate
 
 For the rejected characteristic-polynomial claim, exact replay checks the

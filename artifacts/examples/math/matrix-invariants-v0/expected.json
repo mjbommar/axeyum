@@ -73,6 +73,24 @@
       "notes": "The validator recomputes centers, radii, intervals, and eigenvalue containment exactly."
     },
     {
+      "id": "bad-trace-invariant-rejected",
+      "claim": "The fixed matrix has trace 5.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_trace_invariant_refutation",
+      "proof_status": "checked",
+      "data": {
+        "matrix": [
+          ["2", "1"],
+          ["1", "2"]
+        ],
+        "computed_trace": "4",
+        "claimed_trace": "5",
+        "smt2_artifact": "artifacts/examples/math/matrix-invariants-v0/smt2/bad-trace-invariant-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes matrix_invariants_bad_trace_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator recomputes the matrix trace exactly and rejects the malformed trace; the source equality conflict is checked through QF_LRA/Farkas UnsatFarkas evidence."
+    },
+    {
       "id": "bad-characteristic-polynomial-rejected",
       "claim": "The polynomial lambda^2 - 5*lambda + 6 is not the characteristic polynomial of the fixed matrix.",
       "expected_result": "unsat",

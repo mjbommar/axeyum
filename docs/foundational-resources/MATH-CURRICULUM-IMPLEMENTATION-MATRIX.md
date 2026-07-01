@@ -194,7 +194,8 @@ Build sequence:
    narrow and generated from `scripts/gen-foundational-concepts.py`.
 2. R1 bridge-concept rows landed for linear-algebra computation vocabulary:
    LU replay, rank/nullity replay, residual bounds, Rayleigh/eigenpair witnesses,
-   characteristic-polynomial replay, and finite random-matrix moments.
+   characteristic-polynomial replay with checked trace-invariant evidence, and
+   finite random-matrix moments.
 3. R1 bridge-concept rows landed for algebra-map vocabulary: homomorphism
    preservation, kernel/image replay, quotient maps, ideal closure, module
    actions, tensor bilinearity, and finite group actions.
@@ -430,8 +431,8 @@ Build sequence:
     all checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
 41. [`matrix-computation-index.md`](../learn/math/matrix-computation-index.md)
     now groups LU, rank/nullity, residual, projection, Rayleigh/eigenpair,
-    characteristic-polynomial, finite random-matrix, chain-complex, operator,
-    module, and tensor rows by replay, QF_LRA/Farkas, QF_UF/Alethe,
+    characteristic-polynomial, checked trace-invariant, finite random-matrix,
+    chain-complex, operator, module, and tensor rows by replay, QF_LRA/Farkas, QF_UF/Alethe,
     QF_LIA/Diophantine, Lean-horizon, and numerical-honesty boundary.
 42. [`analysis-calculus-theorem-horizon-map.md`](../learn/math/analysis-calculus-theorem-horizon-map.md)
     now maps analysis/calculus-adjacent finite shadows to their theorem

@@ -2,7 +2,8 @@
 
 This lesson follows one exact matrix-invariant resource from trace and
 determinant replay to characteristic roots, Cayley-Hamilton replay, Gershgorin
-intervals, and a checked bad characteristic-polynomial rejection. It uses the
+intervals, checked bad trace rejection, and checked bad characteristic-polynomial
+rejection. It uses the
 [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 pack.
 
@@ -23,10 +24,12 @@ Concept rows:
 | `characteristic-roots-witness` | `sat` | replay-only |
 | `cayley-hamilton-replay` | `sat` | replay-only |
 | `gershgorin-interval-witness` | `sat` | replay-only |
+| `bad-trace-invariant-rejected` | `unsat` | checked |
 | `bad-characteristic-polynomial-rejected` | `unsat` | checked |
 
-The positive rows replay exact rational matrix arithmetic. The negative row
-recomputes the actual characteristic polynomial and rejects a bad claimed one.
+The positive rows replay exact rational matrix arithmetic. The negative rows
+recompute the actual trace or characteristic polynomial and reject bad claimed
+values.
 
 ## Replay Trace, Determinant, And Characteristic Polynomial
 
@@ -97,6 +100,30 @@ intervals = [1, 3], [1, 3]
 The validator recomputes the intervals and checks the listed eigenvalues lie
 inside them.
 
+## Reject A Bad Trace
+
+The bad trace row claims:
+
+```text
+trace(A) = 5
+```
+
+for the same matrix. The validator recomputes:
+
+```text
+trace(A) = 2 + 2 = 4
+```
+
+The matrix-invariants pack exposes the trace as a `QF_LRA` contradiction:
+
+```text
+matrix_trace = 4
+matrix_trace = 5
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
+
 ## Reject A Bad Characteristic Polynomial
 
 The bad row claims:
@@ -145,6 +172,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes matrix_invariants_bad_trace_artifact_emits_checked_farkas
 ```
 
 Expected output:
@@ -161,6 +189,7 @@ This lesson shows Axeyum's current matrix-invariant resource pattern:
 untrusted fast search -> matrix invariant, root, or interval candidate
 trusted small checking -> exact rational matrix and polynomial replay
 proof upgrade -> QF_LRA/Farkas certificate for the false polynomial value
+                 or false trace value
 remaining horizon -> general spectral proof and numerical algorithm routes
 ```
 

@@ -45,15 +45,15 @@ does not miss major university or research branches.
 
 ## Current Baseline
 
-As of 2026-06-30, the committed resource query reports:
+As of 2026-07-01, the committed resource query reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 570 expected checks.
-- 252 checked proof/evidence rows.
+- 571 expected checks.
+- 253 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -336,8 +336,9 @@ Use one row per commit unless the change is purely navigational.
    shared geometry bridge without promoting general circle/inversion/cyclic
    theorems.
 5. Landed: add a matrix-computation index page that groups LU, rank/nullity,
-   residual, eigenpair, characteristic-polynomial, random-matrix, projection,
-   chain-complex, operator, and tensor/module rows by proof route.
+   residual, eigenpair, characteristic-polynomial and checked trace-invariant,
+   random-matrix, projection, chain-complex, operator, and tensor/module rows
+   by proof route.
 6. Landed: add
    [`analysis-calculus-theorem-horizon-map.md`](../learn/math/analysis-calculus-theorem-horizon-map.md),
    mapping completeness, IVT/MVT/FTC, compactness, sequence convergence,

@@ -4606,7 +4606,8 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "A characteristic-polynomial row replays trace, determinant, fixed "
             "polynomial coefficients, listed roots, and Cayley-Hamilton-style "
-            "matrix substitution for a bounded matrix instance."
+            "matrix substitution for a bounded matrix instance, with bad trace "
+            "and bad polynomial rows checked through QF_LRA/Farkas evidence."
         ),
         "prerequisites": [
             "bridge_lu_replay",
@@ -4629,7 +4630,7 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "matrix-invariants-v0",
-                "Trace, determinant, characteristic polynomial, roots, Cayley-Hamilton, Gershgorin, and bad polynomial rows.",
+                "Trace, determinant, characteristic polynomial, roots, Cayley-Hamilton, Gershgorin, bad trace, and bad polynomial rows.",
             ),
             (
                 "spectral-linear-algebra-v0",
@@ -4642,7 +4643,7 @@ BRIDGE_CONCEPTS = [
         ],
         "proof_routes": [
             {
-                "name": "fixed-degree matrix invariant replay plus QF_LRA/Farkas bad-polynomial certificate",
+                "name": "fixed-degree matrix invariant replay plus QF_LRA/Farkas bad-trace and bad-polynomial certificates",
                 "status": "checked",
                 "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
                 "lean_status": "partial",
@@ -4657,8 +4658,9 @@ BRIDGE_CONCEPTS = [
                 ],
                 "notes": (
                     "The finite checker recomputes the listed invariant values; "
-                    "the promoted bad characteristic-polynomial row checks the "
-                    "isolated exact-rational conflict with Farkas evidence."
+                    "the promoted bad trace and bad characteristic-polynomial "
+                    "rows check isolated exact-rational conflicts with Farkas "
+                    "evidence."
                 ),
             }
         ],
@@ -4681,7 +4683,7 @@ BRIDGE_CONCEPTS = [
             "criteria": [
                 "Rows state matrix entries, polynomial coefficients, evaluation point or root witness, and exact arithmetic domain.",
                 "The validator recomputes trace, determinant, polynomial evaluation, and any matrix substitution claim.",
-                "Bad polynomial rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed.",
+                "Bad invariant rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed.",
             ],
         },
     },

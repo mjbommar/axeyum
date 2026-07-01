@@ -512,7 +512,7 @@ false Rayleigh-quotient and eigenpair claims.
 [`matrix-invariants-v0`](../../artifacts/examples/math/matrix-invariants-v0/)
 validates exact trace/determinant characteristic-polynomial replay,
 characteristic roots, Cayley-Hamilton replay, finite Gershgorin intervals, and
-checked rejection of a false characteristic polynomial.
+checked rejection of false trace and characteristic-polynomial claims.
 [`finite-compactness-v0`](../../artifacts/examples/math/finite-compactness-v0/)
 validates finite open-cover/subcover checks, minimal subcover enumeration,
 finite-intersection families, bad-cover rejection, and a compactness

@@ -37,9 +37,10 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "matrix invariant bad characteristic-polynomial QF_LRA/Farkas regression seed",
-    "pressure": "Exact characteristic-polynomial replay computes the witness-root value 0, but the malformed row claims the same value is 2.",
+    "target": "matrix invariant bad trace and bad characteristic-polynomial QF_LRA/Farkas regression seeds",
+    "pressure": "Two exact matrix-invariant conflicts: replay computes trace 4 while a malformed row claims 5, and characteristic-polynomial replay computes the witness-root value 0 while a malformed row claims 2.",
     "evidence": [
+      "bad-trace-invariant-rejected",
       "bad-characteristic-polynomial-rejected"
     ],
     "next_step": "Promote additional fixed matrix-invariant rows only when they add distinct exact-linear solver pressure; keep higher-dimensional determinant algorithms, algebraic multiplicity theorems, and numerical eigenvalue algorithms in Lean-horizon or numerical-honesty lanes."
@@ -53,6 +54,7 @@
     "docs/curriculum/01-number-systems/reals.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/matrix-invariants-v0/smt2/bad-trace-invariant-farkas-conflict.smt2",
     "artifacts/examples/math/matrix-invariants-v0/smt2/bad-characteristic-polynomial-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
@@ -61,12 +63,13 @@
     "characteristic-roots-witness",
     "cayley-hamilton-replay",
     "gershgorin-interval-witness",
+    "bad-trace-invariant-rejected",
     "bad-characteristic-polynomial-rejected"
   ],
   "graduation_criteria": [
     "Encode fixed 2x2 trace, determinant, characteristic-polynomial, and Cayley-Hamilton claims as deterministic exact-rational obligations.",
     "Replay roots and interval eigenvalue bounds through Axeyum model evaluation over finite matrices and fixed-degree polynomials.",
-    "Route false fixed characteristic-polynomial claims through checked QF_LRA/Farkas evidence once exact replay computes the conflicting witness-root value.",
+    "Route false fixed trace and characteristic-polynomial claims through checked QF_LRA/Farkas evidence once exact replay computes the conflicting invariant value.",
     "Generalize to higher-dimensional determinant/characteristic-polynomial computation only after a reusable matrix-invariant utility is warranted.",
     "Keep general spectral theorems, algebraic multiplicity theorems, and numerical eigenvalue algorithms marked Lean/numerical horizon."
   ]

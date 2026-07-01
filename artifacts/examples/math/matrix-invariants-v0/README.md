@@ -10,6 +10,7 @@ The examples are:
 - characteristic-root replay;
 - Cayley-Hamilton replay for one fixed matrix;
 - a finite Gershgorin interval containment check;
+- checked QF_LRA/Farkas rejection of a false trace invariant;
 - checked QF_LRA/Farkas rejection of a false characteristic polynomial.
 
 ## Concepts
@@ -29,17 +30,19 @@ The validator parses every scalar as an exact rational. It recomputes trace,
 determinant, the `2x2` characteristic polynomial, root evaluations, `A^2`,
 the Cayley-Hamilton matrix polynomial value, and row Gershgorin intervals.
 
-This pack is checked finite evidence for the false characteristic-polynomial
-row and replay-only evidence for the positive witnesses. The bad row also
-links a `QF_LRA` SMT-LIB artifact and a solver regression that emits
-independently rechecked `UnsatFarkas` evidence for the witness-root conflict
-`characteristic_value_at_witness = 0` versus
-`characteristic_value_at_witness = 2`. General spectral theorems, algebraic
-multiplicity theory, higher-dimensional determinant algorithms, and numerical
-eigensolvers remain proof or numerical-horizon material.
+This pack is checked finite evidence for the false trace and false
+characteristic-polynomial rows and replay-only evidence for the positive
+witnesses. The bad rows also link `QF_LRA` SMT-LIB artifacts and solver
+regressions that emit independently rechecked `UnsatFarkas` evidence. The
+trace row checks `matrix_trace = 4` versus `matrix_trace = 5`; the
+characteristic-polynomial row checks `characteristic_value_at_witness = 0`
+versus `characteristic_value_at_witness = 2`. General spectral theorems,
+algebraic multiplicity theory, higher-dimensional determinant algorithms, and
+numerical eigensolvers remain proof or numerical-horizon material.
 
 Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes matrix_invariants_bad_trace_artifact_emits_checked_farkas
 ```

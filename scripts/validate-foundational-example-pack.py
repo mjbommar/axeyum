@@ -12467,6 +12467,31 @@ def validate_matrix_invariants(expected: dict[str, Any]) -> None:
         if not any(lower <= eigenvalue <= upper for lower, upper in intervals):
             fail("gershgorin-interval-witness eigenvalue lies outside all intervals")
 
+    bad_trace = checks["bad-trace-invariant-rejected"]
+    if bad_trace["expected_result"] != "unsat":
+        fail("bad-trace-invariant-rejected must expect unsat")
+    if bad_trace.get("proof_status") != "checked":
+        fail("bad-trace-invariant-rejected must be checked")
+    data = bad_trace.get("data", {})
+    matrix = require_fraction_matrix("bad trace matrix", data.get("matrix"))
+    computed_trace = require_fraction("bad trace computed_trace", data.get("computed_trace"))
+    claimed_trace = require_fraction("bad trace claimed_trace", data.get("claimed_trace"))
+    if matrix_trace(matrix) != computed_trace:
+        fail("bad-trace-invariant-rejected computed_trace is incorrect")
+    if claimed_trace == computed_trace:
+        fail("bad-trace-invariant-rejected claimed trace unexpectedly matches actual trace")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad trace smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/matrix-invariants-v0/smt2/bad-trace-invariant-farkas-conflict.smt2":
+        fail("bad-trace-invariant-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad trace smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad trace farkas_regression", regression)
+    if "matrix_invariants_bad_trace_artifact_emits_checked_farkas" not in regression:
+        fail("bad-trace-invariant-rejected must link the Farkas regression")
+    if "UnsatFarkas" not in bad_trace.get("notes", ""):
+        fail("bad-trace-invariant-rejected notes must name UnsatFarkas evidence")
+
     bad = checks["bad-characteristic-polynomial-rejected"]
     if bad["expected_result"] != "unsat":
         fail("bad-characteristic-polynomial-rejected must expect unsat")

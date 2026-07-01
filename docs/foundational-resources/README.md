@@ -313,7 +313,7 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/matrix-invariants-v0/`](../../artifacts/examples/math/matrix-invariants-v0/)
   validates exact trace/determinant characteristic-polynomial replay,
   characteristic roots, Cayley-Hamilton replay, finite Gershgorin intervals,
-  and checked rejection of a false characteristic polynomial.
+  and checked rejection of false trace and characteristic-polynomial claims.
 - [`artifacts/examples/math/random-matrix-finite-v0/`](../../artifacts/examples/math/random-matrix-finite-v0/)
   validates exact finite random-matrix moments, expected Gram matrices, rank
   probabilities, and checked rejection of a false trace-square moment.

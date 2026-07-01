@@ -124,6 +124,9 @@ const FINITE_OPERATOR_BAD_OPERATOR_BOUND: &str = include_str!(
 const FINITE_OPERATOR_BAD_L1_SUM_NORM: &str = include_str!(
     "../../../artifacts/examples/math/finite-operator-v0/smt2/bad-l1-sum-norm-farkas-conflict.smt2"
 );
+const MATRIX_INVARIANTS_BAD_TRACE: &str = include_str!(
+    "../../../artifacts/examples/math/matrix-invariants-v0/smt2/bad-trace-invariant-farkas-conflict.smt2"
+);
 const SPECTRAL_BAD_RAYLEIGH_QUOTIENT: &str = include_str!(
     "../../../artifacts/examples/math/spectral-linear-algebra-v0/smt2/bad-rayleigh-quotient-farkas-conflict.smt2"
 );
@@ -1154,5 +1157,13 @@ fn matrix_invariants_bad_characteristic_polynomial_emits_checked_farkas() {
         "matrix-invariants-v0 bad-characteristic-polynomial-rejected",
         &arena,
         &[actual_value, false_claimed_value],
+    );
+}
+
+#[test]
+fn matrix_invariants_bad_trace_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "matrix-invariants-v0 bad-trace-invariant SMT-LIB artifact",
+        MATRIX_INVARIANTS_BAD_TRACE,
     );
 }

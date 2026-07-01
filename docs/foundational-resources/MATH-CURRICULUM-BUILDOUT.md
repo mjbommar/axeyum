@@ -940,7 +940,7 @@ Rayleigh-quotient and eigenpair claims.
 `artifacts/examples/math/matrix-invariants-v0/` now validates exact
 trace/determinant characteristic-polynomial replay, characteristic roots,
 Cayley-Hamilton replay, finite Gershgorin intervals, and checked QF_LRA/Farkas
-rejection of a false characteristic polynomial.
+rejection of false trace and characteristic-polynomial claims.
 `artifacts/examples/math/random-matrix-finite-v0/` now validates exact finite
 random-matrix moment replay, expected Gram matrices, rank probabilities, and
 checked QF_LRA/Farkas rejection of a false trace-square moment.
@@ -1016,7 +1016,7 @@ Recommended order:
     bad-Rayleigh-quotient and bad-eigenpair rejections.
 18. `matrix-invariants-v0`: trace/determinant characteristic polynomials,
     roots, Cayley-Hamilton replay, finite eigenvalue intervals, and
-    QF_LRA/Farkas bad-characteristic-polynomial rejection.
+    QF_LRA/Farkas bad-trace and bad-characteristic-polynomial rejections.
 19. `metric-continuity-v0`: finite Lipschitz, epsilon-delta, open-ball
     preimage, and checked QF_LRA/Farkas bad-delta checks over exact rational
     metric spaces.
@@ -2020,8 +2020,9 @@ after exact negative-norm and projection residual replay.
 `spectral-linear-algebra-v0` now routes its bad Rayleigh-quotient and bad
 eigenpair rows through the same checked Farkas evidence path after exact
 quotient and matrix-vector replay.
-`matrix-invariants-v0` now routes its bad characteristic-polynomial row through
-the same checked Farkas evidence path after exact witness-root replay.
+`matrix-invariants-v0` now routes its bad trace and bad
+characteristic-polynomial rows through the same checked Farkas evidence path
+after exact trace and witness-root replay.
 `calculus-algebraic-shadow-v0` now routes its false derivative-value row
 through the same checked Farkas evidence path after exact polynomial derivative
 replay computes the derivative at the fixed point.

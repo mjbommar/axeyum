@@ -1257,7 +1257,8 @@ python3 scripts/query-foundational-resources.py concepts \
 ```
 
 Concept-plus-route queries can find the finite operator, Chebyshev,
-spectral, and characteristic-polynomial packs without hard-coding pack ids:
+spectral, characteristic-polynomial, and checked trace-invariant packs without
+hard-coding pack ids:
 
 ```sh
 python3 scripts/query-foundational-resources.py packs \
@@ -1273,8 +1274,8 @@ python3 scripts/query-foundational-resources.py checks \
 ```
 
 To display concrete checked finite-operator norm/bound, inner-product
-positivity/projection, Chebyshev, and spectral rows, drill into checked Farkas
-examples:
+positivity/projection, Chebyshev, spectral, and matrix-invariant rows, drill
+into checked Farkas examples:
 
 ```sh
 python3 scripts/query-foundational-resources.py checks \

@@ -329,8 +329,8 @@ First targets:
   (resource-backed Farkas regressions landed for the bad Rayleigh-quotient and
   bad eigenpair rows)
 - [matrix-invariants-v0](../../artifacts/examples/math/matrix-invariants-v0/)
-  (resource-backed Farkas regression landed for the bad characteristic
-  polynomial row)
+  (resource-backed Farkas regressions landed for the bad trace and bad
+  characteristic-polynomial rows)
 - [finite-chebyshev-systems-v0](../../artifacts/examples/math/finite-chebyshev-systems-v0/)
   (resource-backed Farkas regressions landed for the duplicate-node determinant
   conflict, bad interpolation-sample row, and bad alternation-magnitude row)

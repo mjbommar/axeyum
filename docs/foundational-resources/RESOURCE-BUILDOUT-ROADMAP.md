@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 570 expected checks.
-- 252 checked proof/evidence rows.
+- 571 expected checks.
+- 253 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -551,8 +551,8 @@ Build next:
 
 - The first generated bridge rows now cover LU replay with checked bad
   product-entry evidence, rank/nullity replay, residual bounds, eigenpair
-  witnesses, characteristic-polynomial replay, and finite random-matrix
-  moments.
+  witnesses, characteristic-polynomial replay with checked bad trace evidence,
+  and finite random-matrix moments.
 - Add narrower concept rows for matrix multiplication, kernel/image, dual basis,
   transpose, tensor bilinear map, Gram matrix, projection, and finite-field
   linear algebra when one row can serve multiple packs.
@@ -1739,8 +1739,8 @@ Pick one item per commit unless the change is purely navigational.
      in the theorem-horizon lane.
 106. Landed: add `chebyshev-operator-index.md`, wiring finite-dimensional
      operator bounds, Chebyshev recurrence values, Vandermonde interpolation,
-     alternating residuals, spectral rows, and characteristic-polynomial
-     arithmetic into one functional-analysis/operator learner path. The
+     alternating residuals, spectral rows, and characteristic-polynomial plus
+     bad-trace arithmetic into one functional-analysis/operator learner path. The
      functional-analysis field readiness and smoke queries now expose
      concept-scoped `bridge_finite_operator_chebyshev` Farkas route lookups
      while keeping Banach/Hilbert-space, compact-operator, Haar-space,

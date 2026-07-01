@@ -6335,7 +6335,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A characteristic-polynomial row replays trace, determinant, fixed polynomial coefficients, listed roots, and Cayley-Hamilton-style matrix substitution for a bounded matrix instance.",
+      "summary": "A characteristic-polynomial row replays trace, determinant, fixed polynomial coefficients, listed roots, and Cayley-Hamilton-style matrix substitution for a bounded matrix instance, with bad trace and bad polynomial rows checked through QF_LRA/Farkas evidence.",
       "prerequisites": [
         "bridge_lu_replay",
         "curriculum_polynomials",
@@ -6359,7 +6359,7 @@
           "id": "matrix-invariants-v0",
           "status": "validated",
           "path": "artifacts/examples/math/matrix-invariants-v0",
-          "notes": "Trace, determinant, characteristic polynomial, roots, Cayley-Hamilton, Gershgorin, and bad polynomial rows."
+          "notes": "Trace, determinant, characteristic polynomial, roots, Cayley-Hamilton, Gershgorin, bad trace, and bad polynomial rows."
         },
         {
           "id": "spectral-linear-algebra-v0",
@@ -6376,7 +6376,7 @@
       ],
       "proof_routes": [
         {
-          "name": "fixed-degree matrix invariant replay plus QF_LRA/Farkas bad-polynomial certificate",
+          "name": "fixed-degree matrix invariant replay plus QF_LRA/Farkas bad-trace and bad-polynomial certificates",
           "status": "checked",
           "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
           "lean_status": "partial",
@@ -6389,7 +6389,7 @@
             "docs/learn/math/matrix-invariants-end-to-end.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "The finite checker recomputes the listed invariant values; the promoted bad characteristic-polynomial row checks the isolated exact-rational conflict with Farkas evidence."
+          "notes": "The finite checker recomputes the listed invariant values; the promoted bad trace and bad characteristic-polynomial rows check isolated exact-rational conflicts with Farkas evidence."
         }
       ],
       "source_refs": [
@@ -6411,7 +6411,7 @@
         "criteria": [
           "Rows state matrix entries, polynomial coefficients, evaluation point or root witness, and exact arithmetic domain.",
           "The validator recomputes trace, determinant, polynomial evaluation, and any matrix substitution claim.",
-          "Bad polynomial rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed."
+          "Bad invariant rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed."
         ]
       }
     },

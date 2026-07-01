@@ -144,8 +144,9 @@ Canonical examples:
   [Random Matrix Finite](../../../artifacts/examples/math/random-matrix-finite-v0/),
   [Spectral Linear Algebra](../../../artifacts/examples/math/spectral-linear-algebra-v0/),
   and [Matrix Invariants](../../../artifacts/examples/math/matrix-invariants-v0/)
-  use bad residual, trace-moment, eigenpair, and characteristic-polynomial rows
-  where the final contradiction is exact rational linear arithmetic.
+  use bad residual, trace-moment, eigenpair, trace-invariant, and
+  characteristic-polynomial rows where the final contradiction is exact
+  rational linear arithmetic.
 - [Finite Operator](../../../artifacts/examples/math/finite-operator-v0/)
   uses a bad operator-bound row after exact finite-dimensional matrix replay
   computes the image infinity norm.
