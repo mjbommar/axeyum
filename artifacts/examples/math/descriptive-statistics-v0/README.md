@@ -8,6 +8,7 @@ The examples are the statistics shadow that maps finite witnesses to replay
 today and future invalid-claim rows to Axeyum's LRA/LIA certificate routes:
 
 - mean and population variance identity for a small data set;
+- a QF_LRA/Farkas certificate for an impossible population-variance claim;
 - contingency-table row, column, and total margins;
 - a QF_LIA/Diophantine certificate for an impossible contingency total;
 - Simpson's paradox witness from integer success/total counts.
@@ -25,9 +26,10 @@ today and future invalid-claim rows to Axeyum's LRA/LIA certificate routes:
 
 The current validator parses all scalar statistics exactly as rational strings
 and count tables as integers. It recomputes the mean, second moment, population
-variance, margins, and Simpson rate inequalities. The promoted bad total row is
-also emitted as a solver-form integer margin contradiction and checked with
-Diophantine evidence.
+variance, margins, and Simpson rate inequalities. The promoted bad variance
+row is emitted as a solver-form exact-rational contradiction and checked with
+Farkas evidence. The promoted bad total row is emitted as a solver-form integer
+margin contradiction and checked with Diophantine evidence.
 
 Positive rows remain finite-model replay. Impossible exact-rational statistic
 constraints should graduate through QF_LRA/Farkas certificates, and

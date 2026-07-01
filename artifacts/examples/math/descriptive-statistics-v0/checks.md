@@ -11,6 +11,19 @@ Proof route: finite-model replay today. A future impossible rational statistic
 claim should emit a QF_LRA/Farkas certificate instead of relying on this SAT
 witness row.
 
+## `bad-variance-rejected`
+
+Expected result: `unsat`.
+
+The validator recomputes the sample mean, second moment, `mean^2`, and
+population variance exactly. The source artifact keeps that replay boundary
+explicit: it only asks QF_LRA to refute
+`population_variance + mean_square = second_moment` together with the false
+claim `population_variance = 3/2`.
+
+Proof route: checked QF_LRA/Farkas evidence. The statistical computation is
+finite replay; the trusted certificate checks the final linear contradiction.
+
 ## `contingency-table-margins`
 
 Expected result: `sat`.

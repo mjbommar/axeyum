@@ -773,6 +773,13 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --pack descriptive-statistics-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text variance \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --field statistics \
   --route Diophantine \
   --proof-status checked \
@@ -1448,6 +1455,7 @@ python3 scripts/query-foundational-resources.py concepts --field statistics --te
 python3 scripts/query-foundational-resources.py concepts --field statistics --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field statistics --text random --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field statistics --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack descriptive-statistics-v0 --route Farkas --proof-status checked --text variance --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field statistics --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field linear_algebra --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field linear_algebra --route Alethe --require-any >/dev/null

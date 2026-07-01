@@ -148,7 +148,8 @@ one of:
      replay.
 5. `artifacts/examples/math/descriptive-statistics-v0/`
    - Fields: `statistics`, `probability_theory`, `linear_algebra`.
-   - Checks: mean/variance identity, contingency-table margins, Simpson's
+   - Checks: mean/variance identity, checked bad-variance rejection,
+     contingency-table margins, checked bad total-count rejection, Simpson's
      paradox count-table witness.
 6. `artifacts/examples/math/linear-optimization-v0/`
    - Fields: `optimization_and_convexity`, `linear_algebra`, `real_analysis`.

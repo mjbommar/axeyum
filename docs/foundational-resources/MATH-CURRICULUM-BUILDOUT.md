@@ -751,8 +751,8 @@ probability mass tables, conditional probability, Bayes posterior replay, and a
 checked QF_LRA/Farkas rejection of false normalization,
 conditional-probability, and Bayes-posterior claims.
 `artifacts/examples/math/descriptive-statistics-v0/` now validates exact
-mean/variance identities, contingency-table margins, and a Simpson's paradox
-count-table witness.
+mean/variance identities, checked rejection of a bad variance claim,
+contingency-table margins, and a Simpson's paradox count-table witness.
 `artifacts/examples/math/least-squares-regression-v0/` now validates exact
 least-squares normal equations, residual orthogonality, mean-baseline RSS
 comparison, checked QF_LRA/Farkas rejection of bad coefficients, and a
@@ -973,9 +973,9 @@ Recommended order:
 2. `finite-probability-v0`: probability mass, conditioning, Bayes rule, and
    checked bad normalization/Bayes-posterior certificates.
 3. `descriptive-statistics-v0` and `least-squares-regression-v0`:
-   mean/variance identities, contingency tables, Simpson witness,
-   least-squares normal equations, residual orthogonality, and bad-coefficient
-   rejection.
+   mean/variance identities, checked bad-variance rejection, contingency
+   tables, Simpson witness, least-squares normal equations, residual
+   orthogonality, and bad-coefficient rejection.
 4. `linear-optimization-v0`: LP feasibility, threshold cliffs, Farkas links.
 5. `convexity-rational-v0`: midpoint convexity, finite second differences,
    monotonicity thresholds, and bad midpoint-convexity rejection.
@@ -1226,9 +1226,10 @@ Priority recipes:
    and promoted in `modular-arithmetic-v0` for the nonunit inverse gcd
    obstruction and incompatible non-coprime CRT obstruction, and in
    `exact-statistical-tests-v0` for the bad binomial tail-count contradiction.
-   The first secondary statistics margin/count row is now promoted in
-   `descriptive-statistics-v0` for the bad contingency total, while broader
-   modular, exact-test, and statistics finite-search rows remain finite replay.
+   The first secondary statistics exact-rational and margin/count rows are now
+   promoted in `descriptive-statistics-v0` for the bad variance and bad
+   contingency total, while broader modular, exact-test, and statistics
+   finite-search rows remain finite replay.
 5. "Lean horizon" recipe template for induction, topology, measure, and limits.
    Status: landed as
    [Lean Horizon Template](../proof-cookbook/recipes/lean-horizon-template.md)
@@ -1693,11 +1694,11 @@ exact residual infinity-norm replay, rational solution-box checking, one-step
 Jacobi contraction replay, checked QF_LRA/Farkas bad residual-bound rejection,
 and the floating-point/stability/convergence horizon.
 `descriptive-statistics-v0` and `least-squares-regression-v0` now have a
-learner-facing end-to-end lesson for exact mean/variance replay, contingency
-table margins, Simpson's paradox counts, least-squares normal equations,
-residual orthogonality, RSS comparison, checked QF_LRA/Farkas
-bad-coefficients rejection, and the statistical inference/numerical regression
-horizon.
+learner-facing end-to-end lesson for exact mean/variance replay, checked bad
+variance rejection, contingency table margins, Simpson's paradox counts,
+least-squares normal equations, residual orthogonality, RSS comparison,
+checked QF_LRA/Farkas bad-coefficients rejection, and the statistical
+inference/numerical regression horizon.
 `coordinate-geometry-v0`, `incidence-geometry-v0`,
 `rigid-configuration-geometry-v0`, `affine-geometry-v0`,
 `orientation-area-geometry-v0`, `finite-circle-geometry-v0`,
@@ -1891,7 +1892,8 @@ The QF_LIA/Diophantine proof-upgrade lane now also has
 `exact-statistical-tests-v0` promoted for its bad binomial tail-count row and
 `finite-simplicial-homology-v0` promoted for its bad boundary coefficient row,
 `induction-patterns-v0` promoted for its finite even-product parity row, and
-`descriptive-statistics-v0` promoted for its bad contingency total row, with
+`descriptive-statistics-v0` promoted for its bad variance and bad contingency
+total rows, with
 `integer-lia-v0` and `number-theory-v0` now promoted for gcd divisibility
 obstructions. The
 related LIA arithmetic-DPLL solver-reuse lane also has

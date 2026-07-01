@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 585 expected checks.
-- 267 checked proof/evidence rows.
+- 586 expected checks.
+- 268 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1607,7 +1607,8 @@ Pick one item per commit unless the change is purely navigational.
 80. Landed: add statistics field-readiness consumer queries through
     [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational smoke
     check, covering Farkas field readiness, finite-table/tail-count bridge
-    lookups, checked exact-rational statistics rows, and checked Diophantine
+    lookups, checked exact-rational statistics rows including the bad
+    variance Farkas row, and checked Diophantine
     count rows.
 81. Landed: add linear-algebra field-readiness consumer queries through
     [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational smoke

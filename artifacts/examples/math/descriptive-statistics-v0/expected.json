@@ -61,6 +61,25 @@
       "notes": "The validator recomputes mean, E[X^2], and Var(X) = E[X^2] - E[X]^2 exactly."
     },
     {
+      "id": "bad-variance-rejected",
+      "claim": "The listed finite sample has population variance 3/2.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_bad_variance_refutation",
+      "proof_status": "checked",
+      "data": {
+        "sample": ["1", "2", "3", "4"],
+        "mean": "5/2",
+        "mean_square": "25/4",
+        "second_moment": "15/2",
+        "actual_population_variance": "5/4",
+        "claimed_population_variance": "3/2",
+        "farkas_variance_equation": "population_variance + mean_square = second_moment",
+        "smt2_artifact": "artifacts/examples/math/descriptive-statistics-v0/smt2/bad-variance-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes descriptive_stats_bad_variance_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator recomputes mean = 5/2, E[X^2] = 15/2, mean^2 = 25/4, and Var(X) = 5/4; the Axeyum regression checks the final exact-linear contradiction against the malformed claim Var(X) = 3/2 using rechecked Farkas evidence."
+    },
+    {
       "id": "contingency-table-margins",
       "claim": "The listed 2x2 contingency table has the stated margins and total.",
       "expected_result": "sat",

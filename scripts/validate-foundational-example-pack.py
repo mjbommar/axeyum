@@ -20877,6 +20877,50 @@ def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     if computed_variance != variance:
         fail("mean-variance witness variance does not match sample")
 
+    bad_variance = checks["bad-variance-rejected"]
+    if bad_variance["expected_result"] != "unsat":
+        fail("bad-variance-rejected must expect unsat")
+    if bad_variance["proof_status"] != "checked":
+        fail("bad-variance-rejected must be checked")
+    if bad_variance["validation"] != "qf_lra_bad_variance_refutation":
+        fail("bad-variance-rejected must use qf_lra_bad_variance_refutation validation")
+    data = bad_variance.get("data", {})
+    bad_sample = require_fraction_vector("bad variance sample", data.get("sample"))
+    bad_mean = require_fraction("bad variance mean", data.get("mean"))
+    mean_square = require_fraction("bad variance mean_square", data.get("mean_square"))
+    bad_second_moment = require_fraction("bad variance second_moment", data.get("second_moment"))
+    actual_variance = require_fraction(
+        "bad variance actual_population_variance",
+        data.get("actual_population_variance"),
+    )
+    claimed_variance = require_fraction(
+        "bad variance claimed_population_variance",
+        data.get("claimed_population_variance"),
+    )
+    if bad_sample != sample:
+        fail("bad-variance-rejected sample must match the mean-variance witness")
+    if bad_mean != computed_mean or bad_mean != mean:
+        fail("bad-variance-rejected mean is incorrect")
+    if mean_square != computed_mean * computed_mean:
+        fail("bad-variance-rejected mean_square is incorrect")
+    if bad_second_moment != computed_second_moment or bad_second_moment != second_moment:
+        fail("bad-variance-rejected second_moment is incorrect")
+    if actual_variance != computed_variance or actual_variance != variance:
+        fail("bad-variance-rejected actual variance is incorrect")
+    if claimed_variance == actual_variance:
+        fail("bad-variance-rejected must document a false variance claim")
+    equation = data.get("farkas_variance_equation")
+    require_string("bad variance farkas_variance_equation", equation)
+    if equation != "population_variance + mean_square = second_moment":
+        fail("bad-variance-rejected must document the Farkas variance equation")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad variance smt2_artifact", smt2_artifact)
+    check_source("bad variance smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad variance farkas_regression", regression)
+    if "descriptive_stats_bad_variance_artifact_emits_checked_farkas" not in regression:
+        fail("bad-variance-rejected must link the Farkas regression")
+
     contingency = checks["contingency-table-margins"]
     if contingency["expected_result"] != "sat":
         fail("contingency-table-margins must expect sat")

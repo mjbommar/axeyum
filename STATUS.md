@@ -205,6 +205,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Descriptive-statistics bad variance QF_LRA row landed.**
+  `descriptive-statistics-v0` now has a checked Farkas row for exact finite
+  statistics: replay computes the sample mean `5/2`, second moment `15/2`,
+  `mean^2 = 25/4`, and population variance `5/4`, then rejects the malformed
+  claim `Var(X) = 3/2`. The source SMT-LIB artifact keeps the nonlinear square
+  out of the trusted solver step by checking only the final linear equation
+  `population_variance + mean_square = second_moment`, the shared
+  `math_resource_lra_routes` regression parses it and checks `UnsatFarkas`
+  evidence, and the validator pins the sample, moments, actual/claimed
+  variance, artifact path, and regression. Generated dashboards and the public
+  query summary now report 111 concept rows, 108 non-template packs, 586
+  expected checks, 268 checked rows, 247 replay-only rows, and 71 Lean-horizon
+  rows.
+
 - **Finite-probability bad conditional-probability QF_LRA row landed.**
   `finite-probability-v0` now has a third checked Farkas row: exact atom-table
   replay computes `P(rain)=3/10`, `P(late and rain)=1/10`, and therefore
@@ -215,8 +229,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `UnsatFarkas` evidence, and the validator pins the atom table, event,
   condition, joint mass, conditioning mass, actual/claimed conditional
   probabilities, artifact path, and regression. Generated dashboards and the
-  public query summary now report 111 concept rows, 108 non-template packs, 585
-  expected checks, 267 checked rows, 247 replay-only rows, and 71 Lean-horizon
+  public query summary now report 111 concept rows, 108 non-template packs, 586
+  expected checks, 268 checked rows, 247 replay-only rows, and 71 Lean-horizon
   rows.
 
 - **Modular-arithmetic nonunit inverse QF_BV/DRAT row landed.**
@@ -226,8 +240,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   rechecked with DRAT evidence. The row sits beside the existing finite replay
   and Diophantine gcd obstruction for `2 mod 6`, giving the same obstruction a
   width-explicit solver route. Generated dashboards and the public query
-  summary now report 111 concept rows, 108 non-template packs, 585 expected
-  checks, 267 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+  summary now report 111 concept rows, 108 non-template packs, 586 expected
+  checks, 268 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
 
 - **Finite-conditional-expectation bad tower-property QF_LRA row landed.**
   `finite-conditional-expectation-v0` now has a second checked Farkas row:
@@ -238,8 +252,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `UnsatFarkas` evidence, and the validator pins the atom table, fine/coarse
   partitions, exact conditional-expectation tables, actual tower table, claimed
   tower table, artifact path, and regression. Generated dashboards and the
-  public query summary now report 111 concept rows, 108 non-template packs, 585
-  expected checks, 267 checked rows, 247 replay-only rows, and 71 Lean-horizon
+  public query summary now report 111 concept rows, 108 non-template packs, 586
+  expected checks, 268 checked rows, 247 replay-only rows, and 71 Lean-horizon
   rows.
 
 - **Finite-random-variable bad expectation-through-pushforward QF_LRA row landed.**
@@ -252,8 +266,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   total random-variable map, pushforward distribution, outcome values, source
   expectation, pushforward expectation, claimed expectation, artifact path,
   regression, and certificate note. Generated dashboards and the public query
-  summary now report 111 concept rows, 108 non-template packs, 585 expected
-  checks, 267 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+  summary now report 111 concept rows, 108 non-template packs, 586 expected
+  checks, 268 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
 
 - **Comprehensive math-curriculum resource plan landed.**
   Added
@@ -262,7 +276,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   educational content, ontology/taxonomy rows, example packs, proof artifacts,
   solver feedback, rules/law transfer, consumer boundaries, and future library
   splits. The plan is grounded in the current 2026-07-01 resource baseline
-  (111 concept rows, 108 non-template packs, 585 expected checks, 267 checked
+  (111 concept rows, 108 non-template packs, 586 expected checks, 268 checked
   rows, 247 replay-only rows, 71 Lean-horizon rows, and 108 promoted
   solver-reuse packs) and is linked from the foundational-resource index,
   mdBook summary, buildout plan, master plan, build sequence, detailed build
@@ -277,8 +291,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   regression parses it and checks `UnsatFarkas` evidence, and the validator
   pins the factor tables, product table, target axis/atom, artifact path,
   regression, and certificate note. Generated dashboards and the public query
-  summary now report 111 concept rows, 108 non-template packs, 585 expected
-  checks, 267 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+  summary now report 111 concept rows, 108 non-template packs, 586 expected
+  checks, 268 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
 
 - **Finite-inversion bad inverse-distance-product QF_LRA row landed.**
   `finite-inversion-geometry-v0` now has a second checked Farkas row: exact

@@ -21,6 +21,7 @@ Concept rows:
 | Check | Expected | Evidence Status |
 |---|---|---|
 | `mean-variance-identity` | `sat` | replay-only |
+| `bad-variance-rejected` | `unsat` | checked |
 | `contingency-table-margins` | `sat` | replay-only |
 | `qf-lia-bad-contingency-total` | `unsat` | checked |
 | `simpson-paradox-witness` | `sat` | replay-only |
@@ -51,6 +52,33 @@ population variance = 15/2 - (5/2)^2 = 5/4
 ```
 
 This is exact rational replay of a fixed finite sample.
+
+## Check The Bad Variance Certificate
+
+The bad row claims that the same sample has population variance:
+
+```text
+Var(X) = 3/2
+```
+
+The validator has already replayed:
+
+```text
+mean^2 = 25/4
+second moment = 15/2
+actual population variance = 5/4
+```
+
+The solver-form artifact checks only the final linear contradiction:
+
+```text
+population_variance + mean_square = second_moment
+population_variance = 3/2
+```
+
+Axeyum emits `UnsatFarkas` evidence and checks it independently. The nonlinear
+square is not trusted as a solver rewrite; it is recomputed by finite replay
+before the LRA certificate step.
 
 ## Replay Count-Table Margins
 

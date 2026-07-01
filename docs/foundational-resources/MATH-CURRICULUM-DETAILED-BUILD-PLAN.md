@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 585 expected checks.
-- 267 checked proof/evidence rows.
+- 586 expected checks.
+- 268 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -603,7 +603,8 @@ Pick one row per commit unless the change is purely navigational.
 69. Landed: add statistics field-readiness consumer query coverage.
     `CONSUMER-QUERIES.md` and `check-foundational-resources.sh` now exercise
     the statistics Farkas field summary, finite-table and tail-count bridge
-    lookups, checked exact-rational statistics rows, and checked Diophantine
+    lookups, checked exact-rational statistics rows, including the bad
+    variance Farkas row, and checked Diophantine
     count rows, making exact finite tests, contingency tables, regression,
     random-matrix, finite probability, process-table, and concentration
     resources visible through the committed JSON contract.
@@ -988,6 +989,13 @@ Pick one row per commit unless the change is purely navigational.
      claims `2/3`; the shared QF_LRA/Farkas route now checks both product
      atom and marginal conflicts without claiming general product-measure
      construction, Fubini/Tonelli, kernels, or almost-everywhere theory.
+119. Landed: extend `descriptive-statistics-v0` with a checked bad variance
+     row. Exact finite-sample replay computes mean `5/2`, second moment
+     `15/2`, `mean^2 = 25/4`, and population variance `5/4`, while the
+     malformed source SMT-LIB artifact claims `3/2`; the shared QF_LRA/Farkas
+     route now checks exact-rational statistic contradictions alongside the
+     existing QF_LIA/Diophantine contingency-total row without claiming
+     inference, estimation, or asymptotic statistics.
 
 ## Validation Checklist
 

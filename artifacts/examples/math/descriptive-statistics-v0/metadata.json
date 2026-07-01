@@ -25,6 +25,7 @@
   ],
   "axeyum_fragments": [
     "LRA (exact rationals)",
+    "QF_LRA / Farkas",
     "LIA",
     "QF_LIA / Diophantine",
     "finite enumeration"
@@ -32,9 +33,10 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "descriptive statistics bad contingency total QF_LIA/Diophantine regression seed",
-    "pressure": "Contingency-table count contradiction where row sums 10 and 10 force total = 20 but the malformed row claims total = 19.",
+    "target": "descriptive statistics bad variance and bad contingency total regression seeds",
+    "pressure": "Exact-rational and integer statistics contradictions: the sample [1,2,3,4] forces Var(X)=5/4 but the malformed row claims 3/2, and the contingency row sums 10 and 10 force total = 20 but the malformed row claims total = 19.",
     "evidence": [
+      "bad-variance-rejected",
       "qf-lia-bad-contingency-total"
     ],
     "next_step": "Promote additional descriptive-statistics rows only when they add distinct integer-count or exact-rational solver pressure; keep inference, estimation, and numerical procedures in numerical-honesty metadata."
@@ -49,11 +51,14 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+    "artifacts/examples/math/descriptive-statistics-v0/smt2/bad-variance-farkas-conflict.smt2",
     "artifacts/examples/math/descriptive-statistics-v0/smt2/bad-contingency-total-diophantine-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
   ],
   "expected_results": [
     "mean-variance-identity",
+    "bad-variance-rejected",
     "contingency-table-margins",
     "qf-lia-bad-contingency-total",
     "simpson-paradox-witness"

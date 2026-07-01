@@ -27,6 +27,13 @@ Var(X) = E[X^2] - mean^2 = 5/4
 ```
 
 This is population variance over the listed finite data, not an estimator.
+The checked bad-variance row preserves the replay boundary by recording
+`mean^2 = 25/4`, then letting QF_LRA/Farkas reject the final contradiction:
+
+```text
+population_variance + 25/4 = 15/2
+population_variance = 3/2
+```
 
 ### Contingency Table Margins
 

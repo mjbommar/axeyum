@@ -377,8 +377,10 @@ schemas, examples, and validation workflows.
   Bayes posterior replay, with checked QF_LRA/Farkas evidence for bad
   normalization, bad conditioning, and bad posterior rows.
 - [`artifacts/examples/math/descriptive-statistics-v0/`](../../artifacts/examples/math/descriptive-statistics-v0/)
-  validates exact mean/variance identities, contingency-table margins, and a
-  Simpson's paradox count-table witness.
+  validates exact mean/variance identities, checked QF_LRA/Farkas rejection of
+  a bad variance claim, contingency-table margins, checked QF_LIA/Diophantine
+  rejection of a bad total-count claim, and a Simpson's paradox count-table
+  witness.
 - [`artifacts/examples/math/least-squares-regression-v0/`](../../artifacts/examples/math/least-squares-regression-v0/)
   validates exact least-squares normal equations, residual orthogonality,
   mean-baseline RSS comparison, checked rejection of bad coefficients, and a
