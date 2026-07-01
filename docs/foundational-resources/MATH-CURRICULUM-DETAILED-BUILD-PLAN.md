@@ -1142,6 +1142,15 @@ Pick one row per commit unless the change is purely navigational.
      coordinate/incidence/rigid/affine/orientation rows and
      circle/inversion/cyclic rows discoverable without claiming synthetic,
      projective, differential, global, or higher-degree geometry theorems.
+139. Landed: add
+     [`ALGEBRA-STRUCTURE-QUERIES.md`](ALGEBRA-STRUCTURE-QUERIES.md) as the
+     finite-algebra consumer query guide. The guide and resource smoke now
+     exercise concept-scoped Alethe/QF_BV checks for
+     `bridge_homomorphism_preservation`, `bridge_group_action`,
+     `bridge_module_action`, `bridge_ideal_closure`, and
+     `bridge_modular_crt_inverse_witness`, making finite algebra rows
+     discoverable without claiming arbitrary group/ring/module/category,
+     classification, isomorphism, or infinite-algebra theorems.
 
 ## Validation Checklist
 

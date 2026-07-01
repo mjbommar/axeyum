@@ -159,6 +159,11 @@ The matrix computation consumer query guide is
 it records exact concept-plus-route queries for LU, residual, rank/nullity,
 eigenpair, random-matrix, chain/cochain/UCT, tensor/module, operator, and
 Chebyshev resources.
+The algebra structure consumer query guide is
+[`docs/foundational-resources/ALGEBRA-STRUCTURE-QUERIES.md`](docs/foundational-resources/ALGEBRA-STRUCTURE-QUERIES.md);
+it records exact concept-plus-route queries for finite groups/actions,
+homomorphisms, ideals, quotient rows, modules, tensor rows, and fixed-width
+residue/field resources.
 The geometry resource consumer query guide is
 [`docs/foundational-resources/GEOMETRY-RESOURCE-QUERIES.md`](docs/foundational-resources/GEOMETRY-RESOURCE-QUERIES.md);
 it records exact concept-plus-route queries for finite coordinate/incidence/
@@ -537,6 +542,12 @@ The matrix computation lane now has
 and the query helper accepts exact `--concept` filters on `packs` and `checks`,
 so consumers can discover matrix rows by bridge concept plus proof route without
 parsing generated Markdown or adding a typed API.
+The algebra structure lane now has
+[`ALGEBRA-STRUCTURE-QUERIES.md`](docs/foundational-resources/ALGEBRA-STRUCTURE-QUERIES.md),
+and the foundational smoke checks concept-scoped Alethe/QF_BV rows for
+homomorphisms, group actions, module actions, ideals, and modular residue
+witnesses, so downstream consumers can discover finite algebra resources
+without promoting arbitrary algebraic structure theorems.
 The geometry resource lane now has
 [`GEOMETRY-RESOURCE-QUERIES.md`](docs/foundational-resources/GEOMETRY-RESOURCE-QUERIES.md),
 and the foundational smoke checks concept-scoped Farkas pack/check queries for

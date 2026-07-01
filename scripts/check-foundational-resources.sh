@@ -126,9 +126,18 @@ python3 scripts/query-foundational-resources.py packs --concept bridge_rank_null
 python3 scripts/query-foundational-resources.py fields --field abstract_algebra --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text homomorphism --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text ideal --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text action --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text tensor --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field abstract_algebra --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_homomorphism_preservation --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_group_action --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_module_action --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_ideal_closure --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_quotient_map --route Alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_tensor_bilinearity --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field abstract_algebra --route qf-bv --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_modular_crt_inverse_witness --route qf-bv --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_modular_crt_inverse_witness --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field number_theory --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack modular-arithmetic-v0 --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field number_theory --text finite --require-any >/dev/null

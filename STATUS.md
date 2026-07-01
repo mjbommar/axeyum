@@ -860,6 +860,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   compact-operator, Haar-space, minimax, alternation-theorem, and
   infinite-dimensional approximation claims remain Lean-horizon.
 
+- **Algebra structure query guide landed.**
+  `ALGEBRA-STRUCTURE-QUERIES.md` now gives downstream consumers copyable
+  concept-plus-route queries for finite algebra resources. It groups
+  homomorphism, group-action, module-action, ideal/quotient, tensor, modular
+  residue, and gcd/divisibility bridge rows across Alethe, QF_BV, and
+  Diophantine routes, and `check-foundational-resources.sh` now smoke-checks
+  the representative concept-scoped algebra queries. This is count-neutral and
+  keeps arbitrary group/ring/module/category, classification, isomorphism, and
+  infinite-algebra claims in the proof-horizon lane.
+
 - **Geometry resource query guide landed.**
   `GEOMETRY-RESOURCE-QUERIES.md` now gives downstream consumers copyable
   concept-plus-route queries for finite geometry resources. It separates

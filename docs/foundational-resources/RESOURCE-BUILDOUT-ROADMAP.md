@@ -1895,6 +1895,13 @@ Pick one item per commit unless the change is purely navigational.
      coordinate/incidence/rigid/affine/orientation rows and
      circle/inversion/cyclic rows discoverable without promoting broad geometry
      theorem claims.
+122. Landed: add
+     [ALGEBRA-STRUCTURE-QUERIES.md](ALGEBRA-STRUCTURE-QUERIES.md), making the
+     finite algebra lane queryable by bridge concept plus proof route. The
+     guide and foundational smoke cover concept-scoped Alethe/QF_BV pack/check
+     queries for homomorphism, group-action, module-action, ideal, and modular
+     residue bridge concepts while keeping arbitrary algebraic structure
+     theorems in the horizon lane.
 
 ## Validation Checklist
 

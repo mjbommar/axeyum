@@ -429,6 +429,11 @@ Use one row per commit unless the change is purely navigational.
    replay, Boolean, QF_BV, QF_LIA, QF_LRA, QF_UF, and Lean-horizon coverage
    queryable by route and optional field.
 21a. Landed: add
+   [ALGEBRA-STRUCTURE-QUERIES.md](ALGEBRA-STRUCTURE-QUERIES.md), making finite
+   group/action, homomorphism, ideal, quotient, module/tensor, and fixed-width
+   residue rows queryable by bridge concept plus proof route without adding a
+   typed API or claiming arbitrary algebraic theorem coverage.
+21b. Landed: add
    [GEOMETRY-RESOURCE-QUERIES.md](GEOMETRY-RESOURCE-QUERIES.md), making finite
    coordinate/incidence/rigid/affine/orientation and circle/inversion/cyclic
    geometry rows queryable by bridge concept plus Farkas route without adding

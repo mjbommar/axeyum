@@ -42,6 +42,8 @@ For proof-route coverage queries, use the
 [Proof Route Query Matrix](PROOF-ROUTE-QUERY-MATRIX.md).
 For matrix computation discovery by bridge concept and proof route, use the
 [Matrix Computation Consumer Queries](MATRIX-COMPUTATION-QUERIES.md).
+For finite algebra discovery by bridge concept and proof route, use the
+[Algebra Structure Consumer Queries](ALGEBRA-STRUCTURE-QUERIES.md).
 For finite geometry discovery by bridge concept and proof route, use the
 [Geometry Resource Consumer Queries](GEOMETRY-RESOURCE-QUERIES.md).
 This file remains the phase contract and landed-history log.
@@ -2223,6 +2225,12 @@ The matrix-resource consumer layer now also has
 `packs` and `checks`. This makes LU, residual, rank/nullity, eigenpair,
 random-matrix, tensor/module, operator, and Chebyshev rows discoverable by
 bridge concept plus proof route while preserving the JSON-first R6 boundary.
+The finite-algebra consumer layer now also has
+[`ALGEBRA-STRUCTURE-QUERIES.md`](ALGEBRA-STRUCTURE-QUERIES.md). The guide and
+resource smoke expose homomorphism, group-action, module-action, ideal, and
+modular residue bridge concepts through Alethe/QF_BV pack/check queries,
+making finite algebra rows discoverable while keeping arbitrary algebraic
+structure theorems in the proof-horizon lane.
 The finite-geometry consumer layer now also has
 [`GEOMETRY-RESOURCE-QUERIES.md`](GEOMETRY-RESOURCE-QUERIES.md). The guide and
 resource smoke expose `bridge_coordinate_orientation_geometry` and

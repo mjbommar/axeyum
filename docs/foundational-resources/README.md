@@ -65,6 +65,9 @@ schemas, examples, and validation workflows.
   copyable concept-plus-route queries for checked LU rows, residuals,
   rank/nullity, eigenpairs, random matrices, tensor/module rows, operators,
   and Chebyshev systems.
+- [ALGEBRA-STRUCTURE-QUERIES.md](ALGEBRA-STRUCTURE-QUERIES.md) gives copyable
+  concept-plus-route queries for finite groups/actions, homomorphisms, ideals,
+  quotients, modules, tensor rows, and fixed-width residue/field rows.
 - [GEOMETRY-RESOURCE-QUERIES.md](GEOMETRY-RESOURCE-QUERIES.md) gives copyable
   concept-plus-route queries for finite coordinate/incidence/rigid/affine
   geometry and finite circle/inversion/cyclic geometry rows.
