@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-Wolfe-line-search bad sufficient-decrease QF_LRA row landed.**
+  `finite-wolfe-line-search-v0` now includes a checked rejection for a
+  malformed Wolfe sufficient-decrease row: exact replay computes Armijo RHS
+  `1/2`, accepted value `0`, and sufficient-decrease slack `1/2`, while the bad
+  row claims that the same slack is nonpositive. The validator pins the source
+  witness, replayed RHS/value/slack, SMT-LIB artifact, regression, and
+  independently checked `UnsatFarkas` certificate. The shared
+  `math_resource_lra_routes` regression parses the artifact and checks the
+  Farkas evidence. Generated dashboards and the public query summary now report
+  111 concept rows, 108 non-template packs, 622 expected checks, 299 checked
+  rows, 252 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite-SDP bad slack-entry QF_LRA row landed.**
   `finite-sdp-v0` now includes a checked rejection for a malformed dual
   slack-entry row: exact primal/dual replay computes

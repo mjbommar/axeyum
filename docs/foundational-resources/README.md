@@ -472,8 +472,8 @@ schemas, examples, and validation workflows.
   rejection, and a general line-search convergence Lean-horizon row.
 - [`artifacts/examples/math/finite-wolfe-line-search-v0/`](../../artifacts/examples/math/finite-wolfe-line-search-v0/)
   validates exact one-variable Wolfe line-search replay, sufficient decrease,
-  curvature, checked bad-minimizer and bad-curvature rejections, and a general
-  Wolfe line-search convergence Lean-horizon row.
+  curvature, checked bad-minimizer, bad sufficient-decrease, and bad-curvature
+  rejections, and a general Wolfe line-search convergence Lean-horizon row.
 - [`artifacts/examples/math/finite-projected-gradient-v0/`](../../artifacts/examples/math/finite-projected-gradient-v0/)
   validates exact one-variable projected-gradient replay over `[0,1]`,
   unconstrained-step arithmetic, interval projection, projected objective

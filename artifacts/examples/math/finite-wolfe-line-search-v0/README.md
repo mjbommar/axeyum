@@ -2,10 +2,9 @@
 
 This pack turns one exact rational Wolfe line-search check into resource rows.
 It checks only the listed quadratic, descent direction, exact one-dimensional
-minimizer, Wolfe sufficient-decrease and curvature inequalities, and a false
-line-minimizer obstruction plus a false curvature obstruction; general Wolfe
-line-search convergence and smooth optimization theorems remain proof
-horizons.
+minimizer, Wolfe sufficient-decrease and curvature inequalities, and false
+line-minimizer, sufficient-decrease, and curvature obstructions; general Wolfe
+line-search convergence and smooth optimization theorems remain proof horizons.
 
 ## Audience
 
@@ -24,6 +23,8 @@ horizons.
   line minimizer is the full step `alpha=1`.
 - `wolfe-sufficient-decrease-replay`: checks the Armijo/Wolfe sufficient
   decrease inequality at the accepted step.
+- `bad-wolfe-sufficient-decrease-rejected`: rejects the malformed claim that
+  the accepted step has nonpositive sufficient-decrease slack.
 - `wolfe-curvature-replay`: checks the Wolfe curvature inequality at the
   accepted step.
 - `bad-wolfe-curvature-rejected`: rejects the malformed claim that the full
@@ -36,6 +37,7 @@ horizons.
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-wolfe-line-search-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_minimizer_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_sufficient_decrease_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_curvature_artifact_emits_checked_farkas
 ```
 

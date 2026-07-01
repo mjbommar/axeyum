@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 621 expected checks.
-- 298 checked proof/evidence rows.
+- 622 expected checks.
+- 299 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -197,7 +197,7 @@ Route plan:
 | Boolean CNF DRAT/LRAT | finite Boolean refutations, graph/search/set-family conflicts | Promote small topology and graph rows that are source-level obvious. |
 | QF_BV DRAT | fixed-width residue, bit-vector, and finite algebra conflicts | Promote only when width is part of the educational claim. |
 | QF_LIA/Diophantine | integer equations, counts, modular obstructions, rank coefficients, torsion membership | Group recurring gcd/divisibility and quotient-boundary obstructions as cookbook examples. |
-| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad width, bad convex-combination, bad separator, bad stationarity, bad complementarity, bad free-gradient, bad degenerate multiplier, bad objective, bad duality-gap, bad slack-entry, bad decrease, bad step-coordinate, bad Armijo, bad accepted-candidate, bad Wolfe minimizer, bad Wolfe curvature, bad projection, bad projected-decrease, bad proximal-point, and bad box-proximal-point rows with independent Farkas checks. |
+| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad width, bad convex-combination, bad separator, bad stationarity, bad complementarity, bad free-gradient, bad degenerate multiplier, bad objective, bad duality-gap, bad slack-entry, bad decrease, bad step-coordinate, bad Armijo, bad accepted-candidate, bad Wolfe minimizer, bad Wolfe sufficient-decrease, bad Wolfe curvature, bad projection, bad projected-decrease, bad proximal-point, and bad box-proximal-point rows with independent Farkas checks. |
 | QF_UF/Alethe | equality-heavy finite functions, quotients, homomorphisms | Use table replay for objects, Alethe for congruence conflicts. |
 | Lean horizon | induction schemas, completeness, topology, measure, asymptotics | Record theorem shape and dependencies; do not benchmark as finite checks. |
 
@@ -667,8 +667,8 @@ Build next:
   source QF_LRA/Farkas artifact; keep `finite-gradient-descent-v0`'s bad decrease and bad
   step-coordinate rows tied to their source QF_LRA/Farkas artifacts; keep `finite-line-search-v0`'s bad Armijo and
   bad accepted-candidate rows tied to their source QF_LRA/Farkas artifacts; keep
-  `finite-wolfe-line-search-v0`'s bad minimizer and bad curvature rows tied
-  to their source QF_LRA/Farkas artifacts; keep
+  `finite-wolfe-line-search-v0`'s bad minimizer, bad sufficient-decrease, and
+  bad curvature rows tied to their source QF_LRA/Farkas artifacts; keep
   `finite-projected-gradient-v0`'s bad projection and bad projected-decrease
   rows tied to their source QF_LRA/Farkas artifacts; keep
   `finite-proximal-gradient-v0`'s bad proximal
@@ -882,7 +882,8 @@ Build next:
   trace/objective, slack, dual-gap replay, and checked bad duality-gap evidence. Finite gradient descent now adds
   exact quadratic step and descent-bound replay. Finite line search now adds
   Armijo trial rejection and accepted-backtrack replay. Finite Wolfe line
-  search now adds sufficient-decrease and curvature replay. Finite projected
+  search now adds sufficient-decrease and curvature replay plus checked bad
+  minimizer, bad sufficient-decrease, and bad curvature evidence. Finite projected
   gradient now adds interval projection after a trial step. Finite proximal
   gradient now adds L1 soft-threshold and box-plus-L1 constrained replay after
   a trial step. Convexity rational rows now include checked bad midpoint and
@@ -1560,7 +1561,8 @@ Pick one item per commit unless the change is purely navigational.
     The new optimization/convexity and numerical-analysis pack validates exact
     descent-direction replay, exact line-minimizer replay, Wolfe
     sufficient-decrease and curvature replay, checked QF_LRA/Farkas rejection
-    of false minimizer and curvature claims, and a Wolfe line-search Lean horizon. The
+    of false minimizer, sufficient-decrease, and curvature claims, and a Wolfe
+    line-search Lean horizon. The
     learner path now includes a focused finite Wolfe line-search end-to-end
     page.
 69. Landed: add `finite-active-set-qp-v0`.
@@ -1967,6 +1969,13 @@ Pick one item per commit unless the change is purely navigational.
      `1`, while the malformed row claims `1/2`; the new source SMT-LIB artifact
      reaches independently checked QF_LRA/Farkas evidence through
      `finite_sdp_bad_slack_entry_artifact_emits_checked_farkas`.
+131. Landed: extend `finite-wolfe-line-search-v0` with a source-linked checked
+     sufficient-decrease refutation. Exact Wolfe replay computes Armijo RHS
+     `1/2`, accepted value `0`, and sufficient-decrease slack `1/2`, while the
+     malformed row claims the same slack is nonpositive; the new source
+     SMT-LIB artifact reaches independently checked QF_LRA/Farkas evidence
+     through
+     `finite_wolfe_line_search_bad_sufficient_decrease_artifact_emits_checked_farkas`.
 
 ## Validation Checklist
 

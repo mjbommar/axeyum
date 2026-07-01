@@ -3,9 +3,9 @@
 This lesson follows
 [finite-wolfe-line-search-v0](../../../artifacts/examples/math/finite-wolfe-line-search-v0/)
 from one exact line-search witness through Wolfe sufficient-decrease and
-curvature replay, then through checked Farkas evidence for a bad minimizer and
-bad curvature row. It is a finite Wolfe certificate, not a general line-search
-convergence theorem.
+curvature replay, then through checked Farkas evidence for bad minimizer,
+sufficient-decrease, and curvature rows. It is a finite Wolfe certificate, not
+a general line-search convergence theorem.
 
 ## Concept
 
@@ -35,7 +35,7 @@ c2 = 1/2
 
 ## What Gets Checked
 
-The pack has seven rows:
+The pack has eight rows:
 
 | Row | Result | Evidence |
 |---|---|---|
@@ -43,6 +43,7 @@ The pack has seven rows:
 | `exact-line-minimizer-replay` | `sat` | replay-only |
 | `bad-line-minimizer-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `wolfe-sufficient-decrease-replay` | `sat` | replay-only |
+| `bad-wolfe-sufficient-decrease-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `wolfe-curvature-replay` | `sat` | replay-only |
 | `bad-wolfe-curvature-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-wolfe-line-search-lean-horizon` | `not-run` | Lean horizon |
@@ -120,6 +121,30 @@ c2 * |phi'(0)| = (1/2) * 4 = 2
 
 At the accepted step, `|phi'(1/2)| = 0`, so curvature holds with slack `2`.
 
+## Bad Sufficient-Decrease Row
+
+The malformed row keeps the accepted step fixed but claims the
+sufficient-decrease slack is nonpositive:
+
+```text
+replayed sufficient-decrease slack = 1/2
+claimed slack <= 0
+```
+
+The source SMT-LIB artifact fixes the replayed slack as `1/2` and also asserts
+the malformed bound:
+
+```smt2
+(set-logic QF_LRA)
+(declare-const sufficient_decrease_slack Real)
+(assert (= sufficient_decrease_slack (/ 1 2)))
+(assert (<= sufficient_decrease_slack 0))
+(check-sat)
+```
+
+Axeyum parses that source row, emits `UnsatFarkas` evidence, and independently
+checks the certificate.
+
 ## Bad Curvature Row
 
 The malformed row claims that the full step `alpha = 1` satisfies the Wolfe
@@ -165,5 +190,6 @@ general Wolfe line-search theorem: future Lean reconstruction
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-wolfe-line-search-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_minimizer_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_sufficient_decrease_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_curvature_artifact_emits_checked_farkas
 ```

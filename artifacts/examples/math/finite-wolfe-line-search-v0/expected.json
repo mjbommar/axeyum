@@ -81,6 +81,24 @@
       "notes": "The validator recomputes the Armijo right-hand side f(x)+c1*alpha*phi'(0) and the nonnegative slack."
     },
     {
+      "id": "bad-wolfe-sufficient-decrease-rejected",
+      "claim": "The accepted step alpha=1/2 has nonpositive Wolfe sufficient-decrease slack.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_wolfe_sufficient_decrease_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "quadratic-wolfe-step",
+        "computed_armijo_rhs": "1/2",
+        "accepted_value": "0",
+        "computed_slack": "1/2",
+        "claimed_slack_upper_bound": "0",
+        "smt2_artifact": "artifacts/examples/math/finite-wolfe-line-search-v0/smt2/bad-wolfe-sufficient-decrease-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_sufficient_decrease_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes Armijo RHS = 1/2 and accepted value = 0, so the sufficient-decrease slack is 1/2; the source artifact checks that the same slack cannot be nonpositive."
+    },
+    {
       "id": "wolfe-curvature-replay",
       "claim": "The accepted step alpha=1/2 satisfies the Wolfe curvature bound with slack 2.",
       "expected_result": "sat",

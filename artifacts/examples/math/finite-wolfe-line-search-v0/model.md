@@ -48,6 +48,15 @@ So the accepted step has Armijo/Wolfe sufficient-decrease slack:
 1/2 - 0 = 1/2
 ```
 
+The checked bad sufficient-decrease row keeps the accepted step fixed but
+claims the slack is nonpositive. Exact replay computes slack `1/2`, so the
+source QF_LRA artifact checks the final contradiction:
+
+```text
+sufficient_decrease_slack = 1/2
+sufficient_decrease_slack <= 0
+```
+
 The Wolfe curvature bound is:
 
 ```text

@@ -1541,6 +1541,17 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+For the Wolfe sufficient-decrease certificate:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-wolfe-line-search-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text sufficient-decrease \
+  --require-any
+```
+
 For geometry, use the Farkas route to keep finite coordinate, incidence,
 rigid-configuration, affine, oriented-area, circle-geometry, inversion, and
 cyclic-configuration replay together while leaving synthetic, projective,

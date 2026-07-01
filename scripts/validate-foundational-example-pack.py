@@ -12381,6 +12381,78 @@ def validate_finite_wolfe_line_search(expected: dict[str, Any]) -> None:
     if armijo_slack < 0:
         fail("wolfe-sufficient-decrease-replay must record nonnegative slack")
 
+    bad_sufficient_decrease = checks["bad-wolfe-sufficient-decrease-rejected"]
+    if (
+        bad_sufficient_decrease["expected_result"] != "unsat"
+        or bad_sufficient_decrease.get("proof_status") != "checked"
+    ):
+        fail("bad-wolfe-sufficient-decrease-rejected must be a checked unsat row")
+    if (
+        bad_sufficient_decrease["validation"]
+        != "finite_bad_wolfe_sufficient_decrease_refutation"
+    ):
+        fail(
+            "bad-wolfe-sufficient-decrease-rejected must use "
+            "finite_bad_wolfe_sufficient_decrease_refutation validation"
+        )
+    data = bad_sufficient_decrease.get("data", {})
+    if data.get("source_witness") != "quadratic-wolfe-step":
+        fail(
+            "bad-wolfe-sufficient-decrease-rejected must cite the "
+            "quadratic-wolfe-step witness"
+        )
+    computed_rhs = require_fraction(
+        "bad Wolfe sufficient decrease computed_armijo_rhs",
+        data.get("computed_armijo_rhs"),
+    )
+    bad_accepted_value = require_fraction(
+        "bad Wolfe sufficient decrease accepted_value",
+        data.get("accepted_value"),
+    )
+    computed_slack = require_fraction(
+        "bad Wolfe sufficient decrease computed_slack",
+        data.get("computed_slack"),
+    )
+    claimed_slack_upper_bound = require_fraction(
+        "bad Wolfe sufficient decrease claimed_slack_upper_bound",
+        data.get("claimed_slack_upper_bound"),
+    )
+    if computed_rhs != armijo_rhs:
+        fail("bad-wolfe-sufficient-decrease-rejected Armijo RHS must match replay")
+    if bad_accepted_value != accepted_value:
+        fail("bad-wolfe-sufficient-decrease-rejected accepted value must match replay")
+    if computed_slack != armijo_slack:
+        fail("bad-wolfe-sufficient-decrease-rejected slack must match replay")
+    if computed_rhs - bad_accepted_value != computed_slack:
+        fail("bad-wolfe-sufficient-decrease-rejected slack equation is incorrect")
+    if computed_slack <= claimed_slack_upper_bound:
+        fail("bad-wolfe-sufficient-decrease-rejected malformed bound must contradict replay")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad Wolfe sufficient decrease smt2_artifact", smt2_artifact)
+    if smt2_artifact != (
+        "artifacts/examples/math/finite-wolfe-line-search-v0/smt2/"
+        "bad-wolfe-sufficient-decrease-farkas-conflict.smt2"
+    ):
+        fail(
+            "bad-wolfe-sufficient-decrease-rejected smt2_artifact must name "
+            "the checked QF_LRA artifact"
+        )
+    check_source("bad Wolfe sufficient decrease smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad Wolfe sufficient decrease farkas_regression", regression)
+    if (
+        "finite_wolfe_line_search_bad_sufficient_decrease_artifact_emits_checked_farkas"
+        not in regression
+    ):
+        fail("bad-wolfe-sufficient-decrease-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad Wolfe sufficient decrease certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail(
+            "bad-wolfe-sufficient-decrease-rejected certificate must document "
+            "checked Farkas evidence"
+        )
+
     curvature = checks["wolfe-curvature-replay"]
     if curvature["expected_result"] != "sat":
         fail("wolfe-curvature-replay must expect sat")

@@ -1148,9 +1148,9 @@ Recommended order:
     projected/stochastic line search, and convergence theorems remain horizon claims.
 40. `finite-wolfe-line-search-v0`: exact descent-direction replay, exact
     line-minimizer replay, Wolfe sufficient-decrease/curvature replay, and
-    checked QF_LRA/Farkas bad-minimizer and bad-curvature rejections, while
-    strong Wolfe variants, stochastic line search, and convergence theorems
-    remain horizon claims.
+    checked QF_LRA/Farkas bad-minimizer, bad sufficient-decrease, and
+    bad-curvature rejections, while strong Wolfe variants, stochastic line
+    search, and convergence theorems remain horizon claims.
 41. `finite-projected-gradient-v0`: exact gradient replay, unconstrained-step
     arithmetic, interval projection, projected descent, and checked QF_LRA/Farkas
     bad-projection and bad projected-decrease rejections, while active-set,
@@ -2077,9 +2077,10 @@ descent-step replay computes decrease `11/4`, decrease error `3/4`, and
 `finite-line-search-v0` now routes its bad Armijo and bad accepted-candidate
 rows through the same checked Farkas evidence path after exact line-search
 replay computes rejected-step violation `1` and accepted point `0`.
-`finite-wolfe-line-search-v0` now routes its bad minimizer and bad curvature
-rows through the same checked Farkas evidence path after exact Wolfe replay
-computes minimizer `alpha=1/2` and curvature violation `2`.
+`finite-wolfe-line-search-v0` now routes its bad minimizer, bad
+sufficient-decrease, and bad curvature rows through the same checked Farkas
+evidence path after exact Wolfe replay computes minimizer `alpha=1/2`,
+sufficient-decrease slack `1/2`, and curvature violation `2`.
 `finite-projected-gradient-v0` now routes its bad projection and bad
 projected-decrease rows through the same checked Farkas evidence path after
 exact interval-projection replay rejects `3/2` for the interval `[0,1]` and

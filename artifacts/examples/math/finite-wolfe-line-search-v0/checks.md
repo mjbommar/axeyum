@@ -6,10 +6,11 @@
 | `exact-line-minimizer-replay` | `sat` | replay-only |
 | `bad-line-minimizer-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `wolfe-sufficient-decrease-replay` | `sat` | replay-only |
+| `bad-wolfe-sufficient-decrease-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `wolfe-curvature-replay` | `sat` | replay-only |
 | `bad-wolfe-curvature-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-wolfe-line-search-lean-horizon` | `not-run` | Lean horizon |
 
 The replay rows check only the listed rational quadratic Wolfe instance. The
-bad rows keep the replayed line minimizer and curvature violation fixed and
-check tiny linear contradictions.
+bad rows keep the replayed line minimizer, sufficient-decrease slack, and
+curvature violation fixed and check tiny linear contradictions.

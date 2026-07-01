@@ -19,7 +19,7 @@ Generated from the current math resource queue:
 - math example packs: 108
 - learner-linked packs: 108 focused links
 - packs with non-checked proof rows: 97
-- non-checked proof rows: 318
+- non-checked proof rows: 323
 
 Candidate route totals:
 
@@ -280,8 +280,9 @@ First targets:
   accepted-candidate rows after exact line-search replay computes
   rejected-step violation `1` and accepted point `0`)
 - [finite-wolfe-line-search-v0](../../artifacts/examples/math/finite-wolfe-line-search-v0/)
-  (source-linked Farkas regressions landed for the bad minimizer and bad
-  curvature rows after exact Wolfe replay computes minimizer `alpha=1/2` and
+  (source-linked Farkas regressions landed for the bad minimizer, bad
+  sufficient-decrease, and bad curvature rows after exact Wolfe replay computes
+  minimizer `alpha=1/2`, accepted sufficient-decrease slack `1/2`, and
   curvature violation `2`)
 - [finite-projected-gradient-v0](../../artifacts/examples/math/finite-projected-gradient-v0/)
   (source-linked Farkas regressions landed for the bad projection and bad
@@ -461,6 +462,10 @@ Secondary targets:
   boundary: exact replay computes the gradient, step update, objective
   decrease, and descent-bound slack, then Farkas checks the final bad-decrease
   error and bad step-coordinate conflicts.
+  Finite Wolfe line search now contributes the line-search-condition version:
+  exact replay computes the minimizer, sufficient-decrease slack, and curvature
+  violation, then Farkas checks the final bad minimizer, bad
+  sufficient-decrease, and bad curvature conflicts.
 
 Expected artifact:
 
