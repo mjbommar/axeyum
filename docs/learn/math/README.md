@@ -499,8 +499,8 @@ Companion maps:
   replay.
 - [Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md): follows
   exact Vandermonde unisolvence, interpolation, alternating residual signs,
-  checked QF_LRA/Farkas duplicate-node determinant rejection, and the
-  Chebyshev/Haar/minimax Lean horizon.
+  checked QF_LRA/Farkas duplicate-node determinant and bad interpolation-sample
+  rejections, and the Chebyshev/Haar/minimax Lean horizon.
 
 ## How To Read These Pages
 

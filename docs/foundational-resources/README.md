@@ -508,8 +508,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-chebyshev-systems-v0/`](../../artifacts/examples/math/finite-chebyshev-systems-v0/)
   validates exact finite Vandermonde unisolvence, interpolation replay,
   alternating residual signs, checked QF_LRA/Farkas rejection of a
-  duplicate-node determinant conflict, and a general Chebyshev-system
-  Lean-horizon row.
+  duplicate-node determinant conflict and a bad interpolation-sample conflict,
+  and a general Chebyshev-system Lean-horizon row.
 - [`artifacts/examples/math/complex-algebraic-v0/`](../../artifacts/examples/math/complex-algebraic-v0/)
   validates exact complex arithmetic, conjugate/norm replay, checked
   QF_LRA/Farkas rejection of a bad norm-squared row, and a fixed polynomial-root

@@ -97,6 +97,26 @@
       "notes": "The validator rejects the grid because the determinant is zero and x - x^2 vanishes on all listed sample points. The SMT-LIB artifact isolates the false determinant claim as a QF_LRA contradiction, and Axeyum emits checked Farkas evidence."
     },
     {
+      "id": "bad-interpolation-sample-rejected",
+      "claim": "The listed quadratic interpolation polynomial has value 5 at x = 1.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_chebyshev_interpolation_refutation",
+      "proof_status": "checked",
+      "data": {
+        "points": ["-1", "0", "1"],
+        "basis_degree": 2,
+        "coefficients": ["2", "-1", "3"],
+        "evaluation_point": "1",
+        "evaluation_row": ["1", "1", "1"],
+        "actual_value": "4",
+        "claimed_value": "5",
+        "smt2_artifact": "artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-interpolation-sample-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_bad_interpolation_sample_artifact_emits_checked_farkas",
+        "certificate": "produce_lra_evidence emits Evidence::UnsatFarkas checked by Evidence::check for the replayed interpolation conflict p(1) = 4 and p(1) = 5"
+      },
+      "notes": "The validator recomputes p(1)=4 for p(x)=2 - x + 3*x^2. The SMT-LIB artifact isolates the final false sample-value claim as a QF_LRA contradiction, and Axeyum emits checked Farkas evidence."
+    },
+    {
       "id": "general-chebyshev-system-lean-horizon",
       "claim": "General Chebyshev-system and minimax-approximation theorems require future Lean resources.",
       "expected_result": "not-run",

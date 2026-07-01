@@ -40,6 +40,26 @@ determinant = 1
 The solver regression emits checked `UnsatFarkas` evidence for that final
 linear contradiction after pack-local replay computes the determinant.
 
+## `bad-interpolation-sample-rejected`
+
+Expected result: `unsat`.
+
+The validator recomputes the interpolation row:
+
+```text
+p(x) = 2 - x + 3*x^2
+p(1) = 4
+```
+
+The malformed row claims:
+
+```text
+p(1) = 5
+```
+
+The promoted QF_LRA route takes the replayed sample value and checks the final
+exact-rational conflict with `UnsatFarkas` evidence.
+
 ## `general-chebyshev-system-lean-horizon`
 
 Expected result: `not-run`.

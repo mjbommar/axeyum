@@ -10155,6 +10155,53 @@ def validate_finite_chebyshev_systems(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "Evidence::check" not in certificate:
         fail("bad-duplicate-node-grid-rejected certificate must document checked Farkas evidence")
 
+    bad_interpolation = checks["bad-interpolation-sample-rejected"]
+    if bad_interpolation["expected_result"] != "unsat":
+        fail("bad-interpolation-sample-rejected must expect unsat")
+    if bad_interpolation["proof_status"] != "checked":
+        fail("bad-interpolation-sample-rejected must be checked")
+    if bad_interpolation["validation"] != "finite_bad_chebyshev_interpolation_refutation":
+        fail("bad-interpolation-sample-rejected must use finite_bad_chebyshev_interpolation_refutation validation")
+    data = bad_interpolation.get("data", {})
+    points = require_fraction_vector("bad interpolation points", data.get("points"))
+    degree = require_basis_degree("bad interpolation basis_degree", data.get("basis_degree"))
+    coefficients = require_fraction_vector("bad interpolation coefficients", data.get("coefficients"))
+    evaluation_point = require_fraction("bad interpolation evaluation_point", data.get("evaluation_point"))
+    evaluation_row = require_fraction_vector("bad interpolation evaluation_row", data.get("evaluation_row"))
+    actual_value = require_fraction("bad interpolation actual_value", data.get("actual_value"))
+    claimed_value = require_fraction("bad interpolation claimed_value", data.get("claimed_value"))
+    if len(points) != degree + 1:
+        fail("bad-interpolation-sample-rejected expects degree + 1 sample points")
+    if len(coefficients) != degree + 1:
+        fail("bad-interpolation-sample-rejected coefficient count must be degree + 1")
+    computed_row = [evaluation_point**power for power in range(degree + 1)]
+    if evaluation_row != computed_row:
+        fail("bad-interpolation-sample-rejected evaluation_row is incorrect")
+    if polynomial_eval(coefficients, evaluation_point) != actual_value:
+        fail("bad-interpolation-sample-rejected actual_value is incorrect")
+    if sum(entry * coefficient for entry, coefficient in zip(evaluation_row, coefficients)) != actual_value:
+        fail("bad-interpolation-sample-rejected row-vector product is incorrect")
+    if claimed_value == actual_value:
+        fail("bad-interpolation-sample-rejected must document a false sample claim")
+    if evaluation_point != 1 or actual_value != 4 or claimed_value != 5:
+        fail("bad-interpolation-sample-rejected is fixed to p(1)=4 versus claimed p(1)=5")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad interpolation Chebyshev smt2_artifact", smt2_artifact)
+    check_source("bad interpolation Chebyshev smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-interpolation-sample-farkas-conflict.smt2"
+    ):
+        fail("bad-interpolation-sample-rejected smt2_artifact must name the checked QF_LRA artifact")
+    regression = data.get("farkas_regression")
+    require_string("bad interpolation Chebyshev farkas_regression", regression)
+    if "finite_chebyshev_bad_interpolation_sample_artifact_emits_checked_farkas" not in regression:
+        fail("bad-interpolation-sample-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad interpolation Chebyshev certificate", certificate)
+    if "UnsatFarkas" not in certificate or "Evidence::check" not in certificate:
+        fail("bad-interpolation-sample-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-chebyshev-system-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-chebyshev-system-lean-horizon must be not-run")

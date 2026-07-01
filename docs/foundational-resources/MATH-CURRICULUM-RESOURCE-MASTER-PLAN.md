@@ -52,8 +52,8 @@ As of 2026-06-30, the committed resource query reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 558 expected checks.
-- 242 checked proof/evidence rows.
+- 559 expected checks.
+- 243 checked proof/evidence rows.
 - 245 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -318,7 +318,7 @@ Next useful increments:
 | `numerical_analysis` | residuals, Euler steps, root-finding, finite optimization iterations, operator bounds | landed finite dynamics/Euler bridge for recurrence prefixes, invariants, Euler steps, and finite error tables; add only distinct pivoting/stability or reproducible numerical metadata pressure | QF_LRA/Farkas, replay, Lean horizon | exact replay is separate from floating-point experiment claims |
 | `differential_equations_and_dynamical_systems` | bounded recurrences, Euler traces, finite invariants, stochastic kernels/hitting times | landed finite dynamics/Euler bridge plus stochastic-kernel bridge; add transition/invariant variants only when they add distinct finite pressure | QF_LRA/Farkas, finite replay, Lean horizon | continuous existence/uniqueness and PDE claims stay horizon |
 | `geometry` | coordinate, incidence, rigid, affine, oriented area, circle, inversion, cyclic quadrilaterals | landed finite circle/inversion/cyclic replay bridge; add only distinct circle-line correspondence, angle rows beyond the square witness, Ptolemy shadows, or higher-degree polynomial geometry | QF_LRA/Farkas, finite replay, QF_NRA horizon | synthetic/global geometry claims stay Lean horizon |
-| `functional_analysis_and_operator_theory` | finite operators, inner products, projections, Chebyshev slices, finite duals | norm variants, finite approximation/interpolation, operator-spectrum rows | QF_LRA/Farkas, finite replay, Lean horizon | Banach/Hilbert and infinite-dimensional claims are not finite checks |
+| `functional_analysis_and_operator_theory` | finite operators, inner products, projections, Chebyshev slices, finite duals | norm variants, finite approximation/alternation, operator-spectrum rows after the landed checked Chebyshev interpolation conflict | QF_LRA/Farkas, finite replay, Lean horizon | Banach/Hilbert and infinite-dimensional claims are not finite checks |
 
 ## Near-Term Commit Queue
 

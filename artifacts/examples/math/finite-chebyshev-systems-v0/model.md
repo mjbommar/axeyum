@@ -36,6 +36,11 @@ p(0) = 2
 p(1) = 4
 ```
 
+The bad interpolation-sample row keeps the same coefficients but claims
+`p(1) = 5`. The pack validator checks the coefficient sum
+`2 + (-1) + 3 = 4`; the solver-facing QF_LRA artifact then rejects the false
+sample value `5` with checked Farkas evidence.
+
 ## Alternating Residual
 
 The alternation witness uses:

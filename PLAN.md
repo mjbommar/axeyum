@@ -148,7 +148,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-06-30): the public JSON layer reports
-111 concept rows, 108 non-template packs, 558 expected checks, 242 checked
+111 concept rows, 108 non-template packs, 559 expected checks, 243 checked
 rows, 245 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -557,7 +557,8 @@ negative-norm row, and spectral linear algebra now promoted for its bad
 eigenpair row, with matrix invariants now promoted for its bad characteristic
 polynomial row, polynomial factorization now promoted for its fixed
 irreducible-quadratic discriminant conflict, and finite Chebyshev systems now
-promoted for the duplicate-node determinant conflict, metric continuity now promoted for the finite
+promoted for the duplicate-node determinant and bad interpolation-sample
+conflicts, with metric continuity now promoted for the finite
 bad-delta output-bound conflict, finite stochastic kernels now promoted for
 the bad kernel-row normalization conflict, and finite product measure now
 promoted for the bad product-probability conflict, with finite random variables

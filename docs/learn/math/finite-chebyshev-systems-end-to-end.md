@@ -2,7 +2,8 @@
 
 This lesson follows one exact finite Chebyshev-system resource from
 Vandermonde unisolvence replay to interpolation, alternating residual signs,
-and a checked duplicate-node rejection. It uses the
+checked duplicate-node rejection, and checked bad interpolation-sample
+rejection. It uses the
 [finite-chebyshev-systems-v0](../../../artifacts/examples/math/finite-chebyshev-systems-v0/)
 pack.
 
@@ -24,11 +25,13 @@ Concept rows:
 | `interpolation-polynomial-witness` | `sat` | replay-only |
 | `alternating-residual-witness` | `sat` | replay-only |
 | `bad-duplicate-node-grid-rejected` | `unsat` | checked |
+| `bad-interpolation-sample-rejected` | `unsat` | checked |
 | `general-chebyshev-system-lean-horizon` | `not-run` | lean-horizon |
 
 The positive rows replay finite exact-rational matrix and polynomial
-calculations. The negative row is a checked refutation of a false unisolvence
-claim, with a promoted QF_LRA/Farkas route for the final determinant conflict.
+calculations. The negative rows are checked refutations of a false unisolvence
+claim and a false interpolation sample, with promoted QF_LRA/Farkas routes for
+the final exact-linear conflicts.
 General Chebyshev-system and minimax theorems remain Lean-horizon.
 
 ## Replay Vandermonde Unisolvence
@@ -77,6 +80,18 @@ p(1)  = 4
 
 This gives the learner a concrete path from polynomial coefficients to a finite
 sample table.
+
+The checked bad interpolation row reuses the same coefficient replay but claims
+the last sample is `5`:
+
+```text
+p(1) = 4
+false claim: p(1) = 5
+```
+
+The pack validator handles the coefficient replay; the QF_LRA/Farkas artifact
+then keeps the final sample-value conflict small enough for independent
+certificate checking.
 
 ## Replay Alternating Residual Signs
 
@@ -168,6 +183,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_duplicate_node_grid_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_bad_interpolation_sample_artifact_emits_checked_farkas
 ```
 
 Expected output:
@@ -181,8 +197,8 @@ validated 1 foundational example pack(s)
 This lesson shows Axeyum's current Chebyshev-system resource pattern:
 
 ```text
-untrusted fast search -> grid, coefficients, residual, or bad-grid candidate
-trusted small checking -> exact rational determinant replay plus checked Farkas conflict
+untrusted fast search -> grid, coefficients, residual, bad-grid, or bad-sample candidate
+trusted small checking -> exact rational replay plus checked Farkas conflict
 remaining horizon -> general Chebyshev, Haar, minimax, and compactness proofs
 ```
 

@@ -10,8 +10,9 @@ The examples are:
 - an interpolation replay from coefficients to sample values;
 - an alternating residual sign-pattern witness on three sample points;
 - checked rejection of a degenerate duplicate-node interpolation grid;
+- checked rejection of a false interpolation sample value;
 - a QF_LRA/Farkas proof-route artifact for the duplicate-node determinant
-  conflict;
+  and bad interpolation-sample conflicts;
 - a general Chebyshev-space Lean-horizon row.
 
 ## Concepts
@@ -33,11 +34,16 @@ degenerate-grid null vectors. The bad-grid row is checked by showing the
 evaluation matrix has determinant zero and a nonzero coefficient vector that
 vanishes on all listed sample points.
 
-The duplicate-node row also has a QF_LRA proof-route artifact:
+The duplicate-node row has a QF_LRA proof-route artifact:
 [`smt2/bad-duplicate-node-grid-farkas-conflict.smt2`](smt2/bad-duplicate-node-grid-farkas-conflict.smt2).
 It isolates the final false determinant claim as `determinant = 0` and
 `determinant = 1`; Axeyum emits `Evidence::UnsatFarkas`, and
 `Evidence::check` independently rechecks the certificate.
+
+The bad interpolation-sample row has the same route:
+[`smt2/bad-interpolation-sample-farkas-conflict.smt2`](smt2/bad-interpolation-sample-farkas-conflict.smt2).
+It follows exact coefficient replay for `p(1)=4` and rejects the final
+malformed claim `p(1)=5` with checked Farkas evidence.
 
 This pack is finite checked evidence. It is not a proof of general Chebyshev
 systems, Haar spaces, minimax approximation, alternation theorems, compactness
@@ -48,4 +54,5 @@ Validation:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_duplicate_node_grid_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_bad_interpolation_sample_artifact_emits_checked_farkas
 ```

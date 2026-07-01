@@ -37,10 +37,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite Chebyshev duplicate-node QF_LRA/Farkas regression seed",
-    "pressure": "Degenerate duplicate-node Vandermonde grid with determinant 0 versus the false determinant-1 unisolvence claim.",
+    "target": "finite Chebyshev duplicate-node and interpolation QF_LRA/Farkas regression seeds",
+    "pressure": "Degenerate duplicate-node Vandermonde grid with determinant 0 versus the false determinant-1 unisolvence claim, plus an exact interpolation sample conflict where p(1)=4 but the malformed row claims p(1)=5.",
     "evidence": [
-      "bad-duplicate-node-grid-rejected"
+      "bad-duplicate-node-grid-rejected",
+      "bad-interpolation-sample-rejected"
     ],
     "next_step": "Promote interpolation or alternation rows only when they add distinct exact-linear regression pressure; keep Haar, minimax, and infinite-dimensional theorems in the Lean-horizon lane."
   },
@@ -55,6 +56,7 @@
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-duplicate-node-grid-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-interpolation-sample-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
@@ -62,12 +64,13 @@
     "interpolation-polynomial-witness",
     "alternating-residual-witness",
     "bad-duplicate-node-grid-rejected",
+    "bad-interpolation-sample-rejected",
     "general-chebyshev-system-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite sample grids and polynomial bases as exact rational evaluation matrices.",
     "Replay determinant, interpolation, and sign-pattern rows by deterministic exact arithmetic.",
-    "Emit checked finite counterexample evidence for degenerate sample grids; the duplicate-node determinant conflict now has checked QF_LRA/Farkas evidence.",
+    "Emit checked finite counterexample evidence for degenerate sample grids and false interpolation samples; the duplicate-node determinant and bad interpolation sample conflicts now have checked QF_LRA/Farkas evidence.",
     "Keep Haar/Chebyshev-system theorems, minimax approximation, alternation theorems, and infinite-dimensional analysis marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

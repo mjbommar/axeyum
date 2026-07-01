@@ -880,8 +880,9 @@ Gram-Schmidt replay, checked QF_LRA/Farkas rejection of a bad inner product,
 and a general inner-product/Hilbert-space Lean-horizon row.
 `artifacts/examples/math/finite-chebyshev-systems-v0/` now validates exact
 finite Vandermonde unisolvence, interpolation matrix replay, alternating
-residual sign patterns, checked QF_LRA/Farkas rejection of a duplicate-node
-determinant conflict, and a general Chebyshev-system Lean-horizon row.
+residual sign patterns, checked QF_LRA/Farkas rejection of duplicate-node
+determinant and bad interpolation-sample conflicts, and a general
+Chebyshev-system Lean-horizon row.
 `artifacts/examples/math/complex-algebraic-v0/` now validates exact complex
 arithmetic, conjugate/norm replay, checked QF_LRA/Farkas rejection of a bad
 norm-squared row, and a fixed polynomial-root witness using real-pair algebra.
@@ -1049,8 +1050,8 @@ Recommended order:
 31. `finite-concentration-v0`: finite Markov, Chebyshev, and union-bound
     tail checks, plus rejection of a false concentration bound.
 32. `finite-chebyshev-systems-v0`: finite Vandermonde unisolvence,
-    interpolation replay, alternating residual signs, and duplicate-node
-    rejection.
+    interpolation replay, alternating residual signs, duplicate-node rejection,
+    and checked bad interpolation-sample rejection.
 33. `finite-root-finding-v0`: exact bisection/Newton iteration replay,
     residual-decrease checking, and checked QF_LRA/Farkas bad-step rejection,
     while convergence and floating-point stability remain horizon claims.
@@ -1653,8 +1654,8 @@ QF_LRA/Farkas evidence, and the general proximal-gradient convergence Lean
 horizon.
 `finite-chebyshev-systems-v0` now has a learner-facing end-to-end lesson for
 exact Vandermonde unisolvence, interpolation, alternating residual signs,
-checked duplicate-node-grid rejection with QF_LRA/Farkas evidence, and the
-Chebyshev/Haar/minimax Lean horizon.
+checked duplicate-node-grid and bad interpolation-sample rejection with
+QF_LRA/Farkas evidence, and the Chebyshev/Haar/minimax Lean horizon.
 `spectral-linear-algebra-v0` now has a learner-facing end-to-end lesson for
 exact eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotient
 checking, spectral decomposition reconstruction, checked bad-eigenpair

@@ -334,9 +334,9 @@ Build sequence:
     `artifacts/examples/math/number-theory-v0/smt2/bad-square-witness-mod7-bitblast-conflict.smt2`,
     both checked by the `math_resource_bv_routes` QF_BV/DRAT regression.
     `finite-chebyshev-systems-v0` now links
-    `bad-duplicate-node-grid-rejected` to
-    `artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-duplicate-node-grid-farkas-conflict.smt2`,
-    checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
+    `bad-duplicate-node-grid-rejected` and
+    `bad-interpolation-sample-rejected` to source-level QF_LRA/Farkas
+    artifacts, checked by the `math_resource_lra_routes` regression.
     `finite-stochastic-kernels-v0` now links `bad-kernel-row-rejected` to
     `artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-kernel-row-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.

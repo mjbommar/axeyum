@@ -42,7 +42,7 @@ These rows live in the
 | Does a finite operator-bound row replay? | `finite-operator-v0` | matrix-vector replay, exact infinity norm, row-sum bound, checked bad-bound Farkas row | Banach/Hilbert-space operator theory |
 | Does a Chebyshev recurrence prefix replay? | `finite-operator-v0` | fixed rational recurrence values such as `T0`, `T1`, `T2`, `T3` at `x = 1/2` | general Chebyshev polynomial theory |
 | Is a finite interpolation grid unisolvent? | `finite-chebyshev-systems-v0` | exact Vandermonde matrix and determinant replay | Haar-space and Chebyshev-system theorems |
-| Do finite samples match listed coefficients? | `finite-chebyshev-systems-v0` | exact evaluation-matrix times coefficient-vector replay | general interpolation and approximation theory |
+| Do finite samples match listed coefficients? | `finite-chebyshev-systems-v0` | exact evaluation-matrix times coefficient-vector replay plus checked bad-sample Farkas row | general interpolation and approximation theory |
 | Does a residual alternate on a finite grid? | `finite-chebyshev-systems-v0` | exact residual values, signs, and common absolute error | minimax and alternation theorems |
 | Do spectral or characteristic-polynomial rows share the same route? | `spectral-linear-algebra-v0`, `matrix-invariants-v0` | exact matrix arithmetic plus checked Farkas rows for bad eigenpair or characteristic-polynomial claims | spectral theorem and general Cayley-Hamilton claims |
 
@@ -82,6 +82,17 @@ claimed determinant = 1
 That final determinant conflict is checked by the same exact-rational Farkas
 route after replay exposes the bad claim.
 
+The bad interpolation-sample row uses the ordinary coefficient replay:
+
+```text
+p(x) = 2 - x + 3*x^2
+p(1) = 4
+false claim: p(1) = 5
+```
+
+After finite replay computes `4`, the final sample-value conflict is another
+checked QF_LRA/Farkas row.
+
 The alternation row is also finite:
 
 ```text
@@ -100,7 +111,7 @@ checked bad operator-bound row.
 
 Then read [Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md)
 for Vandermonde unisolvence, interpolation values, alternating residuals, and
-duplicate-node rejection.
+checked duplicate-node and bad interpolation-sample rejection.
 
 Use [Matrix Computation Index](matrix-computation-index.md) when you want the
 surrounding matrix-resource cluster: residuals, projections, eigenpairs,

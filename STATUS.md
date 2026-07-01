@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-Chebyshev bad interpolation-sample QF_LRA row landed.**
+  `finite-chebyshev-systems-v0` now has a second checked Farkas row:
+  finite replay recomputes `p(1)=4` for `p(x)=2 - x + 3*x^2`, while the
+  malformed row claims `p(1)=5`. The new SMT-LIB artifact isolates the final
+  exact sample-value conflict, the shared `math_resource_lra_routes`
+  regression parses it and checks `UnsatFarkas` evidence, and the validator
+  pins the coefficients, evaluation row, actual/claimed values, artifact path,
+  regression, and certificate note. The Chebyshev learner pages, operator
+  index, proof frontier, field matrix, and buildout ledgers now reference the
+  row. Generated dashboards and the public query summary now report 111
+  concept rows, 108 non-template packs, 559 expected checks, 243 checked rows,
+  245 replay-only rows, and 71 Lean-horizon rows.
+
 - **Modular incompatible-CRT Diophantine QF_LIA row landed.**
   `modular-arithmetic-v0` now has a second checked solver-form arithmetic
   obstruction: the false CRT pair `x == 1 mod 4` and `x == 2 mod 6` reduces to
