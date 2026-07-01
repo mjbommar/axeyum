@@ -10,6 +10,8 @@ The examples are intentionally small:
 - a linear recurrence trace;
 - a bounded invariant witness over that trace;
 - a reachable threshold witness over a finite horizon;
+- a malformed transition-step row whose next state contradicts exact replay
+  and is checked through QF_LRA/Farkas evidence;
 - a malformed invariant-bound row whose final exact state contradicts the
   claimed upper bound and is checked through QF_LRA/Farkas evidence.
 
@@ -29,10 +31,12 @@ strings. It checks that each trace starts at the claimed initial state, follows
 the listed affine update `x(t+1) = x(t) + delta`, and satisfies the claimed
 bounded invariant or threshold reachability condition.
 
-The checked bad-invariant row emits a tiny source-linked QF_LRA artifact:
-replay computes the terminal state `8`, while the malformed invariant claims
-`x(t) <= 6`. The `math_resource_lra_routes` regression parses that artifact,
-emits `UnsatFarkas` evidence, and independently rechecks the certificate.
+The checked bad rows emit tiny source-linked QF_LRA artifacts: transition replay
+computes `2 + 2 = 4` while a malformed row claims the next state is `5`, and
+invariant replay computes the terminal state `8` while a malformed invariant
+claims `x(t) <= 6`. The `math_resource_lra_routes` regressions parse those
+artifacts, emit `UnsatFarkas` evidence, and independently recheck the
+certificates.
 Continuous-time dynamics, ODE existence and uniqueness, stability, chaos, and
 PDE theory remain proof-horizon material.
 
@@ -40,4 +44,5 @@ Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas
 ```

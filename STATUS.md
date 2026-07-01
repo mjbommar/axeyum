@@ -205,16 +205,27 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Bounded-dynamics bad transition-step QF_LRA row landed.**
+  `bounded-dynamics-v0` now has a second checked Farkas row: exact recurrence
+  replay computes the plus-two transition after state `2` as `4`, then rejects
+  the malformed claim that the same next state is `5`. The new source SMT-LIB
+  artifact isolates the local transition equality conflict, the shared
+  `math_resource_lra_routes` regression parses it and checks `UnsatFarkas`
+  evidence, and the validator pins the trace, step index, previous state,
+  computed next state, claimed next state, artifact path, regression, and
+  certificate note. Generated dashboards and the public query summary now
+  report 111 concept rows, 108 non-template packs, 572 expected checks, 254
+  checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+
 - **Matrix-invariants bad trace QF_LRA row landed.**
   `matrix-invariants-v0` now has a second checked Farkas row: exact replay
   computes `trace([[2,1],[1,2]]) = 4`, then rejects the malformed claim that
   the same trace is `5`. The new source SMT-LIB artifact isolates the final
   equality conflict, the shared `math_resource_lra_routes` regression parses it
   and checks `UnsatFarkas` evidence, and the validator pins the matrix, computed
-  trace, claimed trace, artifact path, regression, and certificate note.
-  Generated dashboards and the public query summary now report 111 concept
-  rows, 108 non-template packs, 571 expected checks, 253 checked rows, 247
-  replay-only rows, and 71 Lean-horizon rows.
+  trace, claimed trace, artifact path, regression, and certificate note. This
+  advanced the generated dashboard and public query-summary counters by one
+  checked row.
 
 - **Linear algebra bad LU product-entry QF_LRA row landed.**
   `linear-algebra-rational-v0` now has a second checked Farkas row: exact

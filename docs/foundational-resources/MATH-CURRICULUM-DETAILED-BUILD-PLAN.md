@@ -42,8 +42,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 571 expected checks.
-- 253 checked proof/evidence rows.
+- 572 expected checks.
+- 254 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -380,8 +380,8 @@ Pick one row per commit unless the change is purely navigational.
    evidence out of the broad bounded-dynamics/operator bridge lesson.
 37. Landed: add standalone bounded-dynamics learner page, splitting exact
    recurrence trace replay, finite invariant checking, threshold reachability,
-   and checked QF_LRA/Farkas bad invariant-bound evidence out of the combined
-   finite dynamics/Euler bridge lesson.
+   and checked QF_LRA/Farkas bad transition-step plus bad invariant-bound
+   evidence out of the combined finite dynamics/Euler bridge lesson.
 38. Landed: add standalone finite-Euler learner page, splitting exact
    explicit-Euler transition replay, finite polynomial-solution error tables,
    monotone invariant checking, checked QF_LRA/Farkas bad-step evidence, and
@@ -916,6 +916,13 @@ Pick one row per commit unless the change is purely navigational.
      QF_LRA/Farkas route now checks both trace arithmetic and characteristic
      polynomial conflicts without claiming general spectral-invariant theorem
      coverage.
+109. Landed: extend `bounded-dynamics-v0` with a checked bad transition-step
+     row. Exact recurrence replay computes the plus-two transition after state
+     `2` as `4`, while the malformed source SMT-LIB artifact claims the same
+     next state is `5`; the shared QF_LRA/Farkas route now checks both local
+     transition arithmetic and invariant-bound conflicts without claiming
+     continuous-time dynamics, ODE existence/uniqueness, stability, chaos, or
+     PDE coverage.
 
 ## Validation Checklist
 

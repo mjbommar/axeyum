@@ -7,6 +7,15 @@ Expected result: `sat`.
 The validator replays the trace for `x(t+1) = x(t) + 2`, starting from `0` for
 four steps, and checks the states are exactly `0, 2, 4, 6, 8`.
 
+## `bad-transition-step-rejected`
+
+Expected result: `unsat`.
+
+The validator replays the plus-two trace and recomputes the transition after
+state `2` as `4`. The malformed claim says the same next state is `5`; the
+source QF_LRA artifact isolates the contradiction `next_state = 2 + 2` and
+`next_state = 5` for Farkas checking.
+
 ## `bounded-invariant-witness`
 
 Expected result: `sat`.

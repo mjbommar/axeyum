@@ -36,6 +36,7 @@ Concept rows:
 |---|---|---|
 | `bounded-invariant-witness` | `sat` | replay-only |
 | `unsafe-threshold-reachable` | `sat` | replay-only |
+| `bad-transition-step-rejected` | `unsat` | checked |
 | `bad-invariant-bound-rejected` | `unsat` | checked |
 | `finite-horizon-distribution-replay` | `sat` | replay-only |
 | `stationary-distribution-witness` | `sat` | replay-only |
@@ -98,10 +99,13 @@ For the dynamics row, the checker verifies every transition:
 
 and then checks every state lies in `[0,8]`.
 
-The bad invariant-bound row reuses that exact trace but claims every state is
-at most `6`. Exact replay computes terminal/max state `8`, then the source
-QF_LRA artifact checks `terminal_state = 8` with `terminal_state <= 6` through
-Farkas evidence.
+The bad transition-step row reuses that exact trace but claims the step after
+state `2` lands at `5`; exact replay computes `2 + 2 = 4`, then the source
+QF_LRA artifact checks the contradictory next-state equality through Farkas
+evidence. The bad invariant-bound row reuses the same trace but claims every
+state is at most `6`; exact replay computes terminal/max state `8`, then the
+source QF_LRA artifact checks `terminal_state = 8` with `terminal_state <= 6`
+through Farkas evidence.
 
 For the operator/norm rows, the checker recomputes `u+v`, `A*x`, the `l1` and
 infinity norms, the row-sum norm, and the bound:
@@ -182,6 +186,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0

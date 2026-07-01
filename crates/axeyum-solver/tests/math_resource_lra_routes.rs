@@ -139,6 +139,9 @@ const FINITE_CHEBYSHEV_BAD_ALTERNATING_RESIDUAL: &str = include_str!(
 const BOUNDED_DYNAMICS_BAD_INVARIANT_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/bounded-dynamics-v0/smt2/bad-invariant-bound-farkas-conflict.smt2"
 );
+const BOUNDED_DYNAMICS_BAD_TRANSITION_STEP: &str = include_str!(
+    "../../../artifacts/examples/math/bounded-dynamics-v0/smt2/bad-transition-step-farkas-conflict.smt2"
+);
 const RATIONALS_TRICHOTOMY_NONLESS: &str = include_str!(
     "../../../artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-nonless-farkas-conflict.smt2"
 );
@@ -1036,6 +1039,14 @@ fn bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "bounded-dynamics-v0 bad-invariant-bound SMT-LIB artifact",
         BOUNDED_DYNAMICS_BAD_INVARIANT_BOUND,
+    );
+}
+
+#[test]
+fn bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "bounded-dynamics-v0 bad-transition-step SMT-LIB artifact",
+        BOUNDED_DYNAMICS_BAD_TRANSITION_STEP,
     );
 }
 

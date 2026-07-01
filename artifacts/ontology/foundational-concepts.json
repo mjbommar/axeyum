@@ -6892,7 +6892,7 @@
           "id": "bounded-dynamics-v0",
           "status": "validated",
           "path": "artifacts/examples/math/bounded-dynamics-v0",
-          "notes": "Bounded recurrence traces, finite invariants, threshold reachability, and checked bad invariant-bound rows."
+          "notes": "Bounded recurrence traces, finite invariants, threshold reachability, and checked bad transition-step and invariant-bound rows."
         },
         {
           "id": "finite-euler-method-v0",

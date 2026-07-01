@@ -162,7 +162,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 571 expected checks, 253 checked
+111 concept rows, 108 non-template packs, 572 expected checks, 254 checked
 rows, 247 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -404,8 +404,9 @@ posterior rejection, leaving the broader finite-probability page as the
 stochastic-process bridge.
 `bounded-dynamics-v0` now also has a standalone bounded recurrence dynamics
 page for exact trace replay, finite invariant checking, threshold reachability,
-and checked QF_LRA/Farkas bad invariant-bound evidence, leaving the combined
-finite-dynamics/Euler page as the numerical-step bridge.
+and checked QF_LRA/Farkas bad transition-step plus bad invariant-bound
+evidence, leaving the combined finite-dynamics/Euler page as the numerical-step
+bridge.
 `finite-euler-method-v0` now also has a standalone finite Euler method page
 for exact explicit-Euler transition replay, finite polynomial-solution error
 tables, monotone invariant checks, checked QF_LRA/Farkas bad-step evidence,
@@ -634,7 +635,8 @@ the latest finite-SDP bad objective QF_LRA/Farkas promotion,
 the latest finite-KKT bad stationarity QF_LRA/Farkas promotion,
 the latest finite-separation bad separator QF_LRA/Farkas promotion,
 the latest finite-root-finding bad Newton-step QF_LRA/Farkas promotion,
-the latest bounded-dynamics bad invariant-bound QF_LRA/Farkas promotion,
+the latest bounded-dynamics bad transition-step and invariant-bound
+QF_LRA/Farkas promotion,
 complex-algebraic bad norm-squared QF_LRA/Farkas promotion,
 finite-operator bad `l1` sum-norm QF_LRA/Farkas promotion,
 finite-operator bad operator-bound QF_LRA/Farkas promotion,

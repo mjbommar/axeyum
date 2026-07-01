@@ -5118,7 +5118,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "bounded-dynamics-v0",
-                "Bounded recurrence traces, finite invariants, threshold reachability, and checked bad invariant-bound rows.",
+                "Bounded recurrence traces, finite invariants, threshold reachability, and checked bad transition-step and invariant-bound rows.",
             ),
             (
                 "finite-euler-method-v0",

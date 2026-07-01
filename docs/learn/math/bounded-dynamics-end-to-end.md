@@ -1,7 +1,7 @@
 # End To End: Bounded Recurrence Dynamics
 
 This lesson follows one bounded dynamics resource from exact recurrence replay
-to checked rejection of a false invariant bound. It uses the
+to checked rejection of a false transition step and false invariant bound. It uses the
 [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/)
 pack.
 
@@ -20,6 +20,7 @@ Concept rows:
 | Check | Expected | Evidence Status |
 |---|---|---|
 | `linear-recurrence-trace` | `sat` | replay-only |
+| `bad-transition-step-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `bounded-invariant-witness` | `sat` | replay-only |
 | `unsafe-threshold-reachable` | `sat` | replay-only |
 | `bad-invariant-bound-rejected` | `unsat` | checked QF_LRA/Farkas |
@@ -52,6 +53,34 @@ transition:
 
 This is finite replay. A solver may propose the trace, but the trusted check is
 the exact transition arithmetic over the listed horizon.
+
+## Check A Bad Transition
+
+The first negative row reuses the plus-two recurrence but claims:
+
+```text
+after state 2, next state = 5
+```
+
+Exact replay computes:
+
+```text
+2 + 2 = 4
+```
+
+The committed SMT-LIB artifact
+[`bad-transition-step-farkas-conflict.smt2`](../../../artifacts/examples/math/bounded-dynamics-v0/smt2/bad-transition-step-farkas-conflict.smt2)
+isolates the exact-linear contradiction:
+
+```text
+next_state = previous_state + delta
+previous_state = 2
+delta = 2
+next_state = 5
+```
+
+The source object is still the finite recurrence row; the solver proof is only
+accepted after the emitted `UnsatFarkas` certificate checks independently.
 
 ## Replay An Invariant
 
@@ -129,6 +158,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas
 ```
 
@@ -141,7 +171,7 @@ validated 1 foundational example pack(s)
 ## Trust Boundary
 
 ```text
-untrusted fast search -> trace, invariant, threshold, or Farkas certificate
+untrusted fast search -> trace, transition, invariant, threshold, or Farkas certificate
 trusted small checking -> exact recurrence replay, finite pointwise checks, and exact Farkas arithmetic
 remaining horizon -> continuous dynamics, ODE theory, stability, chaos, PDEs, and asymptotic behavior
 ```

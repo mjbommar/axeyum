@@ -28,6 +28,7 @@ Concept rows:
 | `linear-recurrence-trace` | `sat` | replay-only |
 | `bounded-invariant-witness` | `sat` | replay-only |
 | `unsafe-threshold-reachable` | `sat` | replay-only |
+| `bad-transition-step-rejected` | `unsat` | checked |
 | `bad-invariant-bound-rejected` | `unsat` | checked |
 | `linear-decay-euler-trace` | `sat` | replay-only |
 | `quadratic-forcing-error-replay` | `sat` | replay-only |
@@ -75,7 +76,18 @@ This is the finite, explicit version of an invariant proof. The future
 graduation route is to encode the same shape as a bounded model-checking
 obligation and replay the returned model against the original recurrence.
 
-The checked negative row uses the same trace but claims:
+The first checked negative row uses the same trace but claims the transition
+after state `2` lands at `5`. Exact replay computes `2 + 2 = 4`; the resource
+regression checks the bad transition as `QF_LRA`:
+
+```text
+previous_state = 2
+delta = 2
+next_state = previous_state + delta
+next_state = 5
+```
+
+The second checked negative row uses the same trace but claims:
 
 ```text
 x(t) <= 6
@@ -236,6 +248,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-euler-method-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas
 ```
 
@@ -258,5 +271,5 @@ remaining horizon -> continuous ODE theory, convergence, stability, and PDEs
 The next practical graduation step is to lower fixed recurrence and Euler-step
 rows into deterministic QF_LRA or BV transition obligations, then replay SAT
 witnesses and checked refutations through Axeyum instead of pack-local Python
-alone. The bad invariant-bound row and bad fixed Euler step now exercise that
-QF_LRA/Farkas route.
+alone. The bad transition-step row, bad invariant-bound row, and bad fixed
+Euler step now exercise that QF_LRA/Farkas route.

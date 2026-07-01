@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 571 expected checks.
-- 253 checked proof/evidence rows.
+- 572 expected checks.
+- 254 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -929,8 +929,9 @@ Build next:
 - Add concept rows for recurrence trace, bounded invariant, threshold
   reachability, Euler transition, discrete flow, absorbing Markov chain, and
   existence/uniqueness horizon.
-- Keep `bounded-dynamics-v0`'s promoted bad invariant-bound row tied to exact
-  recurrence replay plus the source QF_LRA/Farkas artifact.
+- Keep `bounded-dynamics-v0`'s promoted bad transition-step and
+  invariant-bound rows tied to exact recurrence replay plus source
+  QF_LRA/Farkas artifacts.
 - Promote bad finite transitions, expected-time equations, and invariant
   failures through LRA/LIA or replay according to source shape.
 - Keep continuous dynamics, PDEs, chaos, and existence/uniqueness theory as
@@ -1369,8 +1370,8 @@ Pick one item per commit unless the change is purely navigational.
     `docs/learn/math/bounded-dynamics-end-to-end.md` follows
     `bounded-dynamics-v0` through exact recurrence trace replay, finite
     invariant checking, threshold reachability, checked QF_LRA/Farkas
-    bad invariant-bound evidence, and the continuous-dynamics/ODE Lean
-    horizon.
+    bad transition-step plus bad invariant-bound evidence, and the
+    continuous-dynamics/ODE Lean horizon.
 49. Landed: add standalone finite-Euler learner page.
     `docs/learn/math/finite-euler-method-end-to-end.md` follows
     `finite-euler-method-v0` through exact explicit-Euler transition replay,

@@ -48,6 +48,27 @@
       "notes": "The validator checks the initial state, horizon length, and every transition."
     },
     {
+      "id": "bad-transition-step-rejected",
+      "claim": "The plus-two recurrence has next state 5 after state 2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_transition_step_refutation",
+      "proof_status": "checked",
+      "data": {
+        "initial": "0",
+        "delta": "2",
+        "steps": 4,
+        "trace": ["0", "2", "4", "6", "8"],
+        "step_index": 2,
+        "previous_state": "2",
+        "computed_next_state": "4",
+        "claimed_next_state": "5",
+        "smt2_artifact": "artifacts/examples/math/bounded-dynamics-v0/smt2/bad-transition-step-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact recurrence replay computes the second transition as 2 + 2 = 4, while the malformed row claims the next state is 5; the source QF_LRA artifact isolates that transition-step equality conflict for Farkas checking."
+    },
+    {
       "id": "bounded-invariant-witness",
       "claim": "The listed trace satisfies the closed-interval invariant at every step.",
       "expected_result": "sat",

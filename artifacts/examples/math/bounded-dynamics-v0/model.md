@@ -17,6 +17,18 @@ For `initial = 0`, `delta = 2`, and `steps = 4`, the trace is:
 0, 2, 4, 6, 8
 ```
 
+## Bad Transition Step
+
+The same trace supplies a checked negative transition row. Exact replay
+computes:
+
+```text
+2 + 2 = 4
+```
+
+so the malformed claim that the next state is `5` is rejected by the
+source-linked QF_LRA/Farkas artifact.
+
 ## Invariant Witness
 
 The same trace is checked against the closed interval:

@@ -20815,6 +20815,46 @@ def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
     values = single_witness_values(recurrence, witnesses)
     require_recurrence_trace("linear recurrence", values)
 
+    bad_step = checks["bad-transition-step-rejected"]
+    if bad_step["expected_result"] != "unsat" or bad_step.get("proof_status") != "checked":
+        fail("bad-transition-step-rejected must be a checked unsat row")
+    data = bad_step.get("data", {})
+    trace = require_recurrence_trace("bad transition step", data)
+    step_index = require_nonnegative_int("bad transition step step_index", data.get("step_index"))
+    if step_index == 0 or step_index >= len(trace):
+        fail("bad-transition-step-rejected step_index must name a non-initial trace state")
+    previous_state = require_fraction("bad transition step previous_state", data.get("previous_state"))
+    computed_next_state = require_fraction(
+        "bad transition step computed_next_state",
+        data.get("computed_next_state"),
+    )
+    claimed_next_state = require_fraction(
+        "bad transition step claimed_next_state",
+        data.get("claimed_next_state"),
+    )
+    delta = require_fraction("bad transition step delta", data.get("delta"))
+    if trace[step_index - 1] != previous_state:
+        fail("bad-transition-step-rejected previous_state does not match the trace")
+    if trace[step_index] != computed_next_state:
+        fail("bad-transition-step-rejected computed_next_state does not match the trace")
+    if previous_state + delta != computed_next_state:
+        fail("bad-transition-step-rejected computed_next_state is not previous_state + delta")
+    if claimed_next_state == computed_next_state:
+        fail("bad-transition-step-rejected claimed next state unexpectedly matches replay")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad transition step smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/bounded-dynamics-v0/smt2/bad-transition-step-farkas-conflict.smt2":
+        fail("bad-transition-step-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad transition step smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad transition step farkas_regression", regression)
+    if "bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas" not in regression:
+        fail("bad-transition-step-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad transition step certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("bad-transition-step-rejected certificate must document checked Farkas evidence")
+
     invariant = checks["bounded-invariant-witness"]
     if invariant["expected_result"] != "sat":
         fail("bounded-invariant-witness must expect sat")

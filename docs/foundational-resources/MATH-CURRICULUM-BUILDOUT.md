@@ -868,7 +868,8 @@ rejection of a false tail bound, and a concentration/limit-theorem
 Lean-horizon row.
 `artifacts/examples/math/bounded-dynamics-v0/` now validates exact rational
 recurrence traces, bounded invariant witnesses, threshold reachability replay,
-and checked QF_LRA/Farkas rejection of a bad invariant-bound row.
+and checked QF_LRA/Farkas rejection of bad transition-step and invariant-bound
+rows.
 `artifacts/examples/math/finite-euler-method-v0/` now validates exact finite
 Euler-method traces, polynomial-solution error replay, invariant checks,
 checked QF_LRA/Farkas rejection of a bad Euler step, and an ODE-theory
@@ -1709,14 +1710,14 @@ They now also have standalone finite-topology and finite-measure pages so
 learners can start from one pack before crossing the topology/measure boundary.
 `bounded-dynamics-v0` and `finite-euler-method-v0` now have a learner-facing
 end-to-end lesson for bounded recurrence traces, invariant replay, threshold
-reachability, checked bad invariant-bound rejection with QF_LRA/Farkas
-evidence, explicit Euler replay, exact finite error tables, checked bad
+reachability, checked bad transition-step and invariant-bound rejection with
+QF_LRA/Farkas evidence, explicit Euler replay, exact finite error tables, checked bad
 Euler-step rejection with QF_LRA/Farkas evidence, and the
 ODE/numerical-analysis Lean horizon.
 `bounded-dynamics-v0` now also has a standalone bounded recurrence dynamics
 lesson for exact trace replay, finite invariant checking, threshold
-reachability, checked QF_LRA/Farkas bad invariant-bound rejection, and the
-continuous-dynamics/ODE Lean horizon.
+reachability, checked QF_LRA/Farkas bad transition-step plus bad
+invariant-bound rejection, and the continuous-dynamics/ODE Lean horizon.
 `finite-euler-method-v0` now also has a standalone finite Euler method lesson
 for exact explicit-Euler transition replay, finite polynomial-solution error
 tables, monotone invariant checking, checked QF_LRA/Farkas bad-step rejection,
