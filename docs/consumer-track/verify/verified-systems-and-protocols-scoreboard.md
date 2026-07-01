@@ -239,14 +239,24 @@ properties symbolically. 6 tests green.
 | **`be16` byte→word field pack** (`zext`+`shl`+`or`) | **parse∘pack round-trip Proved** (extract bytes back == inputs) |
 | `classify` (nested `select` after `-O` if-conversion) | in `1..=3` **Proved** |
 | `day` (a `match`, `-O`-lowered to `icmp`+`add`+`select`) | `<= 9` **Proved** |
+| **`capsum` loop** (`phi`+back-edge) → `TransitionSystem` | `acc <= 100` **Proved for ALL iterations** (k-induction, 4 ms); false bound `Reachable` (BMC) |
 
 **Measured (`-O` if-conversion, 2026-06-30):** `-O` collapses branchy leaf
 functions to `select` — `classify`'s `if/else-if` → *nested selects*, a `match`
 → `icmp`+`add`+`select` (the `switch` vanished). So the single-block reflector
 already spans **straight-line + if-converted-branch + mixed-width** leaf
-functions — the bulk of a protocol parser's per-field code. True `br`/`switch`/
-`phi` blocks appear with **loops**, which are the deferred PDR / transition-system
-path, not acyclic reflection.
+functions — the bulk of a protocol parser's per-field code.
+
+**Loops (N):** true `br`/`phi` multi-block IR appears with **loops** — which now
+also land. A canonical loop (`clang -O1 -fno-unroll-loops`) reflects into the
+solver's `TransitionSystem` (`phi`s → state, entry-incoming → init, back-edge →
+`trans`, spec → `bad`), and k-induction/PDR prove the property for *every*
+iteration — connecting the LLVM front end to the **same unbounded-safety
+machinery** as the protocol FSMs. Modeled at `i8` (the `i32` loop bit-blasts to
+64 bits and PDR's frame search over the unbounded counter blows up >60 s — the
+recurring width lesson; the reflected structure is width-agnostic). Real `-O`
+loop IR (unrolled / SCEV-closed / memory) needs a larger SCEV-aware parser — the
+deferred frontier.
 
 Headline: **one front end verifies code from two source languages**, and proves
 two structurally-different LLVM forms of the same function equivalent. Measured
