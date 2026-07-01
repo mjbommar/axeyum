@@ -14,10 +14,13 @@
 //! territory; sound for the unsigned/wrapping ops here). Memory (`load`/`store`/
 //! `getelementptr`) and `br`/`switch`/`phi` CFG are deferred.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use axeyum_ir::{Assignment, Sort, SymbolId, TermArena, TermId, Value, eval};
-use axeyum_solver::{ProofOutcome, SolverConfig, prove};
+use axeyum_solver::{
+    BmcOutcome, ProofOutcome, SafetyOutcome, SolverConfig, SolverError, TransitionSystem,
+    bounded_model_check, prove, prove_safety_k_induction,
+};
 
 // ---- committed `.ll` fixtures (rustc 1.96 -O --emit=llvm-ir) --------------------
 
@@ -661,4 +664,303 @@ fn llvm_mixed_width_matches_real_rust_under_fuzz() {
         );
         assert_eq!(eval_u32(&day_r, &xv), day(x), "day diverged at x={x}");
     }
+}
+
+// ---- N: reflect an LLVM loop into a TransitionSystem, prove all iterations ------
+//
+// A canonical loop (clang -O1 -fno-unroll-loops) has a header/latch block with a
+// `phi` per loop-carried variable and a body that computes the back-edge values.
+// We reflect it into the solver's `TransitionSystem` (phi -> state var, entry-
+// incoming -> init, back-edge-incoming -> trans via `lower_rhs`, a safety spec ->
+// bad) and prove the property for EVERY iteration via PDR. Loop-exit guard is
+// dropped (a sound over-approximation for safety). Canonical single-loop-block
+// form only; real -O unrolled/SCEV-closed/memory loops are the deferred frontier.
+
+/// `unsigned char capsum8(unsigned char n){ unsigned char acc=0;
+/// for(unsigned char i=0;i<n;i++){ acc++; if(acc>100) acc=100; } return acc; }` —
+/// `clang -O1 -fno-unroll-loops -fno-vectorize`. Block `5` is the loop header/latch
+/// (branches back to itself). Modeled at `i8` so PDR/k-induction over the loop
+/// state stays fast (the 32-bit version bit-blasts to 64 bits of state and PDR's
+/// frame search over the unbounded counter blows up — the same width lesson as the
+/// modular-arithmetic proofs; the loop *structure* reflected is width-agnostic).
+const CAPSUM_LOOP_LL: &str = r"
+define dso_local zeroext range(i8 0, 101) i8 @capsum8(i8 noundef zeroext %0) local_unnamed_addr {
+  %2 = icmp eq i8 %0, 0
+  br i1 %2, label %3, label %5
+
+3:
+  %4 = phi i8 [ 0, %1 ], [ %9, %5 ]
+  ret i8 %4
+
+5:
+  %6 = phi i8 [ %10, %5 ], [ 0, %1 ]
+  %7 = phi i8 [ %9, %5 ], [ 0, %1 ]
+  %8 = tail call i8 @llvm.umin.i8(i8 %7, i8 99)
+  %9 = add nuw nsw i8 %8, 1
+  %10 = add nuw i8 %6, 1
+  %11 = icmp eq i8 %10, %0
+  br i1 %11, label %3, label %5
+}
+";
+
+/// A loop-carried variable: its `phi` name, width, the entry-incoming init value,
+/// and the register feeding its back-edge.
+struct PhiVar {
+    name: String,
+    width: u32,
+    init: String,
+    back: String,
+}
+
+/// An LLVM loop reflected as a transition system over its loop-carried `phi`s.
+struct LoopSystem {
+    phis: Vec<PhiVar>,
+    body: Vec<String>, // needed body instructions (exit guard excluded)
+    bad_idx: usize,    // bad = phis[bad_idx] > bad_bound
+    bad_bound: u128,
+}
+
+impl LoopSystem {
+    fn new(ll: &str, bad_var: &str, bad_bound: u128) -> Self {
+        let (phis, body) = parse_loop(ll);
+        let bad_idx = phis
+            .iter()
+            .position(|p| p.name == bad_var)
+            .expect("bad var must be a loop phi");
+        Self {
+            phis,
+            body,
+            bad_idx,
+            bad_bound,
+        }
+    }
+}
+
+/// Split the function body into `(label, lines)` blocks, find the loop block (its
+/// `br` targets its own label), and extract its `phi`s + the body instructions
+/// transitively needed for the back-edge values (dropping the exit-guard `icmp`).
+/// Split the function body into `(label, lines)` basic blocks (the entry block
+/// has label `""`).
+fn split_blocks(ll: &str) -> Vec<(String, Vec<String>)> {
+    let mut blocks: Vec<(String, Vec<String>)> = Vec::new();
+    let mut label = String::new();
+    let mut lines: Vec<String> = Vec::new();
+    let mut in_body = false;
+    for raw in ll.lines() {
+        let line = raw.trim();
+        if line.starts_with("define") {
+            in_body = true;
+            continue;
+        }
+        if !in_body || line.is_empty() {
+            continue;
+        }
+        if line == "}" {
+            blocks.push((label.clone(), std::mem::take(&mut lines)));
+            break;
+        }
+        // A label line: `N:` with no `=`, the label bare, the rest empty or a comment.
+        let is_label = if line.contains('=') {
+            None
+        } else {
+            line.split_once(':').filter(|(lab, rest)| {
+                !lab.contains(' ')
+                    && !lab.is_empty()
+                    && (rest.trim().is_empty() || rest.trim_start().starts_with(';'))
+            })
+        };
+        if let Some((lab, _)) = is_label {
+            blocks.push((label.clone(), std::mem::take(&mut lines)));
+            label = lab.to_string();
+            continue;
+        }
+        lines.push(line.to_string());
+    }
+    blocks
+}
+
+fn parse_loop(ll: &str) -> (Vec<PhiVar>, Vec<String>) {
+    let blocks = split_blocks(ll);
+    let (loop_label, loop_lines) = blocks
+        .iter()
+        .find(|(lab, ls)| {
+            !lab.is_empty()
+                && ls.iter().any(|l| {
+                    l.starts_with("br ")
+                        && l.split("label %").skip(1).any(|t| {
+                            t.split(|c: char| c == ',' || c.is_whitespace()).next()
+                                == Some(lab.as_str())
+                        })
+                })
+        })
+        .expect("a self-branching loop block");
+
+    let mut phis = Vec::new();
+    for l in loop_lines {
+        if !l.contains("= phi") {
+            continue;
+        }
+        let (dst, rhs) = l.split_once(" = ").unwrap();
+        let name = dst.trim_start_matches('%').to_string();
+        let after = rhs.strip_prefix("phi ").unwrap();
+        let width = width_of(after.split_whitespace().next().unwrap());
+        let (mut init, mut back) = (String::new(), String::new());
+        for chunk in after.split('[').skip(1) {
+            let inside = chunk.split(']').next().unwrap();
+            let mut it = inside.split(',').map(str::trim);
+            let val = it.next().unwrap();
+            let lbl = it.next().unwrap().trim_start_matches('%');
+            if lbl == loop_label {
+                back = val.trim_start_matches('%').to_string();
+            } else {
+                init = val.to_string();
+            }
+        }
+        phis.push(PhiVar {
+            name,
+            width,
+            init,
+            back,
+        });
+    }
+
+    // Non-phi assignments in the loop block.
+    let assigns: Vec<(String, String)> = loop_lines
+        .iter()
+        .filter(|l| l.contains(" = ") && !l.contains("= phi"))
+        .map(|l| {
+            let (d, r) = l.split_once(" = ").unwrap();
+            (d.trim_start_matches('%').to_string(), r.to_string())
+        })
+        .collect();
+
+    // Transitive-dependency closure from the back-edge values (drops the guard).
+    let mut needed: HashSet<String> = phis.iter().map(|p| p.back.clone()).collect();
+    loop {
+        let before = needed.len();
+        for (d, r) in &assigns {
+            if needed.contains(d) {
+                for t in r.replace(',', " ").split_whitespace() {
+                    if let Some(reg) = t.strip_prefix('%') {
+                        needed.insert(reg.to_string());
+                    }
+                }
+            }
+        }
+        if needed.len() == before {
+            break;
+        }
+    }
+    let body = assigns
+        .iter()
+        .filter(|(d, _)| needed.contains(d))
+        .map(|(d, r)| format!("%{d} = {r}"))
+        .collect();
+
+    (phis, body)
+}
+
+impl TransitionSystem for LoopSystem {
+    fn state_vars(&self, arena: &mut TermArena, step: usize) -> Result<Vec<SymbolId>, SolverError> {
+        let mut v = Vec::new();
+        for p in &self.phis {
+            v.push(arena.declare(&format!("{}@{step}", p.name), Sort::BitVec(p.width))?);
+        }
+        Ok(v)
+    }
+
+    fn init(&self, arena: &mut TermArena, s0: &[SymbolId]) -> Result<TermId, SolverError> {
+        let mut acc: Option<TermId> = None;
+        for (k, p) in self.phis.iter().enumerate() {
+            let var = arena.var(s0[k]);
+            let c = arena.bv_const(p.width, p.init.parse::<u128>().expect("constant init"))?;
+            let e = arena.eq(var, c)?;
+            acc = Some(match acc {
+                None => e,
+                Some(a) => arena.and(a, e)?,
+            });
+        }
+        Ok(acc.expect("at least one phi"))
+    }
+
+    fn trans(
+        &self,
+        arena: &mut TermArena,
+        pre: &[SymbolId],
+        post: &[SymbolId],
+    ) -> Result<TermId, SolverError> {
+        let mut env: HashMap<String, (TermId, u32)> = HashMap::new();
+        for (k, p) in self.phis.iter().enumerate() {
+            env.insert(p.name.clone(), (arena.var(pre[k]), p.width));
+        }
+        for line in &self.body {
+            let (dst, rhs) = line.split_once(" = ").unwrap();
+            let (t, w) = lower_rhs(arena, &env, rhs);
+            env.insert(dst.trim_start_matches('%').to_string(), (t, w));
+        }
+        let mut acc: Option<TermId> = None;
+        for (k, p) in self.phis.iter().enumerate() {
+            let next = env.get(&p.back).expect("back-edge value").0;
+            let pv = arena.var(post[k]);
+            let e = arena.eq(pv, next)?;
+            acc = Some(match acc {
+                None => e,
+                Some(a) => arena.and(a, e)?,
+            });
+        }
+        Ok(acc.expect("at least one phi"))
+    }
+
+    fn bad(&self, arena: &mut TermArena, s: &[SymbolId]) -> Result<TermId, SolverError> {
+        let p = &self.phis[self.bad_idx];
+        let v = arena.var(s[self.bad_idx]);
+        let c = arena.bv_const(p.width, self.bad_bound)?;
+        Ok(arena.bv_ugt(v, c)?)
+    }
+}
+
+/// The capped accumulator's `acc` stays `<= 100` for **every iteration** of the
+/// real compiled C loop — proven unbounded by **k-induction** from the reflected
+/// LLVM `phi`/back-edge structure (`acc' = umin(acc,99)+1 <= 100` is 1-inductive,
+/// so k-induction closes it without PDR's frame search).
+#[test]
+fn llvm_loop_acc_bounded_all_iterations() {
+    let sys = LoopSystem::new(CAPSUM_LOOP_LL, "7", 100);
+    let mut arena = TermArena::new();
+    let outcome = prove_safety_k_induction(&mut arena, &sys, 4, &SolverConfig::default())
+        .expect("solver should not hard-error");
+    assert!(
+        matches!(outcome, SafetyOutcome::Safe { .. }),
+        "acc <= 100 must hold for all loop iterations, got {outcome:?}"
+    );
+}
+
+/// A (false) bound the loop genuinely exceeds is refuted, not falsely proved: the
+/// accumulator climbs past `2` within a few iterations, so bounded model checking
+/// finds a concrete `Reachable` counterexample trace.
+#[test]
+fn llvm_loop_false_bound_is_reachable() {
+    let sys = LoopSystem::new(CAPSUM_LOOP_LL, "7", 2);
+    let mut arena = TermArena::new();
+    let outcome = bounded_model_check(&mut arena, &sys, 8, &SolverConfig::default())
+        .expect("solver should not hard-error");
+    assert!(
+        matches!(outcome, BmcOutcome::Reachable { .. }),
+        "acc climbs past 2 within a few steps; expected Reachable, got {outcome:?}"
+    );
+}
+
+/// Bounded model checking of the loop finds no `acc > 100` within a depth bound
+/// (`UnreachableWithinBound`, not a proof), consistent with the unbounded PDR
+/// `Safe` — bounded and unbounded agree.
+#[test]
+fn llvm_loop_bounded_agrees_with_unbounded() {
+    let sys = LoopSystem::new(CAPSUM_LOOP_LL, "7", 100);
+    let mut arena = TermArena::new();
+    let outcome = bounded_model_check(&mut arena, &sys, 8, &SolverConfig::default())
+        .expect("solver should not hard-error");
+    assert!(
+        matches!(outcome, BmcOutcome::UnreachableWithinBound { .. }),
+        "no acc>100 within bound (consistent with the unbounded proof), got {outcome:?}"
+    );
 }
