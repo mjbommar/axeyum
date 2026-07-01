@@ -161,7 +161,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-separation-v0",
-                "Finite convex-hull and separating-hyperplane replay with checked bad-separator rejection.",
+                "Finite convex-hull and separating-hyperplane replay with checked bad convex-combination and bad-separator rejections.",
             ),
             (
                 "finite-kkt-v0",
@@ -516,7 +516,7 @@ FIELD_PACKS = {
         ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and checked bad midpoint-convexity plus affine-threshold rejection."),
         ("multivariable-calculus-rational-v0", "Exact gradients, directional derivatives, Hessian minors, and local convexity shadows."),
         ("inner-product-spaces-rational-v0", "Exact rational projections, Gram matrices, and orthogonal residual checks."),
-        ("finite-separation-v0", "Finite convex-hull and hyperplane-separation replay with checked bad-separator rejection."),
+        ("finite-separation-v0", "Finite convex-hull and hyperplane-separation replay with checked bad convex-combination and bad-separator rejections."),
         ("finite-kkt-v0", "Finite KKT stationarity, complementary slackness, and bad-stationarity rejection."),
         ("finite-active-set-qp-v0", "Finite active-set QP replay with checked bad-free-gradient rejection."),
         ("finite-sdp-v0", "Finite SDP primal/dual slack replay with checked bad-objective rejection."),

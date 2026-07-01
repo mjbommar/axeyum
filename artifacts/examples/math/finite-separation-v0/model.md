@@ -16,6 +16,14 @@ sum(w) = 1
 sum_i w_i * v_i = (1/3, 1/3)
 ```
 
+The checked bad convex-combination row keeps those weights fixed and claims the
+same affine combination has x-coordinate `1/2`. Exact replay leaves
+x-coordinate error:
+
+```text
+1/2 - 1/3 = 1/6
+```
+
 The separator witness uses:
 
 ```text

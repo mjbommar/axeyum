@@ -225,7 +225,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 615 expected checks, 292 checked
+111 concept rows, 108 non-template packs, 616 expected checks, 293 checked
 rows, 252 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -402,7 +402,7 @@ Armijo line-search replay, exact Wolfe line-search replay, exact
 projected-gradient interval replay, and exact L1 proximal-gradient
 soft-threshold plus box-constrained replay, and checked
 QF_LRA/Farkas rejection of bad upper-bound, bad finite-value, bad Newton-step,
-bad bisection-width,
+bad bisection-width, bad convex-combination,
 bad separator, bad stationarity, bad free-gradient, bad degenerate active-set
 multiplier, bad objective, bad decrease, bad Armijo, bad Wolfe-curvature, bad
 projection, bad proximal-point, and bad box-proximal-point rows, while
@@ -834,7 +834,8 @@ the latest finite-gradient-descent bad step-coordinate and bad decrease
 QF_LRA/Farkas promotions,
 the latest finite-SDP bad objective QF_LRA/Farkas promotion,
 the latest finite-KKT bad stationarity QF_LRA/Farkas promotion,
-the latest finite-separation bad separator QF_LRA/Farkas promotion,
+the latest finite-separation bad convex-combination and bad separator
+QF_LRA/Farkas promotions,
 the latest finite-root-finding bad Newton-step and bad bisection-width
 QF_LRA/Farkas promotions,
 the latest bounded-dynamics bad transition-step and invariant-bound

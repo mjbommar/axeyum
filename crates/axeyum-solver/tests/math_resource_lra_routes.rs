@@ -88,6 +88,9 @@ const FINITE_ROOT_FINDING_BAD_BISECTION_WIDTH: &str = include_str!(
 const FINITE_SEPARATION_BAD_SEPARATOR: &str = include_str!(
     "../../../artifacts/examples/math/finite-separation-v0/smt2/bad-separator-farkas-conflict.smt2"
 );
+const FINITE_SEPARATION_BAD_CONVEX_COMBINATION: &str = include_str!(
+    "../../../artifacts/examples/math/finite-separation-v0/smt2/bad-convex-combination-point-farkas-conflict.smt2"
+);
 const FINITE_KKT_BAD_STATIONARITY: &str = include_str!(
     "../../../artifacts/examples/math/finite-kkt-v0/smt2/bad-stationarity-farkas-conflict.smt2"
 );
@@ -722,6 +725,14 @@ fn finite_separation_bad_separator_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-separation-v0 bad-separator SMT-LIB artifact",
         FINITE_SEPARATION_BAD_SEPARATOR,
+    );
+}
+
+#[test]
+fn finite_separation_bad_convex_combination_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-separation-v0 bad-convex-combination SMT-LIB artifact",
+        FINITE_SEPARATION_BAD_CONVEX_COMBINATION,
     );
 }
 

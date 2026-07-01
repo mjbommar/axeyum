@@ -395,7 +395,10 @@ Build sequence:
     and `bad-bisection-width-rejected` to
     `artifacts/examples/math/finite-root-finding-v0/smt2/bad-bisection-width-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
-29. `finite-separation-v0` now links `bad-separator-rejected` to
+29. `finite-separation-v0` now links
+    `bad-convex-combination-point-rejected` to
+    `artifacts/examples/math/finite-separation-v0/smt2/bad-convex-combination-point-farkas-conflict.smt2`
+    and `bad-separator-rejected` to
     `artifacts/examples/math/finite-separation-v0/smt2/bad-separator-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
 30. `finite-kkt-v0` now links `bad-kkt-stationarity-rejected` to

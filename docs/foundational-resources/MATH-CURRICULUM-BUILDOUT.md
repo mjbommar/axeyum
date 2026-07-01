@@ -582,8 +582,8 @@ of false Newton-iterate and bisection-width claims, and a root-finding
 convergence/stability Lean-horizon row.
 `finite-separation-v0` now validates exact convex-combination replay, finite
 separating-hyperplane dot-product replay, supporting-face replay, checked
-QF_LRA/Farkas rejection of a false separator, and a general
-separation-theorem Lean-horizon row.
+QF_LRA/Farkas rejection of false convex-combination and separator claims, and
+a general separation-theorem Lean-horizon row.
 `finite-kkt-v0` now validates exact constrained-quadratic grid replay,
 stationarity replay, complementary-slackness replay, checked QF_LRA/Farkas
 rejection of a false stationarity multiplier, and a general KKT-sufficiency
@@ -1119,8 +1119,8 @@ Recommended order:
     horizon claims.
 34. `finite-separation-v0`: exact convex-hull membership, separating
     hyperplane score replay, supporting-face checks, and checked QF_LRA/Farkas
-    bad-separator rejection, while general separation and duality theorems
-    remain horizon claims.
+    bad convex-combination plus bad-separator rejection, while general
+    separation and duality theorems remain horizon claims.
 35. `finite-kkt-v0`: exact constrained-quadratic grid replay, stationarity,
     complementary slackness, and checked QF_LRA/Farkas bad-stationarity
     rejection, while general KKT sufficiency and constraint qualifications
@@ -2048,9 +2048,10 @@ affine claim `14`.
 `finite-root-finding-v0` now routes its bad Newton-step and bad
 bisection-width rows through the same checked Farkas evidence path after exact
 replay computes the next iterate `17/12` and the selected width `1/2`.
-`finite-separation-v0` now routes its bad separator row through the same checked
-Farkas evidence path after exact convex-hull/separator replay computes the
-outside score `4`.
+`finite-separation-v0` now routes its bad convex-combination and bad separator
+rows through the same checked Farkas evidence path after exact convex-hull
+replay computes point `(1/3,1/3)` and separator replay computes the outside
+score `4`.
 `finite-kkt-v0` now routes its bad stationarity row through the same checked
 Farkas evidence path after exact KKT replay computes stationarity residual
 `-1` and stationarity error `1`.

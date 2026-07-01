@@ -253,8 +253,9 @@ First targets:
   bisection-width rows after exact root-finding replay computes the next
   iterate `17/12` and selected interval width `1/2`)
 - [finite-separation-v0](../../artifacts/examples/math/finite-separation-v0/)
-  (source-linked Farkas regression landed for the bad separator row after
-  exact convex-hull/separator replay computes the outside score `4`)
+  (source-linked Farkas regressions landed for the bad convex-combination
+  point and bad separator rows after exact convex-hull replay computes point
+  `(1/3,1/3)` and exact separator replay computes outside score `4`)
 - [finite-kkt-v0](../../artifacts/examples/math/finite-kkt-v0/)
   (source-linked Farkas regression landed for the bad stationarity row after
   exact constrained-quadratic KKT replay computes stationarity residual `-1`
@@ -442,7 +443,8 @@ Secondary targets:
   checks the final bad-error-bound inequality conflict.
   Finite separation now contributes the convex-optimization version of that
   boundary: exact replay computes convex weights, separator scores, and the
-  tight face, then Farkas checks the final bad-separator inequality conflict.
+  tight face, then Farkas checks the final bad convex-combination equality and
+  bad-separator inequality conflicts.
   Finite KKT now contributes the active-set/stationarity version of that
   boundary: exact replay computes the derivative, multiplier equation, and
   complementary-slackness product, then Farkas checks the final bad-stationarity
@@ -475,6 +477,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes rigid_configuration_
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_convex_combination_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_separator_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas

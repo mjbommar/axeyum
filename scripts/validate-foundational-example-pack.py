@@ -10924,6 +10924,48 @@ def validate_finite_separation(expected: dict[str, Any]) -> None:
         if index >= len(separator_vertices):
             fail("supporting-face-replay tight index is outside the vertex list")
 
+    bad_combination = checks["bad-convex-combination-point-rejected"]
+    if bad_combination["expected_result"] != "unsat" or bad_combination.get("proof_status") != "checked":
+        fail("bad-convex-combination-point-rejected must be a checked unsat row")
+    data = bad_combination.get("data", {})
+    if data.get("source_witness") != "triangle-convex-hull":
+        fail("bad-convex-combination-point-rejected must cite the triangle-convex-hull source witness")
+    computed_point = require_fraction_vector(
+        "bad convex combination computed_point",
+        data.get("computed_point"),
+    )
+    claimed_point = require_fraction_vector(
+        "bad convex combination claimed_point",
+        data.get("claimed_point"),
+    )
+    x_coordinate_error = require_fraction(
+        "bad convex combination x_coordinate_error",
+        data.get("x_coordinate_error"),
+    )
+    require_vector_length("bad convex combination computed_point", computed_point, dimension)
+    require_vector_length("bad convex combination claimed_point", claimed_point, dimension)
+    if computed_point != replayed_point:
+        fail("bad-convex-combination-point-rejected computed_point does not match replay")
+    if claimed_point == computed_point:
+        fail("bad-convex-combination-point-rejected must claim a different point")
+    if claimed_point[0] - computed_point[0] != x_coordinate_error:
+        fail("bad-convex-combination-point-rejected x_coordinate_error is incorrect")
+    if x_coordinate_error == 0:
+        fail("bad-convex-combination-point-rejected must document a nonzero coordinate error")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad convex combination smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-separation-v0/smt2/bad-convex-combination-point-farkas-conflict.smt2":
+        fail("bad-convex-combination-point-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad convex combination smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad convex combination farkas_regression", regression)
+    if "finite_separation_bad_convex_combination_artifact_emits_checked_farkas" not in regression:
+        fail("bad-convex-combination-point-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad convex combination certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-convex-combination-point-rejected certificate must document checked Farkas evidence")
+
     bad = checks["bad-separator-rejected"]
     if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
         fail("bad-separator-rejected must be a checked unsat row")

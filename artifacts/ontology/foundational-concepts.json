@@ -783,7 +783,7 @@
           "id": "finite-separation-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-separation-v0",
-          "notes": "Finite convex-hull and separating-hyperplane replay with checked bad-separator rejection."
+          "notes": "Finite convex-hull and separating-hyperplane replay with checked bad convex-combination and bad-separator rejections."
         },
         {
           "id": "finite-kkt-v0",
@@ -11248,7 +11248,7 @@
           "id": "finite-separation-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-separation-v0",
-          "notes": "Finite convex-hull and hyperplane-separation replay with checked bad-separator rejection."
+          "notes": "Finite convex-hull and hyperplane-separation replay with checked bad convex-combination and bad-separator rejections."
         },
         {
           "id": "finite-kkt-v0",

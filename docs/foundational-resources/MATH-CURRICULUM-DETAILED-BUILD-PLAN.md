@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 615 expected checks.
-- 292 checked proof/evidence rows.
+- 616 expected checks.
+- 293 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -242,7 +242,7 @@ Exit criteria:
 | `naturals` | maintain | keep bounded prefix and LIA/BV width limits explicit |
 | `integers` | maintain | group common Diophantine obstructions |
 | `rationals` | maintain | exact rational order and Farkas conflicts are already the model |
-| `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding has source-linked bad-iterate and bad bisection-width rows, separation has a source-linked bad-separator row, KKT has a source-linked bad-stationarity row, active-set QP has source-linked bad-free-gradient and bad degenerate-multiplier rows, SDP has a source-linked bad-objective row, gradient descent has source-linked bad-decrease and bad step-coordinate rows, finite line search has source-linked bad Armijo and bad accepted-candidate rows, finite Wolfe line search has source-linked bad minimizer and bad curvature rows, finite circle geometry has source-linked bad-radius and bad line-intersection rows, finite inversion geometry has source-linked bad inverse-coordinate and inverse-distance-product rows, and finite cyclic geometry has source-linked bad diagonal-intersection, bad opposite-angle, and bad Ptolemy rows; keep completeness, convergence, separation, KKT sufficiency, active-set method theory, SDP duality, descent-rate, general circle/inversion/cyclic geometry, and broad CAD/SOS/RCF claims horizon |
+| `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding has source-linked bad-iterate and bad bisection-width rows, separation has source-linked bad convex-combination and bad-separator rows, KKT has a source-linked bad-stationarity row, active-set QP has source-linked bad-free-gradient and bad degenerate-multiplier rows, SDP has a source-linked bad-objective row, gradient descent has source-linked bad-decrease and bad step-coordinate rows, finite line search has source-linked bad Armijo and bad accepted-candidate rows, finite Wolfe line search has source-linked bad minimizer and bad curvature rows, finite circle geometry has source-linked bad-radius and bad line-intersection rows, finite inversion geometry has source-linked bad inverse-coordinate and inverse-distance-product rows, and finite cyclic geometry has source-linked bad diagonal-intersection, bad opposite-angle, and bad Ptolemy rows; keep completeness, convergence, separation, KKT sufficiency, active-set method theory, SDP duality, descent-rate, general circle/inversion/cyclic geometry, and broad CAD/SOS/RCF claims horizon |
 | `complex` | deepen | complex-plane bad unit-square real-part row now has a source-linked QF_LRA/Farkas regression; keep analytic theorems Lean-horizon |
 | `divisibility-and-euclid` | maintain | use gcd/Bezout rows as arithmetic-certificate examples |
 | `modular-arithmetic` | maintain | keep LIA nonunit/CRT and BV fixed-width nonunit-inverse/Fermat-unit residue routes distinct |

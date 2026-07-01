@@ -85,8 +85,8 @@ with checked QF_LRA/Farkas bad finite-value and bad affine-step certificates. Th
 finite-root-finding slice adds exact bisection/Newton iteration replay,
 residual-decrease checking, and checked QF_LRA/Farkas bad Newton-step plus
 bad bisection-width certificates. The finite-separation slice adds exact convex-hull membership,
-separating-hyperplane score replay, supporting-face checking, and a checked
-QF_LRA/Farkas bad-separator certificate. The finite-KKT slice adds exact
+separating-hyperplane score replay, supporting-face checking, and checked
+QF_LRA/Farkas bad convex-combination plus bad-separator certificates. The finite-KKT slice adds exact
 constrained-quadratic grid replay, stationarity replay, complementary-slackness
 checking, and a checked QF_LRA/Farkas bad-stationarity certificate. The finite
 active-set QP slice adds exact active-face replay, inactive-constraint slack
@@ -584,7 +584,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_pr
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-separation-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_separator_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-active-set-qp-v0

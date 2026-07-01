@@ -55,6 +55,23 @@
       "notes": "The validator recomputes the tight indices from the separator scores."
     },
     {
+      "id": "bad-convex-combination-point-rejected",
+      "claim": "The listed convex weights also produce point (1/2, 1/3).",
+      "expected_result": "unsat",
+      "validation": "finite_bad_convex_combination_point_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "triangle-convex-hull",
+        "computed_point": ["1/3", "1/3"],
+        "claimed_point": ["1/2", "1/3"],
+        "x_coordinate_error": "1/6",
+        "smt2_artifact": "artifacts/examples/math/finite-separation-v0/smt2/bad-convex-combination-point-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_convex_combination_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact convex-combination replay computes (1/3, 1/3), so the malformed x-coordinate 1/2 leaves error 1/6; the source artifact checks that the same error cannot equal zero through QF_LRA/Farkas evidence."
+    },
+    {
       "id": "bad-separator-rejected",
       "claim": "The outside point (2,2) also satisfies x + y <= 1.",
       "expected_result": "unsat",
