@@ -12,6 +12,8 @@
   - [Math Curriculum Detailed Build Plan](foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
   - [Math Resource Buildout Roadmap](foundational-resources/RESOURCE-BUILDOUT-ROADMAP.md)
   - [Rules/Law Crosswalk](foundational-resources/RULES-LAW-CROSSWALK.md)
+  - [Rules/Law Resource Queries](foundational-resources/RULES-LAW-QUERIES.md)
+  - [Rules/Law Pattern Matrix](foundational-resources/RULES-LAW-PATTERN-MATRIX.md)
   - [Math Curriculum Coverage](foundational-resources/generated/math-coverage.md)
   - [Curriculum Status Audit](foundational-resources/generated/curriculum-status-audit.md)
   - [Math Field Dashboard](foundational-resources/generated/math-field-dashboard.md)
@@ -34,6 +36,7 @@
   - [Tax Benefit Arithmetic V0](rules-as-code/examples/tax-benefit-arithmetic-v0/README.md)
   - [Procurement Scoring V0](rules-as-code/examples/procurement-scoring-v0/README.md)
   - [Rules/Law Resource Queries](foundational-resources/RULES-LAW-QUERIES.md)
+  - [Rules/Law Pattern Matrix](foundational-resources/RULES-LAW-PATTERN-MATRIX.md)
 
 # Learn
 

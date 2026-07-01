@@ -480,11 +480,15 @@ Prefer one row, page, route upgrade, or query surface per commit.
     `scripts/query-rules-as-code.py` so downstream consumers can query rule
     packs, checked obligations, generated query families, and bounded generated
     rows without parsing JSON by hand.
-13. Add rules/law examples only by reusing existing math proof shapes and the
+13. Landed: add
+    [`RULES-LAW-PATTERN-MATRIX.md`](RULES-LAW-PATTERN-MATRIX.md) so the current
+    rule-pattern surface maps back to math concept rows, proof routes, pack
+    checks, generated query families, and copyable query commands.
+14. Add rules/law examples only by reusing existing math proof shapes and the
     current JSON boundary.
-14. Add schema fields only after validators and query scripts show repeated
+15. Add schema fields only after validators and query scripts show repeated
     awkwardness.
-15. Revisit crate/repo boundaries after consumer scripts have at least three
+16. Revisit crate/repo boundaries after consumer scripts have at least three
     duplicated access patterns.
 
 ## Validation Protocol

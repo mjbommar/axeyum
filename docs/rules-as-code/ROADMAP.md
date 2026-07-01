@@ -76,6 +76,12 @@ The cross-resource reuse map is
 Use it to choose math-resource patterns, proof routes, and trust boundaries
 before adding new rule packs.
 
+The current pattern matrix is
+[Rules/Law Pattern Matrix](../foundational-resources/RULES-LAW-PATTERN-MATRIX.md).
+It records which finite predicate, role/tenant, threshold, monotonicity,
+version, precedence, and bounded-equivalence patterns are actually covered by
+the four current packs and which math proof routes they reuse.
+
 ## Audience
 
 | Audience | Need |
@@ -267,6 +273,8 @@ just rules-as-code
 python3 scripts/gen-rules-as-code-dashboard.py
 python3 scripts/validate-rules-as-code.py
 python3 scripts/query-rules-as-code.py summary
+python3 scripts/query-rules-as-code.py checks --text monotonicity --require-any
+python3 scripts/query-rules-as-code.py families --text adjacent --require-any
 ```
 
 Rule-pack solver checks:

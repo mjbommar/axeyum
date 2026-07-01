@@ -606,6 +606,14 @@ Pick one row per commit unless the change is purely navigational.
     The standard `just rules-as-code` gate now smoke-checks summary counts,
     procurement pack lookup, checked obligation lookup, generated
     quality-score family lookup, and bounded late-submission generated rows.
+69. Landed: add
+    [`RULES-LAW-PATTERN-MATRIX.md`](RULES-LAW-PATTERN-MATRIX.md) as the
+    rules/law pattern matrix. The matrix maps finite predicates, exclusions,
+    role/tenant relations, thresholds, caps, deadlines, monotonicity, version
+    transitions, precedence, and bounded implementation-equivalence patterns
+    back to math concept rows, proof routes, current rule packs, generated
+    query families, and smoke-checked query commands without adding a premature
+    rule ontology.
 69. Landed: add functional-analysis/operator field-readiness consumer query
     coverage. `CONSUMER-QUERIES.md` and
     `check-foundational-resources.sh` now exercise the

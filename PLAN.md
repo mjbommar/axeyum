@@ -229,6 +229,12 @@ The rules/law query guide is
 it records copyable `scripts/query-rules-as-code.py` commands for pack
 discovery, checked-obligation lookup, generated query-family lookup, and
 bounded generated-row inspection.
+The rules/law pattern matrix is
+[`docs/foundational-resources/RULES-LAW-PATTERN-MATRIX.md`](docs/foundational-resources/RULES-LAW-PATTERN-MATRIX.md);
+it maps finite predicates, role/tenant relations, thresholds, monotonicity,
+version transitions, precedence, and bounded implementation-equivalence
+patterns back to math concept rows, proof routes, current packs, and copyable
+queries.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
 119 concept rows, 108 non-template packs, 632 expected checks (334 `sat`,
 227 `unsat`, 71 `not-run`), 309 checked rows, 252 replay-only rows, and 71
@@ -765,6 +771,10 @@ packs to legal or solver benchmarks.
 rules/law boundary queryable by pack, proof status, generated family, and
 bounded row; `just rules-as-code` smoke-checks the procurement pack, checked
 obligations, quality-score query family, and late-submission generated rows.
+`RULES-LAW-PATTERN-MATRIX.md` now maps that same boundary back to math-resource
+concepts and proof routes, and the rules-as-code smoke gate also checks
+monotonicity checks, adjacent generated families, and quality-monotonicity
+rows.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, finite tensor products, and finite
 group actions now add secondary equality-heavy promotions for bad antisymmetry,

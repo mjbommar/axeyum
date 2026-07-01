@@ -69,6 +69,12 @@ The copyable downstream query guide lives in
 It uses `scripts/query-rules-as-code.py` to find packs, checked obligations,
 generated query families, and bounded rows from the committed JSON boundary.
 
+The current pattern matrix lives in
+[Rules/Law Pattern Matrix](../foundational-resources/RULES-LAW-PATTERN-MATRIX.md).
+It maps finite predicates, tenant relations, thresholds, monotonicity,
+versioning, precedence, and bounded equivalence back to math concept rows,
+proof routes, current packs, and copyable queries.
+
 ## First Example Theme
 
 Start with a small eligibility rule, not a full statute:

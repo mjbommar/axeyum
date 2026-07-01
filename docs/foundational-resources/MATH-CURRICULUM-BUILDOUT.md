@@ -38,6 +38,9 @@ policy and legal-rule checks, use the
 [Rules/Law Crosswalk](RULES-LAW-CROSSWALK.md).
 For copyable queries over the current rules-as-code JSON boundary, use the
 [Rules/Law Resource Queries](RULES-LAW-QUERIES.md).
+For the current map from reusable rules/law patterns to math concepts, proof
+routes, rule packs, and query commands, use the
+[Rules/Law Pattern Matrix](RULES-LAW-PATTERN-MATRIX.md).
 For the compact all-field consumer query surface, use the
 [Field Readiness Query Matrix](FIELD-READINESS-QUERY-MATRIX.md).
 For proof-route coverage queries, use the

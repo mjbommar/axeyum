@@ -6,6 +6,8 @@ It complements the [Rules/Law Crosswalk](RULES-LAW-CROSSWALK.md): the crosswalk
 maps math proof shapes to policy checks, while this page shows how a consumer
 can find the committed rule packs, checked obligations, and generated bounded
 query rows without reading prose.
+For the current pattern-to-route coverage table, see the
+[Rules/Law Pattern Matrix](RULES-LAW-PATTERN-MATRIX.md).
 
 The scope remains deliberately small:
 

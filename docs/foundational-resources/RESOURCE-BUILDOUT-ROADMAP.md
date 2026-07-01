@@ -1210,7 +1210,12 @@ Pick one item per commit unless the change is purely navigational.
    packs, checked obligations, generated query families, and bounded generated
    rows without parsing JSON by hand. `just rules-as-code` smoke-checks the
    current procurement queries.
-14. Landed: add a consumer-query recipe for "find all packs for a field and
+14. Landed: add
+   [`RULES-LAW-PATTERN-MATRIX.md`](RULES-LAW-PATTERN-MATRIX.md) so current
+   rules/law patterns map back to math concept rows, proof routes, pack
+   checks, generated query families, and copyable query commands before any
+   new rule ontology or rule-pack count push.
+15. Landed: add a consumer-query recipe for "find all packs for a field and
    route" through the `--route` filter in
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md).
@@ -1664,6 +1669,11 @@ Pick one item per commit unless the change is purely navigational.
     with `just rules-as-code` smoke-checking summary counts, procurement pack
     lookup, checked obligations, generated quality-score families, and late
     generated rows.
+77d. Landed: add
+    [`RULES-LAW-PATTERN-MATRIX.md`](RULES-LAW-PATTERN-MATRIX.md) as the
+    rules/law pattern matrix, mapping the current predicate, relation,
+    threshold, monotonicity, version, precedence, and implementation-equivalence
+    patterns back to math concepts, proof routes, and smoke-checked queries.
 78. Landed: add functional-analysis/operator field-readiness consumer queries
     through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational
     smoke check, covering Farkas field readiness, the operator bridge lookup,

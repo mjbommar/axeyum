@@ -114,6 +114,9 @@ schemas, examples, and validation workflows.
 - [RULES-LAW-QUERIES.md](RULES-LAW-QUERIES.md) gives copyable queries for the
   rules-as-code JSON boundary, including pack discovery, checked obligations,
   generated query families, and bounded generated rows.
+- [RULES-LAW-PATTERN-MATRIX.md](RULES-LAW-PATTERN-MATRIX.md) maps the current
+  rules/law patterns back to math concept rows, proof routes, current packs,
+  and copyable query commands.
 - [ROADMAP.md](ROADMAP.md) is the implementation roadmap.
 - [../learn/math/README.md](../learn/math/README.md) is the learner-facing
   math path built from the curriculum, concept atlas, and validated packs.

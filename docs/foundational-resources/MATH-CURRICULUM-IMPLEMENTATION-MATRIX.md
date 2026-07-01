@@ -511,6 +511,10 @@ Build sequence:
     surface for pack discovery, checked obligations, generated query families,
     and bounded generated rows; `just rules-as-code` smoke-checks the current
     procurement queries.
+48. [`RULES-LAW-PATTERN-MATRIX.md`](RULES-LAW-PATTERN-MATRIX.md) now maps the
+    current rules/law patterns back to math concept rows, proof routes, pack
+    checks, generated query families, and copyable query commands so the next
+    rule pack is gated on distinct proof-shape or consumer demand.
 48. Functional-analysis/operator field-readiness consumer queries now land in
     [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
     `scripts/check-foundational-resources.sh`, covering the Farkas field

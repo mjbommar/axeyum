@@ -20,6 +20,10 @@ The reusable identity is the same as the core project:
 untrusted fast search, trusted small checking
 ```
 
+For the current covered-pattern table and copyable JSON queries, see the
+[Rules/Law Pattern Matrix](RULES-LAW-PATTERN-MATRIX.md). This crosswalk is the
+design map; the pattern matrix is the current coverage map.
+
 ## Workflow
 
 Use the math resources as a staging path for a rule pack:

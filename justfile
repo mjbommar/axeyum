@@ -36,6 +36,9 @@ rules-as-code:
     python3 scripts/query-rules-as-code.py checks --pack procurement_scoring_v0 --proof-status checked --require-any
     python3 scripts/query-rules-as-code.py families --pack procurement_scoring_v0 --text quality --require-any
     python3 scripts/query-rules-as-code.py rows --pack procurement_scoring_v0 --family bounded_awards --text 2026-08-02 --limit 3 --require-any
+    python3 scripts/query-rules-as-code.py checks --text monotonicity --require-any
+    python3 scripts/query-rules-as-code.py families --text adjacent --require-any
+    python3 scripts/query-rules-as-code.py rows --pack procurement_scoring_v0 --family quality_monotonicity_adjacent --limit 3 --require-any
     git diff --exit-code docs/rules-as-code/generated
 
 deny:

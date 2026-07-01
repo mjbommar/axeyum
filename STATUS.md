@@ -205,6 +205,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Rules/law pattern matrix landed.**
+  [`RULES-LAW-PATTERN-MATRIX.md`](docs/foundational-resources/RULES-LAW-PATTERN-MATRIX.md)
+  now maps finite predicates, exclusions, role/tenant relations, thresholds,
+  caps, deadlines, monotonicity, version transitions, precedence, and bounded
+  implementation-equivalence patterns back to math concept rows, proof routes,
+  current rule packs, generated query families, and copyable commands. The
+  `just rules-as-code` smoke gate now also exercises monotonicity lookup,
+  adjacent-family lookup, and quality-monotonicity generated rows without
+  adding a premature rule ontology or legal/benchmark claims.
+
 - **Rules/law query surface landed.**
   [`RULES-LAW-QUERIES.md`](docs/foundational-resources/RULES-LAW-QUERIES.md)
   and `scripts/query-rules-as-code.py` now expose the rules-as-code JSON

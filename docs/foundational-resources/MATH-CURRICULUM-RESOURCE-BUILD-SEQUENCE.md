@@ -293,8 +293,8 @@ Build next:
 - policy packs that reuse existing math-resource shapes: predicates,
   arithmetic thresholds, caps, phase-outs, graph reachability, temporal
   effective dates, precedence, exceptions, and monotonicity;
-- a rules query matrix that maps each legal/rule pattern back to math concept
-  rows and proof routes;
+- landed: a rules query matrix that maps each legal/rule pattern back to math
+  concept rows, proof routes, current packs, and copyable query commands;
 - no new rule ontology until the current JSON boundary is exercised by more
   consumers.
 
@@ -400,7 +400,11 @@ Pick one item per commit unless the change is purely navigational.
     `scripts/query-rules-as-code.py` so the current rules/law JSON boundary has
     smoke-checked pack, checked-obligation, generated-family, and generated-row
     lookup commands.
-13. Add the next rules/law example only if it exercises a distinct current
+13. Landed: add `RULES-LAW-PATTERN-MATRIX.md` so current rules/law patterns
+    map back to math concepts, proof routes, pack checks, generated query
+    families, and smoke-checked query commands without adding a premature rule
+    ontology.
+14. Add the next rules/law example only if it exercises a distinct current
     math proof shape or a repeated consumer need.
 
 ## Maintenance Commands
