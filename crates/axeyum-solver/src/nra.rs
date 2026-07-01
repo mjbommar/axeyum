@@ -93,10 +93,48 @@ type Bounds = HashMap<TermId, (axeyum_ir::Rational, axeyum_ir::Rational)>;
 /// Decides a (possibly nonlinear) real-arithmetic query by linear abstraction of
 /// nonlinear products, `McCormick` envelopes, spatial branch-and-bound, and replay.
 ///
+/// This wrapper adds a **final soundness guard**: any `sat` model returned by the
+/// internal engine is re-checked against the **original** assertions (with real
+/// division intact) under the ground evaluator. Internal division elimination
+/// rewrites `x/y` to a fresh variable constrained by `(y=0) ∨ (x=r·y)`, so a
+/// candidate can satisfy the *eliminated* form via the `y=0` branch with `r` free,
+/// while the original `x/0` evaluates (in the ground evaluator, the soundness trust
+/// anchor) to a fixed value that does **not** satisfy the atom — a wrong `sat`.
+/// Re-checking here converts any such spurious `sat` to a first-class `unknown`,
+/// never a wrong verdict. (The internal engine already replays against the
+/// *eliminated* form; this guard closes the gap between that form and the
+/// evaluator's div-by-zero semantics.)
+///
 /// # Errors
 ///
 /// Returns [`SolverError`] from the rewrite or the LRA solver.
 pub fn check_with_nra(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    let result = check_with_nra_impl(arena, assertions, config)?;
+    if let CheckResult::Sat(model) = &result {
+        let assignment = model.to_assignment();
+        let all_true = assertions
+            .iter()
+            .all(|&a| matches!(eval(arena, a, &assignment), Ok(Value::Bool(true))));
+        if !all_true {
+            // The candidate does not satisfy the original (division) semantics —
+            // decline rather than return a wrong `sat`.
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: "nra: sat candidate failed replay against the original \
+                         (real-division) semantics"
+                    .to_owned(),
+            }));
+        }
+    }
+    Ok(result)
+}
+
+/// The internal NRA engine (see [`check_with_nra`] for the final soundness guard).
+fn check_with_nra_impl(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,

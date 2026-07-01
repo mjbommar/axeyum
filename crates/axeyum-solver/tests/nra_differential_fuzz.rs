@@ -151,11 +151,16 @@ struct Monomial {
     factors: Vec<usize>,
 }
 
-/// A generated atom: a polynomial `Σ monomials ⋈ 0`.
+/// A generated atom: a polynomial `Σ monomials ⋈ 0`, optionally divided by a
+/// variable (`(poly / var[divisor]) ⋈ 0`) to exercise `RealDiv` — including the
+/// SMT-LIB div-by-zero congruence path (`eliminate_real_div`), which the
+/// polynomial-only generator never reached.
 #[derive(Clone)]
 struct Atom {
     monomials: Vec<Monomial>,
     cmp: Cmp,
+    /// `Some(v)` wraps the atom's LHS as `(poly / var[v])`.
+    divisor: Option<usize>,
 }
 
 /// A full generated instance: the variable count and the atoms. Owns only plain
@@ -201,9 +206,18 @@ impl Instance {
                     factors: Vec::new(),
                 });
             }
+            // ~1/4 of atoms divide by a variable, so multiple atoms can share the
+            // same `(numerator, divisor)` and a divisor can be forced to 0 — the
+            // congruence + div-by-zero cases `eliminate_real_div` must model.
+            let divisor = if rng.below(4) == 0 {
+                Some(rng.below(num_vars as u64) as usize)
+            } else {
+                None
+            };
             atoms.push(Atom {
                 monomials,
                 cmp: Cmp::pick(rng),
+                divisor,
             });
         }
         Instance { num_vars, atoms }
@@ -237,7 +251,10 @@ impl Instance {
                 });
             }
             // A monomial list is never empty (≥ 1 monomial generated).
-            let lhs = poly.expect("every atom has at least one monomial");
+            let mut lhs = poly.expect("every atom has at least one monomial");
+            if let Some(d) = atom.divisor {
+                lhs = a.real_div(lhs, vars[d]).unwrap();
+            }
             assertions.push(atom.cmp.build(&mut a, lhs, zero));
         }
         (a, syms, assertions)
@@ -269,7 +286,10 @@ impl Instance {
                         Some(acc) => acc + term,
                     });
                 }
-                let lhs = poly.expect("every atom has at least one monomial");
+                let mut lhs = poly.expect("every atom has at least one monomial");
+                if let Some(d) = atom.divisor {
+                    lhs = lhs / vars[d].clone();
+                }
                 match atom.cmp {
                     Cmp::Eq => lhs.eq(&zero),
                     Cmp::Ne => lhs.ne(&zero),
@@ -299,11 +319,11 @@ impl Instance {
                     s
                 })
                 .collect();
-            lines.push(format!(
-                "  atom[{i}]: {} {} 0",
-                parts.join(" + "),
-                atom.cmp.symbol()
-            ));
+            let body = match atom.divisor {
+                Some(d) => format!("({}) / {}", parts.join(" + "), names[d]),
+                None => parts.join(" + "),
+            };
+            lines.push(format!("  atom[{i}]: {} {} 0", body, atom.cmp.symbol()));
         }
         lines.join("\n")
     }
