@@ -18230,6 +18230,133 @@ def validate_finite_simplicial_homology(expected: dict[str, Any]) -> None:
     if "UnsatDiophantine" not in certificate or "Evidence::check" not in certificate:
         fail("qf-lia bad boundary certificate must document checked Diophantine evidence")
 
+    bad_square = checks["bad-boundary-square-rejected"]
+    if bad_square["expected_result"] != "unsat" or bad_square.get("proof_status") != "checked":
+        fail("bad-boundary-square-rejected must be a checked unsat row")
+    data = bad_square.get("data", {})
+    square_vertices = require_string_list("bad boundary square vertices", data.get("vertices"))
+    square_simplex = require_simplex("bad boundary square simplex", data.get("simplex"), square_vertices)
+    square_first_boundary = require_chain(
+        "bad boundary square first_boundary",
+        data.get("first_boundary"),
+        square_vertices,
+    )
+    if oriented_boundary(square_simplex) != square_first_boundary:
+        fail("bad-boundary-square-rejected first_boundary is incorrect")
+    actual_second = require_chain(
+        "bad boundary square actual_second_boundary",
+        data.get("actual_second_boundary"),
+        square_vertices,
+        allow_empty=True,
+    )
+    computed_second = chain_boundary(square_first_boundary)
+    if computed_second != actual_second:
+        fail("bad-boundary-square-rejected actual_second_boundary is incorrect")
+    if computed_second:
+        fail("bad-boundary-square-rejected boundary square should cancel to zero")
+    claimed_second = require_chain(
+        "bad boundary square claimed_second_boundary",
+        data.get("claimed_second_boundary"),
+        square_vertices,
+    )
+    if claimed_second == actual_second:
+        fail("bad-boundary-square-rejected claimed_second_boundary unexpectedly matches actual")
+    target_simplex = require_simplex(
+        "bad boundary square target_simplex",
+        data.get("target_simplex"),
+        square_vertices,
+    )
+    if len(target_simplex) != 1:
+        fail("bad-boundary-square-rejected target_simplex must be a vertex")
+    actual_square_coeff = require_fraction(
+        "bad boundary square actual_coefficient",
+        data.get("actual_coefficient"),
+    )
+    claimed_square_coeff = require_fraction(
+        "bad boundary square claimed_coefficient",
+        data.get("claimed_coefficient"),
+    )
+    if actual_second.get(target_simplex, Fraction(0)) != actual_square_coeff:
+        fail("bad-boundary-square-rejected actual_coefficient is incorrect")
+    if actual_square_coeff != 0:
+        fail("bad-boundary-square-rejected actual coefficient must be zero")
+    if claimed_second.get(target_simplex, Fraction(0)) != claimed_square_coeff:
+        fail("bad-boundary-square-rejected claimed_coefficient is incorrect")
+    if claimed_square_coeff == actual_square_coeff:
+        fail("bad-boundary-square-rejected claimed coefficient unexpectedly matches actual")
+    cancellation_terms = data.get("cancellation_terms")
+    if not isinstance(cancellation_terms, list) or len(cancellation_terms) != 2:
+        fail("bad-boundary-square-rejected cancellation_terms must list two terms")
+    listed_sum = Fraction(0)
+    for index, term in enumerate(cancellation_terms):
+        coeff = require_fraction(
+            f"bad boundary square cancellation_terms[{index}].coefficient",
+            term.get("coefficient"),
+        )
+        source = require_simplex(
+            f"bad boundary square cancellation_terms[{index}].source_simplex",
+            term.get("source_simplex"),
+            square_vertices,
+        )
+        if source not in square_first_boundary:
+            fail("bad-boundary-square-rejected cancellation source must occur in first_boundary")
+        edge_boundary = oriented_boundary(source)
+        if target_simplex not in edge_boundary:
+            fail("bad-boundary-square-rejected cancellation source must contribute target vertex")
+        expected_coeff = square_first_boundary[source] * edge_boundary[target_simplex]
+        if coeff != expected_coeff:
+            fail("bad-boundary-square-rejected cancellation coefficient does not match boundary expansion")
+        listed_sum += coeff
+    if listed_sum != actual_square_coeff:
+        fail("bad-boundary-square-rejected cancellation_terms do not sum to actual coefficient")
+
+    qf_square = checks["qf-lia-bad-boundary-square-coefficient"]
+    if qf_square["expected_result"] != "unsat":
+        fail("qf-lia-bad-boundary-square-coefficient must expect unsat")
+    if qf_square["proof_status"] != "checked":
+        fail("qf-lia-bad-boundary-square-coefficient must be checked")
+    if qf_square["validation"] != "qf_lia_diophantine_evidence":
+        fail("qf-lia-bad-boundary-square-coefficient must use qf_lia_diophantine_evidence validation")
+    data = qf_square.get("data", {})
+    qf_square_vertices = require_string_list("qf-lia boundary square vertices", data.get("vertices"))
+    qf_square_simplex = require_simplex(
+        "qf-lia boundary square simplex",
+        data.get("simplex"),
+        qf_square_vertices,
+    )
+    qf_target = require_simplex(
+        "qf-lia boundary square target_simplex",
+        data.get("target_simplex"),
+        qf_square_vertices,
+    )
+    if qf_square_vertices != square_vertices or qf_square_simplex != square_simplex:
+        fail("qf-lia-bad-boundary-square-coefficient simplex data must match bad-boundary-square-rejected")
+    if qf_target != target_simplex:
+        fail("qf-lia-bad-boundary-square-coefficient target simplex must match bad-boundary-square-rejected")
+    qf_actual = require_fraction("qf-lia boundary square actual_coefficient", data.get("actual_coefficient"))
+    qf_claimed = require_fraction("qf-lia boundary square claimed_coefficient", data.get("claimed_coefficient"))
+    if qf_actual != actual_square_coeff or qf_claimed != claimed_square_coeff:
+        fail("qf-lia-bad-boundary-square-coefficient coefficients must match bad-boundary-square-rejected")
+    if qf_actual != Fraction(0) or qf_claimed == qf_actual:
+        fail("qf-lia-bad-boundary-square-coefficient must document the zero-vs-claimed conflict")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-lia boundary square smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-simplicial-homology-v0/smt2/"
+        "bad-boundary-square-coefficient-diophantine-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lia-bad-boundary-square-coefficient smt2_artifact must name the checked source artifact")
+    check_source("qf-lia boundary square smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("qf-lia boundary square proof_regression", proof_regression)
+    if "finite_simplicial_bad_boundary_square_coefficient_emits_checked_diophantine_evidence" not in proof_regression:
+        fail("qf-lia-bad-boundary-square-coefficient must link the Diophantine regression")
+    certificate = data.get("certificate")
+    require_string("qf-lia boundary square certificate", certificate)
+    if "UnsatDiophantine" not in certificate or "Evidence::check" not in certificate:
+        fail("qf-lia boundary square certificate must document checked Diophantine evidence")
+
     horizon = checks["general-homology-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-homology-lean-horizon must be not-run")

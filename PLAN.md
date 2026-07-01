@@ -253,8 +253,8 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-120 concept rows, 108 non-template packs, 640 expected checks (336 `sat`,
-233 `unsat`, 71 `not-run`), 315 checked rows, 254 replay-only rows, and 71
+120 concept rows, 108 non-template packs, 642 expected checks (336 `sat`,
+235 `unsat`, 71 `not-run`), 317 checked rows, 254 replay-only rows, and 71
 Lean-horizon rows. The learner coverage audit records all 108 non-template
 packs as focused-lesson linked, with no path-only, index-only, or missing
 learner buckets. The first QF_UF/Alethe
@@ -302,7 +302,10 @@ search: no 3-bit residue `b < 6` satisfies `(2*b) mod 6 = 1`, and no 3-bit
 residue `0 < a < 5` satisfies `a^4 mod 5 != 1`, both with checked
 DIMACS/DRAT evidence. The topology
 QF_LIA/Diophantine lane now also includes finite chain-complex torsion via
-one-entry Smith diagonal replay and checked rejection of `2*k = 1`. The
+one-entry Smith diagonal replay and checked rejection of `2*k = 1`, plus
+finite simplicial homology boundary-square cancellation via checked rejection
+of the false coefficient row `coeff_b = 1` when `boundary(boundary([a,b,c]))`
+forces `coeff_b = 0`. The
 measure/probability QF_LRA/Farkas lane now also promotes finite
 product-measure's bad product-probability and bad marginal rows through
 source-linked exact linear contradictions after replay computes the product

@@ -178,6 +178,19 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_chain_homology_replay \
+  --route Diophantine \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-simplicial-homology-v0 \
+  --route Diophantine \
+  --proof-status checked \
+  --text boundary-square \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --concept bridge_finite_torsion_homology_replay \
   --route Diophantine \
   --proof-status checked \

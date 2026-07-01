@@ -25,6 +25,8 @@ Concept rows:
 | `betti-rank-replay` | `sat` | replay-only |
 | `bad-boundary-rejected` | `unsat` | checked |
 | `qf-lia-bad-boundary-coefficient` | `unsat` | checked |
+| `bad-boundary-square-rejected` | `unsat` | checked |
+| `qf-lia-bad-boundary-square-coefficient` | `unsat` | checked |
 | `general-homology-lean-horizon` | `not-run` | lean-horizon |
 
 Every checked row is finite set and exact integer/rational linear-algebra
@@ -33,9 +35,10 @@ equivalence, general cohomology theory, or general algebraic topology.
 
 The shared `bridge_finite_boundary_operator_replay` row is the atlas vocabulary
 for oriented boundary coefficients, `boundary^2 = 0`, and checked bad-sign
-certificate rows. `bridge_finite_chain_homology_replay` sits one level higher:
-it reuses the boundary operator rows for the finite chain-complex and Betti-rank
-slice without treating the finite row as a general algebraic-topology theorem.
+certificate rows, including the boundary-square coefficient cancellation row.
+`bridge_finite_chain_homology_replay` sits one level higher: it reuses the
+boundary operator rows for the finite chain-complex and Betti-rank slice without
+treating the finite row as a general algebraic-topology theorem.
 
 ## Replay Simplicial Closure
 
@@ -182,6 +185,33 @@ equalities and checks it independently. That keeps the educational boundary
 replay tied to the project identity: search can propose a boundary row, but
 the accepted negative claim has a small checked integer certificate.
 
+## Reject A Bad Boundary-Square Coefficient
+
+The second negative row starts from the same first boundary and applies the
+edge boundary again. The coefficient of `[b]` receives two contributions:
+
+```text
+d([b,c]) contributes -[b]
+d([a,b]) contributes +[b]
+```
+
+They cancel exactly:
+
+```text
+coeff_b = -1 + 1 = 0
+```
+
+The malformed row claims:
+
+```text
+coeff_b = 1
+```
+
+The finite replay row rejects that source claim directly, and the solver-form
+row isolates the same failure as inconsistent integer equalities
+`coeff_b = 0` and `coeff_b = 1`. Axeyum emits checked `UnsatDiophantine`
+evidence for the contradiction.
+
 ## Name The Lean Horizon
 
 The finite pack checks:
@@ -194,6 +224,8 @@ boundary-matrix rank replay over Q
 Betti-number replay for a fixed circle
 bad boundary-sign refutation
 QF_LIA boundary-coefficient contradiction
+bad boundary-square coefficient refutation
+QF_LIA boundary-square coefficient contradiction
 ```
 
 The following remain proof-assistant targets:
@@ -235,9 +267,10 @@ remaining horizon -> general algebraic-topology theorems
 
 The graduation target is to encode fixed finite simplicial complexes as
 deterministic finite-set and integer-linear-algebra obligations, replay
-boundary and Betti rows through Axeyum model evaluation, and add emitted
-certificates for false-boundary and rank rows once finite matrix proof routes
-are promoted.
+boundary and Betti rows through Axeyum model evaluation, keep false boundary
+and boundary-square coefficient rows tied to checked Diophantine evidence, and
+add emitted certificates for rank rows once finite matrix proof routes are
+promoted.
 
 For the integer quotient/torsion next step, read
 [End To End: Finite Chain-Complex Torsion](finite-chain-complex-torsion-end-to-end.md).

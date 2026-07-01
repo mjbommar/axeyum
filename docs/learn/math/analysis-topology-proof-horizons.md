@@ -336,8 +336,8 @@ cycle = [a,b] - [a,c] + [b,c]
 The `finite-simplicial-homology-v0` validator checks face closure, recomputes
 oriented boundaries, verifies `boundary^2 = 0`, builds exact rational boundary
 matrices, checks the three-edge circle has `b0 = 1` and `b1 = 1`, and rejects a
-false boundary sign for `[a,b,c]` with a checked QF_LIA/Diophantine coefficient
-certificate.
+false boundary sign plus a false boundary-square vertex coefficient for
+`[a,b,c]` with checked QF_LIA/Diophantine coefficient certificates.
 
 For a finite integer torsion shadow, encode a two-term free abelian chain
 complex:

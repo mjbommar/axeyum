@@ -515,13 +515,14 @@ Next buildout:
    homeomorphism-invariance theorems.
    A follow-up topology row, `bridge_finite_chain_homology_replay`, now makes
    fixed finite simplicial-complex closure, oriented boundaries,
-   boundary-squared-zero, Betti-rank replay, and checked bad-boundary
-   coefficient evidence queryable without promoting general algebraic-topology
-   theorems.
+   boundary-squared-zero, Betti-rank replay, checked bad-boundary coefficient
+   evidence, and checked boundary-square cancellation evidence queryable
+   without promoting general algebraic-topology theorems.
    A follow-up topology row, `bridge_finite_boundary_operator_replay`, now
    makes oriented boundary coefficients, boundary-of-boundary cancellation,
-   boundary-matrix shape, and checked bad-boundary coefficient evidence
-   queryable as the reusable lower-level bridge for the chain/homology row.
+   boundary-matrix shape, and checked bad-boundary coefficient plus
+   boundary-square cancellation evidence queryable as the reusable lower-level
+   bridge for the chain/homology row.
    A follow-up topology row, `bridge_finite_specialization_order_replay`, now
    makes finite topology-to-preorder replay, singleton-closure
    characterization, finite `T0` antisymmetry replay, and checked bad `T0`

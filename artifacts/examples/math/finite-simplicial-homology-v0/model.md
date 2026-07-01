@@ -37,6 +37,18 @@ sum_i (-1)^i [v0, ..., v_{i-1}, v_{i+1}, ..., vn]
 
 For `[a,b,c]`, this gives `[b,c] - [a,c] + [a,b]`.
 
+Applying the boundary again cancels every vertex coefficient. For vertex
+`[b]`, the two contributing edge boundaries are:
+
+```text
+boundary([b,c]) contributes -[b]
+boundary([a,b]) contributes +[b]
+```
+
+The `bad-boundary-square-rejected` and
+`qf-lia-bad-boundary-square-coefficient` rows reject the malformed claim that
+the final `[b]` coefficient is `1` instead of `0`.
+
 ## Homology Rank Encoding
 
 For the finite circle, the validator builds the boundary matrices over exact

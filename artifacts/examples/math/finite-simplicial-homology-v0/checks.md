@@ -45,6 +45,22 @@ contradiction: the coefficient of `[a,c]` is forced to be both `-1` and `1`.
 Axeyum emits and checks an `UnsatDiophantine` certificate for those
 inconsistent equalities.
 
+## `bad-boundary-square-rejected`
+
+Expected result: `unsat`.
+
+The validator rejects the false chain-complex row because the coefficient of
+vertex `[b]` in `boundary(boundary([a,b,c]))` cancels to `0`, not `1`.
+
+## `qf-lia-bad-boundary-square-coefficient`
+
+Expected result: `unsat`.
+
+The SMT-LIB artifact isolates the cancellation error as an integer equality
+contradiction: the coefficient of `[b]` is forced to be both `0` and `1`.
+Axeyum emits and checks an `UnsatDiophantine` certificate for those
+inconsistent equalities.
+
 ## `general-homology-lean-horizon`
 
 Expected result: `not-run`.

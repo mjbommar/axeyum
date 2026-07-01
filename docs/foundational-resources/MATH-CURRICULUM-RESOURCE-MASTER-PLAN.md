@@ -55,8 +55,8 @@ As of 2026-07-01, the committed resource query reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 640 expected checks.
-- 315 checked proof/evidence rows.
+- 642 expected checks.
+- 317 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -533,7 +533,8 @@ Use one row per commit unless the change is purely navigational.
     current JSON boundary is exercised by more consumers.
 32. Landed: add `bridge_finite_chain_homology_replay` so finite
     simplicial-complex closure, boundary replay, boundary-squared-zero,
-    Betti-rank replay, and the checked bad-boundary coefficient row are
+    Betti-rank replay, the checked bad-boundary coefficient row, and the
+    checked boundary-square cancellation row are
     discoverable as a shared topology/linear-algebra bridge without promoting
     homology invariance, exact sequences, homotopy equivalence, cohomology
     operations, or general algebraic-topology theorems.
@@ -547,7 +548,8 @@ Use one row per commit unless the change is purely navigational.
     theorems.
 29. Landed: add `bridge_finite_boundary_operator_replay` so oriented boundary
     coefficients, boundary-of-boundary cancellation, boundary-matrix shape, and
-    the checked bad-boundary coefficient row are discoverable as the reusable
+    the checked bad-boundary coefficient plus boundary-square cancellation rows
+    are discoverable as the reusable
     lower-level topology/linear-algebra bridge without promoting
     functoriality, exactness, homology invariance, cohomology-operation laws,
     or general algebraic topology.

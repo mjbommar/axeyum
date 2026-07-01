@@ -2589,7 +2589,7 @@ results, and arbitrary-space specialization-order theorems in the horizon lane.
 The topology concept layer now also has
 `bridge_finite_boundary_operator_replay`. It groups oriented boundary
 coefficients, boundary-of-boundary cancellation, boundary-matrix shape, and
-checked bad-boundary coefficient evidence across
+checked bad-boundary coefficient plus boundary-square cancellation evidence across
 `finite-simplicial-homology-v0`. The foundational-resource smoke check now
 exercises topology boundary lookup plus concept-scoped Diophantine route
 queries while keeping functoriality, exactness, homology invariance,

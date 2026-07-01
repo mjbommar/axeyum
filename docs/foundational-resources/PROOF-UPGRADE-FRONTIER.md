@@ -641,8 +641,8 @@ First targets:
   tail-count row; the exact-rational bad Fisher and multinomial p-value rows
   are covered by the QF_LRA/Farkas lane above)
 - [finite-simplicial-homology-v0](../../artifacts/examples/math/finite-simplicial-homology-v0/)
-  (resource-backed QF_LIA/Diophantine regression landed for the bad boundary
-  coefficient row)
+  (resource-backed QF_LIA/Diophantine regressions landed for the bad boundary
+  coefficient row and the bad boundary-square cancellation coefficient row)
 - [finite-chain-complex-torsion-v0](../../artifacts/examples/math/finite-chain-complex-torsion-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the bad torsion
   generator row after exact Smith/torsion replay isolates `2*k = 1`)

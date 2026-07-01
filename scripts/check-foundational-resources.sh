@@ -126,6 +126,7 @@ python3 scripts/query-foundational-resources.py packs --concept bridge_finite_bo
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_boundary_operator_replay --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_chain_homology_replay --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_chain_homology_replay --route Diophantine --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-simplicial-homology-v0 --route Diophantine --proof-status checked --text boundary-square --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_torsion_homology_replay --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_torsion_homology_replay --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_cohomology_replay --route alethe --require-any >/dev/null

@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 640 expected checks.
-- 315 checked proof/evidence rows.
+- 642 expected checks.
+- 317 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1815,7 +1815,8 @@ Pick one item per commit unless the change is purely navigational.
 96. Landed: add `bridge_finite_chain_homology_replay` plus topology homology
     lookup and concept-scoped Diophantine route smoke queries, making finite
     simplicial-complex closure, oriented boundaries, boundary-squared-zero,
-    Betti-rank replay, and the checked bad-boundary coefficient row
+    Betti-rank replay, the checked bad-boundary coefficient row, and the checked
+    boundary-square cancellation row
     discoverable without promoting homology invariance, exact sequences,
     homotopy equivalence, cohomology-operation laws, or general algebraic
     topology.
@@ -1830,8 +1831,9 @@ Pick one item per commit unless the change is purely navigational.
 98. Landed: add `bridge_finite_boundary_operator_replay` plus topology
     boundary lookup and concept-scoped Diophantine route smoke queries, making
     oriented boundary coefficients, boundary-of-boundary cancellation,
-    boundary-matrix shape, and checked bad-boundary coefficient evidence
-    discoverable without promoting functoriality, exactness, homology
+    boundary-matrix shape, and checked bad-boundary coefficient plus
+    boundary-square cancellation evidence discoverable without promoting
+    functoriality, exactness, homology
     invariance, cohomology-operation laws, or general algebraic topology.
 99. Landed: add `finite-specialization-order-v0` and
     `bridge_finite_specialization_order_replay` plus topology specialization
@@ -2137,6 +2139,12 @@ Pick one item per commit unless the change is purely navigational.
      the source SMT-LIB artifact separately checks the malformed table that
      excludes `0` despite `f(0)=u` and `u in {u}`. This makes the topology
      preimage route directly queryable by pack, field, route, and proof status.
+143. Landed: extend `finite-simplicial-homology-v0` with a checked
+     boundary-square cancellation row. The pack now rejects the malformed claim
+     that the coefficient of `[b]` in `boundary(boundary([a,b,c]))` is `1`,
+     after exact replay computes the two edge contributions `-1` and `+1`;
+     the linked QF_LIA/Diophantine regression checks the source SMT-LIB
+     contradiction `coeff_b = 0` and `coeff_b = 1`.
 
 ## Validation Checklist
 

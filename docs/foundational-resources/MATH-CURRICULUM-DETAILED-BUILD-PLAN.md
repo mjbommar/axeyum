@@ -47,8 +47,8 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 640 expected checks.
-- 315 checked proof/evidence rows.
+- 642 expected checks.
+- 317 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -776,7 +776,8 @@ Pick one row per commit unless the change is purely navigational.
 84. Landed: add the finite chain-complex/homology replay bridge row.
     `bridge_finite_chain_homology_replay` makes finite simplicial-complex
     closure, oriented-boundary replay, boundary-squared-zero, Betti-rank
-    replay, and checked bad-boundary coefficient evidence queryable from the
+    replay, checked bad-boundary coefficient evidence, and checked
+    boundary-square cancellation evidence queryable from the
     atlas while preserving the boundary around homology invariance, exact
     sequences, homotopy equivalence, cohomology-operation laws, and general
     algebraic topology. The topology consumer smoke now includes homology lookup and
@@ -796,7 +797,8 @@ Pick one row per commit unless the change is purely navigational.
 86. Landed: add the finite boundary-operator replay bridge row.
     `bridge_finite_boundary_operator_replay` makes oriented boundary
     coefficients, boundary-of-boundary cancellation, boundary-matrix shape, and
-    checked bad-boundary coefficient evidence queryable from one shared atlas
+    checked bad-boundary coefficient plus boundary-square cancellation evidence
+    queryable from one shared atlas
     concept while keeping functoriality, exactness, homology invariance,
     cohomology-operation laws, and general algebraic topology in the Lean-horizon lane. The
     topology consumer smoke now includes boundary lookup and concept-scoped
@@ -1446,6 +1448,15 @@ Pick one row per commit unless the change is purely navigational.
      malformed preimage table that excludes `0` even though `f(0)=u` and
      `u in {u}`. The public query surface now reports 640 checks, 315 checked
      rows, and 53 checked QF_UF/Alethe rows.
+170. Landed: extend `finite-simplicial-homology-v0` with checked
+     `bad-boundary-square-rejected` and
+     `qf-lia-bad-boundary-square-coefficient` rows. Exact replay expands
+     `d([a,b,c]) = [b,c] - [a,c] + [a,b]`, recomputes the second boundary,
+     and checks the `[b]` contributions `-1 + 1 = 0`; the source SMT-LIB
+     artifact then rejects the malformed coefficient claim via
+     `finite_simplicial_bad_boundary_square_coefficient_emits_checked_diophantine_evidence`.
+     The public query surface now reports 642 checks, 317 checked rows, and
+     58 checked QF_LIA/Diophantine rows.
 
 ## Validation Checklist
 

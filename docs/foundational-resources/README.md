@@ -325,7 +325,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-simplicial-homology-v0/`](../../artifacts/examples/math/finite-simplicial-homology-v0/)
   validates finite simplicial-complex closure, oriented-boundary replay,
   `boundary^2 = 0`, Betti-rank replay for a three-edge circle, checked
-  rejection of a bad boundary sign, and a homology Lean-horizon row.
+  rejection of a bad boundary sign, checked boundary-square cancellation
+  evidence, and a homology Lean-horizon row.
 - [`artifacts/examples/math/finite-chain-complex-torsion-v0/`](../../artifacts/examples/math/finite-chain-complex-torsion-v0/)
   validates one two-term integer chain complex, one-entry Smith diagonal
   replay, `H0 = Z/2`, checked rejection of a bad torsion-generator boundary

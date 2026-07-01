@@ -35,10 +35,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite simplicial boundary coefficient QF_LIA/Diophantine regression seed",
-    "pressure": "Oriented-boundary coefficient contradiction where coeff_ac is forced to be -1 but the malformed row claims coeff_ac = 1.",
+    "target": "finite simplicial boundary coefficient and boundary-square QF_LIA/Diophantine regression seeds",
+    "pressure": "Two finite chain coefficient contradictions: an oriented-boundary sign error where coeff_ac is forced to be -1 but the malformed row claims coeff_ac = 1, and a boundary-of-boundary cancellation error where coeff_b is forced to be 0 but the malformed row claims coeff_b = 1.",
     "evidence": [
-      "qf-lia-bad-boundary-coefficient"
+      "qf-lia-bad-boundary-coefficient",
+      "qf-lia-bad-boundary-square-coefficient"
     ],
     "next_step": "Promote additional finite chain-complex rows only when they add distinct integer-linear solver pressure; keep homology invariance, exact sequences, and cohomology operations in the Lean-horizon lane."
   },
@@ -52,6 +53,7 @@
     "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "artifacts/examples/math/finite-simplicial-homology-v0/smt2/bad-boundary-coefficient-diophantine-conflict.smt2",
+    "artifacts/examples/math/finite-simplicial-homology-v0/smt2/bad-boundary-square-coefficient-diophantine-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
   ],
   "expected_results": [
@@ -61,12 +63,14 @@
     "betti-rank-replay",
     "bad-boundary-rejected",
     "qf-lia-bad-boundary-coefficient",
+    "bad-boundary-square-rejected",
+    "qf-lia-bad-boundary-square-coefficient",
     "general-homology-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode fixed finite simplicial complexes as deterministic finite-set and integer-linear-algebra obligations.",
     "Replay boundary, chain-complex, and Betti-rank rows through Axeyum model evaluation rather than pack-local Python only.",
-    "Keep promoted bad boundary coefficient rows tied to checked QF_LIA/Diophantine evidence.",
+    "Keep promoted bad boundary coefficient and boundary-square cancellation rows tied to checked QF_LIA/Diophantine evidence.",
     "Add emitted certificates for false-boundary and rank rows once finite matrix proof routes are promoted.",
     "Keep homology invariance, exact sequences, homotopy equivalence, cohomology operations, and general algebraic-topology theorems under Lean horizon until formal routes exist."
   ]

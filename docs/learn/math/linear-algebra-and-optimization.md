@@ -123,7 +123,8 @@ fixed bivariate polynomial maps, including a chain-rule matrix product and a
 positive-definite Hessian certificate by leading principal minors. The finite
 homology slice builds boundary matrices for a fixed simplicial complex,
 computes exact ranks, replays Betti numbers over `Q`, and checks a
-QF_LIA/Diophantine bad boundary coefficient certificate. The finite
+QF_LIA/Diophantine bad boundary coefficient certificate plus a boundary-square
+cancellation coefficient certificate. The finite
 universal-coefficient shadow slice dualizes a one-entry integer boundary
 matrix, replays `H^1 = Z/2`, checks the fixed degree-one Hom/Ext row, and
 rejects a bad `H^1 = 0` identity with QF_UF/Alethe evidence. The finite

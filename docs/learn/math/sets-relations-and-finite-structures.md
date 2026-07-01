@@ -438,7 +438,8 @@ The finite-simplicial-cup-products pack adds a checked finite cochain-operation
 row without promoting general cohomology-ring laws.
 The finite-simplicial-homology and finite-chain-complex-torsion packs now also
 carry checked QF_LIA/Diophantine certificates for bad integer boundary
-coefficients and bad torsion-generator membership. The
+coefficients, boundary-square cancellation, and bad torsion-generator
+membership. The
 finite-universal-coefficient-shadow pack adds checked QF_UF/Alethe evidence
 for a bad `H^1 = 0` group-identification row without promoting the general
 theorem. The Alethe

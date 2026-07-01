@@ -12,6 +12,8 @@ The pack covers:
 - Betti-number rank replay for a three-edge circle over `Q`;
 - checked rejection of a false boundary sign;
 - a QF_LIA/Diophantine certificate for the false boundary coefficient;
+- checked rejection of a false boundary-of-boundary cancellation coefficient;
+- a QF_LIA/Diophantine certificate for that false cancellation coefficient;
 - a Lean-horizon row for general algebraic topology.
 
 ## Concepts
@@ -29,12 +31,12 @@ The pack covers:
 The validator parses vertices, simplices, chains, and coefficients from
 machine-readable JSON. It recomputes face closure, alternating boundaries,
 boundary-of-boundary cancellation, boundary-matrix ranks, and the listed cycle
-generator using exact arithmetic. The promoted bad boundary coefficient row is
-also emitted as a solver-form integer equality contradiction and checked with
-Diophantine evidence.
+generator using exact arithmetic. The promoted bad boundary coefficient and
+boundary-of-boundary cancellation rows are also emitted as solver-form integer
+equality contradictions and checked with Diophantine evidence.
 
-This is finite replay evidence plus a small checked QF_LIA certificate for the
-bad coefficient. It does not prove homology invariance, exact sequences,
+This is finite replay evidence plus small checked QF_LIA certificates for the
+bad coefficients. It does not prove homology invariance, exact sequences,
 homotopy equivalence, cohomology operations, or higher-dimensional algebraic
 topology.
 

@@ -618,7 +618,8 @@ Build sequence:
 58. Landed: add the finite chain-complex/homology replay bridge row.
     `bridge_finite_chain_homology_replay` makes finite simplicial-complex
     closure, oriented-boundary replay, boundary-squared-zero, Betti-rank
-    replay, and checked bad-boundary coefficient evidence queryable through
+    replay, checked bad-boundary coefficient evidence, and checked
+    boundary-square cancellation evidence queryable through
     topology homology lookup and concept-scoped Diophantine route queries while
     keeping homology invariance, exact sequences, homotopy equivalence,
     cohomology-operation laws, and general algebraic topology in the
@@ -635,7 +636,8 @@ Build sequence:
 60. Landed: add the finite boundary-operator replay bridge row.
     `bridge_finite_boundary_operator_replay` makes oriented boundary
     coefficients, boundary-of-boundary cancellation, boundary-matrix shape, and
-    checked bad-boundary coefficient evidence queryable through topology
+    checked bad-boundary coefficient plus boundary-square cancellation evidence
+    queryable through topology
     boundary lookup and concept-scoped Diophantine route queries while keeping
     functoriality, exactness, homology invariance, cohomology-operation laws,
     and general algebraic topology in the Lean-horizon lane.

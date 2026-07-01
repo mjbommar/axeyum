@@ -213,8 +213,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   QF_UF/Alethe row separately checks the malformed table that excludes `0`
   despite `f(0)=u` and `u in {u}`. Focused validation and the existing
   `finite_continuous_maps_bad_preimage_emits_checked_alethe` regression pass;
-  the public summary now reports 120 concept rows, 108 packs, 640 expected
-  checks, 315 checked rows, 254 replay-only rows, and 71 Lean-horizon rows.
+  the public summary now reports 120 concept rows, 108 packs, 642 expected
+  checks, 317 checked rows, 254 replay-only rows, and 71 Lean-horizon rows.
+
+- **Finite simplicial homology boundary-square row landed.**
+  `finite-simplicial-homology-v0` now promotes the false
+  `boundary(boundary([a,b,c]))` coefficient row through exact finite replay and
+  QF_LIA/Diophantine evidence. The replay row expands the first boundary,
+  checks the `[b]` vertex contributions `-1 + 1 = 0`, and rejects the malformed
+  claim that the coefficient is `1`; the SMT-LIB artifact isolates the same
+  conflict as `coeff_b = 0` and `coeff_b = 1`. Focused validation and the new
+  `finite_simplicial_bad_boundary_square_coefficient_emits_checked_diophantine_evidence`
+  regression pass; the public summary now reports 120 concept rows, 108 packs,
+  642 expected checks, 317 checked rows, 254 replay-only rows, and 71
+  Lean-horizon rows.
 
 - **Finite conditional-variance decomposition row landed.**
   `finite-conditional-expectation-v0` now replays the finite law of total
