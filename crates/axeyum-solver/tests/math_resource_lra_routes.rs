@@ -304,6 +304,9 @@ const FINITE_PROBABILITY_BAD_CONDITIONAL_PROBABILITY: &str = include_str!(
 const FINITE_PROBABILITY_BAD_INDEPENDENCE: &str = include_str!(
     "../../../artifacts/examples/math/finite-probability-v0/smt2/bad-independence-farkas-conflict.smt2"
 );
+const FINITE_PROBABILITY_BAD_TOTAL_VARIATION: &str = include_str!(
+    "../../../artifacts/examples/math/finite-probability-v0/smt2/bad-total-variation-farkas-conflict.smt2"
+);
 const RATIONALS_TRICHOTOMY_NONLESS: &str = include_str!(
     "../../../artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-nonless-farkas-conflict.smt2"
 );
@@ -1230,6 +1233,14 @@ fn finite_probability_bad_independence_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-probability-v0 bad-independence SMT-LIB artifact",
         FINITE_PROBABILITY_BAD_INDEPENDENCE,
+    );
+}
+
+#[test]
+fn finite_probability_bad_total_variation_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-probability-v0 bad-total-variation SMT-LIB artifact",
+        FINITE_PROBABILITY_BAD_TOTAL_VARIATION,
     );
 }
 

@@ -39,7 +39,8 @@ additivity, event complements, finite measure monotonicity, finite union
 subadditivity, a checked QF_LRA bad-complement certificate, a checked QF_LRA
 bad subset-measure certificate, a checked QF_LRA bad union-subadditivity
 certificate, checked QF_LRA bad-normalization,
-bad-conditional-probability, bad-Bayes, and bad-independence certificates,
+bad-conditional-probability, bad-Bayes, bad-independence, and
+bad-total-variation certificates,
 finite simple-function integrals, indicator
 integrals, finite random-variable pushforwards, expectations through
 pushforward distributions, independence checks, a checked QF_LRA bad
@@ -92,9 +93,11 @@ P(late | rain) = (1/10) / (1/10 + 1/5) = 1/3
 ```
 
 The validator recomputes the numerator, denominator, and quotient. For finite
-probability it also rejects a false normalization row, `1/2 + 1/2 = 3/2`, with
-checked `UnsatFarkas` evidence. For finite measure, the same route rejects a
-bad complement row where `mu(A)=1/3`, `mu(U)=1`, and the malformed claim
+probability it also rejects a false normalization row, `1/2 + 1/2 = 3/2`, and
+a false total-variation row where two three-atom distributions have replayed
+distance `1/6` but the malformed claim asserts `1/4`, both with checked
+`UnsatFarkas` evidence. For finite measure, the same route rejects a bad
+complement row where `mu(A)=1/3`, `mu(U)=1`, and the malformed claim
 requires `mu(A^c)=1/2` while preserving `mu(A)+mu(A^c)=mu(U)`.
 The finite-measure monotonicity pack replays `A subset B` by computing
 `B \ A`, checking `mu(B)=mu(A)+mu(B\A)`, and rejecting a false

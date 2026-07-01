@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 73 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 632 expected checks.
-- 309 checked proof/evidence rows.
-- 252 replay-only rows.
+- 634 expected checks.
+- 310 checked proof/evidence rows.
+- 253 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -123,7 +123,7 @@ Near-term concept-row families:
 | algebraic structure maps | Current algebra packs are broad | homomorphism, kernel/image, quotient, action, ideal, module, tensor |
 | analysis/topology boundaries | Prevents overclaiming bounded examples | metric ball, epsilon-delta shadow, compactness shadow, connectedness shadow, continuity preimage |
 | matrix computation | Bridges education and solver corpora | LU replay, rank/nullity, residual bound, eigenpair, characteristic polynomial, finite random-matrix moment |
-| probability/statistics tables | Many packs share finite probability structure | landed rows for finite probability mass tables, pushforward distributions, stochastic kernels, conditional expectation, and tail/count obstructions |
+| probability/statistics tables | Many packs share finite probability structure | landed rows for finite probability mass tables, finite distribution distance, pushforward distributions, stochastic kernels, conditional expectation, and tail/count obstructions |
 | rules/law transfer | Reuses math concepts for policies | finite predicate, threshold, exception, precedence, temporal version |
 
 Graduation signal: `python3 scripts/validate-foundational-concepts.py` passes
@@ -1454,7 +1454,8 @@ Pick one item per commit unless the change is purely navigational.
     probability replay, Bayes posterior replay, checked QF_LRA/Farkas
     bad-normalization rejection, checked bad-conditional-probability rejection,
     checked bad-posterior rejection, finite independence replay, and checked
-    bad-independence rejection.
+    bad-independence rejection, total variation replay, and checked
+    bad-total-variation rejection.
 47. Landed: add standalone finite-operator learner page.
     `docs/learn/math/finite-operator-end-to-end.md` follows
     `finite-operator-v0` through exact finite-dimensional `l1` norm replay,

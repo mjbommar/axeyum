@@ -32,9 +32,9 @@ python3 scripts/query-foundational-resources.py summary
 ```
 
 - 108 non-template math packs.
-- 632 expected checks.
-- 309 checked proof/evidence rows.
-- 252 replay-only rows.
+- 634 expected checks.
+- 310 checked proof/evidence rows.
+- 253 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 
@@ -45,7 +45,7 @@ Route summaries from `scripts/query-foundational-resources.py routes`:
 | Boolean CNF/LRAT | 16 | 72 | 51 | 15 | 6 |
 | QF_BV bit-blast | 7 | 45 | 34 | 10 | 1 |
 | QF_LIA/Diophantine | 14 | 87 | 56 | 24 | 7 |
-| QF_LRA/Farkas | 58 | 363 | 144 | 177 | 42 |
+| QF_LRA/Farkas | 58 | 365 | 145 | 178 | 42 |
 | QF_UF/Alethe | 19 | 109 | 50 | 43 | 16 |
 | Lean horizon | 78 | 476 | 205 | 200 | 71 |
 
@@ -60,7 +60,7 @@ and Lean-horizon theorem boundaries without conflating them.
 | Boolean CNF/LRAT | finite graph and finite set-family obstruction | `finite-topology-v0` bad empty-open row, plus graph matching/reachability/cut/d-separation rows | Tiny finite objects make the encoder/checker boundary visible: untrusted CNF generation and search, trusted DRAT/LRAT checking. | Add another row only for a learner-readable Boolean shape not covered by pigeonhole, graph reachability/matching/cut/d-separation, finite topology, compactness, connectedness, or lattice top-element rows. |
 | QF_BV bit-blast | fixed-width finite algebra and residue search | `finite-fields-v0`, `finite-rings-v0`, `modular-arithmetic-v0`, and graph-coloring fixed-width rows | Width is part of the mathematical object: residues, finite fields/rings, and fixed color encodings should lower through bit-blast evidence. | Add another row only when the bit width is mathematically meaningful and not a disguised finite replay table. |
 | QF_LIA/Diophantine | integer obstruction and finite coefficient arithmetic | `gcd-bezout-v0`, `modular-arithmetic-v0`, torsion homology, finite graph traversal counters, exact statistical tail/count rows | Integer infeasibility has a compact certificate story: divisibility, gcd obstruction, rank/torsion membership, coefficient convolution, or bounded integer counters. | Prefer a new compact obstruction that generalizes across packs, such as another Smith-normal-form/torsion row or a count/margin contradiction that cannot be taught by the existing exact-test rows. |
-| QF_LRA/Farkas | exact rational finite-table and optimization conflicts | probability/measure table conflicts, LP threshold, LU/nullspace, KKT/SDP/descent/line-search/projected/proximal rows | Farkas is the main exact-rational certificate route and already covers the largest route surface. The best rows start with source replay and then check the linear contradiction. | Add only distinct finite-table or algorithm-step conflicts, not another duplicate product-measure or generic bound row. |
+| QF_LRA/Farkas | exact rational finite-table and optimization conflicts | probability/measure table conflicts including finite total variation, LP threshold, LU/nullspace, KKT/SDP/descent/line-search/projected/proximal rows | Farkas is the main exact-rational certificate route and already covers the largest route surface. The best rows start with source replay and then check the linear contradiction. | Add only distinct finite-table or algorithm-step conflicts, not another duplicate product-measure, probability-distance, or generic bound row. |
 | QF_UF/Alethe | equality-heavy finite structures and quotient maps | equivalence classes, function composition, finite homomorphisms, finite monoids/groups/actions, modules/tensors, quotient topology/cohomology shadows | Alethe adds value when table replay says what happened and congruence proof explains why an equality claim is impossible. | Prefer equality conflicts where table replay and congruence proof teach different things, such as quotient representative consistency, action compatibility, or algebra/topology map preservation. |
 | Lean horizon | theorem boundary families | induction schemas, completeness, compactness, convergence, measure limits, general algebra, Banach/Hilbert/Chebyshev facts | These rows keep finite shadows honest. They should state theorem shape and missing proof dependencies, not masquerade as SMT evidence. | Add or split horizon rows when a learner page risks overclaiming from a bounded example or when a future Lean reconstruction target needs prerequisites named. |
 

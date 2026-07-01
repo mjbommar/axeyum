@@ -16,6 +16,9 @@ certificate route:
 - impossible Bayes posterior rejected with checked QF_LRA/Farkas evidence;
 - finite independence replay for a four-atom table;
 - impossible independence joint mass rejected with checked QF_LRA/Farkas
+  evidence;
+- total variation replay for two three-atom distributions;
+- impossible total variation distance rejected with checked QF_LRA/Farkas
   evidence.
 
 ## Concepts
@@ -32,14 +35,15 @@ certificate route:
 The current validator parses probabilities exactly as rational strings, checks
 that mass tables are normalized and nonnegative, and recomputes conditional and
 Bayes probabilities. Satisfiable finite-table rows remain finite-model replay.
-The bad normalization, bad conditional probability, bad Bayes posterior, and
-bad independence rows are small `QF_LRA` contradictions and must emit checked
-`UnsatFarkas` evidence. Future impossible nonnegativity constraints should use
-the same QF_LRA/Farkas route.
+The bad normalization, bad conditional probability, bad Bayes posterior, bad
+independence, and bad total-variation rows are small `QF_LRA` contradictions
+and must emit checked `UnsatFarkas` evidence. Future impossible nonnegativity
+or finite probability-table distance constraints should use the same
+QF_LRA/Farkas route.
 
 Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_independence_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_total_variation_artifact_emits_checked_farkas
 ```

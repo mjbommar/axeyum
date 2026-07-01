@@ -581,8 +581,8 @@ descendant-opened colliders.
 validates finite minimum edge-cut and vertex-cut certificates, plus checked
 rejection of non-separating one-edge and one-vertex cuts.
 [`finite-probability-v0`](../../artifacts/examples/math/finite-probability-v0/)
-validates exact finite probability mass tables, conditional probability, and
-Bayes posterior replay.
+validates exact finite probability mass tables, conditional probability, Bayes
+posterior replay, finite independence replay, and total variation replay.
 [`descriptive-statistics-v0`](../../artifacts/examples/math/descriptive-statistics-v0/)
 validates exact mean/variance identities, checked QF_LRA/Farkas rejection of a
 bad variance claim, contingency-table margins, checked QF_LIA/Diophantine

@@ -88,3 +88,27 @@ The resource-backed Axeyum regression checks the final linear contradiction as
 `QF_LRA`: `joint_probability = independence_product`,
 `independence_product = 1/4`, and `joint_probability = 1/3`, requiring
 rechecked `UnsatFarkas` evidence.
+
+## `total-variation-witness`
+
+Expected result: `sat`.
+
+The witness compares two normalized three-atom distributions. The validator
+recomputes the absolute atomwise differences as `1/6`, `0`, and `1/6`, sums the
+`l1` distance as `1/3`, and checks total variation as `1/6`.
+
+Proof route: finite-model replay today. Impossible finite distribution-distance
+claims belong on the QF_LRA/Farkas route after the absolute-difference table has
+been replayed exactly.
+
+## `bad-total-variation-rejected`
+
+Expected result: `unsat`.
+
+The row fixes the same two finite distributions but claims total variation
+distance `1/4`. Exact replay computes `l1_distance = 1/3`, so the true total
+variation distance is `1/6`.
+
+The resource-backed Axeyum regression checks the final linear contradiction as
+`QF_LRA`: `2 * total_variation = l1_distance`, `l1_distance = 1/3`, and
+`total_variation = 1/4`, requiring rechecked `UnsatFarkas` evidence.

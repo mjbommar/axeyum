@@ -802,9 +802,9 @@ and vertex-cut certificates, plus checked rejection of non-separating one-edge
 and one-vertex cuts.
 `artifacts/examples/math/finite-probability-v0/` now validates finite
 probability mass tables, conditional probability, Bayes posterior replay,
-finite independence replay, and checked QF_LRA/Farkas rejection of false
-normalization, conditional-probability, Bayes-posterior, and independence
-claims.
+finite independence replay, total variation replay, and checked QF_LRA/Farkas
+rejection of false normalization, conditional-probability, Bayes-posterior,
+independence, and total-variation claims.
 `artifacts/examples/math/descriptive-statistics-v0/` now validates exact
 mean/variance identities, checked rejection of a bad variance claim,
 contingency-table margins, and a Simpson's paradox count-table witness.
@@ -1036,8 +1036,8 @@ Recommended order:
    cost counters, cut separation, matching witnesses, augmenting paths, finite
    DAG d-separation, and minimum cut certificates.
 2. `finite-probability-v0`: probability mass, conditioning, Bayes rule,
-   finite independence, and checked bad normalization/Bayes-posterior/
-   independence certificates.
+   finite independence, total variation, and checked bad normalization/
+   Bayes-posterior/independence/total-variation certificates.
 3. `descriptive-statistics-v0` and `least-squares-regression-v0`:
    mean/variance identities, checked bad-variance rejection, contingency
    tables, Simpson witness, least-squares normal equations, residual
@@ -1858,7 +1858,8 @@ tampered-certificate rejection.
 mass-table page for exact PMF normalization, conditional probability replay,
 Bayes posterior replay, checked QF_LRA/Farkas bad-normalization rejection,
 checked bad-conditional-probability rejection, checked bad-posterior rejection,
-finite independence replay, and checked bad-independence rejection.
+finite independence replay, checked bad-independence rejection, total
+variation replay, and checked bad-total-variation rejection.
 `equivalence-classes-v0` now has an Alethe certificate anatomy lesson that
 follows the quotient-map congruence conflict through source SMT-LIB, emitted
 zero-trust `UnsatAletheProof` evidence, and same-artifact truncated-proof
@@ -2055,7 +2056,9 @@ rows through the same checked Farkas evidence path after exact replay computes
 the relevant conditioning, disease-positive, and evidence probabilities.
 It now routes a bad finite-independence row through the same checked Farkas
 evidence path after exact replay computes `P(heads)=1/2`, `P(red)=1/2`, and
-`P(heads and red)=1/4`.
+`P(heads and red)=1/4`. It also routes a bad total-variation row through that
+path after exact replay computes the atomwise absolute differences, `l1`
+distance `1/3`, and `TV=1/6`.
 `finite-measure-v0` now routes its bad complement-measure row through the same
 checked Farkas evidence path after finite replay computes `mu(A) = 1/3` and
 `mu(U) = 1`.

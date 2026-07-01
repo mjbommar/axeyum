@@ -253,8 +253,8 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-119 concept rows, 108 non-template packs, 632 expected checks (334 `sat`,
-227 `unsat`, 71 `not-run`), 309 checked rows, 252 replay-only rows, and 71
+119 concept rows, 108 non-template packs, 634 expected checks (335 `sat`,
+228 `unsat`, 71 `not-run`), 310 checked rows, 253 replay-only rows, and 71
 Lean-horizon rows. The learner coverage audit records all 108 non-template
 packs as focused-lesson linked, with no path-only, index-only, or missing
 learner buckets. The first QF_UF/Alethe
@@ -320,7 +320,9 @@ finite concentration's bad tail-bound and bad union-bound rows after exact
 finite replay computes `P(X >= 2) = 1/4` and `P(A union B) = 3/4`, and finite
 hitting-times' bad survival-mass and bad expected-time rows after replay
 computes `P(T > 4) = 5/16` and the start equation reduces to
-`2*h_start = 2 + h_start + h_middle`.
+`2*h_start = 2 + h_start + h_middle`, plus finite-probability's bad
+total-variation row after replay computes absolute differences `1/6, 0, 1/6`,
+`l1 = 1/3`, and `TV = 1/6` while the bad row claims `1/4`.
 The statistics
 QF_LRA/Farkas lane now also promotes exact-statistical-tests' bad Fisher
 left-tail and probability-ordered two-sided rows after fixed-margin replay
@@ -357,7 +359,7 @@ cup-product replay, LU factorization and nullspace
 replay with checked bad product-entry and bad nullspace-component evidence,
 rank-nullity replay, residual bounds, eigenpair witnesses, characteristic polynomial replay, finite
 trace-invariant checks, finite random-matrix moments, finite measure additivity, finite probability mass
-tables, finite pushforward distributions, finite stochastic kernels, finite
+tables and finite distribution-distance rows, finite pushforward distributions, finite stochastic kernels, finite
 conditional expectations, finite product-measure/integration replay, finite
 tail/count obstructions, homomorphism preservation, kernel/image replay,
 quotient maps,
@@ -547,8 +549,9 @@ combined linear-system/LP page as the matrix-to-optimization bridge.
 mass-table page for exact PMF normalization, conditional probability, Bayes
 posterior replay, checked QF_LRA/Farkas bad normalization, checked bad
 conditional-probability rejection, checked bad posterior rejection, finite
-independence replay, and checked bad-independence rejection, leaving the broader finite-probability page as the
-stochastic-process bridge.
+independence replay, checked bad-independence rejection, total variation replay,
+and checked bad-total-variation rejection, leaving the broader finite-probability
+page as the stochastic-process bridge.
 `bounded-dynamics-v0` now also has a standalone bounded recurrence dynamics
 page for exact trace replay, finite invariant checking, threshold reachability,
 and checked QF_LRA/Farkas bad transition-step, bad threshold-step, and bad invariant-bound

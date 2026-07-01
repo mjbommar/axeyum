@@ -31,9 +31,9 @@ Current summary:
 
 - 119 concept rows.
 - 108 non-template math packs.
-- 632 expected checks.
-- 309 checked proof/evidence rows.
-- 252 replay-only rows.
+- 634 expected checks.
+- 310 checked proof/evidence rows.
+- 253 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 

@@ -265,8 +265,8 @@ Add bridge-concept or example-family rows for repeated subtopics:
   random-matrix moments, with dual spaces, inner products, tensor maps, and
   spectral decompositions still needing narrower rows when reuse demands them;
 - probability/statistics: landed bridge rows for finite probability mass
-  tables, pushforward distributions, stochastic kernels, conditional
-  expectation, and tail/count obstructions, backed by finite probability,
+  tables, finite distribution distance, pushforward distributions, stochastic
+  kernels, conditional expectation, and tail/count obstructions, backed by finite probability,
   random-variable, kernel, martingale, hitting-time, concentration, and exact
   test packs;
 - measure theory: landed bridge rows for finite event-algebra/additivity,
@@ -488,7 +488,8 @@ Next buildout:
    conditional probability replay, Bayes posterior replay, checked QF_LRA/Farkas
    bad-normalization rejection, checked bad-conditional-probability rejection,
    checked bad-posterior rejection, finite independence replay, and checked
-   bad-independence rejection; the finite
+   bad-independence rejection, plus total variation replay and checked
+   bad-total-variation rejection; the finite
    measure page follows finite sigma-algebra replay, exact finite additivity,
    event complements, and checked QF_LRA/Farkas bad-complement rejection.
    `docs/learn/math/finite-measure-monotonicity-end-to-end.md` now follows

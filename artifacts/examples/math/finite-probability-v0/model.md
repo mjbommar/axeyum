@@ -131,6 +131,39 @@ joint_probability = independence_product
 joint_probability = 1/3
 ```
 
+### Total Variation Distance
+
+The total-variation witness compares two three-atom distributions:
+
+```text
+p = [1/2, 1/3, 1/6]
+q = [1/3, 1/3, 1/3]
+```
+
+The exact atomwise absolute differences are:
+
+```text
+|p(a)-q(a)| = 1/6
+|p(b)-q(b)| = 0
+|p(c)-q(c)| = 1/6
+```
+
+So the `l1` distance is `1/3`, and total variation is half of that:
+
+```text
+TV(p,q) = (1/2) * 1/3 = 1/6
+```
+
+The bad total-variation row keeps the same two finite distributions but asserts
+the false distance `1/4`. After exact replay computes the absolute-difference
+table, the checked linear contradiction is:
+
+```text
+2 * total_variation = l1_distance
+l1_distance = 1/3
+total_variation = 1/4
+```
+
 These fixed checks are not claims about continuous distributions, sampling, or
 statistical inference. They are exact finite-table replay targets.
 
@@ -138,6 +171,7 @@ Certificate route:
 
 - satisfiable finite probability tables remain finite-model replay;
 - impossible linear probability constraints, including contradictory
-  normalization, nonnegativity, conditioning, Bayes-rule, or independence
-  equations, belong on the QF_LRA/Farkas route;
+  normalization, nonnegativity, conditioning, Bayes-rule, independence
+  equations, or total-variation distance claims, belong on the QF_LRA/Farkas
+  route;
 - continuous distributions and sampling claims remain out of proof status.

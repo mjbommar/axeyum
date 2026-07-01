@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 73 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 632 expected checks.
-- 309 checked proof/evidence rows.
-- 252 replay-only rows.
+- 634 expected checks.
+- 310 checked proof/evidence rows.
+- 253 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1349,6 +1349,16 @@ Pick one row per commit unless the change is purely navigational.
      one concept. Concept-scoped LIA and Farkas queries now find checked rows
      while asymptotic runtime, recurrence closed forms, convergence rates, and
      limiting theorem claims remain Lean-horizon.
+160. Landed: extend `finite-probability-v0` with a checked bad
+     total-variation row as the next distinct probability finite-table
+     conflict. Exact replay compares
+     `p=[1/2,1/3,1/6]` and `q=[1/3,1/3,1/3]`, recomputes absolute differences
+     `1/6,0,1/6`, `l1_distance=1/3`, and `TV=1/6`, while the malformed source
+     SMT-LIB artifact claims `TV=1/4`; the shared QF_LRA/Farkas route now
+     checks normalization, conditioning, Bayes, independence, and finite
+     distribution-distance conflicts without claiming continuous probability
+     metrics, sampling guarantees, asymptotic inference, or measure-theoretic
+     probability theorems.
 
 ## Validation Checklist
 

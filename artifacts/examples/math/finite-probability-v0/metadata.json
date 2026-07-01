@@ -32,14 +32,15 @@
   "solver_reuse": {
     "status": "promoted",
     "target": "exact finite probability QF_LRA/Farkas regression seeds",
-    "pressure": "Exact-rational probability conflicts for finite normalization, conditioning, Bayes posterior, and independence equations: a fair coin total is forced to 1 and 3/2, a rain/late table forces P(late | rain)=1/3 but the bad row asserts 1/2, diagnostic-test odds force posterior 2/13 but the bad row asserts 1/5, and a four-atom table forces independent heads/red joint mass 1/4 while the bad row asserts 1/3.",
+    "pressure": "Exact-rational probability conflicts for finite normalization, conditioning, Bayes posterior, independence equations, and finite distribution distance: a fair coin total is forced to 1 and 3/2, a rain/late table forces P(late | rain)=1/3 but the bad row asserts 1/2, diagnostic-test odds force posterior 2/13 but the bad row asserts 1/5, a four-atom table forces independent heads/red joint mass 1/4 while the bad row asserts 1/3, and a three-atom distribution comparison forces total variation 1/6 while the bad row asserts 1/4.",
     "evidence": [
       "bad-normalization-rejected",
       "bad-conditional-probability-rejected",
       "bad-bayes-posterior-rejected",
-      "bad-independence-rejected"
+      "bad-independence-rejected",
+      "bad-total-variation-rejected"
     ],
-    "next_step": "Promote additional finite probability rows only when they add distinct exact-rational mass, conditioning, independence, or Bayes-rule solver pressure; keep continuous distributions, sampling claims, and numerical approximation guarantees in separate horizon lanes."
+    "next_step": "Promote additional finite probability rows only when they add distinct exact-rational mass, conditioning, independence, Bayes-rule, distribution-distance, or finite-process solver pressure; keep continuous distributions, sampling claims, and numerical approximation guarantees in separate horizon lanes."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -54,6 +55,7 @@
     "artifacts/examples/math/finite-probability-v0/smt2/bad-conditional-probability-farkas-conflict.smt2",
     "artifacts/examples/math/finite-probability-v0/smt2/bad-bayes-posterior-farkas-conflict.smt2",
     "artifacts/examples/math/finite-probability-v0/smt2/bad-independence-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-probability-v0/smt2/bad-total-variation-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
@@ -64,12 +66,14 @@
     "bayes-posterior-witness",
     "bad-bayes-posterior-rejected",
     "independence-witness",
-    "bad-independence-rejected"
+    "bad-independence-rejected",
+    "total-variation-witness",
+    "bad-total-variation-rejected"
   ],
   "graduation_criteria": [
     "Encode finite probability mass constraints as deterministic QF_LRA formulas.",
     "Replay probability-table SAT witnesses through Axeyum model evaluation.",
-    "Route impossible normalization, nonnegativity, conditioning, Bayes-rule, or independence constraints through QF_LRA/Farkas certificates.",
+    "Route impossible normalization, nonnegativity, conditioning, Bayes-rule, independence, or finite distribution-distance constraints through QF_LRA/Farkas certificates.",
     "Add generated finite probability tables once at least two packs need shared table helpers.",
     "Keep continuous distributions and sampling-based claims out of proof status until a separate numerical-honesty track exists."
   ]

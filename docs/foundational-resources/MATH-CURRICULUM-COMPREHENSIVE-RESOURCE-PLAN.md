@@ -48,9 +48,9 @@ As of 2026-07-01, the public resource query reports:
 - 119 concept rows: 23 curriculum nodes, 18 math fields, 73 bridge concepts, and
   5 example families.
 - 108 non-template math packs.
-- 632 expected checks: 334 `sat`, 227 `unsat`, and 71 `not-run`.
-- 309 checked proof/evidence rows.
-- 252 replay-only rows.
+- 634 expected checks: 335 `sat`, 228 `unsat`, and 71 `not-run`.
+- 310 checked proof/evidence rows.
+- 253 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 unclassified solver-reuse packs.
@@ -462,8 +462,12 @@ Prefer one row, page, route upgrade, or query surface per commit.
 4. Landed: [Proof Route Learner Snippets](../learn/math/proof-route-learner-snippets.md)
    gives reusable trust-boundary snippets for Farkas, Alethe, Diophantine,
    CNF/LRAT, and QF_BV DRAT rows.
-5. Deepen probability/measure rows by promoting the next distinct finite table
+5. Landed: deepen probability rows with a distinct finite distribution-distance
    conflict, not another duplicate product-table check.
+   `finite-probability-v0` now includes a total-variation witness over two
+   three-atom distributions plus a source-linked checked bad total-variation
+   row. Exact replay computes the absolute-difference table and `TV=1/6`;
+   the QF_LRA/Farkas artifact rejects the malformed claim `TV=1/4`.
 6. Deepen graph resources by adding small CNF/LRAT examples where the source
    graph is learner-readable.
 7. Deepen linear algebra through source-linked matrix-corpus rows only after

@@ -16,12 +16,13 @@ Which checked finite-table probability or statistics packs match this proof rout
 The current probability/statistics surface is finite and exact-rational:
 probability mass tables, finite measure additivity, product measures,
 pushforward distributions, simple-function integration, conditional
-expectation, finite martingale/stopping rows, stochastic kernels, finite Markov
-chains, finite hitting times, concentration/tail-count rows, exact tests, and
-finite random-matrix moments. Continuous distributions, sampling guarantees,
-asymptotic inference, MCMC/VI, stochastic-process limits, random-matrix limit
-laws, and floating-point statistical-library behavior remain in proof-horizon
-or numerical-honesty lanes.
+expectation, finite martingale/stopping rows, finite distribution-distance
+rows, stochastic kernels, finite Markov chains, finite hitting times,
+concentration/tail-count rows, exact tests, and finite random-matrix moments.
+Continuous distributions, sampling guarantees, asymptotic inference, MCMC/VI,
+stochastic-process limits, random-matrix limit laws, and floating-point
+statistical-library behavior remain in proof-horizon or numerical-honesty
+lanes.
 
 ## Query Shape
 
@@ -67,7 +68,7 @@ needs concrete checked rows to display.
 
 | Family | Concept Filter | Route Filter | Start Query |
 |---|---|---|---|
-| Probability mass, finite measure, normalization, Bayes, independence, and concentration rows | `bridge_probability_mass_table` | `Farkas` | `checks --concept bridge_probability_mass_table --route Farkas --proof-status checked` |
+| Probability mass, finite measure, normalization, Bayes, independence, total variation, and concentration rows | `bridge_probability_mass_table` | `Farkas` | `checks --concept bridge_probability_mass_table --route Farkas --proof-status checked` |
 | Finite measure additivity, monotonicity, complement, and subadditivity rows | `bridge_finite_measure_additivity` | `Farkas` | `checks --concept bridge_finite_measure_additivity --route Farkas --proof-status checked` |
 | Product measure, simple integration, conditional expectation, and martingale rows | `bridge_finite_product_integration` | `Farkas` | `checks --concept bridge_finite_product_integration --route Farkas --proof-status checked` |
 | Pushforward distributions and expectation-through-pushforward rows | `bridge_pushforward_distribution` | `Farkas` | `checks --concept bridge_pushforward_distribution --route Farkas --proof-status checked` |
@@ -85,6 +86,17 @@ python3 scripts/query-foundational-resources.py checks \
   --field probability_theory \
   --route Farkas \
   --proof-status checked \
+  --require-any
+```
+
+Display checked finite distribution-distance rows:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-probability-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text "total variation" \
   --require-any
 ```
 

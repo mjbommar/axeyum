@@ -199,8 +199,9 @@ Build sequence:
 3. R1 bridge-concept rows landed for algebra-map vocabulary: homomorphism
    preservation, kernel/image replay, quotient maps, ideal closure, module
    actions, tensor bilinearity, and finite group actions.
-4. R1 bridge-concept rows landed for probability/statistics finite-table
-   vocabulary, measure-theory finite additivity/product/integration
+4. R1 bridge-concept rows landed for probability/statistics finite-table and
+   distribution-distance vocabulary, measure-theory finite additivity/product/
+   integration
    vocabulary, optimization/convexity LP objective and convexity-shadow
    vocabulary, proof/logic vocabulary, proof-object anatomy vocabulary, and
    set/foundations vocabulary, including finite Boolean algebra,
@@ -221,7 +222,8 @@ Build sequence:
    measure pages now split those first-principles stories from the combined
    topology/measure bridge, and standalone linear optimization now splits the
    LP/Farkas story from the combined linear-system/LP bridge. Standalone
-   finite probability mass tables now split the PMF/conditioning/Bayes story
+   finite probability mass tables now split the PMF/conditioning/Bayes/
+   independence/total-variation story
    from the broader finite-probability process bridge. Standalone finite
    operators now split the norm/operator-bound/Chebyshev-prefix story from the broad
    bounded-dynamics/operator bridge. Standalone bounded dynamics now splits

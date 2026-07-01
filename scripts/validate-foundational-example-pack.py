@@ -19608,6 +19608,17 @@ def require_normalized_atoms(context: str, atoms: list[tuple[str, Fraction, set[
         fail(f"{context} atom probabilities must sum to exactly 1")
 
 
+def require_probability_distribution(context: str, value: Any) -> dict[str, Fraction]:
+    if not isinstance(value, dict) or not value:
+        fail(f"{context} must be a non-empty probability distribution object")
+    distribution: dict[str, Fraction] = {}
+    for atom_id, probability in value.items():
+        require_string(f"{context} atom id", atom_id)
+        distribution[atom_id] = require_probability(f"{context}.{atom_id}", probability)
+    require_normalized_probability_map(context, distribution)
+    return distribution
+
+
 def event_probability(atoms: list[tuple[str, Fraction, set[str]]], event: str) -> Fraction:
     return sum((probability for _, probability, events in atoms if event in events), Fraction(0))
 
@@ -19880,6 +19891,100 @@ def validate_finite_probability(expected: dict[str, Any]) -> None:
     require_string("bad independence farkas_regression", regression)
     if "finite_probability_bad_independence_artifact_emits_checked_farkas" not in regression:
         fail("bad-independence-rejected must link the Farkas regression")
+
+    total_variation = checks["total-variation-witness"]
+    if total_variation["expected_result"] != "sat":
+        fail("total-variation-witness must expect sat")
+    values = single_witness_values(total_variation, witnesses)
+    left_distribution = require_probability_distribution(
+        "total variation left_distribution",
+        values.get("left_distribution"),
+    )
+    right_distribution = require_probability_distribution(
+        "total variation right_distribution",
+        values.get("right_distribution"),
+    )
+    if set(left_distribution) != set(right_distribution):
+        fail("total-variation-witness distributions must have the same atom support")
+    atom_ids = sorted(left_distribution)
+    absolute_differences = require_atom_value_table(
+        "total variation absolute_differences",
+        values.get("absolute_differences"),
+        atom_ids,
+    )
+    computed_differences = {
+        atom_id: abs(left_distribution[atom_id] - right_distribution[atom_id])
+        for atom_id in atom_ids
+    }
+    if absolute_differences != computed_differences:
+        fail("total-variation-witness absolute_differences are incorrect")
+    l1_distance = require_fraction("total variation l1_distance", values.get("l1_distance"))
+    if l1_distance != sum(absolute_differences.values(), Fraction(0)):
+        fail("total-variation-witness l1_distance is incorrect")
+    total_variation_value = require_probability(
+        "total variation total_variation",
+        values.get("total_variation"),
+    )
+    if 2 * total_variation_value != l1_distance:
+        fail("total-variation-witness total_variation is incorrect")
+
+    bad_total_variation = checks["bad-total-variation-rejected"]
+    if bad_total_variation["expected_result"] != "unsat":
+        fail("bad-total-variation-rejected must expect unsat")
+    if bad_total_variation["proof_status"] != "checked":
+        fail("bad-total-variation-rejected must be checked")
+    if bad_total_variation["validation"] != "finite_bad_total_variation_refutation":
+        fail("bad-total-variation-rejected must use finite_bad_total_variation_refutation validation")
+    data = bad_total_variation.get("data", {})
+    left_distribution = require_probability_distribution(
+        "bad total variation left_distribution",
+        data.get("left_distribution"),
+    )
+    right_distribution = require_probability_distribution(
+        "bad total variation right_distribution",
+        data.get("right_distribution"),
+    )
+    if set(left_distribution) != set(right_distribution):
+        fail("bad-total-variation-rejected distributions must have the same atom support")
+    atom_ids = sorted(left_distribution)
+    absolute_differences = require_atom_value_table(
+        "bad total variation absolute_differences",
+        data.get("absolute_differences"),
+        atom_ids,
+    )
+    computed_differences = {
+        atom_id: abs(left_distribution[atom_id] - right_distribution[atom_id])
+        for atom_id in atom_ids
+    }
+    if absolute_differences != computed_differences:
+        fail("bad-total-variation-rejected absolute_differences are incorrect")
+    l1_distance = require_fraction("bad total variation l1_distance", data.get("l1_distance"))
+    if l1_distance != sum(absolute_differences.values(), Fraction(0)):
+        fail("bad-total-variation-rejected l1_distance is incorrect")
+    actual_total_variation = require_probability(
+        "bad total variation actual_total_variation",
+        data.get("actual_total_variation"),
+    )
+    claimed_total_variation = require_probability(
+        "bad total variation claimed_total_variation",
+        data.get("claimed_total_variation"),
+    )
+    if 2 * actual_total_variation != l1_distance:
+        fail("bad-total-variation-rejected actual_total_variation is incorrect")
+    if claimed_total_variation == actual_total_variation:
+        fail("bad-total-variation-rejected must document a false total variation")
+    farkas_total_variation_equation = data.get("farkas_total_variation_equation")
+    require_string("bad total variation farkas_total_variation_equation", farkas_total_variation_equation)
+    if farkas_total_variation_equation != "2 * total_variation = l1_distance":
+        fail("bad-total-variation-rejected must document the Farkas total-variation equation")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad total variation smt2_artifact", smt2_artifact)
+    if not (ROOT / smt2_artifact).is_file():
+        fail("bad-total-variation-rejected smt2_artifact is missing")
+    regression = data.get("farkas_regression")
+    require_string("bad total variation farkas_regression", regression)
+    if "finite_probability_bad_total_variation_artifact_emits_checked_farkas" not in regression:
+        fail("bad-total-variation-rejected must link the Farkas regression")
 
 
 def require_atom_value_table(

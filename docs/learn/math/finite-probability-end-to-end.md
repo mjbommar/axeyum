@@ -35,6 +35,8 @@ Concept rows:
 | `bad-bayes-posterior-rejected` | `unsat` | checked |
 | `independence-witness` | `sat` | replay-only |
 | `bad-independence-rejected` | `unsat` | checked |
+| `total-variation-witness` | `sat` | replay-only |
+| `bad-total-variation-rejected` | `unsat` | checked |
 | `pushforward-distribution-witness` | `sat` | replay-only |
 | `expectation-through-pushforward-witness` | `sat` | replay-only |
 | `independent-random-variables-witness` | `sat` | replay-only |
@@ -148,6 +150,19 @@ Exact replay computes `P(heads)=1/2`, `P(red)=1/2`, and
 claims `P(heads and red)=1/3`; the checked `QF_LRA` artifact compares the
 claimed joint mass with the replayed product `1/4`.
 
+The finite-probability total-variation witness compares:
+
+```text
+p = [1/2, 1/3, 1/6]
+q = [1/3, 1/3, 1/3]
+```
+
+Exact replay computes atomwise absolute differences `1/6`, `0`, and `1/6`, so
+the `l1` distance is `1/3` and total variation is `1/6`. The bad
+total-variation row keeps that replayed distance table but claims `1/4`; the
+checked `QF_LRA` artifact compares the false distance with the equation
+`2 * total_variation = l1_distance`.
+
 The finite integration witness is a three-atom table:
 
 ```text
@@ -228,6 +243,11 @@ in `[0,1]`.
 For the bad normalization row, the validator recomputes `1/2 + 1/2 = 1`. The
 solver regression checks the same final obligation as `QF_LRA` and requires
 `Evidence::UnsatFarkas` to pass `Evidence::check`.
+
+For the finite total-variation row, the validator recomputes both normalized
+distributions and the absolute-difference table exactly. The solver regression
+checks only the final malformed equality as `QF_LRA`; it does not claim any
+continuous probability-metric theorem.
 
 For the integration row, the checker recomputes:
 
@@ -358,7 +378,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_product_measure_bad_marginal_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_independence_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_total_variation_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_total_expectation_artifact_emits_checked_farkas
 ```
 
@@ -373,12 +393,13 @@ Each focused cargo regression should pass its named test and filter the rest of
 
 ## Trust Boundary
 
-The search side may propose a probability table or posterior. The trusted side
-only recomputes finite sums, exact rational divisions, and small Farkas
-certificates for linear probability refutations. Continuous
-probability, general product measures, Fubini/Tonelli, Lebesgue integration,
-conditional expectation, regular conditional probabilities, disintegration
-theorems, general Markov kernels, general concentration inequalities,
-Chernoff/Hoeffding bounds, laws of large numbers, central limit theorems,
-general martingale convergence, optional stopping, Doob inequalities,
-convergence theorems, and statistical inference are outside this proof claim.
+The search side may propose a probability table, posterior, distribution
+distance, or process row. The trusted side only recomputes finite sums, exact
+rational divisions, replayed absolute differences, and small Farkas
+certificates for linear probability refutations. Continuous probability,
+general product measures, Fubini/Tonelli, Lebesgue integration, conditional
+expectation, regular conditional probabilities, disintegration theorems,
+general Markov kernels, general concentration inequalities, Chernoff/Hoeffding
+bounds, laws of large numbers, central limit theorems, general martingale
+convergence, optional stopping, Doob inequalities, convergence theorems, and
+statistical inference are outside this proof claim.

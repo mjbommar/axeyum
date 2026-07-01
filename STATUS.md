@@ -205,6 +205,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite probability total-variation row landed.**
+  `finite-probability-v0` now has exact replay for total variation between two
+  normalized three-atom distributions: atomwise differences `1/6, 0, 1/6`,
+  `l1 = 1/3`, and `TV = 1/6`. The malformed row claims `TV = 1/4` and is routed
+  through source-linked QF_LRA/Farkas evidence plus the shared
+  `math_resource_lra_routes` regression. The public summary now reports
+  119 concept rows, 108 non-template packs, 634 expected checks, 310 checked
+  rows, 253 replay-only rows, and 71 Lean-horizon rows.
+
 - **Proof-route learner snippets landed.**
   [`proof-route-learner-snippets.md`](docs/learn/math/proof-route-learner-snippets.md)
   now gives reusable learner-facing trust-boundary snippets for Boolean

@@ -5705,8 +5705,9 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "A finite probability mass table row checks a finite sample space, "
             "exact rational atom weights, event masses, complements, "
-            "normalization, conditioning, and product rows without simulation "
-            "or continuous-distribution assumptions."
+            "normalization, conditioning, product rows, and finite "
+            "distribution-distance rows without simulation or "
+            "continuous-distribution assumptions."
         ),
         "prerequisites": [
             "bridge_finite_measure_additivity",
@@ -5731,7 +5732,7 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "finite-probability-v0",
-                "Finite mass-table normalization, conditioning, independence, and Bayes-rule replay.",
+                "Finite mass-table normalization, conditioning, independence, Bayes-rule, and total-variation replay.",
             ),
             (
                 "finite-measure-v0",
@@ -5766,8 +5767,8 @@ BRIDGE_CONCEPTS = [
                 ],
                 "notes": (
                     "The finite checker recomputes atom sums and event masses "
-                    "exactly; malformed normalization, complement, Bayes, or "
-                    "product rows graduate only when the final rational "
+                    "exactly; malformed normalization, complement, Bayes, "
+                    "total-variation, or product rows graduate only when the final rational "
                     "conflict carries checked Farkas evidence."
                 ),
             }
@@ -5790,7 +5791,7 @@ BRIDGE_CONCEPTS = [
             "status": "validated",
             "criteria": [
                 "Rows state the finite sample space, atom masses, event sets, and exact rational arithmetic domain.",
-                "The validator recomputes normalization, event mass, complement, product, or conditioning claims from atoms.",
+                "The validator recomputes normalization, event mass, complement, product, conditioning, or finite distance claims from atoms.",
                 "Bad mass-table rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed.",
             ],
         },

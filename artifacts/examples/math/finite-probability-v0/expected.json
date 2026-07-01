@@ -57,6 +57,29 @@
         "right_probability": "1/2",
         "joint_probability": "1/4"
       }
+    },
+    {
+      "id": "three-atom-total-variation",
+      "description": "Two three-atom probability tables with total variation distance 1/6.",
+      "values": {
+        "left_distribution": {
+          "a": "1/2",
+          "b": "1/3",
+          "c": "1/6"
+        },
+        "right_distribution": {
+          "a": "1/3",
+          "b": "1/3",
+          "c": "1/3"
+        },
+        "absolute_differences": {
+          "a": "1/6",
+          "b": "0",
+          "c": "1/6"
+        },
+        "l1_distance": "1/3",
+        "total_variation": "1/6"
+      }
     }
   ],
   "checks": [
@@ -184,6 +207,46 @@
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_independence_artifact_emits_checked_farkas"
       },
       "notes": "The validator recomputes P(heads)=1/2, P(red)=1/2, and P(heads and red)=1/4; the source artifact checks that the malformed joint probability 1/3 violates the finite independence equation."
+    },
+    {
+      "id": "total-variation-witness",
+      "claim": "The listed two finite distributions have total variation distance 1/6.",
+      "expected_result": "sat",
+      "validation": "exact_rational_probability_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-atom-total-variation"],
+      "notes": "The validator recomputes the absolute atomwise differences, sums them as L1 distance 1/3, and checks total variation as half that sum."
+    },
+    {
+      "id": "bad-total-variation-rejected",
+      "claim": "The same two finite distributions have total variation distance 1/4.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_total_variation_refutation",
+      "proof_status": "checked",
+      "data": {
+        "left_distribution": {
+          "a": "1/2",
+          "b": "1/3",
+          "c": "1/6"
+        },
+        "right_distribution": {
+          "a": "1/3",
+          "b": "1/3",
+          "c": "1/3"
+        },
+        "absolute_differences": {
+          "a": "1/6",
+          "b": "0",
+          "c": "1/6"
+        },
+        "l1_distance": "1/3",
+        "actual_total_variation": "1/6",
+        "claimed_total_variation": "1/4",
+        "farkas_total_variation_equation": "2 * total_variation = l1_distance",
+        "smt2_artifact": "artifacts/examples/math/finite-probability-v0/smt2/bad-total-variation-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_total_variation_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator recomputes the normalized distributions and their atomwise absolute differences exactly; the source artifact checks that the false total-variation claim 1/4 violates 2 * total_variation = 1/3 using rechecked Farkas evidence."
     }
   ]
 }

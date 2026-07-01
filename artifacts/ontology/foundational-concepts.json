@@ -7529,7 +7529,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A finite probability mass table row checks a finite sample space, exact rational atom weights, event masses, complements, normalization, conditioning, and product rows without simulation or continuous-distribution assumptions.",
+      "summary": "A finite probability mass table row checks a finite sample space, exact rational atom weights, event masses, complements, normalization, conditioning, product rows, and finite distribution-distance rows without simulation or continuous-distribution assumptions.",
       "prerequisites": [
         "bridge_finite_measure_additivity",
         "bridge_finite_model_replay",
@@ -7555,7 +7555,7 @@
           "id": "finite-probability-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-probability-v0",
-          "notes": "Finite mass-table normalization, conditioning, independence, and Bayes-rule replay."
+          "notes": "Finite mass-table normalization, conditioning, independence, Bayes-rule, and total-variation replay."
         },
         {
           "id": "finite-measure-v0",
@@ -7596,7 +7596,7 @@
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "The finite checker recomputes atom sums and event masses exactly; malformed normalization, complement, Bayes, or product rows graduate only when the final rational conflict carries checked Farkas evidence."
+          "notes": "The finite checker recomputes atom sums and event masses exactly; malformed normalization, complement, Bayes, total-variation, or product rows graduate only when the final rational conflict carries checked Farkas evidence."
         }
       ],
       "source_refs": [
@@ -7617,7 +7617,7 @@
         "status": "validated",
         "criteria": [
           "Rows state the finite sample space, atom masses, event sets, and exact rational arithmetic domain.",
-          "The validator recomputes normalization, event mass, complement, product, or conditioning claims from atoms.",
+          "The validator recomputes normalization, event mass, complement, product, conditioning, or finite distance claims from atoms.",
           "Bad mass-table rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed."
         ]
       }
