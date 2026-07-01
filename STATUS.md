@@ -4855,6 +4855,31 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **Session 2026-07-01 — NRA: un-broke HEAD + sign-refutation past the cross-product cap (QF_NRA +2).**
+  1. **HEAD was red** (`cargo test -p axeyum-solver --test nra`): the div-by-zero
+     replay guard (`b38c0439`/`a06dc46a`) correctly declines div-by-zero-forced
+     candidates to `unknown`, but the `real_division_by_zero_is_unconstrained` test
+     still asserted `sat` (the guard was verified against lib tests only). Root
+     cause is a genuine semantic divergence — axeyum's evaluator commits to
+     `x/0 = 0` (tested by `axeyum-ir` `real_division_evaluates_exactly`) while Z3
+     leaves `/0` free — so the only verdict sound under both is `unknown`. Renamed
+     to `real_division_by_zero_is_sound_unknown` (`7a5875df`); documented the
+     free-division-witness recovery follow-up in the P2.5 eval doc (`b403a5fc`).
+  2. **Measured lever** (`explain_corpus`, QF_NRA cvc5-regress-clean, 5 s): the
+     dominant terminal decline is the `>2 cross-product` admission cap (14 hits),
+     and several capped instances are refutable by SIGN ALONE (`simple-mono-unsat`:
+     `(or a=4 a=3) ∧ b>0 ∧ c>0 ∧ a·b·c·d² < 0`). But the sign/zero lemmas were only
+     added AFTER the cap. **Fix (`f9e06baf`):** before declining, add ONLY the
+     sign+zero lemmas (cheap linear `¬p ∨ q`, no `McCormick`/SOS ⇒ no OOM) and run
+     one bounded (≤500 ms) LRA-DPLL solve; `unsat` transfers soundly (relaxation),
+     only `unsat` acted on. Extracted `sign_zero_lemmas` from `product_lemmas`.
+     **Measured: QF_NRA decided 10 → 12** (+2 unsat: `simple-mono-unsat`,
+     `subs0-unsat-confirm`, both `:status unsat`). `nra`+`nia` differential fuzz vs
+     Z3 DISAGREE=0 (929/929 nra agreements, 697 sat replays verified). Next lever:
+     **FM → simplex** for the LRA-DPLL cube check (`lra_online.rs`
+     `MAX_FM_CONSTRAINTS`) — it caps the sign pass's reach on fully-free multi-var
+     systems and is ~8 standalone QF_NRA declines.
+
 - **Session 2026-06-30/07-01 — Nonlinear (P2.5): QF_NRA 9→11, and a pre-existing div-by-zero WRONG-SAT found + fixed.**
   Five things superseded the plan-writing entry below:
   1. **Baseline corrected.** Reading the code + ADRs (0044/0045/0046) showed the
