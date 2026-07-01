@@ -509,6 +509,9 @@ fn sort_bits(sort: Sort) -> u32 {
         Sort::Uninterpreted(_) => {
             unreachable!("scenarios do not declare uninterpreted-sort symbols for enumeration")
         }
+        Sort::Seq(_) => {
+            unreachable!("scenarios do not declare sequence symbols for enumeration")
+        }
     }
 }
 
@@ -562,6 +565,9 @@ fn decode_value(sort: Sort, field: u128) -> Value {
         }
         Sort::Uninterpreted(_) => {
             unreachable!("scenarios do not declare uninterpreted-sort symbols for enumeration")
+        }
+        Sort::Seq(_) => {
+            unreachable!("scenarios do not declare sequence symbols for enumeration")
         }
     }
 }

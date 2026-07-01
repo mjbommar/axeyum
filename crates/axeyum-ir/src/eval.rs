@@ -153,6 +153,8 @@ fn well_founded_default_rec(
             visiting.pop();
             chosen
         }
+        // No sequence capability yet (P2.7): decline to synthesise a default.
+        Sort::Seq(_) => None,
     }
 }
 

@@ -605,7 +605,8 @@ fn rewrite_app(
             | Sort::Real
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
-            | Sort::Float { .. } => BV_CONST_FOLD,
+            | Sort::Float { .. }
+            | Sort::Seq(_) => BV_CONST_FOLD,
         };
         if enabled.contains(rule_id) {
             return Ok(applied(folded, rule_id));

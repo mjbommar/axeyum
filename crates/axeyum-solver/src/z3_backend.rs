@@ -281,6 +281,11 @@ fn lift_model(arena: &TermArena, solver: &Solver) -> Result<Model, SolverError> 
                     "z3 oracle does not lift floating-point models yet (ADR-0026)".to_owned(),
                 ));
             }
+            Sort::Seq(_) => {
+                return Err(SolverError::Unsupported(
+                    "z3 oracle does not lift sequence models yet (P2.7)".to_owned(),
+                ));
+            }
             Sort::Bool => {
                 let ast = Bool::new_const(name);
                 let v = z3_model
@@ -386,6 +391,11 @@ fn translate(
                         return Err(SolverError::Unsupported(
                             "z3 oracle does not support floating-point symbols yet (ADR-0026)"
                                 .to_owned(),
+                        ));
+                    }
+                    Sort::Seq(_) => {
+                        return Err(SolverError::Unsupported(
+                            "z3 oracle does not support sequence symbols yet (P2.7)".to_owned(),
                         ));
                     }
                 };

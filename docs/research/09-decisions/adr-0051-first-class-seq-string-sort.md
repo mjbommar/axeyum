@@ -29,17 +29,23 @@ question.
 
 ## Decision
 
-**Add a first-class parametric sequence sort `Sort::Seq(Box<Sort>)` to `axeyum-ir`,
-with `String` as the distinguished instance `Seq(<Unicode code point>)`; strings
-become ordinary interned terms, and the existing bounded `(len, content)` encoder is
-retained as a sound fast pre-check, not the representation.**
+**Add a first-class sequence sort `Sort::Seq(ArraySortKey)` to `axeyum-ir`, with
+`String` the distinguished instance `Seq(BitVec(18))` over the Unicode code-point
+alphabet; strings become ordinary interned terms, and the existing bounded
+`(len, content)` encoder is retained as a sound fast pre-check, not the
+representation.**
 
-- **Sort.** `Sort::Seq(Box<Sort>)` — a homogeneous sequence over an element sort.
-  `Sort::String` is `Seq` over the SMT-LIB Unicode code-point alphabet
-  `0x00000–0x2FFFF` (`131072` values), total-ordered by code point (so `str.<` /
-  `str.<=` are the lexicographic order over that total order). The element sort is
-  carried explicitly so `seq.*` over other element sorts (`Seq Int`, `Seq (BitVec 8)`)
-  reuse the same machinery.
+- **Sort — Copy-preserving.** `Sort` is deliberately a `Copy` enum (recursion is
+  interned, not `Box`ed — arrays carry a flat `ArraySortKey`, not `Box<Sort>`, so the
+  sort stays `Copy` across ~138 use sites). `Sort::Seq` therefore carries the **same
+  flat, `Copy` element key** as arrays — `Sort::Seq(ArraySortKey)` — over the scalar
+  element sorts (`Bool`/`BitVec`/`Int`/`Real`/`Datatype`/`Uninterpreted`/`Float`).
+  `Sort::String` is the helper `Seq(ArraySortKey::BitVec(18))`: `2^18 = 262144 >
+  0x2FFFF`, and the unsigned bit-vector order over `BitVec(18)` **is** the Unicode
+  code-point total order (so `str.<`/`str.<=` are the lexicographic order over it) —
+  no separate `Unicode` sort or `String` variant is needed. **Nested sequences**
+  (`Seq(Seq …)`) are **deferred** exactly as nested arrays are, and migrate to an
+  interned `SortId` (a superseding ADR) if a use proves them needed.
 - **Terms.** `str.++`, `str.len`, `str.at`/`seq.nth`, `seq.unit`, `seq.empty`,
   `str.substr`, comparisons, `str.in_re`, and the extended functions become IR nodes
   with **string/sequence-valued results** — resolving the `Parsed = Term | Str`

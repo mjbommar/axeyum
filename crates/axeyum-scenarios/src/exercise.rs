@@ -163,7 +163,8 @@ fn enumeration_bits(sort: Sort) -> Option<u32> {
         | Sort::Real
         | Sort::Array { .. }
         | Sort::Datatype(_)
-        | Sort::Uninterpreted(_) => None,
+        | Sort::Uninterpreted(_)
+        | Sort::Seq(_) => None,
     }
 }
 

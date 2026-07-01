@@ -304,9 +304,12 @@ enum FuncStorage {
 fn needs_value_storage(sort: Sort) -> bool {
     match sort {
         Sort::Float { exp, sig } => exp + sig > 128,
-        Sort::BitVec(129..) | Sort::Int | Sort::Real | Sort::Array { .. } | Sort::Datatype(_) => {
-            true
-        }
+        Sort::BitVec(129..)
+        | Sort::Int
+        | Sort::Real
+        | Sort::Array { .. }
+        | Sort::Datatype(_)
+        | Sort::Seq(_) => true,
         Sort::Bool | Sort::BitVec(_) | Sort::Uninterpreted(_) => false,
     }
 }
@@ -588,6 +591,10 @@ fn encode_to(sort: Sort, value: u128) -> u128 {
         Sort::Int => panic!("scalar encoding of an integer sort"),
         Sort::Real => panic!("scalar encoding of a real sort"),
         Sort::Datatype(_) => panic!("scalar encoding of a datatype sort"),
+        // TODO(P2.7 A.1b): Seq handling. Mirrors the non-scalar sibling guards:
+        // a sequence is not a `u128` scalar (needs_value_storage(Seq) == true),
+        // so it is routed through FullValue and never reaches this scalar helper.
+        Sort::Seq(_) => panic!("scalar encoding of a sequence sort"),
     }
 }
 
@@ -618,6 +625,11 @@ impl Value {
             // or algebraic — are not scalar bit patterns).
             Sort::Real => panic!("scalar decoding of a real sort"),
             Sort::Datatype(_) => panic!("scalar decoding of a datatype sort"),
+            // TODO(P2.7 A.1b): Seq handling. Mirrors the non-scalar sibling
+            // guards: a sequence is not a `u128` scalar code
+            // (needs_value_storage(Seq) == true), so it is stored via FullValue
+            // and never decoded through this scalar helper.
+            Sort::Seq(_) => panic!("scalar decoding of a sequence sort"),
         }
     }
 

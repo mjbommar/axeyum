@@ -58,7 +58,7 @@ impl ArraySortKey {
             Sort::Datatype(id) => Some(ArraySortKey::Datatype(id)),
             Sort::Uninterpreted(id) => Some(ArraySortKey::Uninterpreted(id)),
             Sort::Float { exp, sig } => Some(ArraySortKey::Float { exp, sig }),
-            Sort::Array { .. } => None,
+            Sort::Array { .. } | Sort::Seq(_) => None,
         }
     }
 
@@ -153,9 +153,27 @@ pub enum Sort {
         /// Significand bits, including the implicit leading bit.
         sig: u32,
     },
+    /// A homogeneous **sequence** over a scalar element sort (ADR-0051, P2.7).
+    /// Like [`Sort::Array`] it carries a flat, `Copy` [`ArraySortKey`] element (so
+    /// `Sort` stays `Copy`); nested sequences (`Seq(Seq …)`) are deferred exactly as
+    /// nested arrays are. `String` is the distinguished instance
+    /// `Seq(BitVec(18))` — `2^18 > 0x2FFFF`, and the unsigned bit-vector order over
+    /// `BitVec(18)` is the Unicode code-point total order.
+    Seq(ArraySortKey),
 }
 
 impl Sort {
+    /// The SMT-LIB `String` sort: a sequence of Unicode code points, represented as
+    /// `Seq(BitVec(18))` (`2^18 = 262144 > 0x2FFFF`; the unsigned BV order is the
+    /// code-point order). See ADR-0051.
+    pub const STRING_ELEM_WIDTH: u32 = 18;
+
+    /// Constructs the `String` sort (`Seq(BitVec(18))`).
+    #[must_use]
+    pub fn string() -> Sort {
+        Sort::Seq(ArraySortKey::BitVec(Sort::STRING_ELEM_WIDTH))
+    }
+
     /// Returns the bit-vector width, or `None` for non-bit-vector sorts.
     ///
     /// A floating-point sort is **not** a bit-vector and returns `None` here even
@@ -170,7 +188,8 @@ impl Sort {
             | Sort::Real
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
-            | Sort::Float { .. } => None,
+            | Sort::Float { .. }
+            | Sort::Seq(_) => None,
         }
     }
 
@@ -186,7 +205,8 @@ impl Sort {
             | Sort::Int
             | Sort::Real
             | Sort::Datatype(_)
-            | Sort::Uninterpreted(_) => None,
+            | Sort::Uninterpreted(_)
+            | Sort::Seq(_) => None,
         }
     }
 
@@ -205,7 +225,8 @@ impl Sort {
             | Sort::Int
             | Sort::Real
             | Sort::Datatype(_)
-            | Sort::Uninterpreted(_) => None,
+            | Sort::Uninterpreted(_)
+            | Sort::Seq(_) => None,
         }
     }
 
@@ -222,7 +243,8 @@ impl Sort {
             | Sort::Real
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
-            | Sort::Float { .. } => None,
+            | Sort::Float { .. }
+            | Sort::Seq(_) => None,
         }
     }
 
@@ -236,7 +258,8 @@ impl Sort {
             | Sort::Real
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
-            | Sort::Float { .. } => None,
+            | Sort::Float { .. }
+            | Sort::Seq(_) => None,
         }
     }
 }
@@ -254,6 +277,7 @@ impl core::fmt::Display for Sort {
             Sort::Datatype(id) => write!(f, "(Datatype {})", id.index()),
             Sort::Uninterpreted(id) => write!(f, "(Uninterpreted {})", id.index()),
             Sort::Float { exp, sig } => write!(f, "(_ FloatingPoint {exp} {sig})"),
+            Sort::Seq(element) => write!(f, "(Seq {element})"),
         }
     }
 }

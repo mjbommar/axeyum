@@ -115,7 +115,8 @@ impl AbstractionState<'_> {
             | Sort::Real
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
-            | Sort::Float { .. } => return None,
+            | Sort::Float { .. }
+            | Sort::Seq(_) => return None,
         }
 
         if self.is_array_dependent_scalar_leaf(term) {

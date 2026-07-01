@@ -757,6 +757,9 @@ impl<'a> LoweringBuilder<'a> {
             Sort::Uninterpreted(_) => {
                 unreachable!("uninterpreted-sort terms are rejected before bit lowering")
             }
+            Sort::Seq(_) => {
+                unreachable!("sequence terms are rejected before bit lowering (P2.7)")
+            }
         }
     }
 
@@ -778,6 +781,9 @@ impl<'a> LoweringBuilder<'a> {
             }
             Sort::Uninterpreted(_) => {
                 unreachable!("uninterpreted-sort terms are rejected before bit lowering")
+            }
+            Sort::Seq(_) => {
+                unreachable!("sequence terms are rejected before bit lowering (P2.7)")
             }
         };
         let literal = self.aig.input(label);
@@ -1719,6 +1725,9 @@ impl<'a> LoweringBuilder<'a> {
             Sort::Uninterpreted(_) => {
                 unreachable!("uninterpreted-sort terms are rejected before bit lowering")
             }
+            Sort::Seq(_) => {
+                unreachable!("sequence terms are rejected before bit lowering (P2.7)")
+            }
         }
     }
 }
@@ -1775,6 +1784,9 @@ fn sort_width(sort: Sort) -> usize {
         }
         Sort::Uninterpreted(_) => {
             unreachable!("uninterpreted-sort terms are rejected before bit lowering")
+        }
+        Sort::Seq(_) => {
+            unreachable!("sequence terms are rejected before bit lowering (P2.7)")
         }
     }
 }

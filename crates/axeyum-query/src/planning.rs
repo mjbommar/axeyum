@@ -552,6 +552,10 @@ fn update_sort(hash: &mut u64, sort: Sort) {
             update_u64(hash, 8);
             update_u64(hash, u64::try_from(id.index()).unwrap_or(u64::MAX));
         }
+        Sort::Seq(element) => {
+            update_u64(hash, 9);
+            update_array_sort_key(hash, element);
+        }
     }
 }
 

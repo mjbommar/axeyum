@@ -335,7 +335,8 @@ impl TermArena {
             | Sort::Real
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
-            | Sort::Float { .. }) => Err(IrError::SortMismatch {
+            | Sort::Float { .. }
+            | Sort::Seq(_)) => Err(IrError::SortMismatch {
                 expected: "Bool",
                 found,
             }),
@@ -354,7 +355,8 @@ impl TermArena {
             | Sort::Int
             | Sort::Real
             | Sort::Datatype(_)
-            | Sort::Uninterpreted(_)) => Err(IrError::SortMismatch {
+            | Sort::Uninterpreted(_)
+            | Sort::Seq(_)) => Err(IrError::SortMismatch {
                 expected: "BitVec",
                 found,
             }),
@@ -1378,7 +1380,8 @@ impl TermArena {
             | Sort::Real
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
-            | Sort::Float { .. }) => Err(IrError::SortMismatch {
+            | Sort::Float { .. }
+            | Sort::Seq(_)) => Err(IrError::SortMismatch {
                 expected: "Array",
                 found,
             }),
@@ -1489,7 +1492,8 @@ impl TermArena {
             | Sort::Real
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
-            | Sort::Float { .. }) => Err(IrError::SortMismatch {
+            | Sort::Float { .. }
+            | Sort::Seq(_)) => Err(IrError::SortMismatch {
                 expected: "Int",
                 found,
             }),
@@ -1661,7 +1665,8 @@ impl TermArena {
             | Sort::Int
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
-            | Sort::Float { .. }) => Err(IrError::SortMismatch {
+            | Sort::Float { .. }
+            | Sort::Seq(_)) => Err(IrError::SortMismatch {
                 expected: "Real",
                 found,
             }),
@@ -1856,6 +1861,9 @@ fn check_sort(sort: Sort) -> Result<(), IrError> {
             check_array_key(element)
         }
         Sort::Bool | Sort::Int | Sort::Real | Sort::Datatype(_) | Sort::Uninterpreted(_) => Ok(()),
+        // Deferred (P2.7): validate the element key like an array component; no
+        // sequence capability is added by this slice.
+        Sort::Seq(element) => check_array_key(element),
     }
 }
 
@@ -1872,7 +1880,8 @@ fn check_scalar_width(sort: Sort) -> Result<(), IrError> {
         | Sort::Int
         | Sort::Real
         | Sort::Datatype(_)
-        | Sort::Uninterpreted(_)) => Err(IrError::SortMismatch {
+        | Sort::Uninterpreted(_)
+        | Sort::Seq(_)) => Err(IrError::SortMismatch {
             expected: "Bool or BitVec",
             found,
         }),
@@ -1888,7 +1897,7 @@ fn check_uf_param_sort(sort: Sort) -> Result<(), IrError> {
     match sort {
         Sort::Int | Sort::Real | Sort::Uninterpreted(_) | Sort::Array { .. } => Ok(()),
         Sort::Bool | Sort::BitVec(_) | Sort::Float { .. } => check_scalar_width(sort),
-        found @ Sort::Datatype(_) => Err(IrError::SortMismatch {
+        found @ (Sort::Datatype(_) | Sort::Seq(_)) => Err(IrError::SortMismatch {
             expected: "Bool, BitVec, Float, Int, Real, array, or uninterpreted sort",
             found,
         }),
@@ -1903,10 +1912,12 @@ fn check_uf_result_sort(sort: Sort) -> Result<(), IrError> {
     match sort {
         Sort::Int | Sort::Real | Sort::Uninterpreted(_) => Ok(()),
         Sort::Bool | Sort::BitVec(_) | Sort::Float { .. } => check_scalar_width(sort),
-        found @ (Sort::Array { .. } | Sort::Datatype(_)) => Err(IrError::SortMismatch {
-            expected: "Bool, BitVec, Float, Int, Real, or uninterpreted sort",
-            found,
-        }),
+        found @ (Sort::Array { .. } | Sort::Datatype(_) | Sort::Seq(_)) => {
+            Err(IrError::SortMismatch {
+                expected: "Bool, BitVec, Float, Int, Real, or uninterpreted sort",
+                found,
+            })
+        }
     }
 }
 

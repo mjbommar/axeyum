@@ -4658,6 +4658,12 @@ impl Features {
             Sort::Datatype(_) => self.has_datatype = true,
             Sort::Uninterpreted(_) => self.has_uninterpreted_sort = true,
             Sort::Bool => {}
+            // TODO(P2.7 A.1b): Seq handling. No sequence theory/feature flag or
+            // backend exists yet, and no front-end produces a `Seq` sort, so this
+            // is currently unreachable. Note nothing (no capability is claimed);
+            // when sequences land, add a `has_seq` feature and route accordingly
+            // rather than falling through to bit-blasting.
+            Sort::Seq(_) => {}
         }
     }
 }

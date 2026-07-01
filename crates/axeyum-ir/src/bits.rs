@@ -144,7 +144,8 @@ pub fn lsb_bits_to_value(sort: Sort, bits: &[bool]) -> Result<Value, IrError> {
         | Sort::Int
         | Sort::Real
         | Sort::Datatype(_)
-        | Sort::Uninterpreted(_) => Err(IrError::SortMismatch {
+        | Sort::Uninterpreted(_)
+        | Sort::Seq(_) => Err(IrError::SortMismatch {
             expected: "Bool or BitVec",
             found: sort,
         }),

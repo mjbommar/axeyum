@@ -208,7 +208,9 @@ fn update_logic_sort_features(
         Sort::BitVec(_) | Sort::Float { .. } => *has_bitvec = true,
         Sort::Int => *has_integers = true,
         Sort::Real => *has_reals = true,
-        Sort::Bool | Sort::Datatype(_) | Sort::Uninterpreted(_) => {}
+        // A sequence declares no distinct logic feature bit yet (P2.7); decline
+        // like the other aggregate/uninterpreted sorts.
+        Sort::Bool | Sort::Datatype(_) | Sort::Uninterpreted(_) | Sort::Seq(_) => {}
     }
 }
 
@@ -268,6 +270,9 @@ fn collect_uninterpreted_sort(sort: Sort, out: &mut HashSet<SortId>) {
             collect_uninterpreted_sort(index.to_sort(), out);
             collect_uninterpreted_sort(element.to_sort(), out);
         }
+        // Mirror the array recursion: a sequence element may itself be an
+        // uninterpreted carrier sort.
+        Sort::Seq(element) => collect_uninterpreted_sort(element.to_sort(), out),
         Sort::Bool
         | Sort::BitVec(_)
         | Sort::Int
@@ -293,6 +298,7 @@ fn sort_str(arena: &TermArena, sort: Sort) -> String {
         Sort::Datatype(id) => format!("(Datatype {})", id.index()),
         Sort::Uninterpreted(id) => symbol_syntax(arena.uninterpreted_sort_name(id)),
         Sort::Float { exp, sig } => format!("(_ FloatingPoint {exp} {sig})"),
+        Sort::Seq(element) => format!("(Seq {})", array_sort_key_str(arena, element)),
     }
 }
 

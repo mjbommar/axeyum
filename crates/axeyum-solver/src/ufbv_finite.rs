@@ -320,7 +320,8 @@ fn finite_sort_cardinality(sort: Sort) -> Option<u128> {
         | Sort::Real
         | Sort::Array { .. }
         | Sort::Datatype(_)
-        | Sort::Uninterpreted(_) => None,
+        | Sort::Uninterpreted(_)
+        | Sort::Seq(_) => None,
     }
 }
 
