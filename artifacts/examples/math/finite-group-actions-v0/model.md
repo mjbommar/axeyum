@@ -25,6 +25,25 @@ For the malformed identity-action row, the finite replay identifies the failing
 point and the linked QF_UF artifact checks the resulting `e.x = x` conflict with
 an Alethe certificate.
 
+For the malformed compatibility row, the finite replay uses the same group and
+point set but changes the `s` row so that:
+
+```text
+s.01 = 10
+s.10 = 10
+```
+
+The checker recomputes:
+
+```text
+s.(s.01)   = s.10 = 10
+(s*s).01   = e.01 = 01
+```
+
+so the compatibility law `s.(s.01) = (s*s).01` fails. The linked QF_UF
+artifact isolates that equality conflict and checks it with an Alethe
+certificate.
+
 General group actions, orbit-stabilizer, Burnside/Cauchy-Frobenius, and
 representation-theoretic results over arbitrary groups remain proof-assistant
 horizon material.

@@ -497,7 +497,8 @@ Prefer one row, page, route upgrade, or query surface per commit.
    [`algebra-equality-certificate-boundary.md`](../learn/math/algebra-equality-certificate-boundary.md)
    and `bridge_algebra_equality_certificate_boundary` now make that rule
    queryable: exact finite replay must identify the bad equality, closure,
-   representative, preservation, identity-action, or bilinearity obligation
+   representative, preservation, identity-action, action-compatibility, or
+   bilinearity obligation
    before a scoped QF_UF/Alethe row can claim checked certificate value.
 10. Landed: add `bridge_polynomial_coefficient_factor_replay` for fixed
     polynomial coefficients, factor/division witnesses, coefficient windows,

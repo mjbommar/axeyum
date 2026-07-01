@@ -1279,10 +1279,12 @@ Pick one item per commit unless the change is purely navigational.
     cardinality, and cardinality-principle packs to shared set-theory boundary
     vocabulary.
 17. Landed: promote `finite-group-actions-v0` through a source-linked
-    QF_UF/Alethe regression for `bad-action-rejected`. The artifact
+    QF_UF/Alethe regression for `bad-action-rejected` and
+    `bad-compatibility-rejected`. The artifacts
     `artifacts/examples/math/finite-group-actions-v0/smt2/bad-identity-action-alethe-conflict.smt2`
-    is checked by
-    `cargo test -p axeyum-solver --test math_resource_uf_routes finite_group_actions_bad_identity_emits_checked_alethe`.
+    and
+    `artifacts/examples/math/finite-group-actions-v0/smt2/bad-compatibility-action-alethe-conflict.smt2`
+    are checked by the corresponding `math_resource_uf_routes` regressions.
 18. Landed: promote `finite-continuous-maps-v0` through a source-linked
     QF_UF/Alethe regression for `bad-continuous-map-rejected`. The artifact
     `artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2`

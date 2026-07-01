@@ -620,10 +620,11 @@ Next buildout:
    certificate and require independent checker rejection.
 15. Landed: promote `finite-group-actions-v0` through a source-linked
    QF_UF/Alethe regression for the `bad-action-rejected` identity-action
-   conflict:
+   conflict and the `bad-compatibility-rejected` action-compatibility conflict:
    `artifacts/examples/math/finite-group-actions-v0/smt2/bad-identity-action-alethe-conflict.smt2`
-   is checked by
-   `cargo test -p axeyum-solver --test math_resource_uf_routes finite_group_actions_bad_identity_emits_checked_alethe`.
+   and
+   `artifacts/examples/math/finite-group-actions-v0/smt2/bad-compatibility-action-alethe-conflict.smt2`
+   are checked by the corresponding `math_resource_uf_routes` regressions.
 16. Landed: promote `finite-continuous-maps-v0` through a source-linked
    QF_UF/Alethe regression for the `bad-continuous-map-rejected`
    preimage-membership conflict:

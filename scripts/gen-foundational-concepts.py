@@ -6474,8 +6474,9 @@ BRIDGE_CONCEPTS = [
             "This boundary decides when a finite algebra row deserves a "
             "checked equality certificate instead of remaining ordinary table "
             "replay: the table checker must identify a concrete equality, "
-            "closure, representative, preservation, identity-action, or "
-            "bilinearity conflict, and the QF_UF/Alethe artifact must isolate "
+            "closure, representative, preservation, identity-action, "
+            "action-compatibility, or bilinearity conflict, and the "
+            "QF_UF/Alethe artifact must isolate "
             "that proof shape without redoing the whole finite model."
         ),
         "prerequisites": [
@@ -6576,7 +6577,7 @@ BRIDGE_CONCEPTS = [
         ],
         "open_gaps": [
             "This boundary does not prove arbitrary group, ring, module, quotient, tensor, or isomorphism theorems.",
-            "A finite algebra row should not be promoted to this concept merely because it is about algebra; it needs a distinct equality, congruence, closure, representative, preservation, identity-action, or bilinearity certificate shape.",
+            "A finite algebra row should not be promoted to this concept merely because it is about algebra; it needs a distinct equality, congruence, closure, representative, preservation, identity-action, action-compatibility, or bilinearity certificate shape.",
             "Lean reconstruction remains partial until recurring finite algebra EUF shapes have kernel-checked routes.",
         ],
         "graduation": {
@@ -7093,7 +7094,7 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "finite-group-actions-v0",
-                "Action-law, orbit, stabilizer, orbit-stabilizer, Burnside, and horizon rows.",
+                "Action-law, orbit, stabilizer, orbit-stabilizer, Burnside, bad identity-action, bad compatibility, and horizon rows.",
             ),
             (
                 "finite-permutation-groups-v0",

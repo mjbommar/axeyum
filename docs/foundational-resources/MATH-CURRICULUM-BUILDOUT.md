@@ -495,7 +495,8 @@ action orbit/stabilizer replay, checked QF_UF/Alethe bad-nonbijection
 rejection, and a general permutation-group Lean-horizon row. `finite-group-actions-v0` now
 validates finite action laws, orbit/stabilizer replay, orbit-stabilizer
 cardinality, Burnside fixed-point counting, checked QF_UF/Alethe bad
-identity-action rejection, and a general group-action Lean-horizon row.
+identity-action and action-compatibility rejections, and a general
+group-action Lean-horizon row.
 `finite-monoids-v0` now validates finite monoid identity/associativity,
 transformation-composition table replay from finite functions,
 units/idempotents, a checked QF_UF/Alethe non-associative table rejection, and
@@ -1696,7 +1697,8 @@ bad-covector rejection, and a duality/functional-analysis Lean-horizon row.
 `finite-group-actions-v0` now adds the exact finite group-action bridge:
 action-law replay, orbit/stabilizer recomputation, orbit-stabilizer
 cardinality, Burnside fixed-point counting, checked QF_UF/Alethe bad
-identity-action rejection, and a group-action Lean-horizon row.
+identity-action and action-compatibility rejections, and a group-action
+Lean-horizon row.
 `finite-monoids-v0` now adds the exact finite function/algebra bridge:
 monoid identity/associativity replay, transformation-composition table replay,
 unit and idempotent recomputation, checked QF_UF/Alethe non-associative table
@@ -2522,7 +2524,8 @@ The learner/planning layer now also has
 [`algebra-equality-certificate-boundary.md`](../learn/math/algebra-equality-certificate-boundary.md),
 which turns the algebra queue rule into an explicit promotion boundary:
 finite table replay must find the concrete equality, congruence, closure,
-representative, preservation, identity-action, or bilinearity conflict before
+representative, preservation, identity-action, action-compatibility, or
+bilinearity conflict before
 a scoped QF_UF/Alethe certificate row can graduate. It links finite groups,
 monoids, permutation groups, group actions, homomorphisms, ideals, vector
 spaces, dual spaces, modules, and tensor products to copyable concept, pack,

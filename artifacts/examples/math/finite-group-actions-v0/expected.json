@@ -117,6 +117,51 @@
       "notes": "The validator checks that the identity element does not fix 01 in the malformed table, and the linked QF_UF artifact emits a zero-trust Alethe refutation for the identity-action conflict."
     },
     {
+      "id": "bad-compatibility-rejected",
+      "claim": "The malformed table satisfies the group-action compatibility law.",
+      "expected_result": "unsat",
+      "validation": "finite_group_action_compatibility_refutation",
+      "proof_status": "checked",
+      "data": {
+        "group": {
+          "carrier": ["e", "s"],
+          "identity": "e",
+          "table": [
+            ["e", "s"],
+            ["s", "e"]
+          ]
+        },
+        "set": ["00", "01", "10", "11"],
+        "action": {
+          "e": {
+            "00": "00",
+            "01": "01",
+            "10": "10",
+            "11": "11"
+          },
+          "s": {
+            "00": "00",
+            "01": "10",
+            "10": "10",
+            "11": "11"
+          }
+        },
+        "failing_law": "compatibility",
+        "left_element": "s",
+        "right_element": "s",
+        "product_element": "e",
+        "failing_point": "01",
+        "intermediate": "10",
+        "lhs": "10",
+        "rhs": "01",
+        "alethe_compatibility_claim": "s.(s.01) = (s*s).01",
+        "smt2_artifact": "artifacts/examples/math/finite-group-actions-v0/smt2/bad-compatibility-action-alethe-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_group_actions_bad_compatibility_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
+      },
+      "notes": "The validator recomputes s.(s.01)=10 while (s*s).01=e.01=01 in the malformed table, and the linked QF_UF artifact emits a zero-trust Alethe refutation for the action-compatibility conflict."
+    },
+    {
       "id": "general-group-action-theory-lean-horizon",
       "claim": "General group-action theory requires a proof-assistant route.",
       "expected_result": "not-run",

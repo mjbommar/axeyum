@@ -324,8 +324,8 @@ one of:
       `set_theory_and_foundations`.
     - Checks: finite group-action law replay, orbit/stabilizer
       recomputation, orbit-stabilizer cardinality replay, Burnside fixed-point
-      average replay, bad-action rejection, and a general group-action
-      Lean-horizon row.
+      average replay, bad identity-action and compatibility-action rejection,
+      and a general group-action Lean-horizon row.
 35. `artifacts/examples/math/finite-monoids-v0/`
     - Fields: `abstract_algebra`, `discrete_math`,
       `set_theory_and_foundations`.

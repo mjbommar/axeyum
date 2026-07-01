@@ -34,12 +34,13 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-group-actions-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite group-action bad identity QF_UF/Alethe regression seed",
-    "pressure": "The identity element of a fixed finite group action must fix every point; the EUF row refutes a malformed action table that maps a point to a distinct image under the identity.",
+    "target": "finite group-action bad identity and bad compatibility QF_UF/Alethe regression seeds",
+    "pressure": "The identity element of a fixed finite group action must fix every point, and compatibility must satisfy g.(h.x) = (g*h).x; the EUF rows refute a malformed identity table and a malformed compatibility table after finite replay identifies the failing point.",
     "evidence": [
-      "bad-action-rejected"
+      "bad-action-rejected",
+      "bad-compatibility-rejected"
     ],
-    "next_step": "Promote additional group-action rows only when they add distinct congruence pressure; keep orbit-stabilizer, Burnside/Cauchy-Frobenius, quotient actions, and representation theory in the Lean-horizon lane."
+    "next_step": "Promote additional group-action rows only when they add distinct congruence pressure beyond identity and compatibility; keep orbit-stabilizer, Burnside/Cauchy-Frobenius, quotient actions, and representation theory in the Lean-horizon lane."
   },
   "source_refs": [
     "docs/curriculum/02-structures/groups.md",
@@ -50,6 +51,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
     "artifacts/examples/math/finite-group-actions-v0/smt2/bad-identity-action-alethe-conflict.smt2",
+    "artifacts/examples/math/finite-group-actions-v0/smt2/bad-compatibility-action-alethe-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
@@ -58,12 +60,13 @@
     "orbit-stabilizer-replay",
     "burnside-orbit-count-replay",
     "bad-action-rejected",
+    "bad-compatibility-rejected",
     "general-group-action-theory-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode fixed finite group actions as deterministic table obligations.",
     "Replay action-law, orbit, stabilizer, orbit-stabilizer, and Burnside rows through Axeyum model evaluation over finite tables.",
-    "Route malformed finite identity-action rows through checked QF_UF/Alethe evidence once exact table replay identifies the failing point.",
+    "Route malformed finite identity-action and action-compatibility rows through checked QF_UF/Alethe evidence once exact table replay identifies the failing point.",
     "Keep arbitrary group-action theorems, Burnside/Cauchy-Frobenius in full generality, group actions on algebraic/topological structures, and representation theory under Lean horizon until formal routes exist."
   ]
 }

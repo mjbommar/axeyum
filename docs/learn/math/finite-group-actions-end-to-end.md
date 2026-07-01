@@ -22,6 +22,7 @@ Concept rows:
 | `orbit-stabilizer-replay` | `sat` | checked |
 | `burnside-orbit-count-replay` | `sat` | checked |
 | `bad-action-rejected` | `unsat` | checked |
+| `bad-compatibility-rejected` | `unsat` | checked |
 | `general-group-action-theory-lean-horizon` | `not-run` | lean-horizon |
 
 The checked rows are finite table replay. The pack does not claim general
@@ -124,7 +125,7 @@ The checker also enumerates the action orbits directly:
 
 The direct orbit enumeration and the fixed-point average both give `3`.
 
-## Check The Refutation
+## Reject Bad Identity Action
 
 The bad-action row changes the identity action:
 
@@ -134,6 +135,27 @@ e.01 = 10
 
 That violates the required law `e.x = x`. The checker rejects the malformed
 table as an `unsat` claim without needing to search for a better action.
+
+## Reject Bad Compatibility
+
+The bad-compatibility row keeps the identity action intact, but changes the
+`s` table so compatibility fails:
+
+```text
+s.01 = 10
+s.10 = 10
+```
+
+At `g = s`, `h = s`, and `x = 01`, the two action-law sides split:
+
+```text
+s.(s.01) = s.10 = 10
+(s*s).01 = e.01 = 01
+```
+
+The finite replay finds that concrete mismatch first. The linked QF_UF/Alethe
+artifact then checks the isolated equality conflict
+`s.(s.01) = (s*s).01`.
 
 ## Run It
 
@@ -157,6 +179,9 @@ This lesson shows Axeyum's resource pattern in a small algebraic setting:
 untrusted fast search -> candidate action table
 trusted small checking -> group laws, action laws, orbit/stabilizer, Burnside replay
 ```
+
+The two checked QF_UF/Alethe rows are certificate checks over small equality
+conflicts after finite replay has already identified the malformed table entry.
 
 General group-action theory, stabilizer-subgroup theorems, quotient actions,
 Burnside/Cauchy-Frobenius in full generality, representation-theoretic

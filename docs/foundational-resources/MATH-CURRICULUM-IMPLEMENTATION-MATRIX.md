@@ -364,9 +364,11 @@ Build sequence:
     `qf-uf-quotient-ring-representative-alethe` to
     `artifacts/examples/math/finite-ideals-v0/smt2/quotient-ring-representative-congruence-conflict.smt2`,
     checked by the `math_resource_uf_routes` QF_UF/Alethe regression.
-19. `finite-group-actions-v0` now links `bad-action-rejected` to
+19. `finite-group-actions-v0` now links `bad-action-rejected` and
+    `bad-compatibility-rejected` to
     `artifacts/examples/math/finite-group-actions-v0/smt2/bad-identity-action-alethe-conflict.smt2`,
-    checked by the `math_resource_uf_routes` QF_UF/Alethe regression.
+    `artifacts/examples/math/finite-group-actions-v0/smt2/bad-compatibility-action-alethe-conflict.smt2`,
+    checked by the `math_resource_uf_routes` QF_UF/Alethe regressions.
 20. `finite-continuous-maps-v0` now links `bad-continuous-map-rejected` to
     `artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2`,
     checked by the `math_resource_uf_routes` QF_UF/Alethe regression.

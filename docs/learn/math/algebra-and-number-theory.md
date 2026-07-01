@@ -101,8 +101,8 @@ For the route-selection rule over equality-heavy algebra rows, read
 [Algebra Equality Certificate Boundary](algebra-equality-certificate-boundary.md).
 It groups the finite rows where table replay finds the concrete failure and a
 separate QF_UF/Alethe certificate checks the isolated equality, congruence,
-closure, representative, preservation, identity-action, or bilinearity
-conflict.
+closure, representative, preservation, identity-action, action-compatibility,
+or bilinearity conflict.
 
 ## Encode / Check Walkthrough
 
@@ -175,7 +175,8 @@ orbits = (4 + 2) / 2 = 3
 The `finite-group-actions-v0` pack checks the identity and compatibility
 action laws, recomputes the sample orbit and stabilizer, verifies
 `|orbit(x)| * |stabilizer(x)| = |G|`, recomputes all action orbits, and
-checks Burnside's fixed-point average.
+checks Burnside's fixed-point average. Its checked Alethe rows reject both a
+malformed identity action and a malformed compatibility table.
 
 For a finite ring example, use `Z/4Z`:
 

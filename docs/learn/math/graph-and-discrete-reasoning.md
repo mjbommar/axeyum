@@ -149,7 +149,9 @@ orbit count = (4 + 2) / 2 = 3
 ```
 
 The `finite-group-actions-v0` pack recomputes the action orbits
-`{00}`, `{01,10}`, and `{11}` and checks the Burnside average exactly.
+`{00}`, `{01,10}`, and `{11}` and checks the Burnside average exactly, while
+its checked QF_UF/Alethe rows reject malformed identity and compatibility
+action tables.
 
 For graph coloring,
 encode a finite graph by listing vertices, undirected edges, allowed colors, and

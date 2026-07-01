@@ -65,6 +65,9 @@ const FINITE_TENSOR_PRODUCTS_BAD_BILINEAR: &str = include_str!(
 const FINITE_GROUP_ACTIONS_BAD_IDENTITY: &str = include_str!(
     "../../../artifacts/examples/math/finite-group-actions-v0/smt2/bad-identity-action-alethe-conflict.smt2"
 );
+const FINITE_GROUP_ACTIONS_BAD_COMPATIBILITY: &str = include_str!(
+    "../../../artifacts/examples/math/finite-group-actions-v0/smt2/bad-compatibility-action-alethe-conflict.smt2"
+);
 const FINITE_CONTINUOUS_MAPS_BAD_PREIMAGE: &str = include_str!(
     "../../../artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2"
 );
@@ -218,6 +221,14 @@ fn finite_group_actions_bad_identity_emits_checked_alethe() {
     assert_resource_euf_alethe(
         "finite-group-actions-v0 bad identity action",
         FINITE_GROUP_ACTIONS_BAD_IDENTITY,
+    );
+}
+
+#[test]
+fn finite_group_actions_bad_compatibility_emits_checked_alethe() {
+    assert_resource_euf_alethe(
+        "finite-group-actions-v0 bad compatibility action",
+        FINITE_GROUP_ACTIONS_BAD_COMPATIBILITY,
     );
 }
 

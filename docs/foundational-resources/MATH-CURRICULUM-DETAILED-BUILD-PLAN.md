@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 634 expected checks.
-- 310 checked proof/evidence rows.
-- 253 replay-only rows.
+- 637 expected checks.
+- 312 checked proof/evidence rows.
+- 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1414,6 +1414,14 @@ Pick one row per commit unless the change is purely navigational.
      conflicts without claiming Radon-Nikodym construction, regular
      conditional probabilities, martingale convergence, or general
      measure-theoretic conditional expectation.
+166. Landed: extend `finite-group-actions-v0` with a checked
+     `bad-compatibility-rejected` row. Exact finite replay first confirms the
+     malformed action keeps the identity law but fails compatibility at
+     `s.(s.01)=10` while `(s*s).01=e.01=01`; the source SMT-LIB artifact then
+     isolates that equality conflict for the shared QF_UF/Alethe route via
+     `finite_group_actions_bad_compatibility_emits_checked_alethe`, leaving
+     orbit-stabilizer, Burnside/Cauchy-Frobenius, quotient actions, and
+     representation theory in the Lean-horizon lane.
 
 ## Validation Checklist
 

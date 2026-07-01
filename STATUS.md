@@ -228,10 +228,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   now makes the finite algebra promotion rule explicit: table replay owns the
   concrete finite structure, while QF_UF/Alethe rows are added only for isolated
   equality, congruence, closure, representative, preservation, identity-action,
-  or bilinearity certificate shapes. The generated concept atlas now includes
+  action-compatibility, or bilinearity certificate shapes. The generated concept atlas now includes
   `bridge_algebra_equality_certificate_boundary`; the public summary reports
   120 concept rows: 23 curriculum nodes, 18 field rows, 74 bridge rows, and 5
   example-family rows.
+
+- **Finite group-action compatibility QF_UF row landed.**
+  [`finite-group-actions-v0`](artifacts/examples/math/finite-group-actions-v0/)
+  now links `bad-compatibility-rejected` to a source-level QF_UF/Alethe artifact
+  for the action law `s.(s.01) = (s*s).01`. The validator recomputes the
+  finite-table failure before the shared `math_resource_uf_routes` regression
+  emits and checks the Alethe certificate, keeping orbit-stabilizer and
+  Burnside/Cauchy-Frobenius theorem claims in the Lean-horizon lane.
 
 - **Real-completeness theorem-boundary page landed.**
   [`real-completeness-theorem-boundary.md`](docs/learn/math/real-completeness-theorem-boundary.md)
@@ -2043,10 +2051,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Finite group-action QF_UF promotion landed.**
   [`finite-group-actions-v0`](artifacts/examples/math/finite-group-actions-v0/)
-  now links `bad-action-rejected` to a source-level QF_UF artifact for the
-  malformed identity-action row. The shared `math_resource_uf_routes`
-  regression emits and checks an Alethe certificate for that row, and the
-  generated dashboards move promoted solver-reuse packs to 17.
+  now links `bad-action-rejected` and `bad-compatibility-rejected` to
+  source-level QF_UF artifacts for malformed identity-action and
+  action-compatibility rows. The shared `math_resource_uf_routes` regressions
+  emit and check Alethe certificates for those rows, and the generated
+  dashboards track the promoted solver-reuse pack.
 
 - **Finite continuous-map QF_UF promotion landed.**
   [`finite-continuous-maps-v0`](artifacts/examples/math/finite-continuous-maps-v0/)
@@ -4062,8 +4071,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`finite-group-actions-end-to-end.md`](docs/learn/math/finite-group-actions-end-to-end.md)
   as the learner-facing trace for the finite group-action pack: action-table
   encoding, identity/compatibility replay, orbit/stabilizer recomputation,
-  Burnside fixed-point counting, bad-action rejection, and the Lean horizon for
-  general group-action theory. The lesson is linked from the math learning
+  Burnside fixed-point counting, bad identity-action and compatibility
+  rejection, and the Lean horizon for general group-action theory. The lesson is linked from the math learning
   index plus the algebra, discrete-reasoning, and finite-structures paths.
 
 - **Finite group-action foundations pack landed.** Added
@@ -4071,8 +4080,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the exact finite bridge between groups, functions, and counting. The pack
   validates a `C2` action on two-bit strings, action identity/compatibility
   laws, orbit and stabilizer recomputation, orbit-stabilizer cardinality replay,
-  Burnside fixed-point counting, checked bad-action rejection, and a general
-  group-action-theory Lean-horizon row. The foundational example-pack validator,
+  Burnside fixed-point counting, checked bad identity-action and compatibility
+  rejection, and a general group-action-theory Lean-horizon row. The foundational example-pack validator,
   concept atlas, dashboards, library-boundary counts, and learner-facing math
   pages now include the new pack.
 

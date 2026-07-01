@@ -375,7 +375,7 @@ Companion maps:
   QF_UF/Alethe bad-nonbijection rejection.
 - [Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md):
   follows action-law replay, orbit/stabilizer recomputation, Burnside fixed-point
-  counting, and checked bad-action rejection.
+  counting, and checked bad identity-action plus compatibility rejection.
 - [Finite Order Lattices](finite-order-lattices-end-to-end.md): follows finite
   partial-order replay, meet/join recomputation, distributivity checks,
   monotone fixed-point replay, checked QF_UF/Alethe bad-order rejection, and a

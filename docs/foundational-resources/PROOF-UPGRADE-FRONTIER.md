@@ -565,7 +565,8 @@ First targets:
 - [finite-tensor-products-v0](../../artifacts/examples/math/finite-tensor-products-v0/)
   (resource-backed QF_UF/Alethe regression landed for the bad bilinear left-additivity conflict)
 - [finite-group-actions-v0](../../artifacts/examples/math/finite-group-actions-v0/)
-  (resource-backed QF_UF/Alethe regression landed for the bad identity-action conflict)
+  (resource-backed QF_UF/Alethe regressions landed for the bad identity-action
+  and action-compatibility conflicts)
 - [finite-continuous-maps-v0](../../artifacts/examples/math/finite-continuous-maps-v0/)
   (resource-backed QF_UF/Alethe regression landed for the bad preimage-membership conflict)
 - [finite-quotient-topology-v0](../../artifacts/examples/math/finite-quotient-topology-v0/)
@@ -585,7 +586,7 @@ Secondary targets:
 
 - initial module/ideal/tensor equality-heavy secondary set is covered, including
   the finite-ideals quotient representative congruence row and the finite
-  group-action identity row; the topology lane now has small preimage-membership,
+  group-action identity and compatibility rows; the topology lane now has small preimage-membership,
   quotient-open-status, specialization-antisymmetry, cohomology coboundary-value, and finite
   universal-coefficient group-identity EUF certificates.
   Pick the next equality-heavy pack only when it exposes a small fixed EUF

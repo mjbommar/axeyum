@@ -136,8 +136,8 @@ schemas, examples, and validation workflows.
 - [../learn/math/algebra-equality-certificate-boundary.md](../learn/math/algebra-equality-certificate-boundary.md)
   records the algebra row-promotion rule: add checked QF_UF/Alethe evidence
   only when exact finite table replay identifies a distinct equality,
-  congruence, closure, representative, preservation, identity-action, or
-  bilinearity conflict.
+  congruence, closure, representative, preservation, identity-action,
+  action-compatibility, or bilinearity conflict.
 - [../learn/math/real-completeness-theorem-boundary.md](../learn/math/real-completeness-theorem-boundary.md)
   records the real-completeness theorem boundary: existing rational interval,
   sequence-tail, Cauchy-tail, monotone-prefix, metric-continuity, compactness,
@@ -433,7 +433,8 @@ schemas, examples, and validation workflows.
   validate the finite algebra and discrete core: finite group/monoid/ring/field
   table checks, finite transformation-composition monoids, unit/idempotent
   replay, finite permutation group composition/cycle/sign replay, finite
-  group-action law replay, orbit/stabilizer and Burnside counting, finite
+  group-action law replay, checked bad identity-action and compatibility rows,
+  orbit/stabilizer and Burnside counting, finite
   homomorphism/kernel/quotient replay, finite ideal and quotient-ring replay,
   finite vector-space, dual-space, inner-product, and
   module replay, fixed polynomial identities, exact rational polynomial

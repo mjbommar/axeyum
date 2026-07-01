@@ -8360,7 +8360,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "This boundary decides when a finite algebra row deserves a checked equality certificate instead of remaining ordinary table replay: the table checker must identify a concrete equality, closure, representative, preservation, identity-action, or bilinearity conflict, and the QF_UF/Alethe artifact must isolate that proof shape without redoing the whole finite model.",
+      "summary": "This boundary decides when a finite algebra row deserves a checked equality certificate instead of remaining ordinary table replay: the table checker must identify a concrete equality, closure, representative, preservation, identity-action, action-compatibility, or bilinearity conflict, and the QF_UF/Alethe artifact must isolate that proof shape without redoing the whole finite model.",
       "prerequisites": [
         "bridge_finite_model_replay",
         "bridge_counterexample_proof",
@@ -8473,7 +8473,7 @@
       ],
       "open_gaps": [
         "This boundary does not prove arbitrary group, ring, module, quotient, tensor, or isomorphism theorems.",
-        "A finite algebra row should not be promoted to this concept merely because it is about algebra; it needs a distinct equality, congruence, closure, representative, preservation, identity-action, or bilinearity certificate shape.",
+        "A finite algebra row should not be promoted to this concept merely because it is about algebra; it needs a distinct equality, congruence, closure, representative, preservation, identity-action, action-compatibility, or bilinearity certificate shape.",
         "Lean reconstruction remains partial until recurring finite algebra EUF shapes have kernel-checked routes."
       ],
       "graduation": {
@@ -9050,7 +9050,7 @@
           "id": "finite-group-actions-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-group-actions-v0",
-          "notes": "Action-law, orbit, stabilizer, orbit-stabilizer, Burnside, and horizon rows."
+          "notes": "Action-law, orbit, stabilizer, orbit-stabilizer, Burnside, bad identity-action, bad compatibility, and horizon rows."
         },
         {
           "id": "finite-permutation-groups-v0",

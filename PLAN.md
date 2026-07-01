@@ -543,7 +543,8 @@ turning finite shadows into theorem claims.
 The algebra equality-certificate boundary page now makes the finite-algebra
 promotion rule explicit: table replay owns concrete structure evaluation, while
 QF_UF/Alethe rows are added only for isolated equality, congruence, closure,
-representative, preservation, identity-action, or bilinearity certificates.
+representative, preservation, identity-action, action-compatibility, or
+bilinearity certificates.
 Those four certificate anatomy stories now also have first-class bridge rows in
 the foundational concept atlas, making the active proof-object routes queryable
 through shared R1 vocabulary.
@@ -828,7 +829,8 @@ dual spaces, finite modules, finite ideals, finite tensor products, and finite
 group actions now add secondary equality-heavy promotions for bad antisymmetry,
 bad nonbijection, bad subspace-closure, covector-additivity, submodule
 scalar-closure, ideal additive-closure plus quotient-ring representative
-congruence, bilinear left-additivity, and bad identity-action rows.
+congruence, bilinear left-additivity, bad identity-action, and bad
+action-compatibility rows.
 Continue the
 math-resource proof upgrades from
 [`docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md`](docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md),
@@ -897,8 +899,9 @@ secondary QF_LRA/Farkas
 target set is now covered, the initial equality-heavy QF_UF/Alethe
 secondary set is now covered including the finite-ideals quotient
 representative row, and finite group actions now promote a bad identity-action
-conflict through a checked QF_UF/Alethe regression, while finite continuous maps
-now promote a bad preimage-membership conflict through the same checked route.
+conflict and a bad action-compatibility conflict through checked QF_UF/Alethe
+regressions, while finite continuous maps now promote a bad preimage-membership
+conflict through the same checked route.
 The first
 QF_BV bit-blast/DRAT resource promotion now covers the
 finite-rings bad distributivity and bad multiplicative-identity rows, the

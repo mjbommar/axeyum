@@ -5829,6 +5829,67 @@ def validate_finite_group_actions(expected: dict[str, Any]) -> None:
     if action[(identity, failing_point)] == failing_point:
         fail("bad-action-rejected identity action unexpectedly holds")
 
+    bad_compatibility = checks["bad-compatibility-rejected"]
+    if bad_compatibility["expected_result"] != "unsat" or bad_compatibility.get("proof_status") != "checked":
+        fail("bad-compatibility-rejected must be a checked unsat row")
+    if bad_compatibility["validation"] != "finite_group_action_compatibility_refutation":
+        fail("bad-compatibility-rejected must use finite_group_action_compatibility_refutation validation")
+    data = bad_compatibility.get("data", {})
+    if not isinstance(data, dict):
+        fail("bad-compatibility-rejected data must be an object")
+    group, identity, operation, points, action = require_group_action_values("bad compatibility action", data)
+    failing_law = data.get("failing_law")
+    require_string("bad compatibility failing_law", failing_law)
+    if failing_law != "compatibility":
+        fail("bad-compatibility-rejected must document a compatibility failure")
+    left_element = data.get("left_element")
+    right_element = data.get("right_element")
+    product_element = data.get("product_element")
+    failing_point = data.get("failing_point")
+    intermediate = data.get("intermediate")
+    lhs = data.get("lhs")
+    rhs = data.get("rhs")
+    require_string("bad compatibility left_element", left_element)
+    require_string("bad compatibility right_element", right_element)
+    require_string("bad compatibility product_element", product_element)
+    require_string("bad compatibility failing_point", failing_point)
+    require_string("bad compatibility intermediate", intermediate)
+    require_string("bad compatibility lhs", lhs)
+    require_string("bad compatibility rhs", rhs)
+    for group_element, label in ((left_element, "left_element"), (right_element, "right_element"), (product_element, "product_element")):
+        if group_element not in set(group):
+            fail(f"bad-compatibility-rejected {label} is outside the group")
+    for point, label in ((failing_point, "failing_point"), (intermediate, "intermediate"), (lhs, "lhs"), (rhs, "rhs")):
+        if point not in set(points):
+            fail(f"bad-compatibility-rejected {label} is outside the acted-on set")
+    if table_op(operation, left_element, right_element) != product_element:
+        fail("bad-compatibility-rejected product_element is incorrect")
+    if action[(right_element, failing_point)] != intermediate:
+        fail("bad-compatibility-rejected intermediate is incorrect")
+    if action[(left_element, intermediate)] != lhs:
+        fail("bad-compatibility-rejected lhs is incorrect")
+    if action[(product_element, failing_point)] != rhs:
+        fail("bad-compatibility-rejected rhs is incorrect")
+    if lhs == rhs:
+        fail("bad-compatibility-rejected compatibility unexpectedly holds")
+    if action_law_failures(group, identity, operation, points, action) == []:
+        fail("bad-compatibility-rejected malformed table unexpectedly satisfies action laws")
+    claim = data.get("alethe_compatibility_claim")
+    require_string("bad compatibility alethe_compatibility_claim", claim)
+    if claim != "s.(s.01) = (s*s).01":
+        fail("bad-compatibility-rejected must document the Alethe compatibility claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad compatibility smt2_artifact", smt2_artifact)
+    check_source("bad compatibility smt2_artifact", smt2_artifact)
+    regression = data.get("proof_regression")
+    require_string("bad compatibility proof_regression", regression)
+    if "finite_group_actions_bad_compatibility_emits_checked_alethe" not in regression:
+        fail("bad-compatibility-rejected must link the Alethe regression")
+    certificate = data.get("certificate")
+    require_string("bad compatibility certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "Evidence::check" not in certificate:
+        fail("bad-compatibility-rejected certificate must document zero-trust Alethe evidence")
+
     horizon = checks["general-group-action-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-group-action-theory-lean-horizon must be not-run")

@@ -42,8 +42,8 @@ only when all five checks pass:
 1. The finite model is already explicit: operation table, function table,
    subset, quotient representatives, module action, or bilinear map.
 2. Exact replay identifies a small equality, congruence, closure,
-   representative-independence, preservation, identity-action, or bilinearity
-   conflict.
+   representative-independence, preservation, identity-action,
+   action-compatibility, or bilinearity conflict.
 3. The SMT-LIB artifact isolates that conflict as QF_UF rather than smuggling
    the whole table checker into the solver.
 4. `math_resource_uf_routes` emits `UnsatAletheProof` and rechecks it through
@@ -60,7 +60,7 @@ route explicitly instead.
 | `finite-groups-v0` | Cayley-table closure, identity, inverse, and associativity replay. | Binary operation congruence: equal operands must give equal products. | arbitrary group theorems, Lagrange, Sylow, classification |
 | `finite-monoids-v0` | Transformation-table composition, units, idempotents, and associativity replay. | A malformed associativity row is isolated as one equality conflict. | arbitrary monoid theory and semigroup structure theorems |
 | `finite-permutation-groups-v0` | Finite self-map composition, cycle/sign replay, action replay. | A non-bijection row isolates duplicate-image injectivity failure. | general permutation-group and representation theory |
-| `finite-group-actions-v0` | Identity and compatibility laws, orbit/stabilizer replay, Burnside average. | The malformed identity action isolates `e.x = x` for one point. | orbit-stabilizer and Burnside/Cauchy-Frobenius in full generality |
+| `finite-group-actions-v0` | Identity and compatibility laws, orbit/stabilizer replay, Burnside average. | Malformed rows isolate `e.x = x` and `g.(h.x) = (g*h).x` as separate equality conflicts. | orbit-stabilizer and Burnside/Cauchy-Frobenius in full generality |
 | `finite-algebra-homomorphisms-v0` | Group/ring homomorphism table replay, kernel/image, quotient, induced map. | Preservation congruence and concrete bad-map equality conflicts are checked separately. | first isomorphism theorem, normal subgroup and ideal quotient theory |
 | `finite-ideals-v0` | Ideal closure, generated ideal, ring-homomorphism kernel/image, quotient-ring tables. | Bad additive closure and quotient representative congruence become distinct equality artifacts. | general ideal, quotient-ring, and correspondence theorems |
 | `finite-vector-spaces-v0` | Finite subspaces, spans, linear maps, kernel/image, rank-nullity replay. | Bad subspace closure is promoted only after replay finds the failing sum. | arbitrary vector-space theorem schemas |
