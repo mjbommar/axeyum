@@ -20463,6 +20463,19 @@ def finite_conditional_expectation(
     return table
 
 
+def finite_conditional_variance(
+    atoms: list[tuple[str, Fraction, set[str]]],
+    values: dict[str, Fraction],
+    conditional_mean_table: dict[str, Fraction],
+    partition: list[tuple[str, set[str]]],
+) -> dict[str, Fraction]:
+    squared_deviations = {
+        atom_id: (values[atom_id] - conditional_mean_table[atom_id]) ** 2
+        for atom_id in values
+    }
+    return finite_conditional_expectation(atoms, squared_deviations, partition)
+
+
 def validate_finite_conditional_expectation(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -20612,6 +20625,58 @@ def validate_finite_conditional_expectation(expected: dict[str, Any]) -> None:
         fail("tower-property-witness tower conditional expectation is incorrect")
     if tower_table != coarse_table:
         fail("tower-property-witness tower table does not match coarse conditional expectation")
+
+    variance = checks["conditional-variance-decomposition-witness"]
+    if variance["expected_result"] != "sat":
+        fail("conditional-variance-decomposition-witness must expect sat")
+    values = single_witness_values(variance, witnesses)
+    atoms = require_probability_atoms("variance decomposition atoms", values.get("atoms"), require_events=False)
+    require_normalized_atoms("conditional-variance-decomposition-witness", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    variable_values = require_atom_value_table(
+        "variance decomposition random_variable_values",
+        values.get("random_variable_values"),
+        atom_ids,
+    )
+    partition = require_atom_partition("variance decomposition partition", values.get("partition"), atom_ids)
+    conditional_table = require_atom_value_table(
+        "variance decomposition conditional_expectation",
+        values.get("conditional_expectation"),
+        atom_ids,
+    )
+    conditional_variance_table = require_atom_value_table(
+        "variance decomposition conditional_variance",
+        values.get("conditional_variance"),
+        atom_ids,
+    )
+    if finite_conditional_expectation(atoms, variable_values, partition) != conditional_table:
+        fail("conditional-variance-decomposition-witness conditional expectation table is incorrect")
+    if finite_conditional_variance(atoms, variable_values, conditional_table, partition) != conditional_variance_table:
+        fail("conditional-variance-decomposition-witness conditional variance table is incorrect")
+    mean = require_fraction("variance decomposition source_expectation", values.get("source_expectation"))
+    second_moment = require_fraction("variance decomposition second_moment", values.get("second_moment"))
+    total_variance = require_fraction("variance decomposition total_variance", values.get("total_variance"))
+    expected_conditional_variance = require_fraction(
+        "variance decomposition expected_conditional_variance",
+        values.get("expected_conditional_variance"),
+    )
+    conditional_mean_variance = require_fraction(
+        "variance decomposition conditional_mean_variance",
+        values.get("conditional_mean_variance"),
+    )
+    squared_values = {atom_id: value * value for atom_id, value in variable_values.items()}
+    if finite_expected_value(atoms, variable_values) != mean:
+        fail("conditional-variance-decomposition-witness mean is incorrect")
+    if finite_expected_value(atoms, squared_values) != second_moment:
+        fail("conditional-variance-decomposition-witness second moment is incorrect")
+    if finite_variance(atoms, variable_values, mean) != total_variance:
+        fail("conditional-variance-decomposition-witness total variance is incorrect")
+    if finite_expected_value(atoms, conditional_variance_table) != expected_conditional_variance:
+        fail("conditional-variance-decomposition-witness expected conditional variance is incorrect")
+    if finite_variance(atoms, conditional_table, mean) != conditional_mean_variance:
+        fail("conditional-variance-decomposition-witness conditional mean variance is incorrect")
+    if total_variance != expected_conditional_variance + conditional_mean_variance:
+        fail("conditional-variance-decomposition-witness decomposition does not balance")
 
     bad = checks["bad-conditional-expectation-rejected"]
     if bad["expected_result"] != "unsat":
@@ -20767,6 +20832,83 @@ def validate_finite_conditional_expectation(expected: dict[str, Any]) -> None:
     require_string("bad tower property farkas_regression", regression)
     if "finite_conditional_expectation_bad_tower_property_artifact_emits_checked_farkas" not in regression:
         fail("bad-tower-property-rejected must link the Farkas regression")
+
+    bad_variance = checks["bad-variance-decomposition-rejected"]
+    if bad_variance["expected_result"] != "unsat":
+        fail("bad-variance-decomposition-rejected must expect unsat")
+    if bad_variance["proof_status"] != "checked":
+        fail("bad-variance-decomposition-rejected must be checked")
+    if bad_variance["validation"] != "finite_bad_variance_decomposition_refutation":
+        fail("bad-variance-decomposition-rejected must use finite_bad_variance_decomposition_refutation validation")
+    data = bad_variance.get("data", {})
+    if data.get("source_witness") != "four-atom-partition-conditional-expectation":
+        fail("bad-variance-decomposition-rejected must cite the source conditional-expectation witness")
+    atoms = require_probability_atoms("bad variance decomposition atoms", data.get("atoms"), require_events=False)
+    require_normalized_atoms("bad-variance-decomposition-rejected", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    variable_values = require_atom_value_table(
+        "bad variance decomposition random_variable_values",
+        data.get("random_variable_values"),
+        atom_ids,
+    )
+    partition = require_atom_partition("bad variance decomposition partition", data.get("partition"), atom_ids)
+    conditional_table = require_atom_value_table(
+        "bad variance decomposition conditional_expectation",
+        data.get("conditional_expectation"),
+        atom_ids,
+    )
+    conditional_variance_table = require_atom_value_table(
+        "bad variance decomposition conditional_variance",
+        data.get("conditional_variance"),
+        atom_ids,
+    )
+    if finite_conditional_expectation(atoms, variable_values, partition) != conditional_table:
+        fail("bad-variance-decomposition-rejected conditional expectation table is incorrect")
+    if finite_conditional_variance(atoms, variable_values, conditional_table, partition) != conditional_variance_table:
+        fail("bad-variance-decomposition-rejected conditional variance table is incorrect")
+    mean = require_fraction("bad variance decomposition mean", data.get("mean"))
+    second_moment = require_fraction("bad variance decomposition second_moment", data.get("second_moment"))
+    total_variance = require_fraction("bad variance decomposition total_variance", data.get("total_variance"))
+    expected_conditional_variance = require_fraction(
+        "bad variance decomposition expected_conditional_variance",
+        data.get("expected_conditional_variance"),
+    )
+    conditional_mean_variance = require_fraction(
+        "bad variance decomposition conditional_mean_variance",
+        data.get("conditional_mean_variance"),
+    )
+    claimed_total_variance = require_fraction(
+        "bad variance decomposition claimed_total_variance",
+        data.get("claimed_total_variance"),
+    )
+    squared_values = {atom_id: value * value for atom_id, value in variable_values.items()}
+    if finite_expected_value(atoms, variable_values) != mean:
+        fail("bad-variance-decomposition-rejected mean is incorrect")
+    if finite_expected_value(atoms, squared_values) != second_moment:
+        fail("bad-variance-decomposition-rejected second_moment is incorrect")
+    if finite_variance(atoms, variable_values, mean) != total_variance:
+        fail("bad-variance-decomposition-rejected total_variance is incorrect")
+    if finite_expected_value(atoms, conditional_variance_table) != expected_conditional_variance:
+        fail("bad-variance-decomposition-rejected expected_conditional_variance is incorrect")
+    if finite_variance(atoms, conditional_table, mean) != conditional_mean_variance:
+        fail("bad-variance-decomposition-rejected conditional_mean_variance is incorrect")
+    if total_variance != expected_conditional_variance + conditional_mean_variance:
+        fail("bad-variance-decomposition-rejected decomposition does not balance")
+    if claimed_total_variance == total_variance:
+        fail("bad-variance-decomposition-rejected must document a false total variance")
+    farkas_claim = data.get("farkas_claim")
+    require_string("bad variance decomposition farkas_claim", farkas_claim)
+    if farkas_claim != "total_variance = 9":
+        fail("bad-variance-decomposition-rejected must document the Farkas claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad variance decomposition smt2_artifact", smt2_artifact)
+    check_source("bad variance decomposition smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad variance decomposition farkas_regression", regression)
+    if "finite_conditional_expectation_bad_variance_decomposition_artifact_emits_checked_farkas" not in regression:
+        fail("bad-variance-decomposition-rejected must link the Farkas regression")
+    if "UnsatFarkas" not in bad_variance.get("notes", ""):
+        fail("bad-variance-decomposition-rejected notes must document checked Farkas evidence")
 
     horizon = checks["general-conditional-expectation-lean-horizon"]
     if horizon["expected_result"] != "not-run":

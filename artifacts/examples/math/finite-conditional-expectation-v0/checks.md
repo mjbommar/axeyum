@@ -34,6 +34,14 @@ Expected result: `sat`.
 The validator checks that the fine partition refines the coarse partition and
 then verifies `E[E[X | G] | H] = E[X | H]` for the listed nested partitions.
 
+## `conditional-variance-decomposition-witness`
+
+Expected result: `sat`.
+
+The validator recomputes `E[X]`, `E[X^2]`, `Var(X)`, blockwise
+`Var(X | G)`, `E[Var(X | G)]`, and `Var(E[X | G])` exactly, then checks the
+finite decomposition `Var(X) = E[Var(X | G)] + Var(E[X | G])`.
+
 ## `bad-conditional-expectation-rejected`
 
 Expected result: `unsat`.
@@ -57,6 +65,21 @@ nested-partition replay computes `E[E[X|G]|H] = 7/2` on the coarse block, not
 The source-linked Axeyum regression checks the final scalar tower contradiction
 as `QF_LRA`: `tower_value = 7/2` and `tower_value = 4`, requiring rechecked
 `UnsatFarkas` evidence.
+
+## `bad-variance-decomposition-rejected`
+
+Expected result: `unsat`.
+
+The validator rejects the claimed variance-decomposition row because exact
+finite replay computes `Var(X) = 35/4`, `E[Var(X | G)] = 5/2`, and
+`Var(E[X | G]) = 25/4`, not total variance `9`.
+
+The source-linked Axeyum regression checks the final scalar decomposition
+contradiction as `QF_LRA`: `total_variance = 35/4`,
+`expected_conditional_variance = 5/2`,
+`conditional_mean_variance = 25/4`,
+`total_variance = expected_conditional_variance + conditional_mean_variance`,
+and `total_variance = 9`, requiring rechecked `UnsatFarkas` evidence.
 
 ## `general-conditional-expectation-lean-horizon`
 

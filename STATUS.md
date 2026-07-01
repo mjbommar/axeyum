@@ -205,6 +205,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite conditional-variance decomposition row landed.**
+  `finite-conditional-expectation-v0` now replays the finite law of total
+  variance for the four-atom conditioning table:
+  `Var(X)=35/4`, `E[Var(X|G)]=5/2`, and `Var(E[X|G])=25/4`. The malformed row
+  claims total variance `9` and is source-linked to a QF_LRA/Farkas SMT-LIB
+  artifact plus the shared `math_resource_lra_routes` regression. This adds a
+  distinct conditional-moment proof shape without claiming Radon-Nikodym,
+  regular conditional probabilities, martingale convergence, or
+  measure-theoretic conditional expectation.
+
 - **Grant allocation rules/law pack landed.**
   `grant-allocation-v0` adds the fifth rules-as-code pack, reusing exact
   rational allocation shares, budget balance, minimum-share floors,

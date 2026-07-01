@@ -29,7 +29,17 @@
           "d": "6"
         },
         "source_expectation": "7/2",
-        "conditional_expectation_expectation": "7/2"
+        "conditional_expectation_expectation": "7/2",
+        "second_moment": "21",
+        "total_variance": "35/4",
+        "conditional_variance": {
+          "a": "1",
+          "b": "1",
+          "c": "4",
+          "d": "4"
+        },
+        "expected_conditional_variance": "5/2",
+        "conditional_mean_variance": "25/4"
       }
     },
     {
@@ -144,6 +154,15 @@
       "notes": "The validator checks partition refinement and recomputes both sides of the finite tower identity."
     },
     {
+      "id": "conditional-variance-decomposition-witness",
+      "claim": "For the two-block partition, Var(X) = E[Var(X|G)] + Var(E[X|G]) = 35/4.",
+      "expected_result": "sat",
+      "validation": "finite_conditional_variance_decomposition_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["four-atom-partition-conditional-expectation"],
+      "notes": "The validator recomputes E[X], E[X^2], Var(X), the blockwise conditional variances, E[Var(X|G)], and Var(E[X|G]) with exact rationals."
+    },
+    {
       "id": "bad-conditional-expectation-rejected",
       "claim": "The high block conditional expectation is 5.",
       "expected_result": "unsat",
@@ -243,6 +262,54 @@
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_tower_property_artifact_emits_checked_farkas"
       },
       "notes": "The validator rejects the claim because exact nested-partition replay computes E[E[X|G]|H] = 7/2 on the coarse block, not 4; the Axeyum regression refutes tower_value = 7/2 together with tower_value = 4 using rechecked Farkas evidence."
+    },
+    {
+      "id": "bad-variance-decomposition-rejected",
+      "claim": "The variance decomposition total is 9.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_variance_decomposition_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "four-atom-partition-conditional-expectation",
+        "atoms": [
+          {"id": "a", "probability": "1/4"},
+          {"id": "b", "probability": "1/4"},
+          {"id": "c", "probability": "1/4"},
+          {"id": "d", "probability": "1/4"}
+        ],
+        "random_variable_values": {
+          "a": "0",
+          "b": "2",
+          "c": "4",
+          "d": "8"
+        },
+        "partition": [
+          {"id": "low", "atoms": ["a", "b"]},
+          {"id": "high", "atoms": ["c", "d"]}
+        ],
+        "conditional_expectation": {
+          "a": "1",
+          "b": "1",
+          "c": "6",
+          "d": "6"
+        },
+        "conditional_variance": {
+          "a": "1",
+          "b": "1",
+          "c": "4",
+          "d": "4"
+        },
+        "mean": "7/2",
+        "second_moment": "21",
+        "total_variance": "35/4",
+        "expected_conditional_variance": "5/2",
+        "conditional_mean_variance": "25/4",
+        "claimed_total_variance": "9",
+        "farkas_claim": "total_variance = 9",
+        "smt2_artifact": "artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-variance-decomposition-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_variance_decomposition_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator recomputes Var(X)=35/4, E[Var(X|G)]=5/2, and Var(E[X|G])=25/4; the source artifact checks that the malformed total variance 9 violates the exact finite decomposition using rechecked UnsatFarkas evidence."
     },
     {
       "id": "general-conditional-expectation-lean-horizon",

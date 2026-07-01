@@ -7968,7 +7968,7 @@
           "id": "finite-conditional-expectation-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-conditional-expectation-v0",
-          "notes": "Finite partition, conditional mean, and bad high-block, total-expectation, and tower-property rows."
+          "notes": "Finite partition, conditional mean, conditional variance, and bad high-block, total-expectation, tower-property, and variance-decomposition rows."
         },
         {
           "id": "finite-martingales-v0",

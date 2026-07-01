@@ -1143,9 +1143,10 @@ Pick one row per commit unless the change is purely navigational.
      `E[X]=7/2` and `E[E[X|G]]=7/2`, while the malformed source SMT-LIB
      artifact claims `E[E[X|G]]=4` under the law-of-total-expectation
      equality; the shared QF_LRA/Farkas route now checks bad high-block,
-     total-expectation, and tower-property contradictions without claiming
-     Radon-Nikodym construction, regular conditional probabilities, optional
-     stopping, or general measure-theoretic conditional expectation.
+     total-expectation, tower-property, and variance-decomposition
+     contradictions without claiming Radon-Nikodym construction, regular
+     conditional probabilities, optional stopping, or general
+     measure-theoretic conditional expectation.
 132. Landed: extend `random-matrix-finite-v0` with a checked bad
      expected-rank row. Exact rational row-reduction replay computes rank
      probabilities `P(rank=0)=P(rank=1)=P(rank=2)=1/3` and `E[rank]=1`,
@@ -1404,6 +1405,15 @@ Pick one row per commit unless the change is purely navigational.
      and tensor products to copyable concept, pack, and checked-row queries
      while keeping arbitrary algebraic theorems and universal properties in the
      Lean-horizon lane.
+165. Landed: extend `finite-conditional-expectation-v0` with a checked bad
+     variance-decomposition row. Exact finite replay computes
+     `Var(X)=35/4`, `E[Var(X|G)]=5/2`, and `Var(E[X|G])=25/4` for the four-atom
+     conditioning partition, while the malformed source SMT-LIB artifact
+     claims total variance `9`; the shared QF_LRA/Farkas route now checks bad
+     high-block, total-expectation, tower-property, and variance-decomposition
+     conflicts without claiming Radon-Nikodym construction, regular
+     conditional probabilities, martingale convergence, or general
+     measure-theoretic conditional expectation.
 
 ## Validation Checklist
 

@@ -1,8 +1,8 @@
 # End To End: Finite Conditional Expectation
 
 This lesson follows one finite conditional-expectation resource from atom
-probabilities to block averages, total expectation, and tower-property replay.
-It uses
+probabilities to block averages, total expectation, tower-property replay, and
+conditional variance decomposition. It uses
 [finite-conditional-expectation-v0](../../../artifacts/examples/math/finite-conditional-expectation-v0/).
 
 Concept rows:
@@ -24,6 +24,8 @@ Concept rows:
 | `tower-property-witness` | `sat` | replay-only |
 | `bad-conditional-expectation-rejected` | `unsat` | checked |
 | `bad-tower-property-rejected` | `unsat` | checked |
+| `conditional-variance-decomposition-witness` | `sat` | replay-only |
+| `bad-variance-decomposition-rejected` | `unsat` | checked |
 | `general-conditional-expectation-lean-horizon` | `not-run` | lean-horizon |
 
 Every checked row is exact finite rational arithmetic over normalized atom
@@ -257,6 +259,72 @@ tower_value = 4
 
 That `unsat` result must also carry checked `Evidence::UnsatFarkas`.
 
+## Replay Conditional Variance Decomposition
+
+The same finite table also checks a conditional-moment identity:
+
+```text
+E[X]   = 7/2
+E[X^2] = 21
+Var(X) = 21 - (7/2)^2 = 35/4
+```
+
+Within each conditioning block:
+
+```text
+Var(X | {a,b}) = ((0-1)^2 + (2-1)^2) / 2 = 1
+Var(X | {c,d}) = ((4-6)^2 + (8-6)^2) / 2 = 4
+```
+
+So:
+
+```text
+E[Var(X | G)] = (1/2)*1 + (1/2)*4 = 5/2
+Var(E[X | G]) = 25/4
+Var(X) = E[Var(X | G)] + Var(E[X | G])
+       = 5/2 + 25/4
+       = 35/4
+```
+
+## Reject A False Variance Decomposition
+
+The negative variance row keeps the same atom table, random variable,
+partition, conditional-expectation table, and conditional-variance table, but
+claims:
+
+```text
+claimed Var(X) = 9
+```
+
+The checker recomputes:
+
+```text
+Var(X)             = 35/4
+E[Var(X | G)]      = 5/2
+Var(E[X | G])      = 25/4
+5/2 + 25/4         = 35/4
+```
+
+and rejects the claim because:
+
+```text
+35/4 != 9
+```
+
+The source artifact is
+[`bad-variance-decomposition-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-variance-decomposition-farkas-conflict.smt2).
+It checks the final scalar contradiction as `QF_LRA`:
+
+```text
+total_variance = 35/4
+expected_conditional_variance = 5/2
+conditional_mean_variance = 25/4
+total_variance = expected_conditional_variance + conditional_mean_variance
+total_variance = 9
+```
+
+That `unsat` result must carry checked `Evidence::UnsatFarkas`.
+
 ## Name The Lean Horizon
 
 The finite pack checks:
@@ -267,9 +335,11 @@ finite conditioning partitions
 blockwise weighted averages
 law of total expectation
 nested-partition tower property
+conditional variance decomposition
 bad conditional-expectation-table refutations
 bad total-expectation refutations
 bad tower-property refutations
+bad variance-decomposition refutations
 ```
 
 The following remain proof-assistant targets:
@@ -291,7 +361,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-conditional-expectation-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_total_expectation_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_variance_decomposition_artifact_emits_checked_farkas
 ```
 
 Expected output:
@@ -310,13 +380,13 @@ pattern:
 
 ```text
 untrusted fast search -> partition, conditional-expectation, tower, or counterexample row
-trusted small checking -> exact finite partitions, rational block averages, and Farkas certificates for linear refutations
+trusted small checking -> exact finite partitions, rational block averages, conditional moments, and Farkas certificates for linear refutations
 remaining horizon -> general conditional-expectation theory
 ```
 
 The graduation target is to encode finite conditioning sigma-algebras as
 partitions of probability atoms, replay finite conditional expectations, total
-expectation, and tower-property witnesses by exact rational model evaluation,
-and emit checked QF_LRA/Farkas evidence for rejected conditional-expectation,
-total-expectation, or tower-property tables when the final contradiction is
-linear.
+expectation, tower-property, and conditional-variance witnesses by exact
+rational model evaluation, and emit checked QF_LRA/Farkas evidence for
+rejected conditional-expectation, total-expectation, tower-property, or
+variance-decomposition tables when the final contradiction is linear.

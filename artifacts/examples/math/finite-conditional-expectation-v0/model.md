@@ -78,6 +78,34 @@ high_block_expectation = 5
 
 The pack keeps this contradiction on the checked `UnsatFarkas` route.
 
+## Conditional Variance Decomposition
+
+The checker also recomputes the finite law of total variance:
+
+```text
+E[X] = 7/2
+E[X^2] = 21
+Var(X) = 21 - (7/2)^2 = 35/4
+Var(X | low) = 1
+Var(X | high) = 4
+E[Var(X | partition)] = (1/2)*1 + (1/2)*4 = 5/2
+Var(E[X | partition]) = 25/4
+35/4 = 5/2 + 25/4
+```
+
+The false variance-decomposition row keeps the same finite table but asserts
+`Var(X) = 9`. The checked linear contradiction is:
+
+```text
+total_variance = 35/4
+expected_conditional_variance = 5/2
+conditional_mean_variance = 25/4
+total_variance = expected_conditional_variance + conditional_mean_variance
+total_variance = 9
+```
+
+The pack keeps this contradiction on the checked `UnsatFarkas` route.
+
 ## Bad Tower Claim
 
 The false tower-property claim says the coarse-block value of

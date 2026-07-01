@@ -6118,7 +6118,7 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "finite-conditional-expectation-v0",
-                "Finite partition, conditional mean, and bad high-block, total-expectation, and tower-property rows.",
+                "Finite partition, conditional mean, conditional variance, and bad high-block, total-expectation, tower-property, and variance-decomposition rows.",
             ),
             (
                 "finite-martingales-v0",

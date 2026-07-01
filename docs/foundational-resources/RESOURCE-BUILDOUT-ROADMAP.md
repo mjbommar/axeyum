@@ -1337,16 +1337,20 @@ Pick one item per commit unless the change is purely navigational.
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_tail_bound_emits_checked_farkas`.
 26. Landed: promote `finite-conditional-expectation-v0` through source-linked
     QF_LRA/Farkas regressions for `bad-conditional-expectation-rejected`,
-    `bad-total-expectation-rejected`, and `bad-tower-property-rejected`. The
+    `bad-total-expectation-rejected`, `bad-tower-property-rejected`, and
+    `bad-variance-decomposition-rejected`. The
     artifacts are
     `artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-conditional-expectation-farkas-conflict.smt2`,
     `artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-total-expectation-farkas-conflict.smt2`,
     and
-    `artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-tower-property-farkas-conflict.smt2`;
+    `artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-tower-property-farkas-conflict.smt2`,
+    plus
+    `artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-variance-decomposition-farkas-conflict.smt2`;
     they are checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_table_emits_checked_farkas`,
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_total_expectation_artifact_emits_checked_farkas`, and
-    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_tower_property_artifact_emits_checked_farkas`.
+    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_tower_property_artifact_emits_checked_farkas`, and
+    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_variance_decomposition_artifact_emits_checked_farkas`.
 27. Landed: promote `finite-hitting-times-v0` through source-linked
     QF_LRA/Farkas regressions for `bad-survival-mass-rejected` and
     `bad-expected-time-rejected`. The artifacts

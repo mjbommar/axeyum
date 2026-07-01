@@ -335,7 +335,7 @@ First targets:
   bad-delta and bad open-ball preimage rows)
 - [finite-conditional-expectation-v0](../../artifacts/examples/math/finite-conditional-expectation-v0/)
   (source-linked solver-reuse promotions landed for the bad high-block,
-  total-expectation, and tower-property tables)
+  total-expectation, tower-property, and variance-decomposition tables)
 - [finite-stochastic-kernels-v0](../../artifacts/examples/math/finite-stochastic-kernels-v0/)
   (resource-backed Farkas regressions landed for the bad kernel-row
   normalization conflict and bad composed-entry conflict)
