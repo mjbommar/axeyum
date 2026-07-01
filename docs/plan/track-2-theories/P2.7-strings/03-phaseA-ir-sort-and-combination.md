@@ -23,6 +23,33 @@
 
 | exit | a String/Seq sort exists; bounded ops re-expressed over it with identical verdicts; round-trips SMT-LIB |
 
+#### Blast radius + slicing strategy (scoped 2026-07-01)
+
+Adding a variant to `axeyum_ir::Sort` (`crates/axeyum-ir/src/sort.rs:121`) is a
+**workspace-wide** change: **~138 files** reference `Sort::*` variants, and every
+**exhaustive** `match` on `Sort` becomes a compile error the moment the variant is
+added. So A.1 must be sliced to keep each commit compiling:
+
+1. **Slice A.1a — the bare variant + total order.** Add `Sort::Seq(Box<Sort>)`
+   (and `Sort::String = Seq(Unicode-BV)` or a distinct `Unicode` element sort), the
+   `ArraySortKey` mirror, `Ord`/`Hash`/display, and the interner support. Then sweep
+   every broken exhaustive `match` and add a `Sort::Seq(_) => …` arm that **declines
+   cleanly** (`IrError::Unsupported`, `Unknown`, or the natural "not this fragment"
+   path) in every crate that does not yet handle sequences (bv, fp, cnf, aig, most
+   of solver, evm, verify). This commit **adds no capability** — it just keeps the
+   build green with the sort present. Gate: full workspace `cargo build` + `test`.
+   *Tip:* grep the compiler errors, not the 138 files — only exhaustive matches
+   break; many uses are constructors or `matches!` that don't.
+2. **Slice A.1b — eval + a couple of constructors.** Ground-evaluator arms for
+   `seq.unit`/`seq.empty`/`str.++`/`str.len` over the new sort (so models replay),
+   behind the existing bounded encoder as the decision path for now.
+3. **Slice A.1c — SMT-LIB read/write** round-trip for the sort + core ops.
+4. **A.2** (`len`↔LIA Nelson–Oppen) and the ADR follow once the sort is load-bearing.
+
+Do **not** attempt A.1a–c in one commit: the value is a green workspace at each
+step. The `axeyum-strings` crate boundary is deferred to when the word-level solver
+(Phase B) actually needs it — A.1 lives in `axeyum-ir` + the bounded encoder.
+
 ## Task A.2 — `len`-term extraction + Nelson-Oppen link to LIA
 
 - Treat `len(x)` as a shared integer term between the (future) string solver and
