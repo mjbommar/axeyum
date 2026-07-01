@@ -125,6 +125,12 @@ class GrantAllocationFacts:
     admin_share: Fraction
 
 
+@dataclass(frozen=True)
+class CategoryEquivalenceFacts:
+    applicant_category: str
+    program: str
+
+
 def benefit_facts_from_json(context: str, value: Any) -> BenefitFacts:
     if not isinstance(value, dict):
         fail(f"{context} must be an object")
@@ -218,6 +224,20 @@ def grant_allocation_facts_from_json(context: str, value: Any) -> GrantAllocatio
         shelter_share=require_rational(f"{context}.shelter_share", value["shelter_share"]),
         clinic_share=require_rational(f"{context}.clinic_share", value["clinic_share"]),
         admin_share=require_rational(f"{context}.admin_share", value["admin_share"]),
+    )
+
+
+def category_equivalence_facts_from_json(
+    context: str, value: Any
+) -> CategoryEquivalenceFacts:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    require_keys(context, value, {"applicant_category", "program"})
+    return CategoryEquivalenceFacts(
+        applicant_category=require_string(
+            f"{context}.applicant_category", value["applicant_category"]
+        ),
+        program=require_string(f"{context}.program", value["program"]),
     )
 
 
@@ -317,6 +337,29 @@ def grant_allocation_compliant(
     )
 
 
+def category_canonical(category: str, params: dict[str, Any]) -> str:
+    for left, right in params["equivalence_pairs"]:
+        if category in {left, right}:
+            return f"equiv:{left}:{right}"
+    return f"atom:{category}"
+
+
+def category_priority_review(
+    facts: CategoryEquivalenceFacts, params: dict[str, Any]
+) -> bool:
+    categories = set(params["categories"])
+    programs = set(params["programs"])
+    if facts.applicant_category not in categories:
+        fail(f"unknown applicant_category: {facts.applicant_category}")
+    if facts.program not in programs:
+        fail(f"unknown program: {facts.program}")
+    local_canonical = category_canonical(params["equivalence_pairs"][0][0], params)
+    return (
+        category_canonical(facts.applicant_category, params) == local_canonical
+        and facts.program == params["priority_program"]
+    )
+
+
 def validate_metadata(pack_dir: Path, metadata: dict[str, Any]) -> None:
     require_keys(
         "metadata",
@@ -385,6 +428,8 @@ def validate_expected(pack_dir: Path, metadata: dict[str, Any], expected: dict[s
         witness_ids = validate_procurement_expected(expected, citations)
     elif pack_id == "grant_allocation_v0":
         witness_ids = validate_grant_allocation_expected(expected, citations)
+    elif pack_id == "category_equivalence_v0":
+        witness_ids = validate_category_equivalence_expected(expected, citations)
     else:
         fail(f"unsupported rules-as-code pack id {pack_id}")
 
@@ -409,6 +454,8 @@ def validate_expected(pack_dir: Path, metadata: dict[str, Any], expected: dict[s
                 fail(f"{check_id} references unknown witness {witness_id}")
         if check["proof_status"] == "checked":
             validate_solver_fixture(pack_dir, check)
+        if check["validation"] == "qf_uf_alethe_gap":
+            validate_qf_uf_gap_fixture(pack_dir, check)
 
 
 def validate_benefit_expected(expected: dict[str, Any], citations: set[str]) -> set[str]:
@@ -638,6 +685,62 @@ def validate_grant_allocation_expected(
     return witness_ids
 
 
+def validate_category_equivalence_expected(
+    expected: dict[str, Any], citations: set[str]
+) -> set[str]:
+    params = expected["parameters"]
+    require_keys(
+        "parameters",
+        params,
+        {"categories", "programs", "equivalence_pairs", "priority_program"},
+    )
+    categories = params["categories"]
+    programs = params["programs"]
+    if categories != ["resident", "in_state", "nonresident"]:
+        fail("category equivalence parameters.categories must be the fixed v0 list")
+    if programs != ["emergency_housing", "standard_benefit"]:
+        fail("category equivalence parameters.programs must be the fixed v0 list")
+    if params["priority_program"] not in programs:
+        fail("category equivalence priority_program must be in parameters.programs")
+    pairs = params["equivalence_pairs"]
+    if pairs != [["resident", "in_state"]]:
+        fail("category equivalence parameters.equivalence_pairs must be fixed v0 pairs")
+
+    witness_ids: set[str] = set()
+    for index, witness in enumerate(expected["witnesses"]):
+        require_keys(
+            f"witnesses[{index}]",
+            witness,
+            {
+                "id",
+                "facts",
+                "expected_priority_review",
+                "source_citations",
+                "explanation",
+            },
+        )
+        witness_id = witness["id"]
+        if witness_id in witness_ids:
+            fail(f"duplicate witness id {witness_id}")
+        witness_ids.add(witness_id)
+        expected_priority = require_bool(
+            f"{witness_id}.expected_priority_review",
+            witness["expected_priority_review"],
+        )
+        facts = category_equivalence_facts_from_json(
+            f"{witness_id}.facts", witness["facts"]
+        )
+        actual = category_priority_review(facts, params)
+        if actual != expected_priority:
+            fail(
+                f"{witness_id} replay mismatch: expected {expected_priority}, got {actual}"
+            )
+        validate_citations(witness_id, witness["source_citations"], citations)
+
+    validate_category_equivalence_finite_sample(expected["sample_domain"], params)
+    return witness_ids
+
+
 def validate_citations(context: str, labels: Any, citations: set[str]) -> None:
     if not isinstance(labels, list):
         fail(f"{context}.source_citations must be a list")
@@ -673,6 +776,32 @@ def validate_solver_fixture(pack_dir: Path, check: dict[str, Any]) -> None:
     certificate = require_string(f"{check_id}.data.certificate", data.get("certificate"))
     if "certified evidence" not in certificate or "Evidence::check" not in certificate:
         fail(f"{check_id}.data.certificate must document checked evidence")
+
+
+def validate_qf_uf_gap_fixture(pack_dir: Path, check: dict[str, Any]) -> None:
+    check_id = check["id"]
+    if check["expected_result"] != "unsat":
+        fail(f"{check_id} QF_UF/Alethe gap must be an unsat obligation")
+    if check["proof_status"] != "proof-gap":
+        fail(f"{check_id} qf_uf_alethe_gap must remain proof-gap until checked")
+    proof_gap = require_string(f"{check_id}.proof_gap", check.get("proof_gap"))
+    if "QF_UF" not in proof_gap and "Alethe" not in proof_gap:
+        fail(f"{check_id}.proof_gap must name the QF_UF/Alethe route")
+    data = check.get("data")
+    if not isinstance(data, dict):
+        fail(f"{check_id} QF_UF/Alethe gap must include data")
+    artifact = check_repo_path(f"{check_id}.data.smt2_artifact", data.get("smt2_artifact"))
+    artifact_path = ROOT / artifact
+    if pack_dir not in artifact_path.parents:
+        fail(f"{check_id}.data.smt2_artifact must live under the rule pack")
+    intended = require_string(
+        f"{check_id}.data.intended_regression", data.get("intended_regression")
+    )
+    if "rules_as_code_examples" not in intended:
+        fail(f"{check_id}.data.intended_regression must name rules_as_code_examples")
+    certificate = require_string(f"{check_id}.data.certificate", data.get("certificate"))
+    if "prove_qf_uf_unsat_alethe" not in certificate or "Evidence::check" not in certificate:
+        fail(f"{check_id}.data.certificate must name the future checked route")
 
 
 def validate_benefit_finite_sample(sample_domain: dict[str, Any], params: dict[str, Any]) -> None:
@@ -917,6 +1046,49 @@ def validate_grant_allocation_finite_sample(
         fail("grant allocation sample must contain compliant and noncompliant rows")
 
 
+def validate_category_equivalence_finite_sample(
+    sample_domain: dict[str, Any], params: dict[str, Any]
+) -> None:
+    require_keys("sample_domain", sample_domain, {"categories", "programs"})
+    categories = sample_domain["categories"]
+    programs = sample_domain["programs"]
+    if categories != params["categories"]:
+        fail("category equivalence sample_domain.categories must match parameters")
+    if programs != params["programs"]:
+        fail("category equivalence sample_domain.programs must match parameters")
+
+    checked = 0
+    priority_count = 0
+    nonpriority_count = 0
+    for category in categories:
+        for program in programs:
+            facts = CategoryEquivalenceFacts(category, program)
+            priority = category_priority_review(facts, params)
+            if priority:
+                priority_count += 1
+            else:
+                nonpriority_count += 1
+            checked += 1
+
+    for left, right in params["equivalence_pairs"]:
+        if left not in categories or right not in categories:
+            fail("category equivalence pair must reference known categories")
+        for program in programs:
+            left_priority = category_priority_review(
+                CategoryEquivalenceFacts(left, program), params
+            )
+            right_priority = category_priority_review(
+                CategoryEquivalenceFacts(right, program), params
+            )
+            if left_priority != right_priority:
+                fail(f"category equivalence failed for {left}, {right}, {program}")
+
+    if checked == 0:
+        fail("category equivalence finite sample was empty")
+    if priority_count == 0 or nonpriority_count == 0:
+        fail("category equivalence sample must contain priority and nonpriority rows")
+
+
 def validate_generated_queries(
     pack_dir: Path, metadata: dict[str, Any], expected: dict[str, Any]
 ) -> None:
@@ -960,6 +1132,8 @@ def validate_generated_queries(
         validate_procurement_generated_queries(expected, families)
     elif pack_id == "grant_allocation_v0":
         validate_grant_allocation_generated_queries(expected, families)
+    elif pack_id == "category_equivalence_v0":
+        validate_category_equivalence_generated_queries(expected, families)
     else:
         fail(f"unsupported generated query pack id {pack_id}")
 
@@ -1471,6 +1645,85 @@ def validate_grant_allocation_generated_queries(
             facts.admin_share <= require_rational("parameters.admin_cap", params["admin_cap"])
         ):
             fail(f"generated grant balanced row {index} has wrong admin cap flag")
+
+
+def validate_category_equivalence_generated_queries(
+    expected: dict[str, Any], families: dict[str, dict[str, Any]]
+) -> None:
+    require_exact_families(
+        "category equivalence",
+        families,
+        {"bounded_category_rows", "equivalence_pair_rows"},
+    )
+    params = expected["parameters"]
+    sample = expected["sample_domain"]
+    categories = sample["categories"]
+    programs = sample["programs"]
+    category_rows = families["bounded_category_rows"]["rows"]
+    expected_rows = len(categories) * len(programs)
+    if len(category_rows) != expected_rows:
+        fail("category equivalence generated row count mismatch")
+    for index, row in enumerate(category_rows):
+        if row["id"] != f"category-row-{index:04d}":
+            fail("category equivalence generated row ids must be sequential")
+        facts = category_equivalence_facts_from_json(
+            f"generated category equivalence {index}.facts",
+            row.get("facts"),
+        )
+        expected_priority = require_bool(
+            f"generated category equivalence {index}.expected_priority_review",
+            row.get("expected_priority_review"),
+        )
+        if category_priority_review(facts, params) != expected_priority:
+            fail(f"generated category equivalence row {index} replay mismatch")
+        canonical = require_string(
+            f"generated category equivalence {index}.canonical_category",
+            row.get("canonical_category"),
+        )
+        if canonical != category_canonical(facts.applicant_category, params):
+            fail(f"generated category equivalence row {index} canonical mismatch")
+
+    pair_rows = families["equivalence_pair_rows"]["rows"]
+    expected_pairs = len(params["equivalence_pairs"]) * len(programs)
+    if len(pair_rows) != expected_pairs:
+        fail("category equivalence pair generated row count mismatch")
+    for index, row in enumerate(pair_rows):
+        if row["id"] != f"equivalence-pair-{index:04d}":
+            fail("category equivalence pair row ids must be sequential")
+        left = category_equivalence_facts_from_json(
+            f"generated category pair {index}.left_facts",
+            row.get("left_facts"),
+        )
+        right = category_equivalence_facts_from_json(
+            f"generated category pair {index}.right_facts",
+            row.get("right_facts"),
+        )
+        if left.program != right.program:
+            fail(f"generated category pair {index} changed program")
+        if [left.applicant_category, right.applicant_category] not in params[
+            "equivalence_pairs"
+        ]:
+            fail(f"generated category pair {index} must use an equivalence pair")
+        left_priority = require_bool(
+            f"generated category pair {index}.left_priority_review",
+            row.get("left_priority_review"),
+        )
+        right_priority = require_bool(
+            f"generated category pair {index}.right_priority_review",
+            row.get("right_priority_review"),
+        )
+        if category_priority_review(left, params) != left_priority:
+            fail(f"generated category pair {index} left replay mismatch")
+        if category_priority_review(right, params) != right_priority:
+            fail(f"generated category pair {index} right replay mismatch")
+        congruent = require_bool(
+            f"generated category pair {index}.congruent_priority_holds",
+            row.get("congruent_priority_holds"),
+        )
+        if congruent != (left_priority == right_priority):
+            fail(f"generated category pair {index} has wrong congruence flag")
+        if not congruent:
+            fail(f"generated category pair {index} violates category congruence")
 
 
 def validate_pack(pack_dir: Path) -> str:

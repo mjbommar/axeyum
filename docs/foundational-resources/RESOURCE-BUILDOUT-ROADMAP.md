@@ -1132,7 +1132,9 @@ shapes, source math packs, Axeyum fragments, proof routes, and the current
 `benefit-eligibility-v0`, `authorization-policy-v0`, and
 `tax-benefit-arithmetic-v0` mappings, plus the
 `procurement-scoring-v0` exclusion/deadline/bid-cap/bonus mapping and the
-`grant-allocation-v0` rational-share/budget/cap mapping.
+`grant-allocation-v0` rational-share/budget/cap mapping, plus the
+`category-equivalence-v0` category-normalization and QF_UF/Alethe proof-gap
+mapping.
 
 Next work:
 
@@ -1142,9 +1144,12 @@ Next work:
   reference patterns for generated multi-row coverage/equivalence and
   threshold/cap/deadline queries. Use `grant-allocation-v0` as the QF_LRA/Farkas
   reference for rational allocation, exact shares, and budget-balance queries.
+  Use `category-equivalence-v0` as the QF_UF/Alethe proof-gap reference for
+  role/category equivalence and quotient-like classification queries.
   Status: the deterministic generated query-row JSON under
   [`../rules-as-code/generated/queries/`](../rules-as-code/generated/queries/)
-  now materializes 1,766 replayed rows from the five current rule packs, and
+  now materializes 1,774 replayed/proof-gap rows from the six current rule
+  packs, and
   the generated
   [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
   exposes the bounded row counts, generated row counts, query artifacts, and
@@ -1220,13 +1225,18 @@ Pick one item per commit unless the change is purely navigational.
    clinic minimum shares, administrative caps, and bounded implementation
    equivalence. The generated query-row JSON now brings the rules/law surface
    to 1,766 replayed rows across five packs.
-14. Landed: add
+14. Landed: add `category-equivalence-v0` as the sixth rules/law pack, with
+   finite category/program replay, generated equivalence-pair rows, and
+   source-linked QF_UF/Alethe proof-gap artifacts for category congruence and
+   implementation equivalence. The generated query-row JSON now brings the
+   rules/law surface to 1,774 replayed/proof-gap rows across six packs.
+15. Landed: add
    [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) plus
    `scripts/query-rules-as-code.py` so downstream consumers can query rule
    packs, checked obligations, generated query families, and bounded generated
    rows without parsing JSON by hand. `just rules-as-code` smoke-checks the
    current procurement queries.
-15. Landed: add
+16. Landed: add
    [`RULES-LAW-PATTERN-MATRIX.md`](RULES-LAW-PATTERN-MATRIX.md) so current
    rules/law patterns map back to math concept rows, proof routes, pack
    checks, generated query families, and copyable query commands before any
@@ -1699,17 +1709,23 @@ Pick one item per commit unless the change is purely navigational.
     reports 1,007 bounded sample rows and 1,766 generated query rows across
     five packs.
 77d. Landed: add
+    [`category-equivalence-v0`](../rules-as-code/examples/category-equivalence-v0/)
+    as a category-normalization rules/law pack that reuses finite equivalence
+    classes, generated equivalence-pair rows, and source-linked QF_UF/Alethe
+    proof-gap artifacts. The generated rules query surface now reports 1,013
+    bounded sample rows and 1,774 generated query rows across six packs.
+77e. Landed: add
     [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) plus
     `scripts/query-rules-as-code.py` as the rules/law consumer query surface,
     with `just rules-as-code` smoke-checking summary counts, procurement pack
     lookup, checked obligations, generated quality-score families, and late
     generated rows.
-77e. Landed: add
+77f. Landed: add
     [`RULES-LAW-PATTERN-MATRIX.md`](RULES-LAW-PATTERN-MATRIX.md) as the
     rules/law pattern matrix, mapping the current predicate, relation,
     threshold, monotonicity, version, precedence, and implementation-equivalence
     patterns back to math concepts, proof routes, and smoke-checked queries.
-77f. Landed: add
+77g. Landed: add
     [`rules-law-trust-boundary.md`](../learn/rules-law-trust-boundary.md) as
     the learner-facing trust-boundary page for reading current rules/law packs
     without treating them as legal advice or solver benchmarks.

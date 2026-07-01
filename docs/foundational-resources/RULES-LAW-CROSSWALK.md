@@ -45,14 +45,14 @@ or Lean horizon until the formal dependency is clear.
 | Rule/Policy Need | Math Resource Pattern | Example Packs | Axeyum Route | First Rule-Pack Use |
 |---|---|---|---|---|
 | Complete fact patterns, eligibility predicates, required conditions | finite predicate logic and Boolean replay | [`finite-predicate-v0`](../../artifacts/examples/math/finite-predicate-v0/), [`logic-basics-v0`](../../artifacts/examples/math/logic-basics-v0/) | Bool/CNF, finite replay, later CNF/LRAT | consistency and coverage in [`benefit-eligibility-v0`](../rules-as-code/examples/benefit-eligibility-v0/) |
-| Membership, roles, jurisdictions, actor/resource relations | finite sets, relations, functions, equivalence classes | [`finite-sets-v0`](../../artifacts/examples/math/finite-sets-v0/), [`relations-functions-v0`](../../artifacts/examples/math/relations-functions-v0/), [`equivalence-classes-v0`](../../artifacts/examples/math/equivalence-classes-v0/) | finite replay, QF_UF/Alethe for functional conflicts | tenant/resource role tables in [`authorization-policy-v0`](../rules-as-code/examples/authorization-policy-v0/) |
+| Membership, roles, jurisdictions, actor/resource relations | finite sets, relations, functions, equivalence classes | [`finite-sets-v0`](../../artifacts/examples/math/finite-sets-v0/), [`relations-functions-v0`](../../artifacts/examples/math/relations-functions-v0/), [`equivalence-classes-v0`](../../artifacts/examples/math/equivalence-classes-v0/) | finite replay, QF_UF/Alethe for functional conflicts | tenant/resource role tables in [`authorization-policy-v0`](../rules-as-code/examples/authorization-policy-v0/) and category normalization in [`category-equivalence-v0`](../rules-as-code/examples/category-equivalence-v0/) |
 | Thresholds, ages, dates, deadlines, counts | integer and rational arithmetic | [`integer-lia-v0`](../../artifacts/examples/math/integer-lia-v0/), [`natural-arithmetic-v0`](../../artifacts/examples/math/natural-arithmetic-v0/), [`rationals-lra-v0`](../../artifacts/examples/math/rationals-lra-v0/) | QF_LIA/Diophantine, arithmetic-DPLL, QF_LRA/Farkas | income threshold, age cutoff, effective date split in [`benefit-eligibility-v0`](../rules-as-code/examples/benefit-eligibility-v0/) and tax phase-out thresholds in [`tax-benefit-arithmetic-v0`](../rules-as-code/examples/tax-benefit-arithmetic-v0/) |
 | Threshold cliffs, caps, deadlines, and monotonicity | optimization and convexity shadows | [`linear-optimization-v0`](../../artifacts/examples/math/linear-optimization-v0/), [`convexity-rational-v0`](../../artifacts/examples/math/convexity-rational-v0/) | QF_LRA/Farkas or QF_LIA for exact-linear impossibility; finite replay for examples | "one dollar above threshold" witnesses, cap checks, and phase-out monotonicity in [`tax-benefit-arithmetic-v0`](../rules-as-code/examples/tax-benefit-arithmetic-v0/), bid-cap/deadline/score monotonicity in [`procurement-scoring-v0`](../rules-as-code/examples/procurement-scoring-v0/), and rational share caps in [`grant-allocation-v0`](../rules-as-code/examples/grant-allocation-v0/) |
 | Rational allocation, exact shares, and LP-style policy caps | rational arithmetic plus finite LP shadows | [`rationals-lra-v0`](../../artifacts/examples/math/rationals-lra-v0/), [`linear-optimization-v0`](../../artifacts/examples/math/linear-optimization-v0/), [`finite-sdp-v0`](../../artifacts/examples/math/finite-sdp-v0/) | QF_LRA/Farkas for universal linear impossibility; finite rational replay for witnesses | shelter/clinic/admin share constraints and budget balance in [`grant-allocation-v0`](../rules-as-code/examples/grant-allocation-v0/) |
 | Workflow state, dependency chains, delegated authority, forbidden paths | graph reachability and cuts | [`graph-reachability-v0`](../../artifacts/examples/math/graph-reachability-v0/), [`graph-cut-v0`](../../artifacts/examples/math/graph-cut-v0/), [`graph-d-separation-v0`](../../artifacts/examples/math/graph-d-separation-v0/) | Bool/CNF with DRAT/LRAT for small refutations; finite replay for paths | tenant-isolation boundary checks in [`authorization-policy-v0`](../rules-as-code/examples/authorization-policy-v0/) |
 | Precedence, hierarchy, explicit deny, override, classification levels | finite orders and lattices | [`finite-order-lattices-v0`](../../artifacts/examples/math/finite-order-lattices-v0/) | finite relation replay, Bool/CNF for set-family top/precedence conflicts, QF_UF/Alethe for equality conflicts | explicit deny over role/admin permit in [`authorization-policy-v0`](../rules-as-code/examples/authorization-policy-v0/) |
 | Versioned rules and transition points | bounded finite dynamics and arithmetic dates | [`bounded-dynamics-v0`](../../artifacts/examples/math/bounded-dynamics-v0/), [`finite-euler-method-v0`](../../artifacts/examples/math/finite-euler-method-v0/) | finite transition replay, QF_LIA/QF_LRA for bounded transitions | old-threshold versus new-threshold eligibility examples |
-| Implementation equivalence | finite functions and bounded counterexample search | [`function-composition-v0`](../../artifacts/examples/math/function-composition-v0/), [`relations-functions-v0`](../../artifacts/examples/math/relations-functions-v0/) | finite replay, QF_UF/Alethe when function consistency is the issue | logical model versus executable eligibility function |
+| Implementation equivalence | finite functions and bounded counterexample search | [`function-composition-v0`](../../artifacts/examples/math/function-composition-v0/), [`relations-functions-v0`](../../artifacts/examples/math/relations-functions-v0/) | finite replay, QF_UF/Alethe when function consistency is the issue | logical model versus executable eligibility/allocation functions, plus category-map equivalence in [`category-equivalence-v0`](../rules-as-code/examples/category-equivalence-v0/) |
 
 ## Standard Rule Checks
 
@@ -147,6 +147,19 @@ pack exercises the rational-allocation slice of this crosswalk:
 | `admin_cap_respected` | source-linked QF_LRA/Farkas fixture with checked Axeyum evidence | administrative-cap constraints | broaden to cap families with more buckets only when the source model requires them |
 | `implementation_equivalence` | source-linked QF_LRA/Farkas mismatch fixture with checked Axeyum evidence, plus executable witness replay | bounded equivalence over rational domains | broaden to generated mismatch queries over all bounded allocation triples |
 
+## Category Equivalence V0 Mapping
+
+The current
+[`category-equivalence-v0`](../rules-as-code/examples/category-equivalence-v0/)
+pack exercises the category-map and quotient-like classification slice of this
+crosswalk:
+
+| Pack Check | Current Evidence | Crosswalk Pattern | Next Axeyum Upgrade |
+|---|---|---|---|
+| `category_witnesses` | concrete category/program witnesses replay | finite equivalence classes and category normalization | add minimized witness rendering for category-map edge cases if the domain grows |
+| `equivalent_categories_same_priority` | source-linked QF_UF SMT-LIB artifact marked proof-gap | equivalent categories and function congruence | emit and check QF_UF/Alethe evidence through `rules_as_code_examples` |
+| `implementation_equivalence_qf_uf_gap` | source-linked QF_UF SMT-LIB artifact marked proof-gap | model/implementation equivalence for category functions | graduate to checked QF_UF/Alethe once the rules/law harness supports that route |
+
 ## Proof Route Reuse
 
 | Proof Route | Rules/Law Use | Existing Recipe |
@@ -203,7 +216,12 @@ exists.
    administrative caps, finite allocation witnesses, and QF_LRA/Farkas proof
    fixtures. The generated query-row JSON now broadens the bounded share
    domain into allocation replay and balanced-budget rows.
-8. Promote only those rows that have deterministic replay plus a source-linked
+8. Landed: add
+   [`category-equivalence-v0`](../rules-as-code/examples/category-equivalence-v0/),
+   reusing finite equivalence classes, category normalization, generated
+   equivalence-pair rows, and source-linked QF_UF/Alethe proof-gap artifacts
+   for congruence and implementation-equivalence obligations.
+9. Promote only those rows that have deterministic replay plus a source-linked
    regression or proof route.
 
 ## Non-Goals

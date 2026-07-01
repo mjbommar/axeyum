@@ -205,6 +205,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Rules/law category-equivalence pack landed.**
+  `category-equivalence-v0` adds the distinct role/category-equivalence rules
+  shape: finite category/program replay, generated equivalence-pair rows, and
+  source-linked QF_UF/Alethe proof-gap artifacts for category congruence and
+  implementation equivalence. The rules/law JSON layer now reports 6 packs,
+  1,013 bounded sample rows, 1,774 generated query rows, 22 checked
+  obligations, 8 replayed witness rows, and 2 explicit proof-gap rows.
+
 - **Finite order-lattice antisymmetry Alethe row split landed.**
   `finite-order-lattices-v0` now keeps the malformed partial-order rejection
   as exact finite replay and exposes the QF_UF/Alethe proof-object check as the

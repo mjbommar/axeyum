@@ -424,8 +424,14 @@ Pick one item per commit unless the change is purely navigational.
     example, reusing exact shares, budget balance, minimum-share floors,
     administrative caps, finite rational replay, and QF_LRA/Farkas checked
     fixtures through the current JSON boundary.
-16. Add the next rules/law example only if it exercises a distinct current
-    math proof shape or a repeated consumer need.
+16. Landed: add `category-equivalence-v0` as the role/category-equivalence
+    rules/law example, reusing finite equivalence classes, category
+    normalization, generated equivalence-pair rows, and source-linked
+    QF_UF/Alethe proof-gap artifacts through the current JSON boundary.
+17. Add the next rules/law example only if it exercises a distinct current
+    math proof shape or a repeated consumer need, such as checked QF_UF/Alethe
+    evidence for category maps, graph reachability over workflow states, pure
+    Boolean CNF/LRAT coverage certificates, or multi-period allocation.
 
 ## Maintenance Commands
 

@@ -39,13 +39,14 @@ for formalized rule obligations.
 
 ## Current Status
 
-The first five rule packs have landed:
+The first six rule packs have landed:
 
 - [Benefit Eligibility V0](examples/benefit-eligibility-v0/README.md)
 - [Authorization Policy V0](examples/authorization-policy-v0/README.md)
 - [Tax Benefit Arithmetic V0](examples/tax-benefit-arithmetic-v0/README.md)
 - [Procurement Scoring V0](examples/procurement-scoring-v0/README.md)
 - [Grant Allocation V0](examples/grant-allocation-v0/README.md)
+- [Category Equivalence V0](examples/category-equivalence-v0/README.md)
 
 The first metadata schema lives at
 [rules-core.schema.json](../../artifacts/ontology/rules-core.schema.json).
@@ -63,17 +64,21 @@ implementation equivalence now have checked fixtures. Procurement debarment,
 late submission, bid-cap, score-monotonicity, and bounded implementation
 equivalence checks also have checked fixtures. Grant allocation budget-balance,
 minimum-share, administrative-cap, and bounded implementation-equivalence
-checks now have source-linked QF_LRA/Farkas fixtures. They are checked by
+checks now have source-linked QF_LRA/Farkas fixtures. Category equivalence now
+has finite replay plus source-linked QF_UF/Alethe proof-gap artifacts for
+category congruence and implementation-equivalence rows. Checked fixtures are
+checked by
 `cargo test -p axeyum-solver --test rules_as_code_examples`; benefit threshold
 and temporal-transition rows, authorization version-delta rows, tax/benefit
 threshold-cliff and temporal-transition rows, and procurement bonus-threshold
-rows, plus grant allocation edge allocations, remain replayed witnesses.
+rows, plus grant allocation edge allocations and category replay witnesses,
+remain replayed witnesses.
 The generated
-[Rules Query Dashboard](generated/rules-query-dashboard.md) now reads the five
-pack JSON files and exposes 1,007 bounded sample rows plus 1,766 deterministic
+[Rules Query Dashboard](generated/rules-query-dashboard.md) now reads the six
+pack JSON files and exposes 1,013 bounded sample rows plus 1,774 deterministic
 generated query rows for coverage, income monotonicity, version deltas,
 threshold/cap checks, deadlines, bid-cap exclusions, monotonicity, and rational
-allocation rows.
+allocation rows, plus category-equivalence congruence rows.
 
 The cross-resource reuse map is
 [Rules/Law Crosswalk For Foundational Resources](../foundational-resources/RULES-LAW-CROSSWALK.md).
@@ -83,8 +88,9 @@ before adding new rule packs.
 The current pattern matrix is
 [Rules/Law Pattern Matrix](../foundational-resources/RULES-LAW-PATTERN-MATRIX.md).
 It records which finite predicate, role/tenant, threshold, monotonicity,
-version, precedence, rational-allocation, and bounded-equivalence patterns are
-actually covered by the five current packs and which math proof routes they
+version, precedence, rational-allocation, category-equivalence, and
+bounded-equivalence patterns are actually covered by the six current packs and
+which math proof routes they
 reuse.
 
 The learner-facing trust-boundary page is
@@ -300,6 +306,32 @@ Checks:
 This pack exercises exact rational replay, QF_LRA/Farkas evidence, and
 allocation-style policy checks.
 
+## Sixth Example Pack: Category Equivalence
+
+Status: landed as
+[Category Equivalence V0](examples/category-equivalence-v0/README.md), with
+finite category/program replay plus source-linked QF_UF/Alethe proof-gap
+artifacts for equivalent-category congruence and implementation equivalence.
+
+Model a tiny category-normalization rule:
+
+- applicant category;
+- program;
+- resident and in-state categories treated as equivalent;
+- nonresident category kept separate;
+- priority review only for local categories in emergency housing.
+
+Checks:
+
+- representative category/program witnesses replay over the finite sample;
+- equivalent categories cannot disagree on priority review for the same
+  program once QF_UF/Alethe evidence is connected;
+- implementation equivalence needs the same category-function congruence route.
+
+This pack exercises finite equivalence classes, category normalization,
+function congruence, and the explicit QF_UF/Alethe proof gap for rules/law
+category maps.
+
 ## Validation Checks
 
 Near-term documentation checks:
@@ -310,6 +342,8 @@ just rules-as-code
 python3 scripts/gen-rules-as-code-dashboard.py
 python3 scripts/validate-rules-as-code.py
 python3 scripts/query-rules-as-code.py summary
+python3 scripts/query-rules-as-code.py packs --pack category_equivalence_v0 --require-any
+python3 scripts/query-rules-as-code.py checks --pack category_equivalence_v0 --proof-status proof-gap --require-any
 python3 scripts/query-rules-as-code.py checks --text monotonicity --require-any
 python3 scripts/query-rules-as-code.py families --text adjacent --require-any
 ```

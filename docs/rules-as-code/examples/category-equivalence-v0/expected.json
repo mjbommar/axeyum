@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "pack_id": "category_equivalence_v0",
+  "parameters": {
+    "categories": ["resident", "in_state", "nonresident"],
+    "programs": ["emergency_housing", "standard_benefit"],
+    "equivalence_pairs": [["resident", "in_state"]],
+    "priority_program": "emergency_housing"
+  },
+  "sample_domain": {
+    "categories": ["resident", "in_state", "nonresident"],
+    "programs": ["emergency_housing", "standard_benefit"]
+  },
+  "witnesses": [
+    {
+      "id": "resident_housing_priority",
+      "facts": {
+        "applicant_category": "resident",
+        "program": "emergency_housing"
+      },
+      "expected_priority_review": true,
+      "source_citations": ["Example Rule 6(a)", "Example Rule 6(c)"],
+      "explanation": "A resident applicant is local and the program is the priority program."
+    },
+    {
+      "id": "in_state_housing_priority",
+      "facts": {
+        "applicant_category": "in_state",
+        "program": "emergency_housing"
+      },
+      "expected_priority_review": true,
+      "source_citations": ["Example Rule 6(a)", "Example Rule 6(c)", "Example Rule 6(d)"],
+      "explanation": "The in-state category is equivalent to resident for the same priority program."
+    },
+    {
+      "id": "nonresident_housing_denied",
+      "facts": {
+        "applicant_category": "nonresident",
+        "program": "emergency_housing"
+      },
+      "expected_priority_review": false,
+      "source_citations": ["Example Rule 6(b)", "Example Rule 6(c)"],
+      "explanation": "A nonresident applicant is not local, even for the priority program."
+    },
+    {
+      "id": "resident_standard_denied",
+      "facts": {
+        "applicant_category": "resident",
+        "program": "standard_benefit"
+      },
+      "expected_priority_review": false,
+      "source_citations": ["Example Rule 6(a)", "Example Rule 6(c)"],
+      "explanation": "Local category alone is not enough outside emergency housing."
+    }
+  ],
+  "checks": [
+    {
+      "id": "category_witnesses",
+      "expected_result": "sat",
+      "validation": "witness_replay",
+      "witnesses": ["resident_housing_priority", "in_state_housing_priority", "nonresident_housing_denied", "resident_standard_denied"],
+      "proof_status": "replayed",
+      "source_citations": ["Example Rule 6(a)", "Example Rule 6(b)", "Example Rule 6(c)"]
+    },
+    {
+      "id": "equivalent_categories_same_priority",
+      "expected_result": "unsat",
+      "validation": "qf_uf_alethe_gap",
+      "proof_status": "proof-gap",
+      "proof_gap": "The source-level obligation is a QF_UF congruence conflict, but the rules/law regression harness does not yet emit and check Alethe evidence for rule-pack QF_UF artifacts.",
+      "source_citations": ["Example Rule 6(a)", "Example Rule 6(c)", "Example Rule 6(d)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/category-equivalence-v0/smt2/equivalent-categories-same-priority-qf-uf-conflict.smt2",
+        "intended_regression": "cargo test -p axeyum-solver --test rules_as_code_examples category_equivalence_same_priority_emits_checked_alethe",
+        "certificate": "future prove_qf_uf_unsat_alethe evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "implementation_equivalence_qf_uf_gap",
+      "expected_result": "unsat",
+      "validation": "qf_uf_alethe_gap",
+      "proof_status": "proof-gap",
+      "proof_gap": "The mismatch query is a category-function congruence problem. It is source-linked now and should graduate when the rules/law harness accepts checked QF_UF/Alethe evidence.",
+      "source_citations": ["Example Rule 6(a)", "Example Rule 6(c)", "Example Rule 6(d)", "Example Rule 6(e)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/category-equivalence-v0/smt2/implementation-equivalence-qf-uf-conflict.smt2",
+        "intended_regression": "cargo test -p axeyum-solver --test rules_as_code_examples category_equivalence_implementation_equivalence_emits_checked_alethe",
+        "certificate": "future prove_qf_uf_unsat_alethe evidence checked by Evidence::check"
+      },
+      "notes": "The SMT-LIB artifact isolates the equality/congruence shape instead of encoding a full finite table."
+    }
+  ]
+}

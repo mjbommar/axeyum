@@ -26,6 +26,7 @@ docs/rules-as-code/
     queries/
       authorization-policy-v0.json
       benefit-eligibility-v0.json
+      category-equivalence-v0.json
       grant-allocation-v0.json
       procurement-scoring-v0.json
       tax-benefit-arithmetic-v0.json
@@ -33,6 +34,7 @@ docs/rules-as-code/
   examples/
     benefit-eligibility-v0/
     authorization-policy-v0/
+    category-equivalence-v0/
     grant-allocation-v0/
     procurement-scoring-v0/
     tax-benefit-arithmetic-v0/
@@ -50,6 +52,7 @@ Current example packs:
 - [Tax Benefit Arithmetic V0](examples/tax-benefit-arithmetic-v0/README.md)
 - [Procurement Scoring V0](examples/procurement-scoring-v0/README.md)
 - [Grant Allocation V0](examples/grant-allocation-v0/README.md)
+- [Category Equivalence V0](examples/category-equivalence-v0/README.md)
 
 ## Roadmap
 
@@ -120,11 +123,17 @@ rational shares, budget-balance constraints, minimum program shares,
 administrative caps, finite replay, and QF_LRA/Farkas evidence for an
 allocation shape.
 
+The sixth pack,
+[Category Equivalence V0](examples/category-equivalence-v0/README.md), reuses
+equivalence classes, finite functions, category normalization, and explicit
+QF_UF/Alethe proof-gap rows for a role/category classification shape.
+
 Validate the current packs with:
 
 ```sh
 python3 scripts/gen-rules-as-code-dashboard.py
 python3 scripts/validate-rules-as-code.py
 python3 scripts/query-rules-as-code.py summary
+python3 scripts/query-rules-as-code.py packs --pack category_equivalence_v0 --require-any
 cargo test -p axeyum-solver --test rules_as_code_examples
 ```

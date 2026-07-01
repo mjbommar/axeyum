@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "generated_by": "python3 scripts/gen-rules-as-code-dashboard.py",
+  "pack_id": "category_equivalence_v0",
+  "pack_title": "Example Category Equivalence Policy",
+  "source_pack": "docs/rules-as-code/examples/category-equivalence-v0",
+  "query_families": [
+    {
+      "id": "bounded_category_rows",
+      "description": "Complete bounded category/program rows with replayed priority-review output.",
+      "row_count": 6,
+      "rows": [
+        {"id":"category-row-0000","facts":{"applicant_category":"resident","program":"emergency_housing"},"canonical_category":"equiv:resident:in_state","expected_priority_review":true},
+        {"id":"category-row-0001","facts":{"applicant_category":"resident","program":"standard_benefit"},"canonical_category":"equiv:resident:in_state","expected_priority_review":false},
+        {"id":"category-row-0002","facts":{"applicant_category":"in_state","program":"emergency_housing"},"canonical_category":"equiv:resident:in_state","expected_priority_review":true},
+        {"id":"category-row-0003","facts":{"applicant_category":"in_state","program":"standard_benefit"},"canonical_category":"equiv:resident:in_state","expected_priority_review":false},
+        {"id":"category-row-0004","facts":{"applicant_category":"nonresident","program":"emergency_housing"},"canonical_category":"atom:nonresident","expected_priority_review":false},
+        {"id":"category-row-0005","facts":{"applicant_category":"nonresident","program":"standard_benefit"},"canonical_category":"atom:nonresident","expected_priority_review":false}
+      ]
+    },
+    {
+      "id": "equivalence_pair_rows",
+      "description": "Equivalent-category pairs for each program; priority-review outputs must agree.",
+      "row_count": 2,
+      "rows": [
+        {"id":"equivalence-pair-0000","left_facts":{"applicant_category":"resident","program":"emergency_housing"},"right_facts":{"applicant_category":"in_state","program":"emergency_housing"},"left_priority_review":true,"right_priority_review":true,"congruent_priority_holds":true},
+        {"id":"equivalence-pair-0001","left_facts":{"applicant_category":"resident","program":"standard_benefit"},"right_facts":{"applicant_category":"in_state","program":"standard_benefit"},"left_priority_review":false,"right_priority_review":false,"congruent_priority_holds":true}
+      ]
+    }
+  ]
+}

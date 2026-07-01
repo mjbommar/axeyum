@@ -28,11 +28,11 @@ python3 scripts/query-rules-as-code.py summary
 Current expected summary:
 
 ```text
-rule_packs=5
-bounded_sample_rows=1007
-generated_query_rows=1766
-check_results={'sat': 7, 'unsat': 22}
-proof_statuses={'checked': 22, 'replayed': 7}
+rule_packs=6
+bounded_sample_rows=1013
+generated_query_rows=1774
+check_results={'sat': 8, 'unsat': 24}
+proof_statuses={'checked': 22, 'proof-gap': 2, 'replayed': 8}
 ```
 
 ## Find Packs By Pattern
@@ -65,7 +65,15 @@ python3 scripts/query-rules-as-code.py packs \
 
 Use this when a downstream consumer needs to locate the current policy domains:
 benefit eligibility, authorization, tax/benefit arithmetic, procurement
-scoring, and grant allocation.
+scoring, grant allocation, and category equivalence.
+
+The category-equivalence pack:
+
+```sh
+python3 scripts/query-rules-as-code.py packs \
+  --pack category_equivalence_v0 \
+  --require-any
+```
 
 ## Find Checked Obligations
 
@@ -101,6 +109,21 @@ This returns the debarment, late-submission, bid-cap, score-monotonicity, and
 implementation-equivalence rows. Each row points back through
 `expected.json` to an SMT-LIB artifact under the pack and a focused
 `rules_as_code_examples` regression.
+
+Category-equivalence QF_UF/Alethe proof gaps:
+
+```sh
+python3 scripts/query-rules-as-code.py checks \
+  --pack category_equivalence_v0 \
+  --proof-status proof-gap \
+  --validation qf_uf_alethe_gap \
+  --require-any
+```
+
+These rows are intentionally not counted as checked evidence yet. They expose
+source-linked QF_UF SMT-LIB artifacts that should graduate when the
+`rules_as_code_examples` harness emits and checks Alethe evidence for rule-pack
+category maps.
 
 ## Find Generated Query Families
 
@@ -141,6 +164,12 @@ The two grant-allocation families are:
   triple;
 - `balanced_budget_allocations`: only triples whose shares sum to exactly `1`,
   with floor and cap flags exposed.
+
+The two category-equivalence families are:
+
+- `bounded_category_rows`: every bounded category/program pair;
+- `equivalence_pair_rows`: equivalent-category pairs for each program, exposing
+  whether priority-review congruence holds.
 
 ## Inspect Generated Rows
 
@@ -199,6 +228,17 @@ python3 scripts/query-rules-as-code.py rows \
   --require-any
 ```
 
+Category-equivalence pair rows:
+
+```sh
+python3 scripts/query-rules-as-code.py rows \
+  --pack category_equivalence_v0 \
+  --family equivalence_pair_rows \
+  --text emergency_housing \
+  --limit 3 \
+  --require-any
+```
+
 ## Validation
 
 The standard rules-as-code gate now smoke-checks this query surface:
@@ -221,6 +261,10 @@ python3 scripts/query-rules-as-code.py packs --pack grant_allocation_v0 --requir
 python3 scripts/query-rules-as-code.py checks --pack grant_allocation_v0 --validation qf_lra_farkas_solver_regression --proof-status checked --require-any
 python3 scripts/query-rules-as-code.py families --pack grant_allocation_v0 --text balanced --require-any
 python3 scripts/query-rules-as-code.py rows --pack grant_allocation_v0 --family balanced_budget_allocations --text 1/2 --limit 3 --require-any
+python3 scripts/query-rules-as-code.py packs --pack category_equivalence_v0 --require-any
+python3 scripts/query-rules-as-code.py checks --pack category_equivalence_v0 --proof-status proof-gap --validation qf_uf_alethe_gap --require-any
+python3 scripts/query-rules-as-code.py families --pack category_equivalence_v0 --text equivalence --require-any
+python3 scripts/query-rules-as-code.py rows --pack category_equivalence_v0 --family equivalence_pair_rows --text emergency_housing --limit 3 --require-any
 ```
 
 Run the solver evidence regression when a checked SMT-LIB fixture changes:

@@ -27,11 +27,11 @@ python3 scripts/query-rules-as-code.py summary
 Expected current boundary:
 
 ```text
-rule_packs=5
-bounded_sample_rows=1007
-generated_query_rows=1766
-check_results={'sat': 7, 'unsat': 22}
-proof_statuses={'checked': 22, 'replayed': 7}
+rule_packs=6
+bounded_sample_rows=1013
+generated_query_rows=1774
+check_results={'sat': 8, 'unsat': 24}
+proof_statuses={'checked': 22, 'proof-gap': 2, 'replayed': 8}
 ```
 
 | Pack | Domain | Main Pattern | Checked Rows | Generated Families |
@@ -41,6 +41,7 @@ proof_statuses={'checked': 22, 'replayed': 7}
 | `tax_benefit_arithmetic_v0` | tax/benefit | caps, phase-outs, threshold cliffs, dates | nonnegative benefit, cap, phase-out monotonicity, implementation equivalence | `bounded_benefits` (66), `income_phaseout_adjacent` (60) |
 | `procurement_scoring_v0` | procurement | exclusions, deadlines, bid caps, score monotonicity | debarment, late submission, bid cap, score monotonicity, implementation equivalence | `bounded_awards` (144), `quality_monotonicity_adjacent` (108) |
 | `grant_allocation_v0` | grant allocation | rational shares, budget balance, floors, caps | total budget, shelter minimum, clinic minimum, admin cap, implementation equivalence | `bounded_allocations` (125), `balanced_budget_allocations` (15) |
+| `category_equivalence_v0` | category equivalence | category normalization, equivalence pairs, priority program | category congruence and implementation equivalence are QF_UF/Alethe proof gaps | `bounded_category_rows` (6), `equivalence_pair_rows` (2) |
 
 ## Pattern Coverage
 
@@ -49,12 +50,13 @@ proof_statuses={'checked': 22, 'replayed': 7}
 | Complete finite fact patterns | benefit `coverage`, authorization `bounded_requests`, procurement `bounded_awards` | `curriculum_predicate_logic`, `bridge_counterexample_proof`, `family_boolean_cnf_lrat` | finite replay plus checked Bool/QF_LIA obligations | `python3 scripts/query-rules-as-code.py rows --text expected --limit 5 --require-any` |
 | Explicit exclusions and required predicates | procurement `debarment_exclusion`, benefit `consistency`, authorization tenant checks | `curriculum_predicate_logic`, `bridge_finite_boolean_algebra` | checked Bool/QF_LIA | `python3 scripts/query-rules-as-code.py checks --text exclusion --require-any` |
 | Roles, tenants, relations, and category maps | authorization `tenant_isolation`, `admin_tenant_guard`, generated role/action rows | `bridge_partition_relation_roundtrip`, `bridge_finite_image_preimage_inverse`, `bridge_qf_uf_alethe_anatomy` | checked Bool/QF_LIA today; QF_UF/Alethe is the natural upgrade | `python3 scripts/query-rules-as-code.py rows --pack authorization_policy_v0 --text tenant --limit 5 --require-any` |
+| Category equivalence and quotient-like classification | category equivalence `equivalent_categories_same_priority`, generated equivalence-pair rows | `bridge_partition_relation_roundtrip`, `bridge_qf_uf_alethe_anatomy`, `family_finite_algebra_alethe` | finite replay plus explicit QF_UF/Alethe proof-gap artifacts | `python3 scripts/query-rules-as-code.py checks --pack category_equivalence_v0 --proof-status proof-gap --require-any` |
 | Thresholds, caps, dates, and deadlines | benefit threshold/date witnesses, tax cap/phase-out checks, procurement deadline and bid-cap checks | `bridge_totality_conventions`, `bridge_exact_vs_floating_arithmetic`, `bridge_lp_objective_farkas` | QF_LIA checked rows plus finite replay | `python3 scripts/query-rules-as-code.py checks --text cap --require-any` |
 | Rational allocation and exact shares | grant allocation budget balance, program floors, admin cap, and balanced-budget generated rows | `bridge_lp_objective_farkas`, `bridge_exact_vs_floating_arithmetic`, `bridge_rational_convexity_shadow` | QF_LRA/Farkas checked rows plus finite rational replay | `python3 scripts/query-rules-as-code.py checks --pack grant_allocation_v0 --validation qf_lra_farkas_solver_regression --require-any` |
 | Adjacent monotonicity | benefit income, tax phase-out, procurement quality-score monotonicity | `bridge_lp_objective_farkas`, `bridge_rational_convexity_shadow`, `bridge_bounded_family_asymptotic_boundary` | QF_LIA checked rows today; QF_LRA/Farkas is already exercised by the rational allocation pack | `python3 scripts/query-rules-as-code.py families --text adjacent --require-any` |
 | Version and effective-date transitions | benefit `temporal_transition`, authorization `version_delta`, tax temporal rows | `bridge_finite_dynamics_euler_replay`, `bridge_bounded_family_asymptotic_boundary` | finite replay and QF_LIA date/version obligations | `python3 scripts/query-rules-as-code.py rows --text version --limit 5 --require-any` |
 | Precedence, deny-over-permit, and overrides | authorization `explicit_deny_precedence` | `bridge_finite_boolean_algebra`, `bridge_partition_relation_roundtrip`, `bridge_qf_uf_alethe_anatomy` | checked Bool/QF_LIA today; finite-order/QF_UF route when priority vocab becomes first-class | `python3 scripts/query-rules-as-code.py checks --text precedence --require-any` |
-| Bounded implementation equivalence | all five packs have `implementation_equivalence` | `bridge_finite_image_preimage_inverse`, `bridge_qf_uf_alethe_anatomy`, `family_finite_algebra_alethe` | checked Bool/QF_LIA or QF_LRA mismatch obligations plus executable replay | `python3 scripts/query-rules-as-code.py checks --text implementation_equivalence --require-any` |
+| Bounded implementation equivalence | the Bool/QF_LIA and QF_LRA/Farkas packs have checked `implementation_equivalence`; category equivalence has a QF_UF proof-gap equivalence row | `bridge_finite_image_preimage_inverse`, `bridge_qf_uf_alethe_anatomy`, `family_finite_algebra_alethe` | checked Bool/QF_LIA or QF_LRA mismatch obligations plus executable replay; QF_UF/Alethe gap for category maps | `python3 scripts/query-rules-as-code.py checks --text implementation_equivalence --require-any` |
 
 ## Proof-Route Translation
 
@@ -64,7 +66,7 @@ proof_statuses={'checked': 22, 'replayed': 7}
 | Boolean consistency or coverage | Boolean CNF/LRAT or Bool/QF_LIA | currently Bool/QF_LIA checked | move tiny pure-Boolean rows to CNF/LRAT when the encoded source formula is small enough for a learner |
 | Integer thresholds and dates | QF_LIA/Diophantine or arithmetic-DPLL | current checked route | add source-linked LIA route examples for repeated date-window or count-obstruction patterns |
 | Rational allocation or exact caps | QF_LRA/Farkas | landed in `grant_allocation_v0` for exact shares, floors, caps, and budget balance | broaden only when another rule pack needs rational shares, LP-style eligibility, or allocation constraints |
-| Role/category equality conflicts | QF_UF/Alethe | planned upgrade for relation-heavy packs | use when role maps, category equivalences, or quotient-like classifications become first-class |
+| Role/category equality conflicts | QF_UF/Alethe | represented by `category_equivalence_v0` as source-linked proof-gap rows | graduate when the rule-pack harness emits and checks Alethe evidence for category equivalence artifacts |
 | Broad legal schema theorem | Lean horizon | out of scope for current packs | only after kernel-checked reconstruction can state the formal theorem |
 
 ## Queries To Keep Working
@@ -80,6 +82,7 @@ python3 scripts/query-rules-as-code.py rows --pack authorization_policy_v0 --fam
 python3 scripts/query-rules-as-code.py rows --pack tax_benefit_arithmetic_v0 --family income_phaseout_adjacent --text 2026-07-01 --limit 3 --require-any
 python3 scripts/query-rules-as-code.py rows --pack procurement_scoring_v0 --family quality_monotonicity_adjacent --limit 3 --require-any
 python3 scripts/query-rules-as-code.py rows --pack grant_allocation_v0 --family balanced_budget_allocations --text 1/2 --limit 3 --require-any
+python3 scripts/query-rules-as-code.py rows --pack category_equivalence_v0 --family equivalence_pair_rows --text emergency_housing --limit 3 --require-any
 ```
 
 The corresponding math-resource lookups remain:
@@ -101,7 +104,8 @@ example:
 
 - graph reachability plus temporal state transitions;
 - multi-period allocation, LP-style eligibility, or other rational rule shapes needing QF_LRA/Farkas beyond the current grant pack;
-- role/category equivalence needing QF_UF/Alethe;
+- checked role/category equivalence after the QF_UF/Alethe rules/law harness
+  exists;
 - small pure-Boolean coverage rows suited to CNF/LRAT certificate anatomy.
 
 Until then, keep the boundary as committed JSON, generated dashboards, and

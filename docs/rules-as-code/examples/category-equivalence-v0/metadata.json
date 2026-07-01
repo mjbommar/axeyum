@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "id": "category_equivalence_v0",
+  "title": "Example Category Equivalence Policy",
+  "domain": "category_equivalence",
+  "jurisdiction": "example",
+  "source_citations": [
+    {"label": "Example Rule 6(a)", "uri": "source.md#rule-6a-equivalent-local-categories"},
+    {"label": "Example Rule 6(b)", "uri": "source.md#rule-6b-nonlocal-category"},
+    {"label": "Example Rule 6(c)", "uri": "source.md#rule-6c-priority-program"},
+    {"label": "Example Rule 6(d)", "uri": "source.md#rule-6d-category-uniformity"},
+    {"label": "Example Rule 6(e)", "uri": "source.md#rule-6e-implementation"}
+  ],
+  "effective_interval": {
+    "from": "2026-01-01",
+    "to": null
+  },
+  "actors": ["applicant", "policy_engine"],
+  "inputs": [
+    {"name": "applicant_category", "sort": "Enum(resident,in_state,nonresident)"},
+    {"name": "program", "sort": "Enum(emergency_housing,standard_benefit)"}
+  ],
+  "outputs": [
+    {"name": "priority_review", "sort": "Bool"}
+  ],
+  "checks": [
+    "category_witnesses",
+    "equivalent_categories_same_priority",
+    "implementation_equivalence_qf_uf_gap"
+  ],
+  "axeyum_fragments": ["QF_UF", "finite replay", "Alethe horizon"],
+  "proof_expectation": "Representative category/program rows replay today. Category congruence and implementation equivalence are source-linked QF_UF/Alethe proof gaps until the rules/law harness has a checked Alethe regression."
+}

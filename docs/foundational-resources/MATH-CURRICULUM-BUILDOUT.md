@@ -2680,6 +2680,11 @@ antisymmetry evidence: `bad-partial-order-rejected` remains the exact finite
 replay row that computes `x <= y`, `y <= x`, and `x != y`, while
 `qf-uf-bad-partial-order-antisymmetry` owns the checked QF_UF/Alethe
 antisymmetry artifact and direct pack/route/text query.
+The rules/law lab now also has `category-equivalence-v0`. It adds a distinct
+role/category-equivalence resource: finite category/program replay,
+generated equivalence-pair rows, and source-linked QF_UF/Alethe proof-gap
+artifacts for category congruence and implementation equivalence without
+pretending the rules/law harness can check Alethe for those rows yet.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

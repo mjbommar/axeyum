@@ -234,8 +234,8 @@ it records exact concept-plus-route queries for Boolean proof rows, finite
 proof patterns, bounded induction, finite quantifiers, cardinality, counting,
 Boolean algebra, partition, and relation/function resources.
 The rules/law transfer crosswalk that maps finite predicates, arithmetic
-thresholds, graph reachability, precedence, and proof routes into concrete
-policy/rule checks is
+thresholds, graph reachability, precedence, category equivalence, and proof
+routes into concrete policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 The rules/law query guide is
 [`docs/foundational-resources/RULES-LAW-QUERIES.md`](docs/foundational-resources/RULES-LAW-QUERIES.md);
@@ -245,9 +245,9 @@ bounded generated-row inspection.
 The rules/law pattern matrix is
 [`docs/foundational-resources/RULES-LAW-PATTERN-MATRIX.md`](docs/foundational-resources/RULES-LAW-PATTERN-MATRIX.md);
 it maps finite predicates, role/tenant relations, thresholds, monotonicity,
-version transitions, precedence, and bounded implementation-equivalence
-patterns back to math concept rows, proof routes, current packs, and copyable
-queries.
+version transitions, precedence, category equivalence, and bounded
+implementation-equivalence patterns back to math concept rows, proof routes,
+current packs, and copyable queries.
 The learner-facing rules/law trust-boundary page is
 [`docs/learn/rules-law-trust-boundary.md`](docs/learn/rules-law-trust-boundary.md);
 it walks from human-authored source rules through formal models, replayed
@@ -255,9 +255,11 @@ witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
 120 concept rows, 108 non-template packs, 647 expected checks (336 `sat`,
 240 `unsat`, 71 `not-run`), 322 checked rows, 254 replay-only rows, and 71
-Lean-horizon rows. The learner coverage audit records all 108 non-template
-packs as focused-lesson linked, with no path-only, index-only, or missing
-learner buckets. The first QF_UF/Alethe
+Lean-horizon rows. The rules/law JSON layer now reports 6 packs, 1,013
+bounded sample rows, 1,774 generated query rows, 22 checked obligations, 8
+replayed witness rows, and 2 explicit QF_UF/Alethe proof-gap rows. The learner
+coverage audit records all 108 non-template packs as focused-lesson linked,
+with no path-only, index-only, or missing learner buckets. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
 finite group actions, with finite continuous-map preimage membership,

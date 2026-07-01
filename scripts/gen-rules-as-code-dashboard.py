@@ -129,6 +129,21 @@ def grant_allocation_compliant(facts: dict[str, Any], params: dict[str, Any]) ->
     )
 
 
+def category_canonical(category: str, params: dict[str, Any]) -> str:
+    for left, right in params["equivalence_pairs"]:
+        if category in {left, right}:
+            return f"equiv:{left}:{right}"
+    return f"atom:{category}"
+
+
+def category_priority_review(facts: dict[str, Any], params: dict[str, Any]) -> bool:
+    local_canonical = category_canonical(params["equivalence_pairs"][0][0], params)
+    return (
+        category_canonical(facts["applicant_category"], params) == local_canonical
+        and facts["program"] == params["priority_program"]
+    )
+
+
 def benefit_metrics(expected: dict[str, Any]) -> tuple[int, list[tuple[str, int]], str]:
     sample = expected["sample_domain"]
     booleans = len(sample["booleans"])
@@ -253,6 +268,21 @@ def grant_allocation_metrics(expected: dict[str, Any]) -> tuple[int, list[tuple[
         ("checked QF_LRA/Farkas fixtures", check_counts(expected)["checked"]),
     ]
     return rows, families, "Generate rational allocation coverage and balanced-budget query rows across the bounded share domain."
+
+
+def category_equivalence_metrics(
+    expected: dict[str, Any]
+) -> tuple[int, list[tuple[str, int]], str]:
+    sample = expected["sample_domain"]
+    rows = len(sample["categories"]) * len(sample["programs"])
+    pair_rows = len(expected["parameters"]["equivalence_pairs"]) * len(sample["programs"])
+    families = [
+        ("bounded category/program rows", rows),
+        ("equivalence-pair congruence rows", pair_rows),
+        ("category replay witnesses", witness_count(expected, {"category_witnesses"})),
+        ("QF_UF/Alethe proof-gap fixtures", check_counts(expected)["proof-gap"]),
+    ]
+    return rows, families, "Generate category-normalization and equivalence-pair query rows across the bounded policy domain."
 
 
 def generic_metrics(expected: dict[str, Any]) -> tuple[int, list[tuple[str, int]], str]:
@@ -610,12 +640,70 @@ def grant_allocation_query_families(expected: dict[str, Any]) -> list[dict[str, 
     ]
 
 
+def category_equivalence_query_families(expected: dict[str, Any]) -> list[dict[str, Any]]:
+    params = expected["parameters"]
+    sample = expected["sample_domain"]
+    category_rows = []
+    for category in sample["categories"]:
+        for program in sample["programs"]:
+            facts = {
+                "applicant_category": category,
+                "program": program,
+            }
+            category_rows.append(
+                {
+                    "id": f"category-row-{len(category_rows):04d}",
+                    "facts": facts,
+                    "canonical_category": category_canonical(category, params),
+                    "expected_priority_review": category_priority_review(facts, params),
+                }
+            )
+
+    pair_rows = []
+    for left, right in params["equivalence_pairs"]:
+        for program in sample["programs"]:
+            left_facts = {
+                "applicant_category": left,
+                "program": program,
+            }
+            right_facts = {
+                "applicant_category": right,
+                "program": program,
+            }
+            left_priority = category_priority_review(left_facts, params)
+            right_priority = category_priority_review(right_facts, params)
+            pair_rows.append(
+                {
+                    "id": f"equivalence-pair-{len(pair_rows):04d}",
+                    "left_facts": left_facts,
+                    "right_facts": right_facts,
+                    "left_priority_review": left_priority,
+                    "right_priority_review": right_priority,
+                    "congruent_priority_holds": left_priority == right_priority,
+                }
+            )
+
+    return [
+        {
+            "id": "bounded_category_rows",
+            "description": "Complete bounded category/program rows with replayed priority-review output.",
+            "rows": category_rows,
+        },
+        {
+            "id": "equivalence_pair_rows",
+            "description": "Equivalent-category pairs for each program; priority-review outputs must agree.",
+            "rows": pair_rows,
+        },
+    ]
+
+
 METRIC_DISPATCH = {
     "benefit_eligibility_v0": benefit_metrics,
     "authorization_policy_v0": authorization_metrics,
     "tax_benefit_arithmetic_v0": tax_benefit_metrics,
     "procurement_scoring_v0": procurement_metrics,
     "grant_allocation_v0": grant_allocation_metrics,
+    "category_equivalence_v0": category_equivalence_metrics,
 }
 
 QUERY_DISPATCH = {
@@ -624,6 +712,7 @@ QUERY_DISPATCH = {
     "tax_benefit_arithmetic_v0": tax_benefit_query_families,
     "procurement_scoring_v0": procurement_query_families,
     "grant_allocation_v0": grant_allocation_query_families,
+    "category_equivalence_v0": category_equivalence_query_families,
 }
 
 
@@ -735,7 +824,8 @@ def render(packs: list[dict[str, Any]]) -> str:
         "planning surface. It is not a legal corpus and not a solver-performance",
         "benchmark; it records which finite rule domains can be expanded into",
         "generated coverage, equivalence, threshold, cap, or monotonicity checks.",
-        "It now also includes the rational-allocation rows that exercise the QF_LRA/Farkas route.",
+        "It now also includes rational-allocation rows for QF_LRA/Farkas and",
+        "category-equivalence rows that expose the QF_UF/Alethe proof gap.",
         "",
         "## Summary",
         "",
@@ -787,6 +877,8 @@ def render(packs: list[dict[str, Any]]) -> str:
             "  artifacts; the validator replays them from the committed pack models.",
             "- Checked `unsat` rows must keep source-linked SMT-LIB fixtures and the",
             "  `rules_as_code_examples` certified-evidence regression.",
+            "- Proof-gap `unsat` rows must keep source-linked artifacts and name the",
+            "  missing proof route before they can graduate to checked evidence.",
             "- These bounded domains do not prove compliance with real law and should",
             "  not be used as solver parity benchmarks.",
             "",
