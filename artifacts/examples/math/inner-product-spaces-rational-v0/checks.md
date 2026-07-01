@@ -6,6 +6,7 @@
 | `gram-matrix-positive-definite` | `sat` | Check symmetry and exact leading principal minors. |
 | `cauchy-schwarz-fixed-vectors` | `sat` | Recompute both sides of a fixed Cauchy-Schwarz inequality. |
 | `orthogonal-projection-replay` | `sat` | Recompute projection coefficient, residual, orthogonality, and norm split. |
+| `bad-projection-orthogonality-rejected` | `unsat` | Reject a malformed projection residual inner product through checked QF_LRA/Farkas evidence. |
 | `gram-schmidt-replay` | `sat` | Recompute the second projection/residual and check orthogonality. |
 | `bad-inner-product-rejected` | `unsat` | Reject a Gram matrix with a negative norm square through checked QF_LRA/Farkas evidence. |
 | `general-inner-product-theory-lean-horizon` | `not-run` | Names the Lean route for general inner-product and Hilbert-space theory. |

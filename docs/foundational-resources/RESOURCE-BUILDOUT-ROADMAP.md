@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 567 expected checks.
-- 249 checked proof/evidence rows.
+- 568 expected checks.
+- 250 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1005,8 +1005,12 @@ Build next:
   or Banach/Hilbert horizons only when multiple packs need the same vocabulary.
 - Keep `finite-operator-v0`'s promoted bad `l1` norm and bad operator-bound
   rows tied to exact replay plus the source QF_LRA/Farkas artifacts.
-- Promote additional finite-dimensional bad norm/operator/interpolation rows
-  through QF_LRA/Farkas where exact rational constraints apply.
+- Keep `inner-product-spaces-rational-v0`'s promoted bad negative-norm and
+  bad projection-orthogonality rows tied to exact replay plus the source
+  QF_LRA/Farkas artifacts.
+- Promote additional finite-dimensional bad norm/operator/projection/
+  interpolation rows through QF_LRA/Farkas where exact rational constraints
+  apply.
 - Keep Banach-space theorems, compact operators, general Chebyshev spaces,
   projection theorem, and topological duals as Lean-horizon.
 
@@ -1788,6 +1792,13 @@ Pick one item per commit unless the change is purely navigational.
      claims the sum norm is at most `4`; the shared QF_LRA/Farkas route now
      checks both the finite norm conflict and the existing operator-bound
      conflict without promoting Banach/Hilbert-space norm theorems.
+114. Landed: extend `inner-product-spaces-rational-v0` with a checked bad
+     projection-orthogonality row. Finite replay computes the residual
+     `[-1/2,1/2]` for projecting `[2,3]` onto `span([1,1])` and verifies
+     `<residual,[1,1]> = 0`, while the malformed source SMT-LIB artifact claims
+     the residual inner product is `1`; the shared QF_LRA/Farkas route now
+     checks both inner-product positivity and projection-orthogonality
+     conflicts without promoting infinite-dimensional projection theorems.
 
 ## Validation Checklist
 

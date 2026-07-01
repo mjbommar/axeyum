@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Inner-product bad projection-orthogonality QF_LRA row landed.**
+  `inner-product-spaces-rational-v0` now has a second checked Farkas row:
+  finite replay reuses the projection of `[2,3]` onto `span([1,1])`,
+  computes residual `[-1/2,1/2]` and `<residual,[1,1]> = 0`, then rejects
+  the malformed claim that the same inner product is `1`. The new source
+  SMT-LIB artifact isolates the final equality conflict, the shared
+  `math_resource_lra_routes` regression parses it and checks `UnsatFarkas`
+  evidence, and the validator pins the projection witness, residual inner
+  product, artifact path, regression, and certificate note. Generated
+  dashboards and the public query summary now report 111 concept rows, 108
+  non-template packs, 568 expected checks, 250 checked rows, 247 replay-only
+  rows, and 71 Lean-horizon rows.
+
 - **Finite-operator bad `l1` norm QF_LRA row landed.**
   `finite-operator-v0` now has a second checked Farkas row: finite replay
   reuses the `l1` triangle witness with `u=(1,2)`, `v=(3,-1)`, and

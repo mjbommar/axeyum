@@ -26,6 +26,25 @@ residual = x - proj_a(x)
 
 Gram-Schmidt is checked as projection subtraction, not as a general theorem.
 
+For the concrete projection row:
+
+```text
+target = [2,3]
+basis = [1,1]
+projection = [5/2,5/2]
+residual = [-1/2,1/2]
+<residual,basis> = 0
+```
+
+The bad projection row keeps the replayed residual but claims:
+
+```text
+<residual,basis> = 1
+```
+
+The source QF_LRA artifact reduces that malformed claim to the exact equality
+conflict `residual_inner_basis = 0` and `residual_inner_basis = 1`.
+
 ## Bad Norm Certificate
 
 For the rejected Gram matrix `diag(1,-1)` and nonzero vector `[0,1]`, exact

@@ -286,7 +286,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/inner-product-spaces-rational-v0/`](../../artifacts/examples/math/inner-product-spaces-rational-v0/)
   validates exact rational Gram matrices, positive-definite principal minors,
   Cauchy-Schwarz replay for fixed vectors, orthogonal projection replay,
-  Gram-Schmidt replay, checked rejection of an indefinite bilinear form, and a
+  Gram-Schmidt replay, checked rejection of an indefinite bilinear form and a
+  malformed projection-orthogonality claim, and a
   Hilbert/inner-product-theory Lean-horizon row.
 - [`artifacts/examples/math/finite-modules-v0/`](../../artifacts/examples/math/finite-modules-v0/)
   validates finite module laws over `Z/4Z`, submodule and span replay,

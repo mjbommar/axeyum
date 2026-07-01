@@ -307,7 +307,8 @@ one of:
       `numerical_analysis`, `optimization_and_convexity`, `real_analysis`.
     - Checks: exact rational Gram matrices, positive-definite principal
       minors, fixed Cauchy-Schwarz replay, orthogonal projection replay,
-      Gram-Schmidt replay, bad-inner-product rejection, and a general
+      Gram-Schmidt replay, bad-inner-product and bad projection-orthogonality
+      rejection, and a general
       Hilbert/inner-product-space Lean-horizon row.
 33. `artifacts/examples/math/polynomial-factorization-rational-v0/`
     - Fields: `abstract_algebra`, `real_analysis`, `complex_analysis`.

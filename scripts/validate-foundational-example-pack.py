@@ -12154,6 +12154,56 @@ def validate_inner_product_spaces_rational(expected: dict[str, Any]) -> None:
     if target_norm_square != projection_norm_square + residual_norm_square:
         fail("orthogonal-projection-replay norm decomposition is incorrect")
 
+    bad_projection = checks["bad-projection-orthogonality-rejected"]
+    if bad_projection["expected_result"] != "unsat" or bad_projection.get("proof_status") != "checked":
+        fail("bad-projection-orthogonality-rejected must be a checked unsat row")
+    if bad_projection["validation"] != "exact_rational_bad_projection_orthogonality_refutation":
+        fail(
+            "bad-projection-orthogonality-rejected must use "
+            "exact_rational_bad_projection_orthogonality_refutation validation"
+        )
+    data = bad_projection.get("data", {})
+    bad_target = require_fraction_vector("bad projection target", data.get("target"))
+    bad_basis = require_fraction_vector("bad projection basis", data.get("basis"))
+    bad_coefficient = require_fraction("bad projection coefficient", data.get("coefficient"))
+    bad_projected = require_fraction_vector("bad projection projection", data.get("projection"))
+    bad_residual = require_fraction_vector("bad projection residual", data.get("residual"))
+    bad_residual_inner_basis = require_fraction(
+        "bad projection computed_residual_inner_basis",
+        data.get("computed_residual_inner_basis"),
+    )
+    claimed_residual_inner_basis = require_fraction(
+        "bad projection claimed_residual_inner_basis",
+        data.get("claimed_residual_inner_basis"),
+    )
+    if bad_target != target or bad_basis != basis:
+        fail("bad-projection-orthogonality-rejected must reuse the projection target and basis")
+    if bad_coefficient != coefficient or bad_projected != projected or bad_residual != residual:
+        fail("bad-projection-orthogonality-rejected must reuse the replayed projection row")
+    if inner_product(standard_gram, bad_residual, bad_basis) != bad_residual_inner_basis:
+        fail("bad-projection-orthogonality-rejected computed residual inner product is incorrect")
+    if bad_residual_inner_basis != residual_inner_basis:
+        fail("bad-projection-orthogonality-rejected must match the replayed residual inner product")
+    if bad_residual_inner_basis != 0 or claimed_residual_inner_basis == bad_residual_inner_basis:
+        fail("bad-projection-orthogonality-rejected must document a false orthogonality claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad projection smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/inner-product-spaces-rational-v0/smt2/"
+        "bad-projection-orthogonality-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-projection-orthogonality-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad projection smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad projection farkas_regression", regression)
+    if "inner_product_bad_projection_orthogonality_artifact_emits_checked_farkas" not in regression:
+        fail("bad-projection-orthogonality-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad projection certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-projection-orthogonality-rejected certificate must document checked Farkas evidence")
+
     gram_schmidt = checks["gram-schmidt-replay"]
     if gram_schmidt["expected_result"] != "sat" or gram_schmidt.get("proof_status") != "checked":
         fail("gram-schmidt-replay must be a checked sat row")

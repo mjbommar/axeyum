@@ -219,7 +219,9 @@ residual = (-1/2, 1/2)
 ```
 
 It also replays the second Gram-Schmidt vector as `(1/2,-1/2)` and rejects a
-diagonal form with negative norm square.
+diagonal form with negative norm square. The checked projection-orthogonality
+bad row reuses the same residual and rejects the malformed claim
+`<residual,(1,1)> = 1` after replay computes `0`.
 
 For module-flavored linear algebra, encode `Z/4Z` as a module over itself:
 
@@ -559,6 +561,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/li
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dual-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/inner-product-spaces-rational-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes inner_product_bad_projection_orthogonality_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-tensor-products-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
@@ -665,8 +668,8 @@ moments, and satisfiable finite-dimensional operator rows start as
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md).
 Infeasible rational systems, LP thresholds, bad residual bounds, malformed
 eigenpairs, bad characteristic-polynomial rows, bad operator-bound rows,
-bad KKT stationarity rows, bad proximal residual rows, and negative-norm
-examples graduate through
+bad KKT stationarity rows, bad proximal residual rows, negative-norm rows, and
+projection-orthogonality examples graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
 Finite vector-space, dual-space, module, ideal, and tensor-product equality
 conflicts use

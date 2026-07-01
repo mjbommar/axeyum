@@ -22,6 +22,7 @@ Concept rows:
 | `gram-matrix-positive-definite` | `sat` | checked |
 | `cauchy-schwarz-fixed-vectors` | `sat` | checked |
 | `orthogonal-projection-replay` | `sat` | checked |
+| `bad-projection-orthogonality-rejected` | `unsat` | checked |
 | `gram-schmidt-replay` | `sat` | checked |
 | `bad-inner-product-rejected` | `unsat` | checked |
 | `general-inner-product-theory-lean-horizon` | `not-run` | lean-horizon |
@@ -145,6 +146,16 @@ The checker verifies orthogonality and the norm split:
 13 = 25/2 + 1/2
 ```
 
+The bad projection row keeps the same replayed residual but claims:
+
+```text
+<residual,basis> = 1
+```
+
+After exact replay computes `<residual,basis> = 0`, the source `QF_LRA`
+artifact exposes the final equality conflict. The route regression requires an
+`Evidence::UnsatFarkas` certificate and independently checks it.
+
 ## Replay Gram-Schmidt
 
 The input basis is:
@@ -213,6 +224,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/inner-product-spaces-rational-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes inner_product_bad_projection_orthogonality_artifact_emits_checked_farkas
 ```
 
 Expected output:
@@ -229,7 +241,7 @@ analysis:
 ```text
 untrusted fast search -> Gram matrix, vectors, projection, orthogonal basis
 trusted small checking -> rational arithmetic, positivity, orthogonality
-proof upgrade -> QF_LRA/Farkas certificate for the negative norm square
+proof upgrade -> QF_LRA/Farkas certificate for negative norm and projection conflicts
 ```
 
 General Cauchy-Schwarz, Gram-Schmidt over arbitrary spaces, Hilbert projection,

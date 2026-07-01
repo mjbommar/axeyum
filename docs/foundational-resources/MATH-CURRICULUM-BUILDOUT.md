@@ -879,8 +879,9 @@ checked QF_LRA/Farkas bad `l1` norm row plus a bad operator-bound row.
 `artifacts/examples/math/inner-product-spaces-rational-v0/` now validates
 exact rational Gram matrices, positive-definite principal minors,
 Cauchy-Schwarz replay for fixed vectors, orthogonal projection replay,
-Gram-Schmidt replay, checked QF_LRA/Farkas rejection of a bad inner product,
-and a general inner-product/Hilbert-space Lean-horizon row.
+Gram-Schmidt replay, checked QF_LRA/Farkas rejection of a bad inner product
+and bad projection-orthogonality claim, and a general
+inner-product/Hilbert-space Lean-horizon row.
 `artifacts/examples/math/finite-chebyshev-systems-v0/` now validates exact
 finite Vandermonde unisolvence, interpolation matrix replay, alternating
 residual sign patterns, checked QF_LRA/Farkas rejection of duplicate-node
@@ -995,8 +996,8 @@ Recommended order:
    fixed-step rejection.
 11. `finite-operator-v0` and `inner-product-spaces-rational-v0`:
    finite-dimensional norms/operators, exact rational inner products,
-   projections, Gram-Schmidt replay, QF_LRA/Farkas bad-bound and bad-norm
-   rejections, and Chebyshev polynomial examples.
+   projections, Gram-Schmidt replay, QF_LRA/Farkas bad-bound, bad-norm, and
+   bad projection-orthogonality rejections, and Chebyshev polynomial examples.
 12. `complex-algebraic-v0` and `complex-plane-transforms-v0`: complex
     arithmetic, unit-root cycles, conjugation/product replay, QF_LRA/Farkas
     bad norm/unit-square rejections, and rational Mobius transforms as
@@ -1595,8 +1596,8 @@ permutation-group Lean-horizon row.
 `inner-product-spaces-rational-v0` now adds the exact rational
 inner-product-space bridge: Gram matrices, positive-definite minors,
 Cauchy-Schwarz replay, orthogonal projections, Gram-Schmidt residuals,
-checked QF_LRA/Farkas bad-inner-product rejection, and an
-inner-product/Hilbert-space Lean-horizon row.
+checked QF_LRA/Farkas bad-inner-product and bad projection-orthogonality
+rejections, and an inner-product/Hilbert-space Lean-horizon row.
 `finite-modules-v0` now adds the exact finite algebra/linear-algebra bridge
 over `Z/4Z`: module laws, submodule/span replay, module-homomorphism
 kernel/image replay, quotient-module tables, checked QF_UF/Alethe
@@ -2012,8 +2013,9 @@ opposite-angle, and bad Ptolemy rows through the same checked Farkas evidence
 path after exact cyclic-configuration replay computes intersection
 x-coordinate `0`, angle dot product `0`, and Ptolemy right-hand side `25` for
 the malformed cyclic quadrilateral claims.
-`inner-product-spaces-rational-v0` now routes its bad inner-product row
-through the same checked Farkas evidence path after exact negative-norm replay.
+`inner-product-spaces-rational-v0` now routes its bad inner-product and bad
+projection-orthogonality rows through the same checked Farkas evidence path
+after exact negative-norm and projection residual replay.
 `spectral-linear-algebra-v0` now routes its bad eigenpair row through the same
 checked Farkas evidence path after exact matrix-vector replay.
 `matrix-invariants-v0` now routes its bad characteristic-polynomial row through
@@ -2174,8 +2176,9 @@ operator/Chebyshev bridge lookup, concept-scoped
 checked finite-operator norm/bound, inner-product, Chebyshev, spectral, and
 characteristic-polynomial Farkas rows. The foundational-resource smoke check
 runs those same queries so finite-dimensional operator bounds, inner-product
-positivity, Chebyshev duplicate-node grids, interpolation/residual rows,
-alternation-magnitude refutations, spectral/eigenpair witnesses,
+positivity and projection-orthogonality, Chebyshev duplicate-node grids,
+interpolation/residual rows, alternation-magnitude refutations,
+spectral/eigenpair witnesses,
 characteristic-polynomial arithmetic, and
 dual-space rows remain visible through the public JSON boundary without
 promoting Banach, Hilbert, compact-operator, Haar-space, minimax, alternation,

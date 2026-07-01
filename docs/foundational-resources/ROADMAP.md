@@ -437,7 +437,8 @@ bad-covector rejection, and a duality/functional-analysis Lean-horizon row.
 [`inner-product-spaces-rational-v0`](../../artifacts/examples/math/inner-product-spaces-rational-v0/)
 adds the exact rational inner-product bridge: Gram matrices, positive-definite
 principal minors, fixed Cauchy-Schwarz replay, orthogonal projection replay,
-Gram-Schmidt replay, bad-inner-product rejection, and a Hilbert/inner-product
+Gram-Schmidt replay, bad-inner-product and bad projection-orthogonality
+rejections, and a Hilbert/inner-product
 Lean-horizon row.
 [`finite-modules-v0`](../../artifacts/examples/math/finite-modules-v0/)
 validates finite module laws over `Z/4Z`, submodule/span replay,
@@ -490,7 +491,8 @@ annihilators, transpose maps, and bad-covector rejection over `F2`.
 [`inner-product-spaces-rational-v0`](../../artifacts/examples/math/inner-product-spaces-rational-v0/)
 adds the exact rational inner-product bridge: symmetric positive-definite Gram
 matrices, Cauchy-Schwarz arithmetic, orthogonal projections, Gram-Schmidt
-orthogonalization, and bad-inner-product rejection.
+orthogonalization, and bad-inner-product plus bad projection-orthogonality
+rejections.
 [`finite-modules-v0`](../../artifacts/examples/math/finite-modules-v0/)
 adds the finite module bridge from rings into linear algebra: `Z/4Z` action
 tables, generated submodules, module homomorphisms, kernel/image replay,

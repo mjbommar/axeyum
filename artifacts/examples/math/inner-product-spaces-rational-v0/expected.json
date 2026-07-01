@@ -98,6 +98,26 @@
       "notes": "The validator recomputes the coefficient, projection, residual orthogonality, and norm decomposition."
     },
     {
+      "id": "bad-projection-orthogonality-rejected",
+      "claim": "The residual from projecting [2,3] onto span([1,1]) has inner product 1 with the basis vector.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_projection_orthogonality_refutation",
+      "proof_status": "checked",
+      "data": {
+        "target": ["2", "3"],
+        "basis": ["1", "1"],
+        "coefficient": "5/2",
+        "projection": ["5/2", "5/2"],
+        "residual": ["-1/2", "1/2"],
+        "computed_residual_inner_basis": "0",
+        "claimed_residual_inner_basis": "1",
+        "smt2_artifact": "artifacts/examples/math/inner-product-spaces-rational-v0/smt2/bad-projection-orthogonality-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes inner_product_bad_projection_orthogonality_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact projection replay computes <residual,basis> = 0, while the malformed row claims 1; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
       "id": "gram-schmidt-replay",
       "claim": "The listed Gram-Schmidt residuals turn [1,1],[1,0] into an orthogonal rational basis.",
       "expected_result": "sat",

@@ -37,10 +37,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/inner-product-spaces-rational-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "inner-product bad negative-norm QF_LRA/Farkas regression seed",
-    "pressure": "Exact quadratic-form replay computes norm_square = -1 for a nonzero vector, but the malformed row claims norm_square > 0.",
+    "target": "inner-product bad negative-norm and bad projection-orthogonality QF_LRA/Farkas regression seeds",
+    "pressure": "Exact quadratic-form replay computes norm_square = -1 for a nonzero vector while one malformed row claims norm_square > 0, and exact projection replay computes <residual,basis> = 0 while another malformed row claims 1.",
     "evidence": [
-      "bad-inner-product-rejected"
+      "bad-inner-product-rejected",
+      "bad-projection-orthogonality-rejected"
     ],
     "next_step": "Promote additional finite-dimensional inner-product rows only when they add distinct exact-linear solver pressure; keep general Cauchy-Schwarz, Riesz representation, Hilbert projection, adjoints, and spectral theorem statements in the Lean-horizon lane."
   },
@@ -54,6 +55,7 @@
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "artifacts/examples/math/inner-product-spaces-rational-v0/smt2/bad-inner-product-farkas-conflict.smt2",
+    "artifacts/examples/math/inner-product-spaces-rational-v0/smt2/bad-projection-orthogonality-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
@@ -61,6 +63,7 @@
     "gram-matrix-positive-definite",
     "cauchy-schwarz-fixed-vectors",
     "orthogonal-projection-replay",
+    "bad-projection-orthogonality-rejected",
     "gram-schmidt-replay",
     "bad-inner-product-rejected",
     "general-inner-product-theory-lean-horizon"
@@ -68,7 +71,7 @@
   "graduation_criteria": [
     "Encode fixed rational inner-product, Gram-matrix, projection, and Gram-Schmidt rows as deterministic exact-rational obligations.",
     "Replay SAT witnesses through Axeyum model evaluation over finite-dimensional matrices and vectors.",
-    "Route rejected finite positivity rows through checked QF_LRA/Farkas evidence once exact replay computes the bad norm square.",
+    "Route rejected finite positivity and projection-orthogonality rows through checked QF_LRA/Farkas evidence once exact replay computes the bad norm square or residual inner product.",
     "Keep general Cauchy-Schwarz, Riesz representation, orthonormal-basis, Hilbert-projection, and complete Hilbert-space theorems under Lean horizon until formal routes exist."
   ]
 }

@@ -42,8 +42,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 567 expected checks.
-- 249 checked proof/evidence rows.
+- 568 expected checks.
+- 250 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -224,7 +224,7 @@ Exit criteria:
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | maintain landed finite dynamics/Euler bridge and keep numerical-honesty rows distinct from promoted exact residual/error certificates | QF_LRA/Farkas, replay, Lean horizon |
 | `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | maintain landed finite dynamics/Euler bridge; add only distinct transition, reachability, invariant, stochastic, or finite-error pressure | QF_LRA/Farkas, replay, Lean horizon |
 | `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, circle, inversion, and cyclic rational geometry | maintain landed coordinate/oriented replay and finite circle/inversion/cyclic replay bridge rows; add only distinct nontrivial circle-line correspondence, higher-degree polynomial-geometry, or theorem-reconstruction pressure beyond the current circle-line, square angle-dot, and Ptolemy rows | QF_LRA/Farkas, finite replay |
-| `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now has checked bad `l1` norm and bad operator-bound rows, and finite-Chebyshev now has checked duplicate-node, bad-interpolation, and bad-alternation rows; add only distinct norm, recurrence, alternation variants, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
+| `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now has checked bad `l1` norm and bad operator-bound rows, inner-product now has checked bad negative-norm and projection-orthogonality rows, and finite-Chebyshev now has checked duplicate-node, bad-interpolation, and bad-alternation rows; add only distinct norm, projection, recurrence, alternation variants, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
 
 ## Curriculum Node Build Ledger
 
@@ -887,6 +887,14 @@ Pick one row per commit unless the change is purely navigational.
      SMT-LIB artifact claims `||u+v||_1 <= 4`; the shared QF_LRA/Farkas route
      now checks both finite-operator norm and operator-bound conflicts without
      claiming general normed-space theorem coverage.
+105. Landed: extend `inner-product-spaces-rational-v0` with a checked bad
+     projection-orthogonality row. Exact replay checks the projection of
+     `[2,3]` onto `span([1,1])`, residual `[-1/2,1/2]`, and
+     `<residual,[1,1]> = 0`, while the malformed source SMT-LIB artifact
+     claims the same residual inner product is `1`; the shared QF_LRA/Farkas
+     route now checks both the bad negative-norm and bad
+     projection-orthogonality conflicts without claiming general Hilbert-space
+     projection theorem coverage.
 
 ## Validation Checklist
 

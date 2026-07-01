@@ -323,7 +323,8 @@ First targets:
   operator-bound rows after exact vector/operator replay computes the sum norm
   and image infinity norm)
 - [inner-product-spaces-rational-v0](../../artifacts/examples/math/inner-product-spaces-rational-v0/)
-  (resource-backed Farkas regression landed for the bad negative-norm row)
+  (resource-backed Farkas regressions landed for the bad negative-norm and bad
+  projection-orthogonality rows)
 - [spectral-linear-algebra-v0](../../artifacts/examples/math/spectral-linear-algebra-v0/)
   (resource-backed Farkas regression landed for the bad eigenpair row)
 - [matrix-invariants-v0](../../artifacts/examples/math/matrix-invariants-v0/)

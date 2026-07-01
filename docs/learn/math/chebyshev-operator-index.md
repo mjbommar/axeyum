@@ -127,6 +127,10 @@ Start with [Finite-Dimensional Operators](finite-operator-end-to-end.md) for
 exact vector norms, matrix row-sum bounds, Chebyshev recurrence replay, and the
 checked bad norm and bad operator-bound rows.
 
+Use [Rational Inner Product Spaces](inner-product-spaces-end-to-end.md) when the
+operator story needs projection arithmetic, residual orthogonality, and checked
+bad projection-orthogonality evidence.
+
 Then read [Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md)
 for Vandermonde unisolvence, interpolation values, alternating residuals, and
 checked duplicate-node, bad interpolation-sample, and bad alternation-magnitude

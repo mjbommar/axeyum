@@ -11,6 +11,8 @@ It checks:
 - symmetric positive-definite Gram matrices by exact principal minors;
 - Cauchy-Schwarz for fixed rational vectors;
 - orthogonal projection onto a one-dimensional subspace;
+- checked QF_LRA/Farkas rejection of a malformed projection residual
+  orthogonality claim;
 - Gram-Schmidt residual replay for a two-vector basis;
 - checked QF_LRA/Farkas rejection of a matrix that gives a negative norm
   square;
