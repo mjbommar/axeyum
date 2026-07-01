@@ -777,8 +777,8 @@ distance replay, checked QF_LRA/Farkas rejection of a false distance-table
 claim, and a graph-rigidity/rigid-motion-classification Lean-horizon row.
 `artifacts/examples/math/affine-geometry-v0/` now validates exact affine
 point-image replay, midpoint preservation, collinearity preservation, checked
-QF_LRA/Farkas rejection of a false affine distance-preservation claim, and a
-general affine-geometry Lean-horizon row.
+QF_LRA/Farkas rejection of false affine midpoint-coordinate and
+distance-preservation claims, and a general affine-geometry Lean-horizon row.
 `artifacts/examples/math/orientation-area-geometry-v0/` now validates exact
 signed-area/orientation replay, affine area scaling by determinant,
 barycentric point-inside replay, checked QF_LRA/Farkas rejection of false
@@ -1530,8 +1530,8 @@ distance-table data, and a graph-rigidity/rigid-motion-classification
 Lean-horizon row.
 `affine-geometry-v0` now adds the exact finite affine-map bridge for geometry:
 point-image replay, midpoint preservation, collinearity preservation, checked
-QF_LRA/Farkas rejection of false distance preservation, and an affine-geometry
-Lean-horizon row.
+QF_LRA/Farkas rejection of false midpoint-coordinate and distance-preservation
+claims, and an affine-geometry Lean-horizon row.
 `orientation-area-geometry-v0` now adds the exact finite orientation/area
 bridge for geometry: signed-area replay, affine determinant area scaling,
 barycentric point-inside replay, checked QF_LRA/Farkas rejection of false
@@ -1701,7 +1701,7 @@ circle-line intersection replay, unit-circle inversion replay, inverse-distance 
 collinearity, cyclic quadrilateral replay, diagonal-intersection replay,
 opposite-angle dot-product replay, rational Ptolemy replay, checked QF_LRA/Farkas bad squared-distance, checked QF_LRA/Farkas bad incidence,
 checked QF_LRA/Farkas bad distance-table data, checked QF_LRA/Farkas
-bad-distance-preservation, checked QF_LRA/Farkas bad area-scaling,
+bad affine midpoint-coordinate and bad-distance-preservation, checked QF_LRA/Farkas bad area-scaling,
 checked QF_LRA/Farkas bad-orientation, checked QF_LRA/Farkas bad-radius and bad line-intersection, checked QF_LRA/Farkas bad inverse-coordinate,
 checked QF_LRA/Farkas bad diagonal-intersection, bad opposite-angle, and bad Ptolemy rows,
 and general geometry Lean-horizon rows.
@@ -2005,8 +2005,9 @@ the same checked Farkas evidence path after exact squared-distance replay.
 same checked Farkas evidence path after exact residual-norm replay.
 `random-matrix-finite-v0` now routes its bad trace-square row through the same
 checked Farkas evidence path after exact finite moment replay.
-`affine-geometry-v0` now routes its bad distance-preservation row through the
-same checked Farkas evidence path after exact squared-distance replay.
+`affine-geometry-v0` now routes its bad midpoint-coordinate and
+distance-preservation rows through the same checked Farkas evidence path after
+exact affine-midpoint and squared-distance replay.
 `finite-circle-geometry-v0` now routes its bad radius and bad
 line-intersection rows through the same checked Farkas evidence path after
 exact coordinate replay computes squared radius `2` for the malformed

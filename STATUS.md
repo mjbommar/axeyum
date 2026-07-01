@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Affine-geometry bad midpoint-coordinate QF_LRA row landed.**
+  `affine-geometry-v0` now has a second checked Farkas row: exact affine replay
+  computes midpoint `M = (2,1)` for the segment `(0,0)` to `(4,2)` and
+  `T(M) = (6,4)`, then rejects the malformed claim that the image
+  y-coordinate is `5`. The new source SMT-LIB artifact isolates the final
+  exact-linear coordinate conflict, the shared `math_resource_lra_routes`
+  regression parses it and checks `UnsatFarkas` evidence, and the validator
+  pins the map, segment, midpoint, replayed image, claimed coordinate,
+  artifact path, regression, and certificate note. Generated dashboards and
+  the public query summary now report 111 concept rows, 108 non-template
+  packs, 576 expected checks, 258 checked rows, 247 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Complex-algebraic bad product-coordinate QF_LRA row landed.**
   `complex-algebraic-v0` now has a second checked Farkas row: exact real-pair
   replay computes `(1 + 2i) * (3 - i) = 5 + 5i`, then rejects the malformed
@@ -212,10 +225,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   isolates the final exact-linear real-part conflict, the shared
   `math_resource_lra_routes` regression parses it and checks `UnsatFarkas`
   evidence, and the validator pins the source operands, computed product,
-  claimed real part, artifact path, regression, and certificate note. Generated
-  dashboards and the public query summary now report 111 concept rows, 108
-  non-template packs, 575 expected checks, 257 checked rows, 247 replay-only
-  rows, and 71 Lean-horizon rows.
+  claimed real part, artifact path, regression, and certificate note. This
+  advanced the generated dashboard and public query-summary counters by one
+  checked row.
 
 - **Orientation/area bad affine-area-scaling QF_LRA row landed.**
   `orientation-area-geometry-v0` now has a second checked Farkas row: exact
@@ -1898,11 +1910,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Affine-geometry QF_LRA/Farkas regression landed.**
   [`affine-geometry-v0`](artifacts/examples/math/affine-geometry-v0/)
-  now binds its bad distance-preservation row to Axeyum's evidence path. The
-  new SMT-LIB artifact encodes `original_distance_squared = 1`,
-  `transformed_distance_squared = 5`, and the false equality between them; the
-  shared LRA resource regression requires `Evidence::UnsatFarkas` and rechecks
-  the rational certificate independently.
+  now binds its bad midpoint-coordinate and distance-preservation rows to
+  Axeyum's evidence path. The source SMT-LIB artifacts encode
+  `image_midpoint_y = 4` versus `5`, and `original_distance_squared = 1`
+  versus `transformed_distance_squared = 5` with a false equality between
+  them; the shared LRA resource regressions require `Evidence::UnsatFarkas`
+  and recheck the rational certificates independently.
 
 - **Inner-product-spaces QF_LRA/Farkas regression landed.**
   [`inner-product-spaces-rational-v0`](artifacts/examples/math/inner-product-spaces-rational-v0/)
@@ -3270,10 +3283,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the exact finite affine-map bridge after coordinate geometry. The pack
   validates affine point-image replay, midpoint preservation, collinearity
   preservation under an invertible affine map, checked rejection of false
-  Euclidean distance preservation, and a general affine-geometry Lean-horizon
-  row. The foundational example-pack validator now checks the affine map,
-  determinant, midpoint, collinearity, and distance counterexample rows by
-  exact rational replay.
+  midpoint-coordinate and Euclidean distance-preservation claims, and a general
+  affine-geometry Lean-horizon row. The foundational example-pack validator
+  now checks the affine map, determinant, midpoint, collinearity, midpoint
+  coordinate conflict, and distance counterexample rows by exact rational
+  replay.
 
 - **Foundational resource library-boundary decision landed.** Added
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)

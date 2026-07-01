@@ -14619,6 +14619,44 @@ def validate_affine_geometry(expected: dict[str, Any]) -> None:
     if image_midpoint != midpoint_of_images:
         fail("affine-midpoint-preservation fails for the listed segment")
 
+    bad_midpoint = checks["bad-midpoint-image-y-rejected"]
+    if bad_midpoint["expected_result"] != "unsat" or bad_midpoint.get("proof_status") != "checked":
+        fail("bad-midpoint-image-y-rejected must be a checked unsat row")
+    data = bad_midpoint.get("data", {})
+    matrix = require_matrix2("bad affine midpoint matrix", data.get("matrix"))
+    translation = require_point2("bad affine midpoint translation", data.get("translation"))
+    a = require_point2("bad affine midpoint a", data.get("a"))
+    b = require_point2("bad affine midpoint b", data.get("b"))
+    midpoint_point = require_point2("bad affine midpoint midpoint", data.get("midpoint"))
+    image_midpoint = require_point2("bad affine midpoint image_midpoint", data.get("image_midpoint"))
+    claimed_image_midpoint_y = require_fraction(
+        "bad affine midpoint claimed_image_midpoint_y",
+        data.get("claimed_image_midpoint_y"),
+    )
+    if midpoint2(a, b) != midpoint_point:
+        fail("bad-midpoint-image-y-rejected listed midpoint is incorrect")
+    if affine_image(matrix, translation, midpoint_point) != image_midpoint:
+        fail("bad-midpoint-image-y-rejected image_midpoint is incorrect")
+    if image_midpoint[1] == claimed_image_midpoint_y:
+        fail("bad-midpoint-image-y-rejected must document a false y-coordinate claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad affine midpoint smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/affine-geometry-v0/smt2/"
+        "bad-midpoint-image-y-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-midpoint-image-y-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad affine midpoint smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad affine midpoint farkas_regression", regression)
+    if "affine_geometry_bad_midpoint_image_y_artifact_emits_checked_farkas" not in regression:
+        fail("bad-midpoint-image-y-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad affine midpoint certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("bad-midpoint-image-y-rejected certificate must document Farkas evidence")
+
     collinear = checks["affine-collinearity-preservation"]
     if collinear["expected_result"] != "sat":
         fail("affine-collinearity-preservation must expect sat")

@@ -32,9 +32,10 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "affine geometry bad distance-preservation QF_LRA/Farkas regression seed",
-    "pressure": "Exact affine replay computes original squared distance 1 and transformed squared distance 5, but the malformed row claims they are equal.",
+    "target": "affine geometry bad midpoint-coordinate and bad distance-preservation QF_LRA/Farkas regression seeds",
+    "pressure": "Exact affine replay computes midpoint image (6, 4) but a row claims y-coordinate 5, and computes original squared distance 1 versus transformed squared distance 5 while a row claims they are equal.",
     "evidence": [
+      "bad-midpoint-image-y-rejected",
       "bad-distance-preservation-rejected"
     ],
     "next_step": "Promote additional affine-coordinate rows only when they add distinct exact-linear solver pressure; keep general affine-combination, incidence, ratio, and synthetic-geometry theorems in the Lean-horizon lane."
@@ -48,12 +49,14 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/affine-geometry-v0/smt2/bad-midpoint-image-y-farkas-conflict.smt2",
     "artifacts/examples/math/affine-geometry-v0/smt2/bad-distance-preservation-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "affine-map-point-witness",
     "affine-midpoint-preservation",
+    "bad-midpoint-image-y-rejected",
     "affine-collinearity-preservation",
     "bad-distance-preservation-rejected",
     "general-affine-geometry-lean-horizon"
@@ -61,6 +64,7 @@
   "graduation_criteria": [
     "Encode fixed affine-map and incidence checks as deterministic QF_LRA formulas.",
     "Replay SAT witnesses through Axeyum model evaluation rather than pack-local Python only.",
+    "Route the false midpoint-coordinate row through checked QF_LRA/Farkas evidence after exact replay computes the midpoint image.",
     "Route the false distance-preservation row through checked QF_LRA/Farkas evidence after exact replay computes both squared distances.",
     "Keep projective, differential, and synthetic geometry theorems under Lean horizon until formal proof routes exist."
   ]

@@ -121,6 +121,9 @@ const INCIDENCE_GEOMETRY_BAD_POINT_ON_LINE: &str = include_str!(
 const RIGID_CONFIGURATION_BAD_DISTANCE_TABLE: &str = include_str!(
     "../../../artifacts/examples/math/rigid-configuration-geometry-v0/smt2/bad-rigid-distance-table-farkas-conflict.smt2"
 );
+const AFFINE_GEOMETRY_BAD_MIDPOINT_IMAGE_Y: &str = include_str!(
+    "../../../artifacts/examples/math/affine-geometry-v0/smt2/bad-midpoint-image-y-farkas-conflict.smt2"
+);
 const ORIENTATION_AREA_BAD_AFFINE_AREA_SCALING: &str = include_str!(
     "../../../artifacts/examples/math/orientation-area-geometry-v0/smt2/bad-affine-area-scaling-farkas-conflict.smt2"
 );
@@ -1142,6 +1145,14 @@ fn affine_geometry_bad_distance_preservation_emits_checked_farkas() {
         "affine-geometry-v0 bad-distance-preservation-rejected",
         &arena,
         &[original_is_one, transformed_is_five, false_preservation],
+    );
+}
+
+#[test]
+fn affine_geometry_bad_midpoint_image_y_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "affine-geometry-v0 bad-midpoint-image-y SMT-LIB artifact",
+        AFFINE_GEOMETRY_BAD_MIDPOINT_IMAGE_Y,
     );
 }
 

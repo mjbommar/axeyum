@@ -45,8 +45,9 @@ Concept rows:
 | `bad-distance-squared-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `affine-map-point-witness` | `sat` | replay-only |
 | `affine-midpoint-preservation` | `sat` | replay-only |
+| `bad-midpoint-image-y-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `affine-collinearity-preservation` | `sat` | replay-only |
-| `bad-distance-preservation-rejected` | `unsat` | checked |
+| `bad-distance-preservation-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `triangle-orientation-witness` | `sat` | replay-only |
 | `affine-area-scaling` | `sat` | replay-only |
 | `bad-affine-area-scaling-rejected` | `unsat` | checked |
@@ -169,6 +170,27 @@ T(4,2) = (11,9)
 T(2,1) = (6,4)
 midpoint((1,-1), (11,9)) = (6,4)
 ```
+
+## Reject A Bad Affine Midpoint Coordinate
+
+The bad midpoint row keeps the same segment and affine map. Exact replay
+computes:
+
+```text
+M = midpoint((0,0), (4,2)) = (2,1)
+T(M) = (6,4)
+```
+
+The malformed row claims the midpoint image has y-coordinate `5`. The source
+QF_LRA artifact checks only the final exact-linear contradiction:
+
+```text
+image_midpoint_y = 4
+image_midpoint_y = 5
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
 
 For the collinear triple `(0,0)`, `(1,1)`, `(3,3)`, the same map has
 determinant `5` and sends the points to:
@@ -328,6 +350,7 @@ From the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes affine_geometry_bad_midpoint_image_y_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes orientation_area_bad_affine_area_scaling_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-circle-geometry-v0

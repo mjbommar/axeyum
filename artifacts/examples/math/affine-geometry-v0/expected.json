@@ -59,6 +59,26 @@
       "notes": "The validator recomputes the segment midpoint, all three images, and the midpoint of the image segment exactly."
     },
     {
+      "id": "bad-midpoint-image-y-rejected",
+      "claim": "The listed affine map sends the midpoint of the fixed segment to a point with y-coordinate 5.",
+      "expected_result": "unsat",
+      "validation": "exact_affine_bad_midpoint_image_refutation",
+      "proof_status": "checked",
+      "data": {
+        "matrix": [["2", "1"], ["1", "3"]],
+        "translation": ["1", "-1"],
+        "a": ["0", "0"],
+        "b": ["4", "2"],
+        "midpoint": ["2", "1"],
+        "image_midpoint": ["6", "4"],
+        "claimed_image_midpoint_y": "5",
+        "smt2_artifact": "artifacts/examples/math/affine-geometry-v0/smt2/bad-midpoint-image-y-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes affine_geometry_bad_midpoint_image_y_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact midpoint and affine-image replay computes T((0,0)+(4,2))/2 = T(2,1) = (6,4), while the malformed row claims y-coordinate 5; the source QF_LRA artifact isolates the final coordinate equality conflict for Farkas checking."
+    },
+    {
       "id": "affine-collinearity-preservation",
       "claim": "The listed invertible affine map sends a collinear triple to another collinear triple.",
       "expected_result": "sat",

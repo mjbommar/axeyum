@@ -422,8 +422,8 @@ schemas, examples, and validation workflows.
   checks, plus checked rejection of a bad squared-distance claim.
 - [`artifacts/examples/math/affine-geometry-v0/`](../../artifacts/examples/math/affine-geometry-v0/)
   validates exact affine point-image replay, midpoint preservation,
-  collinearity preservation, checked rejection of false distance preservation,
-  and an affine-geometry Lean-horizon row.
+  collinearity preservation, checked rejection of false midpoint-coordinate
+  and distance-preservation claims, and an affine-geometry Lean-horizon row.
 - [`artifacts/examples/math/orientation-area-geometry-v0/`](../../artifacts/examples/math/orientation-area-geometry-v0/)
   validates exact signed-area/orientation replay, affine area scaling,
   barycentric point-inside replay, checked rejection of false affine-area

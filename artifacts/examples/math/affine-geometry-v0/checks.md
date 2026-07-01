@@ -15,6 +15,15 @@ The validator recomputes the midpoint of `(0, 0)` and `(4, 2)`, applies the
 affine map to the endpoints and midpoint, and checks that the image of the
 midpoint equals the midpoint of the images.
 
+## `bad-midpoint-image-y-rejected`
+
+Expected result: `unsat`.
+
+The validator recomputes the segment midpoint and affine midpoint image:
+`T(2, 1) = (6, 4)`. The malformed row claims image y-coordinate `5`. The final
+coordinate conflict is also checked by a linked `QF_LRA` artifact and a
+resource-backed `UnsatFarkas` regression.
+
 ## `affine-collinearity-preservation`
 
 Expected result: `sat`.

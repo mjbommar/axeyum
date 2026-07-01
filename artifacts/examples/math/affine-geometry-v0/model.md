@@ -45,6 +45,22 @@ T(M) = (6, 4)
 
 The midpoint of `T(A)` and `T(B)` is also `(6, 4)`.
 
+### False Midpoint Coordinate
+
+The same midpoint replay rejects a malformed row that claims:
+
+```text
+T(M).y = 5
+```
+
+Exact replay computes `T(M).y = 4`, and the source `QF_LRA` artifact checks
+only the final coordinate conflict:
+
+```text
+image_midpoint_y = 4
+image_midpoint_y = 5
+```
+
 ### Collinearity Preservation
 
 The points `(0, 0)`, `(1, 1)`, and `(3, 3)` are collinear. The matrix has

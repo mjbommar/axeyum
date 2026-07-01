@@ -304,8 +304,8 @@ First targets:
   (resource-backed Farkas regression landed for the bad trace-square moment
   row)
 - [affine-geometry-v0](../../artifacts/examples/math/affine-geometry-v0/)
-  (resource-backed Farkas regression landed for the bad distance-preservation
-  row)
+  (resource-backed Farkas regressions landed for the bad midpoint-coordinate
+  and bad distance-preservation rows)
 - [coordinate-geometry-v0](../../artifacts/examples/math/coordinate-geometry-v0/)
   (source-linked Farkas regression landed for the bad squared-distance row
   after exact coordinate replay computes the squared distance)
@@ -379,6 +379,10 @@ Secondary targets:
   Coordinate geometry now contributes the geometry version of the
   replay-then-Farkas boundary: exact replay computes the squared distance, then
   Farkas checks the final bad-distance equality conflict.
+  Affine geometry now contributes the affine-map version of that boundary:
+  exact replay computes the midpoint image and transformed squared distance,
+  then Farkas checks the final bad-coordinate and bad-distance equality
+  conflicts.
   Finite cyclic geometry now contributes the cyclic-configuration version of
   that boundary: exact replay computes circle membership, diagonal midpoints,
   angle dot products, and a rational Ptolemy product-sum row, then Farkas
@@ -430,6 +434,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_ba
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes affine_geometry_bad_midpoint_image_y_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test lean_crosscheck certified_lra_interpolant_both_farkas_certs_checked_by_real_lean
 ./scripts/check-foundational-resources.sh
 ```
