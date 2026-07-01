@@ -54,3 +54,12 @@ claims gap `1/2`. Exact replay computes:
 ```
 
 so the malformed gap claim has error `1/2`.
+
+The checked bad slack-entry row keeps the same dual witness but claims the
+bottom-right entry of `S` is `1/2`. Exact replay computes:
+
+```text
+S_11 = 1
+```
+
+so the malformed slack-entry claim has gap `1/2`.

@@ -94,7 +94,7 @@ checking, degenerate active-bound replay, and checked QF_LRA/Farkas
 bad-free-gradient plus bad-degenerate-multiplier certificates. The finite
 SDP slice adds two-by-two PSD replay, trace/objective arithmetic, dual-slack
 matrix replay, zero duality-gap checking, and checked QF_LRA/Farkas
-bad-objective plus bad-duality-gap certificates. The finite-gradient-descent slice adds exact
+bad-objective, bad-duality-gap, and bad-slack-entry certificates. The finite-gradient-descent slice adds exact
 quadratic gradient replay, step-update replay, objective-decrease checking,
 finite descent-bound replay, and a checked QF_LRA/Farkas bad-decrease
 certificate. The finite line-search slice adds exact Armijo trial rejection,
@@ -437,8 +437,9 @@ S = C - yI
 The `finite-sdp-v0` validator checks the primal matrix and slack matrix by
 two-by-two principal minors, recomputes `<I,X> = 1`, `<C,X> = 1`, and verifies
 zero primal-dual gap. Its bad rows change the objective to `0` and the gap to
-`1/2`, giving objective error `1` and gap error `1/2`; the final contradictions
-are checked through QF_LRA/Farkas evidence. For a focused trace, read
+`1/2`, and claim slack entry `1/2`, giving objective error `1`, gap error
+`1/2`, and slack-entry gap `1/2`; the final contradictions are checked through
+QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite SDP Checks](finite-sdp-end-to-end.md).
 
 For a finite gradient-descent example, encode a quadratic, start point, step

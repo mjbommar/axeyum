@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 620 expected checks.
-- 297 checked proof/evidence rows.
+- 621 expected checks.
+- 298 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -197,7 +197,7 @@ Route plan:
 | Boolean CNF DRAT/LRAT | finite Boolean refutations, graph/search/set-family conflicts | Promote small topology and graph rows that are source-level obvious. |
 | QF_BV DRAT | fixed-width residue, bit-vector, and finite algebra conflicts | Promote only when width is part of the educational claim. |
 | QF_LIA/Diophantine | integer equations, counts, modular obstructions, rank coefficients, torsion membership | Group recurring gcd/divisibility and quotient-boundary obstructions as cookbook examples. |
-| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad width, bad convex-combination, bad separator, bad stationarity, bad complementarity, bad free-gradient, bad degenerate multiplier, bad objective, bad duality-gap, bad decrease, bad step-coordinate, bad Armijo, bad accepted-candidate, bad Wolfe minimizer, bad Wolfe curvature, bad projection, bad projected-decrease, bad proximal-point, and bad box-proximal-point rows with independent Farkas checks. |
+| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad width, bad convex-combination, bad separator, bad stationarity, bad complementarity, bad free-gradient, bad degenerate multiplier, bad objective, bad duality-gap, bad slack-entry, bad decrease, bad step-coordinate, bad Armijo, bad accepted-candidate, bad Wolfe minimizer, bad Wolfe curvature, bad projection, bad projected-decrease, bad proximal-point, and bad box-proximal-point rows with independent Farkas checks. |
 | QF_UF/Alethe | equality-heavy finite functions, quotients, homomorphisms | Use table replay for objects, Alethe for congruence conflicts. |
 | Lean horizon | induction schemas, completeness, topology, measure, asymptotics | Record theorem shape and dependencies; do not benchmark as finite checks. |
 
@@ -663,7 +663,7 @@ Build next:
   artifacts; keep `finite-kkt-v0`'s bad stationarity and bad
   complementarity rows tied to their source QF_LRA/Farkas artifacts; keep
   `finite-active-set-qp-v0`'s bad free-gradient and bad degenerate-multiplier
-  rows tied to their source QF_LRA/Farkas artifacts; keep `finite-sdp-v0`'s bad objective and bad duality-gap rows tied to their
+  rows tied to their source QF_LRA/Farkas artifacts; keep `finite-sdp-v0`'s bad objective, bad duality-gap, and bad slack-entry rows tied to their
   source QF_LRA/Farkas artifact; keep `finite-gradient-descent-v0`'s bad decrease and bad
   step-coordinate rows tied to their source QF_LRA/Farkas artifacts; keep `finite-line-search-v0`'s bad Armijo and
   bad accepted-candidate rows tied to their source QF_LRA/Farkas artifacts; keep
@@ -1962,6 +1962,11 @@ Pick one item per commit unless the change is purely navigational.
      terminal error `3/4`, while the malformed row claims `1/2`; the new source
      SMT-LIB artifact reaches independently checked QF_LRA/Farkas evidence
      through `finite_euler_bad_terminal_error_artifact_emits_checked_farkas`.
+130. Landed: extend `finite-sdp-v0` with a source-linked checked slack-entry
+     refutation. Exact primal/dual replay computes bottom-right slack entry
+     `1`, while the malformed row claims `1/2`; the new source SMT-LIB artifact
+     reaches independently checked QF_LRA/Farkas evidence through
+     `finite_sdp_bad_slack_entry_artifact_emits_checked_farkas`.
 
 ## Validation Checklist
 

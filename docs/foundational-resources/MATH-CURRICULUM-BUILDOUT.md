@@ -1135,7 +1135,8 @@ Recommended order:
     anti-cycling, and active-set convergence theorems remain horizon claims.
 37. `finite-sdp-v0`: exact two-by-two PSD replay, trace/objective arithmetic,
     dual-slack matrix replay, zero duality-gap checking, and checked
-    QF_LRA/Farkas bad-objective and bad-duality-gap rejections, while general SDP duality and
+    QF_LRA/Farkas bad-objective, bad-duality-gap, and bad-slack-entry
+    rejections, while general SDP duality and
     convergence theorems remain horizon claims.
 38. `finite-gradient-descent-v0`: exact quadratic gradient replay, descent-step
     arithmetic, objective-decrease and descent-bound replay, and checked
@@ -1713,7 +1714,7 @@ KKT stationarity/complementarity, checked bad-free-gradient rejection with
 QF_LRA/Farkas evidence, and the general active-set-method Lean horizon.
 `finite-sdp-v0` now has a learner-facing end-to-end lesson for exact two-by-two
 PSD replay, trace/objective arithmetic, dual-slack matrix replay, zero-gap
-replay, checked bad-objective and bad-duality-gap rejections with
+replay, checked bad-objective, bad-duality-gap, and bad-slack-entry rejections with
 QF_LRA/Farkas evidence, and the general SDP-duality Lean horizon.
 `finite-gradient-descent-v0` now has a learner-facing end-to-end lesson for
 exact quadratic gradient replay, finite descent-step arithmetic,
@@ -2064,9 +2065,11 @@ product `0`, and complementarity error `1`.
 degenerate-multiplier rows through the same checked Farkas evidence path after
 exact active-face replay computes free-coordinate stationarity error `2` and
 degenerate active-bound replay computes false positive-multiplier error `1`.
-`finite-sdp-v0` now routes its bad objective and bad duality-gap rows through
+`finite-sdp-v0` now routes its bad objective, bad duality-gap, and bad
+slack-entry rows through
 the same checked Farkas evidence path after exact SDP replay computes objective
-value `1`, dual objective `1`, objective error `1`, and gap error `1/2`.
+value `1`, dual objective `1`, objective error `1`, gap error `1/2`, and
+bottom-right slack-entry gap `1/2`.
 `finite-gradient-descent-v0` now routes its bad decrease and bad
 step-coordinate rows through the same checked Farkas evidence path after exact
 descent-step replay computes decrease `11/4`, decrease error `3/4`, and

@@ -264,9 +264,9 @@ S = [[0,0],
 
 The `finite-sdp-v0` validator recomputes two-by-two principal minors, trace,
 objective value, slack matrix, dual objective, and primal-dual gap. Its bad
-rows change the objective to `0` and the gap to `1/2`, compute exact errors
-`1` and `1/2`, and check the resulting exact-linear contradictions through
-QF_LRA/Farkas evidence. For a focused trace, read
+rows change the objective to `0`, the gap to `1/2`, and the bottom-right slack
+entry to `1/2`, compute exact errors `1`, `1/2`, and `1/2`, and check the
+resulting exact-linear contradictions through QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite SDP Checks](finite-sdp-end-to-end.md).
 
 For a finite gradient-descent check, encode a fixed quadratic step:

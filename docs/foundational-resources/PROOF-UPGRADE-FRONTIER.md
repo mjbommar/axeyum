@@ -267,9 +267,10 @@ First targets:
   degenerate-multiplier row after tight-bound replay computes stationarity
   error `1`)
 - [finite-sdp-v0](../../artifacts/examples/math/finite-sdp-v0/)
-  (source-linked Farkas regressions landed for the bad objective and bad
-  duality-gap rows after exact two-by-two SDP replay computes objective value
-  `1`, dual objective `1`, objective error `1`, and gap error `1/2`)
+  (source-linked Farkas regressions landed for the bad objective,
+  bad duality-gap, and bad slack-entry rows after exact two-by-two SDP replay
+  computes objective value `1`, dual objective `1`, objective error `1`, gap
+  error `1/2`, and bottom-right slack-entry gap `1/2`)
 - [finite-gradient-descent-v0](../../artifacts/examples/math/finite-gradient-descent-v0/)
   (source-linked Farkas regressions landed for the bad decrease and bad
   step-coordinate rows after exact quadratic descent replay computes decrease
@@ -454,8 +455,8 @@ Secondary targets:
   error conflict.
   Finite SDP now contributes the primal/dual-slack version of that boundary:
   exact replay computes two-by-two PSD minors, trace/objective arithmetic,
-  slack PSD, and zero gap, then Farkas checks the final bad-objective and
-  bad-duality-gap error conflicts.
+  slack PSD, and zero gap, then Farkas checks the final bad-objective,
+  bad-duality-gap, and bad-slack-entry conflicts.
   Finite gradient descent now contributes the algorithm-step version of that
   boundary: exact replay computes the gradient, step update, objective
   decrease, and descent-bound slack, then Farkas checks the final bad-decrease

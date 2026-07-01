@@ -2,8 +2,9 @@
 
 This pack turns one two-by-two semidefinite-programming calculation into exact
 rational resource rows. It checks only the listed matrix witness, trace
-constraint, objective value, dual slack matrix, and zero duality gap; general
-SDP strong duality and convex-optimization theorems remain proof horizons.
+constraint, objective value, dual slack matrix, zero duality gap, and a bad
+slack-entry rejection; general SDP strong duality and convex-optimization
+theorems remain proof horizons.
 
 ## Audience
 
@@ -24,6 +25,8 @@ SDP strong duality and convex-optimization theorems remain proof horizons.
   primal matrix has objective `0`; exact replay computes objective `1`.
 - `bad-sdp-duality-gap-rejected`: rejects the malformed claim that the same
   primal/dual witness has duality gap `1/2`; exact replay computes gap `0`.
+- `bad-sdp-slack-entry-rejected`: rejects the malformed claim that the
+  bottom-right slack entry is `1/2`; exact replay computes it as `1`.
 - `general-sdp-duality-lean-horizon`: names the future proof route for general
   SDP duality, constraint qualifications, and strong-duality theorems.
 
@@ -39,4 +42,5 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_
 Untrusted search may propose a primal matrix, dual variable, or slack matrix.
 The trusted work is small: exact matrix arithmetic, two-by-two PSD principal
 minor replay, objective replay, dual-gap arithmetic, and checked `UnsatFarkas`
-evidence over the source SMT-LIB row.
+evidence over the source SMT-LIB rows for false objective, duality-gap, and
+slack-entry claims.

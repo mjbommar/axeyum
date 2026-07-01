@@ -188,7 +188,8 @@ Companion maps:
   active-set method Lean horizon.
 - [Finite SDP Checks](finite-sdp-end-to-end.md): follows two-by-two PSD replay,
   objective, dual-slack, and gap replay, checked QF_LRA/Farkas bad-objective
-  and bad-duality-gap rejections, and the general SDP duality Lean horizon.
+  bad-duality-gap, and bad-slack-entry rejections, and the general SDP duality
+  Lean horizon.
 - [Finite Gradient Descent Checks](finite-gradient-descent-end-to-end.md):
   follows exact quadratic gradient replay, one descent step, a finite descent
   bound, checked QF_LRA/Farkas bad-decrease and bad step-coordinate

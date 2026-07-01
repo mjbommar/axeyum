@@ -460,7 +460,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-sdp-v0/`](../../artifacts/examples/math/finite-sdp-v0/)
   validates exact two-by-two SDP primal/dual replay, objective arithmetic,
   slack PSD checks, zero-gap checking, checked bad-objective and
-  bad-duality-gap rejections, and a general SDP-duality Lean-horizon row.
+  bad-duality-gap and bad-slack-entry rejections, and a general SDP-duality
+  Lean-horizon row.
 - [`artifacts/examples/math/finite-gradient-descent-v0/`](../../artifacts/examples/math/finite-gradient-descent-v0/)
   validates exact two-variable quadratic gradient replay, descent-step replay,
   objective-decrease checking, checked bad-decrease and bad step-coordinate

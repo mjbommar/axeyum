@@ -225,8 +225,8 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 620 expected checks (334 `sat`,
-215 `unsat`, 71 `not-run`), 297 checked rows, 252 replay-only rows, and 71
+111 concept rows, 108 non-template packs, 621 expected checks (334 `sat`,
+216 `unsat`, 71 `not-run`), 298 checked rows, 252 replay-only rows, and 71
 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -405,7 +405,7 @@ soft-threshold plus box-constrained replay, and checked
 QF_LRA/Farkas rejection of bad upper-bound, bad finite-value, bad Newton-step,
 bad bisection-width, bad convex-combination,
 bad separator, bad stationarity, bad free-gradient, bad degenerate active-set
-multiplier, bad objective, bad duality-gap, bad decrease, bad Armijo, bad Wolfe-curvature, bad
+multiplier, bad objective, bad duality-gap, bad slack-entry, bad decrease, bad Armijo, bad Wolfe-curvature, bad
 projection, bad projected-decrease, bad proximal-point, and bad
 box-proximal-point rows, while
 monotone convergence, closed-form recurrence solving, asymptotics, and
@@ -834,7 +834,8 @@ the latest finite-line-search bad accepted-candidate QF_LRA/Farkas promotion,
 the latest finite-line-search bad Armijo QF_LRA/Farkas promotion,
 the latest finite-gradient-descent bad step-coordinate and bad decrease
 QF_LRA/Farkas promotions,
-the latest finite-SDP bad objective and bad duality-gap QF_LRA/Farkas promotion,
+the latest finite-SDP bad objective, bad duality-gap, and bad slack-entry
+QF_LRA/Farkas promotion,
 the latest finite-KKT bad stationarity and bad complementarity QF_LRA/Farkas
 promotion,
 the latest finite-separation bad convex-combination and bad separator

@@ -11785,6 +11785,53 @@ def validate_finite_sdp(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-sdp-duality-gap-rejected certificate must document checked Farkas evidence")
 
+    bad_slack = checks["bad-sdp-slack-entry-rejected"]
+    if bad_slack["expected_result"] != "unsat" or bad_slack.get("proof_status") != "checked":
+        fail("bad-sdp-slack-entry-rejected must be a checked unsat row")
+    data = bad_slack.get("data", {})
+    if data.get("source_witness") != "rank-one-primal-dual-sdp":
+        fail("bad-sdp-slack-entry-rejected must cite the rank-one-primal-dual-sdp witness")
+    slack_entry = data.get("slack_entry")
+    if not isinstance(slack_entry, list) or len(slack_entry) != 2:
+        fail("bad-sdp-slack-entry-rejected slack_entry must be a two-item index")
+    slack_row = require_nonnegative_int("bad SDP slack_entry[0]", slack_entry[0])
+    slack_col = require_nonnegative_int("bad SDP slack_entry[1]", slack_entry[1])
+    if slack_row >= 2 or slack_col >= 2:
+        fail("bad-sdp-slack-entry-rejected slack_entry must index a two-by-two matrix")
+    computed_slack_entry = require_fraction(
+        "bad SDP computed_slack_entry",
+        data.get("computed_slack_entry"),
+    )
+    claimed_slack_entry = require_fraction(
+        "bad SDP claimed_slack_entry",
+        data.get("claimed_slack_entry"),
+    )
+    slack_entry_gap = require_fraction(
+        "bad SDP slack_entry_gap",
+        data.get("slack_entry_gap"),
+    )
+    if computed_slack_entry != computed_slack[slack_row][slack_col]:
+        fail("bad-sdp-slack-entry-rejected computed slack entry does not match replay")
+    if computed_slack_entry == claimed_slack_entry:
+        fail("bad-sdp-slack-entry-rejected malformed slack entry must disagree with replay")
+    if computed_slack_entry - claimed_slack_entry != slack_entry_gap:
+        fail("bad-sdp-slack-entry-rejected slack entry gap is incorrect")
+    if slack_entry_gap <= 0:
+        fail("bad-sdp-slack-entry-rejected slack entry gap must be positive")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad SDP slack-entry smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-sdp-v0/smt2/bad-slack-entry-farkas-conflict.smt2":
+        fail("bad-sdp-slack-entry-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad SDP slack-entry smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad SDP slack-entry farkas_regression", regression)
+    if "finite_sdp_bad_slack_entry_artifact_emits_checked_farkas" not in regression:
+        fail("bad-sdp-slack-entry-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad SDP slack-entry certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-sdp-slack-entry-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-sdp-duality-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-sdp-duality-lean-horizon must be not-run")

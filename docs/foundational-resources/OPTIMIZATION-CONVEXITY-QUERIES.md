@@ -64,7 +64,7 @@ needs concrete checked rows to display.
 | KKT stationarity and complementarity display rows | pack `finite-kkt-v0` | `Farkas` | `checks --pack finite-kkt-v0 --route Farkas --proof-status checked` |
 | Active-set QP display row | pack `finite-active-set-qp-v0` | `Farkas` | `checks --pack finite-active-set-qp-v0 --route Farkas --proof-status checked` |
 | Degenerate active-set multiplier row | pack `finite-active-set-qp-v0`, text `degenerate` | `Farkas` | `checks --pack finite-active-set-qp-v0 --route Farkas --proof-status checked --text degenerate` |
-| SDP objective/slack/gap display row | pack `finite-sdp-v0` | `Farkas` | `checks --pack finite-sdp-v0 --route Farkas --proof-status checked` |
+| SDP objective/slack/gap display row | pack `finite-sdp-v0` | `Farkas` | `checks --pack finite-sdp-v0 --route Farkas --proof-status checked`; `checks --pack finite-sdp-v0 --route Farkas --proof-status checked --text slack` |
 | Gradient descent and line-search display rows | packs `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0` | `Farkas` | `checks --pack finite-gradient-descent-v0 --route Farkas --proof-status checked`; `checks --pack finite-line-search-v0 --route Farkas --proof-status checked`; `checks --pack finite-wolfe-line-search-v0 --route Farkas --proof-status checked` |
 | Projected and proximal gradient display rows | packs `finite-projected-gradient-v0`, `finite-proximal-gradient-v0` | `Farkas` | `checks --pack finite-projected-gradient-v0 --route Farkas --proof-status checked`; `checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked`; `checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked --text box` |
 

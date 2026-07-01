@@ -83,6 +83,24 @@
       "notes": "Exact replay computes primal objective 1 and dual objective 1, so the duality gap is 0; the malformed gap claim 1/2 leaves positive error 1/2."
     },
     {
+      "id": "bad-sdp-slack-entry-rejected",
+      "claim": "The same dual variable produces bottom-right slack entry 1/2.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_sdp_slack_entry_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "rank-one-primal-dual-sdp",
+        "slack_entry": [1, 1],
+        "computed_slack_entry": "1",
+        "claimed_slack_entry": "1/2",
+        "slack_entry_gap": "1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-sdp-v0/smt2/bad-slack-entry-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_slack_entry_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes S = C - yI = [[0,0],[0,1]], so the malformed bottom-right slack-entry claim 1/2 is rejected by checked Farkas evidence."
+    },
+    {
       "id": "general-sdp-duality-lean-horizon",
       "claim": "General SDP weak/strong duality, Slater-style conditions, and KKT sufficiency require future Lean reconstruction.",
       "expected_result": "not-run",

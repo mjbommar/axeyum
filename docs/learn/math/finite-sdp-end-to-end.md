@@ -32,7 +32,7 @@ X = [[1, 0],
 
 ## What Gets Checked
 
-The pack has six rows:
+The pack has seven rows:
 
 | Row | Result | Evidence |
 |---|---|---|
@@ -41,6 +41,7 @@ The pack has six rows:
 | `finite-sdp-dual-slack-replay` | `sat` | replay-only |
 | `bad-sdp-objective-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `bad-sdp-duality-gap-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-sdp-slack-entry-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-sdp-duality-lean-horizon` | `not-run` | Lean horizon |
 
 The replay rows use exact rational arithmetic and two-by-two matrix arithmetic.
@@ -154,6 +155,19 @@ The source SMT-LIB artifact fixes that gap error and also claims it is zero:
 
 The Farkas route checks this final contradiction after the pack validator has
 replayed the primal/dual arithmetic.
+
+## Bad Slack-Entry Row
+
+The same dual replay computes:
+
+```text
+S = [[0, 0],
+     [0, 1]]
+```
+
+The malformed row claims the bottom-right entry is `1/2`. The source SMT-LIB
+artifact fixes the replayed entry as `1` and the claimed entry as `1/2`, and
+the Farkas route checks that exact equality conflict.
 
 ## What This Does Not Prove
 

@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-SDP bad slack-entry QF_LRA row landed.**
+  `finite-sdp-v0` now includes a checked rejection for a malformed dual
+  slack-entry row: exact primal/dual replay computes
+  `S = C - yI = [[0,0],[0,1]]`, while the bad row claims the bottom-right
+  slack entry is `1/2`, leaving gap `1/2`. The validator pins the SDP source
+  witness, slack-entry index, computed entry, claimed entry, gap, SMT-LIB
+  artifact, regression, and independently checked `UnsatFarkas` certificate.
+  The shared `math_resource_lra_routes` regression parses the artifact and
+  checks the Farkas evidence. Generated dashboards and the public query summary
+  now report 111 concept rows, 108 non-template packs, 621 expected checks, 298
+  checked rows, 252 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite-Euler bad terminal-error QF_LRA row landed.**
   `finite-euler-method-v0` now includes a checked pointwise terminal-error
   refutation for the quadratic-forcing Euler trace: exact replay computes

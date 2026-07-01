@@ -7,8 +7,10 @@
 | `finite-sdp-dual-slack-replay` | `sat` | replay-only |
 | `bad-sdp-objective-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `bad-sdp-duality-gap-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-sdp-slack-entry-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-sdp-duality-lean-horizon` | `not-run` | Lean horizon |
 
 The replay rows check only the listed rational two-by-two SDP witness. The bad
 rows keep the replayed objective or duality-gap error fixed and check tiny
-linear contradictions.
+linear contradictions; the slack-entry row does the same for the replayed
+bottom-right entry of `S = C - yI`.
