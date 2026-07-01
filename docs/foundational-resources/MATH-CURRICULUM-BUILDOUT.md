@@ -54,6 +54,8 @@ For finite geometry discovery by bridge concept and proof route, use the
 [Geometry Resource Consumer Queries](GEOMETRY-RESOURCE-QUERIES.md).
 For graph/discrete discovery by bridge concept and proof route, use the
 [Graph And Discrete Resource Consumer Queries](GRAPH-DISCRETE-QUERIES.md).
+For optimization/convexity discovery by bridge concept and proof route, use the
+[Optimization And Convexity Resource Consumer Queries](OPTIMIZATION-CONVEXITY-QUERIES.md).
 This file remains the phase contract and landed-history log.
 
 The product is not a textbook and not a formal-library clone. It is a set of
@@ -2278,6 +2280,15 @@ concept-scoped Boolean, QF_BV, and LIA pack/check queries, making finite
 coloring, reachability, matching, cut, d-separation, fixed-width coloring, and
 BFS/DFS runtime rows discoverable while keeping general graph theorems and
 asymptotic algorithm claims in the proof-horizon lane.
+The optimization/convexity consumer layer now also has
+[`OPTIMIZATION-CONVEXITY-QUERIES.md`](OPTIMIZATION-CONVEXITY-QUERIES.md). The
+guide and resource smoke expose LP objective/Farkas rows, rational convexity
+shadows, projection/residual rows, exact-vs-floating boundary rows, and
+pack-specific KKT, active-set QP, SDP, gradient-descent, Armijo/Wolfe
+line-search, projected-gradient, and proximal-gradient rows through
+concept-scoped or pack-scoped Farkas queries, making finite optimization
+resources discoverable while keeping duality, KKT sufficiency, SDP strong
+duality, convergence, stability, and benchmark claims in the horizon lanes.
 The proof-route consumer layer now also has
 [`PROOF-ROUTE-QUERY-MATRIX.md`](PROOF-ROUTE-QUERY-MATRIX.md), and
 `query-foundational-resources.py routes` summarizes route coverage from

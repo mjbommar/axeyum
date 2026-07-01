@@ -190,6 +190,11 @@ The graph/discrete consumer query guide is
 it records exact concept-plus-route queries for finite graph coloring,
 reachability, matching, cuts, d-separation, fixed-width coloring, and BFS/DFS
 runtime resources.
+The optimization/convexity consumer query guide is
+[`docs/foundational-resources/OPTIMIZATION-CONVEXITY-QUERIES.md`](docs/foundational-resources/OPTIMIZATION-CONVEXITY-QUERIES.md);
+it records exact concept-plus-route queries for LP objectives, convexity
+shadows, KKT/QP/SDP rows, first-order method steps, projections, residuals,
+and exact-vs-floating boundary resources.
 The rules/law transfer crosswalk that maps finite predicates, arithmetic
 thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
@@ -607,6 +612,15 @@ pack/check queries for `bridge_finite_graph_replay_obstruction`, so downstream
 consumers can discover finite coloring, reachability, matching, cut,
 d-separation, fixed-width coloring, and BFS/DFS runtime rows without promoting
 general graph-theory or asymptotic algorithm claims.
+The optimization/convexity lane now has
+[`OPTIMIZATION-CONVEXITY-QUERIES.md`](docs/foundational-resources/OPTIMIZATION-CONVEXITY-QUERIES.md),
+and the foundational smoke checks LP objective/Farkas rows, rational convexity
+shadows, projection/residual rows, exact-vs-floating boundary rows, and
+pack-specific KKT, active-set QP, SDP, gradient-descent, Armijo/Wolfe
+line-search, projected-gradient, and proximal-gradient rows, so downstream
+consumers can discover finite optimization resources without promoting
+duality, KKT sufficiency, SDP strong duality, method convergence, stability, or
+benchmark claims.
 The proof-route lane now has
 [`PROOF-ROUTE-QUERY-MATRIX.md`](docs/foundational-resources/PROOF-ROUTE-QUERY-MATRIX.md),
 and the query helper accepts `routes` summaries with route aliases and optional

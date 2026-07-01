@@ -79,6 +79,10 @@ schemas, examples, and validation workflows.
 - [NUMBER-ARITHMETIC-QUERIES.md](NUMBER-ARITHMETIC-QUERIES.md) gives copyable
   concept-plus-route queries for gcd/divisibility, CRT, nonunit inverse,
   fixed-width residue, totality, quotient/ideal, and exact-vs-floating rows.
+- [OPTIMIZATION-CONVEXITY-QUERIES.md](OPTIMIZATION-CONVEXITY-QUERIES.md) gives
+  copyable concept-plus-route queries for LP objectives, convexity shadows,
+  KKT/QP/SDP rows, first-order method steps, projections, residuals, and
+  exact-vs-floating boundary rows.
 - [GRAPH-DISCRETE-QUERIES.md](GRAPH-DISCRETE-QUERIES.md) gives copyable
   concept-plus-route queries for finite graph coloring, reachability,
   matching, cuts, d-separation, fixed-width coloring, and BFS/DFS runtime rows.
