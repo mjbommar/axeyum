@@ -689,6 +689,8 @@ Next buildout:
    `artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-duplicate-node-grid-farkas-conflict.smt2`,
    checked from `crates/axeyum-solver/tests/math_resource_lra_routes.rs`.
    `finite-ideals-v0` now adds
+   `artifacts/examples/math/finite-ideals-v0/smt2/bad-ideal-additive-closure-conflict.smt2`
+   and
    `artifacts/examples/math/finite-ideals-v0/smt2/quotient-ring-representative-congruence-conflict.smt2`,
    checked from `crates/axeyum-solver/tests/math_resource_uf_routes.rs`.
 11. Landed: add

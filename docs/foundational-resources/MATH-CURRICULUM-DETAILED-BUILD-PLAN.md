@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 647 expected checks.
+- 648 expected checks.
 - 322 checked proof/evidence rows.
-- 254 replay-only rows.
+- 255 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1503,6 +1503,15 @@ Pick one row per commit unless the change is purely navigational.
      regression. The public query surface now reports 647 checks, 322 checked
      rows, and row-scoped Alethe lookup for the pack returns the antisymmetry
      row.
+176. Landed: split the `finite-ideals-v0` bad-ideal proof-object check into
+     the explicit `qf-uf-bad-ideal-additive-closure` row. Exact finite replay
+     still owns `bad-ideal-rejected` by computing `2 + 2 = 4` in `Z/6Z` and
+     checking that `4` is absent from `{0,2}`; the source SMT-LIB artifact
+     separately rejects the malformed fixed additive-closure membership claim
+     through the existing `finite_ideals_bad_ideal_emits_checked_alethe`
+     regression. The public query surface now reports 648 checks, 322 checked
+     rows, 255 replay-only rows, and row-scoped Alethe lookup for the pack
+     returns the additive-closure row.
 
 ## Validation Checklist
 

@@ -32,9 +32,10 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-ideals-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite ideal quotient-ring QF_UF/Alethe representative-congruence seed",
-    "pressure": "Quotient-ring addition must be independent of choosing representatives from the same ideal cosets; the fixed EUF row refutes a false distinction between even/odd representative additions.",
+    "target": "finite ideal additive-closure and quotient-ring QF_UF/Alethe seeds",
+    "pressure": "A malformed ideal closure row and a quotient-ring representative row both reduce to compact equality conflicts: additive closure must include 2+2, and quotient addition must be independent of representative choice.",
     "evidence": [
+      "qf-uf-bad-ideal-additive-closure",
       "qf-uf-quotient-ring-representative-alethe"
     ],
     "next_step": "Promote additional ideal or quotient rows only when they add distinct congruence pressure; keep correspondence theorems, localization, and prime/maximal ideal theory in the Lean-horizon lane."
@@ -48,6 +49,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-ideals-v0/smt2/bad-ideal-additive-closure-conflict.smt2",
     "artifacts/examples/math/finite-ideals-v0/smt2/quotient-ring-representative-congruence-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
@@ -58,6 +60,7 @@
     "quotient-ring-replay",
     "qf-uf-quotient-ring-representative-alethe",
     "bad-ideal-rejected",
+    "qf-uf-bad-ideal-additive-closure",
     "general-ideal-theory-lean-horizon"
   ],
   "graduation_criteria": [

@@ -566,8 +566,10 @@ First targets:
   `qf-uf-bad-submodule-scalar-closure` for the bad scalar-closure membership
   conflict)
 - [finite-ideals-v0](../../artifacts/examples/math/finite-ideals-v0/)
-  (resource-backed QF_UF/Alethe regressions landed for the bad ideal
-  additive-closure conflict and quotient-ring representative congruence)
+  (resource-backed QF_UF/Alethe regressions landed as
+  `qf-uf-bad-ideal-additive-closure` for the bad ideal additive-closure
+  membership conflict and as `qf-uf-quotient-ring-representative-alethe` for
+  quotient-ring representative congruence)
 - [finite-tensor-products-v0](../../artifacts/examples/math/finite-tensor-products-v0/)
   (resource-backed QF_UF/Alethe regression landed as
   `qf-uf-bad-bilinear-left-additivity` for the bad bilinear left-additivity

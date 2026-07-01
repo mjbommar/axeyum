@@ -205,6 +205,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite ideal additive-closure Alethe row split landed.**
+  `finite-ideals-v0` now keeps the malformed `{0,2}` ideal rejection as exact
+  finite replay and exposes the QF_UF/Alethe proof-object check as the
+  explicit `qf-uf-bad-ideal-additive-closure` row. The replay row computes
+  `2 + 2 = 4` in `Z/6Z` and checks that `4` is absent from the claimed subset;
+  the source SMT-LIB artifact separately checks the fixed
+  additive-closure membership contradiction. Focused validation passes; the
+  public summary now reports 120 concept rows, 108 packs, 648 expected checks,
+  322 checked rows, 255 replay-only rows, and 71 Lean-horizon rows.
+
 - **Rules/law workflow-reachability pack landed.**
   `workflow-reachability-v0` adds the state-machine rules shape: finite
   transition replay, generated two-step reachability rows, terminal-state

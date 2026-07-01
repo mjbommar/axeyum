@@ -391,8 +391,9 @@ schemas, examples, and validation workflows.
   QF_UF/Alethe left-additivity evidence, and a tensor-theory Lean-horizon row.
 - [`artifacts/examples/math/finite-ideals-v0/`](../../artifacts/examples/math/finite-ideals-v0/)
   validates finite ideal laws over `Z/6Z`, principal ideal generation,
-  ring-homomorphism kernel/image replay, quotient-ring table replay, checked
-  rejection of a non-ideal, and an ideal-theory Lean-horizon row.
+  ring-homomorphism kernel/image replay, quotient-ring table replay, replayed
+  rejection of a non-ideal, explicit QF_UF/Alethe additive-closure evidence,
+  and an ideal-theory Lean-horizon row.
 - [`artifacts/examples/math/numerical-linear-algebra-v0/`](../../artifacts/examples/math/numerical-linear-algebra-v0/)
   validates exact residual bounds, rational solution boxes, Jacobi one-step
   contraction replay, and checked rejection of false residual, solution-box,

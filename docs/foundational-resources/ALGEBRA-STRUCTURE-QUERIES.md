@@ -170,6 +170,17 @@ python3 scripts/query-foundational-resources.py packs \
   --require-any
 ```
 
+Display the explicit checked finite-ideal additive-closure row:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-ideals-v0 \
+  --route Alethe \
+  --proof-status checked \
+  --text additive-closure \
+  --require-any
+```
+
 Display checked module, vector-space, dual-space, and tensor rows:
 
 ```sh

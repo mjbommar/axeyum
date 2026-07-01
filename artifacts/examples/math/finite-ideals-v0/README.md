@@ -13,7 +13,9 @@ The pack covers:
 - kernel/image replay for that ring homomorphism;
 - quotient-ring addition and multiplication table replay;
 - checked quotient-ring representative congruence with QF_UF/Alethe evidence;
-- checked rejection of a non-ideal subset with QF_UF/Alethe evidence;
+- replayed rejection of a non-ideal subset;
+- checked QF_UF/Alethe additive-closure membership evidence for that bad
+  subset;
 - a Lean-horizon row for general ideal and quotient-ring theory.
 
 ## Concepts
@@ -37,9 +39,9 @@ small QF_UF/Alethe proof: equal quotient classes must produce equal quotient
 addition results, independent of representative choice.
 
 For the bad ideal row, exact replay computes `2 + 2 = 4` in `Z/6Z` while the
-claimed subset marks `2` present and `4` absent. The linked `QF_UF` artifact
-refutes the fixed additive-closure membership claim and checks the resulting
-`UnsatAletheProof` independently.
+claimed subset marks `2` present and `4` absent. A separate `QF_UF` row links
+the source artifact that refutes the fixed additive-closure membership claim
+and checks the resulting `UnsatAletheProof` independently.
 
 This is a finite replay pack. It does not prove ideal correspondence,
 prime/maximal ideal theory, localization, Noetherianity, or algebraic geometry.

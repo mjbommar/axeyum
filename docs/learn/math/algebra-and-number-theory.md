@@ -60,8 +60,9 @@ recomputation, quotient and induced-map replay, ring homomorphism replay,
 QF_UF/Alethe homomorphism-preservation congruence, and bad-homomorphism
 rejection. The finite-ideals pack checks finite ideals,
 principal ideal generation, ring-homomorphism kernels, quotient-ring tables,
-and checked QF_UF/Alethe bad-ideal refutations over modular rings. The
-finite-vector-spaces pack checks finite fields
+replayed bad-ideal rejection, and a separate checked QF_UF/Alethe
+additive-closure membership row over modular rings. The finite-vector-spaces
+pack checks finite fields
 acting on finite additive groups, subspaces, spans, linear maps, kernels,
 images, rank-nullity, checked bad-subspace replay, and an explicit QF_UF/Alethe
 additive-closure membership row. The

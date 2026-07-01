@@ -5290,8 +5290,8 @@ def validate_finite_ideals(expected: dict[str, Any]) -> None:
         fail("qf-uf-quotient-ring-representative-alethe certificate must document zero-trust Alethe evidence")
 
     bad = checks["bad-ideal-rejected"]
-    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
-        fail("bad-ideal-rejected must be a checked unsat row")
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "replay-only":
+        fail("bad-ideal-rejected must be a replay-only unsat row")
     data = bad.get("data", {})
     carrier, zero, one, add_op, mul_op = require_ring_tables("bad ideal ring", data.get("ring"))
     failures = ring_axiom_failures(carrier, zero, one, add_op, mul_op)
@@ -5314,21 +5314,47 @@ def validate_finite_ideals(expected: dict[str, Any]) -> None:
         fail("bad-ideal-rejected actual_sum is incorrect")
     if actual_sum in subset:
         fail("bad-ideal-rejected actual_sum unexpectedly belongs to the subset")
+
+    bad_alethe = checks["qf-uf-bad-ideal-additive-closure"]
+    if bad_alethe["expected_result"] != "unsat" or bad_alethe.get("proof_status") != "checked":
+        fail("qf-uf-bad-ideal-additive-closure must be a checked unsat row")
+    if bad_alethe["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-bad-ideal-additive-closure must use qf_uf_congruence_alethe validation")
+    data = bad_alethe.get("data", {})
+    qf_subset = require_ring_subset("qf-uf bad ideal subset", data.get("subset"), carrier, nonempty=True)
+    if qf_subset != subset:
+        fail("qf-uf-bad-ideal-additive-closure subset must match bad-ideal-rejected")
+    qf_failing_sum = data.get("failing_sum")
+    if not isinstance(qf_failing_sum, list) or len(qf_failing_sum) != 2:
+        fail("qf-uf-bad-ideal-additive-closure failing_sum must be a two-element list")
+    qf_left, qf_right = qf_failing_sum
+    require_string("qf-uf bad ideal failing_sum[0]", qf_left)
+    require_string("qf-uf bad ideal failing_sum[1]", qf_right)
+    if [qf_left, qf_right] != [left, right]:
+        fail("qf-uf-bad-ideal-additive-closure failing_sum must match bad-ideal-rejected")
+    qf_actual_sum = data.get("actual_sum")
+    require_string("qf-uf bad ideal actual_sum", qf_actual_sum)
+    if qf_actual_sum != actual_sum:
+        fail("qf-uf-bad-ideal-additive-closure actual_sum must match bad-ideal-rejected")
+    if data.get("actual_membership") != "absent":
+        fail("qf-uf-bad-ideal-additive-closure actual_membership must be absent")
+    if data.get("claimed_membership") != "present":
+        fail("qf-uf-bad-ideal-additive-closure claimed_membership must be present")
     alethe_claim = data.get("alethe_additive_closure_claim")
-    require_string("bad ideal alethe_additive_closure_claim", alethe_claim)
+    require_string("qf-uf bad ideal alethe_additive_closure_claim", alethe_claim)
     if alethe_claim != f"in_subset(add({left},{right})) = present":
-        fail("bad-ideal-rejected must document the Alethe additive-closure claim")
+        fail("qf-uf-bad-ideal-additive-closure must document the Alethe additive-closure claim")
     smt2_artifact = data.get("smt2_artifact")
-    require_string("bad ideal smt2_artifact", smt2_artifact)
-    check_source("bad ideal smt2_artifact", smt2_artifact)
+    require_string("qf-uf bad ideal smt2_artifact", smt2_artifact)
+    check_source("qf-uf bad ideal smt2_artifact", smt2_artifact)
     proof_regression = data.get("proof_regression")
-    require_string("bad ideal proof_regression", proof_regression)
+    require_string("qf-uf bad ideal proof_regression", proof_regression)
     if "finite_ideals_bad_ideal_emits_checked_alethe" not in proof_regression:
-        fail("bad-ideal-rejected must link the Alethe regression")
+        fail("qf-uf-bad-ideal-additive-closure must link the Alethe regression")
     certificate = data.get("certificate")
-    require_string("bad ideal certificate", certificate)
+    require_string("qf-uf bad ideal certificate", certificate)
     if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
-        fail("bad-ideal-rejected certificate must document zero-trust Alethe evidence")
+        fail("qf-uf-bad-ideal-additive-closure certificate must document zero-trust Alethe evidence")
 
     horizon = checks["general-ideal-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

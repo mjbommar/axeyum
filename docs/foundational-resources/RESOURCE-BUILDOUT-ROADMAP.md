@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 647 expected checks.
+- 648 expected checks.
 - 322 checked proof/evidence rows.
-- 254 replay-only rows.
+- 255 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1191,9 +1191,9 @@ Pick one item per commit unless the change is purely navigational.
 4. Landed: promote `finite-stochastic-kernels-v0` for small exact-rational
    QF_LRA/Farkas bad-row normalization and bad composition-entry
    contradictions with strong learner value.
-5. Landed: promote `finite-ideals-v0` for a quotient-ring representative
-   congruence row that exercises equality of induced quotient addition beyond
-   the existing bad-ideal closure family row.
+5. Landed: promote `finite-ideals-v0` for explicit QF_UF/Alethe
+   additive-closure membership and quotient-ring representative congruence
+   rows, separating exact bad-ideal replay from checked equality artifacts.
 6. Landed: add a rules/law crosswalk doc that maps finite predicates,
    arithmetic thresholds, graph reachability, precedence, and proof routes to
    policy/rule checks.

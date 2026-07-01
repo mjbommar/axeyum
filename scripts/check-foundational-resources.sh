@@ -187,6 +187,7 @@ python3 scripts/query-foundational-resources.py checks --pack finite-modules-v0 
 python3 scripts/query-foundational-resources.py checks --pack finite-vector-spaces-v0 --route Alethe --proof-status checked --text addition-closure --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-tensor-products-v0 --route Alethe --proof-status checked --text left-additivity --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_ideal_closure --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-ideals-v0 --route Alethe --proof-status checked --text additive-closure --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_quotient_map --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_tensor_bilinearity --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text polynomial --require-any >/dev/null

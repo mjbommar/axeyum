@@ -405,8 +405,8 @@ Companion maps:
   and the concrete bad-map Alethe refutation.
 - [Finite Ideals And Quotient Rings](finite-ideals-quotient-rings-end-to-end.md):
   follows `Z/6Z` ideal closure, principal generation, parity-map kernel/image,
-  quotient-ring table replay, and checked QF_UF/Alethe bad non-ideal
-  rejection.
+  quotient-ring table replay, replayed bad non-ideal rejection, and a separate
+  checked QF_UF/Alethe bad additive-closure row.
 - [Conditional Probability, Random Variables, Kernels, Concentration, Martingales, And Product Measures](finite-probability-end-to-end.md):
   follows finite atom tables through exact conditional-probability,
   checked Bayes-posterior and bad-independence refutations, random-variable,

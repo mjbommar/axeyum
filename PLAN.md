@@ -253,8 +253,8 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-120 concept rows, 108 non-template packs, 647 expected checks (336 `sat`,
-240 `unsat`, 71 `not-run`), 322 checked rows, 254 replay-only rows, and 71
+120 concept rows, 108 non-template packs, 648 expected checks (336 `sat`,
+241 `unsat`, 71 `not-run`), 322 checked rows, 255 replay-only rows, and 71
 Lean-horizon rows. The rules/law JSON layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
@@ -265,9 +265,10 @@ groups, function composition, finite algebra homomorphisms, finite monoids, and
 finite group actions, with finite continuous-map preimage membership,
 finite module scalar-closure membership, finite vector-space additive-closure
 membership, finite dual-space covector additivity, finite tensor-product
-left-additivity, finite order-lattice antisymmetry, finite quotient-topology,
-finite specialization-order, finite cohomology, finite universal-coefficient
-shadow, and finite cup-product extensions. The
+left-additivity, finite order-lattice antisymmetry, finite ideal
+additive-closure membership, finite quotient-topology, finite
+specialization-order, finite cohomology, finite universal-coefficient shadow,
+and finite cup-product extensions. The
 finite algebra-homomorphism lane now also promotes the
 concrete bad group-homomorphism row through QF_UF/Alethe after exact table
 replay isolates `phi(1+1)=1` versus `phi(1)+phi(1)=0`. The finite

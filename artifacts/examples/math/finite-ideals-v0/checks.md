@@ -43,8 +43,17 @@ QF_UF/Alethe evidence.
 Expected result: `unsat`.
 
 The validator rejects `{0, 2}` because it is not additively closed:
-`2 + 2 = 4`, and `4` is not in the subset. The row links that additive-closure
-conflict to checked QF_UF/Alethe evidence.
+`2 + 2 = 4`, and `4` is not in the subset. This row is exact finite replay; it
+does not own the proof object.
+
+## `qf-uf-bad-ideal-additive-closure`
+
+Expected result: `unsat`.
+
+The SMT-LIB artifact records the fixed membership conflict behind the replayed
+bad ideal: `2` and `2` are present, `2 + 2 = 4`, `4` is absent, and the
+malformed row claims `in_subset(add(2,2)) = present`. The row links that fixed
+EUF contradiction to checked QF_UF/Alethe evidence.
 
 ## `general-ideal-theory-lean-horizon`
 

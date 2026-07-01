@@ -273,8 +273,9 @@ one of:
       `set_theory_and_foundations`.
     - Checks: finite ideal table replay over `Z/6Z`, principal ideal
       generation, ring-homomorphism kernel/image replay, quotient-ring replay,
-      checked bad-ideal rejection, checked quotient representative congruence,
-      and a general ideal-theory Lean-horizon row.
+      replayed bad-ideal rejection, explicit QF_UF/Alethe additive-closure
+      evidence, checked quotient representative congruence, and a general
+      ideal-theory Lean-horizon row.
 28. `artifacts/examples/math/finite-order-lattices-v0/`
     - Fields: `set_theory_and_foundations`, `discrete_math`,
       `logic_and_proof`.

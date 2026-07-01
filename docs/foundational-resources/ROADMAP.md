@@ -449,9 +449,9 @@ module-homomorphism kernel/image replay, quotient-module table replay, checked
 bad-submodule rejection, and a module-theory Lean-horizon row.
 [`finite-ideals-v0`](../../artifacts/examples/math/finite-ideals-v0/)
 validates finite ideal laws over `Z/6Z`, principal ideal generation,
-ring-homomorphism kernel/image replay, quotient-ring table replay, checked
-bad-ideal rejection, checked quotient representative congruence, and an
-ideal-theory Lean-horizon row.
+ring-homomorphism kernel/image replay, quotient-ring table replay, replayed
+bad-ideal rejection, explicit QF_UF/Alethe additive-closure evidence, checked
+quotient representative congruence, and an ideal-theory Lean-horizon row.
 [`finite-order-lattices-v0`](../../artifacts/examples/math/finite-order-lattices-v0/)
 validates finite partial-order replay, Boolean-lattice meet/join tables,
 distributivity, monotone-map fixed points, checked bad-order replay, explicit

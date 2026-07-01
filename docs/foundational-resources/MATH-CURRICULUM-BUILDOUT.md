@@ -1731,9 +1731,9 @@ matrix replay, checked bad-bilinear replay, explicit QF_UF/Alethe
 left-additivity evidence, and a tensor-theory Lean-horizon row.
 `finite-ideals-v0` now adds the exact finite quotient-ring bridge over `Z/6Z`:
 ideal laws, principal ideal generation, modulo-2 ring-homomorphism
-kernel/image replay, quotient-ring tables, checked QF_UF/Alethe non-ideal
-rejection, checked quotient representative congruence, and an ideal-theory
-Lean-horizon row.
+kernel/image replay, quotient-ring tables, replayed non-ideal rejection,
+explicit QF_UF/Alethe additive-closure membership evidence, checked quotient
+representative congruence, and an ideal-theory Lean-horizon row.
 `finite-order-lattices-v0` now adds the exact finite order-theory bridge:
 Boolean-lattice partial-order replay, meet/join table checks, distributivity,
 monotone-map fixed-point replay, checked bad-order replay, explicit

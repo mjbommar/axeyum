@@ -361,6 +361,9 @@ Build sequence:
     `artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-kernel-row-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
     `finite-ideals-v0` now links
+    `qf-uf-bad-ideal-additive-closure` to
+    `artifacts/examples/math/finite-ideals-v0/smt2/bad-ideal-additive-closure-conflict.smt2`
+    and
     `qf-uf-quotient-ring-representative-alethe` to
     `artifacts/examples/math/finite-ideals-v0/smt2/quotient-ring-representative-congruence-conflict.smt2`,
     checked by the `math_resource_uf_routes` QF_UF/Alethe regression.
