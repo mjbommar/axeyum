@@ -20,12 +20,13 @@ Concept rows:
 | `matrix-vector-solution` | `sat` | replay-only |
 | `lu-factorization-witness` | `sat` | replay-only |
 | `bad-lu-product-entry-rejected` | `unsat` | checked |
+| `bad-nullspace-component-rejected` | `unsat` | checked |
 | `singular-system-inconsistent` | `unsat` | checked |
 | `objective-threshold-farkas-infeasible` | `unsat` | checked |
 
 The matrix-vector and positive LU rows are exact arithmetic replay. The bad LU
-product entry, inconsistent system, and LP threshold rows carry checked Farkas
-evidence for fixed linear rational systems.
+product entry, bad nullspace component, inconsistent system, and LP threshold
+rows carry checked Farkas evidence for fixed linear rational systems.
 
 ## Encode
 
@@ -77,6 +78,18 @@ The positive row recomputes `L*U = A`. The checked negative row isolates the
 bottom-right product entry: exact replay gives `(L*U)[1,1] = 3`, while the
 malformed claim says that same entry is `4`.
 
+The nullspace row uses:
+
+```text
+A = [[1, 2],
+     [2, 4]]
+v = [2, -1]
+```
+
+Exact replay computes `A*v = [0, 0]`, so the fixed vector is in the kernel of
+the singular matrix. The checked negative row isolates the first component:
+exact replay gives `v0 = 2`, while the malformed claim says `v0 = 1`.
+
 ## Replay
 
 For the matrix row, the checker recomputes:
@@ -94,6 +107,15 @@ For the bad LU row, the checker recomputes:
 The source SMT-LIB artifact then forces the same product entry to equal both
 `3` and `4`, and the route regression requires independently rechecked
 `UnsatFarkas` evidence.
+
+For the bad nullspace row, the checker recomputes:
+
+```text
+[1*2 + 2*(-1), 2*2 + 4*(-1)] = [0, 0]
+```
+
+The source SMT-LIB artifact then forces the first component to equal both `2`
+and `1`, with the same rechecked `UnsatFarkas` route.
 
 For the Farkas row, the checker combines the two inequalities:
 
@@ -113,6 +135,7 @@ From the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_bad_lu_product_entry_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_bad_nullspace_component_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_singular_system_inconsistent_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_emits_checked_farkas
 ```
@@ -127,4 +150,5 @@ validated 1 foundational example pack(s)
 
 The untrusted side can search for vectors, LU factors, feasible points, or
 certificates. The trusted checker recomputes matrix products, evaluates linear
-constraints, and verifies Farkas certificate arithmetic over exact rationals.
+constraints, checks nullspace products, and verifies Farkas certificate
+arithmetic over exact rationals.

@@ -57,10 +57,11 @@ Companion index:
 
 The linear path uses exact rational matrices. It replays `A*x = b`, checks
 `L*U = A`, rejects a malformed LU product entry through checked
-QF_LRA/Farkas evidence, validates a row-scaling inconsistency certificate,
-checks LP feasibility witnesses, checks a tiny Farkas infeasibility
-certificate, and replays finite convexity/threshold and finite-dimensional
-norm/operator examples. The least-squares regression slice checks normal equations,
+QF_LRA/Farkas evidence, rejects a malformed nullspace component after exact
+kernel replay, validates a row-scaling inconsistency certificate, checks LP
+feasibility witnesses, checks a tiny Farkas infeasibility certificate, and
+replays finite convexity/threshold and finite-dimensional norm/operator
+examples. The least-squares regression slice checks normal equations,
 residual orthogonality, RSS comparison, and checked `UnsatFarkas`
 bad-RSS and bad-coefficients certificates. The finite-vector-space slice adds `F2^2`,
 subspace/span replay,
@@ -576,6 +577,7 @@ Run the checks from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_bad_nullspace_component_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dual-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/inner-product-spaces-rational-v0

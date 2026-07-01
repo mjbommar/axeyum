@@ -61,6 +61,27 @@ inconsistent. The source SMT-LIB artifact isolates the final equality conflict,
 and the Axeyum route regression checks `UnsatFarkas` evidence for that fixed
 formula.
 
+### Bad Nullspace Component
+
+For
+
+```text
+A = [[1, 2],
+     [2, 4]]
+v = [2, -1]
+```
+
+exact replay computes `A*v = [0, 0]`, so `v` is a concrete nullspace vector.
+The checked bad row reuses the replayed first component:
+
+```text
+null_v0 = 2
+null_v0 = 1
+```
+
+The source SMT-LIB artifact isolates that final component conflict, and the
+Axeyum route regression checks `UnsatFarkas` evidence for the fixed formula.
+
 ### Singular Inconsistent System
 
 The system
@@ -85,4 +106,5 @@ That query emits `UnsatFarkas` evidence, and the certificate arithmetic is
 rechecked independently.
 
 These fixed checks are not general theorem proofs. They are exact replay
-targets; the listed inconsistent linear system now has QF_LRA/Farkas evidence.
+targets; the listed inconsistent linear system, nullspace component conflict,
+and bad LU row now have QF_LRA/Farkas evidence.

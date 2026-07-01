@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 629 expected checks.
-- 306 checked proof/evidence rows.
+- 630 expected checks.
+- 307 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -367,7 +367,8 @@ Nodes: number theory, linear algebra, calculus.
 Current resource surface:
 
 - Bounded number-theory checks.
-- Exact rational linear algebra with checked bad LU product-entry evidence.
+- Exact rational linear algebra with checked bad LU product-entry and
+  nullspace-component evidence.
 - Finite vector/dual/module/tensor resources.
 - Inner-product, spectral, matrix-invariant, numerical-linear-algebra, and
   random-matrix finite packs.
@@ -381,9 +382,10 @@ Build next:
   residue, CRT, quadratic residue, sum-of-squares, and modular obstruction
   families.
 - Treat linear algebra as the bridge from education to solver-friendly matrix
-  corpora: LU replay plus checked bad product-entry evidence, rank/nullity,
-  residual bounds, eigenpair checks, characteristic polynomial, tensor maps,
-  and finite-field linear algebra.
+  corpora: LU/nullspace replay plus checked bad product-entry and
+  nullspace-component evidence, rank/nullity, residual bounds, eigenpair
+  checks, characteristic polynomial, tensor maps, and finite-field linear
+  algebra.
 - Treat calculus as exact algebraic shadow plus explicit proof horizon:
   derivative identities, Jacobian/Hessian replay, finite sums, bounded
   epsilon-delta samples, and theorem targets for FTC, convergence, and
@@ -553,8 +555,8 @@ Current packs:
 
 Build next:
 
-- The first generated bridge rows now cover LU replay with checked bad
-  product-entry evidence, rank/nullity replay, residual bounds, eigenpair
+- The first generated bridge rows now cover LU/nullspace replay with checked
+  bad product-entry and bad nullspace-component evidence, rank/nullity replay, residual bounds, eigenpair
   witnesses, characteristic-polynomial replay with checked bad trace evidence,
   and finite random-matrix moments.
 - Add narrower concept rows for matrix multiplication, kernel/image, dual basis,

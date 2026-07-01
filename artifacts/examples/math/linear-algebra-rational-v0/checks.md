@@ -25,6 +25,17 @@ the same product entry is `4`.
 The resource-backed Axeyum regression parses the source SMT-LIB artifact for
 that exact equality conflict and requires rechecked `UnsatFarkas` evidence.
 
+## `bad-nullspace-component-rejected`
+
+Expected result: `unsat`.
+
+The checked query rejects a malformed nullspace row. Exact replay computes
+`A*v = [0, 0]` for `A = [[1, 2], [2, 4]]` and `v = [2, -1]`, while the
+malformed row claims the first component is `1` instead of `2`.
+
+The resource-backed Axeyum regression parses the source SMT-LIB artifact for
+that exact component conflict and requires rechecked `UnsatFarkas` evidence.
+
 ## `singular-system-inconsistent`
 
 Expected result: `unsat`.

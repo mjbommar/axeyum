@@ -55,8 +55,8 @@ As of 2026-07-01, the committed resource query reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 629 expected checks.
-- 306 checked proof/evidence rows.
+- 630 expected checks.
+- 307 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -284,10 +284,10 @@ Build plan:
 - Number theory: bounded residue, CRT, quadratic residue, sum-of-squares, and
   Diophantine rows with precise proof-route labels.
 - Linear algebra: matrix computation families that are both educational and
-  solver-useful: LU replay plus checked bad product-entry evidence,
-  rank/nullity, residual bounds, eigenpairs, characteristic polynomials,
-  finite-field linear algebra, tensor maps, projections, and random-matrix
-  moments.
+  solver-useful: LU/nullspace replay plus checked bad product-entry and bad
+  nullspace-component evidence, rank/nullity, residual bounds, eigenpairs,
+  characteristic polynomials, finite-field linear algebra, tensor maps,
+  projections, and random-matrix moments.
 - Calculus: exact algebraic derivatives, finite Riemann sums, Jacobian/Hessian
   replay, root-finding, finite optimization steps, line-search/projection/prox
   rows, and explicit theorem horizons for FTC, differentiability, and

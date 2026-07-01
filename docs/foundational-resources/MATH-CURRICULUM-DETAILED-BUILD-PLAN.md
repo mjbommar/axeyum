@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 629 expected checks.
-- 306 checked proof/evidence rows.
+- 630 expected checks.
+- 307 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1275,6 +1275,13 @@ Pick one row per commit unless the change is purely navigational.
      checks residual-bound, solution-box upper-bound, and Jacobi error-bound
      conflicts without claiming floating-point accuracy, conditioning,
      backward-error analysis, or general convergence.
+156. Landed: extend `linear-algebra-rational-v0` with a source-linked checked
+     bad nullspace-component row. Exact rational matrix replay checks
+     `A*v = [0, 0]` for `A = [[1, 2], [2, 4]]` and `v = [2, -1]`, while the
+     malformed source SMT-LIB artifact claims `v0 = 1`; the shared
+     QF_LRA/Farkas route now checks singular-system, LU product-entry, and
+     nullspace-component conflicts without claiming general rank-nullity,
+     basis-extension, pivoting, conditioning, or numerical-stability theorems.
 
 ## Validation Checklist
 

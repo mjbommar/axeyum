@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Linear algebra bad nullspace-component QF_LRA row landed.**
+  `linear-algebra-rational-v0` now includes a checked rejection for a
+  malformed nullspace row: exact replay checks `A*v = [0, 0]` for
+  `A = [[1, 2], [2, 4]]` and `v = [2, -1]`, while the bad row claims the first
+  component is `1` instead of `2`. The validator pins the matrix, null vector,
+  zero vector, component index, actual component, claimed component, source
+  SMT-LIB artifact, and route regression. The shared
+  `math_resource_lra_routes` regression parses the source QF_LRA artifact and
+  checks the `UnsatFarkas` evidence. Generated dashboards and the public query
+  summary now report 111 concept rows, 108 non-template packs, 630 expected
+  checks, 307 checked rows, 252 replay-only rows, and 71 Lean-horizon rows.
+
 - **Numerical-linear-algebra bad solution-box QF_LRA row landed.**
   `numerical-linear-algebra-v0` now includes a checked rejection for a
   malformed solution-box row: exact replay solves the fixed `2x2` system as
@@ -214,8 +226,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   SMT-LIB artifact, and route regression. The shared
   `math_resource_lra_routes` regression parses the source QF_LRA artifact and
   checks the `UnsatFarkas` evidence. Generated dashboards and the public query
-  summary now report 111 concept rows, 108 non-template packs, 629 expected
-  checks, 306 checked rows, 252 replay-only rows, and 71 Lean-horizon rows.
+  summary were refreshed for that increment.
 
 - **Complex-plane bad conjugation-product imaginary QF_LRA row landed.**
   `complex-plane-transforms-v0` now includes a checked rejection for a

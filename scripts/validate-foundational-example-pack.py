@@ -10057,6 +10057,50 @@ def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in bad_lu.get("notes", ""):
         fail("bad-lu-product-entry-rejected notes must name UnsatFarkas evidence")
 
+    bad_nullspace = checks["bad-nullspace-component-rejected"]
+    if bad_nullspace["expected_result"] != "unsat" or bad_nullspace.get("proof_status") != "checked":
+        fail("bad-nullspace-component-rejected must be a checked unsat row")
+    if bad_nullspace.get("validation") != "exact_rational_nullspace_component_refutation":
+        fail("bad-nullspace-component-rejected validation is incorrect")
+    data = bad_nullspace.get("data", {})
+    matrix = require_fraction_matrix("bad nullspace matrix", data.get("matrix"))
+    null_vector = require_fraction_vector("bad nullspace vector", data.get("null_vector"))
+    zero_vector = require_fraction_vector("bad nullspace zero_vector", data.get("zero_vector"))
+    require_mat_vec_shape("bad nullspace matrix-vector", matrix, null_vector)
+    if len(matrix) != len(zero_vector):
+        fail("bad-nullspace-component-rejected zero_vector length must match matrix height")
+    if mat_vec(matrix, null_vector) != zero_vector:
+        fail("bad-nullspace-component-rejected null_vector does not satisfy A*v = zero_vector")
+    if any(item != 0 for item in zero_vector):
+        fail("bad-nullspace-component-rejected zero_vector must be all zero")
+    component_index = require_int("bad nullspace component_index", data.get("component_index"))
+    if component_index < 0 or component_index >= len(null_vector):
+        fail("bad-nullspace-component-rejected component_index is out of range")
+    actual_component = require_fraction("bad nullspace actual_component", data.get("actual_component"))
+    claimed_component = require_fraction("bad nullspace claimed_component", data.get("claimed_component"))
+    if actual_component != null_vector[component_index]:
+        fail("bad-nullspace-component-rejected actual_component does not match null_vector")
+    if actual_component == claimed_component:
+        fail("bad-nullspace-component-rejected claim unexpectedly matches the nullspace component")
+    farkas_component_claim = data.get("farkas_component_claim")
+    require_string("bad nullspace farkas_component_claim", farkas_component_claim)
+    if farkas_component_claim != "null_v0 = claimed_component":
+        fail("bad-nullspace-component-rejected must document the Farkas component claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad nullspace smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-nullspace-component-farkas-conflict.smt2"
+    ):
+        fail("bad-nullspace-component-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad nullspace smt2_artifact", smt2_artifact)
+    farkas_regression = data.get("farkas_regression")
+    require_string("bad nullspace farkas_regression", farkas_regression)
+    if "linear_algebra_bad_nullspace_component_artifact_emits_checked_farkas" not in farkas_regression:
+        fail("bad-nullspace-component-rejected must link the Farkas regression")
+    if "UnsatFarkas" not in bad_nullspace.get("notes", ""):
+        fail("bad-nullspace-component-rejected notes must name UnsatFarkas evidence")
+
     inconsistent = checks["singular-system-inconsistent"]
     if inconsistent["expected_result"] != "unsat":
         fail("singular-system-inconsistent must expect unsat")

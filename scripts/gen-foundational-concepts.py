@@ -374,7 +374,7 @@ CURRICULUM_MAP = {
     "linear-algebra": {
         "field_ids": ["linear_algebra", "numerical_analysis", "optimization_and_convexity"],
         "pack": "linear-algebra-rational-v0",
-        "slice": "Fixed rational matrices, LU replay, inverse checks, and inconsistent systems.",
+        "slice": "Fixed rational matrices, LU replay, nullspace replay, inverse checks, and inconsistent systems.",
         "proof": "Exact replay plus Farkas certificates for infeasible LRA systems.",
         "extra_packs": [
             (
@@ -4243,11 +4243,12 @@ BRIDGE_CONCEPTS = [
         "field_ids": ["linear_algebra", "numerical_analysis"],
         "resource_status": "validated",
         "summary": (
-            "A claimed LU factorization is checked by exact matrix multiplication "
-            "over a fixed rational matrix; a malformed product-entry row now "
-            "routes through checked QF_LRA/Farkas evidence, while pivoting, "
+            "A claimed LU factorization and nullspace vector are checked by "
+            "exact matrix multiplication over fixed rational matrices; "
+            "malformed product-entry and nullspace-component rows now route "
+            "through checked QF_LRA/Farkas evidence, while pivoting, "
             "singularity, and stability claims stay separate from the replayed "
-            "equality."
+            "equalities."
         ),
         "prerequisites": [
             "bridge_finite_model_replay",
@@ -4270,7 +4271,7 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "linear-algebra-rational-v0",
-                "Exact matrix-vector solution and LU factorization witnesses over rational matrices.",
+                "Exact matrix-vector solution, LU factorization, and nullspace witnesses over rational matrices.",
             ),
             (
                 "numerical-linear-algebra-v0",
@@ -4296,9 +4297,10 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/numerical-linear-algebra-end-to-end.md",
                 ],
                 "notes": (
-                    "The pack validator recomputes L*U and A*x exactly over "
-                    "rationals; bad LU product-entry and bad infeasible "
-                    "linear-system rows use the separate QF_LRA/Farkas route."
+                    "The pack validator recomputes L*U, A*x, and A*v exactly "
+                    "over rationals; bad LU product-entry, bad nullspace-"
+                    "component, and bad infeasible linear-system rows use the "
+                    "separate QF_LRA/Farkas route."
                 ),
             }
         ],
@@ -4310,6 +4312,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/linear-system-end-to-end.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
             "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-lu-product-entry-farkas-conflict.smt2",
+            "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-nullspace-component-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [

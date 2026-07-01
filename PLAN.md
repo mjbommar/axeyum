@@ -156,9 +156,9 @@ Boolean CNF/LRAT, QF_BV, QF_LIA/Diophantine, QF_LRA/Farkas, QF_UF/Alethe, and
 Lean-horizon resources.
 The matrix computation consumer query guide is
 [`docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md`](docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md);
-it records exact concept-plus-route queries for LU, residual, rank/nullity,
-eigenpair, random-matrix, chain/cochain/UCT, tensor/module, operator, and
-Chebyshev resources.
+it records exact concept-plus-route queries for LU/nullspace, residual,
+rank/nullity, eigenpair, random-matrix, chain/cochain/UCT, tensor/module,
+operator, and Chebyshev resources.
 The probability/statistics consumer query guide is
 [`docs/foundational-resources/PROBABILITY-STATISTICS-QUERIES.md`](docs/foundational-resources/PROBABILITY-STATISTICS-QUERIES.md);
 it records exact concept-plus-route queries for finite probability tables,
@@ -225,8 +225,8 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 629 expected checks (334 `sat`,
-224 `unsat`, 71 `not-run`), 306 checked rows, 252 replay-only rows, and 71
+111 concept rows, 108 non-template packs, 630 expected checks (334 `sat`,
+225 `unsat`, 71 `not-run`), 307 checked rows, 252 replay-only rows, and 71
 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -235,6 +235,9 @@ finite quotient-topology, finite cohomology, finite universal-coefficient shadow
 extensions. The finite algebra-homomorphism lane now also promotes the
 concrete bad group-homomorphism row through QF_UF/Alethe after exact table
 replay isolates `phi(1+1)=1` versus `phi(1)+phi(1)=0`. The finite
+linear-algebra lane now also promotes the bad nullspace-component row through
+QF_LRA/Farkas after exact matrix replay computes `A*v = 0` for
+`v = [2, -1]` while the bad row claims the first component is `1`. The finite
 order/lattice lane now also promotes the false Boolean-lattice top-element row
 through Bool/CNF DRAT/LRAT after exact relation replay isolates `B !<= A`
 while the bad claim that `A` is top requires `B <= A`. The modular-arithmetic
@@ -302,9 +305,9 @@ finite quotient-topology replay,
 finite specialization-order replay, finite boundary-operator replay, finite
 chain-complex/homology replay, finite torsion-homology replay, finite
 cohomology replay, finite universal-coefficient shadow replay, finite
-cup-product replay, LU factorization
-replay with checked bad product-entry evidence, rank-nullity replay,
-residual bounds, eigenpair witnesses, characteristic polynomial replay, finite
+cup-product replay, LU factorization and nullspace
+replay with checked bad product-entry and bad nullspace-component evidence,
+rank-nullity replay, residual bounds, eigenpair witnesses, characteristic polynomial replay, finite
 trace-invariant checks, finite random-matrix moments, finite measure additivity, finite probability mass
 tables, finite pushforward distributions, finite stochastic kernels, finite
 conditional expectations, finite product-measure/integration replay, finite
@@ -459,7 +462,7 @@ The first QF_BV bit-blast certificate anatomy learner page now follows
 `finite-fields-v0` from fixed-width finite-field BV rows through source
 SMT-LIB, generated DIMACS/DRAT evidence, and same-artifact truncated-DRAT
 rejection.
-The matrix-computation learner index now groups LU, rank/nullity, residual,
+The matrix-computation learner index now groups LU/nullspace, rank/nullity, residual,
 projection, eigenpair, characteristic-polynomial, finite random-matrix,
 chain-complex, operator, module, and tensor rows by replay, QF_LRA/Farkas,
 QF_UF/Alethe, QF_LIA/Diophantine, Lean-horizon, and numerical-honesty

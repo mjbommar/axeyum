@@ -80,6 +80,28 @@
       "notes": "The validator recomputes L*U exactly, checks that the selected product entry is 3, and rejects the malformed claim 4; the Axeyum regression parses the source artifact and requires independently checked UnsatFarkas evidence."
     },
     {
+      "id": "bad-nullspace-component-rejected",
+      "claim": "The listed nullspace vector for the fixed singular matrix has first component 1.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_nullspace_component_refutation",
+      "proof_status": "checked",
+      "data": {
+        "matrix": [
+          ["1", "2"],
+          ["2", "4"]
+        ],
+        "null_vector": ["2", "-1"],
+        "zero_vector": ["0", "0"],
+        "component_index": 0,
+        "actual_component": "2",
+        "claimed_component": "1",
+        "farkas_component_claim": "null_v0 = claimed_component",
+        "smt2_artifact": "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-nullspace-component-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_bad_nullspace_component_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator recomputes A*v = 0 exactly for v = [2, -1], so the malformed claim that the first component is 1 is false; the Axeyum regression refutes null_v0 = 2 together with null_v0 = 1 using rechecked UnsatFarkas evidence."
+    },
+    {
       "id": "singular-system-inconsistent",
       "claim": "The system x + y = 1 and 2x + 2y = 3 has no rational solution.",
       "expected_result": "unsat",

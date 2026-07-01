@@ -188,7 +188,7 @@ First targets:
   order-transitivity refutations)
 - [linear-algebra-rational-v0](../../artifacts/examples/math/linear-algebra-rational-v0/)
   (source-linked solver-reuse promotions landed for the singular inconsistent
-  system and the bad LU product-entry row)
+  system, bad LU product-entry row, and bad nullspace-component row)
 - [linear-optimization-v0](../../artifacts/examples/math/linear-optimization-v0/)
   (source-linked solver-reuse promotion landed for the objective-threshold
   conflict)
@@ -491,6 +491,7 @@ cargo test -p axeyum-solver --test evidence tampered_farkas_evidence_fails_its_o
 cargo test -p axeyum-solver --test math_resource_lra_routes qf_lra_resource_route_rejects_tampered_farkas_certificate
 cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_midpoint_x_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_bad_nullspace_component_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes incidence_geometry_bad_intersection_x_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes rigid_configuration_bad_translation_image_x_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas

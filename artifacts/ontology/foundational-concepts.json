@@ -1713,7 +1713,7 @@
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed rational matrices, LU replay, inverse checks, and inconsistent systems."
+          "notes": "Fixed rational matrices, LU replay, nullspace replay, inverse checks, and inconsistent systems."
         },
         {
           "id": "finite-vector-spaces-v0",
@@ -1828,7 +1828,7 @@
             "docs/proof-cookbook/README.md",
             "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
           ],
-          "notes": "Fixed rational matrices, LU replay, inverse checks, and inconsistent systems."
+          "notes": "Fixed rational matrices, LU replay, nullspace replay, inverse checks, and inconsistent systems."
         }
       ],
       "source_refs": [
@@ -5936,7 +5936,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A claimed LU factorization is checked by exact matrix multiplication over a fixed rational matrix; a malformed product-entry row now routes through checked QF_LRA/Farkas evidence, while pivoting, singularity, and stability claims stay separate from the replayed equality.",
+      "summary": "A claimed LU factorization and nullspace vector are checked by exact matrix multiplication over fixed rational matrices; malformed product-entry and nullspace-component rows now route through checked QF_LRA/Farkas evidence, while pivoting, singularity, and stability claims stay separate from the replayed equalities.",
       "prerequisites": [
         "bridge_finite_model_replay",
         "curriculum_linear_algebra",
@@ -5960,7 +5960,7 @@
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Exact matrix-vector solution and LU factorization witnesses over rational matrices."
+          "notes": "Exact matrix-vector solution, LU factorization, and nullspace witnesses over rational matrices."
         },
         {
           "id": "numerical-linear-algebra-v0",
@@ -5989,7 +5989,7 @@
             "docs/learn/math/linear-system-end-to-end.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md"
           ],
-          "notes": "The pack validator recomputes L*U and A*x exactly over rationals; bad LU product-entry and bad infeasible linear-system rows use the separate QF_LRA/Farkas route."
+          "notes": "The pack validator recomputes L*U, A*x, and A*v exactly over rationals; bad LU product-entry, bad nullspace-component, and bad infeasible linear-system rows use the separate QF_LRA/Farkas route."
         }
       ],
       "source_refs": [
@@ -6000,6 +6000,7 @@
         "docs/learn/math/linear-system-end-to-end.md",
         "docs/learn/math/numerical-linear-algebra-end-to-end.md",
         "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-lu-product-entry-farkas-conflict.smt2",
+        "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-nullspace-component-farkas-conflict.smt2",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md"
       ],
       "open_gaps": [

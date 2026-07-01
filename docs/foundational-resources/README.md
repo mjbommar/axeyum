@@ -326,8 +326,9 @@ schemas, examples, and validation workflows.
   and a multivariable-calculus Lean-horizon row.
 - [`artifacts/examples/math/linear-algebra-rational-v0/`](../../artifacts/examples/math/linear-algebra-rational-v0/)
   validates exact rational matrix-vector solution replay, LU factorization
-  replay, a checked bad LU product-entry certificate, and a row-scaling
-  inconsistency certificate for a singular system.
+  replay, checked bad LU product-entry and bad nullspace-component
+  certificates, and a row-scaling inconsistency certificate for a singular
+  system.
 - [`artifacts/examples/math/finite-vector-spaces-v0/`](../../artifacts/examples/math/finite-vector-spaces-v0/)
   validates finite vector-space laws over `F2`, subspace and span replay,
   linear-map kernel/image replay, rank-nullity replay, checked rejection of a
