@@ -8580,7 +8580,7 @@
           "id": "finite-operator-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-operator-v0",
-          "notes": "Finite-dimensional norm, operator-bound, Chebyshev recurrence, and bad operator-bound rows."
+          "notes": "Finite-dimensional norm, operator-bound, Chebyshev recurrence, bad operator-bound, and bad Chebyshev-prefix rows."
         },
         {
           "id": "finite-chebyshev-systems-v0",
@@ -8646,7 +8646,7 @@
         "criteria": [
           "Rows state the finite vector space, operator matrix, norm, polynomial basis, or sample grid being replayed.",
           "The validator recomputes matrix actions, norms, recurrence values, interpolation rows, and alternating residual witnesses.",
-          "Malformed finite operator or interpolation rows link to checked QF_LRA/Farkas regressions after replay."
+          "Malformed finite operator, recurrence, or interpolation rows link to checked QF_LRA/Farkas regressions after replay."
         ]
       }
     },

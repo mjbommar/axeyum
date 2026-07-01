@@ -10219,6 +10219,56 @@ def validate_finite_operator(expected: dict[str, Any]) -> None:
         expected_next = 2 * x_value * chebyshev_values[index] - chebyshev_values[index - 1]
         if chebyshev_values[index + 1] != expected_next:
             fail(f"chebyshev T{index + 1} does not match the recurrence")
+    chebyshev_source_x = x_value
+    chebyshev_source_values = chebyshev_values
+
+    bad_chebyshev = checks["bad-chebyshev-t3-rejected"]
+    if bad_chebyshev["expected_result"] != "unsat" or bad_chebyshev.get("proof_status") != "checked":
+        fail("bad-chebyshev-t3-rejected must be a checked unsat row")
+    if bad_chebyshev["validation"] != "exact_rational_chebyshev_bad_value_refutation":
+        fail("bad-chebyshev-t3-rejected must use exact_rational_chebyshev_bad_value_refutation validation")
+    data = bad_chebyshev.get("data", {})
+    if data.get("source_witness") != "chebyshev-half-values":
+        fail("bad-chebyshev-t3-rejected must cite the chebyshev-half-values witness")
+    bad_x = require_fraction("bad Chebyshev x", data.get("x"))
+    bad_values = require_fraction_vector(
+        "bad Chebyshev values",
+        data.get("chebyshev_values"),
+    )
+    if bad_x != chebyshev_source_x or bad_values != chebyshev_source_values:
+        fail("bad-chebyshev-t3-rejected must reuse the Chebyshev recurrence witness")
+    target_index = require_int("bad Chebyshev target_index", data.get("target_index"))
+    if target_index != 3:
+        fail("bad-chebyshev-t3-rejected target_index must be 3")
+    if target_index >= len(bad_values):
+        fail("bad-chebyshev-t3-rejected target_index is outside the value list")
+    computed_value = require_fraction("bad Chebyshev computed_value", data.get("computed_value"))
+    claimed_value = require_fraction("bad Chebyshev claimed_value", data.get("claimed_value"))
+    if bad_values[target_index] != computed_value:
+        fail("bad-chebyshev-t3-rejected computed value is incorrect")
+    if claimed_value == computed_value:
+        fail("bad-chebyshev-t3-rejected claimed value unexpectedly matches")
+    recurrence = data.get("recurrence")
+    require_string("bad Chebyshev recurrence", recurrence)
+    if recurrence != "T(n+1) = 2*x*T(n) - T(n-1)":
+        fail("bad-chebyshev-t3-rejected recurrence text is incorrect")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad Chebyshev smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-operator-v0/smt2/"
+        "bad-chebyshev-t3-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-chebyshev-t3-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad Chebyshev smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad Chebyshev farkas_regression", regression)
+    if "finite_operator_bad_chebyshev_t3_artifact_emits_checked_farkas" not in regression:
+        fail("bad-chebyshev-t3-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad Chebyshev certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("bad-chebyshev-t3-rejected certificate must document Farkas evidence")
 
 
 def validate_finite_chebyshev_systems(expected: dict[str, Any]) -> None:

@@ -164,7 +164,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 602 expected checks, 281 checked
+111 concept rows, 108 non-template packs, 603 expected checks, 282 checked
 rows, 250 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -441,9 +441,9 @@ tables, monotone invariant checks, checked QF_LRA/Farkas bad max-error plus
 bad-step evidence, and the ODE/numerical-analysis Lean horizon.
 `finite-operator-v0` now also has a standalone finite-dimensional operator
 page for exact `l1` norm replay, row-sum operator-bound replay, finite
-Chebyshev recurrence replay, and checked QF_LRA/Farkas bad `l1` norm and
-bad-bound evidence, leaving the broader bounded-dynamics/operator page as the
-cross-resource bridge.
+Chebyshev recurrence replay, and checked QF_LRA/Farkas bad `l1` norm,
+bad-bound, and bad Chebyshev-prefix evidence, leaving the broader
+bounded-dynamics/operator page as the cross-resource bridge.
 The six active proof-cookbook routes for CNF/LRAT, QF_BV, QF_LIA, QF_LRA,
 QF_UF/Alethe, and Lean horizons now each name concrete math example packs that
 use the route.

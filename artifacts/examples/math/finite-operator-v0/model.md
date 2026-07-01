@@ -83,5 +83,21 @@ T3 = -1
 
 The validator checks `T(n+1) = 2*x*T(n) - T(n-1)` for the finite list.
 
+The bad Chebyshev row reuses the same finite prefix but claims:
+
+```text
+T3(1/2) = -1/2
+```
+
+Exact recurrence replay computes `T3(1/2) = -1`, so the source QF_LRA artifact
+reduces the row to the equivalent shifted conflict:
+
+```text
+t3_plus_one = 0
+t3_plus_one = 1/2
+```
+
+The Farkas route checks only that final exact linear contradiction.
+
 These are finite replay targets, not general operator theory or approximation
 theorems.

@@ -1,7 +1,7 @@
 # End To End: Finite-Dimensional Operators
 
-This lesson follows one finite-dimensional operator resource from exact vector
-and matrix replay to checked rejection of a false norm bound. It uses the
+This lesson follows one finite-dimensional operator resource from exact vector,
+matrix, and recurrence replay to checked rejection of false finite claims. It uses the
 [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/)
 pack.
 
@@ -23,6 +23,7 @@ Concept rows:
 | `bad-l1-sum-norm-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `matrix-operator-bound` | `sat` | replay-only |
 | `chebyshev-recurrence-witness` | `sat` | replay-only |
+| `bad-chebyshev-t3-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `bad-operator-bound-rejected` | `unsat` | checked QF_LRA/Farkas |
 
 Every row is finite-dimensional and exact-rational. The pack checks concrete
@@ -151,6 +152,26 @@ T(n+1) = 2*x*T(n) - T(n-1)
 for the listed finite prefix. General Chebyshev-system, Haar-space, and minimax
 approximation theorems remain Lean-horizon material.
 
+## Check The Bad Chebyshev Value
+
+The bad Chebyshev row reuses the same finite prefix but claims:
+
+```text
+T3(1/2) = -1/2
+```
+
+Replay computes `T3(1/2) = -1`. The committed SMT-LIB artifact
+[`bad-chebyshev-t3-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-operator-v0/smt2/bad-chebyshev-t3-farkas-conflict.smt2)
+uses the equivalent shifted contradiction:
+
+```text
+t3_plus_one = 0
+t3_plus_one = 1/2
+```
+
+The checked certificate proves only this exact finite recurrence-value
+conflict.
+
 ## Run It
 
 From the repository root:
@@ -159,6 +180,7 @@ From the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_l1_sum_norm_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_chebyshev_t3_artifact_emits_checked_farkas
 ```
 
 Expected validator output:

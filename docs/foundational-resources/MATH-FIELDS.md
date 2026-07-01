@@ -220,8 +220,8 @@ one of:
     - Fields: `functional_analysis_and_operator_theory`, `linear_algebra`,
       `numerical_analysis`, `real_analysis`.
     - Checks: finite-dimensional norm replay, matrix operator bound,
-      checked QF_LRA/Farkas bad `l1` norm and bad operator-bound rejection,
-      and Chebyshev recurrence witness.
+      checked QF_LRA/Farkas bad `l1` norm, bad operator-bound, and bad
+      Chebyshev-prefix rejection, and Chebyshev recurrence witness.
 19. `artifacts/examples/math/finite-chebyshev-systems-v0/`
     - Fields: `functional_analysis_and_operator_theory`, `numerical_analysis`,
       `linear_algebra`, `real_analysis`.

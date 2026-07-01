@@ -158,7 +158,7 @@ High-priority focused lessons still worth auditing or adding:
 - linear optimization as a standalone LP/Farkas bridge;
 - finite topology as a standalone topology-axiom/closure/interior bridge;
 - finite operators now have a standalone finite-dimensional
-  norm/operator-bound bridge;
+  norm/operator-bound/Chebyshev-prefix bridge;
 - bounded dynamics now has a standalone recurrence/invariant bridge;
 - finite Euler now has a standalone numerical-step/error-table bridge.
 - finite root finding now has a standalone exact bisection/Newton replay

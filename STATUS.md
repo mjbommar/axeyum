@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-operator bad Chebyshev-prefix QF_LRA row landed.**
+  `finite-operator-v0` now includes a third checked Farkas row: exact
+  Chebyshev recurrence replay at `x=1/2` computes `T3=-1`, while the
+  malformed source SMT-LIB artifact claims the shifted value `T3+1=1/2`.
+  The validator pins the source witness, finite prefix, target index, actual
+  and claimed values, recurrence text, artifact path, and regression; the
+  shared `math_resource_lra_routes` regression parses the artifact and checks
+  `UnsatFarkas` evidence. Generated dashboards and the public query summary
+  now report 111 concept rows, 108 non-template packs, 603 expected checks,
+  282 checked rows, 250 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite random-matrix bad expected-rank QF_LRA row landed.**
   `random-matrix-finite-v0` now includes a second checked Farkas row: exact
   rank replay computes ranks `0`, `1`, and `2` with probability `1/3` each,

@@ -527,8 +527,8 @@ schemas, examples, and validation workflows.
   and an ODE-theory Lean-horizon row.
 - [`artifacts/examples/math/finite-operator-v0/`](../../artifacts/examples/math/finite-operator-v0/)
   validates exact finite-dimensional norm, matrix-operator, Chebyshev
-  recurrence checks, and checked QF_LRA/Farkas rejection of bad `l1` norm and
-  operator-bound claims.
+  recurrence checks, and checked QF_LRA/Farkas rejection of bad `l1` norm,
+  operator-bound, and Chebyshev-prefix claims.
 - [`artifacts/examples/math/finite-chebyshev-systems-v0/`](../../artifacts/examples/math/finite-chebyshev-systems-v0/)
   validates exact finite Vandermonde unisolvence, interpolation replay,
   alternating residual signs, checked QF_LRA/Farkas rejection of a

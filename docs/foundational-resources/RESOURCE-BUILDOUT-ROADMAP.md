@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 602 expected checks.
-- 281 checked proof/evidence rows.
+- 603 expected checks.
+- 282 checked proof/evidence rows.
 - 250 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1023,8 +1023,9 @@ Build next:
   alternating residual witnesses.
 - Add narrower concept rows for dual spaces, adjoints, spectral decomposition,
   or Banach/Hilbert horizons only when multiple packs need the same vocabulary.
-- Keep `finite-operator-v0`'s promoted bad `l1` norm and bad operator-bound
-  rows tied to exact replay plus the source QF_LRA/Farkas artifacts.
+- Keep `finite-operator-v0`'s promoted bad `l1` norm, bad operator-bound, and
+  bad Chebyshev-prefix rows tied to exact replay plus the source QF_LRA/Farkas
+  artifacts.
 - Keep `inner-product-spaces-rational-v0`'s promoted bad negative-norm and
   bad projection-orthogonality rows tied to exact replay plus the source
   QF_LRA/Farkas artifacts.
@@ -1405,7 +1406,7 @@ Pick one item per commit unless the change is purely navigational.
     `docs/learn/math/finite-operator-end-to-end.md` follows
     `finite-operator-v0` through exact finite-dimensional `l1` norm replay,
     row-sum operator-bound replay, finite Chebyshev recurrence replay,
-    checked QF_LRA/Farkas bad norm/bound evidence, and the
+    checked QF_LRA/Farkas bad norm/bound/prefix evidence, and the
     Banach/Hilbert/compact-operator Lean horizon.
 48. Landed: add standalone bounded-dynamics learner page.
     `docs/learn/math/bounded-dynamics-end-to-end.md` follows
@@ -1872,6 +1873,12 @@ Pick one item per commit unless the change is purely navigational.
      both trace-square moment and expected-rank conflicts without promoting
      asymptotic spectral laws, concentration, universality, simulation
      quality, or numerical eigensolver behavior.
+119. Landed: extend `finite-operator-v0` with a checked bad Chebyshev-prefix
+     row. Exact recurrence replay at `x=1/2` computes `T3=-1`, while the
+     malformed source SMT-LIB artifact claims the shifted value
+     `T3+1=1/2`; the shared QF_LRA/Farkas route now checks the recurrence
+     value conflict without promoting Haar-space, minimax, Banach/Hilbert, or
+     infinite-dimensional approximation theorems.
 
 ## Validation Checklist
 

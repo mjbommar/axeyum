@@ -34,11 +34,12 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite-dimensional bad l1 norm and operator-bound QF_LRA/Farkas regression seeds",
-    "pressure": "Malformed exact norm/operator rows where replay computes ||u+v||_1 = 5 while one row claims at most 4, and computes ||A*x||_infty = 3 while another row claims the image norm is at most 2.",
+    "target": "finite-dimensional bad l1 norm, operator-bound, and Chebyshev-prefix QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed exact norm/operator rows where replay computes ||u+v||_1 = 5 while one row claims at most 4, computes ||A*x||_infty = 3 while another row claims the image norm is at most 2, and computes T3(1/2) = -1 while a Chebyshev row claims -1/2.",
     "evidence": [
       "bad-l1-sum-norm-rejected",
-      "bad-operator-bound-rejected"
+      "bad-operator-bound-rejected",
+      "bad-chebyshev-t3-rejected"
     ],
     "next_step": "Promote additional finite-operator rows only when they add distinct norm, recurrence, interpolation, or finite-dimensional operator pressure; keep Banach-space, Hilbert-space, compact-operator, and general Chebyshev-space theorems in the Lean-horizon lane."
   },
@@ -52,6 +53,7 @@
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "artifacts/examples/math/finite-operator-v0/smt2/bad-l1-sum-norm-farkas-conflict.smt2",
     "artifacts/examples/math/finite-operator-v0/smt2/bad-operator-bound-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-operator-v0/smt2/bad-chebyshev-t3-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
@@ -60,12 +62,13 @@
     "bad-l1-sum-norm-rejected",
     "matrix-operator-bound",
     "chebyshev-recurrence-witness",
+    "bad-chebyshev-t3-rejected",
     "bad-operator-bound-rejected"
   ],
   "graduation_criteria": [
     "Encode finite-dimensional norm and operator checks as deterministic exact-rational obligations.",
     "Replay matrix/operator witnesses through Axeyum model evaluation.",
-    "Emit checked bad-bound evidence for finite-dimensional norm and operator claims; the bad l1 norm and bad operator-bound rows now have checked QF_LRA/Farkas evidence after replay computes the exact norms.",
+    "Emit checked bad-bound evidence for finite-dimensional norm, operator, and recurrence claims; the bad l1 norm, bad operator-bound, and bad Chebyshev-prefix rows now have checked QF_LRA/Farkas evidence after replay computes the exact values.",
     "Add polynomial-basis and interpolation checks before claiming broader approximation coverage.",
     "Keep Banach-space, Hilbert-space, compact-operator, and general Chebyshev-space theorems marked Lean-horizon."
   ]

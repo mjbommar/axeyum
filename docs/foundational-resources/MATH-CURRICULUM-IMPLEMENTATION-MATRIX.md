@@ -223,7 +223,7 @@ Build sequence:
    LP/Farkas story from the combined linear-system/LP bridge. Standalone
    finite probability mass tables now split the PMF/conditioning/Bayes story
    from the broader finite-probability process bridge. Standalone finite
-   operators now split the norm/operator-bound story from the broad
+   operators now split the norm/operator-bound/Chebyshev-prefix story from the broad
    bounded-dynamics/operator bridge. Standalone bounded dynamics now splits
    recurrence traces, finite invariants, and threshold reachability from the
    finite dynamics/Euler bridge. Standalone finite Euler now splits

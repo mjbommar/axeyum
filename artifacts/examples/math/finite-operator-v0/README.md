@@ -14,7 +14,9 @@ small LRA/NRA/BV obligations:
 - an infinity-norm matrix operator bound via the row-sum norm;
 - a malformed finite-dimensional operator-bound row checked through
   QF_LRA/Farkas evidence;
-- a Chebyshev polynomial recurrence witness at a fixed rational point.
+- a Chebyshev polynomial recurrence witness at a fixed rational point;
+- a malformed finite Chebyshev-prefix value checked through QF_LRA/Farkas
+  evidence.
 
 ## Concepts
 
@@ -30,14 +32,14 @@ small LRA/NRA/BV obligations:
 
 The validator parses every vector, matrix entry, norm, and polynomial value as
 an exact rational string. It recomputes vector sums, norms, matrix-vector
-products, row-sum operator norms, the bad norm/bound source data, and the
+products, row-sum operator norms, the bad norm/bound/prefix source data, and the
 Chebyshev recurrence `T(n+1) = 2*x*T(n) - T(n-1)`.
 
-The malformed norm and operator-bound rows are checked by the QF_LRA/Farkas
-route after exact replay computes `||u+v||_1 = 5` and `||A*x||_infty = 3` and
-rejects claimed upper bounds `4` and `2`. General normed-space theorems,
-compact operators, approximation theorems, and Chebyshev-space theorems remain
-Lean-horizon material.
+The malformed norm, operator-bound, and Chebyshev-prefix rows are checked by
+the QF_LRA/Farkas route after exact replay computes `||u+v||_1 = 5`,
+`||A*x||_infty = 3`, and `T3(1/2) = -1`, rejecting claimed values `4`, `2`,
+and `-1/2`. General normed-space theorems, compact operators, approximation
+theorems, and Chebyshev-space theorems remain Lean-horizon material.
 
 Validation:
 

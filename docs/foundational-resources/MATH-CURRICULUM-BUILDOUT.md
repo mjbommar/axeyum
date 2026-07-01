@@ -885,7 +885,8 @@ checked QF_LRA/Farkas rejection of bad max-error and bad Euler-step rows, and
 an ODE-theory Lean-horizon row.
 `artifacts/examples/math/finite-operator-v0/` now validates exact
 finite-dimensional norm, matrix-operator, Chebyshev recurrence checks, and a
-checked QF_LRA/Farkas bad `l1` norm row plus a bad operator-bound row.
+checked QF_LRA/Farkas bad `l1` norm row, bad operator-bound row, and bad
+Chebyshev-prefix row.
 `artifacts/examples/math/inner-product-spaces-rational-v0/` now validates
 exact rational Gram matrices, positive-definite principal minors,
 Cauchy-Schwarz replay for fixed vectors, orthogonal projection replay,
@@ -1756,8 +1757,9 @@ tables, monotone invariant checking, checked QF_LRA/Farkas bad max-error plus
 bad-step rejection, and the ODE/numerical-analysis Lean horizon.
 `finite-operator-v0` now also has a standalone finite-dimensional operator
 lesson for exact `l1` norm replay, row-sum operator-bound replay, finite
-Chebyshev recurrence replay, checked QF_LRA/Farkas bad `l1` norm and bad
-operator-bound rejection, and the Banach/Hilbert/compact-operator Lean
+Chebyshev recurrence replay, checked QF_LRA/Farkas bad `l1` norm,
+bad operator-bound, and bad Chebyshev-prefix rejection, and the
+Banach/Hilbert/compact-operator Lean
 horizon.
 `proof-methods-refutation-v0` now also has a proof-object anatomy lesson that
 follows the PHP(3,2) source claim through committed CNF, emitted DRAT/LRAT
@@ -2234,10 +2236,11 @@ The consumer query layer now also exposes functional-analysis/operator
 readiness: `CONSUMER-QUERIES.md` shows the Farkas field summary,
 operator/Chebyshev bridge lookup, concept-scoped
 `bridge_finite_operator_chebyshev` pack and checked-row drill-downs, and
-checked finite-operator norm/bound, inner-product, Chebyshev, spectral, and
+checked finite-operator norm/bound/Chebyshev-prefix, inner-product, Chebyshev, spectral, and
 characteristic-polynomial Farkas rows. The foundational-resource smoke check
 runs those same queries so finite-dimensional operator bounds, inner-product
-positivity and projection-orthogonality, Chebyshev duplicate-node grids,
+positivity and projection-orthogonality, finite Chebyshev-prefix conflicts,
+Chebyshev duplicate-node grids,
 interpolation/residual rows, alternation-magnitude refutations,
 spectral/eigenpair witnesses,
 characteristic-polynomial arithmetic, and
@@ -2253,7 +2256,7 @@ QF_LIA/Diophantine, Lean-horizon, and numerical-honesty boundaries.
 The learner layer now also has
 [`chebyshev-operator-index.md`](../learn/math/chebyshev-operator-index.md),
 which groups finite operator bounds, Chebyshev recurrence values,
-Vandermonde interpolation matrices, alternating residuals, spectral rows, and
+bad Chebyshev-prefix values, Vandermonde interpolation matrices, alternating residuals, spectral rows, and
 characteristic-polynomial arithmetic by exact replay, QF_LRA/Farkas evidence,
 and functional-analysis theorem horizons.
 The learner layer now also has

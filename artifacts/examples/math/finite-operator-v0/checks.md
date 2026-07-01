@@ -29,6 +29,14 @@ Expected result: `sat`.
 The validator checks the exact values `T0(1/2)`, `T1(1/2)`, `T2(1/2)`, and
 `T3(1/2)` against the recurrence `T(n+1) = 2*x*T(n) - T(n-1)`.
 
+## `bad-chebyshev-t3-rejected`
+
+Expected result: `unsat`.
+
+The validator reuses the same finite Chebyshev prefix, recomputes
+`T3(1/2) = -1`, and checks the source QF_LRA artifact for the malformed claim
+`T3(1/2) = -1/2` through checked Farkas evidence.
+
 ## `bad-operator-bound-rejected`
 
 Expected result: `unsat`.

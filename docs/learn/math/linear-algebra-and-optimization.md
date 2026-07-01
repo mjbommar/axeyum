@@ -129,7 +129,9 @@ rational data. The finite
 Chebyshev-system slice checks Vandermonde unisolvence, interpolation replay,
 alternating residual signs, duplicate-node rejection, and a checked bad
 interpolation sample plus a checked bad alternation-magnitude claim over exact
-rational sample grids. The incidence-geometry slice checks line equations and
+rational sample grids. The finite-operator slice also checks a bad
+Chebyshev-prefix value after exact recurrence replay computes `T3(1/2) = -1`.
+The incidence-geometry slice checks line equations and
 non-parallel line intersections as tiny exact linear systems, then rejects bad
 intersection-coordinate and point-on-line rows through QF_LRA/Farkas evidence.
 The
@@ -675,9 +677,10 @@ Exact rational matrix witnesses, projections, residuals, spectra, random-matrix
 moments, and satisfiable finite-dimensional operator rows start as
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md).
 Infeasible rational systems, LP thresholds, bad residual bounds, malformed
-eigenpairs, bad Rayleigh-quotient rows, bad characteristic-polynomial rows, bad operator-bound rows,
-bad KKT stationarity rows, bad proximal residual rows, negative-norm rows, and
-projection-orthogonality examples graduate through
+eigenpairs, bad Rayleigh-quotient rows, bad characteristic-polynomial rows,
+bad operator-bound and bad Chebyshev-prefix rows, bad KKT stationarity rows,
+bad proximal residual rows, negative-norm rows, and projection-orthogonality
+examples graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
 Finite vector-space, dual-space, module, ideal, and tensor-product equality
 conflicts use

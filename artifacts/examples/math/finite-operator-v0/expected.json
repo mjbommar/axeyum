@@ -89,6 +89,26 @@
       "notes": "The validator checks T0, T1, and every listed recurrence step exactly."
     },
     {
+      "id": "bad-chebyshev-t3-rejected",
+      "claim": "The listed Chebyshev prefix at x = 1/2 cannot have T3 equal to -1/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_chebyshev_bad_value_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "chebyshev-half-values",
+        "x": "1/2",
+        "chebyshev_values": ["1", "1/2", "-1/2", "-1"],
+        "target_index": 3,
+        "computed_value": "-1",
+        "claimed_value": "-1/2",
+        "recurrence": "T(n+1) = 2*x*T(n) - T(n-1)",
+        "smt2_artifact": "artifacts/examples/math/finite-operator-v0/smt2/bad-chebyshev-t3-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_chebyshev_t3_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact recurrence replay computes T3(1/2) = -1, while the malformed row claims T3(1/2) = -1/2; the source QF_LRA artifact isolates the equivalent shifted equality conflict for Farkas checking."
+    },
+    {
       "id": "bad-operator-bound-rejected",
       "claim": "The listed matrix-vector image has infinity norm at most 2.",
       "expected_result": "unsat",

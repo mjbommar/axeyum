@@ -49,6 +49,7 @@ Concept rows:
 | `bad-l1-sum-norm-rejected` | `unsat` | checked |
 | `bad-operator-bound-rejected` | `unsat` | checked |
 | `chebyshev-recurrence-witness` | `sat` | replay-only |
+| `bad-chebyshev-t3-rejected` | `unsat` | checked |
 | `vandermonde-unisolvence-witness` | `sat` | replay-only |
 | `interpolation-polynomial-witness` | `sat` | replay-only |
 | `alternating-residual-witness` | `sat` | replay-only |
@@ -131,6 +132,9 @@ T2 = -1/2
 T3 = -1
 ```
 
+The bad Chebyshev-prefix row reuses that finite recurrence replay and rejects
+the malformed value `T3 = -1/2` through checked Farkas evidence.
+
 For the finite Chebyshev-system rows, it checks exact finite unisolvence and
 interpolation:
 
@@ -197,6 +201,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_l1_sum_norm_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_chebyshev_t3_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 ```

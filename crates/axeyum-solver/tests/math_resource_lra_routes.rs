@@ -163,6 +163,9 @@ const FINITE_OPERATOR_BAD_OPERATOR_BOUND: &str = include_str!(
 const FINITE_OPERATOR_BAD_L1_SUM_NORM: &str = include_str!(
     "../../../artifacts/examples/math/finite-operator-v0/smt2/bad-l1-sum-norm-farkas-conflict.smt2"
 );
+const FINITE_OPERATOR_BAD_CHEBYSHEV_T3: &str = include_str!(
+    "../../../artifacts/examples/math/finite-operator-v0/smt2/bad-chebyshev-t3-farkas-conflict.smt2"
+);
 const MATRIX_INVARIANTS_BAD_TRACE: &str = include_str!(
     "../../../artifacts/examples/math/matrix-invariants-v0/smt2/bad-trace-invariant-farkas-conflict.smt2"
 );
@@ -849,6 +852,14 @@ fn finite_operator_bad_operator_bound_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-operator-v0 bad-operator-bound SMT-LIB artifact",
         FINITE_OPERATOR_BAD_OPERATOR_BOUND,
+    );
+}
+
+#[test]
+fn finite_operator_bad_chebyshev_t3_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-operator-v0 bad-chebyshev-t3 SMT-LIB artifact",
+        FINITE_OPERATOR_BAD_CHEBYSHEV_T3,
     );
 }
 

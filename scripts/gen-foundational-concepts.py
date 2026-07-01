@@ -6660,7 +6660,7 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "finite-operator-v0",
-                "Finite-dimensional norm, operator-bound, Chebyshev recurrence, and bad operator-bound rows.",
+                "Finite-dimensional norm, operator-bound, Chebyshev recurrence, bad operator-bound, and bad Chebyshev-prefix rows.",
             ),
             (
                 "finite-chebyshev-systems-v0",
@@ -6725,7 +6725,7 @@ BRIDGE_CONCEPTS = [
             "criteria": [
                 "Rows state the finite vector space, operator matrix, norm, polynomial basis, or sample grid being replayed.",
                 "The validator recomputes matrix actions, norms, recurrence values, interpolation rows, and alternating residual witnesses.",
-                "Malformed finite operator or interpolation rows link to checked QF_LRA/Farkas regressions after replay.",
+                "Malformed finite operator, recurrence, or interpolation rows link to checked QF_LRA/Farkas regressions after replay.",
             ],
         },
     },

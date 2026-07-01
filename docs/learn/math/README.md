@@ -511,11 +511,11 @@ Companion maps:
   plus bad-step rejection.
 - [Finite-Dimensional Operators](finite-operator-end-to-end.md): follows exact
   `l1` norm replay, matrix row-sum operator-bound replay, finite Chebyshev
-  recurrence replay, and checked QF_LRA/Farkas bad `l1` norm and bad
-  operator-bound rejection.
+  recurrence replay, and checked QF_LRA/Farkas bad `l1` norm, bad
+  operator-bound, and bad Chebyshev-prefix rejection.
 - [Bounded Dynamics And Operators](analysis-dynamics-end-to-end.md): follows
   bounded recurrence, invariant, operator-bound, checked QF_LRA/Farkas bad
-  norm/operator-bound rejection, Chebyshev recurrence, and finite
+  norm/operator-bound/Chebyshev-prefix rejection, Chebyshev recurrence, and finite
   Chebyshev-system replay.
 - [Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md): follows
   exact Vandermonde unisolvence, interpolation, alternating residual signs,

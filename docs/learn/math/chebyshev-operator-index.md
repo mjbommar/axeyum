@@ -40,7 +40,7 @@ These rows live in the
 | Question | Packs | Trusted Check | Horizon |
 |---|---|---|---|
 | Does a finite operator/norm row replay? | `finite-operator-v0` | vector-sum replay, exact `l1` norm, matrix-vector replay, exact infinity norm, row-sum bound, checked bad-norm and bad-bound Farkas rows | Banach/Hilbert-space operator theory |
-| Does a Chebyshev recurrence prefix replay? | `finite-operator-v0` | fixed rational recurrence values such as `T0`, `T1`, `T2`, `T3` at `x = 1/2` | general Chebyshev polynomial theory |
+| Does a Chebyshev recurrence prefix replay? | `finite-operator-v0` | fixed rational recurrence values such as `T0`, `T1`, `T2`, `T3` at `x = 1/2`, plus checked rejection of a bad `T3` value | general Chebyshev polynomial theory |
 | Is a finite interpolation grid unisolvent? | `finite-chebyshev-systems-v0` | exact Vandermonde matrix and determinant replay | Haar-space and Chebyshev-system theorems |
 | Do finite samples match listed coefficients? | `finite-chebyshev-systems-v0` | exact evaluation-matrix times coefficient-vector replay plus checked bad-sample Farkas row | general interpolation and approximation theory |
 | Does a residual alternate on a finite grid? | `finite-chebyshev-systems-v0` | exact residual values, signs, common absolute error, and checked bad-uniform-error Farkas row | minimax and alternation theorems |
@@ -69,6 +69,17 @@ The validator recomputes the vector sum, matrix image, and norms before the
 final contradiction is handed to the QF_LRA/Farkas route. The certificate
 checks the small rational conflict; it does not prove a general operator-norm
 theorem.
+
+The finite Chebyshev recurrence prefix is equally small:
+
+```text
+x = 1/2
+T0, T1, T2, T3 = 1, 1/2, -1/2, -1
+false claim: T3 = -1/2
+```
+
+After replay computes `T3 = -1`, the checked Farkas artifact uses the shifted
+conflict `T3+1 = 0` versus `T3+1 = 1/2`.
 
 Finite Chebyshev-system rows use an explicit grid and basis:
 
@@ -125,7 +136,7 @@ as a QF_LRA/Farkas row.
 
 Start with [Finite-Dimensional Operators](finite-operator-end-to-end.md) for
 exact vector norms, matrix row-sum bounds, Chebyshev recurrence replay, and the
-checked bad norm and bad operator-bound rows.
+checked bad norm, bad operator-bound, and bad Chebyshev-prefix rows.
 
 Use [Rational Inner Product Spaces](inner-product-spaces-end-to-end.md) when the
 operator story needs projection arithmetic, residual orthogonality, and checked
@@ -153,6 +164,7 @@ From the repository root:
 python3 scripts/query-foundational-resources.py concepts --field functional_analysis_and_operator_theory --text Chebyshev --require-any
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_operator_chebyshev --route Farkas --require-any
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_operator_chebyshev --route Farkas --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0 --route Farkas --proof-status checked --text Chebyshev --require-any
 python3 scripts/query-foundational-resources.py checks --field functional_analysis_and_operator_theory --route Farkas --proof-status checked --require-any
 ```
 
@@ -177,7 +189,8 @@ for each command.
 
 The checked rows prove only the listed finite rational rows: matrix actions,
 norms, recurrence values, interpolation matrices, determinants, residual signs,
-eigenpair arithmetic, and characteristic-polynomial arithmetic. They do not
+eigenpair arithmetic, characteristic-polynomial arithmetic, and bad finite
+recurrence-value conflicts. They do not
 prove Banach-space completeness, Hilbert projection, Riesz representation,
 compact-operator facts, spectral theorem variants, Haar-space theorems,
 minimax approximation, alternation theorems, or infinite-dimensional
