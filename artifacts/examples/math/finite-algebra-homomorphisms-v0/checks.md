@@ -45,6 +45,16 @@ Expected result: `unsat`.
 The validator rejects the malformed map because `1 + 1 = 2`, the map sends
 `2` to `1`, but the codomain sum `f(1) + f(1)` is `0`.
 
+## `qf-uf-bad-group-homomorphism-alethe`
+
+Expected result: `unsat`.
+
+The SMT-LIB artifact isolates the same concrete failing pair as pure EUF
+equalities: `opG(1,1)=2`, `phi(2)=1`, `opH(phi(1),phi(1))=0`, and the
+homomorphism-preservation equation
+`phi(opG(1,1)) = opH(phi(1),phi(1))`. Since `0 != 1`, Axeyum emits and checks
+an `UnsatAletheProof` for the conflict.
+
 ## `general-isomorphism-theorems-lean-horizon`
 
 Expected result: `not-run`.

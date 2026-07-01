@@ -378,7 +378,9 @@ Pick one item per commit unless the change is purely navigational.
    matrix-valued atom tables, moment replay, expected Gram replay,
    rank-mixture replay, and checked QF_LRA/Farkas bad-moment rows before any
    asymptotic statement.
-8. Promote one replay-heavy QF_UF topology/algebra row through Alethe.
+8. Landed: promote the concrete bad finite group-homomorphism row in
+   `finite-algebra-homomorphisms-v0` through QF_UF/Alethe after table replay
+   identifies `phi(1+1)=1` versus `phi(1)+phi(1)=0`.
 9. Promote one small graph or set-family Boolean row through CNF/LRAT.
 10. Add the next rules/law example only by reusing an existing math proof
     shape and the current JSON boundary.

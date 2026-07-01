@@ -24,6 +24,7 @@ Concept rows:
 | `z4-to-z2-ring-homomorphism` | `sat` | replay-only |
 | `qf-uf-homomorphism-preservation-alethe` | `unsat` | checked |
 | `bad-group-homomorphism-rejected` | `unsat` | checked |
+| `qf-uf-bad-group-homomorphism-alethe` | `unsat` | checked |
 | `general-isomorphism-theorems-lean-horizon` | `not-run` | lean-horizon |
 
 The replay rows are finite operation-table checks. The pack does not claim the
@@ -193,6 +194,21 @@ g(1) + g(1) = 1 + 1 = 0 mod 2
 ```
 
 Because `1 != 0`, the map is not a group homomorphism.
+
+The promoted Alethe row then strips that concrete failure down to an equality
+conflict:
+
+```text
+opG(1,1) = 2
+phi(2) = 1
+opH(phi(1), phi(1)) = 0
+phi(opG(1,1)) = opH(phi(1), phi(1))
+0 != 1
+```
+
+Axeyum checks the resulting `UnsatAletheProof` for the fixed equality
+contradiction. The finite table replay still owns the job of finding the bad
+pair; the Alethe route owns only the small congruence refutation.
 
 ## Run It
 

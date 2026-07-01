@@ -31,12 +31,13 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-algebra-homomorphisms-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite homomorphism preservation QF_UF/Alethe regression seed",
-    "pressure": "Homomorphism-preservation congruence conflict where congruent source pairs must preserve the same operation equality but the malformed row rejects the second pair.",
+    "target": "finite homomorphism preservation and bad-map QF_UF/Alethe regression seeds",
+    "pressure": "Homomorphism-preservation congruence conflict, plus a concrete bad map where finite table replay computes phi(1+1)=1 and phi(1)+phi(1)=0.",
     "evidence": [
-      "qf-uf-homomorphism-preservation-alethe"
+      "qf-uf-homomorphism-preservation-alethe",
+      "qf-uf-bad-group-homomorphism-alethe"
     ],
-    "next_step": "Promote additional finite homomorphism rows only when they add distinct equality or quotient-map solver pressure; keep general isomorphism theorems and categorical universal properties in the Lean-horizon lane."
+    "next_step": "Promote additional finite homomorphism rows only when they add distinct equality, concrete bad-map, quotient-map, or kernel/image solver pressure; keep general isomorphism theorems and categorical universal properties in the Lean-horizon lane."
   },
   "source_refs": [
     "docs/curriculum/02-structures/groups.md",
@@ -48,6 +49,7 @@
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "artifacts/examples/math/finite-algebra-homomorphisms-v0/smt2/homomorphism-preservation-congruence-conflict.smt2",
+    "artifacts/examples/math/finite-algebra-homomorphisms-v0/smt2/bad-group-homomorphism-alethe-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [
@@ -57,12 +59,14 @@
     "z4-to-z2-ring-homomorphism",
     "qf-uf-homomorphism-preservation-alethe",
     "bad-group-homomorphism-rejected",
+    "qf-uf-bad-group-homomorphism-alethe",
     "general-isomorphism-theorems-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite homomorphism tables as deterministic finite-function and equality obligations.",
     "Replay kernel, image, quotient, and induced-map witnesses through Axeyum model evaluation rather than pack-local Python only.",
-    "Keep adding emitted EUF/Alethe or finite-table certificates for quotient and bad-homomorphism rows once those concrete encodings are promoted.",
+    "Keep the promoted QF_UF/Alethe rows tied to both abstract preservation and concrete bad-map source artifacts.",
+    "Continue adding emitted EUF/Alethe or finite-table certificates for quotient, kernel/image, and bad-homomorphism rows only when those concrete encodings add distinct equality/congruence pressure.",
     "Keep general isomorphism theorems, module homomorphisms, categorical universal properties, and infinite algebra under Lean horizon until formal routes exist."
   ]
 }

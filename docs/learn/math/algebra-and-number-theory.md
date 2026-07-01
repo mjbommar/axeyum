@@ -185,8 +185,9 @@ ker(f) = {0, 2}
 
 The `finite-algebra-homomorphisms-v0` pack checks `f(a + b) = f(a) + f(b)` for
 every pair, recomputes kernel and image, verifies the quotient by the kernel,
-checks the same map as a unital ring homomorphism, and carries a checked
-QF_UF/Alethe proof row for homomorphism-preservation congruence.
+checks the same map as a unital ring homomorphism, and carries checked
+QF_UF/Alethe proof rows for homomorphism-preservation congruence and the
+concrete bad-map equality conflict.
 
 For a finite ideal and quotient-ring example, use even residues in `Z/6Z`:
 

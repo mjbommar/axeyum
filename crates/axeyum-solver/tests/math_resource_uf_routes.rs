@@ -23,6 +23,9 @@ const FUNCTION_COMPOSITION_APPLICATION_CONFLICT: &str = include_str!(
 const FINITE_ALGEBRA_HOMOMORPHISM_PRESERVATION: &str = include_str!(
     "../../../artifacts/examples/math/finite-algebra-homomorphisms-v0/smt2/homomorphism-preservation-congruence-conflict.smt2"
 );
+const FINITE_ALGEBRA_HOMOMORPHISM_BAD_GROUP_MAP: &str = include_str!(
+    "../../../artifacts/examples/math/finite-algebra-homomorphisms-v0/smt2/bad-group-homomorphism-alethe-conflict.smt2"
+);
 const FINITE_MONOIDS_ASSOCIATIVITY_FAILURE: &str = include_str!(
     "../../../artifacts/examples/math/finite-monoids-v0/smt2/nonassociative-table-alethe-conflict.smt2"
 );
@@ -106,6 +109,14 @@ fn finite_algebra_homomorphism_preservation_emits_checked_alethe() {
     assert_resource_euf_alethe(
         "finite-algebra-homomorphisms-v0 homomorphism preservation conflict",
         FINITE_ALGEBRA_HOMOMORPHISM_PRESERVATION,
+    );
+}
+
+#[test]
+fn finite_algebra_homomorphism_bad_group_map_emits_checked_alethe() {
+    assert_resource_euf_alethe(
+        "finite-algebra-homomorphisms-v0 bad group homomorphism",
+        FINITE_ALGEBRA_HOMOMORPHISM_BAD_GROUP_MAP,
     );
 }
 

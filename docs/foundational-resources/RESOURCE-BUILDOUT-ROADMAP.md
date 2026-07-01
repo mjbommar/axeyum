@@ -1724,6 +1724,13 @@ Pick one item per commit unless the change is purely navigational.
      Farkas route lookups while keeping asymptotic spectra, universality,
      concentration theorems, simulation quality, and high-dimensional
      random-matrix claims in theorem/numerical-honesty lanes.
+108. Landed: promote the concrete bad group-homomorphism row in
+     `finite-algebra-homomorphisms-v0` through QF_UF/Alethe. The new
+     `bad-group-homomorphism-alethe-conflict.smt2` artifact isolates the
+     table-replayed mismatch `phi(1+1)=1` versus `phi(1)+phi(1)=0`, the solver
+     regression checks the emitted Alethe proof object, and the consumer smoke
+     now exercises `bridge_homomorphism_preservation` checked-row drilldowns
+     without promoting general isomorphism or infinite algebra claims.
 
 ## Validation Checklist
 

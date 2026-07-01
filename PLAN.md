@@ -152,7 +152,9 @@ upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
 finite group actions, with topology/preimage, finite specialization-order,
 finite quotient-topology, finite cohomology, finite universal-coefficient shadow, and finite cup-product
-extensions. The topology
+extensions. The finite algebra-homomorphism lane now also promotes the
+concrete bad group-homomorphism row through QF_UF/Alethe after exact table
+replay isolates `phi(1+1)=1` versus `phi(1)+phi(1)=0`. The topology
 QF_LIA/Diophantine lane now also includes finite chain-complex torsion via
 one-entry Smith diagonal replay and checked rejection of `2*k = 1`. The measure/probability QF_LRA/Farkas lane now
 also promotes finite product-measure's bad product-probability row through a
@@ -244,7 +246,8 @@ conditioning/stability, and general vector-space/module theorem claims stay in
 the horizon lanes.
 The public foundational-resource consumer query layer now also exercises the
 core algebra/number/graph lanes: abstract-algebra Alethe readiness,
-homomorphism/ideal bridge lookups, checked Alethe and fixed-width QF_BV rows;
+homomorphism/ideal bridge lookups, concept-scoped homomorphism-preservation
+Alethe checked-row queries, checked Alethe and fixed-width QF_BV rows;
 number-theory Diophantine readiness, finite-family lookups, and checked
 integer-arithmetic rows; and graph-theory Boolean plus LIA readiness,
 graph-family/runtime lookups, checked finite

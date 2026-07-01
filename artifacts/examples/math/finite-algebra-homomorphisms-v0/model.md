@@ -63,3 +63,26 @@ f(1) = 1
 ```
 
 This is one finite table replay, not a theorem about all quotient rings.
+
+## Bad Homomorphism Row
+
+The malformed group map keeps the same source and codomain tables but sends:
+
+```text
+g(0) = 0
+g(1) = 1
+g(2) = 1
+g(3) = 1
+```
+
+The failing pair is:
+
+```text
+1 + 1 = 2 mod 4
+g(1 + 1) = g(2) = 1
+g(1) + g(1) = 1 + 1 = 0 mod 2
+```
+
+The finite replay row finds that mismatch by table evaluation. The QF_UF row
+then checks the isolated equality contradiction with Alethe evidence; it does
+not prove any general homomorphism theorem.

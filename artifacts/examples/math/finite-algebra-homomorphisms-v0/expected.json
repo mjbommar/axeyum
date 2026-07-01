@@ -210,6 +210,23 @@
       "notes": "The validator checks the pair 1+1: the map sends 2 to 1, while f(1)+f(1) is 0 in Z/2Z."
     },
     {
+      "id": "qf-uf-bad-group-homomorphism-alethe",
+      "claim": "The malformed finite group map cannot satisfy homomorphism preservation at 1+1.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
+      "data": {
+        "failing_pair": ["1", "1"],
+        "source_sum": "2",
+        "claimed_image_of_sum": "1",
+        "actual_sum_of_images": "0",
+        "smt2_artifact": "artifacts/examples/math/finite-algebra-homomorphisms-v0/smt2/bad-group-homomorphism-alethe-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_algebra_homomorphism_bad_group_map_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
+      },
+      "notes": "Finite replay identifies the bad pair 1+1: phi(2)=1 while phi(1)+phi(1)=0. The linked QF_UF artifact isolates that operation-preservation equality and checks the contradiction through Alethe evidence."
+    },
+    {
       "id": "general-isomorphism-theorems-lean-horizon",
       "claim": "General algebraic isomorphism theorems and structure-theory claims require future proof resources.",
       "expected_result": "not-run",

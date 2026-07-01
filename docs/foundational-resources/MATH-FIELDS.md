@@ -250,7 +250,8 @@ one of:
     - Fields: `abstract_algebra`, `set_theory_and_foundations`.
     - Checks: finite group and ring homomorphism replay, kernel/image
       recomputation, quotient/induced-map replay, bad-homomorphism rejection,
-      and a general isomorphism-theorem Lean-horizon row.
+      QF_UF/Alethe preservation and concrete bad-map rows, and a general
+      isomorphism-theorem Lean-horizon row.
 25. `artifacts/examples/math/finite-vector-spaces-v0/`
     - Fields: `linear_algebra`, `abstract_algebra`,
       `set_theory_and_foundations`.

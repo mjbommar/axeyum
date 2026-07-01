@@ -5585,7 +5585,7 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "finite-algebra-homomorphisms-v0",
-                "Group and ring homomorphism table replay plus checked homomorphism-preservation congruence.",
+                "Group and ring homomorphism table replay plus checked preservation and bad-map Alethe conflicts.",
             ),
             (
                 "finite-groups-v0",
@@ -5602,7 +5602,7 @@ BRIDGE_CONCEPTS = [
         ],
         "proof_routes": [
             {
-                "name": "finite homomorphism replay plus QF_UF/Alethe preservation conflict",
+                "name": "finite homomorphism replay plus QF_UF/Alethe preservation and bad-map conflicts",
                 "status": "checked",
                 "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
                 "lean_status": "partial",
@@ -5614,9 +5614,9 @@ BRIDGE_CONCEPTS = [
                 ],
                 "notes": (
                     "The finite checker evaluates every operation-preservation "
-                    "equation over the source table; the promoted bad row "
-                    "uses the QF_UF/Alethe regression for the isolated "
-                    "congruence conflict."
+                    "equation over the source table; the promoted Alethe rows "
+                    "cover both the abstract preservation congruence conflict "
+                    "and the concrete bad-map equality conflict."
                 ),
             }
         ],
@@ -5636,7 +5636,8 @@ BRIDGE_CONCEPTS = [
             "criteria": [
                 "Rows state the finite source/codomain tables and the total map.",
                 "The validator recomputes preservation for each listed operation and rejects corrupted map entries.",
-                "Bad preservation rows carry source-linked QF_UF/Alethe evidence before solver reuse is claimed.",
+            "Bad preservation rows carry source-linked QF_UF/Alethe evidence before solver reuse is claimed.",
+            "Concrete malformed-map rows keep finite table replay separate from the checked equality conflict.",
             ],
         },
     },

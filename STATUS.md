@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Bad finite group-homomorphism Alethe row landed.**
+  `finite-algebra-homomorphisms-v0` now has a second source-linked
+  QF_UF/Alethe row: after finite table replay finds the malformed map's
+  failing pair `1+1`, the new SMT-LIB artifact checks the isolated conflict
+  `phi(1+1)=1` versus `phi(1)+phi(1)=0` with
+  `prove_qf_uf_unsat_alethe` and `Evidence::check`. The learner page,
+  consumer guide, field-readiness matrix, concept generator, and resource
+  smoke now expose the row through `bridge_homomorphism_preservation`, while
+  general isomorphism, quotient, categorical, and infinite-algebra theorems
+  remain Lean-horizon.
+
 - **Random-matrix moment learner index landed.**
   `random-matrix-moment-index.md` now ties finite matrix-valued atom tables,
   exact trace/determinant moments, expected Gram matrices, rank-mixture

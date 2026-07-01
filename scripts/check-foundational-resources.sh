@@ -106,6 +106,7 @@ python3 scripts/query-foundational-resources.py fields --field abstract_algebra 
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text homomorphism --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text ideal --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field abstract_algebra --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_homomorphism_preservation --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field abstract_algebra --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field number_theory --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field number_theory --text finite --require-any >/dev/null

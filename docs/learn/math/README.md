@@ -364,8 +364,8 @@ Companion maps:
 - [Finite Algebra Homomorphisms](finite-algebra-homomorphisms-end-to-end.md):
   follows parity-map preservation, kernel/image recomputation,
   quotient/induced-map replay, ring-homomorphism replay, QF_UF/Alethe
-  homomorphism-preservation congruence, and checked bad-homomorphism
-  rejection.
+  homomorphism-preservation congruence, checked bad-homomorphism rejection,
+  and the concrete bad-map Alethe refutation.
 - [Finite Ideals And Quotient Rings](finite-ideals-quotient-rings-end-to-end.md):
   follows `Z/6Z` ideal closure, principal generation, parity-map kernel/image,
   quotient-ring table replay, and checked QF_UF/Alethe bad non-ideal

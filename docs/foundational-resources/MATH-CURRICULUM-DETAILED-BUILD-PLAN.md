@@ -825,6 +825,16 @@ Pick one row per commit unless the change is purely navigational.
     universality, concentration theorems, simulation quality, and
     high-dimensional random-matrix claims in the theorem/numerical-honesty
     lanes.
+97. Landed: promote the concrete `finite-algebra-homomorphisms-v0`
+    bad group-homomorphism row through QF_UF/Alethe. Finite table replay
+    identifies the failing pair `1+1`: the malformed map has `phi(2)=1`,
+    while the codomain table gives `phi(1)+phi(1)=0`; the new source-linked
+    SMT-LIB artifact checks that isolated equality conflict with
+    `prove_qf_uf_unsat_alethe` and `Evidence::check`. The abstract-algebra
+    consumer smoke now includes concept-scoped
+    `bridge_homomorphism_preservation` Alethe checked-row queries while
+    keeping general isomorphism, quotient, categorical, and infinite-algebra
+    theorems in the Lean-horizon lane.
 
 ## Validation Checklist
 

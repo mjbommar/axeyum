@@ -454,8 +454,10 @@ QF_BV/DRAT proof-route row for the bad distributivity conflict.
 `finite-algebra-homomorphisms-v0` now extends the algebra core with finite
 group-homomorphism replay, kernel/image recomputation, quotient and induced-map
 checks, ring-homomorphism replay, a QF_UF/Alethe homomorphism-preservation row,
-checked bad-homomorphism rejection, and a general isomorphism-theorem
-Lean-horizon row. `finite-vector-spaces-v0` now
+checked bad-homomorphism rejection, a concrete QF_UF/Alethe bad-map
+refutation after table replay identifies `phi(1+1)=1` versus
+`phi(1)+phi(1)=0`, and a general isomorphism-theorem Lean-horizon row.
+`finite-vector-spaces-v0` now
 bridges finite fields into linear algebra with `F2^2` vector-space table
 replay, subspace/span checks, linear-map kernel/image replay, rank-nullity
 replay, checked QF_UF/Alethe non-subspace rejection, and a general
@@ -1555,8 +1557,8 @@ invariant checks, checked QF_LRA/Farkas rejection of a bad Euler step, and an
 ODE-theory Lean-horizon row. `finite-algebra-homomorphisms-v0` now adds the
 next exact finite algebra bridge after group/ring tables: homomorphism preservation,
 kernel/image replay, quotient/induced-map replay, QF_UF/Alethe preservation
-congruence, checked bad-homomorphism rejection, and an isomorphism-theorem
-Lean-horizon row.
+congruence, checked bad-homomorphism rejection, concrete bad-map Alethe
+refutation, and an isomorphism-theorem Lean-horizon row.
 `finite-vector-spaces-v0` now adds the exact finite linear-algebra bridge over
 `F2`: vector-space laws, subspace/span replay, linear-map kernel/image replay,
 rank-nullity by finite cardinality, checked QF_UF/Alethe non-subspace
@@ -2073,7 +2075,8 @@ vector-space/module theorem claims.
 The consumer query layer now also exposes core algebra, number-theory, and
 graph-theory readiness: `CONSUMER-QUERIES.md` shows abstract-algebra Alethe
 field summaries, homomorphism/ideal bridge lookups, checked Alethe and
-fixed-width QF_BV finite-algebra rows, number-theory Diophantine field
+concept-scoped homomorphism-preservation Alethe rows, fixed-width QF_BV
+finite-algebra rows, number-theory Diophantine field
 summaries with finite-family lookups and checked integer-arithmetic rows, and
 graph-theory Boolean and LIA field summaries with checked finite coloring,
 reachability, matching, cut, d-separation, and BFS/DFS runtime-counter rows.
