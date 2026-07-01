@@ -545,7 +545,8 @@ validates exact finite Markov, Chebyshev, and union-bound replays, plus checked
 rejection of a false tail bound.
 [`exact-statistical-tests-v0`](../../artifacts/examples/math/exact-statistical-tests-v0/)
 validates exact binomial tails, hypergeometric point probabilities, one-sided
-Fisher p-values, and checked rejection of a false p-value.
+Fisher p-values, checked QF_LRA/Farkas rejection of a false Fisher left-tail
+p-value, and checked QF_LIA/Diophantine rejection of a bad binomial tail count.
 [`generating-functions-v0`](../../artifacts/examples/math/generating-functions-v0/)
 validates finite coefficient extraction, Cauchy product convolution,
 Fibonacci generating-function prefix replay, checked rejection of a bad

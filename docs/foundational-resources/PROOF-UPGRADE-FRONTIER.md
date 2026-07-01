@@ -25,12 +25,12 @@ Candidate route totals:
 
 | Route | Pack Count | Meaning |
 |---|---:|---|
-| [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 32 | Boolean refutations that should carry checked CNF proof objects. |
-| [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 14 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
-| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 18 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions, including finite graph traversal cost counters. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 62 | Exact rational infeasibility and linear inequality obligations. |
-| [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 22 | Equality-heavy finite structures and congruence conflicts. |
-| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 96 | General theorem statements that remain outside bounded SMT replay. |
+| [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 9 | Boolean refutations that should carry checked CNF proof objects. |
+| [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 5 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
+| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 11 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions, including finite graph traversal cost counters. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 58 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 19 | Equality-heavy finite structures and congruence conflicts. |
+| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 78 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
 
@@ -201,6 +201,9 @@ First targets:
 - [descriptive-statistics-v0](../../artifacts/examples/math/descriptive-statistics-v0/)
   (resource-backed Farkas regression landed for the bad variance row after
   exact finite-sample replay computes `Var(X) = 5/4`)
+- [exact-statistical-tests-v0](../../artifacts/examples/math/exact-statistical-tests-v0/)
+  (resource-backed Farkas regression landed for the bad Fisher left-tail row
+  after exact fixed-margin replay computes `17/70`)
 - [finite-probability-v0](../../artifacts/examples/math/finite-probability-v0/)
   (resource-backed Farkas regressions landed for the bad normalization,
   conditional-probability, and Bayes-posterior rows)
@@ -578,7 +581,8 @@ First targets:
   `UnsatDiophantine` checking and contradiction-row tamper rejection)
 - [exact-statistical-tests-v0](../../artifacts/examples/math/exact-statistical-tests-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the bad binomial
-  tail-count row)
+  tail-count row; the exact-rational bad Fisher left-tail row is covered by
+  the QF_LRA/Farkas lane above)
 - [finite-simplicial-homology-v0](../../artifacts/examples/math/finite-simplicial-homology-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the bad boundary
   coefficient row)

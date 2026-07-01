@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const fisher_left_tail_p_value Real)
+(assert (= (* 70 fisher_left_tail_p_value) 17))
+(assert (= fisher_left_tail_p_value (/ 1 4)))
+(check-sat)

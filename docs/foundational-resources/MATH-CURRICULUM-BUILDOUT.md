@@ -959,8 +959,8 @@ stationary-distribution replay, and checked QF_LRA/Farkas rejection of a
 malformed transition row.
 `artifacts/examples/math/exact-statistical-tests-v0/` now validates exact
 binomial tails, hypergeometric point probabilities, one-sided Fisher p-values,
-checked rejection of a false p-value, and a checked QF_LIA bad tail-count
-obstruction.
+checked QF_LRA/Farkas rejection of a false Fisher left-tail p-value, and a
+checked QF_LIA bad tail-count obstruction.
 
 Recommended order:
 
@@ -1226,10 +1226,11 @@ Priority recipes:
    and promoted in `modular-arithmetic-v0` for the nonunit inverse gcd
    obstruction and incompatible non-coprime CRT obstruction, and in
    `exact-statistical-tests-v0` for the bad binomial tail-count contradiction.
-   The first secondary statistics exact-rational and margin/count rows are now
-   promoted in `descriptive-statistics-v0` for the bad variance and bad
-   contingency total, while broader modular, exact-test, and statistics
-   finite-search rows remain finite replay.
+   The exact Fisher left-tail p-value contradiction is covered by the
+   QF_LRA/Farkas lane. The first secondary statistics exact-rational and
+   margin/count rows are now promoted in `descriptive-statistics-v0` for the
+   bad variance and bad contingency total, while broader modular, exact-test,
+   and statistics finite-search rows remain finite replay.
 5. "Lean horizon" recipe template for induction, topology, measure, and limits.
    Status: landed as
    [Lean Horizon Template](../proof-cookbook/recipes/lean-horizon-template.md)
@@ -1448,7 +1449,8 @@ stochastic-process bridge across probability, linear algebra, statistics, and
 dynamics, with a checked QF_LRA/Farkas bad stochastic-row regression.
 `exact-statistical-tests-v0` now adds the first exact finite
 statistical-test slice for p-values as rational finite sums, with a checked
-QF_LIA/Diophantine bad tail-count row.
+QF_LRA/Farkas bad Fisher left-tail row and a checked QF_LIA/Diophantine bad
+tail-count row.
 `proof-methods-patterns-v0` now deepens the proof-methods curriculum row with
 finite direct proof, contrapositive, proof-by-cases, contradiction, invalid
 converse counterexample, and natural-deduction Lean-horizon examples.
@@ -1778,8 +1780,9 @@ replay, checked bad unit-square rejection, and the complex-analysis Lean
 horizon.
 `exact-statistical-tests-v0` now has a learner-facing end-to-end lesson for
 one-sided exact binomial tails, hypergeometric point probability, one-sided
-Fisher tail replay, checked bad p-value rejection, a checked QF_LIA bad
-tail-count certificate, and the statistical numerical-honesty horizon.
+Fisher tail replay, checked QF_LRA/Farkas bad Fisher p-value rejection, a
+checked QF_LIA bad tail-count certificate, and the statistical
+numerical-honesty horizon.
 `metric-continuity-v0` now has a learner-facing end-to-end lesson for finite
 metric-table replay, finite Lipschitz checks, epsilon-delta containment,
 open-ball preimage replay, checked QF_LRA/Farkas bad-delta rejection, and the

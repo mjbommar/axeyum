@@ -18,6 +18,7 @@ Concept rows:
 | `binomial-tail-pvalue` | `sat` | replay-only |
 | `hypergeometric-point-probability` | `sat` | replay-only |
 | `fisher-left-tail-pvalue` | `sat` | replay-only |
+| `bad-fisher-left-tail-rejected` | `unsat` | checked |
 | `bad-binomial-pvalue-rejected` | `unsat` | checked |
 | `qf-lia-bad-binomial-tail-count` | `unsat` | checked |
 
@@ -93,7 +94,27 @@ P(X <= 1) = 17/70
 This is a finite Fisher exact-test replay for one fixed table. It does not
 claim a full statistical testing library.
 
-## Reject A Bad P-Value
+## Check The Fisher P-Value Certificate
+
+The checked Fisher row keeps the finite counting step outside the solver:
+
+```text
+actual left-tail p-value = 17/70
+```
+
+Then it asks QF_LRA to reject only the final exact-rational contradiction:
+
+```text
+70 * fisher_left_tail_p_value = 17
+fisher_left_tail_p_value = 1/4
+```
+
+Axeyum derives a Farkas certificate for that inconsistent linear real system
+and checks the certificate independently. This is the trusted-small-checking
+pattern for exact rational p-values: finite replay computes the rational, and
+the solver proof route checks the malformed equality.
+
+## Reject A Bad Binomial P-Value
 
 The checked negative row uses the same binomial setting:
 
@@ -146,8 +167,8 @@ tail_count = 4
 
 Axeyum derives an `UnsatDiophantine` certificate for the inconsistent linear
 integer system and checks that certificate independently. This upgrades the
-bad p-value row from finite replay to a concrete QF_LIA proof-object route for
-the count contradiction.
+bad binomial p-value row from finite replay to a concrete QF_LIA proof-object
+route for the count contradiction.
 
 ## Name The Horizon
 
@@ -158,6 +179,7 @@ binomial finite tails
 hypergeometric point probabilities
 one-sided Fisher tails
 bad p-value refutations
+QF_LRA Fisher p-value contradictions
 QF_LIA tail-count contradictions
 ```
 
@@ -182,9 +204,11 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes exact_stats_bad_fisher_left_tail_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lia_routes exact_stats_bad_binomial_tail_count_emits_checked_diophantine_evidence
 ```
 
-Expected output:
+Expected validator output:
 
 ```text
 validated 1 foundational example pack(s)
@@ -196,7 +220,7 @@ This lesson shows Axeyum's current exact-statistics resource pattern:
 
 ```text
 untrusted fast search -> p-value or table claim
-trusted small checking -> exact finite counts, rational sums, and Diophantine certificates
+trusted small checking -> exact finite counts, rational sums, Farkas certificates, and Diophantine certificates
 remaining horizon -> asymptotics, policy choices, and floating-point statistics
 ```
 

@@ -21260,8 +21260,56 @@ def validate_exact_statistical_tests(expected: dict[str, Any]) -> None:
     row1 = row_sums[0]
     row2 = row_sums[1]
     col1 = column_sums_value[0]
-    if fisher_left_tail_probability(row1, row2, col1, observed_top_left) != p_value:
+    fisher_left_tail = fisher_left_tail_probability(row1, row2, col1, observed_top_left)
+    if fisher_left_tail != p_value:
         fail("fisher-left-tail-pvalue p_value is incorrect")
+
+    bad_fisher = checks["bad-fisher-left-tail-rejected"]
+    if bad_fisher["expected_result"] != "unsat":
+        fail("bad-fisher-left-tail-rejected must expect unsat")
+    if bad_fisher["proof_status"] != "checked":
+        fail("bad-fisher-left-tail-rejected must be checked")
+    if bad_fisher["validation"] != "qf_lra_bad_fisher_left_tail_refutation":
+        fail("bad-fisher-left-tail-rejected must use qf_lra_bad_fisher_left_tail_refutation validation")
+    data = bad_fisher.get("data", {})
+    bad_table = require_2x2_count_table("bad Fisher table", data.get("table"))
+    bad_row_sums = require_nonnegative_int_list("bad Fisher row_sums", data.get("row_sums"))
+    bad_column_sums = require_nonnegative_int_list("bad Fisher column_sums", data.get("column_sums"))
+    bad_observed_top_left = require_nonnegative_int(
+        "bad Fisher observed_top_left",
+        data.get("observed_top_left"),
+    )
+    if bad_table != table:
+        fail("bad-fisher-left-tail-rejected table must match Fisher replay witness")
+    if bad_row_sums != row_sums:
+        fail("bad-fisher-left-tail-rejected row_sums must match Fisher replay witness")
+    if bad_column_sums != column_sums_value:
+        fail("bad-fisher-left-tail-rejected column_sums must match Fisher replay witness")
+    if bad_observed_top_left != observed_top_left:
+        fail("bad-fisher-left-tail-rejected observed_top_left must match Fisher replay witness")
+    tail_numerator = require_positive_int("bad Fisher tail_numerator", data.get("tail_numerator"))
+    tail_denominator = require_positive_int("bad Fisher tail_denominator", data.get("tail_denominator"))
+    actual = require_probability("bad Fisher actual_left_tail_p_value", data.get("actual_left_tail_p_value"))
+    claimed = require_probability("bad Fisher claimed_left_tail_p_value", data.get("claimed_left_tail_p_value"))
+    if actual != fisher_left_tail:
+        fail("bad-fisher-left-tail-rejected actual_left_tail_p_value is incorrect")
+    if tail_numerator != fisher_left_tail.numerator:
+        fail("bad-fisher-left-tail-rejected tail_numerator is incorrect")
+    if tail_denominator != fisher_left_tail.denominator:
+        fail("bad-fisher-left-tail-rejected tail_denominator is incorrect")
+    if claimed == actual:
+        fail("bad-fisher-left-tail-rejected claimed p-value unexpectedly matches")
+    equation = data.get("farkas_tail_equation")
+    require_string("bad Fisher farkas_tail_equation", equation)
+    if equation != "tail_denominator * fisher_left_tail_p_value = tail_numerator":
+        fail("bad-fisher-left-tail-rejected must document the Farkas tail equation")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad Fisher smt2_artifact", smt2_artifact)
+    check_source("bad Fisher smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad Fisher farkas_regression", regression)
+    if "exact_stats_bad_fisher_left_tail_artifact_emits_checked_farkas" not in regression:
+        fail("bad-fisher-left-tail-rejected must name the checked Farkas regression")
 
     bad = checks["bad-binomial-pvalue-rejected"]
     if bad["expected_result"] != "unsat":

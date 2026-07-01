@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 586 expected checks.
-- 268 checked proof/evidence rows.
+- 587 expected checks.
+- 269 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -834,7 +834,8 @@ Build next:
   equations, residual orthogonality, finite sampling, and numerical-honesty
   status.
 - Promote bad count/table rows through QF_LIA and bad rational coefficient or
-  residual rows through QF_LRA/Farkas.
+  residual rows through QF_LRA/Farkas, including exact Fisher p-value
+  contradictions after fixed-margin replay.
 - Mark simulations, MCMC, VI, asymptotic normality, and calibration claims as
   numerical or proof-horizon, never checked proof.
 

@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Exact-statistical-tests bad Fisher QF_LRA row landed.**
+  `exact-statistical-tests-v0` now has a checked Farkas row for a malformed
+  one-sided Fisher exact-test claim: finite fixed-margin replay computes the
+  left tail as `(1 + 16) / 70 = 17/70`, then the source SMT-LIB artifact
+  rejects the incompatible claim `p = 1/4` through the final linear equation
+  `70*p = 17`. The shared `math_resource_lra_routes` regression parses the
+  artifact and checks `UnsatFarkas` evidence, while the validator pins the
+  `2x2` table, margins, observed top-left count, numerator/denominator,
+  actual/claimed p-values, artifact path, and regression. Generated dashboards
+  and the public query summary now report 111 concept rows, 108 non-template
+  packs, 587 expected checks, 269 checked rows, 247 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Descriptive-statistics bad variance QF_LRA row landed.**
   `descriptive-statistics-v0` now has a checked Farkas row for exact finite
   statistics: replay computes the sample mean `5/2`, second moment `15/2`,
@@ -215,8 +228,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_lra_routes` regression parses it and checks `UnsatFarkas`
   evidence, and the validator pins the sample, moments, actual/claimed
   variance, artifact path, and regression. Generated dashboards and the public
-  query summary now report 111 concept rows, 108 non-template packs, 586
-  expected checks, 268 checked rows, 247 replay-only rows, and 71 Lean-horizon
+  query summary now report 111 concept rows, 108 non-template packs, 587
+  expected checks, 269 checked rows, 247 replay-only rows, and 71 Lean-horizon
   rows.
 
 - **Finite-probability bad conditional-probability QF_LRA row landed.**
@@ -229,8 +242,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `UnsatFarkas` evidence, and the validator pins the atom table, event,
   condition, joint mass, conditioning mass, actual/claimed conditional
   probabilities, artifact path, and regression. Generated dashboards and the
-  public query summary now report 111 concept rows, 108 non-template packs, 586
-  expected checks, 268 checked rows, 247 replay-only rows, and 71 Lean-horizon
+  public query summary now report 111 concept rows, 108 non-template packs, 587
+  expected checks, 269 checked rows, 247 replay-only rows, and 71 Lean-horizon
   rows.
 
 - **Modular-arithmetic nonunit inverse QF_BV/DRAT row landed.**
@@ -240,8 +253,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   rechecked with DRAT evidence. The row sits beside the existing finite replay
   and Diophantine gcd obstruction for `2 mod 6`, giving the same obstruction a
   width-explicit solver route. Generated dashboards and the public query
-  summary now report 111 concept rows, 108 non-template packs, 586 expected
-  checks, 268 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+  summary now report 111 concept rows, 108 non-template packs, 587 expected
+  checks, 269 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
 
 - **Finite-conditional-expectation bad tower-property QF_LRA row landed.**
   `finite-conditional-expectation-v0` now has a second checked Farkas row:
@@ -252,8 +265,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `UnsatFarkas` evidence, and the validator pins the atom table, fine/coarse
   partitions, exact conditional-expectation tables, actual tower table, claimed
   tower table, artifact path, and regression. Generated dashboards and the
-  public query summary now report 111 concept rows, 108 non-template packs, 586
-  expected checks, 268 checked rows, 247 replay-only rows, and 71 Lean-horizon
+  public query summary now report 111 concept rows, 108 non-template packs, 587
+  expected checks, 269 checked rows, 247 replay-only rows, and 71 Lean-horizon
   rows.
 
 - **Finite-random-variable bad expectation-through-pushforward QF_LRA row landed.**
@@ -266,8 +279,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   total random-variable map, pushforward distribution, outcome values, source
   expectation, pushforward expectation, claimed expectation, artifact path,
   regression, and certificate note. Generated dashboards and the public query
-  summary now report 111 concept rows, 108 non-template packs, 586 expected
-  checks, 268 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+  summary now report 111 concept rows, 108 non-template packs, 587 expected
+  checks, 269 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
 
 - **Comprehensive math-curriculum resource plan landed.**
   Added
@@ -276,7 +289,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   educational content, ontology/taxonomy rows, example packs, proof artifacts,
   solver feedback, rules/law transfer, consumer boundaries, and future library
   splits. The plan is grounded in the current 2026-07-01 resource baseline
-  (111 concept rows, 108 non-template packs, 586 expected checks, 268 checked
+  (111 concept rows, 108 non-template packs, 587 expected checks, 269 checked
   rows, 247 replay-only rows, 71 Lean-horizon rows, and 108 promoted
   solver-reuse packs) and is linked from the foundational-resource index,
   mdBook summary, buildout plan, master plan, build sequence, detailed build
@@ -291,8 +304,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   regression parses it and checks `UnsatFarkas` evidence, and the validator
   pins the factor tables, product table, target axis/atom, artifact path,
   regression, and certificate note. Generated dashboards and the public query
-  summary now report 111 concept rows, 108 non-template packs, 586 expected
-  checks, 268 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+  summary now report 111 concept rows, 108 non-template packs, 587 expected
+  checks, 269 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
 
 - **Finite-inversion bad inverse-distance-product QF_LRA row landed.**
   `finite-inversion-geometry-v0` now has a second checked Farkas row: exact
@@ -2785,9 +2798,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`exact-statistical-tests-end-to-end.md`](docs/learn/math/exact-statistical-tests-end-to-end.md)
   as the learner-facing trace for the exact-statistical-tests pack: exact
   binomial-tail replay, hypergeometric point probability, one-sided Fisher
-  tail replay, checked bad p-value rejection, a checked QF_LIA bad tail-count
-  certificate, and the statistical numerical-honesty horizon. The lesson is
-  linked from the math learning index plus the probability/statistics path.
+  tail replay, checked QF_LRA/Farkas bad Fisher p-value rejection, a checked
+  QF_LIA bad tail-count certificate, and the statistical numerical-honesty
+  horizon. The lesson is linked from the math learning index plus the
+  probability/statistics path.
 
 - **Complex-plane transform end-to-end lesson landed.** Added
   [`complex-plane-transforms-end-to-end.md`](docs/learn/math/complex-plane-transforms-end-to-end.md)
@@ -3695,12 +3709,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`exact-statistical-tests-v0`](artifacts/examples/math/exact-statistical-tests-v0/README.md)
   as the first exact finite statistical-test resource. The pack validates a
   binomial right-tail p-value, a hypergeometric point probability, a one-sided
-  Fisher exact-test p-value, checked rejection of a false p-value, and a
-  checked QF_LIA/Diophantine bad tail-count row. The foundational example-pack
-  validator now checks binomial and hypergeometric p-values as rational finite
-  sums over integer counts, requires the solver-form SMT-LIB artifact and
-  regression metadata for the bad tail-count certificate, and stays clear of
-  asymptotic or floating-point approximations.
+  Fisher exact-test p-value, checked QF_LRA/Farkas rejection of a false Fisher
+  left-tail p-value, and a checked QF_LIA/Diophantine bad tail-count row. The
+  foundational example-pack validator now checks binomial and hypergeometric
+  p-values as rational finite sums over integer counts, requires solver-form
+  SMT-LIB artifact and regression metadata for promoted proof rows, and stays
+  clear of asymptotic or floating-point approximations.
 
 - **Finite Markov-chain foundations pack landed.** Added
   [`finite-markov-chain-v0`](artifacts/examples/math/finite-markov-chain-v0/README.md)

@@ -25,6 +25,9 @@ const CONVEXITY_BAD_MIDPOINT: &str = include_str!(
 const DESCRIPTIVE_STATS_BAD_VARIANCE: &str = include_str!(
     "../../../artifacts/examples/math/descriptive-statistics-v0/smt2/bad-variance-farkas-conflict.smt2"
 );
+const EXACT_STATS_BAD_FISHER_LEFT_TAIL: &str = include_str!(
+    "../../../artifacts/examples/math/exact-statistical-tests-v0/smt2/bad-fisher-left-tail-farkas-conflict.smt2"
+);
 const CALCULUS_RIEMANN_FALSE_INTEGRAL: &str = include_str!(
     "../../../artifacts/examples/math/calculus-riemann-sum-v0/smt2/false-integral-farkas-conflict.smt2"
 );
@@ -498,6 +501,14 @@ fn descriptive_stats_bad_variance_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "descriptive-statistics-v0 bad-variance SMT-LIB artifact",
         DESCRIPTIVE_STATS_BAD_VARIANCE,
+    );
+}
+
+#[test]
+fn exact_stats_bad_fisher_left_tail_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "exact-statistical-tests-v0 bad-Fisher-left-tail SMT-LIB artifact",
+        EXACT_STATS_BAD_FISHER_LEFT_TAIL,
     );
 }
 

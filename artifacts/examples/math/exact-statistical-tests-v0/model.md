@@ -37,5 +37,13 @@ counts `0` and `1` under the same fixed margins:
 (C(4,0)*C(4,4) + C(4,1)*C(4,3)) / C(8,4) = 17/70
 ```
 
+The checked bad Fisher row preserves that finite replay boundary, then lets
+QF_LRA/Farkas reject only the final rational contradiction:
+
+```text
+70 * fisher_left_tail_p_value = 17
+fisher_left_tail_p_value = 1/4
+```
+
 These fixed checks are finite exact replay targets. They do not claim
 asymptotic test calibration or floating-point statistical-library equivalence.

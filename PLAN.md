@@ -164,7 +164,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 586 expected checks, 268 checked
+111 concept rows, 108 non-template packs, 587 expected checks, 269 checked
 rows, 247 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -199,8 +199,10 @@ finite replay computes the subset and superset measures, finite-martingales'
 bad conditional-expectation row after finite filtration replay computes the
 up-block expectation, and finite Markov-chain's existing bad stochastic-row
 artifact now explicitly promoted in solver-reuse metadata. The statistics
-QF_LRA/Farkas lane now also promotes descriptive-statistics' bad variance row
-after exact finite-sample replay computes `Var(X) = 5/4` rather than `3/2`.
+QF_LRA/Farkas lane now also promotes exact-statistical-tests' bad Fisher
+left-tail row after fixed-margin replay computes `17/70` rather than `1/4`,
+alongside descriptive-statistics' bad variance row after exact finite-sample
+replay computes `Var(X) = 5/4` rather than `3/2`.
 The foundational concept atlas now also includes 65 generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 refutation-as-query, finite proof-pattern replay, finite quantifier expansion,
@@ -553,7 +555,8 @@ math-resource proof upgrades from
 [`docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md`](docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md),
 where modular arithmetic now promotes both the nonunit inverse obstruction and
 incompatible non-coprime CRT obstruction through checked QF_LIA/Diophantine
-evidence, exact statistical tests promote the bad binomial tail-count row,
+evidence, exact statistical tests promote the bad binomial tail-count row and
+the bad Fisher left-tail p-value row,
 finite simplicial homology promotes its bad boundary coefficient, and induction
 patterns promote a finite even-product parity obstruction. The
 QF_LIA/Diophantine first-target set is now covered;

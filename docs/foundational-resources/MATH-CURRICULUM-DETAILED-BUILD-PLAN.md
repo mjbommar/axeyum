@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 586 expected checks.
-- 268 checked proof/evidence rows.
+- 587 expected checks.
+- 269 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -996,6 +996,14 @@ Pick one row per commit unless the change is purely navigational.
      route now checks exact-rational statistic contradictions alongside the
      existing QF_LIA/Diophantine contingency-total row without claiming
      inference, estimation, or asymptotic statistics.
+120. Landed: extend `exact-statistical-tests-v0` with a checked bad Fisher
+     left-tail row. Exact fixed-margin replay computes the one-sided Fisher
+     left tail as `(1 + 16) / 70 = 17/70`, while the malformed source SMT-LIB
+     artifact claims `1/4`; the shared QF_LRA/Farkas route now checks the
+     final exact-rational p-value contradiction alongside the existing
+     QF_LIA/Diophantine binomial tail-count row without claiming asymptotic
+     tests, floating-point statistical libraries, or full test-family
+     coverage.
 
 ## Validation Checklist
 
