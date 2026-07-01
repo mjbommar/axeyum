@@ -365,7 +365,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-vector-spaces-v0/`](../../artifacts/examples/math/finite-vector-spaces-v0/)
   validates finite vector-space laws over `F2`, subspace and span replay,
   linear-map kernel/image replay, rank-nullity replay, checked rejection of a
-  non-subspace, and a vector-space/module Lean-horizon row.
+  non-subspace, an explicit QF_UF/Alethe additive-closure membership row, and
+  a vector-space/module Lean-horizon row.
 - [`artifacts/examples/math/finite-dual-spaces-v0/`](../../artifacts/examples/math/finite-dual-spaces-v0/)
   validates finite dual-space covector linearity over `F2`, pointwise dual
   operations, dual-basis pairing, annihilator recomputation, transpose-map

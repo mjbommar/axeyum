@@ -145,6 +145,17 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Display the finite vector-space additive-closure certificate row:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-vector-spaces-v0 \
+  --route Alethe \
+  --proof-status checked \
+  --text addition-closure \
+  --require-any
+```
+
 List finite ideal and quotient representative packs:
 
 ```sh

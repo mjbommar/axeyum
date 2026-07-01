@@ -1055,6 +1055,13 @@ python3 scripts/query-foundational-resources.py checks \
   --route Alethe \
   --proof-status checked \
   --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-vector-spaces-v0 \
+  --route Alethe \
+  --proof-status checked \
+  --text addition-closure \
+  --require-any
 ```
 
 For abstract algebra, query the Alethe route to keep equality-heavy finite
@@ -1128,6 +1135,13 @@ python3 scripts/query-foundational-resources.py checks \
   --route Alethe \
   --proof-status checked \
   --text scalar-closure \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-vector-spaces-v0 \
+  --route Alethe \
+  --proof-status checked \
+  --text addition-closure \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
@@ -1912,6 +1926,7 @@ python3 scripts/query-foundational-resources.py checks --field linear_algebra --
 python3 scripts/query-foundational-resources.py packs --concept bridge_lu_replay --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_rank_nullity --route Alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-vector-spaces-v0 --route Alethe --proof-status checked --text addition-closure --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field abstract_algebra --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text homomorphism --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text ideal --require-any >/dev/null
@@ -1921,6 +1936,7 @@ python3 scripts/query-foundational-resources.py checks --field abstract_algebra 
 python3 scripts/query-foundational-resources.py checks --concept bridge_homomorphism_preservation --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_group_action --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_module_action --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-vector-spaces-v0 --route Alethe --proof-status checked --text addition-closure --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_ideal_closure --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_quotient_map --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_tensor_bilinearity --route Alethe --require-any >/dev/null

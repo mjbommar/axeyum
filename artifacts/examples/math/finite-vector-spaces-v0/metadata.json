@@ -34,10 +34,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite vector-space bad subspace QF_UF/Alethe regression seed",
-    "pressure": "Subspace additive-closure conflict where 10 and 01 are present, 10 + 01 = 11, and 11 is absent while the malformed row demands closure.",
+    "target": "finite vector-space bad subspace replay plus QF_UF/Alethe regression seed",
+    "pressure": "Subspace additive-closure conflict where exact replay computes 10 + 01 = 11 outside the claimed subset, while the separate QF_UF artifact isolates the malformed membership claim.",
     "evidence": [
-      "bad-subspace-rejected"
+      "bad-subspace-rejected",
+      "qf-uf-bad-subspace-addition-closure"
     ],
     "next_step": "Promote additional finite vector-space rows only when they add distinct finite-field, subspace, or linear-map solver pressure; keep basis-extension, dimension uniqueness, quotient-space, and arbitrary-field theorems in the Lean-horizon lane."
   },
@@ -59,12 +60,13 @@
     "linear-map-kernel-image",
     "rank-nullity-replay",
     "bad-subspace-rejected",
+    "qf-uf-bad-subspace-addition-closure",
     "general-vector-space-theory-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode fixed finite vector-space tables as deterministic finite-function and equality obligations.",
     "Replay subspace, span, linear-map, kernel, image, and rank-nullity witnesses through Axeyum model evaluation.",
-    "Route bad finite subspace-closure conflicts through checked QF_UF/Alethe evidence once exact table replay identifies the missing sum.",
+    "Keep the bad finite subspace replay row distinct from the checked QF_UF/Alethe additive-closure membership row once exact table replay identifies the missing sum.",
     "Keep general vector-space, module, basis-extension, dimension, quotient-space, and linear-map theorems under Lean horizon until formal routes exist."
   ]
 }

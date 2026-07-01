@@ -63,7 +63,8 @@ principal ideal generation, ring-homomorphism kernels, quotient-ring tables,
 and checked QF_UF/Alethe bad-ideal refutations over modular rings. The
 finite-vector-spaces pack checks finite fields
 acting on finite additive groups, subspaces, spans, linear maps, kernels,
-images, rank-nullity, and a checked QF_UF/Alethe bad-subspace row. The
+images, rank-nullity, checked bad-subspace replay, and an explicit QF_UF/Alethe
+additive-closure membership row. The
 finite-dual-spaces pack checks covectors as
 finite field-valued function tables, pointwise dual operations, dual-basis
 pairing, annihilator recomputation, transpose maps, and checked QF_UF/Alethe

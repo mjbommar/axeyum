@@ -21,7 +21,8 @@ Concept rows:
 | `subspace-span-replay` | `sat` | replay-only |
 | `linear-map-kernel-image` | `sat` | replay-only |
 | `rank-nullity-replay` | `sat` | replay-only |
-| `bad-subspace-rejected` | `unsat` | checked QF_UF/Alethe |
+| `bad-subspace-rejected` | `unsat` | checked finite replay |
+| `qf-uf-bad-subspace-addition-closure` | `unsat` | checked QF_UF/Alethe |
 | `general-vector-space-theory-lean-horizon` | `not-run` | lean-horizon |
 
 The replay rows are exact finite table checks. The pack does not claim general
@@ -163,10 +164,12 @@ The checker rejects it with one addition-closure failure:
 ```
 
 Because `11` is not in `B`, the subset is not closed under vector addition and
-cannot be a subspace. The linked `QF_UF` artifact records the two memberships,
-the table equation `10 + 01 = 11`, absence of `11`, and the fixed closure
-claim `in_subset(add(10,01)) = present`; Axeyum emits and independently
-rechecks an `UnsatAletheProof` for that equality conflict.
+cannot be a subspace. That is the finite replay row.
+
+The separate `qf-uf-bad-subspace-addition-closure` row records the two
+memberships, the table equation `10 + 01 = 11`, absence of `11`, and the fixed
+closure claim `in_subset(add(10,01)) = present`; Axeyum emits and
+independently rechecks an `UnsatAletheProof` for that equality conflict.
 
 ## Run It
 
@@ -189,7 +192,7 @@ This lesson shows Axeyum's resource pattern for finite linear algebra:
 ```text
 untrusted fast search -> candidate field, vector space, subspace, map, dimensions
 trusted small checking -> table laws, span replay, kernel/image, rank-nullity
-checked proof object -> QF_UF/Alethe certificate for the bad subspace row
+checked proof object -> QF_UF/Alethe certificate for the isolated bad subspace additive-closure row
 ```
 
 General vector-space theory, arbitrary-field rank-nullity, quotient spaces,

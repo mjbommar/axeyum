@@ -66,7 +66,8 @@ residual orthogonality, RSS comparison, and checked `UnsatFarkas`
 bad-RSS and bad-coefficients certificates. The finite-vector-space slice adds `F2^2`,
 subspace/span replay,
 linear-map kernel/image replay, rank-nullity by finite cardinality, and
-checked QF_UF/Alethe non-subspace rejection. The finite-dual-space slice adds covectors as
+checked exact non-subspace replay plus an explicit QF_UF/Alethe additive-closure
+membership row. The finite-dual-space slice adds covectors as
 finite function tables, pointwise dual operations, dual-basis pairings,
 annihilator recomputation, transpose-map replay, and checked QF_UF/Alethe
 bad-covector rejection. The exact rational inner-product slice adds symmetric

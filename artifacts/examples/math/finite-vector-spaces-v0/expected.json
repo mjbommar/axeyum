@@ -259,13 +259,30 @@
         },
         "subset": ["00", "10", "01"],
         "failing_sum": ["10", "01"],
+        "actual_sum": "11"
+      },
+      "notes": "The validator recomputes 10 + 01 = 11 and checks that 11 is missing from the claimed subset; the separate QF_UF row owns the proof-object refutation for the fixed additive-closure membership claim."
+    },
+    {
+      "id": "qf-uf-bad-subspace-addition-closure",
+      "claim": "The malformed subset can contain 10 and 01, omit 11, and still be closed under vector addition.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
+      "data": {
+        "field": "F2",
+        "space": "F2^2",
+        "subset": ["00", "10", "01"],
+        "failing_sum": ["10", "01"],
         "actual_sum": "11",
+        "actual_membership": "absent",
+        "claimed_membership": "present",
         "alethe_closure_claim": "in_subset(add(10,01)) = present",
         "smt2_artifact": "artifacts/examples/math/finite-vector-spaces-v0/smt2/bad-subspace-addition-closure-conflict.smt2",
         "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_vector_spaces_bad_subspace_emits_checked_alethe",
         "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
       },
-      "notes": "The validator recomputes 10 + 01 = 11 and checks that 11 is missing from the claimed subset; the linked QF_UF artifact emits a zero-trust Alethe refutation for the fixed additive-closure membership claim."
+      "notes": "The SMT-LIB artifact isolates the additive-closure membership contradiction after exact replay computes 10 + 01 = 11."
     },
     {
       "id": "general-vector-space-theory-lean-horizon",

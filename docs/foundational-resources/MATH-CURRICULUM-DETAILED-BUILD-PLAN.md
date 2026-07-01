@@ -47,8 +47,8 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 643 expected checks.
-- 318 checked proof/evidence rows.
+- 644 expected checks.
+- 319 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1466,6 +1466,15 @@ Pick one row per commit unless the change is purely navigational.
      `finite_modules_bad_submodule_emits_checked_alethe` regression. The
      public query surface now reports 643 checks, 318 checked rows, and
      row-scoped Alethe lookup for the pack returns the scalar-closure row.
+172. Landed: split the `finite-vector-spaces-v0` additive-closure proof-object
+     check into the explicit `qf-uf-bad-subspace-addition-closure` row. Exact
+     finite replay still owns `bad-subspace-rejected` by computing
+     `10 + 01 = 11` in `F2^2` and checking that `11` is absent from
+     `{00,10,01}`; the source SMT-LIB artifact separately rejects the malformed
+     membership claim through the existing
+     `finite_vector_spaces_bad_subspace_emits_checked_alethe` regression. The
+     public query surface now reports 644 checks, 319 checked rows, and
+     row-scoped Alethe lookup for the pack returns the addition-closure row.
 
 ## Validation Checklist
 

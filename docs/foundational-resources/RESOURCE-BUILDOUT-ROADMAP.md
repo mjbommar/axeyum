@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 643 expected checks.
-- 318 checked proof/evidence rows.
+- 644 expected checks.
+- 319 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -2149,6 +2149,12 @@ Pick one item per commit unless the change is purely navigational.
      into an explicit QF_UF/Alethe row. The finite replay row still rejects
      `{0,1}` as a non-submodule by computing `2*1 = 2`; the new
      `qf-uf-bad-submodule-scalar-closure` row isolates the membership
+     contradiction for checked Alethe evidence and gives consumers a direct
+     pack/route/text query.
+145. Landed: split the `finite-vector-spaces-v0` additive-closure proof-object
+     check into an explicit QF_UF/Alethe row. The finite replay row still
+     rejects `{00,10,01}` as a non-subspace by computing `10 + 01 = 11`; the
+     new `qf-uf-bad-subspace-addition-closure` row isolates the membership
      contradiction for checked Alethe evidence and gives consumers a direct
      pack/route/text query.
 

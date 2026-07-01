@@ -4380,21 +4380,55 @@ def validate_finite_vector_spaces(expected: dict[str, Any]) -> None:
         fail("bad-subspace-rejected actual_sum is incorrect")
     if actual_sum in subset:
         fail("bad-subspace-rejected actual_sum unexpectedly belongs to the subset")
+
+    alethe = checks["qf-uf-bad-subspace-addition-closure"]
+    if alethe["expected_result"] != "unsat" or alethe.get("proof_status") != "checked":
+        fail("qf-uf-bad-subspace-addition-closure must be a checked unsat row")
+    if alethe.get("validation") != "qf_uf_congruence_alethe":
+        fail("qf-uf-bad-subspace-addition-closure must use the QF_UF/Alethe validation route")
+    data = alethe.get("data", {})
+    if data.get("field") != "F2":
+        fail("qf-uf-bad-subspace-addition-closure field must be F2")
+    if data.get("space") != "F2^2":
+        fail("qf-uf-bad-subspace-addition-closure space must be F2^2")
+    alethe_subset = require_vector_subset("qf-uf bad subspace subset", data.get("subset"), vectors, nonempty=True)
+    if alethe_subset != subset:
+        fail("qf-uf-bad-subspace-addition-closure subset must match the replay row")
+    alethe_failing_sum = data.get("failing_sum")
+    if not isinstance(alethe_failing_sum, list) or len(alethe_failing_sum) != 2:
+        fail("qf-uf-bad-subspace-addition-closure failing_sum must be a two-element list")
+    alethe_left, alethe_right = alethe_failing_sum
+    require_string("qf-uf bad subspace failing_sum[0]", alethe_left)
+    require_string("qf-uf bad subspace failing_sum[1]", alethe_right)
+    if [alethe_left, alethe_right] != [left, right]:
+        fail("qf-uf-bad-subspace-addition-closure failing_sum must match the replay row")
+    alethe_actual_sum = data.get("actual_sum")
+    require_string("qf-uf bad subspace actual_sum", alethe_actual_sum)
+    if alethe_actual_sum != actual_sum:
+        fail("qf-uf-bad-subspace-addition-closure actual_sum must match the replay row")
+    actual_membership = data.get("actual_membership")
+    require_string("qf-uf bad subspace actual_membership", actual_membership)
+    if actual_membership != "absent":
+        fail("qf-uf-bad-subspace-addition-closure actual_membership must be absent")
+    claimed_membership = data.get("claimed_membership")
+    require_string("qf-uf bad subspace claimed_membership", claimed_membership)
+    if claimed_membership != "present":
+        fail("qf-uf-bad-subspace-addition-closure claimed_membership must be present")
     alethe_claim = data.get("alethe_closure_claim")
-    require_string("bad subspace alethe_closure_claim", alethe_claim)
+    require_string("qf-uf bad subspace alethe_closure_claim", alethe_claim)
     if alethe_claim != f"in_subset(add({left},{right})) = present":
-        fail("bad-subspace-rejected must document the Alethe additive-closure membership claim")
+        fail("qf-uf-bad-subspace-addition-closure must document the Alethe additive-closure membership claim")
     smt2_artifact = data.get("smt2_artifact")
-    require_string("bad subspace smt2_artifact", smt2_artifact)
-    check_source("bad subspace smt2_artifact", smt2_artifact)
+    require_string("qf-uf bad subspace smt2_artifact", smt2_artifact)
+    check_source("qf-uf bad subspace smt2_artifact", smt2_artifact)
     proof_regression = data.get("proof_regression")
-    require_string("bad subspace proof_regression", proof_regression)
+    require_string("qf-uf bad subspace proof_regression", proof_regression)
     if "finite_vector_spaces_bad_subspace_emits_checked_alethe" not in proof_regression:
-        fail("bad-subspace-rejected must link the Alethe regression")
+        fail("qf-uf-bad-subspace-addition-closure must link the Alethe regression")
     certificate = data.get("certificate")
-    require_string("bad subspace certificate", certificate)
+    require_string("qf-uf bad subspace certificate", certificate)
     if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
-        fail("bad-subspace-rejected certificate must document zero-trust Alethe evidence")
+        fail("qf-uf-bad-subspace-addition-closure certificate must document zero-trust Alethe evidence")
 
     horizon = checks["general-vector-space-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

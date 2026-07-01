@@ -33,8 +33,16 @@ The validator derives dimensions from finite cardinalities over `F2` and checks
 Expected result: `unsat`.
 
 The validator rejects `{00, 10, 01}` because `10 + 01 = 11`, and `11` is not in
-the subset. The linked `QF_UF` artifact turns the failed additive-closure
-membership claim into a checked Alethe refutation.
+the subset. This row is the finite replay refutation of the malformed subspace
+claim.
+
+## `qf-uf-bad-subspace-addition-closure`
+
+Expected result: `unsat`.
+
+The linked `QF_UF` artifact turns the isolated additive-closure membership
+claim `in_subset(add(10,01)) = present` into a checked Alethe refutation after
+finite replay computes the sum as the absent vector `11`.
 
 ## `general-vector-space-theory-lean-horizon`
 

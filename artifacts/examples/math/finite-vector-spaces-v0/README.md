@@ -11,7 +11,8 @@ The pack covers:
 - subspace and span replay for a one-dimensional subspace;
 - linear-map replay for first-coordinate projection;
 - kernel/image and rank-nullity replay by finite cardinality;
-- checked QF_UF/Alethe rejection of a non-subspace;
+- checked finite replay rejection of a non-subspace;
+- a separate checked QF_UF/Alethe additive-closure membership refutation;
 - a Lean-horizon row for general vector-space and module theory.
 
 ## Concepts
@@ -31,8 +32,9 @@ vector-space laws by finite enumeration, recomputes spans, kernels, images, and
 dimensions from exact finite data, and rejects a bad subset by a concrete
 addition counterexample.
 
-For the bad subspace row, exact replay computes `10 + 01 = 11` while `10` and
-`01` are in the claimed subset and `11` is absent. The linked `QF_UF` artifact
+For the bad subspace replay row, exact replay computes `10 + 01 = 11` while
+`10` and `01` are in the claimed subset and `11` is absent. The separate
+`qf-uf-bad-subspace-addition-closure` row links the `QF_UF` artifact that
 refutes the fixed additive-closure membership claim and checks the resulting
 `UnsatAletheProof` independently.
 

@@ -44,7 +44,7 @@ when the consumer needs a concrete checked row to display.
 |---|---|---|---|
 | Linear systems, nullspaces, and LU | `bridge_lu_replay`; pack `linear-algebra-rational-v0` | `Farkas` | `checks --concept bridge_lu_replay --route Farkas --proof-status checked`; `checks --pack linear-algebra-rational-v0 --route Farkas --proof-status checked --text nullspace` |
 | Residual bounds, solution boxes, and least squares | `bridge_residual_bound`; pack `numerical-linear-algebra-v0` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked --text solution` |
-| Rank, kernel, image, and dual rows | `bridge_rank_nullity` | `Alethe` | `packs --concept bridge_rank_nullity --route Alethe` |
+| Rank, kernel, image, vector-space, and dual rows | `bridge_rank_nullity`; pack `finite-vector-spaces-v0` | `Alethe` | `packs --concept bridge_rank_nullity --route Alethe`; `checks --pack finite-vector-spaces-v0 --route Alethe --proof-status checked --text addition-closure` |
 | Rayleigh quotients, eigenpairs, and matrix invariants | `bridge_eigenpair` | `Farkas` | `checks --concept bridge_eigenpair --route Farkas --proof-status checked` |
 | Finite random-matrix moments and ranks | `bridge_random_matrix_finite_moment` | `Farkas` | `checks --pack random-matrix-finite-v0 --route Farkas --proof-status checked --text rank` |
 | Inner products and projections | `bridge_inner_product_projection` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked` |
@@ -95,6 +95,13 @@ List equality-heavy rank/nullity packs that use the Alethe route:
 python3 scripts/query-foundational-resources.py packs \
   --concept bridge_rank_nullity \
   --route Alethe \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-vector-spaces-v0 \
+  --route Alethe \
+  --proof-status checked \
+  --text addition-closure \
   --require-any
 ```
 

@@ -69,7 +69,7 @@ dim(image) = 1
 2 = 1 + 1
 ```
 
-## Bad Subspace Certificate
+## Bad Subspace Replay
 
 For the rejected subset, exact replay computes:
 
@@ -86,6 +86,8 @@ Additive closure of a subspace would require:
 in_subset(add(10,01)) = present
 ```
 
-The linked `QF_UF` artifact is therefore unsatisfiable by equality reasoning.
-The resource regression checks that Axeyum emits independently rechecked
-`UnsatAletheProof` evidence with no trusted reduction step.
+The separate `qf-uf-bad-subspace-addition-closure` row owns the linked `QF_UF`
+artifact. It is unsatisfiable by equality reasoning because the table equation
+forces `add(10,01) = 11` while membership says `11` is absent. The resource
+regression checks that Axeyum emits independently rechecked `UnsatAletheProof`
+evidence with no trusted reduction step.

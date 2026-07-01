@@ -513,8 +513,9 @@ refutation after table replay identifies `phi(1+1)=1` versus
 `finite-vector-spaces-v0` now
 bridges finite fields into linear algebra with `F2^2` vector-space table
 replay, subspace/span checks, linear-map kernel/image replay, rank-nullity
-replay, checked QF_UF/Alethe non-subspace rejection, and a general
-vector-space/module Lean-horizon row. `finite-modules-v0` now adds the finite ring-to-linear-algebra
+replay, checked exact non-subspace replay, an explicit QF_UF/Alethe
+additive-closure membership row, and a general vector-space/module
+Lean-horizon row. `finite-modules-v0` now adds the finite ring-to-linear-algebra
 bridge with `Z/4Z` module table replay, submodule/span replay,
 module-homomorphism kernel/image replay, quotient-module table replay,
 checked exact non-submodule replay, an explicit QF_UF/Alethe scalar-closure
@@ -1690,8 +1691,9 @@ congruence, checked bad-homomorphism rejection, concrete bad-map Alethe
 refutation, and an isomorphism-theorem Lean-horizon row.
 `finite-vector-spaces-v0` now adds the exact finite linear-algebra bridge over
 `F2`: vector-space laws, subspace/span replay, linear-map kernel/image replay,
-rank-nullity by finite cardinality, checked QF_UF/Alethe non-subspace
-rejection, and a vector-space/module Lean-horizon row.
+rank-nullity by finite cardinality, checked exact non-subspace replay, an
+explicit QF_UF/Alethe additive-closure membership row, and a
+vector-space/module Lean-horizon row.
 `finite-dual-spaces-v0` now adds the exact finite dual-space bridge over `F2`:
 covector linearity, pointwise dual operations, dual-basis pairing,
 annihilator recomputation, transpose-map replay, checked QF_UF/Alethe
@@ -2655,6 +2657,11 @@ derivative shadows, and rational polynomial-geometry obligations under one
 queryable concept. Concept-scoped Diophantine and Farkas queries now return
 checked rows while general factorization, algebraic closure, root distribution,
 and generating-function convergence remain proof-horizon work.
+The finite vector-space pack now also splits its bad-subspace closure evidence:
+`bad-subspace-rejected` remains the exact finite replay row that computes
+`10 + 01 = 11` outside `{00,10,01}`, while
+`qf-uf-bad-subspace-addition-closure` owns the checked QF_UF/Alethe
+membership-conflict artifact and direct pack/route/text query.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

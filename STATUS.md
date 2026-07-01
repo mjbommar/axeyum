@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite vector-space additive-closure Alethe row split landed.**
+  `finite-vector-spaces-v0` now keeps the malformed `{00,10,01}` subspace
+  rejection as exact finite replay and exposes the QF_UF/Alethe proof-object
+  check as the explicit `qf-uf-bad-subspace-addition-closure` row. The replay
+  row computes `10 + 01 = 11` in `F2^2` and rejects the subset because `11` is
+  absent; the source SMT-LIB artifact separately checks the membership
+  contradiction `in_subset(add(10,01)) = present` against `in_subset(11) =
+  absent`. Focused validation and the existing
+  `finite_vector_spaces_bad_subspace_emits_checked_alethe` regression pass; the
+  public summary now reports 120 concept rows, 108 packs, 644 expected checks,
+  319 checked rows, 254 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite module scalar-closure Alethe row split landed.**
   `finite-modules-v0` now keeps the malformed `{0,1}` submodule rejection as
   exact finite replay and exposes the QF_UF/Alethe proof-object check as the

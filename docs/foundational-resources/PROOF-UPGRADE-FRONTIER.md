@@ -554,7 +554,9 @@ First targets:
 - [finite-permutation-groups-v0](../../artifacts/examples/math/finite-permutation-groups-v0/)
   (resource-backed QF_UF/Alethe regression landed for the bad nonbijection conflict)
 - [finite-vector-spaces-v0](../../artifacts/examples/math/finite-vector-spaces-v0/)
-  (resource-backed QF_UF/Alethe regression landed for the bad subspace-closure conflict)
+  (resource-backed QF_UF/Alethe regression landed as
+  `qf-uf-bad-subspace-addition-closure` for the bad additive-closure membership
+  conflict)
 - [finite-dual-spaces-v0](../../artifacts/examples/math/finite-dual-spaces-v0/)
   (resource-backed QF_UF/Alethe regression landed for the bad covector-additivity conflict)
 - [finite-modules-v0](../../artifacts/examples/math/finite-modules-v0/)
