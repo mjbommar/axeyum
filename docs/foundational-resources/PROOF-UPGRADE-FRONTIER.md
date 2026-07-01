@@ -263,9 +263,10 @@ First targets:
   `0`, and complementarity error `1`)
 - [finite-active-set-qp-v0](../../artifacts/examples/math/finite-active-set-qp-v0/)
   (source-linked Farkas regressions landed for the bad free-gradient row after
-  exact active-face replay computes stationarity error `2`, and for the bad
-  degenerate-multiplier row after tight-bound replay computes stationarity
-  error `1`)
+  exact active-face replay computes stationarity error `2`, for the bad
+  inactive-slack row after active-face replay computes inactive slack `1`, and
+  for the bad degenerate-multiplier row after tight-bound replay computes
+  stationarity error `1`)
 - [finite-sdp-v0](../../artifacts/examples/math/finite-sdp-v0/)
   (source-linked Farkas regressions landed for the bad objective,
   bad duality-gap, and bad slack-entry rows after exact two-by-two SDP replay
@@ -454,6 +455,10 @@ Secondary targets:
   boundary: exact replay computes the derivative, multiplier equation, and
   complementary-slackness product, then Farkas checks the final bad-stationarity
   error conflict.
+  Finite active-set QP now contributes the working-set/slack version of that
+  boundary: exact replay computes the active-face candidate, inactive slack, and
+  degenerate active-bound stationarity, then Farkas checks the final
+  bad-free-gradient, bad-inactive-slack, and bad-degenerate-multiplier conflicts.
   Finite SDP now contributes the primal/dual-slack version of that boundary:
   exact replay computes two-by-two PSD minors, trace/objective arithmetic,
   slack PSD, and zero gap, then Farkas checks the final bad-objective,

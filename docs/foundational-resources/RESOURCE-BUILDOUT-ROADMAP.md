@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 622 expected checks.
-- 299 checked proof/evidence rows.
+- 623 expected checks.
+- 300 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -662,8 +662,8 @@ Build next:
   convex-combination and bad separator rows tied to their source QF_LRA/Farkas
   artifacts; keep `finite-kkt-v0`'s bad stationarity and bad
   complementarity rows tied to their source QF_LRA/Farkas artifacts; keep
-  `finite-active-set-qp-v0`'s bad free-gradient and bad degenerate-multiplier
-  rows tied to their source QF_LRA/Farkas artifacts; keep `finite-sdp-v0`'s bad objective, bad duality-gap, and bad slack-entry rows tied to their
+  `finite-active-set-qp-v0`'s bad free-gradient, bad inactive-slack, and bad
+  degenerate-multiplier rows tied to their source QF_LRA/Farkas artifacts; keep `finite-sdp-v0`'s bad objective, bad duality-gap, and bad slack-entry rows tied to their
   source QF_LRA/Farkas artifact; keep `finite-gradient-descent-v0`'s bad decrease and bad
   step-coordinate rows tied to their source QF_LRA/Farkas artifacts; keep `finite-line-search-v0`'s bad Armijo and
   bad accepted-candidate rows tied to their source QF_LRA/Farkas artifacts; keep
@@ -877,8 +877,8 @@ Build next:
   checked bad stationarity plus bad complementarity evidence. Finite active-set
   QP now adds exact
   unconstrained-minimizer replay, active-face candidate replay, inactive slack,
-  degenerate active-bound replay, and bad free-gradient plus bad
-  degenerate-multiplier Farkas evidence. Finite SDP now adds two-by-two PSD,
+  degenerate active-bound replay, and bad free-gradient, bad inactive-slack,
+  plus bad degenerate-multiplier Farkas evidence. Finite SDP now adds two-by-two PSD,
   trace/objective, slack, dual-gap replay, and checked bad duality-gap evidence. Finite gradient descent now adds
   exact quadratic step and descent-bound replay. Finite line search now adds
   Armijo trial rejection and accepted-backtrack replay. Finite Wolfe line
@@ -1976,6 +1976,12 @@ Pick one item per commit unless the change is purely navigational.
      SMT-LIB artifact reaches independently checked QF_LRA/Farkas evidence
      through
      `finite_wolfe_line_search_bad_sufficient_decrease_artifact_emits_checked_farkas`.
+132. Landed: extend `finite-active-set-qp-v0` with a source-linked checked
+     inactive-slack refutation. Exact active-face replay computes inactive
+     lower-bound slack `0 - (-1) = 1` at `(1,1)`, while the malformed row claims
+     the same slack is nonpositive; the new source SMT-LIB artifact reaches
+     independently checked QF_LRA/Farkas evidence through
+     `finite_active_set_qp_bad_inactive_slack_artifact_emits_checked_farkas`.
 
 ## Validation Checklist
 

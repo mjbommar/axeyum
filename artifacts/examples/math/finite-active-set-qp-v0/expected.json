@@ -92,6 +92,24 @@
       "notes": "The validator recomputes the inactive constraint value, slack, and complementarity product."
     },
     {
+      "id": "bad-inactive-slack-rejected",
+      "claim": "At the active-set candidate (1,1), the lower-bound constraint y >= 0 is tight.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_active_set_inactive_slack_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "box-face-active-set-qp",
+        "inactive_constraint_value": "-1",
+        "inactive_bound": "0",
+        "computed_inactive_slack": "1",
+        "claimed_slack_upper_bound": "0",
+        "smt2_artifact": "artifacts/examples/math/finite-active-set-qp-v0/smt2/bad-inactive-slack-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_active_set_qp_bad_inactive_slack_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes inactive slack = 0 - (-1) = 1 for the lower-bound constraint, so the malformed tight/nonpositive-slack claim is rejected by checked Farkas evidence."
+    },
+    {
       "id": "bad-active-set-free-gradient-rejected",
       "claim": "The feasible point (1,0) solves the same active-face subproblem.",
       "expected_result": "unsat",

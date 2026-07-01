@@ -100,6 +100,9 @@ const FINITE_KKT_BAD_COMPLEMENTARITY: &str = include_str!(
 const FINITE_ACTIVE_SET_QP_BAD_FREE_GRADIENT: &str = include_str!(
     "../../../artifacts/examples/math/finite-active-set-qp-v0/smt2/bad-free-gradient-farkas-conflict.smt2"
 );
+const FINITE_ACTIVE_SET_QP_BAD_INACTIVE_SLACK: &str = include_str!(
+    "../../../artifacts/examples/math/finite-active-set-qp-v0/smt2/bad-inactive-slack-farkas-conflict.smt2"
+);
 const FINITE_ACTIVE_SET_QP_BAD_DEGENERATE_MULTIPLIER: &str = include_str!(
     "../../../artifacts/examples/math/finite-active-set-qp-v0/smt2/bad-degenerate-multiplier-farkas-conflict.smt2"
 );
@@ -775,6 +778,14 @@ fn finite_active_set_qp_bad_free_gradient_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-active-set-qp-v0 bad-free-gradient SMT-LIB artifact",
         FINITE_ACTIVE_SET_QP_BAD_FREE_GRADIENT,
+    );
+}
+
+#[test]
+fn finite_active_set_qp_bad_inactive_slack_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-active-set-qp-v0 bad-inactive-slack SMT-LIB artifact",
+        FINITE_ACTIVE_SET_QP_BAD_INACTIVE_SLACK,
     );
 }
 

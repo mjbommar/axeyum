@@ -38,6 +38,16 @@ lambda * active_slack = 0
 mu * inactive_slack = 0
 ```
 
+The checked bad inactive-slack row keeps `(1,1)` fixed but claims the lower
+bound is tight:
+
+```text
+inactive slack = 1
+inactive slack <= 0
+```
+
+The source QF_LRA artifact checks exactly that final contradiction.
+
 The malformed row uses the feasible point `(1,0)` as if it solved the same
 active-face subproblem:
 

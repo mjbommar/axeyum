@@ -247,8 +247,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-active-set-qp-v0/`](../../artifacts/examples/math/finite-active-set-qp-v0/)
   validates exact active-set QP replay, active-face candidate arithmetic,
   inactive-constraint slack, degenerate active-bound replay, checked rejection
-  of false free-gradient and false degenerate-multiplier claims, and an
-  active-set method Lean-horizon row.
+  of false free-gradient, false inactive-slack, and false
+  degenerate-multiplier claims, and an active-set method Lean-horizon row.
 - [`artifacts/examples/math/finite-gradient-descent-v0/`](../../artifacts/examples/math/finite-gradient-descent-v0/)
   validates exact quadratic gradient replay, finite descent-step arithmetic,
   objective-decrease checking, checked rejection of a false decrease claim, and
@@ -455,8 +455,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-active-set-qp-v0/`](../../artifacts/examples/math/finite-active-set-qp-v0/)
   validates exact active-face QP replay, active/inactive constraint checks,
   KKT stationarity, degenerate active-bound replay, checked bad-free-gradient
-  and bad-degenerate-multiplier rejection, and a general active-set method
-  Lean-horizon row.
+  bad-inactive-slack, and bad-degenerate-multiplier rejections, and a general
+  active-set method Lean-horizon row.
 - [`artifacts/examples/math/finite-sdp-v0/`](../../artifacts/examples/math/finite-sdp-v0/)
   validates exact two-by-two SDP primal/dual replay, objective arithmetic,
   slack PSD checks, zero-gap checking, checked bad-objective and

@@ -3,8 +3,9 @@
 This lesson follows
 [finite-active-set-qp-v0](../../../artifacts/examples/math/finite-active-set-qp-v0/)
 from exact active-set witnesses through KKT replay, inactive-constraint replay,
-a degenerate active-bound check, and checked Farkas evidence. It is a finite
-active-set certificate, not a general active-set convergence theorem.
+a degenerate active-bound check, and checked Farkas evidence for bad inactive
+slack, free-gradient, and degenerate-multiplier rows. It is a finite active-set
+certificate, not a general active-set convergence theorem.
 
 ## Concept
 
@@ -25,7 +26,7 @@ the face `x = 1`. On that face, the free-coordinate minimizer is `y = 1`.
 
 ## What Gets Checked
 
-The pack has eight rows:
+The pack has nine rows:
 
 | Row | Result | Evidence |
 |---|---|---|
@@ -33,6 +34,7 @@ The pack has eight rows:
 | `active-face-candidate-replay` | `sat` | replay-only |
 | `active-set-kkt-replay` | `sat` | replay-only |
 | `inactive-constraint-slack-replay` | `sat` | replay-only |
+| `bad-inactive-slack-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `bad-active-set-free-gradient-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `degenerate-active-bound-replay` | `sat` | replay-only |
 | `bad-degenerate-active-multiplier-rejected` | `unsat` | checked QF_LRA/Farkas |
@@ -88,6 +90,31 @@ The validator also checks the complementarity products:
 2 * 0 = 0
 0 * 1 = 0
 ```
+
+## Bad Inactive-Slack Row
+
+The malformed row keeps the accepted active-face candidate `(1,1)` but claims
+the inactive lower-bound constraint is tight:
+
+```text
+inactive slack = 1
+claimed inactive slack <= 0
+```
+
+The source SMT-LIB artifact fixes the replayed slack as `1` and also asserts
+the malformed bound:
+
+```smt2
+(set-logic QF_LRA)
+(declare-const inactive_slack Real)
+(assert (= inactive_slack 1))
+(assert (<= inactive_slack 0))
+(check-sat)
+```
+
+Axeyum parses that source row, emits `UnsatFarkas` evidence, and independently
+checks the certificate. This is the finite working-set membership check: the
+constraint is feasible but not active at the replayed candidate.
 
 ## Bad Active-Set Row
 

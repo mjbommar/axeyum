@@ -23,6 +23,8 @@ theorems remain proof horizons.
   stationarity, and complementary slackness.
 - `inactive-constraint-slack-replay`: checks the inactive lower-bound slack and
   zero inactive multiplier.
+- `bad-inactive-slack-rejected`: rejects the malformed claim that the inactive
+  lower-bound constraint is tight at `(1,1)`.
 - `bad-active-set-free-gradient-rejected`: rejects the malformed claim that the
   feasible candidate `(1,0)` solves the same active-face subproblem.
 - `degenerate-active-bound-replay`: checks a tight active bound at the

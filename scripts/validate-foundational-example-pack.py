@@ -11402,6 +11402,57 @@ def validate_finite_active_set_qp(expected: dict[str, Any]) -> None:
     if inactive_multiplier * inactive_constraint_slack != 0:
         fail("inactive-constraint-slack-replay complementarity product must be zero")
 
+    bad_inactive = checks["bad-inactive-slack-rejected"]
+    if bad_inactive["expected_result"] != "unsat" or bad_inactive.get("proof_status") != "checked":
+        fail("bad-inactive-slack-rejected must be a checked unsat row")
+    if bad_inactive["validation"] != "finite_bad_active_set_inactive_slack_refutation":
+        fail("bad-inactive-slack-rejected must use finite_bad_active_set_inactive_slack_refutation validation")
+    data = bad_inactive.get("data", {})
+    if data.get("source_witness") != "box-face-active-set-qp":
+        fail("bad-inactive-slack-rejected must cite the box-face-active-set-qp witness")
+    data_inactive_value = require_fraction(
+        "bad active-set inactive_constraint_value",
+        data.get("inactive_constraint_value"),
+    )
+    data_inactive_bound = require_fraction(
+        "bad active-set inactive_bound",
+        data.get("inactive_bound"),
+    )
+    computed_inactive_slack = require_fraction(
+        "bad active-set computed_inactive_slack",
+        data.get("computed_inactive_slack"),
+    )
+    claimed_slack_upper_bound = require_fraction(
+        "bad active-set claimed_slack_upper_bound",
+        data.get("claimed_slack_upper_bound"),
+    )
+    if data_inactive_value != inactive_constraint_value:
+        fail("bad-inactive-slack-rejected inactive constraint value must match replay")
+    if data_inactive_bound != inactive_bound:
+        fail("bad-inactive-slack-rejected inactive bound must match replay")
+    if computed_inactive_slack != inactive_constraint_slack:
+        fail("bad-inactive-slack-rejected inactive slack must match replay")
+    if data_inactive_bound - data_inactive_value != computed_inactive_slack:
+        fail("bad-inactive-slack-rejected slack equation is incorrect")
+    if computed_inactive_slack <= claimed_slack_upper_bound:
+        fail("bad-inactive-slack-rejected malformed bound must contradict replay")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad active-set inactive slack smt2_artifact", smt2_artifact)
+    if smt2_artifact != (
+        "artifacts/examples/math/finite-active-set-qp-v0/smt2/"
+        "bad-inactive-slack-farkas-conflict.smt2"
+    ):
+        fail("bad-inactive-slack-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad active-set inactive slack smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad active-set inactive slack farkas_regression", regression)
+    if "finite_active_set_qp_bad_inactive_slack_artifact_emits_checked_farkas" not in regression:
+        fail("bad-inactive-slack-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad active-set inactive slack certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-inactive-slack-rejected certificate must document checked Farkas evidence")
+
     if diagonal_center_quadratic_value(diagonal, center, bad_candidate) != bad_candidate_value:
         fail("bad active-set candidate value is incorrect")
     if diagonal_center_quadratic_gradient(diagonal, center, bad_candidate) != bad_candidate_gradient:

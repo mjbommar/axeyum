@@ -14,7 +14,7 @@ Which checked optimization packs match this finite method family and proof route
 
 The current optimization surface is finite and exact-rational: LP objective
 thresholds, convexity shadows, finite separation, KKT stationarity and
-complementarity, active-set QP face and degenerate-bound replay, tiny SDP
+complementarity, active-set QP face/slack and degenerate-bound replay, tiny SDP
 objective/slack/gap replay, gradient-descent steps, Armijo/Wolfe line-search
 rows, projected-gradient interval/decrease replay, proximal-gradient soft-threshold and
 box-plus-L1 replay, least-squares rows, residual bounds, and projection
@@ -63,6 +63,7 @@ needs concrete checked rows to display.
 | Exact arithmetic and numerical-honesty rows | `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked` |
 | KKT stationarity and complementarity display rows | pack `finite-kkt-v0` | `Farkas` | `checks --pack finite-kkt-v0 --route Farkas --proof-status checked` |
 | Active-set QP display row | pack `finite-active-set-qp-v0` | `Farkas` | `checks --pack finite-active-set-qp-v0 --route Farkas --proof-status checked` |
+| Inactive active-set slack row | pack `finite-active-set-qp-v0`, text `inactive` | `Farkas` | `checks --pack finite-active-set-qp-v0 --route Farkas --proof-status checked --text inactive` |
 | Degenerate active-set multiplier row | pack `finite-active-set-qp-v0`, text `degenerate` | `Farkas` | `checks --pack finite-active-set-qp-v0 --route Farkas --proof-status checked --text degenerate` |
 | SDP objective/slack/gap display row | pack `finite-sdp-v0` | `Farkas` | `checks --pack finite-sdp-v0 --route Farkas --proof-status checked`; `checks --pack finite-sdp-v0 --route Farkas --proof-status checked --text slack` |
 | Gradient descent and line-search display rows | packs `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0` | `Farkas` | `checks --pack finite-gradient-descent-v0 --route Farkas --proof-status checked`; `checks --pack finite-line-search-v0 --route Farkas --proof-status checked`; `checks --pack finite-wolfe-line-search-v0 --route Farkas --proof-status checked` |
@@ -170,6 +171,13 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-active-set-qp-v0 \
   --route Farkas \
   --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-active-set-qp-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text inactive \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
