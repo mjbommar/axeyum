@@ -337,9 +337,10 @@ alpha = 1/2
 
 The `finite-projected-gradient-v0` validator recomputes the derivative,
 unconstrained trial point `2`, interval projection to `1`, projected objective
-value, and exact decrease. Its bad row claims `3/2` is a feasible projected
-point for `[0,1]`; the final upper-bound contradiction is checked through
-QF_LRA/Farkas evidence. For a focused trace, read
+value, and exact decrease. Its bad rows claim `3/2` is a feasible projected
+point for `[0,1]` and that the same step decreases the objective by `4`; the
+final contradictions are checked through QF_LRA/Farkas evidence. For a focused
+trace, read
 [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md).
 
 For a finite proximal-gradient check, encode one L1-regularized quadratic step:
@@ -520,7 +521,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_minimizer_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_curvature_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-projected-gradient-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_projected_gradient_bad_projection_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_projected_gradient_bad_
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-proximal-gradient-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_proximal_gradient_bad_proximal_point_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0

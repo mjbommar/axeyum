@@ -1466,7 +1466,7 @@ thresholds, finite convexity shadows, regression normal equations, residual
 bounds, gradient/Hessian replay, finite KKT stationarity, finite SDP
 objective/slack/gap replay, finite gradient-descent replay, and finite
 line-search replay, finite Wolfe line-search replay, finite active-set QP
-replay, finite projected-gradient replay, finite proximal-gradient replay, and
+replay, finite projected-gradient interval/decrease replay, finite proximal-gradient replay, and
 checked gradient step-coordinate rows together while
 leaving duality, KKT sufficiency, SDP strong duality, line-search convergence,
 Wolfe line-search convergence, active-set convergence, projected-gradient convergence,

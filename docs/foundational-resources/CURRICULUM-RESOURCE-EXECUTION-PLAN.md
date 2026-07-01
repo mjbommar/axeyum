@@ -117,8 +117,8 @@ Concrete work:
   degenerate-multiplier conflicts, finite SDP objective/slack replay, finite
   gradient-descent step replay, finite
   line-search rejected-step and accepted-candidate replay, finite Wolfe
-  line-search exact-minimizer replay, finite projected-gradient replay, finite
-  proximal-gradient replay, least-squares
+  line-search exact-minimizer replay, finite projected-gradient
+  interval/decrease replay, finite proximal-gradient replay, least-squares
   normal equations, residual bounds, gradient/Hessian replay, and
   related matrix checks without promoting duality, KKT sufficiency, SDP strong
   duality, or convergence theorem claims.
@@ -579,7 +579,7 @@ Next buildout:
    convexity shadows, finite KKT stationarity, finite SDP objective/slack
    replay, finite gradient-descent replay, finite line-search rejected-step
    and accepted-candidate replay, finite Wolfe line-search exact-minimizer
-   replay, finite projected-gradient replay, finite proximal-gradient replay,
+   replay, finite projected-gradient interval/decrease replay, finite proximal-gradient replay,
    least-squares, gradients, residual bounds, and
    matrix witnesses to the same boundary.
    It now also supports exact atlas concept filters on `packs` and `checks`;

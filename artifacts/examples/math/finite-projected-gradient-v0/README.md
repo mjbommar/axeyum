@@ -2,7 +2,7 @@
 
 This pack turns one exact rational projected-gradient step into resource rows.
 It checks only the listed quadratic, interval constraint, unconstrained step,
-projection, projected descent, and false projected-point obstruction; general
+projection, projected descent, and false projected-point/decrease obstructions; general
 projected-gradient convergence and constrained-optimization theorems remain
 proof horizons.
 
@@ -25,6 +25,8 @@ proof horizons.
   decrease.
 - `bad-projected-point-rejected`: rejects the malformed claim that `3/2` is a
   feasible projected point for the interval `[0,1]`.
+- `bad-projected-decrease-rejected`: rejects the malformed claim that the same
+  projected step decreases the objective by `4`; exact replay computes `3`.
 - `general-projected-gradient-convergence-lean-horizon`: names the future proof
   route for projected-gradient convergence, constraint qualifications, and rate
   theorems.
@@ -34,6 +36,7 @@ proof horizons.
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-projected-gradient-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_projected_gradient_bad_projection_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_projected_gradient_bad_decrease_artifact_emits_checked_farkas
 ```
 
 ## Trust Boundary
@@ -41,4 +44,4 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_projected_gra
 Untrusted search may propose the step size, trial point, or projected point.
 The trusted work is small: exact derivative replay, exact step arithmetic,
 exact interval projection, exact objective evaluation, and checked
-`UnsatFarkas` evidence over the source SMT-LIB row.
+`UnsatFarkas` evidence over the source SMT-LIB rows.

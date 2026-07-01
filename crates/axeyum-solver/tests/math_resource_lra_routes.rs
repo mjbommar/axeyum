@@ -130,6 +130,9 @@ const FINITE_WOLFE_LINE_SEARCH_BAD_MINIMIZER: &str = include_str!(
 const FINITE_PROJECTED_GRADIENT_BAD_PROJECTION: &str = include_str!(
     "../../../artifacts/examples/math/finite-projected-gradient-v0/smt2/bad-projection-farkas-conflict.smt2"
 );
+const FINITE_PROJECTED_GRADIENT_BAD_DECREASE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-projected-gradient-v0/smt2/bad-projected-decrease-farkas-conflict.smt2"
+);
 const INNER_PRODUCT_BAD_PROJECTION_ORTHOGONALITY: &str = include_str!(
     "../../../artifacts/examples/math/inner-product-spaces-rational-v0/smt2/bad-projection-orthogonality-farkas-conflict.smt2"
 );
@@ -843,6 +846,14 @@ fn finite_projected_gradient_bad_projection_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-projected-gradient-v0 bad-projection SMT-LIB artifact",
         FINITE_PROJECTED_GRADIENT_BAD_PROJECTION,
+    );
+}
+
+#[test]
+fn finite_projected_gradient_bad_decrease_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-projected-gradient-v0 bad-decrease SMT-LIB artifact",
+        FINITE_PROJECTED_GRADIENT_BAD_DECREASE,
     );
 }
 

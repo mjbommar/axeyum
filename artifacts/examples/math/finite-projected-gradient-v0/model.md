@@ -49,3 +49,7 @@ variants, or floating-point behavior.
 
 The checked bad row claims that `3/2` is a feasible projected point for
 `[0,1]`. Exact interval replay rejects that point because `3/2 > 1`.
+
+The second checked bad row claims the same projected step decreases the
+objective by `4`. Exact objective replay computes decrease `3`, so the claimed
+decrease has error `1`.

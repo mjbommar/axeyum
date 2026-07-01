@@ -27,7 +27,7 @@ alpha = 1/2
 
 ## What Gets Checked
 
-The pack has six rows:
+The pack has seven rows:
 
 | Row | Result | Evidence |
 |---|---|---|
@@ -36,6 +36,7 @@ The pack has six rows:
 | `interval-projection-replay` | `sat` | replay-only |
 | `projected-descent-replay` | `sat` | replay-only |
 | `bad-projected-point-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-projected-decrease-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-projected-gradient-convergence-lean-horizon` | `not-run` | Lean horizon |
 
 The replay rows use exact rational arithmetic. They do not use floating-point
@@ -119,6 +120,30 @@ it is at most `1`:
 Axeyum parses that source row, emits `UnsatFarkas` evidence, and independently
 checks the certificate.
 
+## Bad Decrease Row
+
+The second malformed row keeps the same projected step but claims the decrease
+is `4`:
+
+```text
+computed decrease = f(0) - f(1) = 4 - 1 = 3
+claimed decrease = 4
+```
+
+The source SMT-LIB artifact fixes the same decrease to both values:
+
+```smt2
+(set-logic QF_LRA)
+(declare-const projected_decrease Real)
+(assert (= projected_decrease 3))
+(assert (= projected_decrease 4))
+(check-sat)
+```
+
+That keeps projected descent in the same trust story: exact replay computes the
+finite objective values, and checked Farkas evidence rejects the malformed
+decrease equality.
+
 ## What This Does Not Prove
 
 The pack does not prove projected-gradient convergence for arbitrary closed
@@ -137,5 +162,5 @@ general projected-gradient theorem: future Lean reconstruction
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-projected-gradient-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_projected_gradient_bad_projection_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_projected_gradient_bad_
 ```

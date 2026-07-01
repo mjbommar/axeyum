@@ -204,8 +204,9 @@ Companion maps:
   line-search Lean horizon.
 - [Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md):
   follows exact gradient replay, one unconstrained trial step, interval
-  projection, projected descent, checked QF_LRA/Farkas bad-projection
-  rejection, and the general projected-gradient convergence Lean horizon.
+  projection, projected descent, checked QF_LRA/Farkas bad-projection and bad
+  projected-decrease rejections, and the general projected-gradient convergence
+  Lean horizon.
 - [Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md):
   follows exact smooth-gradient replay, one trial step, L1 soft-threshold
   proximal replay, box-plus-L1 constrained replay, composite descent, checked

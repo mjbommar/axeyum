@@ -12525,6 +12525,63 @@ def validate_finite_projected_gradient(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-projected-point-rejected certificate must document checked Farkas evidence")
 
+    bad_decrease = checks["bad-projected-decrease-rejected"]
+    if bad_decrease["expected_result"] != "unsat" or bad_decrease.get("proof_status") != "checked":
+        fail("bad-projected-decrease-rejected must be a checked unsat row")
+    data = bad_decrease.get("data", {})
+    if data.get("source_witness") != "quadratic-interval-projected-step":
+        fail("bad-projected-decrease-rejected must cite the quadratic-interval-projected-step witness")
+    computed_start_value = require_fraction(
+        "bad projected decrease computed_start_value",
+        data.get("computed_start_value"),
+    )
+    computed_projected_value = require_fraction(
+        "bad projected decrease computed_projected_value",
+        data.get("computed_projected_value"),
+    )
+    computed_decrease = require_fraction(
+        "bad projected decrease computed_projected_decrease",
+        data.get("computed_projected_decrease"),
+    )
+    claimed_decrease = require_fraction(
+        "bad projected decrease claimed_projected_decrease",
+        data.get("claimed_projected_decrease"),
+    )
+    decrease_error = require_fraction(
+        "bad projected decrease computed_decrease_error",
+        data.get("computed_decrease_error"),
+    )
+    if computed_start_value != start_value:
+        fail("bad-projected-decrease-rejected computed_start_value does not match replay")
+    if computed_projected_value != projected_value:
+        fail("bad-projected-decrease-rejected computed_projected_value does not match replay")
+    if computed_start_value - computed_projected_value != computed_decrease:
+        fail("bad-projected-decrease-rejected computed decrease is incorrect")
+    if computed_decrease != projected_decrease:
+        fail("bad-projected-decrease-rejected computed decrease must match the replay row")
+    if computed_decrease == claimed_decrease:
+        fail("bad-projected-decrease-rejected malformed decrease must disagree with replay")
+    if claimed_decrease - computed_decrease != decrease_error:
+        fail("bad-projected-decrease-rejected decrease error is incorrect")
+    if decrease_error <= 0:
+        fail("bad-projected-decrease-rejected decrease error must be positive")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad projected decrease smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/finite-projected-gradient-v0/smt2/bad-projected-decrease-farkas-conflict.smt2"
+    ):
+        fail("bad-projected-decrease-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad projected decrease smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad projected decrease farkas_regression", regression)
+    if "finite_projected_gradient_bad_decrease_artifact_emits_checked_farkas" not in regression:
+        fail("bad-projected-decrease-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad projected decrease certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-projected-decrease-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-projected-gradient-convergence-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-projected-gradient-convergence-lean-horizon must be not-run")

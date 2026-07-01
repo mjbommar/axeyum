@@ -265,8 +265,9 @@ schemas, examples, and validation workflows.
   row.
 - [`artifacts/examples/math/finite-projected-gradient-v0/`](../../artifacts/examples/math/finite-projected-gradient-v0/)
   validates exact projected-gradient interval replay, unconstrained-step
-  arithmetic, projection onto `[0,1]`, checked rejection of a false projected
-  point, and a projected-gradient convergence Lean-horizon row.
+  arithmetic, projection onto `[0,1]`, projected objective decrease, checked
+  rejection of false projected-point and false decrease claims, and a
+  projected-gradient convergence Lean-horizon row.
 - [`artifacts/examples/math/finite-proximal-gradient-v0/`](../../artifacts/examples/math/finite-proximal-gradient-v0/)
   validates exact L1 proximal-gradient replay, soft-threshold arithmetic,
   box-plus-L1 constrained replay, composite objective decrease, checked
@@ -474,8 +475,9 @@ schemas, examples, and validation workflows.
   Wolfe line-search convergence Lean-horizon row.
 - [`artifacts/examples/math/finite-projected-gradient-v0/`](../../artifacts/examples/math/finite-projected-gradient-v0/)
   validates exact one-variable projected-gradient replay over `[0,1]`,
-  unconstrained-step arithmetic, interval projection, checked bad-projection
-  rejection, and a general projected-gradient convergence Lean-horizon row.
+  unconstrained-step arithmetic, interval projection, projected objective
+  decrease, checked bad-projection and bad-decrease rejections, and a general
+  projected-gradient convergence Lean-horizon row.
 - [`artifacts/examples/math/finite-proximal-gradient-v0/`](../../artifacts/examples/math/finite-proximal-gradient-v0/)
   validates exact one-variable proximal-gradient replay for an L1 penalty,
   soft-threshold optimality, box-plus-L1 constrained replay, composite

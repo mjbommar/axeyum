@@ -101,9 +101,9 @@ certificate. The finite line-search slice adds exact Armijo trial rejection,
 one accepted backtracked step, and a checked QF_LRA/Farkas bad-acceptance
 certificate. The finite Wolfe line-search slice adds exact Wolfe
 sufficient-decrease and curvature replay plus checked bad-minimizer and
-bad-curvature certificates. The finite projected-gradient slice adds exact interval
-projection after a trial step and a checked QF_LRA/Farkas bad-projection
-certificate. The finite proximal-gradient slice adds exact L1 soft-threshold
+bad-curvature certificates. The finite projected-gradient slice adds exact
+interval projection after a trial step, projected objective decrease, and
+checked QF_LRA/Farkas bad-projection plus bad-decrease certificates. The finite proximal-gradient slice adds exact L1 soft-threshold
 replay after a trial step, exact box-plus-L1 constrained replay with an active
 upper multiplier, and checked QF_LRA/Farkas bad-proximal-point plus bad
 box-proximal-point certificates. The finite random-matrix slice adds exact
@@ -513,9 +513,10 @@ alpha = 1/2
 
 The `finite-projected-gradient-v0` validator recomputes the derivative,
 unconstrained trial point `2`, projection to the interval endpoint `1`,
-objective decrease from `4` to `1`, and the projection distance. Its bad row
-claims `3/2` is feasible for `[0,1]`; the final upper-bound contradiction is
-checked through QF_LRA/Farkas evidence. For a focused trace, read
+objective decrease from `4` to `1`, and the projection distance. Its bad rows
+claim `3/2` is feasible for `[0,1]` and that the same step decreases the
+objective by `4`; the final contradictions are checked through QF_LRA/Farkas
+evidence. For a focused trace, read
 [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md).
 
 For a finite proximal-gradient example, encode one L1-regularized quadratic:
@@ -601,7 +602,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_minimizer_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_curvature_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-projected-gradient-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_projected_gradient_bad_projection_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_projected_gradient_bad_
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-proximal-gradient-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_proximal_gradient_bad_proximal_point_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0

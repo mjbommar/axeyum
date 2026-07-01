@@ -34,10 +34,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-projected-gradient-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite projected-gradient bad projection QF_LRA/Farkas regression seed",
-    "pressure": "Exact projection replay computes projected_x=1 for the interval [0,1], so the malformed feasible projected point 3/2 is inconsistent.",
+    "target": "finite projected-gradient bad projection and bad decrease QF_LRA/Farkas regressions",
+    "pressure": "Exact projection replay computes projected_x=1 for the interval [0,1], and exact objective replay computes projected decrease 3; malformed projected-point and decrease rows are inconsistent.",
     "evidence": [
-      "bad-projected-point-rejected"
+      "bad-projected-point-rejected",
+      "bad-projected-decrease-rejected"
     ],
     "next_step": "Promote additional projected-gradient rows only when they add distinct box/simplex projection, active-set, proximal, stochastic, or convergence pressure; keep general projected-gradient convergence and rate theorems in horizon lanes."
   },
@@ -51,6 +52,7 @@
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "docs/learn/math/finite-projected-gradient-end-to-end.md",
     "artifacts/examples/math/finite-projected-gradient-v0/smt2/bad-projection-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-projected-gradient-v0/smt2/bad-projected-decrease-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
@@ -59,12 +61,13 @@
     "interval-projection-replay",
     "projected-descent-replay",
     "bad-projected-point-rejected",
+    "bad-projected-decrease-rejected",
     "general-projected-gradient-convergence-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite projected-gradient witnesses as deterministic exact-rational replay rows.",
     "Replay derivatives, feasible interval bounds, unconstrained trial points, interval projections, objective values, and projected-step decrease over exact rationals.",
-    "Route false projected-feasibility claims through checked QF_LRA/Farkas evidence after replay computes the projection boundary.",
+    "Route false projected-feasibility and projected-decrease claims through checked QF_LRA/Farkas evidence after replay computes the projection boundary or objective decrease.",
     "Keep general projected-gradient convergence, constraint qualifications, proximal variants, stochastic variants, and floating-point stability claims marked Lean-horizon until proof artifacts exist."
   ]
 }

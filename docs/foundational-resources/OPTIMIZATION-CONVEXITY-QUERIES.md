@@ -16,7 +16,7 @@ The current optimization surface is finite and exact-rational: LP objective
 thresholds, convexity shadows, finite separation, KKT stationarity and
 complementarity, active-set QP face and degenerate-bound replay, tiny SDP
 objective/slack/gap replay, gradient-descent steps, Armijo/Wolfe line-search
-rows, projected-gradient interval replay, proximal-gradient soft-threshold and
+rows, projected-gradient interval/decrease replay, proximal-gradient soft-threshold and
 box-plus-L1 replay, least-squares rows, residual bounds, and projection
 witnesses. General duality, KKT sufficiency, SDP strong duality, method
 convergence, stability, and floating-point performance claims remain in the

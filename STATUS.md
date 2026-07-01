@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-projected-gradient bad decrease QF_LRA row landed.**
+  `finite-projected-gradient-v0` now includes a checked rejection for a
+  malformed projected-decrease row: exact replay computes `f(0) = 4`,
+  `f(1) = 1`, and projected decrease `3`, while the bad row claims decrease
+  `4`, leaving positive error `1`. The validator pins the source witness,
+  computed start value, computed projected value, computed decrease, claimed
+  decrease, exact error, SMT-LIB artifact, regression, and independently
+  checked `UnsatFarkas` certificate. The shared `math_resource_lra_routes`
+  regression parses the artifact and checks the Farkas evidence. Generated
+  dashboards and the public query summary now report 111 concept rows, 108
+  non-template packs, 619 expected checks, 296 checked rows, 252 replay-only
+  rows, and 71 Lean-horizon rows.
+
 - **Finite-KKT bad complementarity QF_LRA row landed.**
   `finite-kkt-v0` now includes a checked rejection for a malformed
   complementary-slackness row: exact KKT replay computes
@@ -1539,7 +1552,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   foundational-resource smoke check runs the same commands so exact LP,
   convexity, finite active-set QP replay, finite SDP objective/slack, finite
   gradient-descent replay, finite line-search replay, finite Wolfe line-search
-  replay, finite projected-gradient replay, finite proximal-gradient replay,
+  replay, finite projected-gradient interval/decrease replay,
+  finite proximal-gradient replay,
   least-squares, gradient/Hessian, residual, eigenpair, and related matrix
   examples remain visible through the public JSON boundary.
 
@@ -2805,7 +2819,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   normal-equation replay, finite root-finding, and finite hyperplane
   separation, plus finite KKT stationarity/complementarity replay, finite SDP
   objective/slack replay, finite gradient-descent replay, finite line-search
-  replay, finite projected-gradient replay, and finite proximal-gradient replay
+  replay, finite projected-gradient interval/decrease replay, and
+  finite proximal-gradient replay
   while keeping duality, KKT sufficiency, SDP strong duality, general
   separation, projected-gradient convergence, proximal-gradient convergence,
   and convergence theorems as Lean horizons. The

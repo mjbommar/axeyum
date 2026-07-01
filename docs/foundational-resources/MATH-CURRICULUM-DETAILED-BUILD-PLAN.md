@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 618 expected checks.
-- 295 checked proof/evidence rows.
+- 619 expected checks.
+- 296 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -222,7 +222,7 @@ Exit criteria:
 | `measure_theory` | finite measures, monotonicity/subadditivity, product measure, integration, random variables | finite measure/additivity, monotonicity/subadditivity, and finite product/integration bridge rows landed; monotonicity now checks both subset and union-subadditivity conflicts, and product-measure checks both product atom and marginal conflicts; promote only distinct convergence-horizon, countable-measure, or new measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | standalone finite probability mass-table lesson landed; keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
-| `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | LP objective/Farkas, rational convexity/gradient bridge rows with checked bad midpoint and affine-threshold evidence, finite root-finding step and bisection-width replay, finite hyperplane-separation replay, finite KKT replay with checked bad stationarity and complementarity evidence, finite active-set QP face/slack replay, finite degenerate active-bound replay, finite SDP primal/dual replay with checked bad objective and bad duality-gap rows, finite gradient-descent replay, finite Armijo line-search replay with checked bad Armijo and bad accepted-candidate rows, finite Wolfe line-search replay with checked bad minimizer and bad curvature rows, finite projected-gradient interval replay, finite proximal soft-threshold replay, and finite box-plus-L1 proximal replay landed; add only distinct duality, working-set pivots, higher-dimensional SDP, strong-Wolfe/nonconvex line-search, group-lasso, active-set proximal, or stochastic/convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
+| `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | LP objective/Farkas, rational convexity/gradient bridge rows with checked bad midpoint and affine-threshold evidence, finite root-finding step and bisection-width replay, finite hyperplane-separation replay, finite KKT replay with checked bad stationarity and complementarity evidence, finite active-set QP face/slack replay, finite degenerate active-bound replay, finite SDP primal/dual replay with checked bad objective and bad duality-gap rows, finite gradient-descent replay, finite Armijo line-search replay with checked bad Armijo and bad accepted-candidate rows, finite Wolfe line-search replay with checked bad minimizer and bad curvature rows, finite projected-gradient interval/decrease replay with checked bad projection and bad projected-decrease rows, finite proximal soft-threshold replay, and finite box-plus-L1 proximal replay landed; add only distinct duality, working-set pivots, higher-dimensional SDP, strong-Wolfe/nonconvex line-search, group-lasso, active-set proximal, or stochastic/convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | maintain landed finite dynamics/Euler bridge and keep numerical-honesty rows distinct from promoted exact residual/error certificates; finite line-search and finite Wolfe now check accepted-candidate, exact-minimizer, and curvature arithmetic conflicts | QF_LRA/Farkas, replay, Lean horizon |
 | `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | maintain landed finite dynamics/Euler bridge; add only distinct transition, reachability, invariant, stochastic, or finite-error pressure | QF_LRA/Farkas, replay, Lean horizon |
 | `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, circle, inversion, and cyclic rational geometry | maintain landed coordinate/oriented replay and finite circle/inversion/cyclic replay bridge rows; add only distinct nontrivial affine-coordinate, circle-line correspondence, higher-degree polynomial-geometry, or theorem-reconstruction pressure beyond the current midpoint-coordinate, area-scaling, circle-line, square angle-dot, and Ptolemy rows | QF_LRA/Farkas, finite replay |
@@ -254,7 +254,7 @@ Exit criteria:
 | `counting` | maintain | finite-counting replay bridge now groups pigeonhole CNF/LRAT, coefficient-count, double-counting, finite orbit-count, and exact tail-count rows |
 | `number-theory` | maintain | bounded residue and Diophantine families |
 | `linear-algebra` | deepen | matrix corpus notes, dot-product/separator/KKT/active-set-QP/SDP/gradient-step/line-search/Wolfe/projected-gradient/proximal-gradient/circle-tangent/inversion rows, and route-specific regression back-links |
-| `calculus` | deepen | one-variable false derivative, Riemann-sum false integral, multivariable bad-gradient, finite root-finding bad-step and bad-width, finite KKT bad-stationarity and bad-complementarity, finite active-set QP bad-free-gradient and bad-degenerate-multiplier, finite gradient-descent bad-decrease and bad step-coordinate, finite line-search bad-Armijo and bad accepted-candidate, finite Wolfe bad-minimizer and bad-curvature, finite projected-gradient bad-projection, and finite proximal-gradient bad-proximal-point plus bad box-proximal-point rows now have QF_LRA/Farkas regressions |
+| `calculus` | deepen | one-variable false derivative, Riemann-sum false integral, multivariable bad-gradient, finite root-finding bad-step and bad-width, finite KKT bad-stationarity and bad-complementarity, finite active-set QP bad-free-gradient and bad-degenerate-multiplier, finite gradient-descent bad-decrease and bad step-coordinate, finite line-search bad-Armijo and bad accepted-candidate, finite Wolfe bad-minimizer and bad-curvature, finite projected-gradient bad-projection and bad projected-decrease, and finite proximal-gradient bad-proximal-point plus bad box-proximal-point rows now have QF_LRA/Farkas regressions |
 
 ## Commit-Sized Queue
 
@@ -500,8 +500,9 @@ Pick one row per commit unless the change is purely navigational.
 54. Landed: add `finite-projected-gradient-v0` as the next distinct
    optimization/convexity and numerical-analysis pack. The pack validates exact
    gradient replay, one unconstrained trial step, interval projection,
-   projected objective decrease, checked QF_LRA/Farkas rejection of a false
-   projected point, a focused learner page, and concept links under reals,
+   projected objective decrease, checked QF_LRA/Farkas rejection of false
+   projected-point and projected-decrease claims, a focused learner page, and
+   concept links under reals,
    calculus, numerical analysis, optimization/convexity, and the
    rational-convexity bridge.
 55. Landed: add `finite-proximal-gradient-v0` as the next distinct
