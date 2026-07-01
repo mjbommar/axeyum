@@ -358,10 +358,11 @@ Companion maps:
   zero-divisor witness replay, and checked non-distributive-table rejection.
 - [Finite Fields](finite-fields-end-to-end.md): follows `F_7` inverse-table
   replay, exhaustive no-distributivity-counterexample checking in `F_5`, and
-  checked no-inverse rejection for `2 mod 6`.
+  checked no-inverse rejection for `2 mod 6` plus a bad inverse-candidate
+  rejection inside `F_7`.
 - [QF_BV Bit-Blast Certificate Anatomy](qf-bv-bitblast-certificate-anatomy-end-to-end.md):
-  follows a fixed-width composite-modulus no-inverse row through source
-  SMT-LIB, generated DIMACS/DRAT evidence, and corrupted-certificate rejection.
+  follows fixed-width finite-field BV rows through source SMT-LIB, generated
+  DIMACS/DRAT evidence, and corrupted-certificate rejection.
 - [Finite Algebra Homomorphisms](finite-algebra-homomorphisms-end-to-end.md):
   follows parity-map preservation, kernel/image recomputation,
   quotient/induced-map replay, ring-homomorphism replay, QF_UF/Alethe

@@ -45,3 +45,31 @@ The product is computed at 6-bit width before `bvurem 6`, so this is an exact
 fixed-width encoding of the residue equation for the listed finite domain. The
 solver regression exports the bit-blasted CNF with a DRAT refutation and
 rechecks the certificate independently.
+
+## `bad-prime-field-inverse-candidate-rejected`
+
+Expected result: `unsat`.
+
+The checked query is the fixed false claim that `4` is an inverse of `3` in
+`F_7`. The validator computes:
+
+```text
+3 * 4 = 12 = 5 mod 7
+```
+
+Since `5 != 1`, the candidate is rejected.
+
+## `bad-prime-field-inverse-candidate-qf-bv-drat`
+
+Expected result: `unsat`.
+
+The QF_BV artifact encodes the same fixed bad candidate at product width:
+
+```text
+3 * 4 mod 7 = 5
+3 * 4 mod 7 = 1
+```
+
+The solver regression parses that artifact, proves it `unsat`, exports the
+bit-blasted CNF with a DRAT refutation, and rechecks the certificate
+independently.

@@ -339,8 +339,8 @@ The first Diophantine certificate anatomy learner page now follows
 source SMT-LIB, emitted `UnsatDiophantine` evidence, and same-artifact
 contradiction-row tamper rejection.
 The first QF_BV bit-blast certificate anatomy learner page now follows
-`finite-fields-v0` from a fixed-width composite-modulus no-inverse row through
-source SMT-LIB, generated DIMACS/DRAT evidence, and same-artifact truncated-DRAT
+`finite-fields-v0` from fixed-width finite-field BV rows through source
+SMT-LIB, generated DIMACS/DRAT evidence, and same-artifact truncated-DRAT
 rejection.
 The matrix-computation learner index now groups LU, rank/nullity, residual,
 projection, eigenpair, characteristic-polynomial, finite random-matrix,
@@ -572,9 +572,9 @@ now promote a bad preimage-membership conflict through the same checked route.
 The first
 QF_BV bit-blast/DRAT resource promotion now covers the
 finite-rings bad distributivity and bad multiplicative-identity rows, the
-finite-fields composite no-inverse row, and the graph-coloring one-bit
-triangle two-coloring obstruction, with bounded number theory now promoted for
-the modulo-7 quadratic nonresidue row; finite
+finite-fields composite no-inverse and bad inverse-candidate rows, and the
+graph-coloring one-bit triangle two-coloring obstruction, with bounded number
+theory now promoted for the modulo-7 quadratic nonresidue row; finite
 compactness now contributes checked DRAT/LRAT evidence for a bad open-cover row,
 finite connectedness now contributes checked DRAT/LRAT evidence for a bad
 connectedness row, finite topology now contributes checked DRAT/LRAT evidence

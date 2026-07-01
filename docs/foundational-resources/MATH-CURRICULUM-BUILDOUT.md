@@ -421,9 +421,9 @@ QF_UF/Alethe bad-order rejection, checked Bool/CNF bad top-element rejection,
 and a general order/lattice Lean-horizon row.
 `finite-fields-v0` now
 validates prime-field inverse replay, exhaustive distributivity over a fixed
-prime field, a checked composite-modulus non-field contrast, and a
-resource-backed QF_BV/DRAT proof-route row for the composite no-inverse
-obstruction.
+prime field, a checked composite-modulus non-field contrast, a checked bad
+prime-field inverse candidate, and resource-backed QF_BV/DRAT proof-route rows
+for both fixed-width conflicts.
 `polynomial-identities-v0`
 now validates exact coefficient identity replay, a factor-theorem root witness,
 and a checked false rational-root rejection. `counting-v0` now validates fixed
@@ -1736,8 +1736,8 @@ follows the nonunit inverse obstruction through source SMT-LIB, emitted
 `UnsatDiophantine` evidence, and same-artifact contradiction-row tamper
 rejection.
 `finite-fields-v0` now has a QF_BV bit-blast certificate anatomy lesson that
-follows the fixed-width composite-modulus no-inverse row through source SMT-LIB,
-generated DIMACS/DRAT evidence, and same-artifact truncated-DRAT rejection.
+follows fixed-width finite-field BV rows through source SMT-LIB, generated
+DIMACS/DRAT evidence, and same-artifact truncated-DRAT rejection.
 The concept atlas now gives these certificate lessons first-class proof-object
 anatomy bridge rows for Boolean CNF DRAT/LRAT, QF_LRA/Farkas, QF_UF/Alethe, and
 QF_BV bit-blast evidence, so packs can point at shared route vocabulary instead

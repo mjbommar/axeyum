@@ -19,6 +19,9 @@ const FINITE_RINGS_BAD_MULTIPLICATIVE_IDENTITY: &str = include_str!(
 const FINITE_FIELDS_COMPOSITE_NONFIELD: &str = include_str!(
     "../../../artifacts/examples/math/finite-fields-v0/smt2/composite-modulus-nonfield-bitblast-conflict.smt2"
 );
+const FINITE_FIELDS_BAD_INVERSE_CANDIDATE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-fields-v0/smt2/bad-inverse-candidate-bitblast-conflict.smt2"
+);
 const GRAPH_COLORING_TRIANGLE_NOT_2_COLORABLE: &str = include_str!(
     "../../../artifacts/examples/math/graph-coloring-v0/smt2/triangle-not-2-colorable-bitblast-conflict.smt2"
 );
@@ -50,6 +53,14 @@ fn finite_fields_composite_nonfield_emits_checked_drat() {
     assert_resource_qf_bv_drat(
         "finite-fields-v0 composite modulus nonfield bit-blast conflict",
         FINITE_FIELDS_COMPOSITE_NONFIELD,
+    );
+}
+
+#[test]
+fn finite_fields_bad_inverse_candidate_emits_checked_drat() {
+    assert_resource_qf_bv_drat(
+        "finite-fields-v0 bad inverse candidate bit-blast conflict",
+        FINITE_FIELDS_BAD_INVERSE_CANDIDATE,
     );
 }
 

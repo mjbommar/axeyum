@@ -20,6 +20,8 @@ Concept rows:
 | `prime-field-distributivity-no-counterexample` | `unsat` | checked |
 | `composite-modulus-nonfield` | `unsat` | checked |
 | `composite-modulus-nonfield-qf-bv-drat` | `unsat` | checked DRAT |
+| `bad-prime-field-inverse-candidate-rejected` | `unsat` | checked |
+| `bad-prime-field-inverse-candidate-qf-bv-drat` | `unsat` | checked DRAT |
 
 The checked proof-object source claim is fixed-width and finite:
 
@@ -64,6 +66,17 @@ bvurem 6     : residue modulo 6
 
 The assertion demands the impossible residue equation `(2 * inv) mod 6 = 1`.
 
+The same pack now has a second fixed-width source artifact:
+
+```text
+artifacts/examples/math/finite-fields-v0/smt2/bad-inverse-candidate-bitblast-conflict.smt2
+```
+
+It records the table-replayed prime-field fact `3*4 mod 7 = 5` and the false
+inverse target `3*4 mod 7 = 1`. That row uses the same certificate route but a
+different source pressure: rejecting a bad candidate inside a real prime field,
+not proving that a composite residue lacks any inverse.
+
 ## Bit-Blast And DRAT Certificate
 
 The QF_BV route lowers the original bit-vector formula through deterministic
@@ -78,6 +91,7 @@ promoted resource regression is:
 
 ```sh
 cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
+cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_bad_inverse_candidate_emits_checked_drat
 ```
 
 That test parses the source SMT-LIB artifact, checks the obligation is `unsat`,
@@ -140,6 +154,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-fields-v0
 cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
+cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_bad_inverse_candidate_emits_checked_drat
 cargo test -p axeyum-solver --test math_resource_bv_routes qf_bv_resource_route_rejects_tampered_drat_certificate
 ```
 

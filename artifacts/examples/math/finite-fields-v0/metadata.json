@@ -30,10 +30,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-fields-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite field composite nonfield QF_BV/DRAT regression seed",
-    "pressure": "Composite-modulus obstruction where a 3-bit residue inv < 6 is required to satisfy (2*inv) mod 6 = 1, but no residue works.",
+    "target": "finite field composite nonfield and bad inverse-candidate QF_BV/DRAT regression seeds",
+    "pressure": "Two fixed-width field arithmetic conflicts: a composite-modulus obstruction where no 3-bit residue inv < 6 satisfies (2*inv) mod 6 = 1, and a prime-field bad inverse candidate where exact replay computes 3*4 mod 7 = 5 while the false inverse claim requires 1.",
     "evidence": [
-      "composite-modulus-nonfield-qf-bv-drat"
+      "composite-modulus-nonfield-qf-bv-drat",
+      "bad-prime-field-inverse-candidate-qf-bv-drat"
     ],
     "next_step": "Promote additional finite-field rows only when they add distinct fixed-width inverse, distributivity, or table solver pressure; keep field extensions, algebraic closure, and quantified field theory in the Lean-horizon lane."
   },
@@ -46,16 +47,19 @@
     "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
     "docs/learn/math/qf-bv-bitblast-certificate-anatomy-end-to-end.md",
     "artifacts/examples/math/finite-fields-v0/smt2/composite-modulus-nonfield-bitblast-conflict.smt2",
+    "artifacts/examples/math/finite-fields-v0/smt2/bad-inverse-candidate-bitblast-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_bv_routes.rs"
   ],
   "expected_results": [
     "prime-field-inverse-table",
     "prime-field-distributivity-no-counterexample",
     "composite-modulus-nonfield",
-    "composite-modulus-nonfield-qf-bv-drat"
+    "bad-prime-field-inverse-candidate-rejected",
+    "composite-modulus-nonfield-qf-bv-drat",
+    "bad-prime-field-inverse-candidate-qf-bv-drat"
   ],
   "graduation_criteria": [
-    "Encode fixed prime-field operations as deterministic BV formulas or finite tables; the first composite-modulus no-inverse row now has a checked QF_BV/DRAT artifact.",
+    "Encode fixed prime-field operations as deterministic BV formulas or finite tables; the composite-modulus no-inverse and bad prime-field inverse-candidate rows now have checked QF_BV/DRAT artifacts.",
     "Replay inverse-table witnesses through Axeyum model evaluation.",
     "Keep the composite-modulus QF_BV row tied to a source artifact, checked DRAT regression, and tamper-rejection learner page before claiming proof-object coverage.",
     "Continue emitting checked BV/CNF evidence for exhaustive no-counterexample and no-inverse rows.",

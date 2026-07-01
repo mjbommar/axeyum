@@ -636,9 +636,10 @@ First targets:
   (resource-backed QF_BV/DRAT regressions landed for the bad distributivity and
   bad multiplicative-identity rows)
 - [finite-fields-v0](../../artifacts/examples/math/finite-fields-v0/)
-  (resource-backed QF_BV/DRAT regression landed for the composite-modulus
-  no-inverse row; the route-anatomy lesson now follows this same source
-  artifact through DIMACS/DRAT checking and truncated-proof rejection)
+  (resource-backed QF_BV/DRAT regressions landed for the composite-modulus
+  no-inverse row and the bad prime-field inverse-candidate row; the
+  route-anatomy lesson follows these source artifacts through DIMACS/DRAT
+  checking and truncated-proof rejection)
 - [graph-coloring-v0](../../artifacts/examples/math/graph-coloring-v0/)
   (resource-backed QF_BV/DRAT regression landed for the one-bit triangle
   two-coloring obstruction)

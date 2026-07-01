@@ -19,12 +19,15 @@ Concept rows:
 | `prime-field-distributivity-no-counterexample` | `unsat` | checked |
 | `composite-modulus-nonfield` | `unsat` | checked |
 | `composite-modulus-nonfield-qf-bv-drat` | `unsat` | checked DRAT |
+| `bad-prime-field-inverse-candidate-rejected` | `unsat` | checked |
+| `bad-prime-field-inverse-candidate-qf-bv-drat` | `unsat` | checked DRAT |
 
 The checked rows are fixed finite residue computations. The QF_BV row
-additionally records the composite-modulus no-inverse claim as a fixed-width
-bit-vector formula whose generated CNF carries a rechecked DRAT certificate.
-The pack does not claim general field theory, field extensions, algebraic
-closure, or quantification over all fields.
+additionally records the composite-modulus no-inverse claim and the bad
+prime-field inverse candidate as fixed-width bit-vector formulas whose
+generated CNFs carry rechecked DRAT certificates. The pack does not claim
+general field theory, field extensions, algebraic closure, or quantification
+over all fields.
 
 ## Encode
 
@@ -111,26 +114,54 @@ The checker enumerates all residues:
 None equals `1`, so the inverse-existence claim is checked `unsat`. This is the
 smallest practical lesson in why composite residue rings can fail to be fields.
 
+## Check A Bad Prime-Field Inverse Candidate
+
+The next bad row stays inside the prime field `F_7`, but gives the wrong
+candidate inverse:
+
+```text
+claim: 4 is the inverse of 3 modulo 7
+```
+
+The checker replays the single product:
+
+```text
+3 * 4 = 12 = 5 mod 7
+```
+
+Since an inverse must multiply to `1`, this fixed candidate is rejected even
+though `3` really does have an inverse in `F_7` (`5`, listed in the positive
+table).
+
 ## Check The Bit-Blast Certificate
 
-The pack also records the same no-inverse row as a QF_BV artifact:
+The pack also records both bad rows as QF_BV artifacts:
 
 ```text
 artifacts/examples/math/finite-fields-v0/smt2/composite-modulus-nonfield-bitblast-conflict.smt2
+artifacts/examples/math/finite-fields-v0/smt2/bad-inverse-candidate-bitblast-conflict.smt2
 ```
 
-The formula declares a 3-bit residue `inv`, guards it with `inv < 6`, then
-zero-extends it to 6 bits so `2*inv` is exact before `bvurem 6`. It asserts:
+The composite formula declares a 3-bit residue `inv`, guards it with `inv < 6`,
+then zero-extends it to 6 bits so `2*inv` is exact before `bvurem 6`. It
+asserts:
 
 ```text
 (2 * inv) mod 6 = 1
 ```
 
-The resource regression parses that SMT-LIB file, proves it `unsat`, exports the
-bit-blasted DIMACS plus DRAT refutation, and runs `UnsatProof::recheck` on the
-saved text. This checks the clausal refutation; the modular lowering and
+The bad candidate formula computes the fixed product exactly:
+
+```text
+3 * 4 mod 7 = 5
+3 * 4 mod 7 = 1
+```
+
+The resource regression parses the SMT-LIB files, proves them `unsat`, exports
+the bit-blasted DIMACS plus DRAT refutation, and runs `UnsatProof::recheck` on
+the saved text. This checks the clausal refutations; the modular lowering and
 bit-blast/Tseitin steps remain named trust steps until a Lean reconstruction
-covers the original formula directly.
+covers the original formulas directly.
 
 ## Run It
 
@@ -139,6 +170,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-fields-v0
 cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
+cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_bad_inverse_candidate_emits_checked_drat
 ```
 
 Expected output:
@@ -154,7 +186,7 @@ This lesson shows Axeyum's resource pattern for finite field arithmetic:
 ```text
 untrusted fast search -> inverse table or counterexample candidate
 trusted small checking -> modular products and bounded enumeration
-trusted small checking -> DIMACS/DRAT recheck for the bit-blasted no-inverse row
+trusted small checking -> DIMACS/DRAT recheck for the bit-blasted bad rows
 ```
 
 General field theory, field extensions, algebraic closure, Galois theory, and

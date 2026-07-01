@@ -52,6 +52,21 @@
       "notes": "The validator enumerates all residues modulo 6 and confirms none is an inverse for 2."
     },
     {
+      "id": "bad-prime-field-inverse-candidate-rejected",
+      "claim": "The residue 4 is a multiplicative inverse of 3 modulo 7.",
+      "expected_result": "unsat",
+      "validation": "finite_field_inverse_candidate_replay",
+      "proof_status": "checked",
+      "data": {
+        "modulus": 7,
+        "element": 3,
+        "candidate_inverse": 4,
+        "product": 5,
+        "required": 1
+      },
+      "notes": "The validator computes 3*4 mod 7 = 5, so the fixed candidate does not satisfy the inverse law."
+    },
+    {
       "id": "composite-modulus-nonfield-qf-bv-drat",
       "claim": "The non-invertibility of 2 modulo 6 lowers to a fixed-width QF_BV contradiction with checked DRAT evidence.",
       "expected_result": "unsat",
@@ -67,6 +82,26 @@
         "certificate": "export_qf_bv_unsat_proof emits a DRAT certificate for the bit-blasted CNF; UnsatProof::recheck validates the CNF refutation while modular lowering and bit-blast/Tseitin remain explicit trust steps until Lean reconstruction covers the original formula."
       },
       "notes": "The artifact quantifies a 3-bit residue inv with inv < 6, computes 2*inv exactly after zero-extension, and refutes (2*inv) mod 6 = 1 through a checked DIMACS/DRAT pair."
+    },
+    {
+      "id": "bad-prime-field-inverse-candidate-qf-bv-drat",
+      "claim": "The bad inverse-candidate row lowers to a fixed-width QF_BV contradiction with checked DRAT evidence.",
+      "expected_result": "unsat",
+      "validation": "qf_bv_bitblast_drat",
+      "proof_status": "checked",
+      "data": {
+        "modulus": 7,
+        "element": 3,
+        "candidate_inverse": 4,
+        "product": 5,
+        "required": 1,
+        "residue_width": 3,
+        "product_width": 6,
+        "smt2_artifact": "artifacts/examples/math/finite-fields-v0/smt2/bad-inverse-candidate-bitblast-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_bad_inverse_candidate_emits_checked_drat",
+        "certificate": "export_qf_bv_unsat_proof emits a DRAT certificate for the bit-blasted CNF; UnsatProof::recheck validates the CNF refutation while modular lowering and bit-blast/Tseitin remain explicit trust steps until Lean reconstruction covers the original formula."
+      },
+      "notes": "The artifact computes 3*4 mod 7 at 6-bit product width, records the replayed value 5, and refutes the false inverse target 1 through a checked DIMACS/DRAT pair."
     }
   ]
 }

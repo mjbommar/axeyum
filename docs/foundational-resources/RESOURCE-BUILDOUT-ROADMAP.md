@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 552 expected checks.
-- 236 checked proof/evidence rows.
+- 554 expected checks.
+- 238 checked proof/evidence rows.
 - 245 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1760,6 +1760,12 @@ Pick one item per commit unless the change is purely navigational.
      `math_resource_bv_routes`, and the learner page now distinguishes the
      distributivity and identity failures without promoting general ring
      theory.
+111. Landed: extend the fixed-width finite-field QF_BV/DRAT lane with the
+     `bad-prime-field-inverse-candidate-qf-bv-drat` row in
+     `finite-fields-v0`. Finite replay isolates `3*4 mod 7 = 5` while the bad
+     inverse claim requires `1`; the new SMT-LIB artifact is checked by
+     `math_resource_bv_routes`, and the learner page keeps the prime-field bad
+     candidate distinct from the composite-modulus no-inverse row.
 
 ## Validation Checklist
 

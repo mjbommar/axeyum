@@ -2488,6 +2488,34 @@ def validate_finite_fields(expected: dict[str, Any]) -> None:
     if has_mod_inverse(element, modulus):
         fail(f"element {element} unexpectedly has an inverse modulo {modulus}")
 
+    bad_inverse = checks["bad-prime-field-inverse-candidate-rejected"]
+    if bad_inverse["expected_result"] != "unsat":
+        fail("bad-prime-field-inverse-candidate-rejected must expect unsat")
+    if bad_inverse["proof_status"] != "checked":
+        fail("bad-prime-field-inverse-candidate-rejected must be checked")
+    if bad_inverse["validation"] != "finite_field_inverse_candidate_replay":
+        fail("bad-prime-field-inverse-candidate-rejected must use finite_field_inverse_candidate_replay validation")
+    data = bad_inverse.get("data", {})
+    modulus = require_modulus("bad inverse candidate modulus", data.get("modulus"))
+    if not is_prime(modulus):
+        fail("bad-prime-field-inverse-candidate-rejected must use a prime modulus")
+    element = require_int("bad inverse candidate element", data.get("element"))
+    candidate_inverse = require_int(
+        "bad inverse candidate candidate_inverse", data.get("candidate_inverse")
+    )
+    product_value = require_int("bad inverse candidate product", data.get("product"))
+    required_value = require_int("bad inverse candidate required", data.get("required"))
+    for label, value in (("element", element), ("candidate_inverse", candidate_inverse)):
+        if value <= 0 or value >= modulus:
+            fail(f"bad-prime-field-inverse-candidate-rejected {label} must be a nonzero residue")
+    if required_value != 1:
+        fail("bad-prime-field-inverse-candidate-rejected required value must be 1")
+    computed_product = (element * candidate_inverse) % modulus
+    if computed_product != product_value:
+        fail("bad-prime-field-inverse-candidate-rejected product does not match modular replay")
+    if product_value == required_value:
+        fail("bad-prime-field-inverse-candidate-rejected candidate unexpectedly is an inverse")
+
     qf_bv = checks["composite-modulus-nonfield-qf-bv-drat"]
     if qf_bv["expected_result"] != "unsat":
         fail("composite-modulus-nonfield-qf-bv-drat must expect unsat")
@@ -2521,6 +2549,51 @@ def validate_finite_fields(expected: dict[str, Any]) -> None:
     require_string("composite-modulus-nonfield-qf-bv-drat certificate", certificate)
     if "DRAT" not in certificate or "bit-blast/Tseitin" not in certificate:
         fail("composite-modulus-nonfield-qf-bv-drat certificate must document DRAT and lowering trust")
+
+    inverse_qf_bv = checks["bad-prime-field-inverse-candidate-qf-bv-drat"]
+    if inverse_qf_bv["expected_result"] != "unsat":
+        fail("bad-prime-field-inverse-candidate-qf-bv-drat must expect unsat")
+    if inverse_qf_bv["proof_status"] != "checked":
+        fail("bad-prime-field-inverse-candidate-qf-bv-drat must be checked")
+    if inverse_qf_bv["validation"] != "qf_bv_bitblast_drat":
+        fail("bad-prime-field-inverse-candidate-qf-bv-drat must use qf_bv_bitblast_drat validation")
+    data = inverse_qf_bv.get("data", {})
+    modulus = require_modulus("bad inverse candidate QF_BV modulus", data.get("modulus"))
+    if not is_prime(modulus):
+        fail("bad-prime-field-inverse-candidate-qf-bv-drat must use a prime modulus")
+    element = require_int("bad inverse candidate QF_BV element", data.get("element"))
+    candidate_inverse = require_int(
+        "bad inverse candidate QF_BV candidate_inverse", data.get("candidate_inverse")
+    )
+    product_value = require_int("bad inverse candidate QF_BV product", data.get("product"))
+    required_value = require_int("bad inverse candidate QF_BV required", data.get("required"))
+    for label, value in (("element", element), ("candidate_inverse", candidate_inverse)):
+        if value <= 0 or value >= modulus:
+            fail(f"bad-prime-field-inverse-candidate-qf-bv-drat {label} must be a nonzero residue")
+    if required_value != 1:
+        fail("bad-prime-field-inverse-candidate-qf-bv-drat required value must be 1")
+    computed_product = (element * candidate_inverse) % modulus
+    if computed_product != product_value:
+        fail("bad-prime-field-inverse-candidate-qf-bv-drat product does not match modular replay")
+    if product_value == required_value:
+        fail("bad-prime-field-inverse-candidate-qf-bv-drat candidate unexpectedly is an inverse")
+    residue_width = require_int("bad inverse candidate QF_BV residue_width", data.get("residue_width"))
+    product_width = require_int("bad inverse candidate QF_BV product_width", data.get("product_width"))
+    if 2**residue_width <= modulus:
+        fail("bad-prime-field-inverse-candidate-qf-bv-drat residue_width must encode every residue")
+    if 2**product_width <= element * candidate_inverse:
+        fail("bad-prime-field-inverse-candidate-qf-bv-drat product_width must encode the product exactly")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad-prime-field-inverse-candidate-qf-bv-drat smt2_artifact", smt2_artifact)
+    check_source("bad-prime-field-inverse-candidate-qf-bv-drat smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("bad-prime-field-inverse-candidate-qf-bv-drat proof_regression", proof_regression)
+    if "finite_fields_bad_inverse_candidate_emits_checked_drat" not in proof_regression:
+        fail("bad-prime-field-inverse-candidate-qf-bv-drat proof_regression must name the BV route test")
+    certificate = data.get("certificate")
+    require_string("bad-prime-field-inverse-candidate-qf-bv-drat certificate", certificate)
+    if "DRAT" not in certificate or "bit-blast/Tseitin" not in certificate:
+        fail("bad-prime-field-inverse-candidate-qf-bv-drat certificate must document DRAT and lowering trust")
 
 
 def require_cayley_table(

@@ -42,8 +42,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 552 expected checks.
-- 236 checked proof/evidence rows.
+- 554 expected checks.
+- 238 checked proof/evidence rows.
 - 245 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -853,6 +853,11 @@ Pick one row per commit unless the change is purely navigational.
     then isolates `1*1=0` while the claimed identity law requires `1`; the
     source SMT-LIB artifact and `math_resource_bv_routes` regression check the
     resulting one-bit contradiction without promoting general ring theory.
+100. Landed: extend `finite-fields-v0` with a bad prime-field inverse-candidate
+     row. Finite replay computes `3*4 mod 7 = 5` while the false inverse claim
+     requires `1`; the new fixed-width SMT-LIB artifact is checked by
+     `math_resource_bv_routes`, and the learner pages now distinguish this
+     bad-candidate pressure from the existing composite no-inverse row.
 
 ## Validation Checklist
 

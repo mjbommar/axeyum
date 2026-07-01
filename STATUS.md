@@ -211,8 +211,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   isolates `1*1=0` while the identity law requires `1`; the new SMT-LIB
   artifact is checked by `math_resource_bv_routes` through DIMACS/DRAT
   evidence, and the pack validator, learner page, generated dashboards,
-  buildout ledgers, `PLAN.md`, and public query counts now reflect
+  buildout ledgers, `PLAN.md`, and public query counts advanced to
   552 expected checks and 236 checked rows.
+
+- **Finite-fields bad inverse-candidate QF_BV row landed.**
+  `finite-fields-v0` now has a second fixed-width finite-field contradiction:
+  exact replay computes `3*4 mod 7 = 5` while the false inverse claim requires
+  `1`. The new SMT-LIB artifact is checked by `math_resource_bv_routes`
+  through DIMACS/DRAT evidence, and the pack validator, learner pages,
+  generated dashboards, buildout ledgers, `PLAN.md`, and public query counts
+  now reflect 554 expected checks and 238 checked rows.
 
 - **Bad finite group-homomorphism Alethe row landed.**
   `finite-algebra-homomorphisms-v0` now has a second source-linked
@@ -299,7 +307,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   the practical plan for turning the math curriculum into educational content,
   ontology/bridge rows, example packs, proof artifacts, solver-feedback rows,
   rules/law transfer examples, and eventual library boundaries. The document
-  records the current 111-concept / 108-pack / 552-check / 108-promoted-pack
+  records the current 111-concept / 108-pack / 554-check / 108-promoted-pack
   baseline, R0-R6 gates, staged learner/proof/solver work, field-specific next
   work for delta-epsilon balls, graph runtime pathologies, random matrices,
   LU/matrix computation, topology quotients, Chebyshev/operator rows, and
@@ -1232,9 +1240,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **QF_BV bit-blast certificate anatomy learner page landed.**
   [`qf-bv-bitblast-certificate-anatomy-end-to-end.md`](docs/learn/math/qf-bv-bitblast-certificate-anatomy-end-to-end.md)
-  now follows `finite-fields-v0` from the fixed-width composite-modulus
-  no-inverse row through source SMT-LIB, generated DIMACS/DRAT evidence, and
-  same-artifact truncated-DRAT rejection. The BV route regression already
+  now follows `finite-fields-v0` from fixed-width finite-field BV rows through
+  source SMT-LIB, generated DIMACS/DRAT evidence, and same-artifact
+  truncated-DRAT rejection. The BV route regression already
   includes `qf_bv_resource_route_rejects_tampered_drat_certificate`, which
   checks the genuine proof first, removes the final DRAT step, and requires the
   corrupted certificate to reject.

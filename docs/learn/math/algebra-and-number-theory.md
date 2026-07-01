@@ -76,7 +76,8 @@ pack adds exact divisibility and fixed linear Diophantine checks. The
 number-theory pack adds bounded CRT
 compatibility, quadratic residues, sum-of-two-squares, and Diophantine replay.
 The finite-fields pack adds a complete inverse table for `F_7`, exhaustive
-distributivity checking in `F_5`, and a `Z/6Z` non-field contrast.
+distributivity checking in `F_5`, a `Z/6Z` non-field contrast, and a checked
+bad inverse-candidate row inside `F_7`.
 The polynomial pack adds exact coefficient replay, factor-theorem witnesses, and
 fixed false-root rejection. The rational polynomial-factorization pack adds
 factor-list product replay, polynomial long division, Euclidean GCD replay,
@@ -306,7 +307,8 @@ inverse in `F_7`:
 ```
 
 It also checks that no residue `b` satisfies `2*b == 1 mod 6`, showing the
-fixed composite modulus is not a field.
+fixed composite modulus is not a field, and rejects the bad `F_7` inverse
+candidate `4` for `3` because `3*4 == 5 mod 7`, not `1`.
 
 For a polynomial-flavored algebra example, the polynomial pack encodes
 `x^2 - 5x + 6` as `[6, -5, 1]`, checks `p(2) = 0`, and verifies:
