@@ -45,7 +45,7 @@ with prose, fix the JSON, metadata, generator, or prose source.
 
 As of 2026-07-01, the public resource query reports:
 
-- 117 concept rows: 23 curriculum nodes, 18 math fields, 71 bridge concepts, and
+- 118 concept rows: 23 curriculum nodes, 18 math fields, 72 bridge concepts, and
   5 example families.
 - 108 non-template math packs.
 - 632 expected checks: 334 `sat`, 227 `unsat`, and 71 `not-run`.
@@ -153,8 +153,10 @@ Priority work:
 1. Use algebra-table packs to keep QF_UF/Alethe and QF_BV routes exercised.
 2. Use divisibility/counting/torsion rows to keep QF_LIA/Diophantine evidence
    visible.
-3. Add recurrence/asymptotic bridge rows only when they serve graph search,
-   generating functions, or probability resources.
+3. Maintain the landed bounded-family/asymptotic boundary bridge for graph
+   search, recurrence prefixes, generating-function coefficient windows,
+   bounded dynamics, and Euler rows; add narrower rows only if a new family
+   creates distinct proof or solver pressure.
 
 ### Layer 3: Destinations
 

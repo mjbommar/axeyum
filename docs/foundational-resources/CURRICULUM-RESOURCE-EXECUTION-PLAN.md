@@ -246,6 +246,11 @@ Add bridge-concept or example-family rows for repeated subtopics:
   metric continuity with checked QF_LRA/Farkas bad-delta evidence, finite
   compactness with checked Bool/CNF bad-cover evidence, finite connectedness,
   and finite integration;
+- finite families/asymptotic boundaries: landed
+  `bridge_bounded_family_asymptotic_boundary` for finite BFS/DFS runtime
+  counters, recurrence prefixes, fixed coefficient windows, bounded dynamics,
+  and finite Euler error rows, keeping asymptotic runtime, closed forms,
+  convergence rates, and limiting theorem claims in the Lean-horizon lane;
 - linear algebra: landed bridge rows for LU replay, rank/nullity, residual
   bounds, eigenpair witnesses, characteristic-polynomial replay, and finite
   random-matrix moments, with dual spaces, inner products, tensor maps, and

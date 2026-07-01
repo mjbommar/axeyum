@@ -52,7 +52,7 @@ As of 2026-07-01, the committed resource query reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 71 bridge-concept rows.
+- 72 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
 - 632 expected checks.
@@ -272,8 +272,8 @@ Next useful increments:
 
 - orbit-stabilizer and Burnside refinements only if they serve multiple packs;
 - polynomial-resultant/discriminant rows if they produce real NRA/RCF pressure;
-- recurrence/asymptotic bridge rows tied to graph-search and generating-function
-  examples.
+- the landed bounded-family/asymptotic boundary bridge, tied to graph-search,
+  recurrence-prefix, generating-function, bounded-dynamics, and Euler examples.
 
 ### Layer 3: Destinations
 

@@ -63,12 +63,16 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_finite_i
 python3 scripts/query-foundational-resources.py fields --field discrete_math --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field discrete_math --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field discrete_math --text counting --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field discrete_math --text asymptotic --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field discrete_math --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_counting_replay --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_counting_replay --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_counting_replay --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_bounded_family_asymptotic_boundary --route LIA --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_bounded_family_asymptotic_boundary --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field differential_equations_and_dynamical_systems --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field differential_equations_and_dynamical_systems --text Euler --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field differential_equations_and_dynamical_systems --text asymptotic --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field differential_equations_and_dynamical_systems --text stochastic --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_dynamics_euler_replay --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked --require-any >/dev/null
@@ -195,6 +199,7 @@ python3 scripts/query-foundational-resources.py fields --field graph_theory --ro
 python3 scripts/query-foundational-resources.py concepts --field graph_theory --text graph --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field graph_theory --text reachability --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field graph_theory --text runtime --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field graph_theory --text asymptotic --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route LIA --proof-status checked --require-any >/dev/null

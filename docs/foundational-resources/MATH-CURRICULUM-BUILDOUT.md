@@ -1394,7 +1394,7 @@ Possible boundaries:
 Exit criteria:
 
 - At least 40 validated concept rows.
-  Status: 117 atlas rows validate, including generated bridge-concept rows for
+  Status: 118 atlas rows validate, including generated bridge-concept rows for
   finite model replay, counterexample proof, bounded theorem shadows,
   refutation-as-query, finite proof-pattern replay, finite quantifier
   expansion, bounded induction obligations, Boolean CNF DRAT/LRAT anatomy,
@@ -1403,7 +1403,7 @@ Exit criteria:
   Alethe certificate anatomy, QF_BV bit-blast
   certificate anatomy, gcd/divisibility witnesses, modular CRT/inverse
   witnesses, finite counting replay, finite graph replay/obstruction, finite
-  dynamics/Euler replay, finite Boolean algebra, finite
+  dynamics/Euler replay, bounded-family/asymptotic boundaries, finite Boolean algebra, finite
   partition/relation roundtrips, finite
   image/preimage/inverse tables, finite
   bijection/cardinality, cardinality theorem horizons, metric balls, bounded
@@ -2573,6 +2573,13 @@ checked QF_LRA/Farkas row: `bad-projected-decrease-rejected` in
 and projected decrease `3`, while the malformed row claims decrease `4`, so the
 resource now covers both projection-feasibility and projected-decrease
 refutations without claiming projected-gradient convergence or rate theorems.
+The concept atlas now also has a bounded-family/asymptotic boundary bridge:
+`bridge_bounded_family_asymptotic_boundary` groups finite BFS/DFS runtime
+counters, finite recurrence prefixes, fixed coefficient windows, bounded
+dynamics traces, and finite Euler error rows under one queryable concept. It
+keeps exact finite replay plus checked LIA/Farkas rows separate from
+asymptotic runtime, closed-form recurrence, convergence-rate, and limiting
+theorem claims.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

@@ -2720,6 +2720,133 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_bounded_family_asymptotic_boundary",
+        "title": "Bounded Family And Asymptotic Boundary",
+        "field_ids": [
+            "discrete_math",
+            "graph_theory",
+            "real_analysis",
+            "numerical_analysis",
+            "differential_equations_and_dynamical_systems",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "A bounded-family row fixes a finite graph size, recurrence "
+            "prefix, coefficient window, time horizon, or iteration count and "
+            "states exactly what Axeyum replays or certifies. It is the shared "
+            "vocabulary for examples that are useful finite checks but not "
+            "asymptotic runtime, convergence-rate, closed-form, or limiting "
+            "distribution theorems."
+        ),
+        "prerequisites": [
+            "bridge_finite_counting_replay",
+            "bridge_finite_graph_replay_obstruction",
+            "bridge_bounded_theorem_shadow",
+            "curriculum_counting",
+            "curriculum_sequences_and_limits",
+        ],
+        "unlocks": [
+            "bridge_sequence_tail_shadow",
+            "bridge_finite_dynamics_euler_replay",
+            "bridge_lean_horizon",
+            "field_discrete_math",
+            "field_graph_theory",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite family enumeration",
+            "bounded graph traversal counters",
+            "finite recurrence prefixes",
+            "QF_LIA counters",
+            "QF_LRA exact rational recurrence checks",
+            "finite replay",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "graph-search-runtime-v0",
+                "Finite BFS/DFS traversal and checked bad DFS cost-bound rows, with asymptotic traversal theorems kept out of scope.",
+            ),
+            (
+                "finite-recurrence-prefix-v0",
+                "Finite Fibonacci and affine recurrence prefixes plus checked bad finite-value and bad affine-step rows.",
+            ),
+            (
+                "generating-functions-v0",
+                "Fixed coefficient extraction and finite Cauchy-product rows, with general generating-function identities kept as proof horizons.",
+            ),
+            (
+                "bounded-dynamics-v0",
+                "Fixed finite transition traces, threshold reachability, and invariant-bound rows.",
+            ),
+            (
+                "finite-euler-method-v0",
+                "Fixed-step explicit Euler transitions and finite error-table rows.",
+            ),
+            (
+                "counting-v0",
+                "Finite enumeration and pigeonhole rows that state the checked size rather than an asymptotic family theorem.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "bounded finite-family replay plus LIA/LRA certificates with Lean theorem horizon",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py plus math_resource_lia_routes and math_resource_lra_routes",
+                "lean_status": "required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/graph-traversal-runtime-index.md",
+                    "docs/learn/math/finite-recurrence-prefix-end-to-end.md",
+                    "docs/learn/math/generating-functions-end-to-end.md",
+                    "docs/learn/math/bounded-dynamics-end-to-end.md",
+                    "docs/learn/math/finite-euler-method-end-to-end.md",
+                    "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+                    "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker recomputes the listed family member, "
+                    "prefix, count, or time step. Negative rows graduate only "
+                    "when the bounded arithmetic conflict has checked LIA or "
+                    "Farkas evidence; asymptotic and convergence claims remain "
+                    "Lean-horizon resources."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/graph-traversal-runtime-index.md",
+            "docs/learn/math/finite-recurrence-prefix-end-to-end.md",
+            "docs/learn/math/generating-functions-end-to-end.md",
+            "docs/learn/math/bounded-dynamics-end-to-end.md",
+            "docs/learn/math/finite-euler-method-end-to-end.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "A checked finite family member does not prove an asymptotic runtime bound, recurrence closed form, convergence rate, or limiting theorem.",
+            "Average-case algorithms, randomized processes, numerical stability, and convergence rates require separate benchmark, numerical-honesty, or Lean-horizon artifacts.",
+            "When a bounded row becomes a solver regression, the source pack must still state the fixed size or horizon that was actually checked.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite family parameter, horizon, prefix, or iteration count.",
+                "Validators recompute the listed finite member or exact arithmetic obligation before trusting any solver result.",
+                "General asymptotic, closed-form, convergence, or limiting claims stay linked to Lean-horizon resources.",
+            ],
+        },
+    },
+    {
         "id": "bridge_cardinality_theorem_horizon",
         "title": "Cardinality Theorem Horizon",
         "field_ids": ["set_theory_and_foundations", "logic_and_proof", "discrete_math"],

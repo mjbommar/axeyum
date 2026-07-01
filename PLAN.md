@@ -225,7 +225,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-117 concept rows, 108 non-template packs, 632 expected checks (334 `sat`,
+118 concept rows, 108 non-template packs, 632 expected checks (334 `sat`,
 227 `unsat`, 71 `not-run`), 309 checked rows, 252 replay-only rows, and 71
 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
@@ -246,7 +246,12 @@ reciprocal-tail bound row through QF_LRA/Farkas after exact replay computes
 `a_2 = 1/3` while the bad row claims the distance is strictly below `1/4`.
 The analysis bridge lane now also makes rational interval replay, sequence-tail
 shadows, Cauchy-tail shadows, squeeze shadows, derivative-identity shadows, and
-integration horizons first-class atlas concepts. The finite
+integration horizons first-class atlas concepts. The bounded-family/asymptotic
+boundary lane now also makes finite BFS/DFS runtime counters, finite recurrence
+prefixes, fixed coefficient windows, bounded dynamics traces, and finite Euler
+error rows queryable as one bridge concept while keeping asymptotic runtime,
+closed-form recurrence, convergence-rate, and limiting theorem claims in the
+Lean-horizon lane. The finite
 order/lattice lane now also promotes the false Boolean-lattice top-element row
 through Bool/CNF DRAT/LRAT after exact relation replay isolates `B !<= A`
 while the bad claim that `A` is top requires `B <= A`. The modular-arithmetic

@@ -41,7 +41,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 71 bridge-concept rows.
+- 72 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
 - 632 expected checks.
@@ -104,7 +104,7 @@ Last row closed:
 
 | Pack | Upgrade Trigger |
 |---|---|
-| analysis bridge concepts | generated `bridge_rational_interval_replay`, `bridge_sequence_tail_shadow`, `bridge_cauchy_tail_shadow`, `bridge_squeeze_shadow`, `bridge_derivative_identity_shadow`, and `bridge_integration_horizon`, making reusable finite-analysis vocabulary queryable across existing packs |
+| bounded-family/asymptotic bridge | generated `bridge_bounded_family_asymptotic_boundary`, making finite graph-runtime, recurrence-prefix, coefficient-window, bounded-dynamics, and Euler-step rows queryable while preserving asymptotic and convergence claims as Lean horizons |
 
 Exit criteria:
 
@@ -211,8 +211,8 @@ Exit criteria:
 |---|---|---|---|
 | `logic_and_proof` | SAT, refutation, finite proof patterns, induction bounds | maintain proof-object anatomy bridge rows and PHP CNF promotions | Bool/CNF DRAT/LRAT, QF_LIA, Lean horizon |
 | `set_theory_and_foundations` | finite sets, relations, functions, quotients, lattices, cardinality | maintain landed finite Boolean algebra, partition/relation, image/preimage/inverse, finite cardinality, and cardinality-horizon bridge rows | finite replay, Bool/CNF, QF_UF/Alethe, Lean horizon |
-| `discrete_math` | counting, generating functions, graph resources, finite actions | maintain landed finite-counting replay bridge and add new rows only for distinct counting, recurrence, or asymptotic-boundary pressure | Bool/CNF, QF_LIA, finite replay |
-| `graph_theory` | coloring, reachability, search runtime, matching, cuts, d-separation | maintain landed finite graph replay/obstruction bridge; add theorem/asymptotic horizons only as proof targets | Bool/CNF, QF_BV, QF_LIA, finite replay |
+| `discrete_math` | counting, generating functions, graph resources, finite actions | maintain landed finite-counting replay and bounded-family/asymptotic-boundary bridges; add new rows only for distinct counting, recurrence, or family-boundary pressure | Bool/CNF, QF_LIA, QF_LRA/Farkas, finite replay |
+| `graph_theory` | coloring, reachability, search runtime, matching, cuts, d-separation | maintain landed finite graph replay/obstruction and bounded-family/asymptotic-boundary bridges; add theorem/asymptotic horizons only as proof targets | Bool/CNF, QF_BV, QF_LIA, finite replay |
 | `number_theory` | gcd, modular arithmetic, residues, bounded Diophantine checks | group recurring divisibility and residue obstructions; modular Fermat-unit search now has a fixed-width QF_BV/DRAT row | QF_LIA/Diophantine, QF_BV |
 | `linear_algebra` | exact matrices, vector spaces, duals, modules, tensors, spectral rows, active-set QP rows, SDP rows, descent-step rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | make matrix rows queryable by computation type and solver route | QF_LRA/Farkas, finite replay, QF_UF/Alethe |
 | `abstract_algebra` | finite groups/rings/fields, homomorphisms, ideals, modules, tensors | add narrower rows only when multiple packs reuse them | QF_UF/Alethe, QF_BV, finite replay |
@@ -224,7 +224,7 @@ Exit criteria:
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | LP objective/Farkas, rational convexity/gradient bridge rows with checked bad midpoint and affine-threshold evidence, finite root-finding step and bisection-width replay, finite hyperplane-separation replay, finite KKT replay with checked bad stationarity and complementarity evidence, finite active-set QP face/slack replay with checked bad free-gradient, bad inactive-slack, and bad degenerate-multiplier rows, finite degenerate active-bound replay, finite SDP primal/dual replay with checked bad objective, bad duality-gap, and bad slack-entry rows, finite gradient-descent replay with checked bad decrease, bad step-coordinate, and bad descent-bound rows, finite Armijo line-search replay with checked bad Armijo, bad descent-direction, and bad accepted-candidate rows, finite Wolfe line-search replay with checked bad minimizer, bad sufficient-decrease, and bad curvature rows, finite projected-gradient interval/decrease replay with checked bad projection and bad projected-decrease rows, finite proximal soft-threshold/composite-decrease replay, and finite box-plus-L1 proximal replay landed with checked bad proximal-point, bad composite-decrease, and bad box-proximal-point rows; add only distinct duality, working-set pivots, higher-dimensional SDP, strong-Wolfe/nonconvex line-search, group-lasso, active-set proximal, or stochastic/convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | maintain landed finite dynamics/Euler bridge and keep numerical-honesty rows distinct from promoted exact residual/error certificates; bounded dynamics now checks false transition-step, threshold-step, and invariant-bound arithmetic, finite line-search and finite Wolfe now check descent-direction, accepted-candidate, exact-minimizer, sufficient-decrease, and curvature arithmetic conflicts, and finite proximal-gradient now checks false composite-decrease arithmetic | QF_LRA/Farkas, replay, Lean horizon |
-| `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | maintain landed finite dynamics/Euler bridge; bounded dynamics now has checked bad transition-step, bad threshold-step, and bad invariant-bound rows; add only distinct transition, reachability, invariant, stochastic, or finite-error pressure | QF_LRA/Farkas, replay, Lean horizon |
+| `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | maintain landed finite dynamics/Euler and bounded-family/asymptotic-boundary bridges; bounded dynamics now has checked bad transition-step, bad threshold-step, and bad invariant-bound rows; add only distinct transition, reachability, invariant, stochastic, finite-error, or theorem-boundary pressure | QF_LRA/Farkas, replay, Lean horizon |
 | `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, circle, inversion, and cyclic rational geometry | maintain landed coordinate/oriented replay and finite circle/inversion/cyclic replay bridge rows; add only distinct nontrivial affine-coordinate, circle-line correspondence, higher-degree polynomial-geometry, or theorem-reconstruction pressure beyond the current midpoint-coordinate, area-scaling, circle-line, square angle-dot, and Ptolemy rows | QF_LRA/Farkas, finite replay |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now has checked bad `l1` norm, bad operator-bound, and bad Chebyshev-prefix rows, inner-product now has checked bad negative-norm and projection-orthogonality rows, and finite-Chebyshev now has checked duplicate-node, bad-interpolation, and bad-alternation rows; add only distinct norm, projection, recurrence, alternation variants, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
 
@@ -1298,6 +1298,13 @@ Pick one row per commit unless the change is purely navigational.
      probability packs discoverable by reusable concept rather than by pack id,
      while keeping convergence, completeness, differentiability, integration,
      FTC, and measure-theoretic limit theorems in the Lean-horizon lane.
+159. Landed: add the generated bounded-family/asymptotic boundary bridge row.
+     `bridge_bounded_family_asymptotic_boundary` makes finite BFS/DFS runtime
+     counters, recurrence prefixes, fixed generating-function coefficient
+     windows, bounded dynamics traces, and finite Euler error rows queryable by
+     one concept. Concept-scoped LIA and Farkas queries now find checked rows
+     while asymptotic runtime, recurrence closed forms, convergence rates, and
+     limiting theorem claims remain Lean-horizon.
 
 ## Validation Checklist
 

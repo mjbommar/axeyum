@@ -47,7 +47,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 71 bridge-concept rows.
+- 72 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
 - 632 expected checks.
@@ -474,9 +474,10 @@ Build next:
 
 - Landed finite-counting replay bridge row for finite enumeration, pigeonhole,
   double counting, coefficient extraction, finite orbit counts, and exact
-  finite tail counts; add recurrence/asymptotic horizon rows only when reused.
-- Add one reusable "bounded family vs asymptotic theorem" bridge row for graph
-  search and recurrences.
+  finite tail counts.
+- Landed reusable bounded-family/asymptotic-boundary bridge row for finite graph
+  search, recurrence prefixes, generating-function coefficient windows,
+  bounded dynamics, and Euler rows.
 - Promote finite counting contradictions through CNF/LRAT or LIA when they
   produce small certificates.
 
@@ -2029,6 +2030,13 @@ Pick one item per commit unless the change is purely navigational.
      the new source SMT-LIB artifact reaches independently checked
      QF_LRA/Farkas evidence through
      `numerical_linear_algebra_bad_solution_box_upper_bound_artifact_emits_checked_farkas`.
+139. Landed: add the generated bounded-family/asymptotic boundary bridge row.
+     `bridge_bounded_family_asymptotic_boundary` makes finite BFS/DFS runtime
+     counters, recurrence prefixes, fixed coefficient windows, bounded
+     dynamics traces, and finite Euler error rows discoverable by one concept.
+     Concept-scoped LIA and Farkas queries now return checked rows while
+     asymptotic runtime, closed-form recurrence, convergence-rate, and
+     limiting theorem claims remain proof-horizon work.
 
 ## Validation Checklist
 

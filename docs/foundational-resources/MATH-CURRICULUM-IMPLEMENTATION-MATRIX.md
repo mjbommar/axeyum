@@ -633,7 +633,13 @@ Build sequence:
     torsion lookup and concept-scoped Diophantine route queries while keeping
     general Smith normal form, universal coefficients, Ext/Tor functor laws,
     exact sequences, and homology invariance in the Lean-horizon lane.
-65. Revisit crate/repo boundaries only after three real consumers or repeated
+65. Landed: add the bounded-family/asymptotic boundary bridge row.
+    `bridge_bounded_family_asymptotic_boundary` groups finite graph-runtime
+    counters, recurrence prefixes, fixed coefficient windows, bounded dynamics,
+    and finite Euler rows, with concept-scoped LIA and Farkas checked-row
+    queries and theorem-scale runtime/convergence/asymptotic claims kept in the
+    Lean-horizon lane.
+66. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

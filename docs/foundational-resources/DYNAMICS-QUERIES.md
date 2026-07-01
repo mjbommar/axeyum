@@ -55,6 +55,7 @@ needs concrete checked rows to display.
 | Family | Concept Or Pack Filter | Route Filter | Start Query |
 |---|---|---|---|
 | Finite recurrences, transition steps, invariants, and Euler rows | `bridge_finite_dynamics_euler_replay` | `Farkas` | `checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked` |
+| Bounded family rows versus convergence/asymptotic theorem boundaries | `bridge_bounded_family_asymptotic_boundary` | `Farkas`; `LIA` | `checks --concept bridge_bounded_family_asymptotic_boundary --route Farkas --proof-status checked`; `checks --concept bridge_bounded_family_asymptotic_boundary --route LIA --proof-status checked` |
 | Stochastic kernels, Markov chains, and hitting-time equations | `bridge_stochastic_kernel` | `Farkas` | `checks --concept bridge_stochastic_kernel --route Farkas --proof-status checked` |
 | Bounded deterministic dynamics display rows | pack `bounded-dynamics-v0` | `Farkas` | `checks --pack bounded-dynamics-v0 --route Farkas --proof-status checked` |
 | Bounded threshold-step refutations | pack `bounded-dynamics-v0` | `Farkas` | `checks --pack bounded-dynamics-v0 --route Farkas --proof-status checked --text threshold` |
@@ -89,6 +90,22 @@ Display finite recurrence, transition, invariant, and Euler rows:
 ```sh
 python3 scripts/query-foundational-resources.py checks \
   --concept bridge_finite_dynamics_euler_replay \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+```
+
+Display finite-family rows that deliberately stop before convergence,
+closed-form, or asymptotic theorem claims:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field differential_equations_and_dynamical_systems \
+  --text asymptotic \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_bounded_family_asymptotic_boundary \
   --route Farkas \
   --proof-status checked \
   --require-any

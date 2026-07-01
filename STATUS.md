@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Bounded-family/asymptotic bridge row landed.**
+  The generated concept atlas now includes
+  `bridge_bounded_family_asymptotic_boundary`, grouping finite BFS/DFS runtime
+  counters, finite recurrence prefixes, fixed coefficient windows, bounded
+  dynamics traces, and finite Euler error rows under one reusable concept.
+  The row makes existing checked LIA and Farkas rows queryable by concept while
+  keeping asymptotic runtime, closed-form recurrence, convergence-rate, and
+  limiting theorem claims in the Lean-horizon lane. The public summary now
+  reports 118 concept rows: 23 curriculum nodes, 18 field rows, 72 bridge
+  concepts, and 5 example-family rows; pack and check counts remain 108 packs,
+  632 expected checks, 309 checked rows, 252 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Analysis bridge-concept rows landed.**
   The generated concept atlas now includes six reusable analysis bridge rows:
   `bridge_rational_interval_replay`, `bridge_sequence_tail_shadow`,
@@ -213,10 +226,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   These rows make rational intervals, finite tails, Cauchy-tail enumeration,
   squeeze-style side conditions, symbolic derivative samples, finite integrals,
   and theorem-horizon boundaries queryable across existing packs without
-  creating new solver artifacts. The public summary now reports 117 concept
-  rows: 23 curriculum nodes, 18 field rows, 71 bridge concepts, and 5
-  example-family rows; pack and check counts remain 108 packs, 632 expected
-  checks, 309 checked rows, 252 replay-only rows, and 71 Lean-horizon rows.
+  creating new solver artifacts. For that increment, the public summary
+  reported 117 concept rows: 23 curriculum nodes, 18 field rows, 71 bridge
+  concepts, and 5 example-family rows; pack and check counts remained
+  108 packs, 632 expected checks, 309 checked rows, 252 replay-only rows, and
+  71 Lean-horizon rows.
 
 - **Sequence-limit bad reciprocal-tail QF_LRA row landed.**
   `sequence-limit-shadow-v0` now includes a checked rejection for a malformed
@@ -226,9 +240,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   start, witness index, limit, epsilon, witness value, tail distance, positive
   excess, source SMT-LIB artifact, and route regression. The shared
   `math_resource_lra_routes` regression parses the new QF_LRA artifact and
-  checks the `UnsatFarkas` evidence. Generated dashboards and the public query
-  summary now report 117 concept rows, 108 non-template packs, 632 expected
-  checks, 309 checked rows, 252 replay-only rows, and 71 Lean-horizon rows.
+  checks the `UnsatFarkas` evidence. For that increment, generated dashboards
+  and the public query summary reported 117 concept rows, 108 non-template
+  packs, 632 expected checks, 309 checked rows, 252 replay-only rows, and
+  71 Lean-horizon rows.
 
 - **Metric-continuity bad open-ball-preimage QF_LRA row landed.**
   `metric-continuity-v0` now includes a checked rejection for a malformed

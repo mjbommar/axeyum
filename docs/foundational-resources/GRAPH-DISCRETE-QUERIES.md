@@ -63,6 +63,7 @@ needs concrete checked rows to display.
 | Coloring, reachability, matching, cut, and d-separation refutations | `bridge_finite_graph_replay_obstruction` | `boolean` | `checks --concept bridge_finite_graph_replay_obstruction --route boolean --proof-status checked` |
 | Fixed-width graph-coloring encodings | `bridge_finite_graph_replay_obstruction` | `qf-bv` | `checks --concept bridge_finite_graph_replay_obstruction --route qf-bv --proof-status checked` |
 | BFS/DFS finite traversal cost counters | `bridge_finite_graph_replay_obstruction` | `LIA` | `checks --concept bridge_finite_graph_replay_obstruction --route LIA --proof-status checked` |
+| Bounded family rows versus asymptotic theorem boundaries | `bridge_bounded_family_asymptotic_boundary` | `LIA`; `Farkas` | `checks --concept bridge_bounded_family_asymptotic_boundary --route LIA --proof-status checked`; `checks --concept bridge_bounded_family_asymptotic_boundary --route Farkas --proof-status checked` |
 | All checked graph rows | field `graph_theory` | any route | `checks --field graph_theory --expected-result unsat --proof-status checked` |
 | Runtime-specific rows | pack `graph-search-runtime-v0` | `LIA` | `checks --pack graph-search-runtime-v0 --route LIA --proof-status checked` |
 | Coloring-specific rows | pack `graph-coloring-v0` | `boolean`; `qf-bv` | `checks --pack graph-coloring-v0 --route boolean --proof-status checked`; `checks --pack graph-coloring-v0 --route qf-bv --proof-status checked` |
@@ -116,6 +117,28 @@ python3 scripts/query-foundational-resources.py checks \
 python3 scripts/query-foundational-resources.py checks \
   --pack graph-search-runtime-v0 \
   --route LIA \
+  --proof-status checked \
+  --require-any
+```
+
+Display bounded-family rows that are useful finite checks but not asymptotic
+theorems:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field graph_theory \
+  --text asymptotic \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_bounded_family_asymptotic_boundary \
+  --route LIA \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_bounded_family_asymptotic_boundary \
+  --route Farkas \
   --proof-status checked \
   --require-any
 ```
