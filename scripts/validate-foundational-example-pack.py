@@ -23211,6 +23211,73 @@ def validate_finite_euler_method(expected: dict[str, Any]) -> None:
     if "Farkas" not in bad_error.get("notes", ""):
         fail("bad-max-error-bound-rejected notes must document checked Farkas evidence")
 
+    bad_terminal = checks["bad-terminal-error-rejected"]
+    if bad_terminal["expected_result"] != "unsat" or bad_terminal.get("proof_status") != "checked":
+        fail("bad-terminal-error-rejected must be a checked unsat row")
+    data = bad_terminal.get("data", {})
+    source_witness = data.get("source_witness")
+    require_string("bad terminal error source_witness", source_witness)
+    if source_witness != "quadratic-forcing-euler-error":
+        fail("bad-terminal-error-rejected must cite the quadratic-forcing-euler-error witness")
+    source_values = witnesses[source_witness]["values"]
+    source_replay = validate_euler_trace("bad terminal error source Euler", source_values)
+    source_exact_solution = require_fraction_vector(
+        "bad terminal error source exact_solution",
+        source_values.get("exact_solution"),
+    )
+    source_absolute_errors = require_fraction_vector(
+        "bad terminal error source absolute_errors",
+        source_values.get("absolute_errors"),
+    )
+    terminal_time = require_fraction("bad terminal error terminal_time", data.get("terminal_time"))
+    terminal_state = require_fraction("bad terminal error terminal_state", data.get("terminal_state"))
+    terminal_exact_solution = require_fraction(
+        "bad terminal error terminal_exact_solution",
+        data.get("terminal_exact_solution"),
+    )
+    computed_terminal_error = require_fraction(
+        "bad terminal error computed_terminal_error",
+        data.get("computed_terminal_error"),
+    )
+    claimed_terminal_error = require_fraction(
+        "bad terminal error claimed_terminal_error",
+        data.get("claimed_terminal_error"),
+    )
+    terminal_error_gap = require_fraction(
+        "bad terminal error terminal_error_gap",
+        data.get("terminal_error_gap"),
+    )
+    terminal_index = len(source_replay["states"]) - 1
+    if source_replay["times"][terminal_index] != terminal_time:
+        fail("bad-terminal-error-rejected terminal_time does not match source witness")
+    if source_replay["states"][terminal_index] != terminal_state:
+        fail("bad-terminal-error-rejected terminal_state does not match source witness")
+    if source_exact_solution[terminal_index] != terminal_exact_solution:
+        fail("bad-terminal-error-rejected terminal_exact_solution does not match source witness")
+    if source_absolute_errors[terminal_index] != computed_terminal_error:
+        fail("bad-terminal-error-rejected computed_terminal_error does not match source witness")
+    if abs(terminal_exact_solution - terminal_state) != computed_terminal_error:
+        fail("bad-terminal-error-rejected terminal error arithmetic is incorrect")
+    if computed_terminal_error == claimed_terminal_error:
+        fail("bad-terminal-error-rejected malformed terminal error must disagree with replay")
+    if computed_terminal_error - claimed_terminal_error != terminal_error_gap:
+        fail("bad-terminal-error-rejected terminal error gap is incorrect")
+    if terminal_error_gap <= 0:
+        fail("bad-terminal-error-rejected terminal error gap must be positive")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad terminal error smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-euler-method-v0/smt2/bad-terminal-error-farkas-conflict.smt2":
+        fail("bad-terminal-error-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad terminal error smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad terminal error farkas_regression", regression)
+    if "finite_euler_bad_terminal_error_artifact_emits_checked_farkas" not in regression:
+        fail("bad-terminal-error-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad terminal error certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-terminal-error-rejected certificate must document checked Farkas evidence")
+
     invariant = checks["nonnegative-monotone-invariant"]
     if invariant["expected_result"] != "sat":
         fail("nonnegative-monotone-invariant must expect sat")

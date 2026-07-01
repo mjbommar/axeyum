@@ -225,8 +225,8 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 619 expected checks (334 `sat`,
-214 `unsat`, 71 `not-run`), 296 checked rows, 252 replay-only rows, and 71
+111 concept rows, 108 non-template packs, 620 expected checks (334 `sat`,
+215 `unsat`, 71 `not-run`), 297 checked rows, 252 replay-only rows, and 71
 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -501,8 +501,8 @@ evidence, leaving the combined finite-dynamics/Euler page as the numerical-step
 bridge.
 `finite-euler-method-v0` now also has a standalone finite Euler method page
 for exact explicit-Euler transition replay, finite polynomial-solution error
-tables, monotone invariant checks, checked QF_LRA/Farkas bad max-error plus
-bad-step evidence, and the ODE/numerical-analysis Lean horizon.
+tables, monotone invariant checks, checked QF_LRA/Farkas bad max-error,
+bad terminal-error, and bad-step evidence, and the ODE/numerical-analysis Lean horizon.
 `finite-operator-v0` now also has a standalone finite-dimensional operator
 page for exact `l1` norm replay, row-sum operator-bound replay, finite
 Chebyshev recurrence replay, and checked QF_LRA/Farkas bad `l1` norm,
@@ -755,7 +755,7 @@ promoted for the bad survival-mass and bad expected-time equations; least-square
 promoted for the bad coefficient and bad RSS-improvement rows, and bounded rational real analysis for
 the bad linear-delta row, with finite conditional expectation now promoted for
 the bad high-block, total-expectation, and tower-property tables, finite Euler method now source-linked and promoted
-for its bad max-error and bad fixed-step rows, bounded dynamics now promoted
+for its bad max-error, bad terminal-error, and bad fixed-step rows, bounded dynamics now promoted
 for its bad invariant-bound conflict, and finite probability now promoted for
 bad conditional-probability, bad Bayes-posterior, and bad independence
 conflicts, with orientation/area geometry now promoted

@@ -508,11 +508,12 @@ Companion maps:
 - [Finite Dynamics And Euler Replay](finite-dynamics-euler-end-to-end.md):
   follows bounded recurrence traces, finite invariants, threshold
   reachability, explicit Euler replay, finite error tables, and checked
-  QF_LRA/Farkas bad error-bound plus bad Euler-step rejection.
+  QF_LRA/Farkas bad error-bound, bad terminal-error, and bad Euler-step
+  rejection.
 - [Finite Euler Method](finite-euler-method-end-to-end.md): follows exact
   explicit-Euler transition replay, finite polynomial-solution error replay,
   finite monotone invariant checking, and checked QF_LRA/Farkas bad error-bound
-  plus bad-step rejection.
+  plus bad terminal-error and bad-step rejection.
 - [Finite-Dimensional Operators](finite-operator-end-to-end.md): follows exact
   `l1` norm replay, matrix row-sum operator-bound replay, finite Chebyshev
   recurrence replay, and checked QF_LRA/Farkas bad `l1` norm, bad

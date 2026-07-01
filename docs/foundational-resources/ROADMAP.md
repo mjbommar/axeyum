@@ -643,8 +643,8 @@ validates exact rational recurrence traces, bounded invariant witnesses, and
 threshold reachability replay.
 [`finite-euler-method-v0`](../../artifacts/examples/math/finite-euler-method-v0/)
 validates exact finite Euler-method traces, polynomial-solution error replay,
-invariant checks, checked rejection of bad max-error and bad Euler-step rows,
-and an ODE-theory Lean-horizon row.
+invariant checks, checked rejection of bad max-error, bad terminal-error, and
+bad Euler-step rows, and an ODE-theory Lean-horizon row.
 [`finite-operator-v0`](../../artifacts/examples/math/finite-operator-v0/)
 validates exact finite-dimensional norm, matrix-operator, Chebyshev recurrence
 checks, and checked QF_LRA/Farkas rejection of bad `l1` norm, operator-bound,

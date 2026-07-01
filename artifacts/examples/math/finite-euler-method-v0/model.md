@@ -49,6 +49,15 @@ max(0, 1/4, 1/2, 3/4) = 3/4
 so the malformed claim that the maximum error is at most `1/2` is rejected by
 the source-linked QF_LRA/Farkas artifact.
 
+The same table now also supplies a pointwise terminal-error row:
+
+```text
+|9/4 - 3/2| = 3/4
+```
+
+so the malformed claim that the final listed error is `1/2` is rejected by a
+separate source-linked QF_LRA/Farkas artifact.
+
 ## Invariant And Bad Step
 
 The linear-decay trace remains inside `[0, 1]` and is monotone nonincreasing.

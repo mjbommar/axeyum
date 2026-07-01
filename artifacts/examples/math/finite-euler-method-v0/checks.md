@@ -23,6 +23,15 @@ maximum error as `3/4`. The malformed claim says the max error is at most
 `1/2`; the source QF_LRA artifact isolates `max_error = 3/4` and
 `max_error <= 1/2` for Farkas checking.
 
+## `bad-terminal-error-rejected`
+
+Expected result: `unsat`.
+
+The validator replays the same quadratic-forcing error table and recomputes the
+terminal error as `|9/4 - 3/2| = 3/4`. The malformed claim says the terminal
+error is `1/2`; the source QF_LRA artifact isolates both equalities for Farkas
+checking.
+
 ## `nonnegative-monotone-invariant`
 
 Expected result: `sat`.

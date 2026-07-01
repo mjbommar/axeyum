@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 619 expected checks.
-- 296 checked proof/evidence rows.
+- 620 expected checks.
+- 297 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1427,7 +1427,7 @@ Pick one item per commit unless the change is purely navigational.
     `docs/learn/math/finite-euler-method-end-to-end.md` follows
     `finite-euler-method-v0` through exact explicit-Euler transition replay,
     finite polynomial-solution error tables, monotone invariant checking,
-    checked QF_LRA/Farkas bad max-error plus bad-step evidence, and the
+    checked QF_LRA/Farkas bad max-error plus bad terminal-error and bad-step evidence, and the
     ODE/numerical-analysis Lean horizon.
 50. Landed: add field-level curriculum-readiness consumer queries.
     `scripts/query-foundational-resources.py fields --field probability_theory`
@@ -1952,6 +1952,16 @@ Pick one item per commit unless the change is purely navigational.
      malformed row claims product `1`; the new source SMT-LIB artifact reaches
      independently checked QF_LRA/Farkas evidence through
      `finite_kkt_bad_complementarity_artifact_emits_checked_farkas`.
+128. Landed: extend `finite-projected-gradient-v0` with a source-linked checked
+     projected-decrease refutation. Exact objective replay computes projected
+     decrease `3`, while the malformed row claims `4`; the new source SMT-LIB
+     artifact reaches independently checked QF_LRA/Farkas evidence through
+     `finite_projected_gradient_bad_decrease_artifact_emits_checked_farkas`.
+129. Landed: extend `finite-euler-method-v0` with a source-linked checked
+     terminal-error refutation. Exact finite error-table replay computes
+     terminal error `3/4`, while the malformed row claims `1/2`; the new source
+     SMT-LIB artifact reaches independently checked QF_LRA/Farkas evidence
+     through `finite_euler_bad_terminal_error_artifact_emits_checked_farkas`.
 
 ## Validation Checklist
 

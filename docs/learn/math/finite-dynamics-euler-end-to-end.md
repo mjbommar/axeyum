@@ -33,6 +33,7 @@ Concept rows:
 | `linear-decay-euler-trace` | `sat` | replay-only |
 | `quadratic-forcing-error-replay` | `sat` | replay-only |
 | `bad-max-error-bound-rejected` | `unsat` | checked |
+| `bad-terminal-error-rejected` | `unsat` | checked |
 | `nonnegative-monotone-invariant` | `sat` | replay-only |
 | `bad-euler-step-rejected` | `unsat` | checked |
 | `general-ode-theory-lean-horizon` | `not-run` | lean-horizon |
@@ -191,6 +192,15 @@ max_error <= 1/2
 Exact replay computes `max_error = 3/4`, so the source QF_LRA artifact checks
 the contradictory error-bound inequality through Farkas evidence.
 
+The bad terminal-error row focuses on the last point in the same table:
+
+```text
+|9/4 - 3/2| = 3/4
+```
+
+and rejects the malformed claim that this final error is `1/2` with a separate
+source QF_LRA/Farkas artifact.
+
 ## Reject A Bad Euler Step
 
 The checked negative row claims:
@@ -260,7 +270,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bo
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-euler-method-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_max_error_bound_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_
 ```
 
 Expected output for each command:

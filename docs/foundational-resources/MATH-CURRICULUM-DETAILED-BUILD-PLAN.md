@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 619 expected checks.
-- 296 checked proof/evidence rows.
+- 620 expected checks.
+- 297 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -390,7 +390,7 @@ Pick one row per commit unless the change is purely navigational.
 38. Landed: add standalone finite-Euler learner page, splitting exact
    explicit-Euler transition replay, finite polynomial-solution error tables,
    monotone invariant checking, checked QF_LRA/Farkas bad max-error plus
-   bad-step evidence, and the ODE/numerical-analysis Lean horizon out of the combined finite
+   bad terminal-error and bad-step evidence, and the ODE/numerical-analysis Lean horizon out of the combined finite
    dynamics/Euler bridge lesson.
 39. Landed: add dynamics field-readiness consumer query coverage, extending
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
@@ -1191,6 +1191,20 @@ Pick one row per commit unless the change is purely navigational.
      checked bad-complementarity evidence while keeping KKT sufficiency,
      constraint qualifications, duality, and convergence in the Lean-horizon
      lane.
+145. Landed: extend `finite-projected-gradient-v0` with a source-linked
+     checked bad projected-decrease row. Exact objective replay computes
+     projected decrease `3` for the interval-projected quadratic step, while
+     the malformed source SMT-LIB artifact claims the same decrease is `4`;
+     the shared QF_LRA/Farkas route now checks both projected-feasibility and
+     projected-decrease conflicts without claiming convergence or rate
+     theorems.
+146. Landed: extend `finite-euler-method-v0` with a source-linked checked bad
+     terminal-error row. Exact finite error-table replay computes terminal
+     error `|9/4 - 3/2| = 3/4`, while the malformed source SMT-LIB artifact
+     claims terminal error `1/2`; the shared QF_LRA/Farkas route now checks
+     fixed-step, pointwise-error, and max-error conflicts without claiming
+     convergence, stability, floating-point accuracy, or continuous-time ODE
+     theory.
 
 ## Validation Checklist
 

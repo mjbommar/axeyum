@@ -325,8 +325,8 @@ First targets:
   (resource-backed Farkas regressions landed for the bad kernel-row
   normalization conflict and bad composed-entry conflict)
 - [finite-euler-method-v0](../../artifacts/examples/math/finite-euler-method-v0/)
-  (source-linked solver-reuse promotions landed for the bad max-error bound and
-  bad fixed-step transition)
+  (source-linked solver-reuse promotions landed for the bad max-error bound,
+  bad terminal-error, and bad fixed-step transition)
 - [orientation-area-geometry-v0](../../artifacts/examples/math/orientation-area-geometry-v0/)
   (resource-backed Farkas regressions landed for the bad affine-area-scaling
   and bad fixed-orientation rows)

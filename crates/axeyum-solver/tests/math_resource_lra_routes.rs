@@ -232,6 +232,9 @@ const BOUNDED_DYNAMICS_BAD_TRANSITION_STEP: &str = include_str!(
 const FINITE_EULER_BAD_MAX_ERROR_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/finite-euler-method-v0/smt2/bad-max-error-bound-farkas-conflict.smt2"
 );
+const FINITE_EULER_BAD_TERMINAL_ERROR: &str = include_str!(
+    "../../../artifacts/examples/math/finite-euler-method-v0/smt2/bad-terminal-error-farkas-conflict.smt2"
+);
 const NUMERICAL_LINEAR_ALGEBRA_BAD_JACOBI_ERROR_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-jacobi-error-bound-farkas-conflict.smt2"
 );
@@ -1450,6 +1453,14 @@ fn finite_euler_bad_max_error_bound_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-euler-method-v0 bad-max-error-bound SMT-LIB artifact",
         FINITE_EULER_BAD_MAX_ERROR_BOUND,
+    );
+}
+
+#[test]
+fn finite_euler_bad_terminal_error_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-euler-method-v0 bad-terminal-error SMT-LIB artifact",
+        FINITE_EULER_BAD_TERMINAL_ERROR,
     );
 }
 

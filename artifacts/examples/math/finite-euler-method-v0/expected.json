@@ -83,6 +83,26 @@
       "notes": "The validator recomputes the finite error table exactly and finds max error 3/4; the source QF_LRA artifact isolates max_error = 3/4 with the malformed bound max_error <= 1/2 for rechecked Farkas evidence."
     },
     {
+      "id": "bad-terminal-error-rejected",
+      "claim": "The finite Euler error at t = 3/2 is 1/2.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_terminal_error_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "quadratic-forcing-euler-error",
+        "terminal_time": "3/2",
+        "terminal_state": "3/2",
+        "terminal_exact_solution": "9/4",
+        "computed_terminal_error": "3/4",
+        "claimed_terminal_error": "1/2",
+        "terminal_error_gap": "1/4",
+        "smt2_artifact": "artifacts/examples/math/finite-euler-method-v0/smt2/bad-terminal-error-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_terminal_error_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes terminal error |9/4 - 3/2| = 3/4, so the malformed pointwise error claim 1/2 is rejected by checked Farkas evidence."
+    },
+    {
       "id": "nonnegative-monotone-invariant",
       "claim": "The listed linear-decay Euler trace stays in [0, 1] and is monotone nonincreasing.",
       "expected_result": "sat",

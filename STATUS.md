@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-Euler bad terminal-error QF_LRA row landed.**
+  `finite-euler-method-v0` now includes a checked pointwise terminal-error
+  refutation for the quadratic-forcing Euler trace: exact replay computes
+  terminal state `3/2`, exact value `9/4`, and terminal error `3/4`, while the
+  bad row claims terminal error `1/2`, leaving gap `1/4`. The validator pins
+  the source witness, terminal time/state/exact value, computed error, claimed
+  error, gap, SMT-LIB artifact, regression, and independently checked
+  `UnsatFarkas` certificate. The shared `math_resource_lra_routes` regression
+  parses the artifact and checks the Farkas evidence. Generated dashboards and
+  the public query summary now report 111 concept rows, 108 non-template packs,
+  620 expected checks, 297 checked rows, 252 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Finite-projected-gradient bad decrease QF_LRA row landed.**
   `finite-projected-gradient-v0` now includes a checked rejection for a
   malformed projected-decrease row: exact replay computes `f(0) = 4`,
@@ -3306,8 +3319,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`finite-euler-method-end-to-end.md`](docs/learn/math/finite-euler-method-end-to-end.md)
   as the learner-facing trace for the finite-Euler pack: exact explicit-Euler
   transition replay, finite polynomial-solution error tables, monotone
-  invariant checking, checked QF_LRA/Farkas bad max-error plus bad-step
-  rejection, and the ODE/numerical-analysis Lean horizon. The lesson is linked from the math
+  invariant checking, checked QF_LRA/Farkas bad max-error, bad terminal-error,
+  and bad-step rejection, and the ODE/numerical-analysis Lean horizon. The lesson is linked from the math
   learning index plus the finite dynamics/Euler and bounded-dynamics/operator
   bridge pages.
 
@@ -3864,8 +3877,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the next exact finite bridge across differential equations, numerical
   analysis, and calculus. The pack validates explicit Euler traces,
   polynomial-solution error replay, finite invariant checks, checked rejection
-  of bad max-error and bad Euler-step rows, and a general ODE-theory
-  Lean-horizon row. The
+  of bad max-error, bad terminal-error, and bad Euler-step rows, and a general
+  ODE-theory Lean-horizon row. The
   foundational example-pack validator now checks these rows by exact rational
   transition replay.
 
