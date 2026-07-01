@@ -148,7 +148,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-06-30): the public JSON layer reports
-111 concept rows, 108 non-template packs, 557 expected checks, 241 checked
+111 concept rows, 108 non-template packs, 558 expected checks, 242 checked
 rows, 245 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -159,9 +159,12 @@ concrete bad group-homomorphism row through QF_UF/Alethe after exact table
 replay isolates `phi(1+1)=1` versus `phi(1)+phi(1)=0`. The finite
 order/lattice lane now also promotes the false Boolean-lattice top-element row
 through Bool/CNF DRAT/LRAT after exact relation replay isolates `B !<= A`
-while the bad claim that `A` is top requires `B <= A`. The topology
-QF_LIA/Diophantine lane now also includes finite chain-complex torsion via
-one-entry Smith diagonal replay and checked rejection of `2*k = 1`. The measure/probability QF_LRA/Farkas lane now
+while the bad claim that `A` is top requires `B <= A`. The modular-arithmetic
+QF_LIA/Diophantine lane now also includes the incompatible non-coprime CRT row:
+`x == 1 mod 4` and `x == 2 mod 6` reduce to `4*a - 6*b = 1`, where
+`gcd(4,6)=2` does not divide `1`. The topology QF_LIA/Diophantine lane now
+also includes finite chain-complex torsion via one-entry Smith diagonal replay
+and checked rejection of `2*k = 1`. The measure/probability QF_LRA/Farkas lane now
 also promotes finite product-measure's bad product-probability row through a
 source-linked exact
 linear contradiction after replay computes the product mass, plus finite
@@ -523,11 +526,12 @@ congruence, bilinear left-additivity, and bad identity-action rows.
 Continue the
 math-resource proof upgrades from
 [`docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md`](docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md),
-where the first QF_LIA/Diophantine row now promotes modular arithmetic's
-nonunit inverse obstruction and exact statistical tests' bad binomial
-tail-count row, with finite simplicial homology now promoted for its bad
-boundary coefficient and induction patterns promoted for a finite even-product
-parity obstruction. The QF_LIA/Diophantine first-target set is now covered;
+where modular arithmetic now promotes both the nonunit inverse obstruction and
+incompatible non-coprime CRT obstruction through checked QF_LIA/Diophantine
+evidence, exact statistical tests promote the bad binomial tail-count row,
+finite simplicial homology promotes its bad boundary coefficient, and induction
+patterns promote a finite even-product parity obstruction. The
+QF_LIA/Diophantine first-target set is now covered;
 the first secondary statistics margin/count row is now promoted in
 descriptive statistics, integer LIA is now promoted for its gcd divisibility
 obstruction, bounded induction obligations are now promoted for a bounded

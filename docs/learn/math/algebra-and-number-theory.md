@@ -37,7 +37,9 @@ Example packs:
 The current algebra path is finite and exact. It checks finite group Cayley
 tables, finite ring operation tables, gcd/Bezout witnesses, CRT witnesses,
 modular inverses, composite non-units with no inverse, and a Fermat-style finite
-unit enumeration. The finite-groups pack now also carries a QF_UF/Alethe
+unit enumeration. The modular pack now also carries checked QF_LIA/Diophantine
+obstructions for a nonunit inverse and an incompatible non-coprime CRT pair.
+The finite-groups pack now also carries a QF_UF/Alethe
 binary-operation congruence row. The finite-rings pack adds distributivity
 checks and a `Z/4Z` zero-divisor witness, then promotes both a bad
 distributivity row and a bad multiplicative-identity row through QF_BV/DRAT
@@ -283,7 +285,9 @@ The `modular-arithmetic-v0` pack encodes that as `a = 3`, `modulus = 7`, and
 `inverse = 5`. The validator recomputes the product modulo `7`; no theorem
 about all moduli is needed to trust this witness. The same pack now also
 promotes the composite non-unit obstruction to QF_LIA by checking
-`2*b - 6*k = 1` with an `UnsatDiophantine` certificate.
+`2*b - 6*k = 1` with an `UnsatDiophantine` certificate, and promotes the
+incompatible CRT pair `x == 1 mod 4`, `x == 2 mod 6` by checking the derived
+equation `4*a - 6*b = 1`.
 
 The bounded destination pack adds fixed number-theory shapes:
 

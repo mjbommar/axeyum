@@ -6548,6 +6548,43 @@ def validate_modular_arithmetic(expected: dict[str, Any]) -> None:
     if "UnsatDiophantine" not in certificate or "Evidence::check" not in certificate:
         fail("qf-lia nonunit certificate must document checked Diophantine evidence")
 
+    crt_qf_lia = checks["qf-lia-incompatible-crt-diophantine"]
+    if crt_qf_lia["expected_result"] != "unsat":
+        fail("qf-lia-incompatible-crt-diophantine must expect unsat")
+    if crt_qf_lia["proof_status"] != "checked":
+        fail("qf-lia-incompatible-crt-diophantine must be checked")
+    if crt_qf_lia["validation"] != "qf_lia_diophantine_evidence":
+        fail("qf-lia-incompatible-crt-diophantine must use qf_lia_diophantine_evidence validation")
+    data = crt_qf_lia.get("data", {})
+    congruences = require_congruences("qf-lia incompatible CRT congruences", data.get("congruences"))
+    if len(congruences) != 2:
+        fail("qf-lia-incompatible-crt-diophantine must use exactly two congruences")
+    left, right = congruences
+    divisor = gcd(left["modulus"], right["modulus"])
+    expected_gcd = require_int("qf-lia incompatible CRT gcd", data.get("gcd"))
+    delta = require_int("qf-lia incompatible CRT delta", data.get("delta"))
+    if expected_gcd != divisor:
+        fail("qf-lia-incompatible-crt-diophantine records the wrong modulus gcd")
+    if delta != right["remainder"] - left["remainder"]:
+        fail("qf-lia-incompatible-crt-diophantine records the wrong remainder delta")
+    if delta % divisor == 0:
+        fail("qf-lia-incompatible-crt-diophantine data is compatible by the CRT gcd criterion")
+    if left != {"remainder": 1, "modulus": 4} or right != {"remainder": 2, "modulus": 6}:
+        fail("qf-lia-incompatible-crt-diophantine solver promotion is fixed to x == 1 mod 4 and x == 2 mod 6")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-lia incompatible CRT smt2_artifact", smt2_artifact)
+    check_source("qf-lia incompatible CRT smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/modular-arithmetic-v0/smt2/incompatible-crt-diophantine-conflict.smt2":
+        fail("qf-lia-incompatible-crt-diophantine smt2_artifact must name the checked QF_LIA artifact")
+    proof_regression = data.get("proof_regression")
+    require_string("qf-lia incompatible CRT proof_regression", proof_regression)
+    if "modular_incompatible_crt_emits_checked_diophantine_evidence" not in proof_regression:
+        fail("qf-lia-incompatible-crt-diophantine proof_regression must name the LIA resource test")
+    certificate = data.get("certificate")
+    require_string("qf-lia incompatible CRT certificate", certificate)
+    if "UnsatDiophantine" not in certificate or "Evidence::check" not in certificate:
+        fail("qf-lia-incompatible-crt-diophantine certificate must document checked Diophantine evidence")
+
     fermat = checks["fermat-units-mod-prime"]
     if fermat["expected_result"] != "unsat":
         fail("fermat-units-mod-prime must expect unsat")

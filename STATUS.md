@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Modular incompatible-CRT Diophantine QF_LIA row landed.**
+  `modular-arithmetic-v0` now has a second checked solver-form arithmetic
+  obstruction: the false CRT pair `x == 1 mod 4` and `x == 2 mod 6` reduces to
+  `4*a - 6*b = 1`, but `gcd(4,6)=2` does not divide `1`. The new SMT-LIB
+  artifact is checked by `math_resource_lia_routes` through
+  `UnsatDiophantine` evidence, the validator pins the congruences, gcd,
+  artifact path, regression, and certificate note, and the modular arithmetic,
+  Diophantine anatomy, algebra/number-theory, number-systems, proof-frontier,
+  and curriculum buildout docs now reference the row. Generated dashboards and
+  the public query summary now report 111 concept rows, 108 non-template packs,
+  558 expected checks, 242 checked rows, 245 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Bounded number-theory Diophantine QF_LIA row landed.**
   `number-theory-v0` now has a checked unsat counterpart to the existing
   `14*x + 21*y = 7` witness: the new row encodes `14*x + 21*y = 5`, records
@@ -1253,8 +1266,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`diophantine-certificate-anatomy-end-to-end.md`](docs/learn/math/diophantine-certificate-anatomy-end-to-end.md)
   now follows `modular-arithmetic-v0` from the nonunit inverse equation
   `2*b - 6*k = 1` through source SMT-LIB, emitted `UnsatDiophantine` evidence,
-  and same-artifact contradiction-row tamper rejection. The LIA route
-  regression already includes
+  and same-artifact contradiction-row tamper rejection, with the sibling
+  incompatible CRT equation `4*a - 6*b = 1` listed as the same checked pattern.
+  The LIA route regression already includes
   `qf_lia_resource_route_rejects_tampered_diophantine_certificate`, which
   checks the genuine certificate first, changes the recorded constant, and
   requires the corrupted certificate to reject.

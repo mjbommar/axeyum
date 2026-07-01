@@ -21,12 +21,14 @@ Concept rows:
 | `modular-inverse-witness` | `sat` | replay-only |
 | `composite-nonunit-no-inverse` | `unsat` | replay-only |
 | `qf-lia-nonunit-diophantine` | `unsat` | checked |
+| `qf-lia-incompatible-crt-diophantine` | `unsat` | checked |
 | `fermat-units-mod-prime` | `unsat` | replay-only |
 
 The finite rows still recompute arithmetic directly. The
-`qf-lia-nonunit-diophantine` row is the first promoted solver-form proof
-artifact in this pack: Axeyum emits and checks an `UnsatDiophantine`
-certificate for the nonunit inverse obstruction.
+`qf-lia-nonunit-diophantine` and `qf-lia-incompatible-crt-diophantine` rows are
+the promoted solver-form proof artifacts in this pack: Axeyum emits and checks
+`UnsatDiophantine` certificates for the nonunit inverse and incompatible CRT
+obstructions.
 
 ## Replay A CRT Witness
 
@@ -102,6 +104,27 @@ Axeyum records that as an `UnsatDiophantine` certificate. The checker
 recombines the original equality and verifies the gcd non-divisibility
 obstruction; it does not trust the search result alone.
 
+## Check An Incompatible CRT Pair
+
+The checked CRT obstruction asks for:
+
+```text
+x == 1 mod 4
+x == 2 mod 6
+```
+
+A shared solution would give integers `a,b` with:
+
+```text
+x = 1 + 4*a
+x = 2 + 6*b
+4*a - 6*b = 1
+```
+
+But every value of `4*a - 6*b` is divisible by `gcd(4,6)=2`, and `1` is not.
+The SMT-LIB artifact encodes that derived integer equation and the
+`UnsatDiophantine` checker replays the gcd obstruction.
+
 ## Search Fermat Counterexamples
 
 The Fermat-style row asks for a unit modulo `5` with:
@@ -133,6 +156,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
+cargo test -p axeyum-solver --test math_resource_lia_routes modular_incompatible_crt_emits_checked_diophantine_evidence
 ```
 
 Expected output:

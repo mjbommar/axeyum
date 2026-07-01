@@ -27,7 +27,7 @@ Candidate route totals:
 |---|---:|---|
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 16 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 4 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
-| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 12 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions, including finite graph traversal cost counters. |
+| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 13 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions, including finite graph traversal cost counters. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 57 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 19 | Equality-heavy finite structures and congruence conflicts. |
 | [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 78 | General theorem statements that remain outside bounded SMT replay. |
@@ -531,9 +531,10 @@ Graduation:
 First targets:
 
 - [modular-arithmetic-v0](../../artifacts/examples/math/modular-arithmetic-v0/)
-  (resource-backed QF_LIA/Diophantine regression landed for the nonunit inverse
-  obstruction; the route-anatomy lesson now follows this same source artifact
-  through `UnsatDiophantine` checking and contradiction-row tamper rejection)
+  (resource-backed QF_LIA/Diophantine regressions landed for the nonunit
+  inverse obstruction and the incompatible non-coprime CRT row; the
+  route-anatomy lesson follows the same source-artifact route through
+  `UnsatDiophantine` checking and contradiction-row tamper rejection)
 - [exact-statistical-tests-v0](../../artifacts/examples/math/exact-statistical-tests-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the bad binomial
   tail-count row)
@@ -605,6 +606,7 @@ cargo test -p axeyum-solver diophantine
 cargo test -p axeyum-solver certificate_tamper_is_rejected
 cargo test -p axeyum-solver --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
 cargo test -p axeyum-solver --test math_resource_lia_routes modular_nonunit_inverse_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --test math_resource_lia_routes modular_incompatible_crt_emits_checked_diophantine_evidence
 cargo test -p axeyum-solver --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence
 cargo test -p axeyum-solver --test int_inequality_lean_reconstruct
 cargo test -p axeyum-solver --test math_resource_lia_routes

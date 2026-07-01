@@ -18,10 +18,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "modular nonunit inverse QF_LIA/Diophantine regression seed",
-    "pressure": "Nonunit inverse obstruction where 2*b - 6*k = 1 has no integer solution because gcd(2,6) does not divide 1.",
+    "target": "modular inverse and CRT QF_LIA/Diophantine regression seeds",
+    "pressure": "Nonunit inverse obstruction where 2*b - 6*k = 1 and incompatible CRT obstruction where 4*a - 6*b = 1 have no integer solution because the relevant gcd does not divide the right-hand side.",
     "evidence": [
-      "qf-lia-nonunit-diophantine"
+      "qf-lia-nonunit-diophantine",
+      "qf-lia-incompatible-crt-diophantine"
     ],
     "next_step": "Promote additional modular arithmetic rows only when they add distinct divisibility, CRT, or finite-field solver pressure; keep deeper number-theory theorems in Lean-horizon resources."
   },
@@ -35,6 +36,7 @@
     "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
     "docs/learn/math/diophantine-certificate-anatomy-end-to-end.md",
     "artifacts/examples/math/modular-arithmetic-v0/smt2/nonunit-inverse-diophantine-conflict.smt2",
+    "artifacts/examples/math/modular-arithmetic-v0/smt2/incompatible-crt-diophantine-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
   ],
   "expected_results": [
@@ -42,12 +44,13 @@
     "modular-inverse-witness",
     "composite-nonunit-no-inverse",
     "qf-lia-nonunit-diophantine",
+    "qf-lia-incompatible-crt-diophantine",
     "fermat-units-mod-prime"
   ],
   "graduation_criteria": [
     "Encode each check as deterministic Bool/BV or LIA formulas.",
     "Replay all SAT witnesses through Axeyum model evaluation.",
-    "Keep the nonunit Diophantine obstruction tied to a source artifact, checked certificate regression, and tamper-rejection learner page before claiming proof-object coverage.",
+    "Keep the promoted Diophantine obstructions tied to source artifacts, checked certificate regressions, and tamper-rejection learner coverage before claiming proof-object coverage.",
     "Keep adding checked proof evidence for UNSAT finite-search claims beyond the promoted nonunit Diophantine obstruction.",
     "Promote related finite-field examples into finite-fields-v0."
   ]

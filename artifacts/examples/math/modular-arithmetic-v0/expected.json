@@ -71,6 +71,25 @@
       "notes": "The SMT-LIB artifact encodes the modular inverse equation 2*b == 1 (mod 6) as 2*b - 6*k = 1. Axeyum emits a Diophantine certificate for the gcd divisibility obstruction."
     },
     {
+      "id": "qf-lia-incompatible-crt-diophantine",
+      "claim": "There exists x satisfying x == 1 mod 4 and x == 2 mod 6.",
+      "expected_result": "unsat",
+      "validation": "qf_lia_diophantine_evidence",
+      "proof_status": "checked",
+      "data": {
+        "congruences": [
+          {"remainder": 1, "modulus": 4},
+          {"remainder": 2, "modulus": 6}
+        ],
+        "gcd": 2,
+        "delta": 1,
+        "smt2_artifact": "artifacts/examples/math/modular-arithmetic-v0/smt2/incompatible-crt-diophantine-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_lia_routes modular_incompatible_crt_emits_checked_diophantine_evidence",
+        "certificate": "produce_diophantine_evidence emits Evidence::UnsatDiophantine checked by Evidence::check; the certificate records gcd(4,6) does not divide 1"
+      },
+      "notes": "The congruence pair reduces to 4*a - 6*b = 1. Axeyum emits a Diophantine certificate for the gcd divisibility obstruction."
+    },
+    {
       "id": "fermat-units-mod-prime",
       "claim": "There exists a unit a modulo 5 such that a^4 != 1 mod 5.",
       "expected_result": "unsat",

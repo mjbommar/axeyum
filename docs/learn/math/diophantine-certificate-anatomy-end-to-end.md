@@ -21,6 +21,7 @@ Concept rows:
 | `modular-inverse-witness` | `sat` | replay-only |
 | `composite-nonunit-no-inverse` | `unsat` | replay-only |
 | `qf-lia-nonunit-diophantine` | `unsat` | checked |
+| `qf-lia-incompatible-crt-diophantine` | `unsat` | checked |
 | `fermat-units-mod-prime` | `unsat` | replay-only |
 
 The checked proof-object source claim is finite and exact:
@@ -38,6 +39,10 @@ That equation is the solver-form version of the false modular inverse claim:
 The finite replay row can reject this by enumerating residues modulo `6`. The
 Diophantine row proves the stronger integer obstruction directly: every value
 of `2*b - 6*k` is divisible by `2`, but `1` is not.
+
+The same pack now also checks an incompatible CRT pair by reducing
+`x == 1 mod 4` and `x == 2 mod 6` to `4*a - 6*b = 1`, then replaying the
+`gcd(4,6) = 2` non-divisibility obstruction.
 
 ## Source Artifact
 
@@ -157,6 +162,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 cargo test -p axeyum-solver --test math_resource_lia_routes modular_nonunit_inverse_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --test math_resource_lia_routes modular_incompatible_crt_emits_checked_diophantine_evidence
 cargo test -p axeyum-solver --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
 ```
 

@@ -7,6 +7,7 @@ Notation:
 ```text
 x == r (mod m)  iff  m divides (x - r)
 a has inverse b modulo m  iff  a * b == 1 (mod m)
+CRT compatibility for r1 mod m1 and r2 mod m2 requires gcd(m1,m2) | (r2-r1)
 ```
 
 ## Checks
@@ -47,3 +48,16 @@ a^4 == 1 (mod 5)
 ```
 
 This is a finite check of a small prime modulus, not a general theorem proof.
+
+### Incompatible CRT Pair
+
+The pair:
+
+```text
+x == 1 (mod 4)
+x == 2 (mod 6)
+```
+
+would require `4*a - 6*b = 1`. Since `gcd(4,6) = 2` does not divide `1`, the
+QF_LIA artifact is unsatisfiable and the `UnsatDiophantine` certificate
+rechecks the obstruction.

@@ -230,7 +230,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `reals` | `real_analysis`, `optimization_and_convexity` | `real-analysis-rational-v0`, `reals-rcf-shadow-v0`, `multivariable-calculus-rational-v0`, `finite-root-finding-v0`, `finite-separation-v0`, `finite-kkt-v0`, `finite-active-set-qp-v0`, `finite-sdp-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0`, `finite-projected-gradient-v0`, `finite-proximal-gradient-v0`, `finite-circle-geometry-v0`, `finite-inversion-geometry-v0`, `finite-cyclic-geometry-v0` | Bounded rational neighborhoods, algebraic real constraints through LRA/NRA, checked QF_LRA negative-discriminant shadow, exact rational gradients, Hessian checks, finite root-finding iteration replay, finite separating-hyperplane replay, finite KKT stationarity replay, finite active-set QP face/slack replay, finite SDP objective/slack replay, finite gradient-descent step replay, finite Armijo line-search replay, finite Wolfe sufficient-decrease/curvature replay, finite projected-gradient interval replay, finite proximal-gradient soft-threshold replay, finite circle point/tangent/chord replay, finite inversion replay, and finite cyclic quadrilateral replay; completeness, separation theorems, KKT sufficiency, active-set method theory, SDP duality, descent-rate, Wolfe/line-search/projected/proximal-gradient convergence, circle/inversion/cyclic-geometry theorems, and convergence marked horizon. |
 | `complex` | `complex_analysis`, `linear_algebra` | `complex-algebraic-v0`, `complex-plane-transforms-v0` | Complex arithmetic, unit-root cycles, conjugation, and rational transforms as real-pair algebraic constraints. |
 | `divisibility-and-euclid` | `number_theory` | `gcd-bezout-v0` | GCD, Bezout witness replay, divisibility checks. |
-| `modular-arithmetic` | `number_theory`, `abstract_algebra` | `modular-arithmetic-v0`, `finite-ideals-v0` | Congruences, inverses, CRT, fixed-modulus enumeration, QF_LIA nonunit Diophantine obstruction, modular ring ideals, and quotient rings. |
+| `modular-arithmetic` | `number_theory`, `abstract_algebra` | `modular-arithmetic-v0`, `finite-ideals-v0` | Congruences, inverses, CRT, fixed-modulus enumeration, checked QF_LIA nonunit and incompatible-CRT Diophantine obstructions, modular ring ideals, and quotient rings. |
 | `groups` | `abstract_algebra` | `finite-groups-v0`, `finite-algebra-homomorphisms-v0`, `finite-monoids-v0`, `finite-permutation-groups-v0`, `finite-group-actions-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-modules-v0`, `finite-tensor-products-v0` | Cayley-table closure, identity, inverse, associativity, homomorphism, kernel/image, quotient, finite monoids, units/idempotents, finite permutation groups, cycle/sign replay, finite group actions, orbit/stabilizer replay, Burnside counting, vector-addition groups, dual-space additive groups, module-addition groups, finite tensor-product additive groups, and induced-map checks. |
 | `rings` | `abstract_algebra` | `finite-rings-v0`, `finite-algebra-homomorphisms-v0`, `finite-modules-v0`, `finite-ideals-v0` | Two-operation table checks, distributivity, multiplicative identity, zero divisors, ring-homomorphism preservation, ideals, quotient rings, and finite module actions over rings. |
 | `fields` | `abstract_algebra`, `number_theory` | `finite-fields-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-tensor-products-v0`, `polynomial-factorization-rational-v0` | Field axioms over small prime fields, composite modulus counterexamples, finite vector spaces over `F2`, covectors and dual bases, bilinear maps, tensor-product replay, and rational polynomial arithmetic over `Q[x]`. |
@@ -618,9 +618,10 @@ Recommended order:
 3. `gcd-bezout-v0` (landed): gcd, Bezout, divisibility, and fixed
    Diophantine obstruction checks.
 4. `modular-arithmetic-v0` and `finite-ideals-v0`: CRT, modular inverse,
-   residue witness checks, a checked QF_LIA nonunit Diophantine obstruction,
-   modular ring ideals, quotient-ring replay, quotient representative
-   congruence, and ring-homomorphism kernel/image checks.
+   residue witness checks, checked QF_LIA nonunit and incompatible-CRT
+   Diophantine obstructions, modular ring ideals, quotient-ring replay,
+   quotient representative congruence, and ring-homomorphism kernel/image
+   checks.
 5. `finite-fields-v0` (landed), `finite-algebra-homomorphisms-v0`
    (landed), `finite-ideals-v0` (landed), `finite-vector-spaces-v0`
    (landed), `finite-dual-spaces-v0` (landed), `finite-modules-v0`
@@ -1206,11 +1207,11 @@ Priority recipes:
 4. Bounded arithmetic/Diophantine route for number-theory packs. Status:
    landed as [QF_LIA Diophantine Evidence](../proof-cookbook/recipes/qf-lia-diophantine.md)
    and promoted in `modular-arithmetic-v0` for the nonunit inverse gcd
-   obstruction and in `exact-statistical-tests-v0` for the bad binomial
-   tail-count contradiction. The first secondary statistics margin/count row is
-   now promoted in `descriptive-statistics-v0` for the bad contingency total,
-   while broader modular, exact-test, and statistics finite-search rows remain
-   finite replay.
+   obstruction and incompatible non-coprime CRT obstruction, and in
+   `exact-statistical-tests-v0` for the bad binomial tail-count contradiction.
+   The first secondary statistics margin/count row is now promoted in
+   `descriptive-statistics-v0` for the bad contingency total, while broader
+   modular, exact-test, and statistics finite-search rows remain finite replay.
 5. "Lean horizon" recipe template for induction, topology, measure, and limits.
    Status: landed as
    [Lean Horizon Template](../proof-cookbook/recipes/lean-horizon-template.md)
@@ -1734,8 +1735,8 @@ zero-trust `UnsatAletheProof` evidence, and same-artifact truncated-proof
 rejection.
 `modular-arithmetic-v0` now has a Diophantine certificate anatomy lesson that
 follows the nonunit inverse obstruction through source SMT-LIB, emitted
-`UnsatDiophantine` evidence, and same-artifact contradiction-row tamper
-rejection.
+`UnsatDiophantine` evidence, same-artifact contradiction-row tamper rejection,
+and the sibling incompatible non-coprime CRT row.
 `finite-fields-v0` now has a QF_BV bit-blast certificate anatomy lesson that
 follows fixed-width finite-field BV rows through source SMT-LIB, generated
 DIMACS/DRAT evidence, and same-artifact truncated-DRAT rejection.
