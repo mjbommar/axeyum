@@ -867,8 +867,8 @@ regular-conditional-probability Lean-horizon row.
 `artifacts/examples/math/finite-hitting-times-v0/` now validates exact finite
 first-hit distributions, survival probabilities, absorption-probability
 fixed-point equations, expected hitting-time equations, checked QF_LRA/Farkas
-rejection of a false expected-time table, and a recurrence/transience
-Lean-horizon row.
+rejection of false survival-mass and expected-time tables, and a
+recurrence/transience Lean-horizon row.
 `artifacts/examples/math/finite-concentration-v0/` now validates exact finite
 Markov, Chebyshev, and union-bound replays over rational atom tables, checked
 rejection of false tail and union bounds, and a concentration/limit-theorem
@@ -1064,7 +1064,7 @@ Recommended order:
     rejections.
 30. `finite-hitting-times-v0`: finite first-hit distributions, survival
     probabilities, absorption-probability equations, expected hitting-time
-    equations, and bad expected-time rejection.
+    equations, and bad survival-mass/expected-time rejection.
 31. `finite-concentration-v0`: finite Markov, Chebyshev, and union-bound
     tail checks, plus rejection of a false concentration bound.
 32. `finite-chebyshev-systems-v0`: finite Vandermonde unisolvence,
@@ -1837,8 +1837,8 @@ factorization/disintegration, kernel composition, checked QF_LRA/Farkas bad
 kernel-row rejection, and the regular-conditional-probability Lean horizon.
 `finite-hitting-times-v0` now has a learner-facing end-to-end lesson for finite
 absorbing-chain first-hit distributions, survival mass, absorption equations,
-expected hitting-time equations, checked QF_LRA/Farkas bad expected-time
-rejection, and the general hitting-theory Lean horizon.
+expected hitting-time equations, checked QF_LRA/Farkas bad survival-mass and
+bad expected-time rejection, and the general hitting-theory Lean horizon.
 `finite-concentration-v0` now has a learner-facing end-to-end lesson for exact
 finite Markov, Chebyshev, and union-bound replay over rational atom tables,
 checked bad concentration-bound rejection, and the general concentration Lean
@@ -1967,9 +1967,10 @@ path after exact replay computes the row sum and the next distribution.
 composition-entry rejections through the same checked Farkas evidence path
 after exact replay computes the malformed row sum `3/5 + 3/5 = 6/5` and the
 composed transition `(K;L)(rainy, early) = 22/75`.
-`finite-hitting-times-v0` now routes its bad expected-time row through a
-source-linked checked Farkas evidence path after clearing denominators in the
-finite linear equation, and its metadata promotes that row for solver reuse.
+`finite-hitting-times-v0` now routes its bad survival-mass and bad expected-time
+rows through source-linked checked Farkas evidence paths after exact first-hit
+replay computes `P(T > 4)=5/16` and clearing denominators in the finite
+expected-time equation, and its metadata promotes those rows for solver reuse.
 `least-squares-regression-v0` now routes its bad coefficient row through the
 same checked Farkas evidence path using the first failed normal equation.
 `real-analysis-rational-v0` now routes its bad linear-delta row through the

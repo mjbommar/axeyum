@@ -293,7 +293,8 @@ First targets:
   (resource-backed Farkas regressions landed for the bad stochastic row and
   bad stationary-distribution row)
 - [finite-hitting-times-v0](../../artifacts/examples/math/finite-hitting-times-v0/)
-  (source-linked solver-reuse promotion landed for the bad expected-time row)
+  (source-linked solver-reuse promotions landed for the bad survival-mass and
+  bad expected-time rows)
 - [least-squares-regression-v0](../../artifacts/examples/math/least-squares-regression-v0/)
   (resource-backed Farkas regression landed for the bad coefficient row)
 - [real-analysis-rational-v0](../../artifacts/examples/math/real-analysis-rational-v0/)
@@ -755,7 +756,8 @@ First theorem families:
 - real limits, epsilon-delta continuity, compactness, connectedness, and
   integration;
 - finite shadows of measure, probability, martingales, stochastic kernels, and
-  hitting times where the general theorem is countable or limiting;
+  hitting times where the finite rows now include survival-mass replay and
+  expected-time equations but the general theorem is countable or limiting;
 - general algebra and topology statements;
 - Chebyshev spaces, operator theory, complex analysis, and functional-analysis
   claims.

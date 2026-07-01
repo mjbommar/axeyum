@@ -164,7 +164,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 595 expected checks, 275 checked
+111 concept rows, 108 non-template packs, 596 expected checks, 276 checked
 rows, 249 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -199,8 +199,11 @@ finite replay computes the subset and superset measures, finite-martingales'
 bad conditional-expectation row after finite filtration replay computes the
 up-block expectation, finite Markov-chain's bad stochastic-row and false
 stationary-distribution rows now explicitly promoted in solver-reuse metadata,
-and finite concentration's bad tail-bound and bad union-bound rows after exact
-finite replay computes `P(X >= 2) = 1/4` and `P(A union B) = 3/4`.
+finite concentration's bad tail-bound and bad union-bound rows after exact
+finite replay computes `P(X >= 2) = 1/4` and `P(A union B) = 3/4`, and finite
+hitting-times' bad survival-mass and bad expected-time rows after replay
+computes `P(T > 4) = 5/16` and the start equation reduces to
+`2*h_start = 2 + h_start + h_middle`.
 The statistics
 QF_LRA/Farkas lane now also promotes exact-statistical-tests' bad Fisher
 left-tail and probability-ordered two-sided rows after fixed-margin replay
@@ -579,7 +582,7 @@ bad-normalization row now has a checked
 QF_LRA/Farkas regression, with finite Markov chains now promoted for the bad
 stochastic-row obstruction and false stationary-distribution row, and finite concentration now promoted for the bad
 tail-bound and bad union-bound obstructions, with finite hitting times now source-linked and
-promoted for the bad expected-time equation; least-squares regression is now
+promoted for the bad survival-mass and bad expected-time equations; least-squares regression is now
 promoted for the bad coefficient row, and bounded rational real analysis for
 the bad linear-delta row, with finite conditional expectation now promoted for
 the bad high-block and tower-property tables, finite Euler method now source-linked and promoted

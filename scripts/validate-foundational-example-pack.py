@@ -20553,6 +20553,51 @@ def validate_finite_hitting_times(expected: dict[str, Any]) -> None:
     if hitting_times[initial_state] != expected_from_initial:
         fail("expected-hitting-time-equations expected_time_from_initial is incorrect")
 
+    bad_survival = checks["bad-survival-mass-rejected"]
+    if bad_survival["expected_result"] != "unsat":
+        fail("bad-survival-mass-rejected must expect unsat")
+    data = bad_survival.get("data", {})
+    states = require_string_list("bad survival states", data.get("states"))
+    matrix = require_state_transition_matrix("bad survival transition_matrix", data.get("transition_matrix"), states)
+    initial_state = require_state("bad survival initial_state", data.get("initial_state"), states)
+    target_states = require_atom_subset("bad survival target_states", data.get("target_states"), states)
+    if not target_states:
+        fail("bad-survival-mass-rejected target_states must be non-empty")
+    rows = require_hitting_probability_rows("bad survival first_hit_probabilities", data.get("first_hit_probabilities"))
+    horizon_steps = require_positive_int("bad survival horizon", data.get("horizon"))
+    times = sorted(rows)
+    if times != list(range(1, horizon_steps + 1)):
+        fail("bad-survival-mass-rejected times must be consecutive through horizon")
+    state_index = {state: index for index, state in enumerate(states)}
+    computed_rows, survival = first_hitting_distribution(
+        matrix,
+        state_index[initial_state],
+        {state_index[state] for state in target_states},
+        horizon_steps,
+    )
+    if computed_rows != rows:
+        fail("bad-survival-mass-rejected first-hit probabilities are incorrect")
+    actual_survival = require_probability(
+        "bad survival actual_survival_after_horizon",
+        data.get("actual_survival_after_horizon"),
+    )
+    claimed_survival = require_probability(
+        "bad survival claimed_survival_after_horizon",
+        data.get("claimed_survival_after_horizon"),
+    )
+    if survival != actual_survival:
+        fail("bad-survival-mass-rejected actual survival is incorrect")
+    if actual_survival == claimed_survival:
+        fail("bad-survival-mass-rejected must document a false survival mass")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad survival smt2_artifact", smt2_artifact)
+    if not (ROOT / smt2_artifact).is_file():
+        fail("bad-survival-mass-rejected smt2_artifact is missing")
+    regression = data.get("farkas_regression")
+    require_string("bad survival farkas_regression", regression)
+    if "finite_hitting_times_bad_survival_mass_artifact_emits_checked_farkas" not in regression:
+        fail("bad-survival-mass-rejected must link the Farkas regression")
+
     bad = checks["bad-expected-time-rejected"]
     if bad["expected_result"] != "unsat":
         fail("bad-expected-time-rejected must expect unsat")

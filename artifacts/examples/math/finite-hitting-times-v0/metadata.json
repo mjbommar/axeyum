@@ -44,9 +44,10 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite hitting-time bad expected-time QF_LRA/Farkas regression seed",
-    "pressure": "Malformed expected hitting-time table where exact replay reduces the start-state equation to 2*h_start = 2 + h_start + h_middle, conflicting with h_start = 3 and h_middle = 2.",
+    "target": "finite hitting-time bad survival-mass and expected-time QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed finite hitting-time rows where exact replay computes survival mass 5/16 instead of 1/4 and reduces the start-state expected-time equation to 2*h_start = 2 + h_start + h_middle, conflicting with h_start = 3 and h_middle = 2.",
     "evidence": [
+      "bad-survival-mass-rejected",
       "bad-expected-time-rejected"
     ],
     "next_step": "Promote additional absorption-probability or finite-horizon rows only when they add distinct exact-linear solver pressure; keep recurrence, transience, optional stopping, mixing, and infinite-horizon potential theory in the Lean-horizon lane."
@@ -62,6 +63,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-hitting-times-v0/smt2/bad-survival-mass-farkas-conflict.smt2",
     "artifacts/examples/math/finite-hitting-times-v0/smt2/bad-expected-time-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
@@ -69,13 +71,14 @@
     "first-hit-distribution-witness",
     "absorption-probability-equations",
     "expected-hitting-time-equations",
+    "bad-survival-mass-rejected",
     "bad-expected-time-rejected",
     "general-hitting-theory-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite hitting events and absorbing targets over explicit finite transition matrices.",
     "Replay first-hit distributions, survival probabilities, absorption probabilities, and expected hitting-time equations by exact rational arithmetic.",
-    "Keep malformed potential/hitting-time table rejections on Axeyum's checked Farkas evidence path when they reduce to linear equations.",
+    "Keep malformed survival-mass and potential/hitting-time table rejections on Axeyum's checked Farkas evidence path when they reduce to linear equations.",
     "Keep recurrence, transience, stopping theorems, and infinite-horizon convergence marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

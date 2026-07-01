@@ -199,6 +199,9 @@ const FINITE_CONDITIONAL_EXPECTATION_BAD_TOWER_PROPERTY: &str = include_str!(
 const FINITE_STOCHASTIC_KERNEL_BAD_COMPOSITION: &str = include_str!(
     "../../../artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-composition-entry-farkas-conflict.smt2"
 );
+const FINITE_HITTING_TIMES_BAD_SURVIVAL_MASS: &str = include_str!(
+    "../../../artifacts/examples/math/finite-hitting-times-v0/smt2/bad-survival-mass-farkas-conflict.smt2"
+);
 const FINITE_PROBABILITY_BAD_CONDITIONAL_PROBABILITY: &str = include_str!(
     "../../../artifacts/examples/math/finite-probability-v0/smt2/bad-conditional-probability-farkas-conflict.smt2"
 );
@@ -1056,6 +1059,14 @@ fn finite_markov_chain_bad_stationary_distribution_artifact_emits_checked_farkas
     assert_resource_farkas(
         "finite-markov-chain-v0 bad-stationary-distribution SMT-LIB artifact",
         FINITE_MARKOV_CHAIN_BAD_STATIONARY_DISTRIBUTION,
+    );
+}
+
+#[test]
+fn finite_hitting_times_bad_survival_mass_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-hitting-times-v0 bad-survival-mass SMT-LIB artifact",
+        FINITE_HITTING_TIMES_BAD_SURVIVAL_MASS,
     );
 }
 

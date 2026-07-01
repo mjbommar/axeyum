@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 595 expected checks.
-- 275 checked proof/evidence rows.
+- 596 expected checks.
+- 276 checked proof/evidence rows.
 - 249 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1282,11 +1282,14 @@ Pick one item per commit unless the change is purely navigational.
     are checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_table_emits_checked_farkas` and
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_tower_property_artifact_emits_checked_farkas`.
-27. Landed: promote `finite-hitting-times-v0` through a source-linked
-    QF_LRA/Farkas regression for `bad-expected-time-rejected`. The existing
-    artifact
+27. Landed: promote `finite-hitting-times-v0` through source-linked
+    QF_LRA/Farkas regressions for `bad-survival-mass-rejected` and
+    `bad-expected-time-rejected`. The artifacts
+    `artifacts/examples/math/finite-hitting-times-v0/smt2/bad-survival-mass-farkas-conflict.smt2`
+    and
     `artifacts/examples/math/finite-hitting-times-v0/smt2/bad-expected-time-farkas-conflict.smt2`
-    is checked by
+    are checked by
+    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_hitting_times_bad_survival_mass_artifact_emits_checked_farkas` and
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_hitting_times_bad_expected_time_emits_checked_farkas`.
 28. Landed: promote `finite-euler-method-v0` through a source-linked
     QF_LRA/Farkas regression for `bad-euler-step-rejected`. The existing

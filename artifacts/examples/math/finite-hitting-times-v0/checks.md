@@ -23,6 +23,17 @@ Expected result: `sat`.
 The validator checks the finite expected hitting-time equations: target states
 have time `0`, and non-target states satisfy `h(i) = 1 + sum_j P(i,j) h(j)`.
 
+## `bad-survival-mass-rejected`
+
+Expected result: `unsat`.
+
+The validator carries only not-yet-hit mass through four steps and recomputes
+`P(T > 4) = 5/16`, so the claimed survival mass `1/4` is false.
+
+The resource-backed Axeyum regression checks the final exact-rational
+contradiction as `QF_LRA`: `16 * survival_mass = 5` and
+`survival_mass = 1/4`, requiring rechecked `UnsatFarkas` evidence.
+
 ## `bad-expected-time-rejected`
 
 Expected result: `unsat`.

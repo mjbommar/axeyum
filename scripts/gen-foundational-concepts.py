@@ -5220,7 +5220,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-hitting-times-v0",
-                "Finite expected hitting-time equations and bad expected-time rows.",
+                "Finite first-hit survival replay, expected hitting-time equations, and bad survival/expected-time rows.",
             ),
             (
                 "bounded-dynamics-v0",
@@ -6984,7 +6984,7 @@ EXAMPLE_FAMILIES = [
             ),
             (
                 "finite-hitting-times-v0",
-                "Bad expected-time equation rejected after clearing denominators.",
+                "Bad survival-mass and expected-time equations rejected after exact finite replay.",
             ),
             (
                 "least-squares-regression-v0",

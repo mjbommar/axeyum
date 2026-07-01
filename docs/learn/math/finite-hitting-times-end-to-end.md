@@ -24,6 +24,7 @@ Concept rows:
 | `first-hit-distribution-witness` | `sat` | replay-only |
 | `absorption-probability-equations` | `sat` | replay-only |
 | `expected-hitting-time-equations` | `sat` | replay-only |
+| `bad-survival-mass-rejected` | `unsat` | checked |
 | `bad-expected-time-rejected` | `unsat` | checked |
 | `general-hitting-theory-lean-horizon` | `not-run` | lean-horizon |
 
@@ -169,6 +170,30 @@ h(middle) = 1 + (1/2)*h(middle) + (1/2)*h(hit)
 The expected-time row is replay-only evidence that this finite table satisfies
 the exact rational equations.
 
+## Reject A False Survival Mass
+
+The negative row keeps the same first-hit table but claims:
+
+```text
+P(T > 4) = 1/4
+```
+
+The checker recomputes the finite survival mass as:
+
+```text
+P(T > 4) = 5/16
+```
+
+The resource regression checks the final contradiction as `QF_LRA`:
+
+```text
+16*survival_mass = 5
+survival_mass = 1/4
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
+
 ## Reject A False Expected-Time Table
 
 The negative row claims:
@@ -217,7 +242,7 @@ bounded first-hit distributions
 survival mass after a finite horizon
 absorption-probability fixed-point equations
 expected hitting-time linear equations
-bad expected-time-table refutations
+bad survival-mass and expected-time-table refutations
 ```
 
 The following remain proof-assistant targets:
@@ -239,6 +264,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_hitting_times_bad_survival_mass_artifact_emits_checked_farkas
 ```
 
 Expected output:
@@ -261,4 +287,4 @@ The graduation target is to encode finite hitting events and absorbing targets
 over explicit finite transition matrices, replay first-hit distributions,
 survival probabilities, absorption probabilities, and expected hitting-time
 equations by exact rational arithmetic, and emit checked counterexample
-evidence for malformed potential or hitting-time tables.
+evidence for malformed survival-mass, potential, or hitting-time tables.

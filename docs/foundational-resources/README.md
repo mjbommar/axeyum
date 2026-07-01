@@ -509,8 +509,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-hitting-times-v0/`](../../artifacts/examples/math/finite-hitting-times-v0/)
   validates exact finite first-hit distributions, survival probabilities,
   absorption-probability equations, expected hitting-time equations, checked
-  rejection of a malformed expected-time table, and a recurrence/transience
-  Lean-horizon row.
+  rejection of malformed survival-mass and expected-time tables, and a
+  recurrence/transience Lean-horizon row.
 - [`artifacts/examples/math/finite-concentration-v0/`](../../artifacts/examples/math/finite-concentration-v0/)
   validates exact finite Markov, Chebyshev, and union-bound replays over
   rational atom tables, checked rejection of false tail and union bounds, and a

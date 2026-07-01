@@ -84,6 +84,35 @@
       "notes": "The validator checks h(target)=0 and h(i)=1+sum_j P(i,j)h(j) for non-target states."
     },
     {
+      "id": "bad-survival-mass-rejected",
+      "claim": "The finite first-hit table has survival mass P(T > 4) = 1/4.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_hitting_survival_refutation",
+      "proof_status": "checked",
+      "data": {
+        "states": ["start", "middle", "hit"],
+        "transition_matrix": [
+          ["1/2", "1/2", "0"],
+          ["0", "1/2", "1/2"],
+          ["0", "0", "1"]
+        ],
+        "initial_state": "start",
+        "target_states": ["hit"],
+        "first_hit_probabilities": [
+          {"time": 1, "probability": "0"},
+          {"time": 2, "probability": "1/4"},
+          {"time": 3, "probability": "1/4"},
+          {"time": 4, "probability": "3/16"}
+        ],
+        "actual_survival_after_horizon": "5/16",
+        "claimed_survival_after_horizon": "1/4",
+        "horizon": 4,
+        "smt2_artifact": "artifacts/examples/math/finite-hitting-times-v0/smt2/bad-survival-mass-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_hitting_times_bad_survival_mass_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator recomputes P(T > 4)=5/16 by carrying only not-yet-hit mass; the Axeyum regression refutes the final linear claim survival_mass = 1/4 with rechecked Farkas evidence."
+    },
+    {
       "id": "bad-expected-time-rejected",
       "claim": "The malformed expected hitting-time table satisfies the finite equations.",
       "expected_result": "unsat",

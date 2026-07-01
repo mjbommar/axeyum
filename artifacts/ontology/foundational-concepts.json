@@ -6999,7 +6999,7 @@
           "id": "finite-hitting-times-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-hitting-times-v0",
-          "notes": "Finite expected hitting-time equations and bad expected-time rows."
+          "notes": "Finite first-hit survival replay, expected hitting-time equations, and bad survival/expected-time rows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -8962,7 +8962,7 @@
           "id": "finite-hitting-times-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-hitting-times-v0",
-          "notes": "Bad expected-time equation rejected after clearing denominators."
+          "notes": "Bad survival-mass and expected-time equations rejected after exact finite replay."
         },
         {
           "id": "least-squares-regression-v0",

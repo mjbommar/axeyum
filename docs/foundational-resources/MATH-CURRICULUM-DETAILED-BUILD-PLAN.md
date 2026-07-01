@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 595 expected checks.
-- 275 checked proof/evidence rows.
+- 596 expected checks.
+- 276 checked proof/evidence rows.
 - 249 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1051,6 +1051,13 @@ Pick one row per commit unless the change is purely navigational.
      normalization and kernel-composition contradictions without claiming
      regular conditional probabilities, general disintegration, Markov kernels
      on arbitrary measurable spaces, or stochastic-process convergence.
+127. Landed: extend `finite-hitting-times-v0` with a checked bad survival-mass
+     row. Exact finite first-hit replay computes `P(T > 4)=5/16`, while the
+     malformed source SMT-LIB artifact claims `1/4`; the shared QF_LRA/Farkas
+     route now checks both finite-horizon survival-mass and expected-time
+     contradictions without claiming recurrence/transience, optional stopping,
+     mixing bounds, Markov-chain potential theory, or infinite-horizon
+     convergence.
 
 ## Validation Checklist
 

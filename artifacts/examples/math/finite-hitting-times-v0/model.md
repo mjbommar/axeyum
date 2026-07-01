@@ -39,6 +39,15 @@ These values account for total mass:
 0 + 1/4 + 1/4 + 3/16 + 5/16 = 1
 ```
 
+The malformed survival row keeps the same finite trace but claims:
+
+```text
+P(T > 4) = 1/4
+```
+
+Exact replay computes `5/16`, so the final equality conflict is checked through
+QF_LRA/Farkas evidence.
+
 ## Absorption Probability
 
 The listed absorption probabilities are:

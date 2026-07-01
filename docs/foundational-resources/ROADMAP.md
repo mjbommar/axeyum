@@ -541,7 +541,7 @@ plus a false stationary-distribution row.
 [`finite-hitting-times-v0`](../../artifacts/examples/math/finite-hitting-times-v0/)
 validates exact finite first-hit distributions, survival probabilities,
 absorption-probability equations, expected hitting-time equations, and checked
-rejection of a malformed expected-time table.
+rejection of malformed survival-mass and expected-time tables.
 [`finite-concentration-v0`](../../artifacts/examples/math/finite-concentration-v0/)
 validates exact finite Markov, Chebyshev, and union-bound replays, plus checked
 rejection of false tail and union bounds.

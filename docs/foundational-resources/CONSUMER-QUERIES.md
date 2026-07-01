@@ -402,6 +402,17 @@ That gives a compact readiness row for recurrence traces, Euler-step examples,
 stochastic-kernel/hitting-time equations, and invariant-bound conflicts without
 requiring a consumer to know which pack owns each topic.
 
+For the concrete finite hitting-time survival-mass proof row:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-hitting-times-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text survival \
+  --require-any
+```
+
 Use the atlas lookup for deterministic finite dynamics/Euler replay and
 stochastic-kernel/process bridge vocabulary:
 

@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const survival_mass Real)
+(assert (= (* 16 survival_mass) 5))
+(assert (= survival_mass (/ 1 4)))
+(check-sat)
