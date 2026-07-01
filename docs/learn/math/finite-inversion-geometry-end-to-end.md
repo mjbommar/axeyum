@@ -26,6 +26,7 @@ assumptions.
 | `inverse-distance-product-witness` | `sat` | replay-only |
 | `inversion-collinearity-witness` | `sat` | replay-only |
 | `bad-inversion-image-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-inverse-distance-product-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-inversion-geometry-lean-horizon` | `not-run` | Lean horizon |
 
 ## Inversion Image
@@ -90,6 +91,28 @@ The source SMT-LIB artifact fixes the replayed value and the malformed value:
 Axeyum parses that source row, emits `UnsatFarkas` evidence, and independently
 checks the certificate.
 
+## Bad Distance Product Row
+
+The second malformed row claims that the squared-distance product is `2`.
+Exact replay computes:
+
+```text
+squared_radius_product = 1
+```
+
+The source SMT-LIB artifact fixes the replayed value and the malformed value:
+
+```smt2
+(set-logic QF_LRA)
+(declare-const squared_radius_product Real)
+(assert (= squared_radius_product 1))
+(assert (= squared_radius_product 2))
+(check-sat)
+```
+
+This keeps the nonlinear inversion arithmetic in exact replay and asks Farkas
+checking to certify only the final linear scalar contradiction.
+
 ## What This Does Not Prove
 
 The pack does not prove general Euclidean inversion theorems. It does not prove
@@ -108,4 +131,5 @@ general inversion geometry: future Lean reconstruction
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-inversion-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_x_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_distance_product_artifact_emits_checked_farkas
 ```

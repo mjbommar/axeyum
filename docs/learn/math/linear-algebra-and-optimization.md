@@ -143,7 +143,8 @@ circle-line intersections as small exact vector calculations, then rejects bad
 radius and bad line-intersection rows through QF_LRA/Farkas evidence.
 The finite inversion-geometry slice checks unit-circle inversion as scalar
 vector replay, inverse-distance products, and collinearity determinants, then
-rejects a bad inverse-coordinate row through QF_LRA/Farkas evidence.
+rejects bad inverse-coordinate and inverse-distance-product rows through
+QF_LRA/Farkas evidence.
 The finite cyclic-geometry slice checks an inscribed square as exact vector
 data: radius-squared rows, diagonal midpoints, diagonal dot products, and
 opposite-angle dot products, then rejects bad diagonal-intersection and
@@ -614,6 +615,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geomet
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geometry_bad_line_intersection_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-inversion-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_x_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_distance_product_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_opposite_angle_artifact_emits_checked_farkas

@@ -25,12 +25,12 @@ Candidate route totals:
 
 | Route | Pack Count | Meaning |
 |---|---:|---|
-| [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 16 | Boolean refutations that should carry checked CNF proof objects. |
-| [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 7 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
-| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 13 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions, including finite graph traversal cost counters. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 57 | Exact rational infeasibility and linear inequality obligations. |
-| [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 19 | Equality-heavy finite structures and congruence conflicts. |
-| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 78 | General theorem statements that remain outside bounded SMT replay. |
+| [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 32 | Boolean refutations that should carry checked CNF proof objects. |
+| [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 14 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
+| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 18 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions, including finite graph traversal cost counters. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 62 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 22 | Equality-heavy finite structures and congruence conflicts. |
+| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 96 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
 
@@ -319,8 +319,9 @@ First targets:
   line-intersection rows after exact coordinate replay computes the squared
   radius and right intersection coordinate)
 - [finite-inversion-geometry-v0](../../artifacts/examples/math/finite-inversion-geometry-v0/)
-  (source-linked Farkas regression landed for the bad inverse-coordinate row
-  after exact inversion replay computes the inverse x-coordinate)
+  (source-linked Farkas regressions landed for the bad inverse-coordinate and
+  bad inverse-distance-product rows after exact inversion replay computes the
+  inverse x-coordinate and squared-radius product)
 - [finite-cyclic-geometry-v0](../../artifacts/examples/math/finite-cyclic-geometry-v0/)
   (source-linked Farkas regressions landed for the bad diagonal-intersection,
   bad opposite-angle, and bad Ptolemy rows after exact cyclic-configuration

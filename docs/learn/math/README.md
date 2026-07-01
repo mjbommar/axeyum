@@ -292,7 +292,8 @@ Companion maps:
 - [Finite Inversion Geometry](finite-inversion-geometry-end-to-end.md):
   follows exact unit-circle inversion replay, inverse-distance product
   checking, collinearity replay, checked QF_LRA/Farkas bad inverse-coordinate
-  rejection, and the general inversion-geometry Lean horizon.
+  and bad inverse-distance-product rejection, and the general inversion-geometry
+  Lean horizon.
 - [Finite Cyclic Geometry](finite-cyclic-geometry-end-to-end.md): follows
   exact cyclic quadrilateral replay, diagonal-intersection checking, opposite
   right-angle replay, rational Ptolemy replay, checked QF_LRA/Farkas bad

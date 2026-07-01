@@ -13963,6 +13963,78 @@ def validate_finite_inversion_geometry(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-inversion-image-rejected certificate must document checked Farkas evidence")
 
+    bad_product = checks["bad-inverse-distance-product-rejected"]
+    if bad_product["expected_result"] != "unsat" or bad_product.get("proof_status") != "checked":
+        fail("bad-inverse-distance-product-rejected must be a checked unsat row")
+    data = bad_product.get("data", {})
+    product_center = require_point2("bad inversion product center", data.get("center"))
+    product_radius_squared = require_fraction(
+        "bad inversion product radius_squared",
+        data.get("radius_squared"),
+    )
+    product_point = require_point2("bad inversion product point", data.get("point"))
+    product_inverse_point = require_point2(
+        "bad inversion product computed_inverse_point",
+        data.get("computed_inverse_point"),
+    )
+    product_point_radius_squared = require_fraction(
+        "bad inversion product computed_point_radius_squared",
+        data.get("computed_point_radius_squared"),
+    )
+    product_inverse_radius_squared = require_fraction(
+        "bad inversion product computed_inverse_radius_squared",
+        data.get("computed_inverse_radius_squared"),
+    )
+    computed_radius_product = require_fraction(
+        "bad inversion product computed_radius_product",
+        data.get("computed_radius_product"),
+    )
+    claimed_radius_product = require_fraction(
+        "bad inversion product claimed_radius_product",
+        data.get("claimed_radius_product"),
+    )
+    if product_center != (Fraction(0), Fraction(0)):
+        fail("bad-inverse-distance-product-rejected currently expects an origin-centered circle")
+    if product_radius_squared <= 0:
+        fail("bad-inverse-distance-product-rejected radius_squared must be positive")
+    replayed_point_radius_squared = distance_squared2(product_center, product_point)
+    if replayed_point_radius_squared != product_point_radius_squared:
+        fail("bad-inverse-distance-product-rejected point radius is incorrect")
+    if product_point_radius_squared == 0:
+        fail("bad-inverse-distance-product-rejected point must not be the center")
+    product_scale = product_radius_squared / product_point_radius_squared
+    replayed_inverse_point = (
+        product_point[0] * product_scale,
+        product_point[1] * product_scale,
+    )
+    if replayed_inverse_point != product_inverse_point:
+        fail("bad-inverse-distance-product-rejected computed inverse is incorrect")
+    if distance_squared2(product_center, product_inverse_point) != product_inverse_radius_squared:
+        fail("bad-inverse-distance-product-rejected inverse radius is incorrect")
+    if product_point_radius_squared * product_inverse_radius_squared != computed_radius_product:
+        fail("bad-inverse-distance-product-rejected radius product is incorrect")
+    if computed_radius_product != product_radius_squared * product_radius_squared:
+        fail("bad-inverse-distance-product-rejected radius product must equal r^4")
+    if computed_radius_product == claimed_radius_product:
+        fail("bad-inverse-distance-product-rejected must document a false product claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad inversion product smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-inversion-geometry-v0/smt2/"
+        "bad-inverse-distance-product-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-inverse-distance-product-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad inversion product smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad inversion product farkas_regression", regression)
+    if "finite_inversion_geometry_bad_inverse_distance_product_artifact_emits_checked_farkas" not in regression:
+        fail("bad-inverse-distance-product-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad inversion product certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-inverse-distance-product-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-inversion-geometry-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-inversion-geometry-lean-horizon must be not-run")

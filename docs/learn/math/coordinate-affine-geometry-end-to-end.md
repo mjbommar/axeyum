@@ -63,6 +63,7 @@ Concept rows:
 | `inverse-distance-product-witness` | `sat` | replay-only |
 | `inversion-collinearity-witness` | `sat` | replay-only |
 | `bad-inversion-image-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-inverse-distance-product-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `cyclic-quadrilateral-witness` | `sat` | replay-only |
 | `cyclic-diagonal-intersection-witness` | `sat` | replay-only |
 | `cyclic-opposite-right-angles-witness` | `sat` | replay-only |
@@ -373,6 +374,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geometry_bad_radius_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-inversion-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_x_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_distance_product_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_opposite_angle_artifact_emits_checked_farkas

@@ -420,8 +420,10 @@ Build sequence:
     both checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
 39. `finite-inversion-geometry-v0` now links `bad-inversion-image-rejected`
     to
-    `artifacts/examples/math/finite-inversion-geometry-v0/smt2/bad-inversion-x-farkas-conflict.smt2`,
-    checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
+    `artifacts/examples/math/finite-inversion-geometry-v0/smt2/bad-inversion-x-farkas-conflict.smt2`
+    and `bad-inverse-distance-product-rejected` to
+    `artifacts/examples/math/finite-inversion-geometry-v0/smt2/bad-inverse-distance-product-farkas-conflict.smt2`,
+    both checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
 40. `finite-cyclic-geometry-v0` now links
     `bad-cyclic-diagonal-intersection-rejected` to
     `artifacts/examples/math/finite-cyclic-geometry-v0/smt2/bad-diagonal-intersection-farkas-conflict.smt2`

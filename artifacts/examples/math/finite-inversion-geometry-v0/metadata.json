@@ -35,12 +35,13 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-inversion-geometry-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite inversion-geometry bad inverse-coordinate QF_LRA/Farkas regression seed",
-    "pressure": "Exact inversion replay computes inverse x-coordinate 2/5 for point (2,1) in the unit circle, but the row claims x-coordinate 1/2.",
+    "target": "finite inversion-geometry bad inverse-coordinate and inverse-distance-product QF_LRA/Farkas regression seeds",
+    "pressure": "Exact inversion replay computes inverse x-coordinate 2/5 and squared-radius product 1 for point (2,1) in the unit circle, but the malformed rows claim x-coordinate 1/2 and product 2.",
     "evidence": [
-      "bad-inversion-image-rejected"
+      "bad-inversion-image-rejected",
+      "bad-inverse-distance-product-rejected"
     ],
-    "next_step": "Promote additional inversion rows only when they add distinct circle-line, angle, cyclic-configuration, or polynomial-geometry pressure; keep general inversion theorems in the Lean-horizon lane."
+    "next_step": "Promote additional inversion rows only when they add distinct circle-line, angle, cyclic-configuration, or polynomial-geometry pressure beyond inverse-coordinate and inverse-distance-product replay; keep general inversion theorems in the Lean-horizon lane."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -53,6 +54,7 @@
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "docs/learn/math/finite-inversion-geometry-end-to-end.md",
     "artifacts/examples/math/finite-inversion-geometry-v0/smt2/bad-inversion-x-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-inversion-geometry-v0/smt2/bad-inverse-distance-product-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
@@ -60,12 +62,13 @@
     "inverse-distance-product-witness",
     "inversion-collinearity-witness",
     "bad-inversion-image-rejected",
+    "bad-inverse-distance-product-rejected",
     "general-inversion-geometry-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode fixed rational inversion-geometry rows as deterministic exact-coordinate replay obligations.",
     "Replay inversion image, inverse-distance product, and collinearity witnesses over exact rationals.",
-    "Route rejected finite inverse-coordinate claims through checked QF_LRA/Farkas evidence after replay computes the inverse coordinate.",
+    "Route rejected finite inverse-coordinate and inverse-distance-product claims through checked QF_LRA/Farkas evidence after replay computes the exact coordinate or scalar product.",
     "Keep general Euclidean inversion theorems, angle preservation, circle-line correspondences, and power-of-a-point claims marked Lean-horizon until proof artifacts exist."
   ]
 }

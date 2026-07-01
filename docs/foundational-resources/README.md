@@ -436,8 +436,9 @@ schemas, examples, and validation workflows.
   circle-geometry Lean-horizon row.
 - [`artifacts/examples/math/finite-inversion-geometry-v0/`](../../artifacts/examples/math/finite-inversion-geometry-v0/)
   validates exact unit-circle inversion replay, inverse-distance product
-  checking, collinearity replay, checked QF_LRA/Farkas rejection of a bad
-  inverse-coordinate claim, and an inversion-geometry Lean-horizon row.
+  checking, collinearity replay, checked QF_LRA/Farkas rejection of bad
+  inverse-coordinate and inverse-distance-product claims, and an
+  inversion-geometry Lean-horizon row.
 - [`artifacts/examples/math/finite-cyclic-geometry-v0/`](../../artifacts/examples/math/finite-cyclic-geometry-v0/)
   validates exact cyclic quadrilateral replay, diagonal-intersection and
   opposite-angle dot-product checks, rational Ptolemy replay, checked

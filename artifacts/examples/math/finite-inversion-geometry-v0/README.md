@@ -2,8 +2,9 @@
 
 This pack turns one exact rational circle-inversion calculation into resource
 rows. It checks a unit-circle inversion image, the inverse-distance product,
-collinearity with the center, one false inverse-coordinate claim, and one
-general theorem horizon. It does not prove general inversion geometry.
+collinearity with the center, false inverse-coordinate and distance-product
+claims, and one general theorem horizon. It does not prove general inversion
+geometry.
 
 ## Audience
 
@@ -24,6 +25,8 @@ general theorem horizon. It does not prove general inversion geometry.
   point are collinear.
 - `bad-inversion-image-rejected`: rejects the malformed claim that the inverse
   x-coordinate is `1/2`.
+- `bad-inverse-distance-product-rejected`: rejects the malformed claim that the
+  squared-distance product is `2`.
 - `general-inversion-geometry-lean-horizon`: names the future proof route for
   coordinate-free inversion theorems.
 
@@ -32,11 +35,12 @@ general theorem horizon. It does not prove general inversion geometry.
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-inversion-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_x_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_distance_product_artifact_emits_checked_farkas
 ```
 
 ## Trust Boundary
 
 Untrusted search may propose a point, inverse image, or inversion theorem
 instance. The trusted work is small: exact rational coordinate replay and
-checked `UnsatFarkas` evidence over the source SMT-LIB row for the final false
-inverse-coordinate claim.
+checked `UnsatFarkas` evidence over the source SMT-LIB rows for final false
+inverse-coordinate and distance-product claims.

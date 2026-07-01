@@ -29,3 +29,10 @@ linear contradiction:
 inverse_x = 2/5
 inverse_x = 1/2
 ```
+
+The second bad row follows the same boundary for the distance-product scalar:
+
+```text
+squared_radius_product = 1
+squared_radius_product = 2
+```

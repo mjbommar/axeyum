@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-inversion bad inverse-distance-product QF_LRA row landed.**
+  `finite-inversion-geometry-v0` now has a second checked Farkas row: exact
+  unit-circle inversion replay computes `|p|^2 = 5`, `|I(p)|^2 = 1/5`, and
+  squared-radius product `1` for `p = (2,1)`, then rejects the malformed claim
+  that the product is `2`. The new source SMT-LIB artifact isolates the final
+  exact-linear scalar conflict, the shared `math_resource_lra_routes`
+  regression parses it and checks `UnsatFarkas` evidence, and the validator
+  pins the point, inverse point, radius squares, artifact path, regression, and
+  certificate note. Generated dashboards and the public query summary now
+  report 111 concept rows, 108 non-template packs, 580 expected checks, 262
+  checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+
 - **Coordinate-geometry bad midpoint-coordinate QF_LRA row landed.**
   `coordinate-geometry-v0` now has a second checked Farkas row: exact midpoint
   replay computes midpoint `(2,1)` for the segment `(0,0)` to `(4,2)`, then

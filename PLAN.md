@@ -162,7 +162,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 579 expected checks, 261 checked
+111 concept rows, 108 non-template packs, 580 expected checks, 262 checked
 rows, 247 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -623,6 +623,7 @@ the latest finite-specialization-order bad `T0` QF_UF/Alethe promotion,
 the latest finite-Chebyshev bad alternation-magnitude QF_LRA/Farkas promotion,
 the latest finite-circle-geometry bad line-intersection QF_LRA/Farkas promotion,
 the latest finite-cyclic-geometry bad Ptolemy QF_LRA/Farkas promotion,
+the latest finite-inversion-geometry bad inverse-distance-product QF_LRA/Farkas promotion,
 the latest finite-inversion-geometry bad inverse-coordinate QF_LRA/Farkas promotion,
 the latest finite-active-set-QP bad free-gradient QF_LRA/Farkas promotion,
 the latest finite-wolfe-line-search bad curvature QF_LRA/Farkas promotion,

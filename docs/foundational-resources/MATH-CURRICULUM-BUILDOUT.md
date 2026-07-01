@@ -791,8 +791,9 @@ rejection of false radius and line-intersection claims, and a general
 circle-geometry Lean-horizon row.
 `artifacts/examples/math/finite-inversion-geometry-v0/` now validates exact
 unit-circle inversion replay, inverse-distance product checking, collinearity
-replay, checked QF_LRA/Farkas rejection of a false inverse-coordinate claim,
-and a general inversion-geometry Lean-horizon row.
+replay, checked QF_LRA/Farkas rejection of false inverse-coordinate and
+inverse-distance-product claims, and a general inversion-geometry Lean-horizon
+row.
 `artifacts/examples/math/finite-cyclic-geometry-v0/` now validates exact
 cyclic quadrilateral replay, diagonal-intersection and diagonal-perpendicularity
 replay, opposite-angle dot-product replay, rational Ptolemy replay, checked
@@ -1545,7 +1546,8 @@ a circle-geometry Lean-horizon row.
 `finite-inversion-geometry-v0` now adds the exact finite inversion bridge for
 geometry: unit-circle inversion-image replay, inverse-distance product replay,
 collinearity replay, checked QF_LRA/Farkas rejection of false inverse
-coordinates, and an inversion-geometry Lean-horizon row.
+coordinates and inverse-distance products, and an inversion-geometry
+Lean-horizon row.
 `finite-cyclic-geometry-v0` now adds the exact finite cyclic bridge for
 geometry: cyclic quadrilateral replay, diagonal-intersection and
 diagonal-perpendicularity replay, opposite-angle dot-product replay, rational
@@ -1704,7 +1706,7 @@ checked QF_LRA/Farkas bad midpoint-coordinate and bad squared-distance,
 checked QF_LRA/Farkas bad intersection-coordinate and bad incidence,
 checked QF_LRA/Farkas bad translation-image and bad distance-table data, checked QF_LRA/Farkas
 bad affine midpoint-coordinate and bad-distance-preservation, checked QF_LRA/Farkas bad area-scaling,
-checked QF_LRA/Farkas bad-orientation, checked QF_LRA/Farkas bad-radius and bad line-intersection, checked QF_LRA/Farkas bad inverse-coordinate,
+checked QF_LRA/Farkas bad-orientation, checked QF_LRA/Farkas bad-radius and bad line-intersection, checked QF_LRA/Farkas bad inverse-coordinate and bad inverse-distance-product,
 checked QF_LRA/Farkas bad diagonal-intersection, bad opposite-angle, and bad Ptolemy rows,
 and general geometry Lean-horizon rows.
 `finite-topology-v0` and `finite-measure-v0` now have a learner-facing
@@ -2017,10 +2019,10 @@ line-intersection rows through the same checked Farkas evidence path after
 exact coordinate replay computes squared radius `2` for the malformed
 unit-circle point and right-intersection x-coordinate `1` for the malformed
 horizontal diameter claim.
-`finite-inversion-geometry-v0` now routes its bad inverse-coordinate row
-through the same checked Farkas evidence path after exact inversion replay
-computes inverse x-coordinate `2/5` for the malformed unit-circle inversion
-claim.
+`finite-inversion-geometry-v0` now routes its bad inverse-coordinate and bad
+inverse-distance-product rows through the same checked Farkas evidence path
+after exact inversion replay computes inverse x-coordinate `2/5` and
+squared-radius product `1` for the malformed unit-circle inversion claims.
 `finite-cyclic-geometry-v0` now routes its bad diagonal-intersection, bad
 opposite-angle, and bad Ptolemy rows through the same checked Farkas evidence
 path after exact cyclic-configuration replay computes intersection

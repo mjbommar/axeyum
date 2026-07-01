@@ -69,6 +69,27 @@
       "notes": "Exact inversion replay computes inverse x-coordinate 2/5, while the malformed row claims 1/2; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
     },
     {
+      "id": "bad-inverse-distance-product-rejected",
+      "claim": "The squared distances of a unit-circle inversion point and its image multiply to 2.",
+      "expected_result": "unsat",
+      "validation": "exact_bad_inverse_distance_product_refutation",
+      "proof_status": "checked",
+      "data": {
+        "center": ["0", "0"],
+        "radius_squared": "1",
+        "point": ["2", "1"],
+        "computed_inverse_point": ["2/5", "1/5"],
+        "computed_point_radius_squared": "5",
+        "computed_inverse_radius_squared": "1/5",
+        "computed_radius_product": "1",
+        "claimed_radius_product": "2",
+        "smt2_artifact": "artifacts/examples/math/finite-inversion-geometry-v0/smt2/bad-inverse-distance-product-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_distance_product_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact inversion replay computes |p|^2 * |I(p)|^2 = 1 for the unit-circle row, while the malformed row claims 2; the source QF_LRA artifact isolates that final scalar conflict for Farkas checking."
+    },
+    {
       "id": "general-inversion-geometry-lean-horizon",
       "claim": "General Euclidean inversion theorems, circle-line correspondences, and power-of-a-point require future Lean reconstruction.",
       "expected_result": "not-run",

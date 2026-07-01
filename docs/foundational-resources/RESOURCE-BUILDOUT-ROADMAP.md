@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 579 expected checks.
-- 261 checked proof/evidence rows.
+- 580 expected checks.
+- 262 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -980,15 +980,17 @@ Build next:
 - Keep `finite-circle-geometry-v0`'s promoted bad radius and bad
   line-intersection rows tied to exact circle-coordinate replay plus the source
   QF_LRA/Farkas artifacts.
-- Keep `finite-inversion-geometry-v0`'s promoted bad inverse-coordinate row
-  tied to exact inversion replay plus the source QF_LRA/Farkas artifact.
+- Keep `finite-inversion-geometry-v0`'s promoted bad inverse-coordinate and
+  inverse-distance-product rows tied to exact inversion replay plus the source
+  QF_LRA/Farkas artifacts.
 - Keep `finite-cyclic-geometry-v0`'s promoted bad diagonal-intersection,
   bad opposite-angle, and bad Ptolemy rows tied to exact cyclic-configuration
   replay plus the source QF_LRA/Farkas artifacts.
 - Promote additional false affine/distance/orientation/incidence/circle/inversion/cyclic
   claims through QF_LRA/Farkas or NRA only when they add distinct exact-rational
   pressure beyond the current area-scaling, nontrivial circle-line,
-  higher-degree polynomial-geometry, or theorem-reconstruction rows.
+  inverse-distance-product, higher-degree polynomial-geometry, or
+  theorem-reconstruction rows.
 - Keep differential geometry, algebraic geometry, global geometry, and
   topology-heavy geometry as Lean-horizon.
 
@@ -1821,6 +1823,12 @@ Pick one item per commit unless the change is purely navigational.
      QF_LRA/Farkas route now checks both Rayleigh-quotient and eigenpair
      spectral conflicts without promoting spectral theorem or eigenvalue
      algorithm claims.
+116. Landed: extend `finite-inversion-geometry-v0` with a checked bad
+     inverse-distance-product row. Exact unit-circle inversion replay computes
+     the squared-radius product as `1`, while the malformed source SMT-LIB
+     artifact claims `2`; the shared QF_LRA/Farkas route now checks both
+     inverse-coordinate and inverse-distance-product conflicts without
+     promoting general inversion theorems.
 
 ## Validation Checklist
 

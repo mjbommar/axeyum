@@ -109,6 +109,9 @@ const FINITE_CIRCLE_GEOMETRY_BAD_LINE_INTERSECTION: &str = include_str!(
 const FINITE_INVERSION_GEOMETRY_BAD_INVERSE_X: &str = include_str!(
     "../../../artifacts/examples/math/finite-inversion-geometry-v0/smt2/bad-inversion-x-farkas-conflict.smt2"
 );
+const FINITE_INVERSION_GEOMETRY_BAD_INVERSE_DISTANCE_PRODUCT: &str = include_str!(
+    "../../../artifacts/examples/math/finite-inversion-geometry-v0/smt2/bad-inverse-distance-product-farkas-conflict.smt2"
+);
 const FINITE_CYCLIC_GEOMETRY_BAD_DIAGONAL_INTERSECTION: &str = include_str!(
     "../../../artifacts/examples/math/finite-cyclic-geometry-v0/smt2/bad-diagonal-intersection-farkas-conflict.smt2"
 );
@@ -680,6 +683,14 @@ fn finite_inversion_geometry_bad_inverse_x_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-inversion-geometry-v0 bad-inversion-x SMT-LIB artifact",
         FINITE_INVERSION_GEOMETRY_BAD_INVERSE_X,
+    );
+}
+
+#[test]
+fn finite_inversion_geometry_bad_inverse_distance_product_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-inversion-geometry-v0 bad-inverse-distance-product SMT-LIB artifact",
+        FINITE_INVERSION_GEOMETRY_BAD_INVERSE_DISTANCE_PRODUCT,
     );
 }
 

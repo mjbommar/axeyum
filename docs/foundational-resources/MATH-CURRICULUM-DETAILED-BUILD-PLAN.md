@@ -42,8 +42,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 579 expected checks.
-- 261 checked proof/evidence rows.
+- 580 expected checks.
+- 262 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -240,7 +240,7 @@ Exit criteria:
 | `naturals` | maintain | keep bounded prefix and LIA/BV width limits explicit |
 | `integers` | maintain | group common Diophantine obstructions |
 | `rationals` | maintain | exact rational order and Farkas conflicts are already the model |
-| `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding has a source-linked bad-iterate row, separation has a source-linked bad-separator row, KKT has a source-linked bad-stationarity row, active-set QP has a source-linked bad-free-gradient row, SDP has a source-linked bad-objective row, gradient descent has a source-linked bad-decrease row, finite circle geometry has source-linked bad-radius and bad line-intersection rows, finite inversion geometry has a source-linked bad inverse-coordinate row, and finite cyclic geometry has source-linked bad diagonal-intersection, bad opposite-angle, and bad Ptolemy rows; keep completeness, convergence, separation, KKT sufficiency, active-set method theory, SDP duality, descent-rate, general circle/inversion/cyclic geometry, and broad CAD/SOS/RCF claims horizon |
+| `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding has a source-linked bad-iterate row, separation has a source-linked bad-separator row, KKT has a source-linked bad-stationarity row, active-set QP has a source-linked bad-free-gradient row, SDP has a source-linked bad-objective row, gradient descent has a source-linked bad-decrease row, finite circle geometry has source-linked bad-radius and bad line-intersection rows, finite inversion geometry has source-linked bad inverse-coordinate and inverse-distance-product rows, and finite cyclic geometry has source-linked bad diagonal-intersection, bad opposite-angle, and bad Ptolemy rows; keep completeness, convergence, separation, KKT sufficiency, active-set method theory, SDP duality, descent-rate, general circle/inversion/cyclic geometry, and broad CAD/SOS/RCF claims horizon |
 | `complex` | deepen | complex-plane bad unit-square real-part row now has a source-linked QF_LRA/Farkas regression; keep analytic theorems Lean-horizon |
 | `divisibility-and-euclid` | maintain | use gcd/Bezout rows as arithmetic-certificate examples |
 | `modular-arithmetic` | maintain | keep LIA nonunit/CRT and BV fixed-width Fermat-unit residue routes distinct |
@@ -971,6 +971,14 @@ Pick one row per commit unless the change is purely navigational.
      checks both midpoint-coordinate and squared-distance conflicts without
      claiming synthetic, projective, differential, or global geometry
      theorems.
+117. Landed: extend `finite-inversion-geometry-v0` with a checked bad
+     inverse-distance-product row. Exact unit-circle inversion replay computes
+     `|p|^2 = 5`, `|I(p)|^2 = 1/5`, and squared-radius product `1` for
+     `p = (2,1)`, while the malformed source SMT-LIB artifact claims product
+     `2`; the shared QF_LRA/Farkas route now checks both inverse-coordinate
+     and inverse-distance-product conflicts without claiming angle
+     preservation, circle-line inversion correspondences, power-of-a-point, or
+     general inversion geometry.
 
 ## Validation Checklist
 
