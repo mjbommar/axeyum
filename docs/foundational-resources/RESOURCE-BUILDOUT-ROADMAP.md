@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 598 expected checks.
-- 278 checked proof/evidence rows.
-- 249 replay-only rows.
+- 600 expected checks.
+- 279 checked proof/evidence rows.
+- 250 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1396,7 +1396,8 @@ Pick one item per commit unless the change is purely navigational.
     `finite-probability-v0` through exact PMF normalization, conditional
     probability replay, Bayes posterior replay, checked QF_LRA/Farkas
     bad-normalization rejection, checked bad-conditional-probability rejection,
-    and checked bad-posterior rejection.
+    checked bad-posterior rejection, finite independence replay, and checked
+    bad-independence rejection.
 47. Landed: add standalone finite-operator learner page.
     `docs/learn/math/finite-operator-end-to-end.md` follows
     `finite-operator-v0` through exact finite-dimensional `l1` norm replay,

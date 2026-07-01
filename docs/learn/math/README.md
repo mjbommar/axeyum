@@ -383,13 +383,15 @@ Companion maps:
   rejection.
 - [Conditional Probability, Random Variables, Kernels, Concentration, Martingales, And Product Measures](finite-probability-end-to-end.md):
   follows finite atom tables through exact conditional-probability,
-  checked Bayes-posterior refutation, random-variable, conditional-expectation,
+  checked Bayes-posterior and bad-independence refutations, random-variable,
+  conditional-expectation,
   finite stochastic-kernel, concentration, finite martingale, product-measure,
   and simple-function integral replay.
 - [Finite Probability Mass Tables](finite-probability-mass-tables-end-to-end.md):
   follows exact PMF normalization, conditional probability, Bayes posterior
   replay, checked QF_LRA/Farkas bad normalization, checked bad conditional
-  probability, and checked bad-posterior rejection.
+  probability, checked bad-posterior rejection, finite independence replay,
+  and checked bad-independence rejection.
 - [Finite Measure](finite-measure-end-to-end.md): follows finite
   sigma-algebra replay, exact finite additivity, event-complement replay,
   checked QF_LRA/Farkas bad-complement rejection, and the countable-measure

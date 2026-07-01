@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-probability bad independence QF_LRA row landed.**
+  `finite-probability-v0` now includes a replayed finite independence witness
+  and a checked bad-independence row: exact atom-table replay computes
+  `P(heads)=1/2`, `P(red)=1/2`, and `P(heads and red)=1/4`, then rejects the
+  malformed claim `P(heads and red)=1/3` under the finite independence
+  equation through a source SMT-LIB artifact on the shared QF_LRA/Farkas route.
+  The validator pins the atom table, events, replayed marginals, actual/product
+  joint masses, claimed joint mass, artifact path, and regression; the shared
+  `math_resource_lra_routes` regression parses the artifact and checks
+  `UnsatFarkas` evidence. Generated dashboards and the public query summary
+  now report 111 concept rows, 108 non-template packs, 600 expected checks,
+  279 checked rows, 250 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite measure monotonicity bad union-subadditivity QF_LRA row landed.**
   `finite-measure-monotonicity-v0` now includes a checked bad
   union-subadditivity row: exact inclusion-exclusion replay computes

@@ -39,7 +39,7 @@ additivity, event complements, finite measure monotonicity, finite union
 subadditivity, a checked QF_LRA bad-complement certificate, a checked QF_LRA
 bad subset-measure certificate, a checked QF_LRA bad union-subadditivity
 certificate, checked QF_LRA bad-normalization,
-bad-conditional-probability, and bad-Bayes certificates,
+bad-conditional-probability, bad-Bayes, and bad-independence certificates,
 finite simple-function integrals, indicator
 integrals, finite random-variable pushforwards, expectations through
 pushforward distributions, independence checks, a checked QF_LRA bad

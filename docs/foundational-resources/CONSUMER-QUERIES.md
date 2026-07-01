@@ -326,9 +326,10 @@ python3 scripts/query-foundational-resources.py checks \
 ```
 
 For probability theory, query the Farkas route to keep finite probability
-mass tables, conditioning and Bayes tables, product measures, pushforwards, conditional
-expectations, stochastic kernels, finite Markov chains, martingales, hitting
-times, concentration rows, and exact random-matrix moments grouped while
+mass tables, conditioning and Bayes tables, independence rows, product
+measures, pushforwards, conditional expectations, stochastic kernels, finite
+Markov chains, martingales, hitting times, concentration rows, and exact
+random-matrix moments grouped while
 leaving continuous distributions, stochastic-process limit theorems, and
 asymptotic probability theory in proof-horizon or numerical-honesty lanes:
 
@@ -336,6 +337,17 @@ asymptotic probability theory in proof-horizon or numerical-honesty lanes:
 python3 scripts/query-foundational-resources.py fields \
   --field probability_theory \
   --route Farkas \
+  --require-any
+```
+
+For the concrete finite probability independence proof row:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-probability-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text independence \
   --require-any
 ```
 

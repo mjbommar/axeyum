@@ -40,6 +40,23 @@
         "false_positive_rate": "1/20",
         "posterior": "2/13"
       }
+    },
+    {
+      "id": "independent-coin-color",
+      "description": "A four-atom table where the coin and color events are independent.",
+      "values": {
+        "atoms": [
+          {"id": "heads_red", "probability": "1/4", "events": ["heads", "red"]},
+          {"id": "heads_blue", "probability": "1/4", "events": ["heads", "blue"]},
+          {"id": "tails_red", "probability": "1/4", "events": ["tails", "red"]},
+          {"id": "tails_blue", "probability": "1/4", "events": ["tails", "blue"]}
+        ],
+        "left_event": "heads",
+        "right_event": "red",
+        "left_probability": "1/2",
+        "right_probability": "1/2",
+        "joint_probability": "1/4"
+      }
     }
   ],
   "checks": [
@@ -132,6 +149,41 @@
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_bayes_posterior_emits_checked_farkas"
       },
       "notes": "The validator recomputes the evidence probability as 117/2000 and the disease-positive probability as 9/1000; the Axeyum regression refutes evidence_probability * posterior = disease_and_positive_probability together with posterior = 1/5 using rechecked Farkas evidence."
+    },
+    {
+      "id": "independence-witness",
+      "claim": "The listed four-atom table has independent heads and red events.",
+      "expected_result": "sat",
+      "validation": "exact_rational_probability_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["independent-coin-color"],
+      "notes": "The validator recomputes P(heads)=1/2, P(red)=1/2, and P(heads and red)=1/4, then checks the finite independence equation."
+    },
+    {
+      "id": "bad-independence-rejected",
+      "claim": "The same marginal probabilities are independent while P(heads and red) is 1/3.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_independence_refutation",
+      "proof_status": "checked",
+      "data": {
+        "atoms": [
+          {"id": "heads_red", "probability": "1/4", "events": ["heads", "red"]},
+          {"id": "heads_blue", "probability": "1/4", "events": ["heads", "blue"]},
+          {"id": "tails_red", "probability": "1/4", "events": ["tails", "red"]},
+          {"id": "tails_blue", "probability": "1/4", "events": ["tails", "blue"]}
+        ],
+        "left_event": "heads",
+        "right_event": "red",
+        "left_probability": "1/2",
+        "right_probability": "1/2",
+        "actual_joint_probability": "1/4",
+        "independence_product": "1/4",
+        "claimed_joint_probability": "1/3",
+        "farkas_independence_equation": "joint_probability = left_probability * right_probability",
+        "smt2_artifact": "artifacts/examples/math/finite-probability-v0/smt2/bad-independence-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_independence_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator recomputes P(heads)=1/2, P(red)=1/2, and P(heads and red)=1/4; the source artifact checks that the malformed joint probability 1/3 violates the finite independence equation."
     }
   ]
 }

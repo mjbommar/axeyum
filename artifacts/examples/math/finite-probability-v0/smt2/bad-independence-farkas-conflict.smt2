@@ -1,0 +1,7 @@
+(set-logic QF_LRA)
+(declare-const joint_probability Real)
+(declare-const independence_product Real)
+(assert (= independence_product (/ 1 4)))
+(assert (= joint_probability independence_product))
+(assert (= joint_probability (/ 1 3)))
+(check-sat)

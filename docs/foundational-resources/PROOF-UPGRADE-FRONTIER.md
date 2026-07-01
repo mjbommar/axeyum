@@ -49,8 +49,8 @@ Classification:
   the first inconsistent integer margin/count row now has a resource-backed
   QF_LIA/Diophantine regression for the bad contingency total;
 - finite-probability satisfiable witness rows remain finite-model replay;
-  future impossible normalization, nonnegativity, conditioning, or Bayes-rule
-  constraints use QF_LRA/Farkas;
+  future impossible normalization, nonnegativity, conditioning, Bayes-rule, or
+  independence constraints use QF_LRA/Farkas;
 - keep satisfiable witness rows on finite-model replay, with model replay as
   the checked evidence;
 - keep statistical inference, sampling, and continuous probability outside
@@ -209,7 +209,7 @@ First targets:
   `1/9`)
 - [finite-probability-v0](../../artifacts/examples/math/finite-probability-v0/)
   (resource-backed Farkas regressions landed for the bad normalization,
-  conditional-probability, and Bayes-posterior rows)
+  conditional-probability, Bayes-posterior, and independence rows)
 - [finite-measure-v0](../../artifacts/examples/math/finite-measure-v0/)
   (resource-backed Farkas regression landed for the bad complement-measure row
   after exact finite-measure replay computes the event and total measures)

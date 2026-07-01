@@ -509,7 +509,7 @@ FIELD_PACKS = {
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
-    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, conditioning, Bayes rule, product measures, and exact discrete distributions."),
+    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, conditioning, independence, Bayes rule, product measures, and exact discrete distributions."),
     "statistics": ("descriptive-statistics-v0", "Mean/variance identities, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, and Simpson witnesses."),
     "optimization_and_convexity": [
         ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
@@ -596,7 +596,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-probability-v0",
-                "Finite probability-table normalization, conditioning, and Bayes-rule replay.",
+                "Finite probability-table normalization, conditioning, independence, and Bayes-rule replay.",
             ),
             (
                 "linear-algebra-rational-v0",
@@ -4722,7 +4722,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-probability-v0",
-                "Finite probability-table normalization and Bayes rows used by expectation replay.",
+                "Finite probability-table normalization, Bayes, and independence rows used by expectation replay.",
             ),
             (
                 "descriptive-statistics-v0",
@@ -6976,7 +6976,7 @@ EXAMPLE_FAMILIES = [
             ),
             (
                 "finite-probability-v0",
-                "Bad normalization and Bayes-posterior rows rejected by exact rational constraints.",
+                "Bad normalization, Bayes-posterior, and independence rows rejected by exact rational constraints.",
             ),
             (
                 "finite-markov-chain-v0",

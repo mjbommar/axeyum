@@ -25,6 +25,7 @@ python3 scripts/query-foundational-resources.py concepts --field probability_the
 python3 scripts/query-foundational-resources.py concepts --field probability_theory --text random --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field probability_theory --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-probability-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-probability-v0 --route Farkas --proof-status checked --text independence --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-random-variables-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-conditional-expectation-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-martingales-v0 --route Farkas --proof-status checked --text stopped --require-any >/dev/null

@@ -18325,6 +18325,87 @@ def validate_finite_probability(expected: dict[str, Any]) -> None:
     if "finite_probability_bad_bayes_posterior_emits_checked_farkas" not in regression:
         fail("bad-bayes-posterior-rejected must link the Farkas regression")
 
+    independence = checks["independence-witness"]
+    if independence["expected_result"] != "sat":
+        fail("independence-witness must expect sat")
+    values = single_witness_values(independence, witnesses)
+    atoms = require_probability_atoms("independence atoms", values.get("atoms"), require_events=True)
+    require_normalized_atoms("independence-witness", atoms)
+    left_event = values.get("left_event")
+    right_event = values.get("right_event")
+    require_string("independence left_event", left_event)
+    require_string("independence right_event", right_event)
+    left_probability = require_probability("independence left_probability", values.get("left_probability"))
+    right_probability = require_probability("independence right_probability", values.get("right_probability"))
+    joint_probability = require_probability("independence joint_probability", values.get("joint_probability"))
+    computed_left = event_probability(atoms, left_event)
+    computed_right = event_probability(atoms, right_event)
+    computed_joint = joint_event_probability(atoms, left_event, right_event)
+    if left_probability != computed_left:
+        fail("independence-witness left_probability is incorrect")
+    if right_probability != computed_right:
+        fail("independence-witness right_probability is incorrect")
+    if joint_probability != computed_joint:
+        fail("independence-witness joint_probability is incorrect")
+    if joint_probability != left_probability * right_probability:
+        fail("independence-witness must satisfy the finite independence equation")
+
+    bad_independence = checks["bad-independence-rejected"]
+    if bad_independence["expected_result"] != "unsat":
+        fail("bad-independence-rejected must expect unsat")
+    if bad_independence["proof_status"] != "checked":
+        fail("bad-independence-rejected must be checked")
+    if bad_independence["validation"] != "finite_bad_independence_refutation":
+        fail("bad-independence-rejected must use finite_bad_independence_refutation validation")
+    data = bad_independence.get("data", {})
+    atoms = require_probability_atoms("bad independence atoms", data.get("atoms"), require_events=True)
+    require_normalized_atoms("bad-independence-rejected", atoms)
+    left_event = data.get("left_event")
+    right_event = data.get("right_event")
+    require_string("bad independence left_event", left_event)
+    require_string("bad independence right_event", right_event)
+    left_probability = require_probability("bad independence left_probability", data.get("left_probability"))
+    right_probability = require_probability("bad independence right_probability", data.get("right_probability"))
+    actual_joint_probability = require_probability(
+        "bad independence actual_joint_probability",
+        data.get("actual_joint_probability"),
+    )
+    independence_product = require_probability(
+        "bad independence independence_product",
+        data.get("independence_product"),
+    )
+    claimed_joint_probability = require_probability(
+        "bad independence claimed_joint_probability",
+        data.get("claimed_joint_probability"),
+    )
+    computed_left = event_probability(atoms, left_event)
+    computed_right = event_probability(atoms, right_event)
+    computed_joint = joint_event_probability(atoms, left_event, right_event)
+    if left_probability != computed_left:
+        fail("bad-independence-rejected left_probability is incorrect")
+    if right_probability != computed_right:
+        fail("bad-independence-rejected right_probability is incorrect")
+    if actual_joint_probability != computed_joint:
+        fail("bad-independence-rejected actual_joint_probability is incorrect")
+    if independence_product != left_probability * right_probability:
+        fail("bad-independence-rejected independence_product is incorrect")
+    if actual_joint_probability != independence_product:
+        fail("bad-independence-rejected source table must satisfy independence before the bad claim")
+    if claimed_joint_probability == independence_product:
+        fail("bad-independence-rejected must document a false joint probability")
+    farkas_independence_equation = data.get("farkas_independence_equation")
+    require_string("bad independence farkas_independence_equation", farkas_independence_equation)
+    if farkas_independence_equation != "joint_probability = left_probability * right_probability":
+        fail("bad-independence-rejected must document the Farkas independence equation")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad independence smt2_artifact", smt2_artifact)
+    if not (ROOT / smt2_artifact).is_file():
+        fail("bad-independence-rejected smt2_artifact is missing")
+    regression = data.get("farkas_regression")
+    require_string("bad independence farkas_regression", regression)
+    if "finite_probability_bad_independence_artifact_emits_checked_farkas" not in regression:
+        fail("bad-independence-rejected must link the Farkas regression")
+
 
 def require_atom_value_table(
     context: str,

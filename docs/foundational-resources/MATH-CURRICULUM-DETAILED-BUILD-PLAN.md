@@ -44,9 +44,9 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 598 expected checks.
-- 278 checked proof/evidence rows.
-- 249 replay-only rows.
+- 600 expected checks.
+- 279 checked proof/evidence rows.
+- 250 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -375,7 +375,8 @@ Pick one row per commit unless the change is purely navigational.
 35. Landed: add standalone finite probability mass-table learner page,
    splitting exact PMF normalization, conditional probability replay, Bayes
    posterior replay, checked QF_LRA/Farkas bad-normalization rejection, checked
-   bad-conditional-probability rejection, and checked bad-posterior rejection
+   bad-conditional-probability rejection, checked bad-posterior rejection,
+   finite independence replay, and checked bad-independence rejection
    out of the broad finite-probability process
    bridge lesson.
 36. Landed: add standalone finite-operator learner page, splitting exact
@@ -1074,6 +1075,14 @@ Pick one row per commit unless the change is purely navigational.
      subset-monotonicity and union-subadditivity contradictions without
      claiming countable subadditivity, monotone/dominated convergence,
      arbitrary measure spaces, or almost-everywhere reasoning.
+130. Landed: extend `finite-probability-v0` with a replayed finite
+     independence witness and a checked bad-independence row. Exact atom-table
+     replay recomputes `P(heads)=1/2`, `P(red)=1/2`, and
+     `P(heads and red)=1/4`, while the malformed source SMT-LIB artifact
+     claims `P(heads and red)=1/3` under the finite independence equation; the
+     shared QF_LRA/Farkas route now checks normalization, conditioning, Bayes,
+     and independence contradictions without claiming continuous
+     distributions, sampling guarantees, or asymptotic probability theory.
 
 ## Validation Checklist
 

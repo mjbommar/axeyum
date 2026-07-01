@@ -2025,7 +2025,7 @@
           "id": "finite-probability-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-probability-v0",
-          "notes": "Finite probability-table normalization, conditioning, and Bayes-rule replay."
+          "notes": "Finite probability-table normalization, conditioning, independence, and Bayes-rule replay."
         },
         {
           "id": "linear-algebra-rational-v0",
@@ -6462,7 +6462,7 @@
           "id": "finite-probability-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-probability-v0",
-          "notes": "Finite probability-table normalization and Bayes rows used by expectation replay."
+          "notes": "Finite probability-table normalization, Bayes, and independence rows used by expectation replay."
         },
         {
           "id": "descriptive-statistics-v0",
@@ -8950,7 +8950,7 @@
           "id": "finite-probability-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-probability-v0",
-          "notes": "Bad normalization and Bayes-posterior rows rejected by exact rational constraints."
+          "notes": "Bad normalization, Bayes-posterior, and independence rows rejected by exact rational constraints."
         },
         {
           "id": "finite-markov-chain-v0",
@@ -11393,7 +11393,7 @@
           "id": "finite-probability-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-probability-v0",
-          "notes": "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, conditioning, Bayes rule, product measures, and exact discrete distributions."
+          "notes": "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, conditioning, independence, Bayes rule, product measures, and exact discrete distributions."
         },
         {
           "id": "counting-v0",

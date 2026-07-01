@@ -98,6 +98,39 @@ evidence_probability * posterior = disease_and_positive_probability
 posterior = 1/5
 ```
 
+### Finite Independence
+
+The independence witness is the four-atom product table:
+
+```text
+P(heads and red)    = 1/4
+P(heads and blue)   = 1/4
+P(tails and red)    = 1/4
+P(tails and blue)   = 1/4
+```
+
+The pack checks:
+
+```text
+P(heads) = 1/2
+P(red) = 1/2
+P(heads and red) = 1/4 = P(heads) * P(red)
+```
+
+The bad independence row keeps the same marginal probabilities but asserts the
+false joint probability `1/3`. After exact replay computes:
+
+```text
+independence_product = P(heads) * P(red) = 1/4
+```
+
+the checked linear contradiction is:
+
+```text
+joint_probability = independence_product
+joint_probability = 1/3
+```
+
 These fixed checks are not claims about continuous distributions, sampling, or
 statistical inference. They are exact finite-table replay targets.
 
@@ -105,6 +138,6 @@ Certificate route:
 
 - satisfiable finite probability tables remain finite-model replay;
 - impossible linear probability constraints, including contradictory
-  normalization, nonnegativity, conditioning, or Bayes-rule equations, belong
-  on the QF_LRA/Farkas route;
+  normalization, nonnegativity, conditioning, Bayes-rule, or independence
+  equations, belong on the QF_LRA/Farkas route;
 - continuous distributions and sampling claims remain out of proof status.

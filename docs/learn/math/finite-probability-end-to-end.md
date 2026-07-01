@@ -33,6 +33,8 @@ Concept rows:
 | `bad-conditional-probability-rejected` | `unsat` | checked |
 | `bayes-posterior-witness` | `sat` | replay-only |
 | `bad-bayes-posterior-rejected` | `unsat` | checked |
+| `independence-witness` | `sat` | replay-only |
+| `bad-independence-rejected` | `unsat` | checked |
 | `pushforward-distribution-witness` | `sat` | replay-only |
 | `expectation-through-pushforward-witness` | `sat` | replay-only |
 | `independent-random-variables-witness` | `sat` | replay-only |
@@ -130,6 +132,20 @@ The checked `QF_LRA` contradiction is:
 evidence_probability * posterior = disease_and_positive_probability
 posterior = 1/5
 ```
+
+The finite-probability independence witness uses a four-atom product table:
+
+```text
+P(heads and red) = 1/4
+P(heads and blue) = 1/4
+P(tails and red) = 1/4
+P(tails and blue) = 1/4
+```
+
+Exact replay computes `P(heads)=1/2`, `P(red)=1/2`, and
+`P(heads and red)=1/4`. The bad independence row keeps the same marginals but
+claims `P(heads and red)=1/3`; the checked `QF_LRA` artifact compares the
+claimed joint mass with the replayed product `1/4`.
 
 The finite integration witness is a three-atom table:
 
@@ -340,6 +356,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_product_measure_bad_marginal_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_independence_artifact_emits_checked_farkas
 ```
 
 Expected output for each command:

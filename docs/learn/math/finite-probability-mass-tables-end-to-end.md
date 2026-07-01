@@ -1,8 +1,8 @@
 # End To End: Finite Probability Mass Tables
 
 This lesson follows one exact finite probability resource from atom-table
-normalization to conditional probability, Bayes replay, and checked rejection
-of malformed exact-rational probability claims. It uses the
+normalization to conditional probability, Bayes replay, finite independence,
+and checked rejection of malformed exact-rational probability claims. It uses the
 [finite-probability-v0](../../../artifacts/examples/math/finite-probability-v0/)
 pack.
 
@@ -25,11 +25,13 @@ Concept rows:
 | `bad-conditional-probability-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `bayes-posterior-witness` | `sat` | replay-only |
 | `bad-bayes-posterior-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `independence-witness` | `sat` | replay-only |
+| `bad-independence-rejected` | `unsat` | checked QF_LRA/Farkas |
 
 Every row is finite and exact-rational. The pack checks probability mass
-tables, conditional probabilities, and Bayes posterior equations. It does not
-cover continuous distributions, sampling guarantees, asymptotic statistics, or
-measure-theoretic probability theorems.
+tables, conditional probabilities, Bayes posterior equations, and finite
+independence equations. It does not cover continuous distributions, sampling
+guarantees, asymptotic statistics, or measure-theoretic probability theorems.
 
 ## Encode A PMF
 
@@ -148,6 +150,39 @@ posterior = 1/5
 against the replayed source values. The Farkas checker, not solver search, is
 the trusted evidence.
 
+## Replay Finite Independence
+
+The independence witness is a four-atom product table:
+
+```text
+P(heads and red) = 1/4
+P(heads and blue) = 1/4
+P(tails and red) = 1/4
+P(tails and blue) = 1/4
+```
+
+Replay computes:
+
+```text
+P(heads) = 1/2
+P(red) = 1/2
+P(heads and red) = 1/4
+```
+
+The bad independence row keeps the marginal probabilities but claims
+`P(heads and red)=1/3`. The committed artifact
+[`bad-independence-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-probability-v0/smt2/bad-independence-farkas-conflict.smt2)
+checks the exact-linear contradiction:
+
+```text
+joint_probability = independence_product
+independence_product = 1/4
+joint_probability = 1/3
+```
+
+The finite table replay computes the marginals; the trusted route checks only
+the final Farkas certificate.
+
 ## Run It
 
 From the repository root:
@@ -157,6 +192,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_normalization_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_conditional_probability_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_bayes_posterior_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_independence_artifact_emits_checked_farkas
 ```
 
 Expected validator output:
@@ -168,7 +204,7 @@ validated 1 foundational example pack(s)
 ## Trust Boundary
 
 ```text
-untrusted fast search -> probability table, posterior, or Farkas certificate
+untrusted fast search -> probability table, posterior, independence, or Farkas certificate
 trusted small checking -> exact finite sums, rational division, checked QF_LRA evidence
 remaining horizon -> continuous probability, sampling guarantees, asymptotics, and measure-theoretic theorems
 ```

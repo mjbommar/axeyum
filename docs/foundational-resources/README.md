@@ -378,9 +378,10 @@ schemas, examples, and validation workflows.
   validates finite minimum edge-cut and vertex-cut certificates, plus checked
   rejection of non-separating one-edge and one-vertex cuts.
 - [`artifacts/examples/math/finite-probability-v0/`](../../artifacts/examples/math/finite-probability-v0/)
-  validates exact finite probability mass tables, conditional probability, and
-  Bayes posterior replay, with checked QF_LRA/Farkas evidence for bad
-  normalization, bad conditioning, and bad posterior rows.
+  validates exact finite probability mass tables, conditional probability,
+  Bayes posterior replay, and finite independence replay, with checked
+  QF_LRA/Farkas evidence for bad normalization, bad conditioning, bad
+  posterior, and bad independence rows.
 - [`artifacts/examples/math/descriptive-statistics-v0/`](../../artifacts/examples/math/descriptive-statistics-v0/)
   validates exact mean/variance identities, checked QF_LRA/Farkas rejection of
   a bad variance claim, contingency-table margins, checked QF_LIA/Diophantine
