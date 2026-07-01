@@ -40,7 +40,8 @@ subadditivity, a checked QF_LRA bad-complement certificate, a checked QF_LRA
 bad subset-measure certificate, checked QF_LRA bad-normalization and bad-Bayes certificates,
 finite simple-function integrals, indicator
 integrals, finite random-variable pushforwards, expectations through
-pushforward distributions, independence checks, finite partition conditional
+pushforward distributions, independence checks, a checked QF_LRA bad
+expectation-through-pushforward certificate, finite partition conditional
 expectations, the law of total expectation, tower property replay, finite
 stochastic-kernel normalization, pushforward, joint disintegration, kernel
 composition, finite first-hit distributions, survival probabilities,
@@ -101,7 +102,10 @@ E[X] = 20
 
 The `finite-random-variables-v0` validator recomputes the pushforward mass,
 expectation from source atoms, expectation from the pushforward distribution,
-and finite independence of two random variables over a four-atom table.
+and finite independence of two random variables over a four-atom table. It
+rejects the malformed expectation row `E[X] = 25` because both exact replay
+routes compute `E[X] = 20`, then checks the final linear conflict through
+`UnsatFarkas`.
 Conditional expectation checks partition averages such as:
 
 ```text

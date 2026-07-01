@@ -130,6 +130,41 @@
       "notes": "The validator rejects the claim because the exact source mass mapped to long is 1/4, not 1/2; after replay computes the pushforward mass, the Axeyum regression refutes long_probability = 1/4 and long_probability = 1/2 with rechecked Farkas evidence."
     },
     {
+      "id": "bad-expectation-through-pushforward-rejected",
+      "claim": "The commute-time random variable has expectation 25.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_expectation_through_pushforward_refutation",
+      "proof_status": "checked",
+      "data": {
+        "atoms": [
+          {"id": "clear", "probability": "1/2"},
+          {"id": "rain", "probability": "1/4"},
+          {"id": "storm", "probability": "1/4"}
+        ],
+        "random_variable": {
+          "clear": "short",
+          "rain": "medium",
+          "storm": "long"
+        },
+        "pushforward_distribution": {
+          "short": "1/2",
+          "medium": "1/4",
+          "long": "1/4"
+        },
+        "outcome_values": {
+          "short": "10",
+          "medium": "20",
+          "long": "40"
+        },
+        "source_expectation": "20",
+        "pushforward_expectation": "20",
+        "claimed_expectation": "25",
+        "smt2_artifact": "artifacts/examples/math/finite-random-variables-v0/smt2/bad-expectation-through-pushforward-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_random_variables_bad_expectation_through_pushforward_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator rejects the claim because exact replay computes E[X] = 20 from both source atoms and the pushforward distribution; after replay computes the expectation, the Axeyum regression refutes expectation_value = 20 and expectation_value = 25 with rechecked Farkas evidence."
+    },
+    {
       "id": "general-random-variable-lean-horizon",
       "claim": "General measurable random variables and conditional expectation require future Lean resources.",
       "expected_result": "not-run",

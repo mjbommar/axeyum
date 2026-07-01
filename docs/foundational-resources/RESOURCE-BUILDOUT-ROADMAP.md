@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 581 expected checks.
-- 263 checked proof/evidence rows.
+- 582 expected checks.
+- 264 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1235,11 +1235,13 @@ Pick one item per commit unless the change is purely navigational.
     and
     `artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-marginal-farkas-conflict.smt2`
     are checked by `math_resource_lra_routes`.
-20. Landed: promote `finite-random-variables-v0` through a source-linked
-    QF_LRA/Farkas regression for `bad-pushforward-rejected`. The artifact
+20. Landed: promote `finite-random-variables-v0` through source-linked
+    QF_LRA/Farkas regressions for `bad-pushforward-rejected` and
+    `bad-expectation-through-pushforward-rejected`. The artifacts
     `artifacts/examples/math/finite-random-variables-v0/smt2/bad-pushforward-farkas-conflict.smt2`
-    is checked by
-    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_random_variables_bad_pushforward_emits_checked_farkas`.
+    and
+    `artifacts/examples/math/finite-random-variables-v0/smt2/bad-expectation-through-pushforward-farkas-conflict.smt2`
+    are checked by `math_resource_lra_routes`.
 21. Landed: promote `finite-integration-v0` through a source-linked
     QF_LRA/Farkas regression for `bad-expectation-rejected`. The artifact
     `artifacts/examples/math/finite-integration-v0/smt2/bad-expectation-farkas-conflict.smt2`

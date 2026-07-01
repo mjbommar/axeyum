@@ -3,7 +3,7 @@
 This pack adds exact finite random-variable checks. It treats a random variable
 as a total finite function from probability atoms to outcome labels, then checks
 pushforward distributions, expectations, independence, and a checked rejection
-of a false pushforward claim.
+of false pushforward and expectation claims.
 
 The examples are:
 
@@ -11,6 +11,7 @@ The examples are:
 - an expectation-through-pushforward witness;
 - an independent random-variables witness;
 - checked rejection of a false pushforward distribution;
+- checked rejection of a false expectation-through-pushforward claim;
 - a general random-variable and conditional-expectation Lean-horizon row.
 
 ## Concepts
@@ -31,12 +32,14 @@ The validator checks normalized finite atom probabilities, verifies that each
 random variable is total on the atom set, recomputes pushforward probability
 mass by exact summation, recomputes expectation both from atoms and from the
 pushforward distribution, and checks independence by comparing a joint
-distribution to the product of its marginals. The false pushforward row is also
-mirrored by a QF_LRA/Farkas regression over the replay-computed outcome mass.
+distribution to the product of its marginals. The false pushforward and false
+expectation rows are also mirrored by QF_LRA/Farkas regressions over the
+replay-computed outcome mass and expectation.
 
-This pack is checked finite evidence for the bad pushforward row. It is not a
-proof of general measurable-function theory, conditional expectation,
-martingales, stochastic kernels, or continuous random variables.
+This pack is checked finite evidence for the bad pushforward and bad
+expectation rows. It is not a proof of general measurable-function theory,
+conditional expectation, martingales, stochastic kernels, or continuous random
+variables.
 
 Validation:
 

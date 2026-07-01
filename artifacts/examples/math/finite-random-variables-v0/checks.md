@@ -31,6 +31,15 @@ mass for `long` is `1/4`, not `1/2`. The source-linked QF_LRA artifact records
 the final exact-linear contradiction checked by the shared Farkas route
 regression.
 
+## `bad-expectation-through-pushforward-rejected`
+
+Expected result: `unsat`.
+
+The validator rejects the claimed expectation because exact replay computes
+`E[X] = 20` from both the source atom table and the pushforward distribution,
+not `25`. The source-linked QF_LRA artifact records the final exact-linear
+contradiction checked by the shared Farkas route regression.
+
 ## `general-random-variable-lean-horizon`
 
 Expected result: `not-run`.

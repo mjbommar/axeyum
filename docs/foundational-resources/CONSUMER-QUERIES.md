@@ -703,6 +703,17 @@ python3 scripts/query-foundational-resources.py fields \
   --require-any
 ```
 
+The random-variable lane now includes checked rows for both a malformed
+pushforward mass and a malformed expectation-through-pushforward claim:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-random-variables-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+```
+
 The bridge rows are visible through the atlas query surface:
 
 ```sh

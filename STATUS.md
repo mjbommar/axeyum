@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-random-variable bad expectation-through-pushforward QF_LRA row landed.**
+  `finite-random-variables-v0` now has a second checked Farkas row: exact
+  finite random-variable replay computes `E[X] = 20` both from source atoms and
+  from the pushforward distribution, then rejects the malformed claim
+  `E[X] = 25`. The new source SMT-LIB artifact isolates the final exact-linear
+  expectation conflict, the shared `math_resource_lra_routes` regression parses
+  it and checks `UnsatFarkas` evidence, and the validator pins the atom table,
+  total random-variable map, pushforward distribution, outcome values, source
+  expectation, pushforward expectation, claimed expectation, artifact path,
+  regression, and certificate note. Generated dashboards and the public query
+  summary now report 111 concept rows, 108 non-template packs, 582 expected
+  checks, 264 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+
 - **Comprehensive math-curriculum resource plan landed.**
   Added
   [`MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md)
@@ -212,7 +225,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   educational content, ontology/taxonomy rows, example packs, proof artifacts,
   solver feedback, rules/law transfer, consumer boundaries, and future library
   splits. The plan is grounded in the current 2026-07-01 resource baseline
-  (111 concept rows, 108 non-template packs, 581 expected checks, 263 checked
+  (111 concept rows, 108 non-template packs, 582 expected checks, 264 checked
   rows, 247 replay-only rows, 71 Lean-horizon rows, and 108 promoted
   solver-reuse packs) and is linked from the foundational-resource index,
   mdBook summary, buildout plan, master plan, build sequence, detailed build
@@ -227,8 +240,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   regression parses it and checks `UnsatFarkas` evidence, and the validator
   pins the factor tables, product table, target axis/atom, artifact path,
   regression, and certificate note. Generated dashboards and the public query
-  summary now report 111 concept rows, 108 non-template packs, 581 expected
-  checks, 263 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+  summary now report 111 concept rows, 108 non-template packs, 582 expected
+  checks, 264 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
 
 - **Finite-inversion bad inverse-distance-product QF_LRA row landed.**
   `finite-inversion-geometry-v0` now has a second checked Farkas row: exact
@@ -3537,8 +3550,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the exact finite random-variable bridge between finite probability,
   measure, functions, and statistics. The pack validates pushforward
   distributions, expectation through pushforward distributions, finite
-  independence checks, checked rejection of a false pushforward distribution,
-  and a general random-variable/conditional-expectation Lean-horizon row. The
+  independence checks, checked rejection of false pushforward and
+  expectation-through-pushforward claims, and a general
+  random-variable/conditional-expectation Lean-horizon row. The
   foundational example-pack validator now checks finite atom-to-outcome maps,
   pushforward mass, exact source and pushforward expectations, joint
   distributions, and independence by product-of-marginals replay.

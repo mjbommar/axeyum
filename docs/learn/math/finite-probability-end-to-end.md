@@ -36,6 +36,7 @@ Concept rows:
 | `expectation-through-pushforward-witness` | `sat` | replay-only |
 | `independent-random-variables-witness` | `sat` | replay-only |
 | `bad-pushforward-rejected` | `unsat` | checked |
+| `bad-expectation-through-pushforward-rejected` | `unsat` | checked |
 | `conditional-expectation-partition-witness` | `sat` | replay-only |
 | `law-total-expectation-witness` | `sat` | replay-only |
 | `tower-property-witness` | `sat` | replay-only |
@@ -215,7 +216,9 @@ E[X] = 10*(1/2) + 20*(1/4) + 40*(1/4) = 20
 ```
 
 It also checks a four-atom independence witness by recomputing the joint table
-and comparing each joint mass to the product of its marginals.
+and comparing each joint mass to the product of its marginals. It now also
+rejects the false expectation claim `E[X] = 25` with checked `UnsatFarkas`
+evidence after replay computes `E[X] = 20`.
 
 For a fuller focused trace, read
 [End To End: Finite Random Variables](finite-random-variables-end-to-end.md).

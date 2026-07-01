@@ -480,9 +480,9 @@ schemas, examples, and validation workflows.
   row.
 - [`artifacts/examples/math/finite-random-variables-v0/`](../../artifacts/examples/math/finite-random-variables-v0/)
   validates exact finite random-variable pushforwards, expectation through
-  pushforward distributions, finite independence checks, checked rejection of a
-  false pushforward distribution, and a general random-variable Lean-horizon
-  row.
+  pushforward distributions, finite independence checks, checked rejection of
+  false pushforward and expectation-through-pushforward claims, and a general
+  random-variable Lean-horizon row.
 - [`artifacts/examples/math/finite-conditional-expectation-v0/`](../../artifacts/examples/math/finite-conditional-expectation-v0/)
   validates exact finite partition conditional expectations, law of total
   expectation, tower property replay, checked rejection of a false

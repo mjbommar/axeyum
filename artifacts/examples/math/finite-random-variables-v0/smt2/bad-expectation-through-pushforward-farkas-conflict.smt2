@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const expectation_value Real)
+(assert (= expectation_value 20))
+(assert (= expectation_value 25))
+(check-sat)

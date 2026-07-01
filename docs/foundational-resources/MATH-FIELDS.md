@@ -175,8 +175,8 @@ one of:
     - Fields: `probability_theory`, `statistics`, `measure_theory`,
       `real_analysis`, `set_theory_and_foundations`.
     - Checks: finite random-variable pushforwards, expectation through
-      pushforward distributions, independence checks, and bad pushforward
-      rejection.
+      pushforward distributions, independence checks, bad pushforward
+      rejection, and bad expectation-through-pushforward rejection.
 12. `artifacts/examples/math/finite-conditional-expectation-v0/`
     - Fields: `probability_theory`, `statistics`, `measure_theory`,
       `real_analysis`, `set_theory_and_foundations`.

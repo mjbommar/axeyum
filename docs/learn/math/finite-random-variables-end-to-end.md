@@ -21,6 +21,7 @@ Concept rows:
 | `expectation-through-pushforward-witness` | `sat` | replay-only |
 | `independent-random-variables-witness` | `sat` | replay-only |
 | `bad-pushforward-rejected` | `unsat` | checked |
+| `bad-expectation-through-pushforward-rejected` | `unsat` | checked |
 | `general-random-variable-lean-horizon` | `not-run` | lean-horizon |
 
 Every checked row is exact finite rational arithmetic over normalized atom
@@ -168,6 +169,36 @@ and rejects the claim because:
 The candidate distribution is untrusted; the small checker rebuilds it from the
 source atom table and the finite function.
 
+## Reject A False Expectation Claim
+
+The second negative row claims:
+
+```text
+E[X] = 25
+```
+
+The checker recomputes expectation from the atom table:
+
+```text
+10*(1/2) + 20*(1/4) + 40*(1/4) = 20
+```
+
+and recomputes the same value from the pushforward distribution:
+
+```text
+10*P(X = short) + 20*P(X = medium) + 40*P(X = long) = 20
+```
+
+The source-linked QF_LRA artifact then isolates the checked contradiction:
+
+```text
+expectation_value = 20
+expectation_value = 25
+```
+
+The untrusted row can suggest an expectation, but the checker rebuilds the
+weighted sums before the Farkas route proves the final exact-linear conflict.
+
 ## Name The Lean Horizon
 
 The finite pack checks:
@@ -179,7 +210,7 @@ pushforward distributions
 expectation from source atoms and pushforward distributions
 joint and marginal distributions
 finite independence
-bad pushforward refutations
+bad pushforward and bad expectation refutations
 ```
 
 The following remain proof-assistant targets:

@@ -169,6 +169,9 @@ const FINITE_EULER_BAD_MAX_ERROR_BOUND: &str = include_str!(
 const FINITE_PRODUCT_MEASURE_BAD_MARGINAL: &str = include_str!(
     "../../../artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-marginal-farkas-conflict.smt2"
 );
+const FINITE_RANDOM_VARIABLES_BAD_EXPECTATION_THROUGH_PUSHFORWARD: &str = include_str!(
+    "../../../artifacts/examples/math/finite-random-variables-v0/smt2/bad-expectation-through-pushforward-farkas-conflict.smt2"
+);
 const RATIONALS_TRICHOTOMY_NONLESS: &str = include_str!(
     "../../../artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-nonless-farkas-conflict.smt2"
 );
@@ -907,6 +910,14 @@ fn finite_random_variables_bad_pushforward_emits_checked_farkas() {
         "finite-random-variables-v0 bad-pushforward-rejected",
         &arena,
         &[replay_computed_mass, false_claimed_mass],
+    );
+}
+
+#[test]
+fn finite_random_variables_bad_expectation_through_pushforward_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-random-variables-v0 bad-expectation-through-pushforward SMT-LIB artifact",
+        FINITE_RANDOM_VARIABLES_BAD_EXPECTATION_THROUGH_PUSHFORWARD,
     );
 }
 

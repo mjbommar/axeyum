@@ -19177,6 +19177,61 @@ def validate_finite_random_variables(expected: dict[str, Any]) -> None:
     if "finite_random_variables_bad_pushforward_emits_checked_farkas" not in data["farkas_regression"]:
         fail("bad-pushforward-rejected must link the Farkas regression")
 
+    bad_expectation = checks["bad-expectation-through-pushforward-rejected"]
+    if bad_expectation["expected_result"] != "unsat":
+        fail("bad-expectation-through-pushforward-rejected must expect unsat")
+    data = bad_expectation.get("data", {})
+    atoms = require_probability_atoms("bad expectation atoms", data.get("atoms"), require_events=False)
+    require_normalized_atoms("bad-expectation-through-pushforward-rejected", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    random_variable = require_atom_outcome_table(
+        "bad expectation random_variable",
+        data.get("random_variable"),
+        atom_ids,
+    )
+    outcome_ids = random_variable_outcomes(atom_ids, random_variable)
+    distribution = require_probability_value_map(
+        "bad expectation pushforward_distribution",
+        data.get("pushforward_distribution"),
+        outcome_ids,
+    )
+    require_normalized_probability_map("bad-expectation-through-pushforward-rejected", distribution)
+    if finite_pushforward_distribution(atoms, random_variable) != distribution:
+        fail("bad-expectation-through-pushforward-rejected pushforward distribution is incorrect")
+    outcome_values = require_atom_value_table(
+        "bad expectation outcome_values",
+        data.get("outcome_values"),
+        outcome_ids,
+    )
+    source_expectation = require_fraction(
+        "bad expectation source_expectation",
+        data.get("source_expectation"),
+    )
+    pushforward_expectation = require_fraction(
+        "bad expectation pushforward_expectation",
+        data.get("pushforward_expectation"),
+    )
+    claimed_expectation = require_fraction(
+        "bad expectation claimed_expectation",
+        data.get("claimed_expectation"),
+    )
+    if finite_random_variable_expectation(atoms, random_variable, outcome_values) != source_expectation:
+        fail("bad-expectation-through-pushforward-rejected source expectation is incorrect")
+    if finite_expectation_from_outcomes(distribution, outcome_values) != pushforward_expectation:
+        fail("bad-expectation-through-pushforward-rejected pushforward expectation is incorrect")
+    if source_expectation != pushforward_expectation:
+        fail("bad-expectation-through-pushforward-rejected expectations do not match")
+    if claimed_expectation == source_expectation:
+        fail("bad-expectation-through-pushforward-rejected must document a false expectation")
+    require_string("bad expectation smt2_artifact", data.get("smt2_artifact"))
+    check_source("bad expectation smt2_artifact", data["smt2_artifact"])
+    require_string("bad expectation farkas_regression", data.get("farkas_regression"))
+    if (
+        "finite_random_variables_bad_expectation_through_pushforward_artifact_emits_checked_farkas"
+        not in data["farkas_regression"]
+    ):
+        fail("bad-expectation-through-pushforward-rejected must link the Farkas regression")
+
     horizon = checks["general-random-variable-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-random-variable-lean-horizon must be not-run")
