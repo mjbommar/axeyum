@@ -23,6 +23,8 @@ For concept-plus-route matrix discovery, see
 [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md).
 For concept-plus-route finite algebra discovery, see
 [ALGEBRA-STRUCTURE-QUERIES.md](ALGEBRA-STRUCTURE-QUERIES.md).
+For concept-plus-route graph and discrete discovery, see
+[GRAPH-DISCRETE-QUERIES.md](GRAPH-DISCRETE-QUERIES.md).
 For concept-plus-route geometry discovery, see
 [GEOMETRY-RESOURCE-QUERIES.md](GEOMETRY-RESOURCE-QUERIES.md).
 
@@ -1092,14 +1094,20 @@ python3 scripts/query-foundational-resources.py checks \
 
 For graph theory, query the Boolean route to keep finite coloring,
 reachability, matching, cut, and d-separation refutations grouped. Query the
-LIA route for finite BFS/DFS traversal-cost counters and bad DFS-bound rows.
-Leave asymptotic algorithm analysis and unbounded graph-theorem coverage in
-the proof-horizon lane:
+QF_BV route for fixed-width graph-coloring encodings, and query the LIA route
+for finite BFS/DFS traversal-cost counters and bad DFS-bound rows. Leave
+asymptotic algorithm analysis and unbounded graph-theorem coverage in the
+proof-horizon lane:
 
 ```sh
 python3 scripts/query-foundational-resources.py fields \
   --field graph_theory \
   --route boolean \
+  --require-any
+
+python3 scripts/query-foundational-resources.py fields \
+  --field graph_theory \
+  --route qf-bv \
   --require-any
 
 python3 scripts/query-foundational-resources.py fields \
@@ -1146,6 +1154,17 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py packs \
   --concept bridge_finite_graph_replay_obstruction \
+  --route qf-bv \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_graph_replay_obstruction \
+  --route qf-bv \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py packs \
+  --concept bridge_finite_graph_replay_obstruction \
   --route LIA \
   --require-any
 
@@ -1157,7 +1176,7 @@ python3 scripts/query-foundational-resources.py checks \
 ```
 
 To display concrete checked graph rows, drill into checked Boolean and LIA
-examples:
+examples, or into the fixed-width graph-coloring row:
 
 ```sh
 python3 scripts/query-foundational-resources.py checks \
@@ -1167,7 +1186,13 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
-  --field graph_theory \
+  --pack graph-coloring-v0 \
+  --route qf-bv \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-search-runtime-v0 \
   --route LIA \
   --proof-status checked \
   --require-any
@@ -1706,14 +1731,18 @@ python3 scripts/query-foundational-resources.py concepts --field number_theory -
 python3 scripts/query-foundational-resources.py concepts --field number_theory --text CRT --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field number_theory --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field graph_theory --route boolean --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field graph_theory --route qf-bv --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field graph_theory --route LIA --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field graph_theory --text graph --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field graph_theory --text reachability --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field graph_theory --text runtime --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field graph_theory --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route LIA --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_graph_replay_obstruction --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_graph_replay_obstruction --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_finite_graph_replay_obstruction --route qf-bv --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_graph_replay_obstruction --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_graph_replay_obstruction --route LIA --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_graph_replay_obstruction --route LIA --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field real_analysis --route Farkas --require-any >/dev/null

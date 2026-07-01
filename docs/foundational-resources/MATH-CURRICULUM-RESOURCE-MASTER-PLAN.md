@@ -438,6 +438,12 @@ Use one row per commit unless the change is purely navigational.
    coordinate/incidence/rigid/affine/orientation and circle/inversion/cyclic
    geometry rows queryable by bridge concept plus Farkas route without adding
    a typed API or claiming broad geometry theorem coverage.
+21c. Landed: add
+   [GRAPH-DISCRETE-QUERIES.md](GRAPH-DISCRETE-QUERIES.md), making finite
+   coloring, reachability, matching, cut, d-separation, fixed-width coloring,
+   and BFS/DFS runtime rows queryable by bridge concept plus Boolean, QF_BV,
+   and LIA routes without adding a typed API or claiming general graph-theory
+   or asymptotic algorithm coverage.
 22. Landed: add number-system semantic-boundary bridge rows for
    exact-vs-floating arithmetic and totality conventions, plus consumer smoke
    queries for number-theory totality and numerical-analysis floating-boundary

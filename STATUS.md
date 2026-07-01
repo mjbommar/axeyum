@@ -881,6 +881,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   synthetic, projective, differential, global, higher-degree, and numerical
   robustness geometry claims in the proof-horizon lane.
 
+- **Graph/discrete query guide landed.**
+  `GRAPH-DISCRETE-QUERIES.md` now gives downstream consumers copyable
+  concept-plus-route queries for finite graph and discrete resources. It groups
+  coloring, reachability, matching, cut, d-separation, fixed-width
+  graph-coloring, and BFS/DFS runtime rows through
+  `bridge_finite_graph_replay_obstruction`, and
+  `check-foundational-resources.sh` now smoke-checks Boolean, QF_BV, and LIA
+  concept-scoped graph pack/check paths. This is count-neutral and keeps
+  general graph theorems, extremal/minor theory, asymptotic algorithms,
+  graph-family lower bounds, and average-case traversal claims in the
+  proof-horizon lane.
+
 - **Graph traversal runtime learner index landed.**
   `graph-traversal-runtime-index.md` now ties finite reachability,
   deterministic BFS/DFS traces, shortcut-tail visited-node counters, checked

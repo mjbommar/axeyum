@@ -169,6 +169,11 @@ The geometry resource consumer query guide is
 it records exact concept-plus-route queries for finite coordinate/incidence/
 rigid/affine/orientation geometry and finite circle/inversion/cyclic geometry
 resources.
+The graph/discrete consumer query guide is
+[`docs/foundational-resources/GRAPH-DISCRETE-QUERIES.md`](docs/foundational-resources/GRAPH-DISCRETE-QUERIES.md);
+it records exact concept-plus-route queries for finite graph coloring,
+reachability, matching, cuts, d-separation, fixed-width coloring, and BFS/DFS
+runtime resources.
 The rules/law transfer crosswalk that maps finite predicates, arithmetic
 thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
@@ -555,6 +560,13 @@ and the foundational smoke checks concept-scoped Farkas pack/check queries for
 `bridge_finite_circle_inversion_cyclic_replay`, so downstream consumers can
 discover finite geometry resources without promoting synthetic, projective,
 differential, global, or higher-degree geometry theorem claims.
+The graph/discrete lane now has
+[`GRAPH-DISCRETE-QUERIES.md`](docs/foundational-resources/GRAPH-DISCRETE-QUERIES.md),
+and the foundational smoke checks concept-scoped Boolean, QF_BV, and LIA
+pack/check queries for `bridge_finite_graph_replay_obstruction`, so downstream
+consumers can discover finite coloring, reachability, matching, cut,
+d-separation, fixed-width coloring, and BFS/DFS runtime rows without promoting
+general graph-theory or asymptotic algorithm claims.
 The proof-route lane now has
 [`PROOF-ROUTE-QUERY-MATRIX.md`](docs/foundational-resources/PROOF-ROUTE-QUERY-MATRIX.md),
 and the query helper accepts `routes` summaries with route aliases and optional

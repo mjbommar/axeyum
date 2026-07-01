@@ -1902,6 +1902,14 @@ Pick one item per commit unless the change is purely navigational.
      queries for homomorphism, group-action, module-action, ideal, and modular
      residue bridge concepts while keeping arbitrary algebraic structure
      theorems in the horizon lane.
+123. Landed: add
+     [GRAPH-DISCRETE-QUERIES.md](GRAPH-DISCRETE-QUERIES.md), making the
+     graph/discrete lane queryable by bridge concept plus proof route. The
+     guide and foundational smoke cover concept-scoped Boolean, QF_BV, and LIA
+     pack/check queries for finite coloring, reachability, matching, cut,
+     d-separation, fixed-width coloring, and BFS/DFS runtime rows while
+     keeping general graph theorems and asymptotic algorithm claims in the
+     horizon lane.
 
 ## Validation Checklist
 

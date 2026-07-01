@@ -46,6 +46,8 @@ For finite algebra discovery by bridge concept and proof route, use the
 [Algebra Structure Consumer Queries](ALGEBRA-STRUCTURE-QUERIES.md).
 For finite geometry discovery by bridge concept and proof route, use the
 [Geometry Resource Consumer Queries](GEOMETRY-RESOURCE-QUERIES.md).
+For graph/discrete discovery by bridge concept and proof route, use the
+[Graph And Discrete Resource Consumer Queries](GRAPH-DISCRETE-QUERIES.md).
 This file remains the phase contract and landed-history log.
 
 The product is not a textbook and not a formal-library clone. It is a set of
@@ -2238,6 +2240,13 @@ resource smoke expose `bridge_coordinate_orientation_geometry` and
 pack/check queries, making coordinate/incidence/rigid/affine/orientation rows
 and circle/inversion/cyclic rows discoverable while keeping broad geometry
 theorems in the proof-horizon lane.
+The graph/discrete consumer layer now also has
+[`GRAPH-DISCRETE-QUERIES.md`](GRAPH-DISCRETE-QUERIES.md). The guide and
+resource smoke expose `bridge_finite_graph_replay_obstruction` through
+concept-scoped Boolean, QF_BV, and LIA pack/check queries, making finite
+coloring, reachability, matching, cut, d-separation, fixed-width coloring, and
+BFS/DFS runtime rows discoverable while keeping general graph theorems and
+asymptotic algorithm claims in the proof-horizon lane.
 The proof-route consumer layer now also has
 [`PROOF-ROUTE-QUERY-MATRIX.md`](PROOF-ROUTE-QUERY-MATRIX.md), and
 `query-foundational-resources.py routes` summarizes route coverage from

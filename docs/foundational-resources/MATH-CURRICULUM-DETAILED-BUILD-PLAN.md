@@ -1151,6 +1151,15 @@ Pick one row per commit unless the change is purely navigational.
      `bridge_modular_crt_inverse_witness`, making finite algebra rows
      discoverable without claiming arbitrary group/ring/module/category,
      classification, isomorphism, or infinite-algebra theorems.
+140. Landed: add
+     [`GRAPH-DISCRETE-QUERIES.md`](GRAPH-DISCRETE-QUERIES.md) as the
+     graph/discrete consumer query guide. The guide and resource smoke now
+     exercise concept-scoped Boolean, QF_BV, and LIA checks for
+     `bridge_finite_graph_replay_obstruction`, making finite coloring,
+     reachability, matching, cut, d-separation, fixed-width coloring, and
+     BFS/DFS runtime rows discoverable without claiming general graph
+     theorems, asymptotic algorithms, graph-family lower bounds, or
+     average-case traversal guarantees.
 
 ## Validation Checklist
 
