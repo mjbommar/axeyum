@@ -88,6 +88,25 @@
       "notes": "Exact replay computes next_x = 1 - (1/4)*2 = 1/2, so the malformed step-coordinate claim 3/4 is rejected through the checked QF_LRA/Farkas route."
     },
     {
+      "id": "bad-descent-bound-slack-rejected",
+      "claim": "The same step has nonpositive descent-bound slack.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_gradient_descent_bound_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "diagonal-quadratic-descent-step",
+        "computed_decrease": "11/4",
+        "descent_bound": "5/2",
+        "computed_descent_slack": "1/4",
+        "claimed_slack_upper_bound": "0",
+        "descent_bound_formula": "descent_slack = decrease - (step_size/2) * ||gradient||^2",
+        "smt2_artifact": "artifacts/examples/math/finite-gradient-descent-v0/smt2/bad-descent-bound-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_descent_bound_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes descent slack = 11/4 - 5/2 = 1/4, so the malformed nonpositive-slack claim is rejected through the checked QF_LRA/Farkas route."
+    },
+    {
       "id": "general-gradient-descent-convergence-lean-horizon",
       "claim": "General gradient-descent convergence, smooth convex descent lemmas, stopping criteria, and rates require future Lean reconstruction.",
       "expected_result": "not-run",

@@ -12061,6 +12061,61 @@ def validate_finite_gradient_descent(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-step-coordinate-rejected certificate must document checked Farkas evidence")
 
+    bad_bound = checks["bad-descent-bound-slack-rejected"]
+    if bad_bound["expected_result"] != "unsat" or bad_bound.get("proof_status") != "checked":
+        fail("bad-descent-bound-slack-rejected must be a checked unsat row")
+    if bad_bound["validation"] != "finite_bad_gradient_descent_bound_refutation":
+        fail("bad-descent-bound-slack-rejected must use finite_bad_gradient_descent_bound_refutation validation")
+    data = bad_bound.get("data", {})
+    if data.get("source_witness") != "diagonal-quadratic-descent-step":
+        fail("bad-descent-bound-slack-rejected must cite the diagonal-quadratic-descent-step witness")
+    computed_decrease = require_fraction(
+        "bad gradient descent bound computed_decrease",
+        data.get("computed_decrease"),
+    )
+    bad_descent_bound = require_fraction(
+        "bad gradient descent bound descent_bound",
+        data.get("descent_bound"),
+    )
+    computed_descent_slack = require_fraction(
+        "bad gradient descent bound computed_descent_slack",
+        data.get("computed_descent_slack"),
+    )
+    claimed_slack_upper_bound = require_fraction(
+        "bad gradient descent bound claimed_slack_upper_bound",
+        data.get("claimed_slack_upper_bound"),
+    )
+    if computed_decrease != decrease:
+        fail("bad-descent-bound-slack-rejected computed_decrease does not match replay")
+    if bad_descent_bound != descent_bound:
+        fail("bad-descent-bound-slack-rejected descent_bound does not match replay")
+    if computed_descent_slack != descent_slack:
+        fail("bad-descent-bound-slack-rejected computed_descent_slack does not match replay")
+    if computed_decrease - bad_descent_bound != computed_descent_slack:
+        fail("bad-descent-bound-slack-rejected descent slack equation is incorrect")
+    if computed_descent_slack <= claimed_slack_upper_bound:
+        fail("bad-descent-bound-slack-rejected malformed slack bound must contradict replay")
+    formula = data.get("descent_bound_formula")
+    require_string("bad gradient descent bound formula", formula)
+    if formula != "descent_slack = decrease - (step_size/2) * ||gradient||^2":
+        fail("bad-descent-bound-slack-rejected must document the descent-bound slack formula")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad gradient descent bound smt2_artifact", smt2_artifact)
+    if smt2_artifact != (
+        "artifacts/examples/math/finite-gradient-descent-v0/smt2/"
+        "bad-descent-bound-farkas-conflict.smt2"
+    ):
+        fail("bad-descent-bound-slack-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad gradient descent bound smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad gradient descent bound farkas_regression", regression)
+    if "finite_gradient_descent_bad_descent_bound_artifact_emits_checked_farkas" not in regression:
+        fail("bad-descent-bound-slack-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad gradient descent bound certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-descent-bound-slack-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-gradient-descent-convergence-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-gradient-descent-convergence-lean-horizon must be not-run")

@@ -1468,7 +1468,7 @@ free-gradient/inactive-slack/degenerate-multiplier conflicts, finite SDP
 objective/slack/gap replay, finite gradient-descent replay, finite
 line-search replay, finite Wolfe line-search replay, finite projected-gradient
 interval/decrease replay, finite proximal-gradient replay, and
-checked gradient step-coordinate rows together while
+checked gradient step-coordinate and descent-bound rows together while
 leaving duality, KKT sufficiency, SDP strong duality, line-search convergence,
 Wolfe line-search convergence, active-set convergence, projected-gradient convergence,
 proximal-gradient convergence, and convergence
@@ -1517,6 +1517,17 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --text coordinate \
+  --require-any
+```
+
+For the exact gradient-descent descent-bound certificate:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-gradient-descent-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text bound \
   --require-any
 ```
 

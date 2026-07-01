@@ -600,8 +600,9 @@ QF_LRA/Farkas rejection of false objective and false duality-gap claims, and a
 general SDP-duality Lean-horizon row.
 `finite-gradient-descent-v0` now validates exact quadratic gradient replay,
 finite descent-step arithmetic, objective-decrease and descent-bound replay,
-checked QF_LRA/Farkas rejection of a false decrease claim, and a general
-gradient-descent convergence Lean-horizon row.
+checked QF_LRA/Farkas rejection of false decrease, false step-coordinate, and
+false descent-bound claims, and a general gradient-descent convergence
+Lean-horizon row.
 `finite-line-search-v0` now validates exact descent-direction replay, Armijo
 trial-step rejection, accepted backtracked-step replay, checked QF_LRA/Farkas
 rejection of false Armijo acceptance and accepted-candidate claims, and a
@@ -961,8 +962,9 @@ checked QF_LRA/Farkas rejection of false objective and false duality-gap claims,
 Lean-horizon row.
 `artifacts/examples/math/finite-gradient-descent-v0/` now validates exact
 quadratic gradient replay, finite descent-step arithmetic, objective-decrease
-and descent-bound replay, checked QF_LRA/Farkas rejection of a false decrease
-claim, and a gradient-descent convergence Lean-horizon row.
+and descent-bound replay, checked QF_LRA/Farkas rejection of false decrease,
+false step-coordinate, and false descent-bound claims, and a gradient-descent
+convergence Lean-horizon row.
 `artifacts/examples/math/finite-line-search-v0/` now validates exact
 descent-direction replay, rejected Armijo trial-step arithmetic,
 accepted backtracked-step replay, checked QF_LRA/Farkas rejection of a false
@@ -1142,8 +1144,9 @@ Recommended order:
     convergence theorems remain horizon claims.
 38. `finite-gradient-descent-v0`: exact quadratic gradient replay, descent-step
     arithmetic, objective-decrease and descent-bound replay, and checked
-    QF_LRA/Farkas bad-decrease and bad step-coordinate rejections, while rate,
-    stochastic, and convergence theorems remain horizon claims.
+    QF_LRA/Farkas bad-decrease, bad step-coordinate, and bad descent-bound
+    rejections, while rate, stochastic, and convergence theorems remain horizon
+    claims.
 39. `finite-line-search-v0`: exact Armijo descent-direction replay, trial-step
     rejection, accepted-backtrack replay, and checked QF_LRA/Farkas bad-Armijo
     and bad accepted-candidate rejections, while strong Wolfe variants,
@@ -1722,8 +1725,8 @@ QF_LRA/Farkas evidence, and the general SDP-duality Lean horizon.
 `finite-gradient-descent-v0` now has a learner-facing end-to-end lesson for
 exact quadratic gradient replay, finite descent-step arithmetic,
 objective-decrease and descent-bound replay, checked bad-decrease and bad
-step-coordinate rejections with QF_LRA/Farkas evidence, and the general
-convergence Lean horizon.
+step-coordinate plus bad descent-bound rejections with QF_LRA/Farkas evidence,
+and the general convergence Lean horizon.
 `finite-line-search-v0` now has a learner-facing end-to-end lesson for exact
 descent-direction replay, Armijo trial rejection, accepted-backtrack replay,
 checked bad-Armijo and bad accepted-candidate rejection with QF_LRA/Farkas
@@ -2074,10 +2077,10 @@ slack-entry rows through
 the same checked Farkas evidence path after exact SDP replay computes objective
 value `1`, dual objective `1`, objective error `1`, gap error `1/2`, and
 bottom-right slack-entry gap `1/2`.
-`finite-gradient-descent-v0` now routes its bad decrease and bad
-step-coordinate rows through the same checked Farkas evidence path after exact
-descent-step replay computes decrease `11/4`, decrease error `3/4`, and
-`next_x = 1/2`.
+`finite-gradient-descent-v0` now routes its bad decrease, bad step-coordinate,
+and bad descent-bound rows through the same checked Farkas evidence path after
+exact descent-step replay computes decrease `11/4`, decrease error `3/4`,
+`next_x = 1/2`, and descent slack `1/4`.
 `finite-line-search-v0` now routes its bad Armijo and bad accepted-candidate
 rows through the same checked Farkas evidence path after exact line-search
 replay computes rejected-step violation `1` and accepted point `0`.

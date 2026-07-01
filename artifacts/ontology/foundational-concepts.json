@@ -807,7 +807,7 @@
           "id": "finite-gradient-descent-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-gradient-descent-v0",
-          "notes": "Finite exact gradient-descent step replay with checked bad-decrease and bad step-coordinate rejections."
+          "notes": "Finite exact gradient-descent step replay with checked bad-decrease, bad step-coordinate, and bad descent-bound rejections."
         },
         {
           "id": "finite-line-search-v0",
@@ -3060,7 +3060,7 @@
           "id": "finite-gradient-descent-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-gradient-descent-v0",
-          "notes": "Finite exact quadratic gradient step, descent-bound, bad-decrease, and bad step-coordinate rows over exact rationals."
+          "notes": "Finite exact quadratic gradient step, descent-bound, bad-decrease, bad step-coordinate, and bad descent-bound rows over exact rationals."
         },
         {
           "id": "finite-line-search-v0",
@@ -11272,7 +11272,7 @@
           "id": "finite-gradient-descent-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-gradient-descent-v0",
-          "notes": "Finite gradient-descent step replay with checked bad-decrease and bad step-coordinate rejections."
+          "notes": "Finite gradient-descent step replay with checked bad-decrease, bad step-coordinate, and bad descent-bound rejections."
         },
         {
           "id": "finite-line-search-v0",

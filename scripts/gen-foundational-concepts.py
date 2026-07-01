@@ -177,7 +177,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-gradient-descent-v0",
-                "Finite exact gradient-descent step replay with checked bad-decrease and bad step-coordinate rejections.",
+                "Finite exact gradient-descent step replay with checked bad-decrease, bad step-coordinate, and bad descent-bound rejections.",
             ),
             (
                 "finite-line-search-v0",
@@ -520,7 +520,7 @@ FIELD_PACKS = {
         ("finite-kkt-v0", "Finite KKT stationarity, complementary slackness, and bad-stationarity rejection."),
         ("finite-active-set-qp-v0", "Finite active-set QP replay with checked bad-free-gradient rejection."),
         ("finite-sdp-v0", "Finite SDP primal/dual slack replay with checked bad-objective and bad duality-gap rejections."),
-        ("finite-gradient-descent-v0", "Finite gradient-descent step replay with checked bad-decrease and bad step-coordinate rejections."),
+        ("finite-gradient-descent-v0", "Finite gradient-descent step replay with checked bad-decrease, bad step-coordinate, and bad descent-bound rejections."),
         ("finite-line-search-v0", "Finite Armijo line-search replay with checked bad-acceptance and bad accepted-candidate rejections."),
         ("finite-wolfe-line-search-v0", "Finite Wolfe line-search replay with checked bad-minimizer and bad-curvature rejections."),
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
@@ -1539,7 +1539,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-gradient-descent-v0",
-                "Finite exact quadratic gradient step, descent-bound, bad-decrease, and bad step-coordinate rows over exact rationals.",
+                "Finite exact quadratic gradient step, descent-bound, bad-decrease, bad step-coordinate, and bad descent-bound rows over exact rationals.",
             ),
             (
                 "finite-line-search-v0",

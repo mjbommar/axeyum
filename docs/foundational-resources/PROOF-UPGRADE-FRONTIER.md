@@ -273,9 +273,10 @@ First targets:
   computes objective value `1`, dual objective `1`, objective error `1`, gap
   error `1/2`, and bottom-right slack-entry gap `1/2`)
 - [finite-gradient-descent-v0](../../artifacts/examples/math/finite-gradient-descent-v0/)
-  (source-linked Farkas regressions landed for the bad decrease and bad
-  step-coordinate rows after exact quadratic descent replay computes decrease
-  `11/4`, decrease error `3/4`, and next x-coordinate `1/2`)
+  (source-linked Farkas regressions landed for the bad decrease,
+  bad step-coordinate, and bad descent-bound rows after exact quadratic descent
+  replay computes decrease `11/4`, decrease error `3/4`, next x-coordinate
+  `1/2`, and descent slack `1/4`)
 - [finite-line-search-v0](../../artifacts/examples/math/finite-line-search-v0/)
   (source-linked Farkas regressions landed for the bad Armijo and bad
   accepted-candidate rows after exact line-search replay computes
@@ -466,7 +467,7 @@ Secondary targets:
   Finite gradient descent now contributes the algorithm-step version of that
   boundary: exact replay computes the gradient, step update, objective
   decrease, and descent-bound slack, then Farkas checks the final bad-decrease
-  error and bad step-coordinate conflicts.
+  error, bad step-coordinate, and bad descent-bound conflicts.
   Finite Wolfe line search now contributes the line-search-condition version:
   exact replay computes the minimizer, sufficient-decrease slack, and curvature
   violation, then Farkas checks the final bad minimizer, bad

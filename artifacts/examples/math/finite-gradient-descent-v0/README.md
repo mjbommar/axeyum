@@ -23,6 +23,8 @@ rates and optimization-algorithm theorems remain proof horizons.
   decreases the objective by only `2`; exact replay computes decrease `11/4`.
 - `bad-step-coordinate-rejected`: rejects the malformed claim that the same
   step has next x-coordinate `3/4`; exact replay computes `1/2`.
+- `bad-descent-bound-slack-rejected`: rejects the malformed claim that the
+  descent-bound slack is nonpositive; exact replay computes slack `1/4`.
 - `general-gradient-descent-convergence-lean-horizon`: names the future proof
   route for convergence rates, smooth convex descent lemmas, and stopping
   criteria.
@@ -33,6 +35,7 @@ rates and optimization-algorithm theorems remain proof horizons.
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_step_coordinate_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_descent_bound_artifact_emits_checked_farkas
 ```
 
 ## Trust Boundary

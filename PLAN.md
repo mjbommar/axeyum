@@ -225,8 +225,8 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 623 expected checks (334 `sat`,
-218 `unsat`, 71 `not-run`), 300 checked rows, 252 replay-only rows, and 71
+111 concept rows, 108 non-template packs, 624 expected checks (334 `sat`,
+219 `unsat`, 71 `not-run`), 301 checked rows, 252 replay-only rows, and 71
 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -406,7 +406,7 @@ QF_LRA/Farkas rejection of bad upper-bound, bad finite-value, bad Newton-step,
 bad bisection-width, bad convex-combination,
 bad separator, bad stationarity, bad free-gradient, bad inactive-slack,
 bad degenerate active-set multiplier, bad objective, bad duality-gap, bad slack-entry, bad decrease,
-bad step-coordinate, bad Armijo, bad accepted-candidate, bad Wolfe-minimizer,
+bad step-coordinate, bad descent-bound, bad Armijo, bad accepted-candidate, bad Wolfe-minimizer,
 bad Wolfe-sufficient-decrease, bad Wolfe-curvature, bad
 projection, bad projected-decrease, bad proximal-point, and bad
 box-proximal-point rows, while
@@ -836,7 +836,7 @@ the latest inner-product bad projection-orthogonality QF_LRA/Farkas promotion,
 the latest spectral bad Rayleigh-quotient QF_LRA/Farkas promotion,
 the latest finite-line-search bad accepted-candidate QF_LRA/Farkas promotion,
 the latest finite-line-search bad Armijo QF_LRA/Farkas promotion,
-the latest finite-gradient-descent bad step-coordinate and bad decrease
+the latest finite-gradient-descent bad descent-bound, bad step-coordinate, and bad decrease
 QF_LRA/Farkas promotions,
 the latest finite-SDP bad objective, bad duality-gap, and bad slack-entry
 QF_LRA/Farkas promotion,

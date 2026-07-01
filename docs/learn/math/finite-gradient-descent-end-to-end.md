@@ -3,7 +3,7 @@
 This lesson follows
 [finite-gradient-descent-v0](../../../artifacts/examples/math/finite-gradient-descent-v0/)
 from one exact quadratic gradient step through descent replay, step-coordinate
-replay, and checked Farkas evidence. It is a finite optimization-step
+replay, descent-bound slack replay, and checked Farkas evidence. It is a finite optimization-step
 certificate, not a general convergence theorem.
 
 ## Concept
@@ -27,7 +27,7 @@ and one step from `(1, 1)` with step size `1/4`.
 
 ## What Gets Checked
 
-The pack has six rows:
+The pack has seven rows:
 
 | Row | Result | Evidence |
 |---|---|---|
@@ -36,6 +36,7 @@ The pack has six rows:
 | `descent-bound-replay` | `sat` | replay-only |
 | `bad-descent-value-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `bad-step-coordinate-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-descent-bound-slack-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-gradient-descent-convergence-lean-horizon` | `not-run` | Lean horizon |
 
 The replay rows use exact rational arithmetic. They do not use floating-point
@@ -138,6 +139,31 @@ The source SMT-LIB artifact fixes `next_x` as `1/2` and also claims it is
 This checks the step-update arithmetic as a separate exact-linear conflict from
 the descent-value row.
 
+## Bad Descent-Bound Row
+
+The malformed row changes only the descent-bound slack claim:
+
+```text
+replayed decrease = 11/4
+replayed descent bound = 5/2
+replayed descent slack = 1/4
+claimed descent slack <= 0
+```
+
+The source SMT-LIB artifact fixes `descent_slack` as `1/4` and also claims it is
+nonpositive:
+
+```smt2
+(set-logic QF_LRA)
+(declare-const descent_slack Real)
+(assert (= descent_slack (/ 1 4)))
+(assert (<= descent_slack 0))
+(check-sat)
+```
+
+This checks the finite descent-bound arithmetic as its own exact-linear
+conflict. It is still only one rational step, not a convergence or rate theorem.
+
 ## What This Does Not Prove
 
 The pack does not prove gradient descent convergence for arbitrary smooth
@@ -158,4 +184,5 @@ general convergence theorem: future Lean reconstruction
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_step_coordinate_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_descent_bound_artifact_emits_checked_farkas
 ```

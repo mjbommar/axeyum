@@ -51,3 +51,10 @@ next point to `3/4`. Exact replay computes:
 ```text
 next_x = 1 - (1/4) * 2 = 1/2
 ```
+
+The checked bad descent-bound row changes the claimed slack to nonpositive.
+Exact replay computes:
+
+```text
+descent slack = 11/4 - 5/2 = 1/4
+```

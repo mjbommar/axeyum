@@ -251,8 +251,9 @@ schemas, examples, and validation workflows.
   degenerate-multiplier claims, and an active-set method Lean-horizon row.
 - [`artifacts/examples/math/finite-gradient-descent-v0/`](../../artifacts/examples/math/finite-gradient-descent-v0/)
   validates exact quadratic gradient replay, finite descent-step arithmetic,
-  objective-decrease checking, checked rejection of a false decrease claim, and
-  a gradient-descent convergence Lean-horizon row.
+  objective-decrease and descent-bound checking, checked rejection of false
+  decrease and false descent-bound claims, and a gradient-descent convergence
+  Lean-horizon row.
 - [`artifacts/examples/math/finite-line-search-v0/`](../../artifacts/examples/math/finite-line-search-v0/)
   validates exact Armijo descent-direction replay, trial-step rejection,
   accepted backtracked-step replay, checked rejection of false Armijo
@@ -464,8 +465,9 @@ schemas, examples, and validation workflows.
   Lean-horizon row.
 - [`artifacts/examples/math/finite-gradient-descent-v0/`](../../artifacts/examples/math/finite-gradient-descent-v0/)
   validates exact two-variable quadratic gradient replay, descent-step replay,
-  objective-decrease checking, checked bad-decrease and bad step-coordinate
-  rejections, and a general gradient-descent convergence Lean-horizon row.
+  objective-decrease and descent-bound checking, checked bad-decrease, bad
+  step-coordinate, and bad descent-bound rejections, and a general
+  gradient-descent convergence Lean-horizon row.
 - [`artifacts/examples/math/finite-line-search-v0/`](../../artifacts/examples/math/finite-line-search-v0/)
   validates exact one-variable Armijo line-search replay, trial rejection,
   accepted backtracking, checked bad-acceptance and bad accepted-candidate
