@@ -81,6 +81,15 @@ const CATEGORY_EQUIVALENCE_SAME_PRIORITY: &str = include_str!(
 const CATEGORY_EQUIVALENCE_IMPLEMENTATION_EQUIVALENCE: &str = include_str!(
     "../../../docs/rules-as-code/examples/category-equivalence-v0/smt2/implementation-equivalence-qf-uf-conflict.smt2"
 );
+const WORKFLOW_REACHABILITY_NO_SKIP_TO_APPROVED: &str = include_str!(
+    "../../../docs/rules-as-code/examples/workflow-reachability-v0/smt2/no-skip-to-approved-bool-qf-lia-conflict.smt2"
+);
+const WORKFLOW_REACHABILITY_TERMINAL_STATES_ABSORBING: &str = include_str!(
+    "../../../docs/rules-as-code/examples/workflow-reachability-v0/smt2/terminal-states-absorbing-bool-qf-lia-conflict.smt2"
+);
+const WORKFLOW_REACHABILITY_IMPLEMENTATION_EQUIVALENCE: &str = include_str!(
+    "../../../docs/rules-as-code/examples/workflow-reachability-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2"
+);
 
 #[test]
 fn benefit_eligibility_consistency_emits_checked_evidence() {
@@ -271,6 +280,30 @@ fn category_equivalence_implementation_equivalence_emits_checked_alethe() {
     assert_rule_qf_uf_alethe(
         "category-equivalence-v0 implementation equivalence",
         CATEGORY_EQUIVALENCE_IMPLEMENTATION_EQUIVALENCE,
+    );
+}
+
+#[test]
+fn workflow_reachability_no_skip_to_approved_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "workflow-reachability-v0 no skip to approved",
+        WORKFLOW_REACHABILITY_NO_SKIP_TO_APPROVED,
+    );
+}
+
+#[test]
+fn workflow_reachability_terminal_states_absorbing_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "workflow-reachability-v0 terminal states absorbing",
+        WORKFLOW_REACHABILITY_TERMINAL_STATES_ABSORBING,
+    );
+}
+
+#[test]
+fn workflow_reachability_implementation_equivalence_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "workflow-reachability-v0 implementation equivalence",
+        WORKFLOW_REACHABILITY_IMPLEMENTATION_EQUIVALENCE,
     );
 }
 

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "id": "workflow_reachability_v0",
+  "title": "Example Workflow Reachability Policy",
+  "domain": "workflow_reachability",
+  "jurisdiction": "example",
+  "source_citations": [
+    {"label": "Example Rule 7(a)", "uri": "source.md#rule-7a-review-transition"},
+    {"label": "Example Rule 7(b)", "uri": "source.md#rule-7b-approval-transition"},
+    {"label": "Example Rule 7(c)", "uri": "source.md#rule-7c-rejection-transition"},
+    {"label": "Example Rule 7(d)", "uri": "source.md#rule-7d-terminal-states"},
+    {"label": "Example Rule 7(e)", "uri": "source.md#rule-7e-implementation"}
+  ],
+  "effective_interval": {
+    "from": "2026-01-01",
+    "to": null
+  },
+  "actors": ["applicant", "reviewer", "supervisor", "workflow_engine"],
+  "inputs": [
+    {"name": "current_state", "sort": "Enum(submitted,under_review,approved,rejected)"},
+    {"name": "action", "sort": "Enum(request_review,approve,reject)"},
+    {"name": "supervisor_review", "sort": "Bool"}
+  ],
+  "outputs": [
+    {"name": "transition_allowed", "sort": "Bool"},
+    {"name": "next_state", "sort": "Enum(submitted,under_review,approved,rejected)"}
+  ],
+  "checks": [
+    "transition_witnesses",
+    "no_skip_to_approved",
+    "terminal_states_absorbing",
+    "implementation_equivalence"
+  ],
+  "axeyum_fragments": ["Bool", "QF_LIA", "finite replay", "graph reachability"],
+  "proof_expectation": "Representative workflow transitions replay today. Skip-to-approved, terminal-state, and bounded implementation-equivalence obligations have source-linked Bool/QF_LIA fixtures with checked Axeyum evidence."
+}

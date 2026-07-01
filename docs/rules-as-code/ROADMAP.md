@@ -39,7 +39,7 @@ for formalized rule obligations.
 
 ## Current Status
 
-The first six rule packs have landed:
+The first seven rule packs have landed:
 
 - [Benefit Eligibility V0](examples/benefit-eligibility-v0/README.md)
 - [Authorization Policy V0](examples/authorization-policy-v0/README.md)
@@ -47,6 +47,7 @@ The first six rule packs have landed:
 - [Procurement Scoring V0](examples/procurement-scoring-v0/README.md)
 - [Grant Allocation V0](examples/grant-allocation-v0/README.md)
 - [Category Equivalence V0](examples/category-equivalence-v0/README.md)
+- [Workflow Reachability V0](examples/workflow-reachability-v0/README.md)
 
 The first metadata schema lives at
 [rules-core.schema.json](../../artifacts/ontology/rules-core.schema.json).
@@ -66,19 +67,23 @@ equivalence checks also have checked fixtures. Grant allocation budget-balance,
 minimum-share, administrative-cap, and bounded implementation-equivalence
 checks now have source-linked QF_LRA/Farkas fixtures. Category equivalence now
 has finite replay plus source-linked checked QF_UF/Alethe artifacts for
-category congruence and implementation-equivalence rows. Checked fixtures are
+category congruence and implementation-equivalence rows. Workflow reachability
+now has finite transition replay plus source-linked checked Bool/QF_LIA
+artifacts for no-skip, terminal-state, and implementation-equivalence rows.
+Checked fixtures are
 checked by
 `cargo test -p axeyum-solver --test rules_as_code_examples`; benefit threshold
 and temporal-transition rows, authorization version-delta rows, tax/benefit
 threshold-cliff and temporal-transition rows, and procurement bonus-threshold
-rows, plus grant allocation edge allocations and category replay witnesses,
-remain replayed witnesses.
+rows, plus grant allocation edge allocations, category replay witnesses, and
+workflow transition witnesses, remain replayed witnesses.
 The generated
-[Rules Query Dashboard](generated/rules-query-dashboard.md) now reads the six
-pack JSON files and exposes 1,013 bounded sample rows plus 1,774 deterministic
+[Rules Query Dashboard](generated/rules-query-dashboard.md) now reads the seven
+pack JSON files and exposes 1,037 bounded sample rows plus 1,942 deterministic
 generated query rows for coverage, income monotonicity, version deltas,
 threshold/cap checks, deadlines, bid-cap exclusions, monotonicity, and rational
-allocation rows, plus category-equivalence congruence rows.
+allocation rows, plus category-equivalence congruence and workflow
+reachability rows.
 
 The cross-resource reuse map is
 [Rules/Law Crosswalk For Foundational Resources](../foundational-resources/RULES-LAW-CROSSWALK.md).
@@ -88,8 +93,9 @@ before adding new rule packs.
 The current pattern matrix is
 [Rules/Law Pattern Matrix](../foundational-resources/RULES-LAW-PATTERN-MATRIX.md).
 It records which finite predicate, role/tenant, threshold, monotonicity,
-version, precedence, rational-allocation, category-equivalence, and
-bounded-equivalence patterns are actually covered by the six current packs and
+version, precedence, rational-allocation, category-equivalence, workflow
+reachability, and bounded-equivalence patterns are actually covered by the
+seven current packs and
 which math proof routes they
 reuse.
 
@@ -332,6 +338,34 @@ This pack exercises finite equivalence classes, category normalization,
 function congruence, and checked QF_UF/Alethe evidence for rules/law category
 maps.
 
+## Seventh Example Pack: Workflow Reachability
+
+Status: landed as
+[Workflow Reachability V0](examples/workflow-reachability-v0/README.md), with
+finite transition replay, generated two-step reachability rows, and
+source-linked checked Bool/QF_LIA artifacts for no-skip, terminal-state, and
+implementation-equivalence obligations.
+
+Model a tiny review workflow:
+
+- `submitted`;
+- `under_review`;
+- `approved`;
+- `rejected`;
+- actions `request_review`, `approve`, and `reject`;
+- supervisor review required for approval.
+
+Checks:
+
+- representative workflow transition witnesses replay over the finite sample;
+- `submitted` cannot skip directly to `approved`;
+- terminal states cannot move back into review;
+- implementation equivalence uses the same bounded transition predicate.
+
+This pack exercises finite graph reachability, transition-system replay,
+terminal-state invariants, and checked Bool/QF_LIA evidence for state-machine
+rules.
+
 ## Validation Checks
 
 Near-term documentation checks:
@@ -344,6 +378,9 @@ python3 scripts/validate-rules-as-code.py
 python3 scripts/query-rules-as-code.py summary
 python3 scripts/query-rules-as-code.py packs --pack category_equivalence_v0 --require-any
 python3 scripts/query-rules-as-code.py checks --pack category_equivalence_v0 --proof-status checked --validation qf_uf_alethe_solver_regression --require-any
+python3 scripts/query-rules-as-code.py packs --pack workflow_reachability_v0 --require-any
+python3 scripts/query-rules-as-code.py checks --pack workflow_reachability_v0 --proof-status checked --validation bool_qf_lia_solver_regression --require-any
+python3 scripts/query-rules-as-code.py families --pack workflow_reachability_v0 --text reachability --require-any
 python3 scripts/query-rules-as-code.py checks --text monotonicity --require-any
 python3 scripts/query-rules-as-code.py families --text adjacent --require-any
 ```

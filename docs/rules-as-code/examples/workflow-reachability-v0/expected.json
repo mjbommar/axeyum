@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "pack_id": "workflow_reachability_v0",
+  "parameters": {
+    "states": ["submitted", "under_review", "approved", "rejected"],
+    "actions": ["request_review", "approve", "reject"],
+    "terminal_states": ["approved", "rejected"],
+    "initial_state": "submitted",
+    "review_state": "under_review",
+    "approved_state": "approved",
+    "rejected_state": "rejected"
+  },
+  "sample_domain": {
+    "states": ["submitted", "under_review", "approved", "rejected"],
+    "actions": ["request_review", "approve", "reject"],
+    "booleans": [false, true]
+  },
+  "witnesses": [
+    {
+      "id": "submitted_request_review",
+      "facts": {
+        "current_state": "submitted",
+        "action": "request_review",
+        "supervisor_review": false
+      },
+      "expected_allowed": true,
+      "expected_next_state": "under_review",
+      "source_citations": ["Example Rule 7(a)"],
+      "explanation": "A submitted application can enter review."
+    },
+    {
+      "id": "submitted_approve_denied",
+      "facts": {
+        "current_state": "submitted",
+        "action": "approve",
+        "supervisor_review": true
+      },
+      "expected_allowed": false,
+      "expected_next_state": "submitted",
+      "source_citations": ["Example Rule 7(a)", "Example Rule 7(b)"],
+      "explanation": "Approval is not available before the application is under review."
+    },
+    {
+      "id": "review_approve_with_supervisor",
+      "facts": {
+        "current_state": "under_review",
+        "action": "approve",
+        "supervisor_review": true
+      },
+      "expected_allowed": true,
+      "expected_next_state": "approved",
+      "source_citations": ["Example Rule 7(b)"],
+      "explanation": "Supervisor review enables approval from the under-review state."
+    },
+    {
+      "id": "approved_terminal_noop",
+      "facts": {
+        "current_state": "approved",
+        "action": "request_review",
+        "supervisor_review": true
+      },
+      "expected_allowed": false,
+      "expected_next_state": "approved",
+      "source_citations": ["Example Rule 7(d)"],
+      "explanation": "Approved is terminal in this bounded workflow."
+    }
+  ],
+  "checks": [
+    {
+      "id": "transition_witnesses",
+      "expected_result": "sat",
+      "validation": "witness_replay",
+      "witnesses": ["submitted_request_review", "submitted_approve_denied", "review_approve_with_supervisor", "approved_terminal_noop"],
+      "proof_status": "replayed",
+      "source_citations": ["Example Rule 7(a)", "Example Rule 7(b)", "Example Rule 7(d)"]
+    },
+    {
+      "id": "no_skip_to_approved",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 7(a)", "Example Rule 7(b)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/workflow-reachability-v0/smt2/no-skip-to-approved-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples workflow_reachability_no_skip_to_approved_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "terminal_states_absorbing",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 7(d)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/workflow-reachability-v0/smt2/terminal-states-absorbing-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples workflow_reachability_terminal_states_absorbing_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "implementation_equivalence",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 7(a)", "Example Rule 7(b)", "Example Rule 7(c)", "Example Rule 7(d)", "Example Rule 7(e)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/workflow-reachability-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples workflow_reachability_implementation_equivalence_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      },
+      "notes": "The SMT-LIB mismatch query compares identical bounded transition predicates; generated two-step rows replay the same transition function by composition."
+    }
+  ]
+}

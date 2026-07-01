@@ -49,7 +49,7 @@ or Lean horizon until the formal dependency is clear.
 | Thresholds, ages, dates, deadlines, counts | integer and rational arithmetic | [`integer-lia-v0`](../../artifacts/examples/math/integer-lia-v0/), [`natural-arithmetic-v0`](../../artifacts/examples/math/natural-arithmetic-v0/), [`rationals-lra-v0`](../../artifacts/examples/math/rationals-lra-v0/) | QF_LIA/Diophantine, arithmetic-DPLL, QF_LRA/Farkas | income threshold, age cutoff, effective date split in [`benefit-eligibility-v0`](../rules-as-code/examples/benefit-eligibility-v0/) and tax phase-out thresholds in [`tax-benefit-arithmetic-v0`](../rules-as-code/examples/tax-benefit-arithmetic-v0/) |
 | Threshold cliffs, caps, deadlines, and monotonicity | optimization and convexity shadows | [`linear-optimization-v0`](../../artifacts/examples/math/linear-optimization-v0/), [`convexity-rational-v0`](../../artifacts/examples/math/convexity-rational-v0/) | QF_LRA/Farkas or QF_LIA for exact-linear impossibility; finite replay for examples | "one dollar above threshold" witnesses, cap checks, and phase-out monotonicity in [`tax-benefit-arithmetic-v0`](../rules-as-code/examples/tax-benefit-arithmetic-v0/), bid-cap/deadline/score monotonicity in [`procurement-scoring-v0`](../rules-as-code/examples/procurement-scoring-v0/), and rational share caps in [`grant-allocation-v0`](../rules-as-code/examples/grant-allocation-v0/) |
 | Rational allocation, exact shares, and LP-style policy caps | rational arithmetic plus finite LP shadows | [`rationals-lra-v0`](../../artifacts/examples/math/rationals-lra-v0/), [`linear-optimization-v0`](../../artifacts/examples/math/linear-optimization-v0/), [`finite-sdp-v0`](../../artifacts/examples/math/finite-sdp-v0/) | QF_LRA/Farkas for universal linear impossibility; finite rational replay for witnesses | shelter/clinic/admin share constraints and budget balance in [`grant-allocation-v0`](../rules-as-code/examples/grant-allocation-v0/) |
-| Workflow state, dependency chains, delegated authority, forbidden paths | graph reachability and cuts | [`graph-reachability-v0`](../../artifacts/examples/math/graph-reachability-v0/), [`graph-cut-v0`](../../artifacts/examples/math/graph-cut-v0/), [`graph-d-separation-v0`](../../artifacts/examples/math/graph-d-separation-v0/) | Bool/CNF with DRAT/LRAT for small refutations; finite replay for paths | tenant-isolation boundary checks in [`authorization-policy-v0`](../rules-as-code/examples/authorization-policy-v0/) |
+| Workflow state, dependency chains, delegated authority, forbidden paths | graph reachability and cuts | [`graph-reachability-v0`](../../artifacts/examples/math/graph-reachability-v0/), [`graph-cut-v0`](../../artifacts/examples/math/graph-cut-v0/), [`graph-d-separation-v0`](../../artifacts/examples/math/graph-d-separation-v0/) | Bool/CNF with DRAT/LRAT for small refutations; finite replay for paths | transition and two-step path checks in [`workflow-reachability-v0`](../rules-as-code/examples/workflow-reachability-v0/) |
 | Precedence, hierarchy, explicit deny, override, classification levels | finite orders and lattices | [`finite-order-lattices-v0`](../../artifacts/examples/math/finite-order-lattices-v0/) | finite relation replay, Bool/CNF for set-family top/precedence conflicts, QF_UF/Alethe for equality conflicts | explicit deny over role/admin permit in [`authorization-policy-v0`](../rules-as-code/examples/authorization-policy-v0/) |
 | Versioned rules and transition points | bounded finite dynamics and arithmetic dates | [`bounded-dynamics-v0`](../../artifacts/examples/math/bounded-dynamics-v0/), [`finite-euler-method-v0`](../../artifacts/examples/math/finite-euler-method-v0/) | finite transition replay, QF_LIA/QF_LRA for bounded transitions | old-threshold versus new-threshold eligibility examples |
 | Implementation equivalence | finite functions and bounded counterexample search | [`function-composition-v0`](../../artifacts/examples/math/function-composition-v0/), [`relations-functions-v0`](../../artifacts/examples/math/relations-functions-v0/) | finite replay, QF_UF/Alethe when function consistency is the issue | logical model versus executable eligibility/allocation functions, plus category-map equivalence in [`category-equivalence-v0`](../rules-as-code/examples/category-equivalence-v0/) |
@@ -160,6 +160,19 @@ crosswalk:
 | `equivalent_categories_same_priority` | source-linked QF_UF/Alethe fixture with checked Axeyum evidence | equivalent categories and function congruence | add broader category-map variants only when they introduce distinct congruence pressure |
 | `implementation_equivalence_qf_uf_gap` | source-linked QF_UF/Alethe mismatch fixture with checked Axeyum evidence | model/implementation equivalence for category functions | reuse when later packs need category-function equivalence rather than arithmetic equivalence |
 
+## Workflow Reachability V0 Mapping
+
+The current
+[`workflow-reachability-v0`](../rules-as-code/examples/workflow-reachability-v0/)
+pack exercises the finite transition-system slice of this crosswalk:
+
+| Pack Check | Current Evidence | Crosswalk Pattern | Next Axeyum Upgrade |
+|---|---|---|---|
+| `transition_witnesses` | concrete one-step workflow witnesses replay | finite graph transitions and path replay | add minimized path rendering if the state graph grows |
+| `no_skip_to_approved` | source-linked Bool/QF_LIA fixture with checked Axeyum evidence | forbidden path / missing edge | promote a tiny CNF/LRAT certificate only when it is learner-readable |
+| `terminal_states_absorbing` | source-linked Bool/QF_LIA fixture with checked Axeyum evidence | terminal-state invariant | reuse when later workflow packs add absorbing or final states |
+| `implementation_equivalence` | source-linked Bool/QF_LIA mismatch fixture with checked Axeyum evidence | executable transition function versus declarative model | broaden only for multi-stage deadlines, delegation, or guards that add distinct solver pressure |
+
 ## Proof Route Reuse
 
 | Proof Route | Rules/Law Use | Existing Recipe |
@@ -221,7 +234,12 @@ exists.
    reusing finite equivalence classes, category normalization, generated
    equivalence-pair rows, and source-linked checked QF_UF/Alethe artifacts for
    congruence and implementation-equivalence obligations.
-9. Promote only those rows that have deterministic replay plus a source-linked
+9. Landed: add
+   [`workflow-reachability-v0`](../rules-as-code/examples/workflow-reachability-v0/),
+   reusing finite graph reachability, terminal-state guards, generated
+   two-step path rows, and source-linked checked Bool/QF_LIA artifacts for
+   no-skip, terminal-state, and implementation-equivalence obligations.
+10. Promote only those rows that have deterministic replay plus a source-linked
    regression or proof route.
 
 ## Non-Goals

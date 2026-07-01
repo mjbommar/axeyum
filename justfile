@@ -44,6 +44,10 @@ rules-as-code:
     python3 scripts/query-rules-as-code.py checks --pack category_equivalence_v0 --validation qf_uf_alethe_solver_regression --proof-status checked --require-any
     python3 scripts/query-rules-as-code.py families --pack category_equivalence_v0 --text equivalence --require-any
     python3 scripts/query-rules-as-code.py rows --pack category_equivalence_v0 --family equivalence_pair_rows --text emergency_housing --limit 3 --require-any
+    python3 scripts/query-rules-as-code.py packs --pack workflow_reachability_v0 --require-any
+    python3 scripts/query-rules-as-code.py checks --pack workflow_reachability_v0 --validation bool_qf_lia_solver_regression --proof-status checked --require-any
+    python3 scripts/query-rules-as-code.py families --pack workflow_reachability_v0 --text reachability --require-any
+    python3 scripts/query-rules-as-code.py rows --pack workflow_reachability_v0 --family two_step_reachability_rows --text '"final_state":"approved"' --limit 3 --require-any
     python3 scripts/query-rules-as-code.py checks --text monotonicity --require-any
     python3 scripts/query-rules-as-code.py families --text adjacent --require-any
     python3 scripts/query-rules-as-code.py rows --pack procurement_scoring_v0 --family quality_monotonicity_adjacent --limit 3 --require-any

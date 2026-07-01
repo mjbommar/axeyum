@@ -6,16 +6,17 @@ This dashboard turns the current rule-pack JSON into a bounded query
 planning surface. It is not a legal corpus and not a solver-performance
 benchmark; it records which finite rule domains can be expanded into
 generated coverage, equivalence, threshold, cap, or monotonicity checks.
-It now also includes rational-allocation rows for QF_LRA/Farkas and
-checked category-equivalence rows for QF_UF/Alethe.
+It now also includes rational-allocation rows for QF_LRA/Farkas,
+checked category-equivalence rows for QF_UF/Alethe, and bounded
+workflow-reachability rows over a finite state graph.
 
 ## Summary
 
-- Rule packs: 6
-- Bounded sample rows: 1013
-- Generated query rows: 1774
-- Check results: sat:8, unsat:24
-- Proof statuses: checked:24, replayed:8
+- Rule packs: 7
+- Bounded sample rows: 1037
+- Generated query rows: 1942
+- Check results: sat:9, unsat:27
+- Proof statuses: checked:27, replayed:9
 
 ## Pack Query Surface
 
@@ -27,6 +28,7 @@ checked category-equivalence rows for QF_UF/Alethe.
 | [Example Grant Allocation With Rational Shares](../examples/grant-allocation-v0/README.md) | 125 | 140 | [queries/grant-allocation-v0.json](queries/grant-allocation-v0.json) | bounded rational allocation rows: 125<br>balanced-budget allocation rows: 15<br>allocation replay witnesses: 5<br>checked QF_LRA/Farkas fixtures: 5 | checked:5, replayed:1 | Generate rational allocation coverage and balanced-budget query rows across the bounded share domain. |
 | [Example Procurement Scoring With Deadline And Exclusions](../examples/procurement-scoring-v0/README.md) | 144 | 252 | [queries/procurement-scoring-v0.json](queries/procurement-scoring-v0.json) | bounded procurement award rows: 144<br>quality-score adjacent scans: 108<br>bonus-threshold replay witnesses: 2<br>checked Bool/QF_LIA fixtures: 5 | checked:5, replayed:1 | Generate debarment, deadline, bid-cap, bonus-threshold, and score-monotonicity fixtures across the bounded procurement domain. |
 | [Example Tax Benefit Arithmetic With Phase-Out](../examples/tax-benefit-arithmetic-v0/README.md) | 66 | 126 | [queries/tax-benefit-arithmetic-v0.json](queries/tax-benefit-arithmetic-v0.json) | bounded benefit replay rows: 66<br>income phase-out adjacent scans: 60<br>threshold/temporal replay witnesses: 4<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:2 | Generate threshold, cap, and phase-out fixtures across the bounded income/date/household domain. |
+| [Example Workflow Reachability Policy](../examples/workflow-reachability-v0/README.md) | 24 | 168 | [queries/workflow-reachability-v0.json](queries/workflow-reachability-v0.json) | bounded workflow transition rows: 24<br>two-step reachability rows: 144<br>terminal-state transition rows: 12<br>transition replay witnesses: 4<br>checked Bool/QF_LIA fixtures: 3 | checked:3, replayed:1 | Generate workflow transition, terminal-state, and two-step reachability rows across the bounded state graph. |
 
 ## Trust Boundary
 

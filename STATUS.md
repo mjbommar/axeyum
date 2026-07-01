@@ -205,13 +205,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
-- **Rules/law category-equivalence Alethe checks landed.**
-  `category-equivalence-v0` adds the distinct role/category-equivalence rules
-  shape: finite category/program replay, generated equivalence-pair rows, and
-  source-linked QF_UF/Alethe checked artifacts for category congruence and
-  implementation equivalence. The rules/law JSON layer now reports 6 packs,
-  1,013 bounded sample rows, 1,774 generated query rows, 24 checked
-  obligations, and 8 replayed witness rows.
+- **Rules/law workflow-reachability pack landed.**
+  `workflow-reachability-v0` adds the state-machine rules shape: finite
+  transition replay, generated two-step reachability rows, terminal-state
+  rows, and source-linked Bool/QF_LIA checked artifacts for no-skip,
+  terminal-absorbing, and implementation-equivalence obligations. The
+  rules/law JSON layer now reports 7 packs, 1,037 bounded sample rows, 1,942
+  generated query rows, 27 checked obligations, and 9 replayed witness rows.
 
 - **Finite order-lattice antisymmetry Alethe row split landed.**
   `finite-order-lattices-v0` now keeps the malformed partial-order rejection

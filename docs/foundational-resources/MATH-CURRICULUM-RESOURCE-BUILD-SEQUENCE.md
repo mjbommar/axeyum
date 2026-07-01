@@ -428,10 +428,14 @@ Pick one item per commit unless the change is purely navigational.
     rules/law example, reusing finite equivalence classes, category
     normalization, generated equivalence-pair rows, and source-linked
     checked QF_UF/Alethe artifacts through the current JSON boundary.
-17. Add the next rules/law example only if it exercises a distinct current
-    math proof shape or a repeated consumer need, such as richer category-map
-    congruence, graph reachability over workflow states, pure Boolean CNF/LRAT
-    coverage certificates, or multi-period allocation.
+17. Landed: add `workflow-reachability-v0` as the state-machine rules/law
+    example, reusing finite graph reachability, terminal-state guards,
+    generated two-step path rows, and source-linked checked Bool/QF_LIA
+    artifacts through the current JSON boundary.
+18. Add the next rules/law example only if it exercises a distinct current
+    math proof shape or a repeated consumer need, such as delegated
+    multi-stage workflows, pure Boolean CNF/LRAT coverage certificates, or
+    multi-period allocation.
 
 ## Maintenance Commands
 

@@ -1146,9 +1146,11 @@ Next work:
   reference for rational allocation, exact shares, and budget-balance queries.
   Use `category-equivalence-v0` as the checked QF_UF/Alethe reference for
   role/category equivalence and quotient-like classification queries.
+  Use `workflow-reachability-v0` as the finite graph/state-machine reference
+  for workflow transitions, terminal states, and bounded path queries.
   Status: the deterministic generated query-row JSON under
   [`../rules-as-code/generated/queries/`](../rules-as-code/generated/queries/)
-  now materializes 1,774 bounded generated rows from the six current rule
+  now materializes 1,942 bounded generated rows from the seven current rule
   packs, and
   the generated
   [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
@@ -1230,13 +1232,19 @@ Pick one item per commit unless the change is purely navigational.
    source-linked checked QF_UF/Alethe artifacts for category congruence and
    implementation equivalence. The generated query-row JSON now brings the
    rules/law surface to 1,774 bounded generated rows across six packs.
-15. Landed: add
+15. Landed: add `workflow-reachability-v0` as the seventh rules/law pack, with
+   finite transition replay, generated two-step reachability rows,
+   terminal-state rows, and source-linked checked Bool/QF_LIA artifacts for
+   no-skip, terminal-state, and implementation-equivalence obligations. The
+   generated query-row JSON now brings the rules/law surface to 1,942 bounded
+   generated rows across seven packs.
+16. Landed: add
    [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) plus
    `scripts/query-rules-as-code.py` so downstream consumers can query rule
    packs, checked obligations, generated query families, and bounded generated
    rows without parsing JSON by hand. `just rules-as-code` smoke-checks the
    current procurement queries.
-16. Landed: add
+17. Landed: add
    [`RULES-LAW-PATTERN-MATRIX.md`](RULES-LAW-PATTERN-MATRIX.md) so current
    rules/law patterns map back to math concept rows, proof routes, pack
    checks, generated query families, and copyable query commands before any
@@ -1716,17 +1724,25 @@ Pick one item per commit unless the change is purely navigational.
     bounded sample rows, 1,774 generated query rows, and 24 checked obligations
     across six packs.
 77e. Landed: add
+    [`workflow-reachability-v0`](../rules-as-code/examples/workflow-reachability-v0/)
+    as a bounded state-machine rules/law pack that reuses finite graph
+    reachability, terminal-state guards, generated two-step path rows, and
+    source-linked Bool/QF_LIA checked artifacts. The generated rules query
+    surface now reports 1,037 bounded sample rows, 1,942 generated query rows,
+    and 27 checked obligations across seven packs.
+77f. Landed: add
     [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) plus
     `scripts/query-rules-as-code.py` as the rules/law consumer query surface,
     with `just rules-as-code` smoke-checking summary counts, procurement pack
     lookup, checked obligations, generated quality-score families, and late
     generated rows.
-77f. Landed: add
+77g. Landed: add
     [`RULES-LAW-PATTERN-MATRIX.md`](RULES-LAW-PATTERN-MATRIX.md) as the
     rules/law pattern matrix, mapping the current predicate, relation,
-    threshold, monotonicity, version, precedence, and implementation-equivalence
-    patterns back to math concepts, proof routes, and smoke-checked queries.
-77g. Landed: add
+    threshold, monotonicity, version, precedence, workflow, and
+    implementation-equivalence patterns back to math concepts, proof routes,
+    and smoke-checked queries.
+77h. Landed: add
     [`rules-law-trust-boundary.md`](../learn/rules-law-trust-boundary.md) as
     the learner-facing trust-boundary page for reading current rules/law packs
     without treating them as legal advice or solver benchmarks.

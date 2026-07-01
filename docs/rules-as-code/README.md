@@ -30,6 +30,7 @@ docs/rules-as-code/
       grant-allocation-v0.json
       procurement-scoring-v0.json
       tax-benefit-arithmetic-v0.json
+      workflow-reachability-v0.json
     rules-query-dashboard.md
   examples/
     benefit-eligibility-v0/
@@ -38,6 +39,7 @@ docs/rules-as-code/
     grant-allocation-v0/
     procurement-scoring-v0/
     tax-benefit-arithmetic-v0/
+    workflow-reachability-v0/
 artifacts/ontology/
   rules-core.schema.json
 scripts/
@@ -53,6 +55,7 @@ Current example packs:
 - [Procurement Scoring V0](examples/procurement-scoring-v0/README.md)
 - [Grant Allocation V0](examples/grant-allocation-v0/README.md)
 - [Category Equivalence V0](examples/category-equivalence-v0/README.md)
+- [Workflow Reachability V0](examples/workflow-reachability-v0/README.md)
 
 ## Roadmap
 
@@ -128,6 +131,11 @@ The sixth pack,
 equivalence classes, finite functions, category normalization, and checked
 QF_UF/Alethe rows for a role/category classification shape.
 
+The seventh pack,
+[Workflow Reachability V0](examples/workflow-reachability-v0/README.md),
+reuses finite graph reachability, transition-system replay, terminal-state
+guards, and checked Bool/QF_LIA rows for a workflow/state-machine shape.
+
 Validate the current packs with:
 
 ```sh
@@ -135,5 +143,6 @@ python3 scripts/gen-rules-as-code-dashboard.py
 python3 scripts/validate-rules-as-code.py
 python3 scripts/query-rules-as-code.py summary
 python3 scripts/query-rules-as-code.py packs --pack category_equivalence_v0 --require-any
+python3 scripts/query-rules-as-code.py packs --pack workflow_reachability_v0 --require-any
 cargo test -p axeyum-solver --test rules_as_code_examples
 ```

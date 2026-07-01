@@ -131,6 +131,13 @@ class CategoryEquivalenceFacts:
     program: str
 
 
+@dataclass(frozen=True)
+class WorkflowFacts:
+    current_state: str
+    action: str
+    supervisor_review: bool
+
+
 def benefit_facts_from_json(context: str, value: Any) -> BenefitFacts:
     if not isinstance(value, dict):
         fail(f"{context} must be an object")
@@ -238,6 +245,19 @@ def category_equivalence_facts_from_json(
             f"{context}.applicant_category", value["applicant_category"]
         ),
         program=require_string(f"{context}.program", value["program"]),
+    )
+
+
+def workflow_facts_from_json(context: str, value: Any) -> WorkflowFacts:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    require_keys(context, value, {"current_state", "action", "supervisor_review"})
+    return WorkflowFacts(
+        current_state=require_string(f"{context}.current_state", value["current_state"]),
+        action=require_string(f"{context}.action", value["action"]),
+        supervisor_review=require_bool(
+            f"{context}.supervisor_review", value["supervisor_review"]
+        ),
     )
 
 
@@ -360,6 +380,31 @@ def category_priority_review(
     )
 
 
+def workflow_transition(
+    facts: WorkflowFacts, params: dict[str, Any]
+) -> tuple[bool, str]:
+    states = set(params["states"])
+    actions = set(params["actions"])
+    if facts.current_state not in states:
+        fail(f"unknown workflow state: {facts.current_state}")
+    if facts.action not in actions:
+        fail(f"unknown workflow action: {facts.action}")
+    if (
+        facts.current_state == params["initial_state"]
+        and facts.action == "request_review"
+    ):
+        return True, params["review_state"]
+    if (
+        facts.current_state == params["review_state"]
+        and facts.action == "approve"
+        and facts.supervisor_review
+    ):
+        return True, params["approved_state"]
+    if facts.current_state == params["review_state"] and facts.action == "reject":
+        return True, params["rejected_state"]
+    return False, facts.current_state
+
+
 def validate_metadata(pack_dir: Path, metadata: dict[str, Any]) -> None:
     require_keys(
         "metadata",
@@ -430,6 +475,8 @@ def validate_expected(pack_dir: Path, metadata: dict[str, Any], expected: dict[s
         witness_ids = validate_grant_allocation_expected(expected, citations)
     elif pack_id == "category_equivalence_v0":
         witness_ids = validate_category_equivalence_expected(expected, citations)
+    elif pack_id == "workflow_reachability_v0":
+        witness_ids = validate_workflow_expected(expected, citations)
     else:
         fail(f"unsupported rules-as-code pack id {pack_id}")
 
@@ -738,6 +785,76 @@ def validate_category_equivalence_expected(
         validate_citations(witness_id, witness["source_citations"], citations)
 
     validate_category_equivalence_finite_sample(expected["sample_domain"], params)
+    return witness_ids
+
+
+def validate_workflow_expected(
+    expected: dict[str, Any], citations: set[str]
+) -> set[str]:
+    params = expected["parameters"]
+    require_keys(
+        "parameters",
+        params,
+        {
+            "states",
+            "actions",
+            "terminal_states",
+            "initial_state",
+            "review_state",
+            "approved_state",
+            "rejected_state",
+        },
+    )
+    if params["states"] != ["submitted", "under_review", "approved", "rejected"]:
+        fail("workflow parameters.states must be the fixed v0 list")
+    if params["actions"] != ["request_review", "approve", "reject"]:
+        fail("workflow parameters.actions must be the fixed v0 list")
+    if params["terminal_states"] != ["approved", "rejected"]:
+        fail("workflow terminal_states must be approved and rejected")
+    if params["initial_state"] != "submitted":
+        fail("workflow initial_state must be submitted")
+    if params["review_state"] != "under_review":
+        fail("workflow review_state must be under_review")
+    if params["approved_state"] != "approved":
+        fail("workflow approved_state must be approved")
+    if params["rejected_state"] != "rejected":
+        fail("workflow rejected_state must be rejected")
+
+    witness_ids: set[str] = set()
+    for index, witness in enumerate(expected["witnesses"]):
+        require_keys(
+            f"witnesses[{index}]",
+            witness,
+            {
+                "id",
+                "facts",
+                "expected_allowed",
+                "expected_next_state",
+                "source_citations",
+                "explanation",
+            },
+        )
+        witness_id = witness["id"]
+        if witness_id in witness_ids:
+            fail(f"duplicate witness id {witness_id}")
+        witness_ids.add(witness_id)
+        facts = workflow_facts_from_json(f"{witness_id}.facts", witness["facts"])
+        expected_allowed = require_bool(
+            f"{witness_id}.expected_allowed", witness["expected_allowed"]
+        )
+        expected_next = require_string(
+            f"{witness_id}.expected_next_state", witness["expected_next_state"]
+        )
+        actual_allowed, actual_next = workflow_transition(facts, params)
+        if actual_allowed != expected_allowed or actual_next != expected_next:
+            fail(
+                f"{witness_id} replay mismatch: expected "
+                f"({expected_allowed}, {expected_next}), got "
+                f"({actual_allowed}, {actual_next})"
+            )
+        validate_citations(witness_id, witness["source_citations"], citations)
+
+    validate_workflow_finite_sample(expected["sample_domain"], params)
     return witness_ids
 
 
@@ -1096,6 +1213,53 @@ def validate_category_equivalence_finite_sample(
         fail("category equivalence sample must contain priority and nonpriority rows")
 
 
+def validate_workflow_finite_sample(
+    sample_domain: dict[str, Any], params: dict[str, Any]
+) -> None:
+    require_keys("sample_domain", sample_domain, {"states", "actions", "booleans"})
+    states = sample_domain["states"]
+    actions = sample_domain["actions"]
+    booleans = sample_domain["booleans"]
+    if states != params["states"]:
+        fail("workflow sample_domain.states must match parameters")
+    if actions != params["actions"]:
+        fail("workflow sample_domain.actions must match parameters")
+    if booleans != [False, True]:
+        fail("workflow sample_domain.booleans must be [false, true]")
+
+    checked = 0
+    allowed_count = 0
+    denied_count = 0
+    terminal_rows = 0
+    approved_rows = 0
+    for state in states:
+        for action in actions:
+            for supervisor in booleans:
+                allowed, next_state = workflow_transition(
+                    WorkflowFacts(state, action, supervisor), params
+                )
+                if allowed:
+                    allowed_count += 1
+                else:
+                    denied_count += 1
+                if state in params["terminal_states"]:
+                    terminal_rows += 1
+                    if next_state != state:
+                        fail("workflow terminal transition must be a no-op")
+                if next_state == params["approved_state"]:
+                    approved_rows += 1
+                checked += 1
+
+    if checked == 0:
+        fail("workflow finite sample was empty")
+    if allowed_count == 0 or denied_count == 0:
+        fail("workflow sample must contain allowed and denied transitions")
+    if terminal_rows == 0:
+        fail("workflow sample must contain terminal-state rows")
+    if approved_rows == 0:
+        fail("workflow sample must contain an approval transition")
+
+
 def validate_generated_queries(
     pack_dir: Path, metadata: dict[str, Any], expected: dict[str, Any]
 ) -> None:
@@ -1141,6 +1305,8 @@ def validate_generated_queries(
         validate_grant_allocation_generated_queries(expected, families)
     elif pack_id == "category_equivalence_v0":
         validate_category_equivalence_generated_queries(expected, families)
+    elif pack_id == "workflow_reachability_v0":
+        validate_workflow_generated_queries(expected, families)
     else:
         fail(f"unsupported generated query pack id {pack_id}")
 
@@ -1731,6 +1897,96 @@ def validate_category_equivalence_generated_queries(
             fail(f"generated category pair {index} has wrong congruence flag")
         if not congruent:
             fail(f"generated category pair {index} violates category congruence")
+
+
+def validate_workflow_generated_queries(
+    expected: dict[str, Any], families: dict[str, dict[str, Any]]
+) -> None:
+    require_exact_families(
+        "workflow",
+        families,
+        {"bounded_transition_rows", "two_step_reachability_rows"},
+    )
+    params = expected["parameters"]
+    sample = expected["sample_domain"]
+    states = sample["states"]
+    actions = sample["actions"]
+    booleans = sample["booleans"]
+
+    transition_rows = families["bounded_transition_rows"]["rows"]
+    expected_transitions = len(states) * len(actions) * len(booleans)
+    if len(transition_rows) != expected_transitions:
+        fail("workflow transition generated row count mismatch")
+    for index, row in enumerate(transition_rows):
+        if row["id"] != f"transition-row-{index:04d}":
+            fail("workflow transition generated row ids must be sequential")
+        facts = workflow_facts_from_json(
+            f"generated workflow transition {index}.facts",
+            row.get("facts"),
+        )
+        expected_allowed = require_bool(
+            f"generated workflow transition {index}.expected_allowed",
+            row.get("expected_allowed"),
+        )
+        expected_next = require_string(
+            f"generated workflow transition {index}.expected_next_state",
+            row.get("expected_next_state"),
+        )
+        actual_allowed, actual_next = workflow_transition(facts, params)
+        if actual_allowed != expected_allowed or actual_next != expected_next:
+            fail(f"generated workflow transition row {index} replay mismatch")
+        terminal = require_bool(
+            f"generated workflow transition {index}.terminal_state",
+            row.get("terminal_state"),
+        )
+        if terminal != (facts.current_state in params["terminal_states"]):
+            fail(f"generated workflow transition row {index} has wrong terminal flag")
+
+    two_step_rows = families["two_step_reachability_rows"]["rows"]
+    expected_two_step = len(states) * len(actions) * len(actions) * len(booleans) * len(
+        booleans
+    )
+    if len(two_step_rows) != expected_two_step:
+        fail("workflow two-step generated row count mismatch")
+    for index, row in enumerate(two_step_rows):
+        if row["id"] != f"two-step-row-{index:04d}":
+            fail("workflow two-step generated row ids must be sequential")
+        first = workflow_facts_from_json(
+            f"generated workflow two-step {index}.first_facts",
+            row.get("first_facts"),
+        )
+        second = workflow_facts_from_json(
+            f"generated workflow two-step {index}.second_facts",
+            row.get("second_facts"),
+        )
+        first_allowed, first_next = workflow_transition(first, params)
+        if second.current_state != first_next:
+            fail(f"generated workflow two-step row {index} must compose states")
+        second_allowed, final_state = workflow_transition(second, params)
+        if require_bool(
+            f"generated workflow two-step {index}.first_allowed",
+            row.get("first_allowed"),
+        ) != first_allowed:
+            fail(f"generated workflow two-step row {index} first replay mismatch")
+        if require_bool(
+            f"generated workflow two-step {index}.second_allowed",
+            row.get("second_allowed"),
+        ) != second_allowed:
+            fail(f"generated workflow two-step row {index} second replay mismatch")
+        if (
+            require_string(
+                f"generated workflow two-step {index}.final_state",
+                row.get("final_state"),
+            )
+            != final_state
+        ):
+            fail(f"generated workflow two-step row {index} final-state mismatch")
+        reached_approved = require_bool(
+            f"generated workflow two-step {index}.reached_approved",
+            row.get("reached_approved"),
+        )
+        if reached_approved != (final_state == params["approved_state"]):
+            fail(f"generated workflow two-step row {index} has wrong approval flag")
 
 
 def validate_pack(pack_dir: Path) -> str:

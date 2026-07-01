@@ -2684,6 +2684,11 @@ The rules/law lab now also has `category-equivalence-v0`. It adds a distinct
 role/category-equivalence resource: finite category/program replay,
 generated equivalence-pair rows, and source-linked checked QF_UF/Alethe
 artifacts for category congruence and implementation equivalence.
+The rules/law lab now also has `workflow-reachability-v0`. It adds the bounded
+state-machine resource: finite transition replay, generated two-step
+reachability rows, terminal-state rows, and source-linked checked Bool/QF_LIA
+artifacts for no-skip, terminal-state, and implementation-equivalence
+obligations.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

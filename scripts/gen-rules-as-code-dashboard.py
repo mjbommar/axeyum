@@ -144,6 +144,25 @@ def category_priority_review(facts: dict[str, Any], params: dict[str, Any]) -> b
     )
 
 
+def workflow_transition(
+    facts: dict[str, Any], params: dict[str, Any]
+) -> tuple[bool, str]:
+    if (
+        facts["current_state"] == params["initial_state"]
+        and facts["action"] == "request_review"
+    ):
+        return True, params["review_state"]
+    if (
+        facts["current_state"] == params["review_state"]
+        and facts["action"] == "approve"
+        and facts["supervisor_review"]
+    ):
+        return True, params["approved_state"]
+    if facts["current_state"] == params["review_state"] and facts["action"] == "reject":
+        return True, params["rejected_state"]
+    return False, facts["current_state"]
+
+
 def benefit_metrics(expected: dict[str, Any]) -> tuple[int, list[tuple[str, int]], str]:
     sample = expected["sample_domain"]
     booleans = len(sample["booleans"])
@@ -283,6 +302,26 @@ def category_equivalence_metrics(
         ("checked QF_UF/Alethe fixtures", check_counts(expected)["checked"]),
     ]
     return rows, families, "Generate category-normalization and equivalence-pair query rows across the bounded policy domain."
+
+
+def workflow_metrics(expected: dict[str, Any]) -> tuple[int, list[tuple[str, int]], str]:
+    sample = expected["sample_domain"]
+    states = sample["states"]
+    actions = sample["actions"]
+    booleans = sample["booleans"]
+    rows = len(states) * len(actions) * len(booleans)
+    two_step_rows = rows * len(actions) * len(booleans)
+    terminal_rows = len(expected["parameters"]["terminal_states"]) * len(actions) * len(
+        booleans
+    )
+    families = [
+        ("bounded workflow transition rows", rows),
+        ("two-step reachability rows", two_step_rows),
+        ("terminal-state transition rows", terminal_rows),
+        ("transition replay witnesses", witness_count(expected, {"transition_witnesses"})),
+        ("checked Bool/QF_LIA fixtures", check_counts(expected)["checked"]),
+    ]
+    return rows, families, "Generate workflow transition, terminal-state, and two-step reachability rows across the bounded state graph."
 
 
 def generic_metrics(expected: dict[str, Any]) -> tuple[int, list[tuple[str, int]], str]:
@@ -697,6 +736,78 @@ def category_equivalence_query_families(expected: dict[str, Any]) -> list[dict[s
     ]
 
 
+def workflow_query_families(expected: dict[str, Any]) -> list[dict[str, Any]]:
+    params = expected["parameters"]
+    sample = expected["sample_domain"]
+    transition_rows = []
+    for state in sample["states"]:
+        for action in sample["actions"]:
+            for supervisor in sample["booleans"]:
+                facts = {
+                    "current_state": state,
+                    "action": action,
+                    "supervisor_review": supervisor,
+                }
+                allowed, next_state = workflow_transition(facts, params)
+                transition_rows.append(
+                    {
+                        "id": f"transition-row-{len(transition_rows):04d}",
+                        "facts": facts,
+                        "expected_allowed": allowed,
+                        "expected_next_state": next_state,
+                        "terminal_state": state in params["terminal_states"],
+                    }
+                )
+
+    two_step_rows = []
+    for state in sample["states"]:
+        for first_action in sample["actions"]:
+            for second_action in sample["actions"]:
+                for first_supervisor in sample["booleans"]:
+                    for second_supervisor in sample["booleans"]:
+                        first_facts = {
+                            "current_state": state,
+                            "action": first_action,
+                            "supervisor_review": first_supervisor,
+                        }
+                        first_allowed, first_next = workflow_transition(
+                            first_facts, params
+                        )
+                        second_facts = {
+                            "current_state": first_next,
+                            "action": second_action,
+                            "supervisor_review": second_supervisor,
+                        }
+                        second_allowed, final_state = workflow_transition(
+                            second_facts, params
+                        )
+                        two_step_rows.append(
+                            {
+                                "id": f"two-step-row-{len(two_step_rows):04d}",
+                                "first_facts": first_facts,
+                                "second_facts": second_facts,
+                                "first_allowed": first_allowed,
+                                "second_allowed": second_allowed,
+                                "final_state": final_state,
+                                "reached_approved": final_state
+                                == params["approved_state"],
+                            }
+                        )
+
+    return [
+        {
+            "id": "bounded_transition_rows",
+            "description": "Complete bounded one-step workflow transitions with replayed allow and next-state outputs.",
+            "rows": transition_rows,
+        },
+        {
+            "id": "two_step_reachability_rows",
+            "description": "Two-step workflow paths obtained by composing the bounded transition relation.",
+            "rows": two_step_rows,
+        },
+    ]
+
+
 METRIC_DISPATCH = {
     "benefit_eligibility_v0": benefit_metrics,
     "authorization_policy_v0": authorization_metrics,
@@ -704,6 +815,7 @@ METRIC_DISPATCH = {
     "procurement_scoring_v0": procurement_metrics,
     "grant_allocation_v0": grant_allocation_metrics,
     "category_equivalence_v0": category_equivalence_metrics,
+    "workflow_reachability_v0": workflow_metrics,
 }
 
 QUERY_DISPATCH = {
@@ -713,6 +825,7 @@ QUERY_DISPATCH = {
     "procurement_scoring_v0": procurement_query_families,
     "grant_allocation_v0": grant_allocation_query_families,
     "category_equivalence_v0": category_equivalence_query_families,
+    "workflow_reachability_v0": workflow_query_families,
 }
 
 
@@ -824,8 +937,9 @@ def render(packs: list[dict[str, Any]]) -> str:
         "planning surface. It is not a legal corpus and not a solver-performance",
         "benchmark; it records which finite rule domains can be expanded into",
         "generated coverage, equivalence, threshold, cap, or monotonicity checks.",
-        "It now also includes rational-allocation rows for QF_LRA/Farkas and",
-        "checked category-equivalence rows for QF_UF/Alethe.",
+        "It now also includes rational-allocation rows for QF_LRA/Farkas,",
+        "checked category-equivalence rows for QF_UF/Alethe, and bounded",
+        "workflow-reachability rows over a finite state graph.",
         "",
         "## Summary",
         "",

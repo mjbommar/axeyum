@@ -245,9 +245,9 @@ bounded generated-row inspection.
 The rules/law pattern matrix is
 [`docs/foundational-resources/RULES-LAW-PATTERN-MATRIX.md`](docs/foundational-resources/RULES-LAW-PATTERN-MATRIX.md);
 it maps finite predicates, role/tenant relations, thresholds, monotonicity,
-version transitions, precedence, category equivalence, and bounded
-implementation-equivalence patterns back to math concept rows, proof routes,
-current packs, and copyable queries.
+version transitions, precedence, category equivalence, workflow reachability,
+and bounded implementation-equivalence patterns back to math concept rows,
+proof routes, current packs, and copyable queries.
 The learner-facing rules/law trust-boundary page is
 [`docs/learn/rules-law-trust-boundary.md`](docs/learn/rules-law-trust-boundary.md);
 it walks from human-authored source rules through formal models, replayed
@@ -255,9 +255,9 @@ witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
 120 concept rows, 108 non-template packs, 647 expected checks (336 `sat`,
 240 `unsat`, 71 `not-run`), 322 checked rows, 254 replay-only rows, and 71
-Lean-horizon rows. The rules/law JSON layer now reports 6 packs, 1,013
-bounded sample rows, 1,774 generated query rows, 24 checked obligations, and
-8 replayed witness rows. The learner
+Lean-horizon rows. The rules/law JSON layer now reports 7 packs, 1,037
+bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
+9 replayed witness rows. The learner
 coverage audit records all 108 non-template packs as focused-lesson linked,
 with no path-only, index-only, or missing learner buckets. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
