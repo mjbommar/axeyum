@@ -537,6 +537,9 @@ fn eliminate_real_div(
     let zero = arena.real_const(axeyum_ir::Rational::integer(0));
     let mut map: HashMap<TermId, TermId> = HashMap::new();
     let mut constraints: Vec<TermId> = Vec::new();
+    // (dividend, divisor, result-var) per distinct div term, kept so the
+    // division-congruence constraints below can relate results with equal args.
+    let mut div_terms: Vec<(TermId, TermId, TermId)> = Vec::new();
     for (i, div) in divs.into_iter().enumerate() {
         let TermNode::App { args, .. } = arena.node(div) else {
             continue;
@@ -552,6 +555,28 @@ fn eliminate_real_div(
         let ry = arena.real_mul(r, y).map_err(err)?;
         let x_eq = arena.eq(x, ry).map_err(err)?;
         constraints.push(arena.or(y_zero, x_eq).map_err(err)?);
+        div_terms.push((x, y, r));
+    }
+    // Division congruence: `/` is a *total function*, so equal arguments give
+    // equal results — `(xᵢ = xⱼ ∧ yᵢ = yⱼ) ⟹ rᵢ = rⱼ`. Without this, the
+    // fresh-per-occurrence result vars are left independent when the divisor is 0
+    // (both `(y=0) ∨ (x=r·y)` disjunctions are satisfied by the `y=0` branch,
+    // leaving `r` free), which loses the SMT-LIB congruence
+    // `x = y ⟹ (/ x 0) = (/ y 0)` and admits spurious models (e.g. the curated
+    // `div.04`/`div.07`). Adding the Ackermann congruence axioms only *restricts*
+    // the model space (they are valid consequences of `/`'s totality), so `unsat`
+    // stays sound and a prior spurious `sat` is correctly ruled out. O(k²) in the
+    // number of distinct div terms `k` (small in practice).
+    for i in 0..div_terms.len() {
+        for j in (i + 1)..div_terms.len() {
+            let (xi, yi, ri) = div_terms[i];
+            let (xj, yj, rj) = div_terms[j];
+            let xe = arena.eq(xi, xj).map_err(err)?;
+            let ye = arena.eq(yi, yj).map_err(err)?;
+            let args_eq = arena.and(xe, ye).map_err(err)?;
+            let res_eq = arena.eq(ri, rj).map_err(err)?;
+            constraints.push(arena.implies(args_eq, res_eq).map_err(err)?);
+        }
     }
 
     let mut memo: HashMap<TermId, TermId> = HashMap::new();
