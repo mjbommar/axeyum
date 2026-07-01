@@ -2730,11 +2730,11 @@ fn evidence_route(arena: &TermArena, assertions: &[TermId]) -> EvidenceRoute {
             // #b00`): it must route to `solve`, not the raw BV bit-blaster.
             Sort::Datatype(_) => has_datatype = true,
             Sort::Uninterpreted(_) => has_uninterpreted_sort = true,
-            Sort::Bool => {}
-            // TODO(P2.7 A.1b): Seq handling. No sequence evidence route exists yet
-            // and no front-end produces a `Seq` sort, so this is unreachable; note
-            // nothing. Add a sequence route when the capability lands.
-            Sort::Seq(_) => {}
+            // `Bool` signals no theory. `Seq` is a no-op for now (TODO(P2.7 A.1b):
+            // no sequence evidence route exists yet and no front-end produces a
+            // `Seq` sort, so this is unreachable today; add a route when sequences
+            // land).
+            Sort::Bool | Sort::Seq(_) => {}
         }
         if let TermNode::App { op, args } = arena.node(term) {
             match op {

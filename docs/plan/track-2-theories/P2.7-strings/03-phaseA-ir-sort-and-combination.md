@@ -40,9 +40,18 @@ added. So A.1 must be sliced to keep each commit compiling:
    build green with the sort present. Gate: full workspace `cargo build` + `test`.
    *Tip:* grep the compiler errors, not the 138 files — only exhaustive matches
    break; many uses are constructors or `matches!` that don't.
-2. **Slice A.1b — eval + a couple of constructors.** Ground-evaluator arms for
-   `seq.unit`/`seq.empty`/`str.++`/`str.len` over the new sort (so models replay),
-   behind the existing bounded encoder as the decision path for now.
+   **LANDED (`c88ebcf8`):** `Sort::Seq(ArraySortKey)` (Copy-preserving — a `Box<Sort>`
+   would have broken `Sort: Copy` at every use site) + `Sort::string()` =
+   `Seq(BitVec(18))`; 39 decline-cleanly arms across 16 crate files, each mirroring
+   its `Int`/`Real`/`Array` sibling (`SortMismatch`/`None`/`unreachable!`/`panic!`
+   per the site's existing convention; structural arms recurse into the element).
+   Workspace + `--all-targets` green, axeyum-ir tests pass, clippy `-D` clean.
+2. **Slice A.1b — the first sequence *capability*.** NB the `Op` enum has **no**
+   dedicated string ops today (the bounded encoder lowers via BV), so A.1b is more
+   than eval arms: add `Op` variants (`seq.empty`/`seq.unit`/`str.++`/`str.len`) +
+   arena builders, a **`Value::Seq`** (sequences route through `FullValue`, since
+   `needs_value_storage(Seq) == true`), and ground-evaluator support (so models
+   replay) — behind the existing bounded encoder as the decision path for now.
 3. **Slice A.1c — SMT-LIB read/write** round-trip for the sort + core ops.
 4. **A.2** (`len`↔LIA Nelson–Oppen) and the ADR follow once the sort is load-bearing.
 
