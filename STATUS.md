@@ -205,6 +205,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-operator bad `l1` norm QF_LRA row landed.**
+  `finite-operator-v0` now has a second checked Farkas row: finite replay
+  reuses the `l1` triangle witness with `u=(1,2)`, `v=(3,-1)`, and
+  `u+v=(4,1)`, computes `||u+v||_1 = 5`, and rejects the malformed claim
+  `||u+v||_1 <= 4`. The new source SMT-LIB artifact isolates the final exact
+  inequality conflict, the shared `math_resource_lra_routes` regression parses
+  it and checks `UnsatFarkas` evidence, and the validator pins the vectors,
+  replayed norms, true triangle bound, artifact path, regression, and
+  certificate note. The operator pack docs, learner pages, proof frontier,
+  field matrix, and buildout ledgers now reference both checked finite-operator
+  rows. Generated dashboards and the public query summary now report 111
+  concept rows, 108 non-template packs, 567 expected checks, 249 checked rows,
+  247 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite cyclic-geometry bad Ptolemy QF_LRA row landed.**
   `finite-cyclic-geometry-v0` now has a rational Ptolemy replay witness and a
   third checked Farkas row: finite replay checks the origin-centered `4 x 3`
@@ -713,8 +727,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
   now shows public JSON queries for the
   `functional_analysis_and_operator_theory` Farkas field summary, the shared
-  operator bridge lookup, and checked finite-operator, inner-product,
-  Chebyshev, and spectral Farkas rows. `check-foundational-resources.sh` now
+  operator bridge lookup, and checked finite-operator norm/bound,
+  inner-product, Chebyshev, and spectral Farkas rows.
+  `check-foundational-resources.sh` now
   smoke-checks those queries so this field stays visible without promoting
   Banach/Hilbert or infinite-dimensional theorem claims.
 
@@ -3975,6 +3990,31 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   the docs hub, the contributor guide, and the mdBook summary.
 
 ## Current focus
+
+- **Session 2026-06-30 (later) — Nonlinear (P2.5) in execution: baseline corrected, measured vs Z3, case-split attempt reverted.**
+  Three things superseded the plan-writing entry below:
+  1. **Baseline corrected.** Reading the code + ADRs (0044/0045/0046) showed the
+     NRA engine is *far more built* than the program's first draft assumed — the
+     bignum algebraic core (polynomials, Sturm, resultants, real algebraic numbers,
+     field arithmetic) already lives in **`axeyum-ir`**, and a largely-complete CAD
+     (2-var complete, N-var decision-complete, fuzz-gated) lives in `axeyum-solver`.
+     **There is NO new `axeyum-poly` crate** (ADR-0044 keeps the primitives in
+     `axeyum-ir`); "Phase A" is mostly done. P2.5 docs 00/02/03/06 corrected.
+  2. **Measured vs z3 4.13.3** (`check_auto`, curated non-incremental corpus, 5 s,
+     `DISAGREE=0`): **QF_NRA 9/36, QF_NIA 20/28.** `explain_corpus` route-trace root
+     cause: the strong CAD only decides *flat conjunctions*, so any Boolean
+     structure (`or`/`distinct`/`ite`) over nonlinear atoms declines and falls to
+     the ≤2-cross-product relaxation. The dominant NRA lever is a DPLL(T)/case-split
+     feeding conjunctive cubes to the existing CAD (P2.5 Phase B).
+  3. **Landed** a graceful-`unknown` fix for an i128 LRA-replay overflow (was a hard
+     backend error). **Attempted + reverted** a Boolean-case-split prototype
+     (`check_with_nra_dpll`): it unlocked +1 (`issue3656`, 9→10) but the
+     **`nra_differential_fuzz` vs Z3 caught a wrong verdict**, so it was reverted in
+     full (soundness floor). The tree is sound; baseline stays 9/36. Root-causing
+     that wrong verdict is the current top NRA task and blocks re-landing.
+  Strings (P2.7) remains at the planning stage; first increment = Phase A
+  (first-class `Seq`/`String` IR sort + String+LIA over `len`, closing
+  `str.len`-unsat). See [`docs/plan/track-2-theories/P2.5-nra/08-evaluation-and-soundness.md`](docs/plan/track-2-theories/P2.5-nra/08-evaluation-and-soundness.md).
 
 - **Session 2026-06-30 — Next focus set: the two theory frontiers (strings + nonlinear).**
   The two largest remaining decide-rate gaps vs Z3/cvc5 now have full top-down

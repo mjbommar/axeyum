@@ -70,25 +70,39 @@ increment at a time and record each one.
    move the core decide-rate; its job is to surface real gaps (it has filed
    U6/U7/U8) and ship user-facing, certifying value, not to claim parity.
 
-**Immediate next focus (2026-06-30): the two theory frontiers now have full
-top-down build programs — start executing them.** Strings (P2.7) and nonlinear
-arithmetic (P2.5) are the largest remaining decide-rate gaps, and each is now
-decomposed into a complete, source-grounded program — current state → literature
-survey → architecture → phased build (A–E) → evaluation — under
+**Immediate next focus (2026-06-30, updated after measurement): the two theory
+frontiers have full top-down build programs; nonlinear (P2.5) is now in
+execution.** Strings (P2.7) and nonlinear arithmetic (P2.5) are the largest
+remaining decide-rate gaps, each decomposed into a source-grounded program
+(current state → literature → architecture → phased build → evaluation) under
 [`docs/plan/track-2-theories/P2.7-strings/`](docs/plan/track-2-theories/P2.7-strings/)
 and [`docs/plan/track-2-theories/P2.5-nra/`](docs/plan/track-2-theories/P2.5-nra/).
-The first concrete increments:
-- **P2.5 Phase A** — the pure-Rust `axeyum-poly` algebraic core (multivariate
-  polynomials, real root isolation, real algebraic numbers, McCallum projection);
-  the long pole that unlocks *complete* NRA (incr. linearization → ICP → CAC) and
-  the NIA UNSAT engine.
-- **P2.7 Phase A** — a first-class `Seq`/`String` IR sort + the String+LIA
-  combination over `len` (rides P1.6), which also closes the `str.len`-unsat gap;
-  then the word-level word-equation core + symbolic-derivative regex.
 
-Both keep DISAGREE=0, `unknown`-first, and the measured-scoreboard discipline
-(no decide-rate claim without re-running the scoreboard). Build, measure, record,
-take the next slice.
+**Grounding correction (important).** Reading the code + ADRs showed the NRA
+engine is *far more built* than the first plan draft assumed: the bignum algebraic
+core (polynomials, Sturm, resultants, real algebraic numbers, field arithmetic)
+already lives in **`axeyum-ir`** (ADR-0044/0045/0046) and a **largely-complete
+CAD** (2-variable complete, N-variable decision-complete, fuzz-gated) lives in
+`axeyum-solver`. So there is **no new `axeyum-poly` crate** (ADR-0044 keeps the
+primitives in `axeyum-ir`) and "Phase A" is mostly done — see the corrected
+[P2.5 current-state](docs/plan/track-2-theories/P2.5-nra/00-current-state.md).
+
+**Measured (2026-06-30, `check_auto` vs z3 4.13.3, curated corpus, DISAGREE=0):
+QF_NRA 9/36, QF_NIA 20/28.** Route-trace root cause: the strong CAD only decides
+*flat conjunctions*, so any Boolean structure (`or`/`distinct`/`ite`) over
+nonlinear atoms — essentially every real benchmark — declines and falls to the
+≤2-cross-product relaxation. **The dominant NRA lever is a DPLL(T)/case-split
+feeding conjunctive cubes to the existing CAD** (P2.5 Phase B), the concrete first
+slice of the [CDCL(T) loop (P1.5)](docs/plan/track-1-engine/P1.5-cdcl-t-loop.md).
+
+**Live status.** Landed a graceful-`unknown` fix for an i128 LRA-replay overflow.
+A Boolean-case-split prototype (`check_with_nra_dpll`) unlocked +1 (`issue3656`)
+but **the NRA differential fuzz vs Z3 caught a wrong verdict, so it was reverted**
+(soundness floor) — root-causing that wrong verdict is the current top task and
+blocks re-landing the case-split. Strings (P2.7) is still at the planning stage;
+its first increment is Phase A (first-class `Seq`/`String` IR sort + String+LIA
+over `len`, closing the `str.len`-unsat gap). Both keep DISAGREE=0, `unknown`-first,
+and the measured-scoreboard discipline (no decide-rate claim without a re-run).
 
 The per-track detail, exit criteria, and current frontier levers are in the
 sections below and under [`docs/plan/`](docs/plan/README.md). **Treat any
@@ -148,7 +162,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 566 expected checks, 248 checked
+111 concept rows, 108 non-template packs, 567 expected checks, 249 checked
 rows, 247 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -398,9 +412,9 @@ tables, monotone invariant checks, checked QF_LRA/Farkas bad-step evidence,
 and the ODE/numerical-analysis Lean horizon.
 `finite-operator-v0` now also has a standalone finite-dimensional operator
 page for exact `l1` norm replay, row-sum operator-bound replay, finite
-Chebyshev recurrence replay, and checked QF_LRA/Farkas bad-bound evidence,
-leaving the broader bounded-dynamics/operator page as the cross-resource
-bridge.
+Chebyshev recurrence replay, and checked QF_LRA/Farkas bad `l1` norm and
+bad-bound evidence, leaving the broader bounded-dynamics/operator page as the
+cross-resource bridge.
 The six active proof-cookbook routes for CNF/LRAT, QF_BV, QF_LIA, QF_LRA,
 QF_UF/Alethe, and Lean horizons now each name concrete math example packs that
 use the route.
@@ -619,6 +633,7 @@ the latest finite-separation bad separator QF_LRA/Farkas promotion,
 the latest finite-root-finding bad Newton-step QF_LRA/Farkas promotion,
 the latest bounded-dynamics bad invariant-bound QF_LRA/Farkas promotion,
 complex-algebraic bad norm-squared QF_LRA/Farkas promotion,
+finite-operator bad `l1` sum-norm QF_LRA/Farkas promotion,
 finite-operator bad operator-bound QF_LRA/Farkas promotion,
 coordinate-geometry bad squared-distance QF_LRA/Farkas promotion,
 incidence-geometry bad point-on-line QF_LRA/Farkas promotion,
