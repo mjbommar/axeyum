@@ -221,6 +221,7 @@ python3 scripts/query-foundational-resources.py concepts --field numerical_analy
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text operator --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text floating --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field numerical_analysis --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked --text solution --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked --text Jacobi --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field complex_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field complex_analysis --text real-pair --require-any >/dev/null

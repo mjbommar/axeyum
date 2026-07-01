@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Numerical-linear-algebra bad solution-box QF_LRA row landed.**
+  `numerical-linear-algebra-v0` now includes a checked rejection for a
+  malformed solution-box row: exact replay solves the fixed `2x2` system as
+  `x = [6/5, 6/5]`, while the bad row claims the first component satisfies
+  `x0 <= 1`. The validator pins the source witness, matrix, right-hand side,
+  exact solution, component index, actual component, claimed bound, source
+  SMT-LIB artifact, and route regression. The shared
+  `math_resource_lra_routes` regression parses the source QF_LRA artifact and
+  checks the `UnsatFarkas` evidence. Generated dashboards and the public query
+  summary now report 111 concept rows, 108 non-template packs, 629 expected
+  checks, 306 checked rows, 252 replay-only rows, and 71 Lean-horizon rows.
+
 - **Complex-plane bad conjugation-product imaginary QF_LRA row landed.**
   `complex-plane-transforms-v0` now includes a checked rejection for a
   malformed conjugation-product row: exact real-pair replay computes both
@@ -215,9 +227,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   artifact, regression, and independently checked `UnsatFarkas` certificate.
   The shared `math_resource_lra_routes` regression parses the shifted
   QF_LRA artifact and checks the Farkas evidence. Generated dashboards and the
-  public query summary now report 111 concept rows, 108 non-template packs,
-  628 expected checks, 305 checked rows, 252 replay-only rows, and 71
-  Lean-horizon rows.
+  public query summary were refreshed for that increment.
 
 - **Bounded-dynamics bad threshold-step QF_LRA row landed.**
   `bounded-dynamics-v0` now includes a checked rejection for a malformed early
@@ -1105,8 +1115,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `ANALYSIS-NUMERICAL-QUERIES.md` now gives downstream consumers copyable
   concept-plus-route and pack-specific Farkas queries for bounded
   epsilon-delta rows, metric balls, algebraic derivative/integral rows,
-  Newton/root-finding rows, finite dynamics/Euler rows, residual/Jacobi rows,
-  exact-vs-floating boundaries, and complex real-pair rows. The
+  Newton/root-finding rows, finite dynamics/Euler rows,
+  residual/solution-box/Jacobi rows, exact-vs-floating boundaries, and complex
+  real-pair rows. The
   foundational-resource smoke check now runs those drills, while completeness,
   IVT/MVT/FTC, convergence, numerical stability, floating-point error,
   holomorphicity, contour integration, analytic continuation, and algebraic

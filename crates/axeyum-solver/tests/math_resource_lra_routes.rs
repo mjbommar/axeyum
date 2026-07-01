@@ -262,6 +262,9 @@ const FINITE_EULER_BAD_TERMINAL_ERROR: &str = include_str!(
 const NUMERICAL_LINEAR_ALGEBRA_BAD_JACOBI_ERROR_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-jacobi-error-bound-farkas-conflict.smt2"
 );
+const NUMERICAL_LINEAR_ALGEBRA_BAD_SOLUTION_BOX_UPPER_BOUND: &str = include_str!(
+    "../../../artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-solution-box-upper-bound-farkas-conflict.smt2"
+);
 const FINITE_MARKOV_CHAIN_BAD_STATIONARY_DISTRIBUTION: &str = include_str!(
     "../../../artifacts/examples/math/finite-markov-chain-v0/smt2/bad-stationary-distribution-farkas-conflict.smt2"
 );
@@ -1611,6 +1614,14 @@ fn numerical_linear_algebra_bad_jacobi_error_bound_artifact_emits_checked_farkas
     assert_resource_farkas(
         "numerical-linear-algebra-v0 bad-jacobi-error-bound SMT-LIB artifact",
         NUMERICAL_LINEAR_ALGEBRA_BAD_JACOBI_ERROR_BOUND,
+    );
+}
+
+#[test]
+fn numerical_linear_algebra_bad_solution_box_upper_bound_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "numerical-linear-algebra-v0 bad-solution-box-upper-bound SMT-LIB artifact",
+        NUMERICAL_LINEAR_ALGEBRA_BAD_SOLUTION_BOX_UPPER_BOUND,
     );
 }
 

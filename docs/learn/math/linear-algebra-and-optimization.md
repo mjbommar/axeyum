@@ -79,7 +79,7 @@ slice adds bilinear maps, finite universal-factorization shadows, Kronecker
 products, and checked QF_UF/Alethe bad-bilinear-map rejection over `F2`. The
 numerical-linear-algebra slice adds exact residual bounds, rational interval
 boxes for solutions, and a one-step Jacobi contraction check, with a checked
-QF_LRA/Farkas bad-bound certificate. The finite-recurrence-prefix slice adds
+QF_LRA/Farkas bad residual, solution-box, and Jacobi-bound certificates. The finite-recurrence-prefix slice adds
 Fibonacci and affine recurrence replay plus a companion-matrix state trace,
 with checked QF_LRA/Farkas bad finite-value and bad affine-step certificates. The
 finite-root-finding slice adds exact bisection/Newton iteration replay,
@@ -583,6 +583,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes inner_product_bad_pr
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-tensor-products-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes numerical_linear_algebra_bad_solution_box_upper_bound_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0
@@ -690,7 +691,7 @@ finite Chebyshev-system interpolation and alternation replay, read
 Exact rational matrix witnesses, projections, residuals, spectra, random-matrix
 moments, and satisfiable finite-dimensional operator rows start as
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md).
-Infeasible rational systems, LP thresholds, bad residual bounds, malformed
+Infeasible rational systems, LP thresholds, bad residual and solution-box bounds, malformed
 eigenpairs, bad Rayleigh-quotient rows, bad characteristic-polynomial rows,
 bad operator-bound and bad Chebyshev-prefix rows, bad KKT stationarity and
 complementarity rows,

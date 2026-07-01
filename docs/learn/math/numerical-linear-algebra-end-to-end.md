@@ -2,7 +2,7 @@
 
 This lesson follows one exact numerical-linear-algebra resource from residual
 norm replay to a rational solution box, a one-step Jacobi contraction check,
-and checked bad residual/Jacobi-bound rejections. It uses the
+and checked bad residual, solution-box, and Jacobi-bound rejections. It uses the
 [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
 pack.
 
@@ -23,6 +23,7 @@ Concept rows:
 | `solution-box-replay` | `sat` | replay-only |
 | `jacobi-contraction-witness` | `sat` | replay-only |
 | `bad-residual-bound-rejected` | `unsat` | checked |
+| `bad-solution-box-upper-bound-rejected` | `unsat` | checked |
 | `bad-jacobi-error-bound-rejected` | `unsat` | checked |
 
 The pack uses exact rational arithmetic only. It models the algebra under
@@ -68,6 +69,32 @@ residual = [0, 0]
 ```
 
 This is exact interval-box replay, not a floating-point enclosure theorem.
+
+## Reject A Bad Solution-Box Bound
+
+The bad solution-box row reuses the exact solution and claims:
+
+```text
+x0 <= 1
+```
+
+The trusted replay computes:
+
+```text
+x0 = 6/5
+```
+
+Since `6/5` is greater than `1`, the false interval-bound claim is checked
+`unsat`. The resource regression isolates the final contradiction as `QF_LRA`:
+
+```text
+5 * solution_x0 = 6
+solution_x0 <= 1
+```
+
+That keeps the source of trust small: the pack replays the matrix equation and
+then Axeyum checks only the final rational linear contradiction with Farkas
+evidence.
 
 ## Replay A Jacobi Step
 
@@ -186,6 +213,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes numerical_linear_algebra_bad_solution_box_upper_bound_artifact_emits_checked_farkas
 ```
 
 Expected output:
@@ -206,5 +234,5 @@ remaining horizon -> floating-point, stability, conditioning, and convergence
 
 The graduation route is deterministic exact-rational checking plus emitted
 proof objects for bad bounds before floating-point or algorithmic convergence
-claims are promoted. The bad residual-bound and Jacobi error-bound rows now
-exercise that QF_LRA/Farkas route.
+claims are promoted. The bad residual-bound, solution-box upper-bound, and
+Jacobi error-bound rows now exercise that QF_LRA/Farkas route.

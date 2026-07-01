@@ -2706,7 +2706,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "Bad residual-bound and Jacobi error-bound rows whose final contradictions are exact rational linear arithmetic."
+          "notes": "Bad residual-bound, solution-box, and Jacobi error-bound rows whose final contradictions are exact rational linear arithmetic."
         },
         {
           "id": "finite-chebyshev-systems-v0",
@@ -6155,7 +6155,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "Residual-norm, solution-box, Jacobi contraction, and bad residual/Jacobi-bound rows."
+          "notes": "Residual-norm, solution-box, Jacobi contraction, and bad residual/solution-box/Jacobi-bound rows."
         },
         {
           "id": "least-squares-regression-v0",
@@ -8998,7 +8998,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "False residual and Jacobi error-bound claims rejected as rational inequality conflicts."
+          "notes": "False residual, solution-box, and Jacobi error-bound claims rejected as rational inequality conflicts."
         },
         {
           "id": "random-matrix-finite-v0",

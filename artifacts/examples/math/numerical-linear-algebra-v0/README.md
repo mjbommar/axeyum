@@ -14,7 +14,8 @@ The examples are:
 - residual infinity-norm replay for an approximate solution;
 - exact solution replay inside a rational interval box;
 - one Jacobi iteration step with an exact row-sum contraction check;
-- checked QF_LRA/Farkas rejection of false residual and Jacobi error bounds.
+- checked QF_LRA/Farkas rejection of false residual, solution-box, and Jacobi
+  error bounds.
 
 ## Concepts
 
@@ -32,9 +33,10 @@ matrix-vector products, residual vectors, infinity norms, interval membership,
 Jacobi updates, exact solution residuals, and the row-sum contraction bound.
 
 This is checked Farkas evidence for the bad-bound rows and replay-only evidence
-for the positive witnesses. The Jacobi bad-bound row is checked after exact
-iteration replay computes the source error norm. Floating-point stability and
-general convergence theorems remain future work.
+for the positive witnesses. The bad solution-box row is checked after exact
+linear-system replay computes the source solution, and the Jacobi bad-bound row
+is checked after exact iteration replay computes the source error norm.
+Floating-point stability and general convergence theorems remain future work.
 
 Validation:
 

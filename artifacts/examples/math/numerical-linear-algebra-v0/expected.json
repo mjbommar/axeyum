@@ -100,6 +100,29 @@
       "notes": "The validator recomputes the exact residual norm as 1, so the claimed 1/2 bound is rejected; the Axeyum regression refutes residual_inf_norm = 1 together with residual_inf_norm <= 1/2 using rechecked Farkas evidence."
     },
     {
+      "id": "bad-solution-box-upper-bound-rejected",
+      "claim": "The exact solution of the fixed 2x2 system has first component at most 1.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_solution_box_bound_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "solution-box",
+        "matrix": [
+          ["4", "1"],
+          ["2", "3"]
+        ],
+        "rhs": ["6", "6"],
+        "exact_solution": ["6/5", "6/5"],
+        "component_index": 0,
+        "actual_component": "6/5",
+        "claimed_upper_bound": "1",
+        "farkas_bound_claim": "solution_x0 <= claimed_upper_bound",
+        "smt2_artifact": "artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-solution-box-upper-bound-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes numerical_linear_algebra_bad_solution_box_upper_bound_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator recomputes A*x = b exactly for x = [6/5, 6/5], so the claimed upper bound x0 <= 1 is false; the Axeyum regression refutes 5*x0 = 6 together with x0 <= 1 using rechecked Farkas evidence."
+    },
+    {
       "id": "bad-jacobi-error-bound-rejected",
       "claim": "The first Jacobi update for the fixed system has infinity-norm error at most 1/8.",
       "expected_result": "unsat",

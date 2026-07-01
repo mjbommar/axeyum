@@ -14,6 +14,17 @@ Expected result: `sat`.
 The vector `[6/5, 6/5]` solves the fixed `2x2` system exactly and lies inside
 the rational interval box `[1, 3/2] x [1, 3/2]`.
 
+## `bad-solution-box-upper-bound-rejected`
+
+Expected result: `unsat`.
+
+The exact solution has first component `6/5`, so the claimed upper bound
+`x0 <= 1` is false.
+
+The resource-backed Axeyum regression checks the final solution-box
+contradiction as `QF_LRA`: `5 * solution_x0 = 6` and `solution_x0 <= 1`,
+requiring rechecked `UnsatFarkas` evidence.
+
 ## `jacobi-contraction-witness`
 
 Expected result: `sat`.

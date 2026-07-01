@@ -10781,6 +10781,60 @@ def validate_numerical_linear_algebra(expected: dict[str, Any]) -> None:
     if "numerical_linear_algebra_bad_residual_bound_emits_checked_farkas" not in regression:
         fail("bad-residual-bound-rejected must link the Farkas regression")
 
+    bad_solution_box = checks["bad-solution-box-upper-bound-rejected"]
+    if bad_solution_box["expected_result"] != "unsat":
+        fail("bad-solution-box-upper-bound-rejected must expect unsat")
+    if bad_solution_box.get("proof_status") != "checked":
+        fail("bad-solution-box-upper-bound-rejected must be checked")
+    if bad_solution_box.get("validation") != "exact_rational_solution_box_bound_refutation":
+        fail("bad-solution-box-upper-bound-rejected validation is incorrect")
+    data = bad_solution_box.get("data", {})
+    if data.get("source_witness") != "solution-box":
+        fail("bad-solution-box-upper-bound-rejected must cite the solution-box witness")
+    matrix = require_fraction_matrix("bad solution box matrix", data.get("matrix"))
+    rhs = require_fraction_vector("bad solution box rhs", data.get("rhs"))
+    exact_solution = require_fraction_vector(
+        "bad solution box exact_solution",
+        data.get("exact_solution"),
+    )
+    component_index = require_int("bad solution box component_index", data.get("component_index"))
+    actual_component = require_fraction(
+        "bad solution box actual_component",
+        data.get("actual_component"),
+    )
+    claimed_upper_bound = require_fraction(
+        "bad solution box claimed_upper_bound",
+        data.get("claimed_upper_bound"),
+    )
+    require_mat_vec_shape("bad solution box system", matrix, exact_solution)
+    if len(matrix) != len(rhs):
+        fail("bad solution box matrix height must match rhs length")
+    if mat_vec(matrix, exact_solution) != rhs:
+        fail("bad-solution-box-upper-bound-rejected exact_solution does not solve A*x = b")
+    if component_index < 0 or component_index >= len(exact_solution):
+        fail("bad-solution-box-upper-bound-rejected component_index is out of range")
+    if exact_solution[component_index] != actual_component:
+        fail("bad-solution-box-upper-bound-rejected actual component is incorrect")
+    if actual_component <= claimed_upper_bound:
+        fail("bad-solution-box-upper-bound-rejected claimed upper bound unexpectedly holds")
+    farkas_bound_claim = data.get("farkas_bound_claim")
+    require_string("bad solution box farkas_bound_claim", farkas_bound_claim)
+    if farkas_bound_claim != "solution_x0 <= claimed_upper_bound":
+        fail("bad-solution-box-upper-bound-rejected must document the Farkas bound claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad solution box smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-solution-box-upper-bound-farkas-conflict.smt2"
+    ):
+        fail("bad-solution-box-upper-bound-rejected smt2_artifact must name the checked QF_LRA artifact")
+    if not (ROOT / smt2_artifact).is_file():
+        fail("bad-solution-box-upper-bound-rejected smt2_artifact is missing")
+    regression = data.get("farkas_regression")
+    require_string("bad solution box farkas_regression", regression)
+    if "numerical_linear_algebra_bad_solution_box_upper_bound_artifact_emits_checked_farkas" not in regression:
+        fail("bad-solution-box-upper-bound-rejected must link the Farkas regression")
+
     bad_jacobi = checks["bad-jacobi-error-bound-rejected"]
     if bad_jacobi["expected_result"] != "unsat":
         fail("bad-jacobi-error-bound-rejected must expect unsat")

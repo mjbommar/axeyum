@@ -43,7 +43,7 @@ when the consumer needs a concrete checked row to display.
 | Computation Family | Concept Filter | Route Filter | Start Query |
 |---|---|---|---|
 | Linear systems and LU | `bridge_lu_replay` | `Farkas` | `checks --concept bridge_lu_replay --route Farkas --proof-status checked` |
-| Residual bounds and least squares | `bridge_residual_bound` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked` |
+| Residual bounds, solution boxes, and least squares | `bridge_residual_bound`; pack `numerical-linear-algebra-v0` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked --text solution` |
 | Rank, kernel, image, and dual rows | `bridge_rank_nullity` | `Alethe` | `packs --concept bridge_rank_nullity --route Alethe` |
 | Rayleigh quotients, eigenpairs, and matrix invariants | `bridge_eigenpair` | `Farkas` | `checks --concept bridge_eigenpair --route Farkas --proof-status checked` |
 | Finite random-matrix moments and ranks | `bridge_random_matrix_finite_moment` | `Farkas` | `checks --pack random-matrix-finite-v0 --route Farkas --proof-status checked --text rank` |
@@ -72,6 +72,13 @@ python3 scripts/query-foundational-resources.py checks \
   --concept bridge_residual_bound \
   --route Farkas \
   --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack numerical-linear-algebra-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text solution \
   --require-any
 ```
 

@@ -944,7 +944,8 @@ replay, checked rejection of false conjugation-product imaginary-part and
 unit-square real-part claims, and a complex-analysis Lean-horizon row.
 `artifacts/examples/math/numerical-linear-algebra-v0/` now validates exact
 residual bounds, rational solution boxes, Jacobi one-step contraction replay,
-and checked QF_LRA/Farkas rejection of false residual and Jacobi error bounds.
+and checked QF_LRA/Farkas rejection of false residual, solution-box, and
+Jacobi error bounds.
 `artifacts/examples/math/finite-root-finding-v0/` now validates exact
 bisection and Newton-step replay, fixed residual decrease, checked
 QF_LRA/Farkas rejection of false Newton-iterate and bisection-width claims,
@@ -1062,7 +1063,8 @@ Recommended order:
     bad product-coordinate/norm/conjugation-product/unit-square rejections,
     and rational Mobius transforms as real-pair algebra.
 13. `numerical-linear-algebra-v0`: residual bounds, rational solution boxes,
-    exact iterative-method error replay, and checked bad Jacobi error bounds.
+    exact iterative-method error replay, and checked bad residual,
+    solution-box, and Jacobi error bounds.
 14. `random-matrix-finite-v0`: finite matrix-valued probability tables,
     exact moments, Gram expectations, rank distributions, and checked
     QF_LRA/Farkas bad trace-square and expected-rank certificates.
@@ -2128,9 +2130,9 @@ line-intersection and line-value replay.
 `rigid-configuration-geometry-v0` now routes its bad translation-image and bad
 distance-table rows through the same checked Farkas evidence path after exact
 translation and squared-distance replay.
-`numerical-linear-algebra-v0` now routes its bad residual-bound and Jacobi
-error-bound rows through the same checked Farkas evidence path after exact
-residual-norm and iteration replay.
+`numerical-linear-algebra-v0` now routes its bad residual-bound, solution-box
+upper-bound, and Jacobi error-bound rows through the same checked Farkas
+evidence path after exact residual-norm, solution-box, and iteration replay.
 `random-matrix-finite-v0` now routes its bad trace-square and expected-rank
 rows through the same checked Farkas evidence path after exact finite moment
 and rank replay.

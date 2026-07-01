@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 628 expected checks.
-- 305 checked proof/evidence rows.
+- 629 expected checks.
+- 306 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -2020,6 +2020,12 @@ Pick one item per commit unless the change is purely navigational.
      shifted source SMT-LIB artifact reaches independently checked
      QF_LRA/Farkas evidence through
      `complex_plane_bad_conjugation_product_imaginary_artifact_emits_checked_farkas`.
+138. Landed: extend `numerical-linear-algebra-v0` with a source-linked checked
+     solution-box upper-bound refutation. Exact rational replay computes
+     solution first component `6/5`, while the malformed row claims `x0 <= 1`;
+     the new source SMT-LIB artifact reaches independently checked
+     QF_LRA/Farkas evidence through
+     `numerical_linear_algebra_bad_solution_box_upper_bound_artifact_emits_checked_farkas`.
 
 ## Validation Checklist
 

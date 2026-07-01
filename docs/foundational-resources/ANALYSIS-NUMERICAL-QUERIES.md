@@ -15,10 +15,10 @@ Which checked finite analysis, numerical, or complex rows match this proof route
 The current surface is finite and exact-rational: metric balls, bounded
 epsilon-delta shadows, bounded sequence tails, algebraic derivative and
 integral replay, Newton/root-finding steps, finite recurrence and Euler rows,
-residual/Jacobi rows, exact-vs-floating boundary rows, and complex numbers as
-real-pair algebra. Completeness, IVT/MVT/FTC, uniform convergence, analytic
-continuation, holomorphicity, contour integration, numerical stability, and
-floating-point error guarantees remain in the proof-horizon or
+residual/solution-box/Jacobi rows, exact-vs-floating boundary rows, and complex
+numbers as real-pair algebra. Completeness, IVT/MVT/FTC, uniform convergence,
+analytic continuation, holomorphicity, contour integration, numerical
+stability, and floating-point error guarantees remain in the proof-horizon or
 numerical-honesty lanes.
 
 ## Query Shape
@@ -68,7 +68,7 @@ needs concrete checked rows to display.
 | Algebraic derivative and Riemann-sum shadows | packs `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0` | `Farkas` | `checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked`; `checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked` |
 | Root-finding and Newton-step rows | pack `finite-root-finding-v0`; concept `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --pack finite-root-finding-v0 --route Farkas --proof-status checked` |
 | Finite dynamics, recurrence, and Euler replay | `bridge_finite_dynamics_euler_replay` | `Farkas` | `checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked` |
-| Residuals, Jacobi steps, and numerical linear algebra | `bridge_residual_bound`; `bridge_lu_replay` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked` |
+| Residuals, solution boxes, Jacobi steps, and numerical linear algebra | `bridge_residual_bound`; `bridge_lu_replay` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked --text solution` |
 | Operator/Chebyshev and spectral numerical rows | `bridge_finite_operator_chebyshev`; `bridge_eigenpair` | `Farkas` | `checks --concept bridge_finite_operator_chebyshev --route Farkas --proof-status checked`; `checks --concept bridge_eigenpair --route Farkas --proof-status checked` |
 | Complex numbers and plane transforms as real-pair algebra | `bridge_complex_real_pair_transform` | `Farkas` | `checks --concept bridge_complex_real_pair_transform --route Farkas --proof-status checked` |
 | Exact-vs-floating boundary rows | `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked` |
@@ -164,6 +164,13 @@ python3 scripts/query-foundational-resources.py checks \
   --pack numerical-linear-algebra-v0 \
   --route Farkas \
   --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack numerical-linear-algebra-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text solution \
   --require-any
 ```
 

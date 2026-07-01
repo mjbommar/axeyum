@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 628 expected checks.
-- 305 checked proof/evidence rows.
+- 629 expected checks.
+- 306 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1268,6 +1268,13 @@ Pick one row per commit unless the change is purely navigational.
      route now checks both conjugation-product imaginary-part and unit-square
      real-part conflicts without claiming holomorphicity, contour integration,
      residues, analytic continuation, or algebraic-closure theorems.
+155. Landed: extend `numerical-linear-algebra-v0` with a source-linked checked
+     bad solution-box upper-bound row. Exact rational linear-system replay
+     computes the fixed solution as `[6/5, 6/5]`, while the malformed source
+     SMT-LIB artifact claims `x0 <= 1`; the shared QF_LRA/Farkas route now
+     checks residual-bound, solution-box upper-bound, and Jacobi error-bound
+     conflicts without claiming floating-point accuracy, conditioning,
+     backward-error analysis, or general convergence.
 
 ## Validation Checklist
 

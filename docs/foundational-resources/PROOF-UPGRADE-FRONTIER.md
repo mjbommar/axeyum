@@ -339,8 +339,8 @@ First targets:
   (resource-backed Farkas regressions landed for the bad affine-area-scaling
   and bad fixed-orientation rows)
 - [numerical-linear-algebra-v0](../../artifacts/examples/math/numerical-linear-algebra-v0/)
-  (resource-backed Farkas regressions landed for the bad residual-bound and
-  bad Jacobi error-bound rows)
+  (resource-backed Farkas regressions landed for the bad residual-bound,
+  bad solution-box upper-bound, and bad Jacobi error-bound rows)
 - [random-matrix-finite-v0](../../artifacts/examples/math/random-matrix-finite-v0/)
   (resource-backed Farkas regressions landed for the bad trace-square moment
   and bad expected-rank rows)

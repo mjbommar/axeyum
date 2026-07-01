@@ -1212,7 +1212,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "numerical-linear-algebra-v0",
-                "Bad residual-bound and Jacobi error-bound rows whose final contradictions are exact rational linear arithmetic.",
+                "Bad residual-bound, solution-box, and Jacobi error-bound rows whose final contradictions are exact rational linear arithmetic.",
             ),
             (
                 "finite-chebyshev-systems-v0",
@@ -4446,7 +4446,7 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "numerical-linear-algebra-v0",
-                "Residual-norm, solution-box, Jacobi contraction, and bad residual/Jacobi-bound rows.",
+                "Residual-norm, solution-box, Jacobi contraction, and bad residual/solution-box/Jacobi-bound rows.",
             ),
             (
                 "least-squares-regression-v0",
@@ -7008,7 +7008,7 @@ EXAMPLE_FAMILIES = [
             ),
             (
                 "numerical-linear-algebra-v0",
-                "False residual and Jacobi error-bound claims rejected as rational inequality conflicts.",
+                "False residual, solution-box, and Jacobi error-bound claims rejected as rational inequality conflicts.",
             ),
             (
                 "random-matrix-finite-v0",

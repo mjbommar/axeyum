@@ -51,6 +51,16 @@ both `A*x = b` and the component-wise interval claim:
 [1, 1] <= [6/5, 6/5] <= [3/2, 3/2]
 ```
 
+The checked bad solution-box row reuses the replayed first component:
+
+```text
+x0 = 6/5
+x0 <= 1
+```
+
+The pack keeps this false interval-bound claim on the checked `UnsatFarkas`
+route.
+
 ## Jacobi Step
 
 For

@@ -264,8 +264,8 @@ Companion maps:
   expected-rank certificates.
 - [Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md): follows
   exact residual infinity norms, rational solution boxes, one-step Jacobi
-  contraction replay, QF_LRA/Farkas bad residual-bound rejection, and the
-  numerical horizon.
+  contraction replay, QF_LRA/Farkas bad residual-bound, solution-box, and
+  Jacobi-bound rejections, and the numerical horizon.
 - [Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md):
   follows exact mean/variance replay, a QF_LRA/Farkas bad-variance
   certificate, contingency-table margins, Simpson's paradox counts, a
