@@ -11,6 +11,7 @@
   - [Math Curriculum Implementation Matrix](foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md)
   - [Math Curriculum Detailed Build Plan](foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
   - [Learner Coverage Audit](foundational-resources/LEARNER-COVERAGE-AUDIT.md)
+  - [Proof Route Family Selection](foundational-resources/PROOF-ROUTE-FAMILY-SELECTION.md)
   - [Math Resource Buildout Roadmap](foundational-resources/RESOURCE-BUILDOUT-ROADMAP.md)
   - [Rules/Law Crosswalk](foundational-resources/RULES-LAW-CROSSWALK.md)
   - [Rules/Law Resource Queries](foundational-resources/RULES-LAW-QUERIES.md)

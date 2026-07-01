@@ -50,6 +50,9 @@ For the compact all-field consumer query surface, use the
 [Field Readiness Query Matrix](FIELD-READINESS-QUERY-MATRIX.md).
 For proof-route coverage queries, use the
 [Proof Route Query Matrix](PROOF-ROUTE-QUERY-MATRIX.md).
+For the compact execution selector that picks one replay-heavy family per proof
+route and states when another negative row should be promoted, use the
+[Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md).
 For matrix computation discovery by bridge concept and proof route, use the
 [Matrix Computation Consumer Queries](MATRIX-COMPUTATION-QUERIES.md).
 For probability/statistics discovery by bridge concept and proof route, use the

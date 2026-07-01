@@ -455,8 +455,10 @@ Prefer one row, page, route upgrade, or query surface per commit.
    the current 108 non-template packs are all focused-lesson linked, with no
    path-only, index-only, or missing learner buckets, and defines the future
    combined-page-only policy.
-3. Pick one replay-heavy family per proof route and promote one compact
-   negative row to checked evidence.
+3. Landed: [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md)
+   picks one representative replay-heavy family per active proof route,
+   records the current checked-row representative, and defines when another
+   compact negative row is worth promoting.
 4. Add or refresh route-specific learner snippets for Farkas, Alethe,
    Diophantine, CNF/LRAT, and QF_BV DRAT rows.
 5. Deepen probability/measure rows by promoting the next distinct finite table

@@ -137,6 +137,9 @@ Exit:
 ## Stage 3: Upgrade Proof Evidence
 
 Goal: make checked evidence normal for representative negative rows.
+Use [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md) before
+adding another checked row, so each promotion has a distinct proof shape or
+trust-boundary reason.
 
 Priority order:
 

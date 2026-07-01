@@ -1,0 +1,123 @@
+# Proof Route Family Selection
+
+## Purpose
+
+This file turns the broad proof-upgrade frontier into a compact execution
+selection: one replay-heavy family per active evidence route, the current
+representative checked row, and the next row shape that should justify another
+promotion.
+
+Use this file when choosing the next commit-sized proof-resource increment.
+Use [Proof Upgrade Frontier](PROOF-UPGRADE-FRONTIER.md) for the full route
+ledger and [Learner And Proof Upgrade Dashboard](generated/learner-proof-upgrade-dashboard.md)
+for generated counts.
+
+The rule is practical:
+
+```text
+do not add another checked row unless it teaches a new proof shape,
+trust boundary, solver pressure, or downstream query shape
+```
+
+## Current Route Baseline
+
+Audit date: 2026-07-01.
+
+The public query surface reports:
+
+```sh
+python3 scripts/query-foundational-resources.py summary
+```
+
+- 108 non-template math packs.
+- 632 expected checks.
+- 309 checked proof/evidence rows.
+- 252 replay-only rows.
+- 71 Lean-horizon rows.
+- 108 promoted solver-reuse packs.
+
+Route summaries from `scripts/query-foundational-resources.py routes`:
+
+| Route | Packs | Checks | Checked Rows | Replay-Only Rows | Horizon Rows |
+|---|---:|---:|---:|---:|---:|
+| Boolean CNF/LRAT | 16 | 72 | 51 | 15 | 6 |
+| QF_BV bit-blast | 7 | 45 | 34 | 10 | 1 |
+| QF_LIA/Diophantine | 14 | 87 | 56 | 24 | 7 |
+| QF_LRA/Farkas | 58 | 363 | 144 | 177 | 42 |
+| QF_UF/Alethe | 19 | 109 | 50 | 43 | 16 |
+| Lean horizon | 78 | 476 | 205 | 200 | 71 |
+
+The counts overlap because packs and rows can carry multiple routes. That is
+intentional: a finite topology pack can have finite replay, Boolean evidence,
+and Lean-horizon theorem boundaries without conflating them.
+
+## Selected Families
+
+| Route | Representative Family | Current Checked Row | Why This Family | Next Distinct Promotion |
+|---|---|---|---|---|
+| Boolean CNF/LRAT | finite graph and finite set-family obstruction | `finite-topology-v0` bad empty-open row, plus graph matching/reachability/cut/d-separation rows | Tiny finite objects make the encoder/checker boundary visible: untrusted CNF generation and search, trusted DRAT/LRAT checking. | Add another row only for a learner-readable Boolean shape not covered by pigeonhole, graph reachability/matching/cut/d-separation, finite topology, compactness, connectedness, or lattice top-element rows. |
+| QF_BV bit-blast | fixed-width finite algebra and residue search | `finite-fields-v0`, `finite-rings-v0`, `modular-arithmetic-v0`, and graph-coloring fixed-width rows | Width is part of the mathematical object: residues, finite fields/rings, and fixed color encodings should lower through bit-blast evidence. | Add another row only when the bit width is mathematically meaningful and not a disguised finite replay table. |
+| QF_LIA/Diophantine | integer obstruction and finite coefficient arithmetic | `gcd-bezout-v0`, `modular-arithmetic-v0`, torsion homology, finite graph traversal counters, exact statistical tail/count rows | Integer infeasibility has a compact certificate story: divisibility, gcd obstruction, rank/torsion membership, coefficient convolution, or bounded integer counters. | Prefer a new compact obstruction that generalizes across packs, such as another Smith-normal-form/torsion row or a count/margin contradiction that cannot be taught by the existing exact-test rows. |
+| QF_LRA/Farkas | exact rational finite-table and optimization conflicts | probability/measure table conflicts, LP threshold, LU/nullspace, KKT/SDP/descent/line-search/projected/proximal rows | Farkas is the main exact-rational certificate route and already covers the largest route surface. The best rows start with source replay and then check the linear contradiction. | Add only distinct finite-table or algorithm-step conflicts, not another duplicate product-measure or generic bound row. |
+| QF_UF/Alethe | equality-heavy finite structures and quotient maps | equivalence classes, function composition, finite homomorphisms, finite monoids/groups/actions, modules/tensors, quotient topology/cohomology shadows | Alethe adds value when table replay says what happened and congruence proof explains why an equality claim is impossible. | Prefer equality conflicts where table replay and congruence proof teach different things, such as quotient representative consistency, action compatibility, or algebra/topology map preservation. |
+| Lean horizon | theorem boundary families | induction schemas, completeness, compactness, convergence, measure limits, general algebra, Banach/Hilbert/Chebyshev facts | These rows keep finite shadows honest. They should state theorem shape and missing proof dependencies, not masquerade as SMT evidence. | Add or split horizon rows when a learner page risks overclaiming from a bounded example or when a future Lean reconstruction target needs prerequisites named. |
+
+## Promotion Discipline
+
+Before promoting another compact negative row to checked evidence:
+
+1. Name the source family and the exact finite object.
+2. Show why existing checked rows do not already teach the same proof shape.
+3. Keep satisfiable rows on finite replay unless a certificate route adds
+   meaningful assurance.
+4. Link the pack to the proof cookbook recipe and the recipe back to at least
+   one math example.
+5. Add a route-specific regression or source artifact only after replay is
+   deterministic.
+6. Keep theorem-horizon rows out of benchmark or solver-performance claims.
+
+## Query Commands
+
+Route-level summaries:
+
+```sh
+python3 scripts/query-foundational-resources.py routes --route "CNF"
+python3 scripts/query-foundational-resources.py routes --route "qf-bv"
+python3 scripts/query-foundational-resources.py routes --route "Diophantine"
+python3 scripts/query-foundational-resources.py routes --route "Farkas"
+python3 scripts/query-foundational-resources.py routes --route "Alethe"
+python3 scripts/query-foundational-resources.py routes --route "Lean"
+```
+
+Field-scoped examples:
+
+```sh
+python3 scripts/query-foundational-resources.py routes --field graph_theory
+python3 scripts/query-foundational-resources.py routes --field linear_algebra
+python3 scripts/query-foundational-resources.py routes --field probability_theory
+python3 scripts/query-foundational-resources.py routes --field topology
+```
+
+Use `--format json` when a downstream consumer needs machine-readable route
+rows.
+
+## Validation
+
+For a docs-only selection update:
+
+```sh
+python3 scripts/query-foundational-resources.py summary
+./scripts/check-foundational-resources.sh
+./scripts/check-links.sh
+```
+
+For a real proof-route promotion, add the route-specific cargo test named in
+[Proof Upgrade Frontier](PROOF-UPGRADE-FRONTIER.md) and validate the affected
+pack with:
+
+```sh
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/<pack>
+```
+
+The promotion is not complete until the artifact or regression rejects a
+tampered or missing certificate where the route supports tamper rejection.

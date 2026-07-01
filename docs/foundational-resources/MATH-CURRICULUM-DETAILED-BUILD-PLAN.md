@@ -24,7 +24,10 @@ proofs, solver feedback, rules/law transfer, and consumer boundaries,
 for per-node gates, [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md)
 for the broader resource-family plan, and
 [PROOF-UPGRADE-FRONTIER.md](PROOF-UPGRADE-FRONTIER.md) for route-specific proof
-upgrades.
+upgrades. Use
+[PROOF-ROUTE-FAMILY-SELECTION.md](PROOF-ROUTE-FAMILY-SELECTION.md) to choose the
+representative replay-heavy family per active proof route before adding another
+compact checked row.
 
 The invariant stays simple:
 
@@ -143,6 +146,11 @@ gate. Keep this true as new packs land.
 ### Wave 3: Proof-Route Depth
 
 Goal: make checked evidence normal for representative UNSAT rows.
+
+Selection aid: [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md)
+records the current representative family for Boolean CNF/LRAT, QF_BV,
+QF_LIA/Diophantine, QF_LRA/Farkas, QF_UF/Alethe, and Lean-horizon resources,
+and states when another compact negative row is worth promoting.
 
 | Route | Curriculum Pressure | Build Pattern | Stop Condition |
 |---|---|---|---|

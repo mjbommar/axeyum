@@ -6,6 +6,8 @@ evidence. The generated truth source is
 [learner-proof-upgrade-dashboard.md](generated/learner-proof-upgrade-dashboard.md);
 this file explains which route to work first, what artifact should be emitted,
 and how a pack graduates.
+For the compact route-by-route family selector, use
+[Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md).
 
 Axeyum's identity stays fixed: untrusted fast search, trusted small checking.
 For these resources, prose never upgrades a claim. A pack graduates only when

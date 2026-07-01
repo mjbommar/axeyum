@@ -201,6 +201,8 @@ The live route-by-route execution frontier is
 [PROOF-UPGRADE-FRONTIER.md](PROOF-UPGRADE-FRONTIER.md); the generated queue it
 interprets is
 [generated/learner-proof-upgrade-dashboard.md](generated/learner-proof-upgrade-dashboard.md).
+The compact representative-family selector is
+[PROOF-ROUTE-FAMILY-SELECTION.md](PROOF-ROUTE-FAMILY-SELECTION.md).
 
 Priority proof upgrades:
 

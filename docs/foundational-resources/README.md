@@ -49,6 +49,9 @@ schemas, examples, and validation workflows.
 - [PROOF-UPGRADE-FRONTIER.md](PROOF-UPGRADE-FRONTIER.md) turns the generated
   proof-upgrade queue into a route-by-route execution plan for checked
   evidence, Lean horizons, and trust-boundary graduation.
+- [PROOF-ROUTE-FAMILY-SELECTION.md](PROOF-ROUTE-FAMILY-SELECTION.md) picks the
+  representative replay-heavy family for each active proof route and records
+  when another compact negative row is worth promoting.
 - [LIBRARY-BOUNDARY-DECISION.md](LIBRARY-BOUNDARY-DECISION.md) records the
   current Phase M8 decision: keep the resources in-repo, expose a stable JSON
   data contract, and defer crates or repo splits until real consumers require

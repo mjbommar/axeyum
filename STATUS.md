@@ -205,6 +205,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Proof-route family selector landed.**
+  [`PROOF-ROUTE-FAMILY-SELECTION.md`](docs/foundational-resources/PROOF-ROUTE-FAMILY-SELECTION.md)
+  now picks one representative replay-heavy family per active proof route
+  (Boolean CNF/LRAT, QF_BV, QF_LIA/Diophantine, QF_LRA/Farkas, QF_UF/Alethe,
+  and Lean horizon), records the current checked-row representative, and states
+  when another compact negative row is worth promoting. The comprehensive
+  resource queue now treats the family-selection step as landed.
+
 - **Learner coverage audit landed.**
   [`LEARNER-COVERAGE-AUDIT.md`](docs/foundational-resources/LEARNER-COVERAGE-AUDIT.md)
   records the mechanical R3 learner-spine check for the current math inventory:

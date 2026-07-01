@@ -192,6 +192,9 @@ count change.
 ### R4: Proof And Evidence
 
 Audience: proof contributors, reviewers, and users who need assurance.
+Use [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md) as the
+compact selector for the current representative proof families before adding
+another checked negative row.
 
 Route plan:
 

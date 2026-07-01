@@ -158,6 +158,11 @@ The proof-route query matrix is
 it records route-level summary queries and boundaries for finite replay,
 Boolean CNF/LRAT, QF_BV, QF_LIA/Diophantine, QF_LRA/Farkas, QF_UF/Alethe, and
 Lean-horizon resources.
+The proof-route family selector is
+[`docs/foundational-resources/PROOF-ROUTE-FAMILY-SELECTION.md`](docs/foundational-resources/PROOF-ROUTE-FAMILY-SELECTION.md);
+it picks one representative replay-heavy family per active proof route and
+states when another compact negative row is worth promoting to checked
+evidence.
 The matrix computation consumer query guide is
 [`docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md`](docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md);
 it records exact concept-plus-route queries for LU/nullspace, residual,
