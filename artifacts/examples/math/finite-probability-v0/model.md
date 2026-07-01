@@ -52,6 +52,21 @@ The pack checks:
 P(late | rain) = P(late and rain) / P(rain) = (1/10) / (3/10) = 1/3
 ```
 
+The bad conditional-probability row keeps the same atom table but asserts the
+false conditional probability `1/2`. After exact replay computes:
+
+```text
+joint_probability = P(late and rain) = 1/10
+condition_probability = P(rain) = 3/10
+```
+
+the checked linear contradiction is division-free:
+
+```text
+condition_probability * conditional_probability = joint_probability
+conditional_probability = 1/2
+```
+
 ### Bayes Posterior
 
 The diagnostic-test table uses:

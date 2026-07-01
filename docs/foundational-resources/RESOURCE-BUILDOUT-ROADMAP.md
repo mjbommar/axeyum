@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 584 expected checks.
-- 266 checked proof/evidence rows.
+- 585 expected checks.
+- 267 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -806,7 +806,7 @@ Build next:
   update, pushforward distribution, independence, stochastic kernel, Markov
   transition, hitting-time equation, martingale condition, stopping-time
   replay, and concentration bound shadow.
-- Promote bad normalization, posterior, kernel-row, expected-time, and
+- Promote bad normalization, conditional-probability, posterior, kernel-row, expected-time, and
   concentration rows through QF_LRA/Farkas or QF_LIA when exact counts are the
   natural source.
 - Keep continuous distributions, stochastic-process limit theorems, optional
@@ -1382,7 +1382,8 @@ Pick one item per commit unless the change is purely navigational.
     `docs/learn/math/finite-probability-mass-tables-end-to-end.md` follows
     `finite-probability-v0` through exact PMF normalization, conditional
     probability replay, Bayes posterior replay, checked QF_LRA/Farkas
-    bad-normalization rejection, and checked bad-posterior rejection.
+    bad-normalization rejection, checked bad-conditional-probability rejection,
+    and checked bad-posterior rejection.
 47. Landed: add standalone finite-operator learner page.
     `docs/learn/math/finite-operator-end-to-end.md` follows
     `finite-operator-v0` through exact finite-dimensional `l1` norm replay,

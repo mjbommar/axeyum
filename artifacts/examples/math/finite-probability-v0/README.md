@@ -11,6 +11,7 @@ certificate route:
 - probability mass table sums to one;
 - impossible normalization rejected with checked QF_LRA/Farkas evidence;
 - conditional probability replay from an atom table;
+- impossible conditional probability rejected with checked QF_LRA/Farkas evidence;
 - Bayes posterior replay for a small diagnostic-test table;
 - impossible Bayes posterior rejected with checked QF_LRA/Farkas evidence.
 
@@ -28,9 +29,9 @@ certificate route:
 The current validator parses probabilities exactly as rational strings, checks
 that mass tables are normalized and nonnegative, and recomputes conditional and
 Bayes probabilities. Satisfiable finite-table rows remain finite-model replay.
-The bad normalization and bad Bayes posterior rows are small `QF_LRA`
-contradictions and must emit checked `UnsatFarkas` evidence. Future impossible
-nonnegativity or conditioning constraints should use the same QF_LRA/Farkas
+The bad normalization, bad conditional probability, and bad Bayes posterior rows
+are small `QF_LRA` contradictions and must emit checked `UnsatFarkas` evidence.
+Future impossible nonnegativity constraints should use the same QF_LRA/Farkas
 route.
 
 Validation:

@@ -30,6 +30,7 @@ Concept rows:
 | `pmf-total-mass` | `sat` | replay-only |
 | `bad-normalization-rejected` | `unsat` | checked |
 | `conditional-probability-witness` | `sat` | replay-only |
+| `bad-conditional-probability-rejected` | `unsat` | checked |
 | `bayes-posterior-witness` | `sat` | replay-only |
 | `bad-bayes-posterior-rejected` | `unsat` | checked |
 | `pushforward-distribution-witness` | `sat` | replay-only |
@@ -89,6 +90,20 @@ P(heads) = 1/2
 P(tails) = 1/2
 total = P(heads) + P(tails)
 total = 3/2
+```
+
+The bad conditional-probability row keeps the same rain/late table but claims:
+
+```text
+P(late | rain) = 1/2
+```
+
+Exact replay computes `P(rain)=3/10` and `P(late and rain)=1/10`; the checked
+linear contradiction is the division-free equation:
+
+```text
+P(rain) * p = P(late and rain)
+p = 1/2
 ```
 
 The Bayes posterior witness uses:

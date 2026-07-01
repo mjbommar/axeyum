@@ -80,6 +80,31 @@
       "notes": "The validator recomputes P(late and rain) / P(rain) exactly from the atom table."
     },
     {
+      "id": "bad-conditional-probability-rejected",
+      "claim": "The same joint table has P(late | rain) = 1/2.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_conditional_probability_refutation",
+      "proof_status": "checked",
+      "data": {
+        "atoms": [
+          {"id": "rain_late", "probability": "1/10", "events": ["rain", "late"]},
+          {"id": "rain_on_time", "probability": "1/5", "events": ["rain", "on_time"]},
+          {"id": "dry_late", "probability": "1/5", "events": ["dry", "late"]},
+          {"id": "dry_on_time", "probability": "1/2", "events": ["dry", "on_time"]}
+        ],
+        "event": "late",
+        "condition": "rain",
+        "joint_probability": "1/10",
+        "condition_probability": "3/10",
+        "actual_conditional_probability": "1/3",
+        "claimed_conditional_probability": "1/2",
+        "farkas_conditional_equation": "condition_probability * conditional_probability = joint_probability",
+        "smt2_artifact": "artifacts/examples/math/finite-probability-v0/smt2/bad-conditional-probability-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_conditional_probability_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator recomputes P(rain) = 3/10 and P(late and rain) = 1/10; the Axeyum regression refutes condition_probability * conditional_probability = joint_probability together with conditional_probability = 1/2 using rechecked Farkas evidence."
+    },
+    {
       "id": "bayes-posterior-witness",
       "claim": "The listed diagnostic-test parameters imply posterior P(disease | positive) = 2/13.",
       "expected_result": "sat",

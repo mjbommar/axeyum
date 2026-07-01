@@ -18114,6 +18114,62 @@ def validate_finite_probability(expected: dict[str, Any]) -> None:
     if joint_probability / condition_probability != claimed:
         fail("conditional probability witness does not match the atom table")
 
+    bad_conditional = checks["bad-conditional-probability-rejected"]
+    if bad_conditional["expected_result"] != "unsat":
+        fail("bad-conditional-probability-rejected must expect unsat")
+    if bad_conditional["proof_status"] != "checked":
+        fail("bad-conditional-probability-rejected must be checked")
+    if bad_conditional["validation"] != "finite_bad_conditional_probability_refutation":
+        fail("bad-conditional-probability-rejected must use finite_bad_conditional_probability_refutation validation")
+    data = bad_conditional.get("data", {})
+    atoms = require_probability_atoms(
+        "bad conditional atoms",
+        data.get("atoms"),
+        require_events=True,
+    )
+    require_normalized_atoms("bad-conditional-probability-rejected", atoms)
+    event = data.get("event")
+    condition = data.get("condition")
+    require_string("bad conditional event", event)
+    require_string("bad conditional condition", condition)
+    joint_probability = require_probability("bad conditional joint_probability", data.get("joint_probability"))
+    condition_probability = require_probability(
+        "bad conditional condition_probability",
+        data.get("condition_probability"),
+    )
+    actual_conditional_probability = require_probability(
+        "bad conditional actual_conditional_probability",
+        data.get("actual_conditional_probability"),
+    )
+    claimed_conditional_probability = require_probability(
+        "bad conditional claimed_conditional_probability",
+        data.get("claimed_conditional_probability"),
+    )
+    computed_condition_probability = event_probability(atoms, condition)
+    computed_joint_probability = joint_event_probability(atoms, event, condition)
+    if computed_condition_probability == 0:
+        fail("bad-conditional-probability-rejected condition must have nonzero probability")
+    if condition_probability != computed_condition_probability:
+        fail("bad-conditional-probability-rejected condition_probability is incorrect")
+    if joint_probability != computed_joint_probability:
+        fail("bad-conditional-probability-rejected joint_probability is incorrect")
+    if actual_conditional_probability != joint_probability / condition_probability:
+        fail("bad-conditional-probability-rejected actual_conditional_probability is incorrect")
+    if claimed_conditional_probability == actual_conditional_probability:
+        fail("bad-conditional-probability-rejected must document a false conditional probability")
+    farkas_conditional_equation = data.get("farkas_conditional_equation")
+    require_string("bad conditional farkas_conditional_equation", farkas_conditional_equation)
+    if farkas_conditional_equation != "condition_probability * conditional_probability = joint_probability":
+        fail("bad-conditional-probability-rejected must document the Farkas conditional equation")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad conditional smt2_artifact", smt2_artifact)
+    if not (ROOT / smt2_artifact).is_file():
+        fail("bad-conditional-probability-rejected smt2_artifact is missing")
+    regression = data.get("farkas_regression")
+    require_string("bad conditional farkas_regression", regression)
+    if "finite_probability_bad_conditional_probability_artifact_emits_checked_farkas" not in regression:
+        fail("bad-conditional-probability-rejected must link the Farkas regression")
+
     bayes = checks["bayes-posterior-witness"]
     if bayes["expected_result"] != "sat":
         fail("bayes-posterior-witness must expect sat")

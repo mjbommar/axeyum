@@ -326,7 +326,7 @@ python3 scripts/query-foundational-resources.py checks \
 ```
 
 For probability theory, query the Farkas route to keep finite probability
-mass tables, Bayes tables, product measures, pushforwards, conditional
+mass tables, conditioning and Bayes tables, product measures, pushforwards, conditional
 expectations, stochastic kernels, finite Markov chains, martingales, hitting
 times, concentration rows, and exact random-matrix moments grouped while
 leaving continuous distributions, stochastic-process limit theorems, and

@@ -37,7 +37,8 @@ The statistics path is exact and finite. It checks probability mass tables,
 conditional probability, Bayes replay, finite sigma-algebra axioms, finite
 additivity, event complements, finite measure monotonicity, finite union
 subadditivity, a checked QF_LRA bad-complement certificate, a checked QF_LRA
-bad subset-measure certificate, checked QF_LRA bad-normalization and bad-Bayes certificates,
+bad subset-measure certificate, checked QF_LRA bad-normalization,
+bad-conditional-probability, and bad-Bayes certificates,
 finite simple-function integrals, indicator
 integrals, finite random-variable pushforwards, expectations through
 pushforward distributions, independence checks, a checked QF_LRA bad

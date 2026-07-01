@@ -22,6 +22,7 @@ Concept rows:
 | `pmf-total-mass` | `sat` | replay-only |
 | `bad-normalization-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `conditional-probability-witness` | `sat` | replay-only |
+| `bad-conditional-probability-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `bayes-posterior-witness` | `sat` | replay-only |
 | `bad-bayes-posterior-rejected` | `unsat` | checked QF_LRA/Farkas |
 
@@ -96,6 +97,26 @@ P(late | rain) = (1/10) / (3/10) = 1/3
 
 No solver trust is needed for this row; it is exact finite replay.
 
+## Reject Bad Conditional Probability
+
+The bad conditional row keeps the same atom table but claims:
+
+```text
+P(late | rain) = 1/2
+```
+
+Replay still computes `P(rain) = 3/10` and `P(late and rain) = 1/10`. The
+committed SMT-LIB artifact
+[`bad-conditional-probability-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-probability-v0/smt2/bad-conditional-probability-farkas-conflict.smt2)
+checks the division-free exact-linear contradiction:
+
+```text
+P(rain) * p = P(late and rain)
+p = 1/2
+```
+
+with rechecked `UnsatFarkas` evidence.
+
 ## Replay Bayes
 
 The diagnostic-test witness is:
@@ -134,6 +155,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_normalization_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_conditional_probability_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_bayes_posterior_emits_checked_farkas
 ```
 

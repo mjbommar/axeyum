@@ -465,7 +465,8 @@ Next buildout:
 4. Landed: add standalone finite probability and finite measure lessons. The
    finite probability mass-table page now follows exact PMF normalization,
    conditional probability replay, Bayes posterior replay, checked QF_LRA/Farkas
-   bad-normalization rejection, and checked bad-posterior rejection; the finite
+   bad-normalization rejection, checked bad-conditional-probability rejection,
+   and checked bad-posterior rejection; the finite
    measure page follows finite sigma-algebra replay, exact finite additivity,
    event complements, and checked QF_LRA/Farkas bad-complement rejection.
    `docs/learn/math/finite-measure-monotonicity-end-to-end.md` now follows

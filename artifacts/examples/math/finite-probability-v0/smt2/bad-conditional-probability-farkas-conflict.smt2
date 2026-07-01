@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const conditional_probability Real)
+(assert (= (* (/ 3 10) conditional_probability) (/ 1 10)))
+(assert (= conditional_probability (/ 1 2)))
+(check-sat)

@@ -374,7 +374,8 @@ schemas, examples, and validation workflows.
   rejection of non-separating one-edge and one-vertex cuts.
 - [`artifacts/examples/math/finite-probability-v0/`](../../artifacts/examples/math/finite-probability-v0/)
   validates exact finite probability mass tables, conditional probability, and
-  Bayes posterior replay.
+  Bayes posterior replay, with checked QF_LRA/Farkas evidence for bad
+  normalization, bad conditioning, and bad posterior rows.
 - [`artifacts/examples/math/descriptive-statistics-v0/`](../../artifacts/examples/math/descriptive-statistics-v0/)
   validates exact mean/variance identities, contingency-table margins, and a
   Simpson's paradox count-table witness.

@@ -164,7 +164,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 584 expected checks, 266 checked
+111 concept rows, 108 non-template packs, 585 expected checks, 267 checked
 rows, 247 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -405,8 +405,8 @@ QF_LRA/Farkas evidence, and tampered-certificate rejection, leaving the
 combined linear-system/LP page as the matrix-to-optimization bridge.
 `finite-probability-v0` now also has a standalone finite probability
 mass-table page for exact PMF normalization, conditional probability, Bayes
-posterior replay, checked QF_LRA/Farkas bad normalization, and checked bad
-posterior rejection, leaving the broader finite-probability page as the
+posterior replay, checked QF_LRA/Farkas bad normalization, checked bad
+conditional-probability rejection, and checked bad posterior rejection, leaving the broader finite-probability page as the
 stochastic-process bridge.
 `bounded-dynamics-v0` now also has a standalone bounded recurrence dynamics
 page for exact trace replay, finite invariant checking, threshold reachability,
@@ -570,7 +570,7 @@ the bad linear-delta row, with finite conditional expectation now promoted for
 the bad high-block and tower-property tables, finite Euler method now source-linked and promoted
 for its bad max-error and bad fixed-step rows, bounded dynamics now promoted
 for its bad invariant-bound conflict, and finite probability now promoted for
-a bad Bayes-posterior conflict, with orientation/area geometry now promoted
+bad conditional-probability and bad Bayes-posterior conflicts, with orientation/area geometry now promoted
 for its bad affine-area-scaling and bad fixed-orientation claims and numerical
 linear algebra now promoted for its bad
 residual-bound row, and random matrix finite now promoted for its bad

@@ -31,6 +31,18 @@ recomputes `P(late | rain)` from atom masses and checks it is exactly `1/3`.
 Proof route: finite-model replay today. A future inconsistent conditional
 probability claim should emit a QF_LRA/Farkas certificate.
 
+## `bad-conditional-probability-rejected`
+
+Expected result: `unsat`.
+
+The row fixes the same four-atom rain/late table but claims
+`P(late | rain) = 1/2`. The validator recomputes `P(rain) = 3/10` and
+`P(late and rain) = 1/10`, so the exact conditional probability is `1/3`.
+
+The resource-backed Axeyum regression checks the division-free linear equation
+as `QF_LRA`: `P(rain) * p = P(late and rain)` and `p = 1/2`, requiring
+rechecked `UnsatFarkas` evidence.
+
 ## `bayes-posterior-witness`
 
 Expected result: `sat`.

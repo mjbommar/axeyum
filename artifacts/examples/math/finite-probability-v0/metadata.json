@@ -31,10 +31,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "exact finite probability QF_LRA/Farkas regression seed",
-    "pressure": "Exact-rational probability conflicts for finite normalization and Bayes posterior equations: a fair coin total is forced to 1 and 3/2, while diagnostic-test odds force posterior 2/13 but the bad row asserts 1/5.",
+    "target": "exact finite probability QF_LRA/Farkas regression seeds",
+    "pressure": "Exact-rational probability conflicts for finite normalization, conditioning, and Bayes posterior equations: a fair coin total is forced to 1 and 3/2, a rain/late table forces P(late | rain)=1/3 but the bad row asserts 1/2, and diagnostic-test odds force posterior 2/13 but the bad row asserts 1/5.",
     "evidence": [
       "bad-normalization-rejected",
+      "bad-conditional-probability-rejected",
       "bad-bayes-posterior-rejected"
     ],
     "next_step": "Promote additional finite probability rows only when they add distinct exact-rational mass, conditioning, independence, or Bayes-rule solver pressure; keep continuous distributions, sampling claims, and numerical approximation guarantees in separate horizon lanes."
@@ -49,6 +50,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "artifacts/examples/math/finite-probability-v0/smt2/bad-normalization-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-probability-v0/smt2/bad-conditional-probability-farkas-conflict.smt2",
     "artifacts/examples/math/finite-probability-v0/smt2/bad-bayes-posterior-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
@@ -56,6 +58,7 @@
     "pmf-total-mass",
     "bad-normalization-rejected",
     "conditional-probability-witness",
+    "bad-conditional-probability-rejected",
     "bayes-posterior-witness",
     "bad-bayes-posterior-rejected"
   ],

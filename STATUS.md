@@ -205,6 +205,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-probability bad conditional-probability QF_LRA row landed.**
+  `finite-probability-v0` now has a third checked Farkas row: exact atom-table
+  replay computes `P(rain)=3/10`, `P(late and rain)=1/10`, and therefore
+  `P(late | rain)=1/3`, then rejects the malformed claim `P(late | rain)=1/2`.
+  The source SMT-LIB artifact uses the division-free linear equation
+  `condition_probability * conditional_probability = joint_probability`, the
+  shared `math_resource_lra_routes` regression parses it and checks
+  `UnsatFarkas` evidence, and the validator pins the atom table, event,
+  condition, joint mass, conditioning mass, actual/claimed conditional
+  probabilities, artifact path, and regression. Generated dashboards and the
+  public query summary now report 111 concept rows, 108 non-template packs, 585
+  expected checks, 267 checked rows, 247 replay-only rows, and 71 Lean-horizon
+  rows.
+
 - **Modular-arithmetic nonunit inverse QF_BV/DRAT row landed.**
   `modular-arithmetic-v0` now has a checked fixed-width BV proof row for the
   composite nonunit inverse search: a 3-bit residue `b < 6` is zero-extended to
@@ -212,8 +226,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   rechecked with DRAT evidence. The row sits beside the existing finite replay
   and Diophantine gcd obstruction for `2 mod 6`, giving the same obstruction a
   width-explicit solver route. Generated dashboards and the public query
-  summary now report 111 concept rows, 108 non-template packs, 584 expected
-  checks, 266 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+  summary now report 111 concept rows, 108 non-template packs, 585 expected
+  checks, 267 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
 
 - **Finite-conditional-expectation bad tower-property QF_LRA row landed.**
   `finite-conditional-expectation-v0` now has a second checked Farkas row:
@@ -224,8 +238,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `UnsatFarkas` evidence, and the validator pins the atom table, fine/coarse
   partitions, exact conditional-expectation tables, actual tower table, claimed
   tower table, artifact path, and regression. Generated dashboards and the
-  public query summary now report 111 concept rows, 108 non-template packs, 584
-  expected checks, 266 checked rows, 247 replay-only rows, and 71 Lean-horizon
+  public query summary now report 111 concept rows, 108 non-template packs, 585
+  expected checks, 267 checked rows, 247 replay-only rows, and 71 Lean-horizon
   rows.
 
 - **Finite-random-variable bad expectation-through-pushforward QF_LRA row landed.**
@@ -238,8 +252,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   total random-variable map, pushforward distribution, outcome values, source
   expectation, pushforward expectation, claimed expectation, artifact path,
   regression, and certificate note. Generated dashboards and the public query
-  summary now report 111 concept rows, 108 non-template packs, 584 expected
-  checks, 266 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+  summary now report 111 concept rows, 108 non-template packs, 585 expected
+  checks, 267 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
 
 - **Comprehensive math-curriculum resource plan landed.**
   Added
@@ -248,7 +262,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   educational content, ontology/taxonomy rows, example packs, proof artifacts,
   solver feedback, rules/law transfer, consumer boundaries, and future library
   splits. The plan is grounded in the current 2026-07-01 resource baseline
-  (111 concept rows, 108 non-template packs, 584 expected checks, 266 checked
+  (111 concept rows, 108 non-template packs, 585 expected checks, 267 checked
   rows, 247 replay-only rows, 71 Lean-horizon rows, and 108 promoted
   solver-reuse packs) and is linked from the foundational-resource index,
   mdBook summary, buildout plan, master plan, build sequence, detailed build
@@ -263,8 +277,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   regression parses it and checks `UnsatFarkas` evidence, and the validator
   pins the factor tables, product table, target axis/atom, artifact path,
   regression, and certificate note. Generated dashboards and the public query
-  summary now report 111 concept rows, 108 non-template packs, 584 expected
-  checks, 266 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+  summary now report 111 concept rows, 108 non-template packs, 585 expected
+  checks, 267 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
 
 - **Finite-inversion bad inverse-distance-product QF_LRA row landed.**
   `finite-inversion-geometry-v0` now has a second checked Farkas row: exact
@@ -1325,7 +1339,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Exact finite probability QF_LRA/Farkas promotion landed.**
   `finite-probability-v0` now carries promoted `solver_reuse` metadata tied to
-  the checked bad-normalization and bad-Bayes posterior source SMT-LIB rows.
+  the checked bad-normalization, bad-conditional-probability, and bad-Bayes
+  posterior source SMT-LIB rows.
   The focused `math_resource_lra_routes finite_probability` regression checks
   both rows with independently rechecked Farkas evidence; generated dashboards
   move promoted solver-reuse packs to 57 and leave 27 unclassified packs.
@@ -1704,7 +1719,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`finite-probability-mass-tables-end-to-end.md`](docs/learn/math/finite-probability-mass-tables-end-to-end.md)
   now follows `finite-probability-v0` through exact PMF normalization,
   conditional probability replay, Bayes posterior replay, checked QF_LRA/Farkas
-  bad-normalization rejection, and checked bad-posterior rejection. The broader
+  bad-normalization rejection, checked bad-conditional-probability rejection,
+  and checked bad-posterior rejection. The broader
   finite-probability page remains as the stochastic-process bridge.
 
 - **Curriculum status audit landed.** The generated

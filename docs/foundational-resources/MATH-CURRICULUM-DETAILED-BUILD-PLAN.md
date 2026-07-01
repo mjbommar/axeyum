@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 584 expected checks.
-- 266 checked proof/evidence rows.
+- 585 expected checks.
+- 267 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -373,8 +373,9 @@ Pick one row per commit unless the change is purely navigational.
    combined linear-system/LP bridge lesson.
 35. Landed: add standalone finite probability mass-table learner page,
    splitting exact PMF normalization, conditional probability replay, Bayes
-   posterior replay, checked QF_LRA/Farkas bad-normalization rejection, and
-   checked bad-posterior rejection out of the broad finite-probability process
+   posterior replay, checked QF_LRA/Farkas bad-normalization rejection, checked
+   bad-conditional-probability rejection, and checked bad-posterior rejection
+   out of the broad finite-probability process
    bridge lesson.
 36. Landed: add standalone finite-operator learner page, splitting exact
    finite-dimensional `l1` norm replay, row-sum operator-bound replay,
