@@ -198,7 +198,8 @@ E(M2 | F1, down) = -1
 
 The `finite-martingales-v0` validator checks adaptedness, recomputes each
 martingale equality, checks the square submartingale inequalities, and replays
-a bounded stopping time by exact expectation.
+a bounded stopping time by exact expectation, with checked `UnsatFarkas`
+evidence for the bad stopped-expectation and martingale rows.
 
 For a focused finite martingale trace, read
 [End To End: Finite Martingales](finite-martingales-end-to-end.md).

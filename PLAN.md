@@ -164,7 +164,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 596 expected checks, 276 checked
+111 concept rows, 108 non-template packs, 597 expected checks, 277 checked
 rows, 249 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -196,7 +196,8 @@ tower-property row after nested-partition replay computes `7/2` rather than
 `4`, finite-measure's bad complement row after finite replay computes the event
 and total measures, finite-measure-monotonicity's bad subset-measure row after
 finite replay computes the subset and superset measures, finite-martingales'
-bad conditional-expectation row after finite filtration replay computes the
+bad stopped-expectation and conditional-expectation rows after bounded stopping
+replay computes `E[M_tau] = 0` and finite filtration replay computes the
 up-block expectation, finite Markov-chain's bad stochastic-row and false
 stationary-distribution rows now explicitly promoted in solver-reuse metadata,
 finite concentration's bad tail-bound and bad union-bound rows after exact
@@ -608,7 +609,8 @@ promoted for the bad product-probability and bad marginal conflicts, with
 finite random variables now promoted for the bad pushforward-distribution and
 bad expectation-through-pushforward conflicts and finite integration now
 promoted for the bad expectation conflict, and finite
-martingales now promoted for the bad conditional-expectation conflict, with
+martingales now promoted for the bad stopped-expectation and
+conditional-expectation conflicts, with
 finite Markov chains carrying explicit promoted solver-reuse metadata for the
 bad stochastic-row and false stationary-distribution conflicts and finite concentration carrying
 source-linked promoted bad tail-bound and bad union-bound conflicts, while sequence-limit shadows

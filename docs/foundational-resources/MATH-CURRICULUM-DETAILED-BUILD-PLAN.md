@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 596 expected checks.
-- 276 checked proof/evidence rows.
+- 597 expected checks.
+- 277 checked proof/evidence rows.
 - 249 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1058,6 +1058,13 @@ Pick one row per commit unless the change is purely navigational.
      contradictions without claiming recurrence/transience, optional stopping,
      mixing bounds, Markov-chain potential theory, or infinite-horizon
      convergence.
+128. Landed: extend `finite-martingales-v0` with a checked bad stopped-
+     expectation row. Exact bounded stopping replay recomputes stopped values
+     `1, 1, 0, -2` and `E[M_tau]=0`, while the malformed source SMT-LIB
+     artifact claims `1/2`; the shared QF_LRA/Farkas route now checks both
+     bounded stopped-expectation and conditional-expectation contradictions
+     without claiming general optional stopping, martingale convergence, Doob
+     inequalities, stochastic integration, or continuous-time martingales.
 
 ## Validation Checklist
 

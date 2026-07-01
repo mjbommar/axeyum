@@ -5309,7 +5309,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-martingales-v0",
-                "Finite filtration, martingale, submartingale, and bad conditional-expectation rows.",
+                "Finite filtration, martingale, submartingale, stopped-expectation, and bad conditional-expectation rows.",
             ),
             (
                 "finite-integration-v0",
@@ -5417,7 +5417,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-martingales-v0",
-                "Finite filtration and martingale checks that reuse conditional weighted-sum replay.",
+                "Finite filtration, stopped-expectation, and martingale checks that reuse conditional weighted-sum replay.",
             ),
         ],
         "proof_routes": [

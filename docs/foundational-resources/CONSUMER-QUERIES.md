@@ -339,6 +339,17 @@ python3 scripts/query-foundational-resources.py fields \
   --require-any
 ```
 
+For the concrete finite martingale stopped-expectation proof row:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-martingales-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text stopped \
+  --require-any
+```
+
 Use the atlas lookup for reusable finite-probability and finite random-matrix
 vocabulary:
 

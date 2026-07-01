@@ -21,6 +21,7 @@ Concept rows:
 | `finite-martingale-witness` | `sat` | replay-only |
 | `square-submartingale-witness` | `sat` | replay-only |
 | `bounded-stopping-replay` | `sat` | replay-only |
+| `bad-stopped-expectation-rejected` | `unsat` | checked |
 | `bad-martingale-rejected` | `unsat` | checked |
 | `general-martingale-lean-horizon` | `not-run` | lean-horizon |
 
@@ -154,6 +155,32 @@ E[M_tau] = 1*(1/4) + 1*(1/4) + 0*(1/4) - 2*(1/4)
 
 This is a bounded finite replay row, not a proof of general optional stopping.
 
+## Reject A False Stopped Expectation
+
+The negative stopped-expectation row keeps the same bounded stopping replay but
+claims:
+
+```text
+E[M_tau] = 1/2
+```
+
+The checker recomputes:
+
+```text
+E[M_tau] = 0
+```
+
+The source-linked resource regression checks the final contradiction as
+`QF_LRA`:
+
+```text
+4*stopped_expectation = 0
+stopped_expectation = 1/2
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
+
 ## Reject A False Martingale Claim
 
 The negative row changes the terminal up-up value:
@@ -191,7 +218,7 @@ adapted process tables
 finite martingale conditional-expectation equalities
 finite square-submartingale inequalities
 bounded stopping-time replay
-bad martingale-table refutations
+bad stopped-expectation and martingale-table refutations
 ```
 
 The following remain proof-assistant targets:
@@ -213,6 +240,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-martingales-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_martingales_bad_stopped_expectation_artifact_emits_checked_farkas
 ```
 
 Expected output:
@@ -234,5 +262,5 @@ remaining horizon -> general martingale and stopping-time theory
 The graduation target is to encode finite filtrations as time-indexed
 partitions of probability atoms, replay finite adaptedness, martingale,
 submartingale, and bounded stopping-time witnesses by exact rational model
-evaluation, and emit checked counterexample evidence for rejected martingale
-claims.
+evaluation, and emit checked counterexample evidence for rejected stopped-
+expectation and martingale claims.

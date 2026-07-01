@@ -135,6 +135,46 @@
       "notes": "The validator checks stopping-time measurability and recomputes the stopped expectation exactly."
     },
     {
+      "id": "bad-stopped-expectation-rejected",
+      "claim": "The bounded stopping-time replay has stopped expectation E[M_tau] = 1/2.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_stopped_expectation_refutation",
+      "proof_status": "checked",
+      "data": {
+        "atoms": [
+          {"id": "uu", "probability": "1/4"},
+          {"id": "ud", "probability": "1/4"},
+          {"id": "du", "probability": "1/4"},
+          {"id": "dd", "probability": "1/4"}
+        ],
+        "filtration": [
+          {"time": 0, "partition": [{"id": "root", "atoms": ["uu", "ud", "du", "dd"]}]},
+          {"time": 1, "partition": [
+            {"id": "up", "atoms": ["uu", "ud"]},
+            {"id": "down", "atoms": ["du", "dd"]}
+          ]},
+          {"time": 2, "partition": [
+            {"id": "uu", "atoms": ["uu"]},
+            {"id": "ud", "atoms": ["ud"]},
+            {"id": "du", "atoms": ["du"]},
+            {"id": "dd", "atoms": ["dd"]}
+          ]}
+        ],
+        "process_values": [
+          {"time": 0, "values": {"uu": "0", "ud": "0", "du": "0", "dd": "0"}},
+          {"time": 1, "values": {"uu": "1", "ud": "1", "du": "-1", "dd": "-1"}},
+          {"time": 2, "values": {"uu": "2", "ud": "0", "du": "0", "dd": "-2"}}
+        ],
+        "stopping_time": {"uu": 1, "ud": 1, "du": 2, "dd": 2},
+        "stopped_values": {"uu": "1", "ud": "1", "du": "0", "dd": "-2"},
+        "actual_stopped_expectation": "0",
+        "claimed_stopped_expectation": "1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-martingales-v0/smt2/bad-stopped-expectation-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_martingales_bad_stopped_expectation_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator recomputes the stopped values and E[M_tau]=0; the Axeyum regression refutes the final linear claim E[M_tau]=1/2 with rechecked Farkas evidence."
+    },
+    {
       "id": "bad-martingale-rejected",
       "claim": "The malformed terminal table still defines a martingale.",
       "expected_result": "unsat",

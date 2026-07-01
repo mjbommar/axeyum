@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const stopped_expectation Real)
+(assert (= (* 4 stopped_expectation) 0))
+(assert (= stopped_expectation (/ 1 2)))
+(check-sat)

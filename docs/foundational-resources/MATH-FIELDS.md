@@ -189,7 +189,7 @@ one of:
       `real_analysis`, `set_theory_and_foundations`.
     - Checks: finite filtration adaptedness, martingale conditional
       expectations, square submartingale inequalities, bounded stopping-time
-      replay, and bad martingale rejection.
+      replay, and bad stopped-expectation/martingale rejection.
 14. `artifacts/examples/math/finite-stochastic-kernels-v0/`
     - Fields: `probability_theory`, `statistics`, `measure_theory`,
       `linear_algebra`, `differential_equations_and_dynamical_systems`,

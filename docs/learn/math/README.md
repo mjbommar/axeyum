@@ -422,7 +422,8 @@ Companion maps:
 - [Finite Martingales](finite-martingales-end-to-end.md): follows finite
   filtrations, adaptedness, martingale conditional-expectation equalities,
   square-submartingale inequalities, bounded stopping replay, checked bad
-  martingale rejection, and the general martingale Lean horizon.
+  stopped-expectation and martingale rejection, and the general martingale Lean
+  horizon.
 - [Finite Stochastic Kernels](finite-stochastic-kernels-end-to-end.md): follows
   row-normalized finite kernels, pushforward distributions, joint
   factorization/disintegration, kernel composition, checked bad kernel-row and

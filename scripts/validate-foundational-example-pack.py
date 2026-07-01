@@ -19228,6 +19228,56 @@ def validate_finite_martingales(expected: dict[str, Any]) -> None:
     if initial_expectation != stopped_expectation:
         fail("bounded-stopping-replay expectations do not match")
 
+    bad_stopped = checks["bad-stopped-expectation-rejected"]
+    if bad_stopped["expected_result"] != "unsat":
+        fail("bad-stopped-expectation-rejected must expect unsat")
+    if bad_stopped["proof_status"] != "checked":
+        fail("bad-stopped-expectation-rejected must be checked")
+    data = bad_stopped.get("data", {})
+    atoms = require_probability_atoms("bad stopped expectation atoms", data.get("atoms"), require_events=False)
+    require_normalized_atoms("bad-stopped-expectation-rejected", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    filtration = require_full_filtration("bad stopped expectation filtration", data.get("filtration"), atom_ids)
+    process_values = require_timed_atom_value_tables(
+        "bad stopped expectation process_values",
+        data.get("process_values"),
+        atom_ids,
+    )
+    validate_timed_process_adapted("bad-stopped-expectation-rejected", process_values, filtration)
+    validate_finite_martingale_equalities("bad-stopped-expectation-rejected", atoms, filtration, process_values)
+    stopping_time = require_stopping_time(
+        "bad stopped expectation stopping_time",
+        data.get("stopping_time"),
+        atom_ids,
+        set(filtration),
+    )
+    validate_stopping_time("bad-stopped-expectation-rejected", stopping_time, filtration)
+    listed_stopped_values = require_atom_value_table(
+        "bad stopped expectation stopped_values",
+        data.get("stopped_values"),
+        atom_ids,
+    )
+    computed_stopped_values = stopped_process_values(process_values, stopping_time)
+    if computed_stopped_values != listed_stopped_values:
+        fail("bad-stopped-expectation-rejected stopped values are incorrect")
+    actual_stopped_expectation = require_fraction(
+        "bad stopped expectation actual_stopped_expectation",
+        data.get("actual_stopped_expectation"),
+    )
+    claimed_stopped_expectation = require_fraction(
+        "bad stopped expectation claimed_stopped_expectation",
+        data.get("claimed_stopped_expectation"),
+    )
+    if finite_expected_value(atoms, listed_stopped_values) != actual_stopped_expectation:
+        fail("bad-stopped-expectation-rejected actual stopped expectation is incorrect")
+    if actual_stopped_expectation == claimed_stopped_expectation:
+        fail("bad-stopped-expectation-rejected must document a false stopped expectation")
+    require_string("bad stopped expectation smt2_artifact", data.get("smt2_artifact"))
+    check_source("bad stopped expectation smt2_artifact", data["smt2_artifact"])
+    require_string("bad stopped expectation farkas_regression", data.get("farkas_regression"))
+    if "finite_martingales_bad_stopped_expectation_artifact_emits_checked_farkas" not in data["farkas_regression"]:
+        fail("bad-stopped-expectation-rejected must link the Farkas regression")
+
     bad = checks["bad-martingale-rejected"]
     if bad["expected_result"] != "unsat":
         fail("bad-martingale-rejected must expect unsat")

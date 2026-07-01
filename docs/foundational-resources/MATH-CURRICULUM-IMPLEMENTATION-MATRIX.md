@@ -371,9 +371,11 @@ Build sequence:
 23. `finite-integration-v0` now links `bad-expectation-rejected` to
     `artifacts/examples/math/finite-integration-v0/smt2/bad-expectation-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
-24. `finite-martingales-v0` now links `bad-martingale-rejected` to
+24. `finite-martingales-v0` now links `bad-stopped-expectation-rejected` to
+    `artifacts/examples/math/finite-martingales-v0/smt2/bad-stopped-expectation-farkas-conflict.smt2`
+    and `bad-martingale-rejected` to
     `artifacts/examples/math/finite-martingales-v0/smt2/bad-martingale-farkas-conflict.smt2`,
-    checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
+    both checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
 25. Route-specific tamper/rejection regressions now land for the active
     certificate routes: Boolean CNF/LRAT, QF_BV DRAT, QF_LRA/Farkas,
     QF_LIA/Diophantine, and QF_UF/Alethe all mutate emitted resource

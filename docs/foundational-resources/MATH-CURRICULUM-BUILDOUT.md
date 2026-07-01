@@ -857,8 +857,8 @@ general conditional-expectation/martingale Lean-horizon row.
 `artifacts/examples/math/finite-martingales-v0/` now validates exact finite
 filtrations, adaptedness, martingale conditional-expectation equalities,
 finite square-submartingale inequalities, bounded stopping-time replay, checked
-QF_LRA/Farkas rejection of a false martingale table, and a general martingale
-Lean-horizon row.
+QF_LRA/Farkas rejection of false stopped-expectation and martingale tables, and
+a general martingale Lean-horizon row.
 `artifacts/examples/math/finite-stochastic-kernels-v0/` now validates exact
 finite source-to-target probability kernels, pushforward distributions, joint
 factorization/disintegration replay, kernel composition, checked rejection of a
@@ -1057,7 +1057,7 @@ Recommended order:
     rejections.
 28. `finite-martingales-v0`: finite filtrations, adaptedness, martingale
     equalities, square submartingale inequalities, bounded stopping replay, and
-    QF_LRA/Farkas bad martingale rejection.
+    QF_LRA/Farkas bad stopped-expectation/martingale rejection.
 29. `finite-stochastic-kernels-v0`: finite source-to-target kernels,
     pushforward distributions, joint disintegration replay, kernel
     composition, and QF_LRA/Farkas bad kernel-row and bad composition-entry
@@ -1829,8 +1829,8 @@ horizon.
 `finite-martingales-v0` now has a learner-facing end-to-end lesson for finite
 filtrations, adaptedness, martingale conditional-expectation equalities,
 square-submartingale inequalities, bounded stopping replay, checked bad
-martingale rejection with QF_LRA/Farkas evidence, and the general martingale
-Lean horizon.
+stopped-expectation and martingale rejection with QF_LRA/Farkas evidence, and
+the general martingale Lean horizon.
 `finite-stochastic-kernels-v0` now has a learner-facing end-to-end lesson for
 row-normalized finite kernels, pushforward distributions, joint
 factorization/disintegration, kernel composition, checked QF_LRA/Farkas bad

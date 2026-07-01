@@ -7096,7 +7096,7 @@
           "id": "finite-martingales-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-martingales-v0",
-          "notes": "Finite filtration, martingale, submartingale, and bad conditional-expectation rows."
+          "notes": "Finite filtration, martingale, submartingale, stopped-expectation, and bad conditional-expectation rows."
         },
         {
           "id": "finite-integration-v0",
@@ -7221,7 +7221,7 @@
           "id": "finite-martingales-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-martingales-v0",
-          "notes": "Finite filtration and martingale checks that reuse conditional weighted-sum replay."
+          "notes": "Finite filtration, stopped-expectation, and martingale checks that reuse conditional weighted-sum replay."
         }
       ],
       "proof_routes": [

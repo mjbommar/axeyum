@@ -287,8 +287,9 @@ First targets:
   exact finite random-variable replay computes the outcome mass and
   expectation)
 - [finite-martingales-v0](../../artifacts/examples/math/finite-martingales-v0/)
-  (resource-backed Farkas regression landed for the bad martingale row after
-  exact finite filtration replay computes the up-block conditional expectation)
+  (resource-backed Farkas regressions landed for the bad stopped-expectation
+  and bad martingale rows after exact bounded-stopping and finite-filtration
+  replay compute the stopped expectation and up-block conditional expectation)
 - [finite-markov-chain-v0](../../artifacts/examples/math/finite-markov-chain-v0/)
   (resource-backed Farkas regressions landed for the bad stochastic row and
   bad stationary-distribution row)
@@ -389,8 +390,9 @@ Secondary targets:
   before Farkas checks the final contradictory masses, and finite random variables contribute a
   pushforward-distribution regression with the same replay-then-Farkas boundary.
   Finite martingales now add the stochastic-process version of that pattern:
-  replay a conditional expectation from a finite filtration, then let Farkas
-  check the contradictory martingale equality. Finite measure now contributes
+  replay a bounded stopped expectation and a conditional expectation from a
+  finite filtration, then let Farkas check the contradictory stopped-
+  expectation and martingale equalities. Finite measure now contributes
   the base measure-table version of that pattern: replay the event and total
   measures, then let Farkas check the false complement-additivity claim.
   Polynomial factorization now contributes the algebra version of the same
@@ -756,8 +758,9 @@ First theorem families:
 - real limits, epsilon-delta continuity, compactness, connectedness, and
   integration;
 - finite shadows of measure, probability, martingales, stochastic kernels, and
-  hitting times where the finite rows now include survival-mass replay and
-  expected-time equations but the general theorem is countable or limiting;
+  hitting times where the finite rows now include stopped-expectation,
+  survival-mass replay, and expected-time equations but the general theorem is
+  countable or limiting;
 - general algebra and topology statements;
 - Chebyshev spaces, operator theory, complex analysis, and functional-analysis
   claims.

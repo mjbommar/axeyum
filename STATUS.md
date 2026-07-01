@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite martingales bad stopped-expectation QF_LRA row landed.**
+  `finite-martingales-v0` now includes a checked bad stopped-expectation row:
+  exact bounded stopping replay computes `E[M_tau] = 0` for stopped values
+  `1, 1, 0, -2`, then rejects the malformed claim `E[M_tau] = 1/2` through a
+  source SMT-LIB artifact on the shared QF_LRA/Farkas route. The validator
+  pins the atom table, full filtration, process values, stopping time,
+  stopped values, actual and claimed stopped expectation, artifact path, and
+  regression; the shared `math_resource_lra_routes` regression parses the
+  artifact and checks `UnsatFarkas` evidence. Generated dashboards and the
+  public query summary now report 111 concept rows, 108 non-template packs,
+  597 expected checks, 277 checked rows, 249 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Finite hitting-times bad survival-mass QF_LRA row landed.**
   `finite-hitting-times-v0` now includes a checked bad survival-mass row:
   exact first-hit replay through horizon 4 computes `P(T > 4) = 5/16`, then

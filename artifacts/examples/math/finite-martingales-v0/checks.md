@@ -22,6 +22,15 @@ The validator checks that the listed `tau` is a bounded stopping time for the
 finite filtration, recomputes the stopped values, and checks
 `E[M_tau] = E[M0]`.
 
+## `bad-stopped-expectation-rejected`
+
+Expected result: `unsat`.
+
+The validator replays the bounded stopping time, recomputes stopped values
+`1, 1, 0, -2`, and checks that the stopped expectation is `0`, not `1/2`.
+The source-linked QF_LRA artifact records the resulting exact-linear
+contradiction and is checked by the shared Farkas route regression.
+
 ## `bad-martingale-rejected`
 
 Expected result: `unsat`.

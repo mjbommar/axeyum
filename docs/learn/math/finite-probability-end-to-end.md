@@ -55,6 +55,7 @@ Concept rows:
 | `finite-martingale-witness` | `sat` | replay-only |
 | `square-submartingale-witness` | `sat` | replay-only |
 | `bounded-stopping-replay` | `sat` | replay-only |
+| `bad-stopped-expectation-rejected` | `unsat` | checked |
 | `bad-martingale-rejected` | `unsat` | checked |
 | `product-measure-table-witness` | `sat` | replay-only |
 | `marginalization-witness` | `sat` | replay-only |
@@ -294,7 +295,9 @@ E(M2 | F1, {du,dd}) = -1 = M1 on {du,dd}
 
 It also checks that `M_t` is adapted to `F_t`, that `M_t^2` is a finite
 submartingale, and that the bounded stopping time `tau = first hit +1 capped at
-2` satisfies `E[M_tau] = E[M0] = 0` by exact rational summation.
+2` satisfies `E[M_tau] = E[M0] = 0` by exact rational summation. The bad
+stopped-expectation row keeps that finite replay but rejects the false claim
+`E[M_tau] = 1/2` through checked Farkas evidence.
 
 For a fuller focused trace, read
 [End To End: Finite Martingales](finite-martingales-end-to-end.md).

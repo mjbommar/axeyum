@@ -55,6 +55,16 @@ M_tau = 1, 1, 0, -2
 E[M_tau] = 0 = M0
 ```
 
+The malformed stopped-expectation row keeps the same bounded stopping replay
+but claims:
+
+```text
+E[M_tau] = 1/2
+```
+
+Exact replay computes `0`, so the final equality conflict is checked through
+QF_LRA/Farkas evidence.
+
 ## Bad Martingale Claim
 
 The false claim changes `M2(uu)` from `2` to `3`. The checker rejects it
