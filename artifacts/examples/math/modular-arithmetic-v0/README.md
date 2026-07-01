@@ -7,8 +7,9 @@ counterexamples.
 The pack is intentionally finite and exact. The validator checks the arithmetic
 directly over small integers. It also includes promoted solver-form
 Diophantine obstructions for the composite non-unit inverse claim and an
-incompatible non-coprime CRT claim, plus a fixed-width QF_BV/DRAT proof route
-for the modulo-5 Fermat-unit counterexample search.
+incompatible non-coprime CRT claim, plus fixed-width QF_BV/DRAT proof routes
+for the composite non-unit inverse search and the modulo-5 Fermat-unit
+counterexample search.
 
 ## Concepts
 
@@ -26,6 +27,10 @@ for the modulo-5 Fermat-unit counterexample search.
 - The `qf-lia-nonunit-diophantine` row encodes `2*b == 1 (mod 6)` as the
   integer equation `2*b - 6*k = 1`; Axeyum emits an `UnsatDiophantine`
   certificate and `Evidence::check` independently rechecks the gcd obstruction.
+- The `composite-nonunit-no-inverse-qf-bv-drat` row encodes the same finite
+  residue search as a 3-bit candidate `b < 6`; Axeyum bit-blasts the modular
+  multiplication/remainder formula, emits DRAT evidence, and rechecks the
+  DIMACS/DRAT pair independently.
 - The `qf-lia-incompatible-crt-diophantine` row encodes the incompatible CRT
   pair `x == 1 mod 4`, `x == 2 mod 6` as `4*a - 6*b = 1`; the same checked
   certificate route records that `gcd(4,6)=2` does not divide `1`.
@@ -39,5 +44,6 @@ Validation:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 cargo test -p axeyum-solver --test math_resource_lia_routes modular_incompatible_crt_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --test math_resource_bv_routes modular_arithmetic_nonunit_inverse_mod6_emits_checked_bv_drat
 cargo test -p axeyum-solver --test math_resource_bv_routes modular_arithmetic_fermat_units_mod5_emits_checked_bv_drat
 ```

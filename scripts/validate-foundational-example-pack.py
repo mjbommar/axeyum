@@ -6548,6 +6548,51 @@ def validate_modular_arithmetic(expected: dict[str, Any]) -> None:
     if "UnsatDiophantine" not in certificate or "Evidence::check" not in certificate:
         fail("qf-lia nonunit certificate must document checked Diophantine evidence")
 
+    nonunit_qf_bv = checks["composite-nonunit-no-inverse-qf-bv-drat"]
+    if nonunit_qf_bv["expected_result"] != "unsat":
+        fail("composite-nonunit-no-inverse-qf-bv-drat must expect unsat")
+    if nonunit_qf_bv["proof_status"] != "checked":
+        fail("composite-nonunit-no-inverse-qf-bv-drat must be checked")
+    if nonunit_qf_bv["validation"] != "qf_bv_bitblast_drat":
+        fail("composite-nonunit-no-inverse-qf-bv-drat must use qf_bv_bitblast_drat validation")
+    data = nonunit_qf_bv.get("data", {})
+    a = require_int("QF_BV nonunit data a", data.get("a"))
+    modulus = require_modulus("QF_BV nonunit modulus", data.get("modulus"))
+    if gcd(a, modulus) == 1:
+        fail("composite-nonunit-no-inverse-qf-bv-drat must use a nonunit residue")
+    if has_mod_inverse(a, modulus):
+        fail("composite-nonunit-no-inverse-qf-bv-drat found an inverse unexpectedly")
+    candidate_residues = require_int_list(
+        "QF_BV nonunit candidate_residues",
+        data.get("candidate_residues"),
+    )
+    if candidate_residues != list(range(modulus)):
+        fail("composite-nonunit-no-inverse-qf-bv-drat must list every residue modulo m")
+    if any((a * residue) % modulus == 1 for residue in candidate_residues):
+        fail("composite-nonunit-no-inverse-qf-bv-drat lists an inverse residue unexpectedly")
+    residue_width = require_int("QF_BV nonunit residue_width", data.get("residue_width"))
+    product_width = require_int("QF_BV nonunit product_width", data.get("product_width"))
+    if 2**residue_width <= modulus:
+        fail("composite-nonunit-no-inverse-qf-bv-drat residue_width must encode every residue and the modulus")
+    max_product = max(a * residue for residue in candidate_residues)
+    if 2**product_width <= max_product:
+        fail("composite-nonunit-no-inverse-qf-bv-drat product_width must encode every listed product exactly")
+    if a != 2 or modulus != 6 or residue_width != 3 or product_width != 6:
+        fail("composite-nonunit-no-inverse-qf-bv-drat is fixed to 2 modulo 6 with 3-bit residues and 6-bit products")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("QF_BV nonunit smt2_artifact", smt2_artifact)
+    check_source("QF_BV nonunit smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/modular-arithmetic-v0/smt2/nonunit-inverse-mod6-bitblast-conflict.smt2":
+        fail("composite-nonunit-no-inverse-qf-bv-drat smt2_artifact must name the checked QF_BV artifact")
+    proof_regression = data.get("proof_regression")
+    require_string("QF_BV nonunit proof_regression", proof_regression)
+    if "modular_arithmetic_nonunit_inverse_mod6_emits_checked_bv_drat" not in proof_regression:
+        fail("composite-nonunit-no-inverse-qf-bv-drat proof_regression must name the BV route test")
+    certificate = data.get("certificate")
+    require_string("QF_BV nonunit certificate", certificate)
+    if "DRAT" not in certificate or "bit-blast" not in certificate or "Tseitin" not in certificate:
+        fail("composite-nonunit-no-inverse-qf-bv-drat certificate must document DRAT and lowering trust")
+
     crt_qf_lia = checks["qf-lia-incompatible-crt-diophantine"]
     if crt_qf_lia["expected_result"] != "unsat":
         fail("qf-lia-incompatible-crt-diophantine must expect unsat")

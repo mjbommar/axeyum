@@ -21,17 +21,19 @@ Concept rows:
 | `modular-inverse-witness` | `sat` | replay-only |
 | `composite-nonunit-no-inverse` | `unsat` | replay-only |
 | `qf-lia-nonunit-diophantine` | `unsat` | checked |
+| `composite-nonunit-no-inverse-qf-bv-drat` | `unsat` | checked |
 | `qf-lia-incompatible-crt-diophantine` | `unsat` | checked |
 | `fermat-units-mod-prime` | `unsat` | replay-only |
 | `fermat-units-mod-prime-qf-bv-drat` | `unsat` | checked |
 
 The finite rows still recompute arithmetic directly. The
 `qf-lia-nonunit-diophantine` and `qf-lia-incompatible-crt-diophantine` rows are
-the promoted solver-form proof artifacts in this pack: Axeyum emits and checks
-`UnsatDiophantine` certificates for the nonunit inverse and incompatible CRT
-obstructions. The Fermat-unit QF_BV row is a fixed-width proof artifact for the
-same modulo-5 finite search: Axeyum bit-blasts the residue formula and rechecks
-the emitted DIMACS/DRAT refutation.
+the promoted integer-arithmetic proof artifacts in this pack: Axeyum emits and
+checks `UnsatDiophantine` certificates for the nonunit inverse and incompatible
+CRT obstructions. The nonunit-inverse and Fermat-unit QF_BV rows are
+fixed-width proof artifacts for the same finite residue-search style: Axeyum
+bit-blasts the residue formulas and rechecks the emitted DIMACS/DRAT
+refutations.
 
 ## Replay A CRT Witness
 
@@ -107,6 +109,23 @@ Axeyum records that as an `UnsatDiophantine` certificate. The checker
 recombines the original equality and verifies the gcd non-divisibility
 obstruction; it does not trust the search result alone.
 
+## Check A Fixed-Width Non-Unit Obstruction
+
+The QF_BV row checks the same impossible inverse search with the width made
+explicit:
+
+```text
+b is a 3-bit residue
+b < 6
+(2*b) mod 6 = 1
+```
+
+The artifact zero-extends `b` to 6 bits before multiplication, so every product
+`2*b` for `b = 0..5` is represented exactly before the final remainder by `6`.
+Axeyum bit-blasts that fixed-width formula and rechecks the DIMACS/DRAT
+refutation. This proves the finite 3-bit search is inconsistent; it still does
+not prove a general theorem about all composite moduli.
+
 ## Check An Incompatible CRT Pair
 
 The checked CRT obstruction asks for:
@@ -166,6 +185,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 cargo test -p axeyum-solver --test math_resource_lia_routes modular_incompatible_crt_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --test math_resource_bv_routes modular_arithmetic_nonunit_inverse_mod6_emits_checked_bv_drat
 cargo test -p axeyum-solver --test math_resource_bv_routes modular_arithmetic_fermat_units_mod5_emits_checked_bv_drat
 ```
 

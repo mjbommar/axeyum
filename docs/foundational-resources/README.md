@@ -165,7 +165,7 @@ schemas, examples, and validation workflows.
   validates small CRT, modular inverse, composite non-unit, and Fermat-style
   finite checks by replay/exhaustive search, with checked QF_LIA/Diophantine
   rows for nonunit/CRT obstructions and checked QF_BV/DRAT evidence for the
-  fixed modulo-5 Fermat-unit search.
+  fixed nonunit inverse and modulo-5 Fermat-unit searches.
 - [`artifacts/examples/math/rationals-lra-v0/`](../../artifacts/examples/math/rationals-lra-v0/)
   validates exact rational density, additive inverse, trichotomy, and
   transitivity checks using rational replay.

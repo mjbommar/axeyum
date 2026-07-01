@@ -39,6 +39,17 @@ The validator checks every candidate `b` in `[0, 6)` and confirms:
 2 * b != 1 (mod 6)
 ```
 
+The promoted fixed-width QF_BV row uses the same finite search with a 3-bit
+candidate and 6-bit product:
+
+```text
+b < 6
+(2*b) mod 6 = 1
+```
+
+The bit-blasted formula is unsatisfiable and its DIMACS/DRAT refutation is
+rechecked independently.
+
 ### Fermat-Style Unit Check
 
 For every unit `a` modulo prime `5`, the validator confirms:

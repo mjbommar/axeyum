@@ -164,7 +164,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 583 expected checks, 265 checked
+111 concept rows, 108 non-template packs, 584 expected checks, 266 checked
 rows, 247 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -179,8 +179,10 @@ while the bad claim that `A` is top requires `B <= A`. The modular-arithmetic
 QF_LIA/Diophantine lane now also includes the incompatible non-coprime CRT row:
 `x == 1 mod 4` and `x == 2 mod 6` reduce to `4*a - 6*b = 1`, where
 `gcd(4,6)=2` does not divide `1`, and the fixed-width QF_BV lane now includes
-the modulo-5 Fermat-unit counterexample search: no 3-bit residue `0 < a < 5`
-satisfies `a^4 mod 5 != 1`, with checked DIMACS/DRAT evidence. The topology
+the composite nonunit inverse search and the modulo-5 Fermat-unit counterexample
+search: no 3-bit residue `b < 6` satisfies `(2*b) mod 6 = 1`, and no 3-bit
+residue `0 < a < 5` satisfies `a^4 mod 5 != 1`, both with checked
+DIMACS/DRAT evidence. The topology
 QF_LIA/Diophantine lane now also includes finite chain-complex torsion via
 one-entry Smith diagonal replay and checked rejection of `2*k = 1`. The
 measure/probability QF_LRA/Farkas lane now also promotes finite

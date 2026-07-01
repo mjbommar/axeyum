@@ -689,9 +689,10 @@ First targets:
   (resource-backed QF_BV/DRAT regression landed for the modulo-7 quadratic
   nonresidue row and the bad square-root witness row)
 - [modular-arithmetic-v0](../../artifacts/examples/math/modular-arithmetic-v0/)
-  (resource-backed QF_BV/DRAT regression landed for the fixed modulo-5
-  Fermat-unit counterexample search, keeping the finite theorem shadow
-  separate from the general Fermat little theorem horizon)
+  (resource-backed QF_BV/DRAT regressions landed for the fixed nonunit inverse
+  search modulo 6 and the fixed modulo-5 Fermat-unit counterexample search,
+  keeping finite residue shadows separate from the general CRT, inverse, and
+  Fermat little theorem horizons)
 - [finite-simplicial-cup-products-v0](../../artifacts/examples/math/finite-simplicial-cup-products-v0/)
   (resource-backed QF_BV/DRAT regression landed for the one-bit F2
   cup-product value conflict)

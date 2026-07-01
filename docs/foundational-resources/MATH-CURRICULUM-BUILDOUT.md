@@ -234,7 +234,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `reals` | `real_analysis`, `optimization_and_convexity` | `real-analysis-rational-v0`, `reals-rcf-shadow-v0`, `multivariable-calculus-rational-v0`, `finite-root-finding-v0`, `finite-separation-v0`, `finite-kkt-v0`, `finite-active-set-qp-v0`, `finite-sdp-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0`, `finite-projected-gradient-v0`, `finite-proximal-gradient-v0`, `finite-circle-geometry-v0`, `finite-inversion-geometry-v0`, `finite-cyclic-geometry-v0` | Bounded rational neighborhoods, algebraic real constraints through LRA/NRA, checked QF_LRA negative-discriminant shadow, exact rational gradients, Hessian checks, finite root-finding iteration replay, finite separating-hyperplane replay, finite KKT stationarity replay, finite active-set QP face/slack replay, finite SDP objective/slack replay, finite gradient-descent step replay, finite Armijo line-search replay, finite Wolfe sufficient-decrease/curvature replay, finite projected-gradient interval replay, finite proximal-gradient soft-threshold replay, finite circle point/tangent/chord/line replay, finite inversion replay, finite cyclic quadrilateral replay, and rational Ptolemy replay; completeness, separation theorems, KKT sufficiency, active-set method theory, SDP duality, descent-rate, Wolfe/line-search/projected/proximal-gradient convergence, circle/inversion/cyclic-geometry theorems, and convergence marked horizon. |
 | `complex` | `complex_analysis`, `linear_algebra` | `complex-algebraic-v0`, `complex-plane-transforms-v0` | Complex arithmetic, unit-root cycles, conjugation, and rational transforms as real-pair algebraic constraints. |
 | `divisibility-and-euclid` | `number_theory` | `gcd-bezout-v0` | GCD, Bezout witness replay, divisibility checks. |
-| `modular-arithmetic` | `number_theory`, `abstract_algebra` | `modular-arithmetic-v0`, `finite-ideals-v0` | Congruences, inverses, CRT, fixed-modulus enumeration, checked QF_LIA nonunit and incompatible-CRT Diophantine obstructions, a checked fixed-width QF_BV/DRAT modulo-5 Fermat-unit search, modular ring ideals, and quotient rings. |
+| `modular-arithmetic` | `number_theory`, `abstract_algebra` | `modular-arithmetic-v0`, `finite-ideals-v0` | Congruences, inverses, CRT, fixed-modulus enumeration, checked QF_LIA nonunit and incompatible-CRT Diophantine obstructions, checked fixed-width QF_BV/DRAT nonunit-inverse and modulo-5 Fermat-unit searches, modular ring ideals, and quotient rings. |
 | `groups` | `abstract_algebra` | `finite-groups-v0`, `finite-algebra-homomorphisms-v0`, `finite-monoids-v0`, `finite-permutation-groups-v0`, `finite-group-actions-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-modules-v0`, `finite-tensor-products-v0` | Cayley-table closure, identity, inverse, associativity, homomorphism, kernel/image, quotient, finite monoids, units/idempotents, finite permutation groups, cycle/sign replay, finite group actions, orbit/stabilizer replay, Burnside counting, vector-addition groups, dual-space additive groups, module-addition groups, finite tensor-product additive groups, and induced-map checks. |
 | `rings` | `abstract_algebra` | `finite-rings-v0`, `finite-algebra-homomorphisms-v0`, `finite-modules-v0`, `finite-ideals-v0` | Two-operation table checks, distributivity, multiplicative identity, zero divisors, ring-homomorphism preservation, ideals, quotient rings, and finite module actions over rings. |
 | `fields` | `abstract_algebra`, `number_theory` | `finite-fields-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-tensor-products-v0`, `polynomial-factorization-rational-v0` | Field axioms over small prime fields, composite modulus counterexamples, finite vector spaces over `F2`, covectors and dual bases, bilinear maps, tensor-product replay, and rational polynomial arithmetic over `Q[x]`. |
@@ -624,7 +624,7 @@ Recommended order:
    Diophantine obstruction checks.
 4. `modular-arithmetic-v0` and `finite-ideals-v0`: CRT, modular inverse,
    residue witness checks, checked QF_LIA nonunit and incompatible-CRT
-   Diophantine obstructions, checked fixed-width QF_BV/DRAT Fermat-unit search,
+   Diophantine obstructions, checked fixed-width QF_BV/DRAT nonunit-inverse and Fermat-unit searches,
    modular ring ideals, quotient-ring replay,
    quotient representative congruence, and ring-homomorphism kernel/image
    checks.
@@ -1128,7 +1128,7 @@ propositional truth-table replay, finite predicate replay, proof-by-refutation
 replay, proof-pattern replay, bounded induction-obligation replay,
 induction-pattern replay, graph coloring, bounded natural-arithmetic replay,
 signed integer-LIA replay, gcd/Bezout replay, modular-arithmetic replay,
-modular nonunit/CRT Diophantine evidence, modular Fermat-unit QF_BV/DRAT
+modular nonunit/CRT Diophantine evidence, modular nonunit-inverse and Fermat-unit QF_BV/DRAT
 evidence, bounded number-theory replay, complex
 real-pair replay, rational midpoint
 replay, bounded rational real-analysis replay, real-algebra RCF-shadow replay,
@@ -1903,8 +1903,8 @@ overlap-additivity count contradiction after finite replay computes the true
 union count.
 The QF_BV/DRAT solver-reuse lane now also has `number-theory-v0` promoted for
 its modulo-7 quadratic nonresidue row and a bad square-root witness row, and
-`modular-arithmetic-v0` promoted for the modulo-5 Fermat-unit counterexample
-search.
+`modular-arithmetic-v0` promoted for the fixed-width nonunit-inverse and
+modulo-5 Fermat-unit counterexample searches.
 The Boolean proof-upgrade lane has its first concrete resource-backed proof
 regression: `graph-coloring-v0` now carries a DIMACS CNF artifact for triangle
 non-2-colorability, and the CNF crate test emits DRAT, elaborates LRAT, and

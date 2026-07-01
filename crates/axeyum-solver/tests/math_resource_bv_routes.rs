@@ -34,6 +34,9 @@ const NUMBER_THEORY_BAD_SQUARE_WITNESS: &str = include_str!(
 const MODULAR_ARITHMETIC_FERMAT_UNITS_MOD5: &str = include_str!(
     "../../../artifacts/examples/math/modular-arithmetic-v0/smt2/fermat-units-mod5-bitblast-conflict.smt2"
 );
+const MODULAR_ARITHMETIC_NONUNIT_INVERSE_MOD6: &str = include_str!(
+    "../../../artifacts/examples/math/modular-arithmetic-v0/smt2/nonunit-inverse-mod6-bitblast-conflict.smt2"
+);
 const FINITE_SIMPLICIAL_CUP_PRODUCT_BAD_VALUE: &str = include_str!(
     "../../../artifacts/examples/math/finite-simplicial-cup-products-v0/smt2/bad-cup-product-bitblast-conflict.smt2"
 );
@@ -99,6 +102,14 @@ fn modular_arithmetic_fermat_units_mod5_emits_checked_bv_drat() {
     assert_resource_qf_bv_drat(
         "modular-arithmetic-v0 Fermat units mod 5 bit-blast conflict",
         MODULAR_ARITHMETIC_FERMAT_UNITS_MOD5,
+    );
+}
+
+#[test]
+fn modular_arithmetic_nonunit_inverse_mod6_emits_checked_bv_drat() {
+    assert_resource_qf_bv_drat(
+        "modular-arithmetic-v0 nonunit inverse mod 6 bit-blast conflict",
+        MODULAR_ARITHMETIC_NONUNIT_INVERSE_MOD6,
     );
 }
 

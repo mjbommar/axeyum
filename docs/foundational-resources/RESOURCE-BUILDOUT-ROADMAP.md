@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 583 expected checks.
-- 265 checked proof/evidence rows.
+- 584 expected checks.
+- 266 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1679,7 +1679,7 @@ Pick one item per commit unless the change is purely navigational.
     `finite-ideals-v0` to concrete CRT congruence replay, modular inverse
     replay, fixed residue searches, finite-field unit/nonunit contrasts,
     checked nonunit/CRT Diophantine evidence, and checked fixed-width
-    Fermat-unit QF_BV evidence. The foundational smoke check now exercises
+    nonunit-inverse plus Fermat-unit QF_BV evidence. The foundational smoke check now exercises
     number-theory CRT concept lookup.
 94. Landed: add the finite-counting replay bridge row, tying `counting-v0`,
     `proof-methods-refutation-v0`, `cardinality-principles-v0`,

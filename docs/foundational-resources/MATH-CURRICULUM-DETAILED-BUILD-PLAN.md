@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 583 expected checks.
-- 265 checked proof/evidence rows.
+- 584 expected checks.
+- 266 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -245,7 +245,7 @@ Exit criteria:
 | `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding has a source-linked bad-iterate row, separation has a source-linked bad-separator row, KKT has a source-linked bad-stationarity row, active-set QP has a source-linked bad-free-gradient row, SDP has a source-linked bad-objective row, gradient descent has a source-linked bad-decrease row, finite circle geometry has source-linked bad-radius and bad line-intersection rows, finite inversion geometry has source-linked bad inverse-coordinate and inverse-distance-product rows, and finite cyclic geometry has source-linked bad diagonal-intersection, bad opposite-angle, and bad Ptolemy rows; keep completeness, convergence, separation, KKT sufficiency, active-set method theory, SDP duality, descent-rate, general circle/inversion/cyclic geometry, and broad CAD/SOS/RCF claims horizon |
 | `complex` | deepen | complex-plane bad unit-square real-part row now has a source-linked QF_LRA/Farkas regression; keep analytic theorems Lean-horizon |
 | `divisibility-and-euclid` | maintain | use gcd/Bezout rows as arithmetic-certificate examples |
-| `modular-arithmetic` | maintain | keep LIA nonunit/CRT and BV fixed-width Fermat-unit residue routes distinct |
+| `modular-arithmetic` | maintain | keep LIA nonunit/CRT and BV fixed-width nonunit-inverse/Fermat-unit residue routes distinct |
 | `groups` | maintain | table replay plus Alethe equality conflicts |
 | `rings` | maintain | BV fixed finite rings only when width is conceptually relevant |
 | `fields` | maintain | finite fields plus linear-algebra links; arbitrary-field facts horizon |
@@ -682,7 +682,7 @@ Pick one row per commit unless the change is purely navigational.
     `bridge_modular_crt_inverse_witness` makes concrete CRT congruence
     witnesses, modular inverse witnesses, fixed residue searches, finite-field
     unit/nonunit contrasts, quotient-ring-adjacent vocabulary, and the checked
-    nonunit Diophantine certificate queryable from the atlas. The
+    nonunit Diophantine and fixed-width QF_BV certificates queryable from the atlas. The
     number-theory consumer smoke now includes CRT concept lookup, and that
     increment raised the atlas to 52 bridge rows.
 80. Landed: add the finite-counting replay bridge row.

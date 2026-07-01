@@ -28,6 +28,15 @@ The SMT-LIB artifact encodes the same non-unit inverse question as
 `2*b - 6*k = 1` over integers. Axeyum emits and checks an
 `UnsatDiophantine` certificate: `gcd(2,6) = 2` does not divide `1`.
 
+## `composite-nonunit-no-inverse-qf-bv-drat`
+
+Expected result: `unsat`.
+
+The fixed-width SMT-LIB artifact represents the finite residue search as a
+3-bit candidate `b` with `b < 6`, zero-extends it to 6 bits, and asserts the
+impossible equation `(2*b) mod 6 = 1`. The QF_BV route bit-blasts the formula
+and rechecks the emitted DIMACS/DRAT refutation.
+
 ## `qf-lia-incompatible-crt-diophantine`
 
 Expected result: `unsat`.

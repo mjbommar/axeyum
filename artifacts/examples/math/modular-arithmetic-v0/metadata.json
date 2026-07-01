@@ -18,10 +18,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "modular inverse, CRT, and fixed-width Fermat-unit regression seeds",
-    "pressure": "Nonunit inverse obstruction where 2*b - 6*k = 1 and incompatible CRT obstruction where 4*a - 6*b = 1 have no integer solution because the relevant gcd does not divide the right-hand side, plus a fixed-width residue search proving no modulo-5 unit violates a^4 = 1.",
+    "target": "modular inverse, CRT, and fixed-width residue regression seeds",
+    "pressure": "Nonunit inverse obstructions where 2*b - 6*k = 1 has no integer solution because gcd(2,6) does not divide 1 and where the fixed-width search b < 6 cannot satisfy (2*b) mod 6 = 1, an incompatible CRT obstruction where 4*a - 6*b = 1 has no integer solution because gcd(4,6) does not divide 1, plus a fixed-width residue search proving no modulo-5 unit violates a^4 = 1.",
     "evidence": [
       "qf-lia-nonunit-diophantine",
+      "composite-nonunit-no-inverse-qf-bv-drat",
       "qf-lia-incompatible-crt-diophantine",
       "fermat-units-mod-prime-qf-bv-drat"
     ],
@@ -38,6 +39,7 @@
     "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
     "docs/learn/math/diophantine-certificate-anatomy-end-to-end.md",
     "artifacts/examples/math/modular-arithmetic-v0/smt2/nonunit-inverse-diophantine-conflict.smt2",
+    "artifacts/examples/math/modular-arithmetic-v0/smt2/nonunit-inverse-mod6-bitblast-conflict.smt2",
     "artifacts/examples/math/modular-arithmetic-v0/smt2/incompatible-crt-diophantine-conflict.smt2",
     "artifacts/examples/math/modular-arithmetic-v0/smt2/fermat-units-mod5-bitblast-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
@@ -48,6 +50,7 @@
     "modular-inverse-witness",
     "composite-nonunit-no-inverse",
     "qf-lia-nonunit-diophantine",
+    "composite-nonunit-no-inverse-qf-bv-drat",
     "qf-lia-incompatible-crt-diophantine",
     "fermat-units-mod-prime",
     "fermat-units-mod-prime-qf-bv-drat"

@@ -114,6 +114,7 @@ python3 scripts/query-foundational-resources.py checks --field abstract_algebra 
 python3 scripts/query-foundational-resources.py checks --concept bridge_homomorphism_preservation --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field abstract_algebra --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field number_theory --route Diophantine --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack modular-arithmetic-v0 --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field number_theory --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field number_theory --text totality --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field number_theory --text gcd --require-any >/dev/null
