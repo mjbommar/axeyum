@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 607 expected checks.
-- 286 checked proof/evidence rows.
-- 250 replay-only rows.
+- 609 expected checks.
+- 287 checked proof/evidence rows.
+- 251 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -197,7 +197,7 @@ Route plan:
 | Boolean CNF DRAT/LRAT | finite Boolean refutations, graph/search/set-family conflicts | Promote small topology and graph rows that are source-level obvious. |
 | QF_BV DRAT | fixed-width residue, bit-vector, and finite algebra conflicts | Promote only when width is part of the educational claim. |
 | QF_LIA/Diophantine | integer equations, counts, modular obstructions, rank coefficients, torsion membership | Group recurring gcd/divisibility and quotient-boundary obstructions as cookbook examples. |
-| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad separator, bad stationarity, bad free-gradient, bad objective, bad decrease, bad step-coordinate, bad Armijo, bad accepted-candidate, bad Wolfe minimizer, bad Wolfe curvature, bad projection, and bad proximal-point rows with independent Farkas checks. |
+| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad separator, bad stationarity, bad free-gradient, bad degenerate multiplier, bad objective, bad decrease, bad step-coordinate, bad Armijo, bad accepted-candidate, bad Wolfe minimizer, bad Wolfe curvature, bad projection, and bad proximal-point rows with independent Farkas checks. |
 | QF_UF/Alethe | equality-heavy finite functions, quotients, homomorphisms | Use table replay for objects, Alethe for congruence conflicts. |
 | Lean horizon | induction schemas, completeness, topology, measure, asymptotics | Record theorem shape and dependencies; do not benchmark as finite checks. |
 
@@ -660,8 +660,8 @@ Build next:
   QF_LRA/Farkas artifact; keep `finite-separation-v0`'s bad separator row tied
   to its source QF_LRA/Farkas artifact; keep `finite-kkt-v0`'s bad
   stationarity row tied to its source QF_LRA/Farkas artifact; keep
-  `finite-active-set-qp-v0`'s bad free-gradient row tied to its source
-  QF_LRA/Farkas artifact; keep `finite-sdp-v0`'s bad objective row tied to its
+  `finite-active-set-qp-v0`'s bad free-gradient and bad degenerate-multiplier
+  rows tied to their source QF_LRA/Farkas artifacts; keep `finite-sdp-v0`'s bad objective row tied to its
   source QF_LRA/Farkas artifact; keep `finite-gradient-descent-v0`'s bad decrease and bad
   step-coordinate rows tied to their source QF_LRA/Farkas artifacts; keep `finite-line-search-v0`'s bad Armijo and
   bad accepted-candidate rows tied to their source QF_LRA/Farkas artifacts; keep
@@ -872,15 +872,16 @@ Build next:
   face replay. Finite KKT now adds constrained-quadratic stationarity and
   complementary-slackness replay. Finite active-set QP now adds exact
   unconstrained-minimizer replay, active-face candidate replay, inactive slack,
-  and bad free-gradient Farkas evidence. Finite SDP now adds two-by-two PSD,
+  degenerate active-bound replay, and bad free-gradient plus bad
+  degenerate-multiplier Farkas evidence. Finite SDP now adds two-by-two PSD,
   trace/objective, slack, and dual-gap replay. Finite gradient descent now adds
   exact quadratic step and descent-bound replay. Finite line search now adds
   Armijo trial rejection and accepted-backtrack replay. Finite Wolfe line
   search now adds sufficient-decrease and curvature replay. Finite projected
   gradient now adds interval projection after a trial step. Finite proximal
   gradient now adds L1 soft-threshold replay after a trial step. Add narrower
-  rows only when multiple packs need distinct duality, degenerate active sets,
-  working-set pivots, higher-dimensional SDP, strong-Wolfe/nonconvex
+  rows only when multiple packs need distinct duality, working-set pivots,
+  higher-dimensional SDP, strong-Wolfe/nonconvex
   line-search, box-plus-L1, affine monotonicity, or stochastic convergence
   vocabulary.
 - Promote small infeasible LP/convexity/root-finding/separation/KKT/active-set

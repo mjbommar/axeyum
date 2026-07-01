@@ -38,12 +38,13 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-active-set-qp-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite active-set QP bad free-gradient QF_LRA/Farkas regression seed",
-    "pressure": "Exact active-set replay computes free-coordinate stationarity error 2 for the malformed active-face candidate.",
+    "target": "finite active-set QP bad free-gradient and degenerate-multiplier QF_LRA/Farkas regression seeds",
+    "pressure": "Exact active-set replay computes free-coordinate stationarity error 2 for the malformed active-face candidate, and degenerate active-bound replay computes stationarity error 1 for a false positive multiplier.",
     "evidence": [
-      "bad-active-set-free-gradient-rejected"
+      "bad-active-set-free-gradient-rejected",
+      "bad-degenerate-active-multiplier-rejected"
     ],
-    "next_step": "Promote additional active-set rows only when they add distinct degenerate active sets, working-set pivots, equality-constrained solves, cycling guards, or convergence pressure; keep general active-set method theory in horizon lanes."
+    "next_step": "Promote additional active-set rows only when they add distinct working-set pivots, equality-constrained solves, cycling guards, or convergence pressure; keep general active-set method theory in horizon lanes."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -56,6 +57,7 @@
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "docs/learn/math/finite-active-set-qp-end-to-end.md",
     "artifacts/examples/math/finite-active-set-qp-v0/smt2/bad-free-gradient-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-active-set-qp-v0/smt2/bad-degenerate-multiplier-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
@@ -64,12 +66,14 @@
     "active-set-kkt-replay",
     "inactive-constraint-slack-replay",
     "bad-active-set-free-gradient-rejected",
+    "degenerate-active-bound-replay",
+    "bad-degenerate-active-multiplier-rejected",
     "general-active-set-method-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite active-set QP witnesses as deterministic exact-rational replay rows.",
-    "Replay unconstrained minimizers, active-face candidates, constraint slacks, KKT multipliers, stationarity residuals, and free-coordinate errors over exact rationals.",
-    "Route false active-set candidate claims through checked QF_LRA/Farkas evidence after replay computes the stationarity error.",
+    "Replay unconstrained minimizers, active-face candidates, degenerate active bounds, constraint slacks, KKT multipliers, stationarity residuals, and free-coordinate errors over exact rationals.",
+    "Route false active-set candidate and false degenerate-multiplier claims through checked QF_LRA/Farkas evidence after replay computes the stationarity error.",
     "Keep general active-set finite termination, cycling, degeneracy, and convergence claims marked Lean-horizon until proof artifacts exist."
   ]
 }

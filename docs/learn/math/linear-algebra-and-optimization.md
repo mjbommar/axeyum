@@ -90,7 +90,8 @@ QF_LRA/Farkas bad-separator certificate. The finite-KKT slice adds exact
 constrained-quadratic grid replay, stationarity replay, complementary-slackness
 checking, and a checked QF_LRA/Farkas bad-stationarity certificate. The finite
 active-set QP slice adds exact active-face replay, inactive-constraint slack
-checking, and a checked QF_LRA/Farkas bad-free-gradient certificate. The finite
+checking, degenerate active-bound replay, and checked QF_LRA/Farkas
+bad-free-gradient plus bad-degenerate-multiplier certificates. The finite
 SDP slice adds two-by-two PSD replay, trace/objective arithmetic, dual-slack
 matrix replay, zero duality-gap checking, and a checked QF_LRA/Farkas
 bad-objective certificate. The finite-gradient-descent slice adds exact
@@ -358,7 +359,9 @@ inactive slack for `y >= 0`, KKT stationarity with multiplier `2`, and the
 zero complementarity products. Its bad row claims `(1,0)` solves the same
 active-face subproblem; exact replay computes free stationarity error `2`, and
 the final nonpositive-error contradiction is checked through QF_LRA/Farkas
-evidence. For a focused trace, read
+evidence. The same pack also checks a degenerate tight bound at `(1,0)` where
+the correct multiplier is zero, and rejects a malformed positive multiplier by
+Farkas evidence. For a focused trace, read
 [End To End: Finite Active-Set QP Checks](finite-active-set-qp-end-to-end.md).
 
 For a finite circle-geometry example, encode a point, tangent direction, and

@@ -32,6 +32,26 @@
         "bad_stationarity_residual": ["0", "-2"],
         "bad_free_stationarity_error": "2"
       }
+    },
+    {
+      "id": "degenerate-bound-active-set-qp",
+      "description": "A degenerate active-set QP witness where the unconstrained minimizer already lies on the active bound x <= 1, so the tight active constraint has zero multiplier.",
+      "values": {
+        "center": ["1", "0"],
+        "quadratic_diagonal": ["1", "1"],
+        "candidate": ["1", "0"],
+        "candidate_value": "0",
+        "candidate_gradient": ["0", "0"],
+        "active_normal": ["1", "0"],
+        "active_bound": "1",
+        "active_constraint_value": "1",
+        "active_constraint_slack": "0",
+        "active_multiplier": "0",
+        "stationarity_residual": ["0", "0"],
+        "claimed_active_multiplier": "1",
+        "claimed_stationarity_residual": ["1", "0"],
+        "claimed_stationarity_error": "1"
+      }
     }
   ],
   "checks": [
@@ -86,6 +106,33 @@
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
       "notes": "Exact replay computes free-coordinate stationarity error 2 for (1,0), so the malformed nonpositive-error claim is rejected by checked Farkas evidence."
+    },
+    {
+      "id": "degenerate-active-bound-replay",
+      "claim": "For f(x,y)=(x-1)^2+y^2 with x <= 1, the minimizer (1,0) is feasible and tight on the active bound with zero multiplier.",
+      "expected_result": "sat",
+      "validation": "finite_degenerate_active_set_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["degenerate-bound-active-set-qp"],
+      "notes": "The validator recomputes the zero gradient, tight active constraint, zero multiplier, and zero stationarity residual over exact rationals."
+    },
+    {
+      "id": "bad-degenerate-active-multiplier-rejected",
+      "claim": "The same degenerate active-bound optimum accepts a positive active multiplier lambda=1 while preserving stationarity.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_degenerate_active_multiplier_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "degenerate-bound-active-set-qp",
+        "computed_active_multiplier": "0",
+        "claimed_active_multiplier": "1",
+        "computed_stationarity_error": "0",
+        "claimed_stationarity_error": "1",
+        "smt2_artifact": "artifacts/examples/math/finite-active-set-qp-v0/smt2/bad-degenerate-multiplier-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_active_set_qp_bad_degenerate_multiplier_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes zero gradient at a tight bound; any positive multiplier along normal (1,0) leaves stationarity error 1, so the malformed row is rejected by checked Farkas evidence."
     },
     {
       "id": "general-active-set-method-lean-horizon",

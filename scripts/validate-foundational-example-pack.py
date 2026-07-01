@@ -11212,6 +11212,160 @@ def validate_finite_active_set_qp(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-active-set-free-gradient-rejected certificate must document checked Farkas evidence")
 
+    degenerate = checks["degenerate-active-bound-replay"]
+    if degenerate["expected_result"] != "sat":
+        fail("degenerate-active-bound-replay must expect sat")
+    degenerate_values = single_witness_values(degenerate, witnesses)
+    degenerate_center = require_fraction_vector(
+        "degenerate active-set center",
+        degenerate_values.get("center"),
+    )
+    degenerate_diagonal = require_fraction_vector(
+        "degenerate active-set quadratic_diagonal",
+        degenerate_values.get("quadratic_diagonal"),
+    )
+    degenerate_candidate = require_fraction_vector(
+        "degenerate active-set candidate",
+        degenerate_values.get("candidate"),
+    )
+    degenerate_candidate_value = require_fraction(
+        "degenerate active-set candidate_value",
+        degenerate_values.get("candidate_value"),
+    )
+    degenerate_gradient = require_fraction_vector(
+        "degenerate active-set candidate_gradient",
+        degenerate_values.get("candidate_gradient"),
+    )
+    degenerate_normal = require_fraction_vector(
+        "degenerate active-set active_normal",
+        degenerate_values.get("active_normal"),
+    )
+    degenerate_bound = require_fraction(
+        "degenerate active-set active_bound",
+        degenerate_values.get("active_bound"),
+    )
+    degenerate_constraint_value = require_fraction(
+        "degenerate active-set active_constraint_value",
+        degenerate_values.get("active_constraint_value"),
+    )
+    degenerate_slack = require_fraction(
+        "degenerate active-set active_constraint_slack",
+        degenerate_values.get("active_constraint_slack"),
+    )
+    degenerate_multiplier = require_fraction(
+        "degenerate active-set active_multiplier",
+        degenerate_values.get("active_multiplier"),
+    )
+    degenerate_stationarity = require_fraction_vector(
+        "degenerate active-set stationarity_residual",
+        degenerate_values.get("stationarity_residual"),
+    )
+    claimed_multiplier = require_fraction(
+        "degenerate active-set claimed_active_multiplier",
+        degenerate_values.get("claimed_active_multiplier"),
+    )
+    claimed_stationarity = require_fraction_vector(
+        "degenerate active-set claimed_stationarity_residual",
+        degenerate_values.get("claimed_stationarity_residual"),
+    )
+    claimed_stationarity_error = require_fraction(
+        "degenerate active-set claimed_stationarity_error",
+        degenerate_values.get("claimed_stationarity_error"),
+    )
+    require_vector_length("degenerate active-set center", degenerate_center, 2)
+    require_vector_length("degenerate active-set quadratic_diagonal", degenerate_diagonal, 2)
+    require_vector_length("degenerate active-set active_normal", degenerate_normal, 2)
+    if any(coefficient <= 0 for coefficient in degenerate_diagonal):
+        fail("degenerate-active-bound-replay quadratic_diagonal entries must be positive")
+    if degenerate_candidate != degenerate_center:
+        fail("degenerate-active-bound-replay candidate must be the unconstrained minimizer")
+    if diagonal_center_quadratic_value(
+        degenerate_diagonal,
+        degenerate_center,
+        degenerate_candidate,
+    ) != degenerate_candidate_value:
+        fail("degenerate-active-bound-replay candidate_value is incorrect")
+    if diagonal_center_quadratic_gradient(
+        degenerate_diagonal,
+        degenerate_center,
+        degenerate_candidate,
+    ) != degenerate_gradient:
+        fail("degenerate-active-bound-replay candidate_gradient is incorrect")
+    if any(component != 0 for component in degenerate_gradient):
+        fail("degenerate-active-bound-replay expected zero gradient")
+    if dot_product(degenerate_normal, degenerate_candidate) != degenerate_constraint_value:
+        fail("degenerate-active-bound-replay active_constraint_value is incorrect")
+    if degenerate_bound - degenerate_constraint_value != degenerate_slack:
+        fail("degenerate-active-bound-replay active_constraint_slack is incorrect")
+    if degenerate_slack != 0:
+        fail("degenerate-active-bound-replay active bound must be tight")
+    computed_degenerate_stationarity = vector_add_fraction(
+        degenerate_gradient,
+        scalar_vec(degenerate_multiplier, degenerate_normal),
+    )
+    if degenerate_stationarity != computed_degenerate_stationarity:
+        fail("degenerate-active-bound-replay stationarity_residual is incorrect")
+    if any(component != 0 for component in degenerate_stationarity):
+        fail("degenerate-active-bound-replay expected zero stationarity residual")
+    if degenerate_multiplier != 0:
+        fail("degenerate-active-bound-replay active multiplier must be zero")
+    computed_claimed_stationarity = vector_add_fraction(
+        degenerate_gradient,
+        scalar_vec(claimed_multiplier, degenerate_normal),
+    )
+    if claimed_stationarity != computed_claimed_stationarity:
+        fail("degenerate-active-bound-replay claimed_stationarity_residual is incorrect")
+    if sum(abs(component) for component in claimed_stationarity) != claimed_stationarity_error:
+        fail("degenerate-active-bound-replay claimed_stationarity_error is incorrect")
+    if claimed_stationarity_error <= 0:
+        fail("degenerate-active-bound-replay malformed multiplier must have positive error")
+
+    bad_degenerate = checks["bad-degenerate-active-multiplier-rejected"]
+    if bad_degenerate["expected_result"] != "unsat" or bad_degenerate.get("proof_status") != "checked":
+        fail("bad-degenerate-active-multiplier-rejected must be a checked unsat row")
+    data = bad_degenerate.get("data", {})
+    if data.get("source_witness") != "degenerate-bound-active-set-qp":
+        fail("bad-degenerate-active-multiplier-rejected must cite the degenerate-bound-active-set-qp witness")
+    computed_multiplier = require_fraction(
+        "bad degenerate computed_active_multiplier",
+        data.get("computed_active_multiplier"),
+    )
+    data_claimed_multiplier = require_fraction(
+        "bad degenerate claimed_active_multiplier",
+        data.get("claimed_active_multiplier"),
+    )
+    computed_stationarity_error = require_fraction(
+        "bad degenerate computed_stationarity_error",
+        data.get("computed_stationarity_error"),
+    )
+    data_claimed_stationarity_error = require_fraction(
+        "bad degenerate claimed_stationarity_error",
+        data.get("claimed_stationarity_error"),
+    )
+    if computed_multiplier != degenerate_multiplier:
+        fail("bad-degenerate-active-multiplier-rejected computed multiplier does not match replay")
+    if data_claimed_multiplier != claimed_multiplier:
+        fail("bad-degenerate-active-multiplier-rejected claimed multiplier does not match witness")
+    if computed_stationarity_error != 0:
+        fail("bad-degenerate-active-multiplier-rejected computed stationarity error must be zero")
+    if data_claimed_stationarity_error != claimed_stationarity_error:
+        fail("bad-degenerate-active-multiplier-rejected claimed stationarity error does not match replay")
+    if data_claimed_stationarity_error <= computed_stationarity_error:
+        fail("bad-degenerate-active-multiplier-rejected malformed error must contradict replay")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad degenerate smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-active-set-qp-v0/smt2/bad-degenerate-multiplier-farkas-conflict.smt2":
+        fail("bad-degenerate-active-multiplier-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad degenerate smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad degenerate farkas_regression", regression)
+    if "finite_active_set_qp_bad_degenerate_multiplier_artifact_emits_checked_farkas" not in regression:
+        fail("bad-degenerate-active-multiplier-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad degenerate certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-degenerate-active-multiplier-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-active-set-method-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-active-set-method-lean-horizon must be not-run")

@@ -2,9 +2,9 @@
 
 This lesson follows
 [finite-active-set-qp-v0](../../../artifacts/examples/math/finite-active-set-qp-v0/)
-from one exact active-set witness through KKT replay, inactive-constraint
-replay, and checked Farkas evidence. It is a finite active-set certificate, not
-a general active-set convergence theorem.
+from exact active-set witnesses through KKT replay, inactive-constraint replay,
+a degenerate active-bound check, and checked Farkas evidence. It is a finite
+active-set certificate, not a general active-set convergence theorem.
 
 ## Concept
 
@@ -25,7 +25,7 @@ the face `x = 1`. On that face, the free-coordinate minimizer is `y = 1`.
 
 ## What Gets Checked
 
-The pack has six rows:
+The pack has eight rows:
 
 | Row | Result | Evidence |
 |---|---|---|
@@ -34,6 +34,8 @@ The pack has six rows:
 | `active-set-kkt-replay` | `sat` | replay-only |
 | `inactive-constraint-slack-replay` | `sat` | replay-only |
 | `bad-active-set-free-gradient-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `degenerate-active-bound-replay` | `sat` | replay-only |
+| `bad-degenerate-active-multiplier-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-active-set-method-lean-horizon` | `not-run` | Lean horizon |
 
 The replay rows use exact rational arithmetic. They do not use floating-point
@@ -112,6 +114,37 @@ that the error is nonpositive:
 Axeyum parses that source row, emits `UnsatFarkas` evidence, and independently
 checks the certificate.
 
+## Degenerate Active Bound
+
+The pack also includes a small degenerate active-set row:
+
+```text
+g(x,y) = (x - 1)^2 + y^2
+x <= 1
+```
+
+Here the unconstrained minimizer `(1,0)` already lies on the active bound. The
+constraint is tight, but the gradient is zero:
+
+```text
+grad g(1,0) = (0,0)
+lambda = 0
+grad g(1,0) + lambda*(1,0) = (0,0)
+```
+
+That is the finite resource's degeneracy slice: an active constraint can be
+tight without carrying a positive multiplier. The checked bad row changes only
+the multiplier:
+
+```text
+claimed lambda = 1
+stationarity residual = (1,0)
+stationarity error = 1
+```
+
+The source SMT-LIB artifact fixes the replayed stationarity error as both `1`
+and `0`, giving another tiny QF_LRA/Farkas contradiction.
+
 ## What This Does Not Prove
 
 The pack does not prove that an active-set method terminates for every convex
@@ -130,5 +163,5 @@ general active-set method theorem: future Lean reconstruction
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-active-set-qp-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_active_set_qp_bad_free_gradient_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_active_set_qp_bad_
 ```

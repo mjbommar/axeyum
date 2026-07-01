@@ -48,9 +48,9 @@ As of 2026-07-01, the public resource query reports:
 - 111 concept rows: 23 curriculum nodes, 18 math fields, 65 bridge concepts, and
   5 example families.
 - 108 non-template math packs.
-- 607 expected checks: 332 `sat`, 204 `unsat`, and 71 `not-run`.
-- 286 checked proof/evidence rows.
-- 250 replay-only rows.
+- 609 expected checks: 333 `sat`, 205 `unsat`, and 71 `not-run`.
+- 287 checked proof/evidence rows.
+- 251 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 unclassified solver-reuse packs.
@@ -194,7 +194,7 @@ real use.
 | `measure_theory` | finite measures, integration, product measures, random variables | QF_LRA/Farkas, replay, Lean horizon | countable-measure and convergence horizons without benchmark claims |
 | `probability_theory` | PMFs, kernels, Markov chains, martingales, hitting times, concentration | QF_LRA/Farkas, QF_LIA, replay | exact discrete distribution variants plus limit-theorem horizons |
 | `statistics` | descriptive statistics, exact tests, regression, contingency tables | QF_LIA, QF_LRA, replay | exact finite inference plus numerical/statistical-honesty metadata |
-| `optimization_and_convexity` | LP/Farkas, convexity, KKT, SDP, descent, line search, projections, proximal steps | QF_LRA/Farkas, QF_NRA, Lean horizon | duality/degenerate active-set/strong-Wolfe variants only when distinct |
+| `optimization_and_convexity` | LP/Farkas, convexity, KKT, SDP, descent, line search, projections, proximal steps | QF_LRA/Farkas, QF_NRA, Lean horizon | duality/working-set/strong-Wolfe variants only when distinct |
 | `numerical_analysis` | residuals, Euler steps, interval/error recurrence, finite algorithms | QF_LRA/Farkas, replay, Lean horizon | pivoting/stability metadata and exact-vs-floating examples |
 | `differential_equations_and_dynamical_systems` | recurrences, Euler traces, invariants, finite hitting times | QF_LRA/Farkas, replay, Lean horizon | transition/invariant variants with explicit continuous-theory boundary |
 | `geometry` | coordinate, incidence, affine, rigid, circle, inversion, cyclic geometry | QF_LRA/Farkas, replay, QF_NRA horizon | nontrivial circle-line or polynomial-geometry rows with checked artifacts |

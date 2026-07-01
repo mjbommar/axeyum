@@ -183,8 +183,9 @@ Companion maps:
   Lean horizon.
 - [Finite Active-Set QP Checks](finite-active-set-qp-end-to-end.md): follows
   unconstrained minimizer replay, active-face candidate replay, inactive
-  constraint slack, checked QF_LRA/Farkas bad-free-gradient rejection, and the
-  general active-set method Lean horizon.
+  constraint slack, degenerate active-bound replay, checked QF_LRA/Farkas
+  bad-free-gradient and bad-degenerate-multiplier rejection, and the general
+  active-set method Lean horizon.
 - [Finite SDP Checks](finite-sdp-end-to-end.md): follows two-by-two PSD replay,
   objective and dual-slack replay, checked QF_LRA/Farkas bad-objective
   rejection, and the general SDP duality Lean horizon.

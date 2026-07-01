@@ -113,8 +113,9 @@ Concrete work:
   measure/Farkas covers finite event-algebra, product-measure, integration,
   random-variable, conditional-expectation, and stochastic-process resources.
   Optimization/Farkas covers exact LP thresholds, finite convexity shadows,
-  finite KKT stationarity replay, active-set QP free-gradient conflicts, finite
-  SDP objective/slack replay, finite gradient-descent step replay, finite
+  finite KKT stationarity replay, active-set QP free-gradient and
+  degenerate-multiplier conflicts, finite SDP objective/slack replay, finite
+  gradient-descent step replay, finite
   line-search rejected-step and accepted-candidate replay, finite Wolfe
   line-search exact-minimizer replay, finite projected-gradient replay, finite
   proximal-gradient replay, least-squares

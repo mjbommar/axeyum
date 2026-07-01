@@ -55,9 +55,9 @@ As of 2026-07-01, the committed resource query reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 607 expected checks.
-- 286 checked proof/evidence rows.
-- 250 replay-only rows.
+- 609 expected checks.
+- 287 checked proof/evidence rows.
+- 251 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 unclassified solver-reuse packs.
@@ -318,7 +318,7 @@ Next useful increments:
 | `measure_theory` | finite measure, monotonicity, product measure, integration, random variables, conditioning, martingales | only distinct table/convergence vocabulary; keep countable/Lebesgue material horizon | QF_LRA/Farkas, finite replay, Lean horizon | finite universe and sigma-algebra are explicit |
 | `probability_theory` | finite PMFs, kernels, Markov chains, martingales, hitting times, concentration | exact discrete distributions, independence/conditioning variants, limit-theorem horizons | QF_LRA/Farkas, QF_LIA, finite replay | probability rows can be audited as exact rational tables |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | exact finite inference examples and numerical-honesty metadata | QF_LIA, QF_LRA/Farkas, replay | inference claims distinguish exact finite tests from statistical modeling |
-| `optimization_and_convexity` | LP, convexity, least squares, root finding, KKT, active-set QP, SDP, gradient/line-search/projected/proximal rows | duality, degenerate active sets, working-set pivots, strong-Wolfe, box-plus-L1, stochastic/convergence horizons | QF_LRA/Farkas, QF_NRA, Lean horizon | finite KKT/duality/algorithm rows do not claim general sufficiency/convergence |
+| `optimization_and_convexity` | LP, convexity, least squares, root finding, KKT, active-set QP, SDP, gradient/line-search/projected/proximal rows | duality, working-set pivots, strong-Wolfe, box-plus-L1, stochastic/convergence horizons | QF_LRA/Farkas, QF_NRA, Lean horizon | finite KKT/duality/algorithm rows do not claim general sufficiency/convergence |
 | `numerical_analysis` | residuals, Euler steps, root-finding, finite optimization iterations, operator bounds | landed finite dynamics/Euler bridge for recurrence prefixes, invariants, Euler steps, and finite error tables; add only distinct pivoting/stability or reproducible numerical metadata pressure | QF_LRA/Farkas, replay, Lean horizon | exact replay is separate from floating-point experiment claims |
 | `differential_equations_and_dynamical_systems` | bounded recurrences, Euler traces, finite invariants, stochastic kernels/hitting times | landed finite dynamics/Euler bridge plus stochastic-kernel bridge; add transition/invariant variants only when they add distinct finite pressure | QF_LRA/Farkas, finite replay, Lean horizon | continuous existence/uniqueness and PDE claims stay horizon |
 | `geometry` | coordinate, incidence, rigid, affine, oriented area, circle, inversion, cyclic quadrilaterals | landed finite circle/inversion/cyclic replay bridge; add only distinct nontrivial circle-line correspondence, higher-degree polynomial geometry, or theorem-reconstruction pressure beyond the current area-scaling, circle-line, square angle-dot, and Ptolemy rows | QF_LRA/Farkas, finite replay, QF_NRA horizon | synthetic/global geometry claims stay Lean horizon |

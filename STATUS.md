@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-active-set degenerate multiplier QF_LRA row landed.**
+  `finite-active-set-qp-v0` now includes a degenerate active-bound replay row:
+  exact quadratic replay computes a tight `x <= 1` active constraint at the
+  unconstrained minimizer `(1,0)` with zero gradient and zero active multiplier.
+  A new checked Farkas row rejects the malformed positive multiplier `lambda=1`
+  because exact stationarity replay produces residual `(1,0)` and stationarity
+  error `1`. The validator pins the degenerate witness, claimed multiplier,
+  source SMT-LIB artifact, and regression; the shared `math_resource_lra_routes`
+  regression parses the artifact and checks `UnsatFarkas` evidence. Generated
+  dashboards and the public query summary now report 111 concept rows, 108
+  non-template packs, 609 expected checks, 287 checked rows, 251 replay-only
+  rows, and 71 Lean-horizon rows.
+
 - **Finite-Wolfe-line-search bad minimizer QF_LRA row landed.**
   `finite-wolfe-line-search-v0` now includes a second checked Farkas row:
   exact line-minimizer replay computes `alpha = 1/2` and `x = 0`, while the
@@ -13400,6 +13413,15 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-07-01** — **Finite-active-set degenerate multiplier row landed.**
+  Added a degenerate active-bound witness, replay row, checked
+  QF_LRA/Farkas SMT-LIB artifact, validator logic, and
+  `math_resource_lra_routes` regression to
+  [`artifacts/examples/math/finite-active-set-qp-v0/`](artifacts/examples/math/finite-active-set-qp-v0/).
+  Exact replay keeps the tight bound and zero multiplier distinct from general
+  active-set degeneracy theory, while the malformed positive multiplier is now
+  rejected by checked `UnsatFarkas` evidence.
 
 - **2026-07-01** — **Dynamics query guide landed.**
   Added

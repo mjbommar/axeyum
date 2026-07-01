@@ -588,9 +588,9 @@ rejection of a false stationarity multiplier, and a general KKT-sufficiency
 Lean-horizon row.
 `finite-active-set-qp-v0` now validates exact unconstrained-minimizer replay,
 active-face candidate replay, KKT stationarity/complementarity replay,
-inactive-constraint slack replay, checked QF_LRA/Farkas rejection of a false
-free-coordinate stationarity claim, and a general active-set-method
-Lean-horizon row.
+inactive-constraint slack replay, degenerate active-bound replay, checked
+QF_LRA/Farkas rejection of false free-coordinate stationarity and false
+degenerate-multiplier claims, and a general active-set-method Lean-horizon row.
 `finite-sdp-v0` now validates exact two-by-two PSD replay, trace/objective
 arithmetic, dual-slack matrix replay, zero duality-gap checking, checked
 QF_LRA/Farkas rejection of a false objective claim, and a general SDP-duality
@@ -1120,8 +1120,9 @@ Recommended order:
     remain horizon claims.
 36. `finite-active-set-qp-v0`: exact unconstrained-minimizer replay,
     active-face candidate replay, KKT stationarity/complementarity,
-    inactive-constraint slack replay, and checked QF_LRA/Farkas
-    bad-free-gradient rejection, while finite termination, degeneracy,
+    inactive-constraint slack replay, degenerate active-bound replay, and
+    checked QF_LRA/Farkas bad-free-gradient and bad-degenerate-multiplier
+    rejection, while finite termination, broader degeneracy handling,
     anti-cycling, and active-set convergence theorems remain horizon claims.
 37. `finite-sdp-v0`: exact two-by-two PSD replay, trace/objective arithmetic,
     dual-slack matrix replay, zero duality-gap checking, and checked
@@ -2039,9 +2040,10 @@ outside score `4`.
 `finite-kkt-v0` now routes its bad stationarity row through the same checked
 Farkas evidence path after exact KKT replay computes stationarity residual
 `-1` and stationarity error `1`.
-`finite-active-set-qp-v0` now routes its bad free-gradient row through the same
-checked Farkas evidence path after exact active-face replay computes
-free-coordinate stationarity error `2`.
+`finite-active-set-qp-v0` now routes its bad free-gradient and bad
+degenerate-multiplier rows through the same checked Farkas evidence path after
+exact active-face replay computes free-coordinate stationarity error `2` and
+degenerate active-bound replay computes false positive-multiplier error `1`.
 `finite-sdp-v0` now routes its bad objective row through the same checked
 Farkas evidence path after exact SDP replay computes objective value `1` and
 objective error `1`.

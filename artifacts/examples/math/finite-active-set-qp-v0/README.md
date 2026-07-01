@@ -1,9 +1,10 @@
 # Finite Active-Set Quadratic Program Checks
 
-This pack turns one exact rational active-set quadratic-program trace into
-resource rows. It checks only the listed two-variable quadratic, active face,
-inactive constraint, KKT multipliers, and a false active-set candidate; general
-active-set convergence and finite-termination theorems remain proof horizons.
+This pack turns exact rational active-set quadratic-program traces into resource
+rows. It checks only the listed two-variable quadratics, active faces, inactive
+constraints, KKT multipliers, one degenerate active bound, and malformed
+active-set candidates; general active-set convergence and finite-termination
+theorems remain proof horizons.
 
 ## Audience
 
@@ -24,6 +25,11 @@ active-set convergence and finite-termination theorems remain proof horizons.
   zero inactive multiplier.
 - `bad-active-set-free-gradient-rejected`: rejects the malformed claim that the
   feasible candidate `(1,0)` solves the same active-face subproblem.
+- `degenerate-active-bound-replay`: checks a tight active bound at the
+  unconstrained minimizer where the correct active multiplier is zero.
+- `bad-degenerate-active-multiplier-rejected`: rejects the malformed positive
+  multiplier on that degenerate active bound with checked QF_LRA/Farkas
+  evidence.
 - `general-active-set-method-lean-horizon`: names the future proof route for
   active-set finite termination, degeneracy handling, and convergence theorems.
 
@@ -31,12 +37,13 @@ active-set convergence and finite-termination theorems remain proof horizons.
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-active-set-qp-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_active_set_qp_bad_free_gradient_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_active_set_qp_bad_
 ```
 
 ## Trust Boundary
 
 Untrusted search may propose an active set, candidate point, or multiplier
 table. The trusted work is small: exact objective/gradient replay, exact
-constraint evaluation, exact stationarity and complementarity arithmetic, and
-checked `UnsatFarkas` evidence over the source SMT-LIB row.
+constraint evaluation, exact stationarity and complementarity arithmetic,
+degenerate-bound multiplier replay, and checked `UnsatFarkas` evidence over the
+source SMT-LIB rows.

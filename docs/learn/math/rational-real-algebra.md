@@ -57,8 +57,9 @@ factorization/division/GCD/square-free replay, finite generating-function
 coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
 companion-matrix replay, finite bisection/Newton root-finding replay, finite
 convex-hull/separating-hyperplane replay, finite KKT stationarity and
-complementary-slackness replay, finite active-set QP replay, finite SDP
-primal/dual slack replay, finite gradient-descent step replay, finite
+complementary-slackness replay, finite active-set QP replay including
+degenerate-bound replay, finite SDP primal/dual slack replay, finite
+gradient-descent step replay, finite
 line-search replay, finite Wolfe line-search replay, finite projected-gradient
 replay, finite proximal-gradient replay, LP feasibility and
 infeasibility certificates, finite convexity and monotonicity checks, exact
@@ -239,7 +240,9 @@ the active-face candidate, active and inactive slacks, KKT stationarity, and
 complementarity. Its bad row claims `(1,0)` solves the same active-face
 subproblem; exact replay computes free-coordinate stationarity error `2`, and
 the final nonpositive-error contradiction is checked through QF_LRA/Farkas
-evidence. For a focused trace, read
+evidence. A second row checks a degenerate tight active bound with zero
+multiplier and rejects a false positive multiplier by checked Farkas evidence.
+For a focused trace, read
 [End To End: Finite Active-Set QP Checks](finite-active-set-qp-end-to-end.md).
 
 For a finite SDP check, encode one trace-one primal matrix and dual slack:

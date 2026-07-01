@@ -49,3 +49,24 @@ free-coordinate stationarity error = 2
 
 The source SMT-LIB row fixes that exact replayed error as `2` while claiming it
 is nonpositive, producing a small QF_LRA/Farkas contradiction.
+
+The degenerate active-bound row uses a second two-variable quadratic:
+
+```text
+minimize g(x,y) = (x - 1)^2 + y^2
+subject to x <= 1
+```
+
+The unconstrained minimizer `(1,0)` is feasible and tight on the active bound.
+Its gradient is zero, so stationarity forces the active multiplier to be zero:
+
+```text
+grad g(1,0) = (0,0)
+active normal = (1,0)
+lambda = 0
+grad g(1,0) + lambda*(1,0) = (0,0)
+```
+
+The malformed degenerate row claims `lambda = 1` is also stationary. Exact
+replay computes residual `(1,0)` and stationarity error `1`, and the source
+SMT-LIB row fixes that error as both `1` and `0`.
