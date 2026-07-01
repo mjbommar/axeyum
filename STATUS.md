@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Bounded-monotone bad tail-gap QF_LRA row landed.**
+  `bounded-monotone-sequence-v0` now includes a checked rejection for a
+  malformed finite epsilon-tail row: exact replay computes `a_2 = 2/3`, so the
+  gap to limit `1` is `1/3` and exceeds `epsilon = 1/4` by `1/12`. The
+  validator pins the source witness, exact gap arithmetic, SMT-LIB artifact,
+  regression, and independently checked `UnsatFarkas` certificate. The shared
+  `math_resource_lra_routes` regression parses the artifact and checks the
+  Farkas evidence. Generated dashboards and the public query summary now report
+  111 concept rows, 108 non-template packs, 613 expected checks, 290 checked
+  rows, 252 replay-only rows, and 71 Lean-horizon rows.
+
 - **Convexity rational bad affine-threshold QF_LRA row landed.**
   `convexity-rational-v0` now includes a checked rejection for a malformed
   affine-threshold sample: exact replay computes `g(1/2) = -1/2` for
@@ -213,7 +224,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   artifact, regression, and independently checked `UnsatFarkas` certificate.
   The shared `math_resource_lra_routes` regression parses the artifact and
   checks the Farkas evidence. Generated dashboards and the public query summary
-  now report 111 concept rows, 108 non-template packs, 612 expected checks, 289
+  now report 111 concept rows, 108 non-template packs, 613 expected checks, 290
   checked rows, 252 replay-only rows, and 71 Lean-horizon rows.
 
 - **Finite-proximal-gradient box-plus-L1 QF_LRA row landed.**
@@ -227,7 +238,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   artifact, and regression; the shared `math_resource_lra_routes` regression
   parses the artifact and checks `UnsatFarkas` evidence. Generated dashboards
   and the public query summary now report 111 concept rows, 108 non-template
-  packs, 612 expected checks, 289 checked rows, 252 replay-only rows, and 71
+  packs, 613 expected checks, 290 checked rows, 252 replay-only rows, and 71
   Lean-horizon rows.
 
 - **Finite-active-set degenerate multiplier QF_LRA row landed.**

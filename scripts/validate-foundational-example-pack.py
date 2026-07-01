@@ -9318,6 +9318,57 @@ def validate_bounded_monotone_sequence(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-upper-bound-rejected certificate must document checked Farkas evidence")
 
+    bad_tail = checks["bad-tail-gap-rejected"]
+    if bad_tail["expected_result"] != "unsat" or bad_tail.get("proof_status") != "checked":
+        fail("bad-tail-gap-rejected must be a checked unsat row")
+    data = bad_tail.get("data", {})
+    if data.get("source_witness") != "bounded-tail-gap":
+        fail("bad-tail-gap-rejected must cite the bounded-tail-gap source witness")
+    claimed_start_index = require_nonnegative_int(
+        "bad tail gap claimed_start_index",
+        data.get("claimed_start_index"),
+    )
+    tail_witness_index = require_nonnegative_int(
+        "bad tail gap witness_index",
+        data.get("witness_index"),
+    )
+    tail_witness_value = require_fraction("bad tail gap witness_value", data.get("witness_value"))
+    bad_limit = require_fraction("bad tail gap limit", data.get("limit"))
+    bad_epsilon = require_fraction("bad tail gap epsilon", data.get("epsilon"))
+    tail_gap = require_fraction("bad tail gap tail_gap", data.get("tail_gap"))
+    tail_excess = require_fraction("bad tail gap tail_excess", data.get("tail_excess"))
+    if bad_limit != limit:
+        fail("bad-tail-gap-rejected limit must match the tail-gap witness")
+    if bad_epsilon != epsilon:
+        fail("bad-tail-gap-rejected epsilon must match the tail-gap witness")
+    if claimed_start_index >= start_index:
+        fail("bad-tail-gap-rejected must document a stricter earlier tail claim")
+    if tail_witness_index < claimed_start_index:
+        fail("bad-tail-gap-rejected witness_index must be inside the claimed tail")
+    if tail_witness_index >= len(tail_sequence):
+        fail("bad-tail-gap-rejected witness_index is outside the source sequence")
+    if tail_sequence[tail_witness_index] != tail_witness_value:
+        fail("bad-tail-gap-rejected witness_value does not match replay")
+    if abs(bad_limit - tail_witness_value) != tail_gap:
+        fail("bad-tail-gap-rejected tail_gap does not match replay")
+    if tail_gap - bad_epsilon != tail_excess:
+        fail("bad-tail-gap-rejected tail_excess is incorrect")
+    if tail_excess <= 0:
+        fail("bad-tail-gap-rejected must document a positive epsilon violation")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad tail gap smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-tail-gap-farkas-conflict.smt2":
+        fail("bad-tail-gap-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad tail gap smt2_artifact", smt2_artifact)
+    farkas_regression = data.get("farkas_regression")
+    require_string("bad tail gap farkas_regression", farkas_regression)
+    if "bounded_monotone_sequence_bad_tail_gap_artifact_emits_checked_farkas" not in farkas_regression:
+        fail("bad-tail-gap-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad tail gap certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-tail-gap-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["monotone-convergence-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("monotone-convergence-lean-horizon must be not-run")

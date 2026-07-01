@@ -569,8 +569,9 @@ limit-counterexample replay, monotone bounded prefix replay, a fixed geometric
 partial-sum identity, a bounded Cauchy-tail no-counterexample row, and a
 general convergence Lean-horizon row. `bounded-monotone-sequence-v0` now
 validates finite monotone-prefix replay, finite prefix supremum replay, finite
-tail-gap replay, checked QF_LRA/Farkas rejection of a false upper-bound row,
-and a monotone-convergence Lean-horizon row. `finite-recurrence-prefix-v0` now
+tail-gap replay, checked QF_LRA/Farkas rejection of false upper-bound and
+tail-gap rows, and a monotone-convergence Lean-horizon row.
+`finite-recurrence-prefix-v0` now
 validates Fibonacci prefix replay, affine recurrence replay,
 companion-matrix state replay, checked QF_LRA/Farkas rejection of a false
 finite recurrence value, and a recurrence-theory Lean-horizon row.
@@ -722,8 +723,9 @@ Recommended order:
     counterexamples, monotone bounded prefixes, fixed geometric partial sums,
     and general convergence Lean-horizon metadata.
 19. `bounded-monotone-sequence-v0` (landed): finite monotone-prefix,
-    finite supremum, finite tail-gap replay, checked bad upper-bound
-    QF_LRA/Farkas rejection, and monotone-convergence Lean-horizon metadata.
+    finite supremum, finite tail-gap replay, checked bad upper-bound and
+    bad tail-gap QF_LRA/Farkas rejections, and monotone-convergence
+    Lean-horizon metadata.
 20. `finite-recurrence-prefix-v0` (landed): Fibonacci prefix replay, affine
     recurrence replay, companion-matrix state replay, checked bad finite-value
     QF_LRA/Farkas rejection, and recurrence-theory Lean-horizon metadata.
@@ -1933,8 +1935,8 @@ bounded prefix checks, geometric partial sums, finite Cauchy-tail
 enumeration, and the general limit Lean horizon.
 `bounded-monotone-sequence-v0` now has a learner-facing end-to-end lesson for
 finite monotone-prefix replay, finite prefix supremum, finite tail-gap replay,
-checked QF_LRA/Farkas bad upper-bound rejection, and the monotone convergence
-Lean horizon.
+checked QF_LRA/Farkas bad upper-bound and bad tail-gap rejections, and the
+monotone convergence Lean horizon.
 `calculus-algebraic-shadow-v0` and `calculus-riemann-sum-v0` now have a
 combined learner-facing end-to-end lesson for polynomial derivative replay,
 product-rule and tangent checks, finite Riemann sums, antiderivative endpoint
@@ -2033,7 +2035,8 @@ first failed normal equation and exact mean-baseline RSS replay.
 same checked Farkas evidence path using the final output-bound contradiction.
 `bounded-monotone-sequence-v0` now routes its bad upper-bound row through the
 same checked Farkas evidence path after exact finite-prefix replay computes
-`a_6 = 6/7`.
+`a_6 = 6/7`, and now routes its bad finite tail-gap row after exact replay
+computes `a_2 = 2/3` and gap excess `1/12`.
 `finite-recurrence-prefix-v0` now routes its bad finite-value row through the
 same checked Farkas evidence path after exact recurrence replay computes
 `F_6 = 8`.

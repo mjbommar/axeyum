@@ -70,6 +70,9 @@ const RANDOM_MATRIX_BAD_EXPECTED_RANK: &str = include_str!(
 const BOUNDED_MONOTONE_SEQUENCE_BAD_UPPER_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-upper-bound-farkas-conflict.smt2"
 );
+const BOUNDED_MONOTONE_SEQUENCE_BAD_TAIL_GAP: &str = include_str!(
+    "../../../artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-tail-gap-farkas-conflict.smt2"
+);
 const FINITE_RECURRENCE_PREFIX_BAD_VALUE: &str = include_str!(
     "../../../artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-fibonacci-value-farkas-conflict.smt2"
 );
@@ -665,6 +668,14 @@ fn bounded_monotone_sequence_bad_upper_bound_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "bounded-monotone-sequence-v0 bad-upper-bound SMT-LIB artifact",
         BOUNDED_MONOTONE_SEQUENCE_BAD_UPPER_BOUND,
+    );
+}
+
+#[test]
+fn bounded_monotone_sequence_bad_tail_gap_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "bounded-monotone-sequence-v0 bad-tail-gap SMT-LIB artifact",
+        BOUNDED_MONOTONE_SEQUENCE_BAD_TAIL_GAP,
     );
 }
 

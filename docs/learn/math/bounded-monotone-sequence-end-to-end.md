@@ -1,7 +1,7 @@
 # End To End: Bounded Monotone Sequence
 
 This lesson follows one bounded sequence resource from exact finite-prefix
-replay to a checked false upper-bound rejection. It uses the
+replay to checked false upper-bound and tail-gap rejections. It uses the
 [bounded-monotone-sequence-v0](../../../artifacts/examples/math/bounded-monotone-sequence-v0/)
 pack.
 
@@ -22,6 +22,7 @@ Concept rows:
 | `finite-prefix-supremum` | `sat` | replay-only |
 | `tail-gap-below-epsilon` | `sat` | replay-only |
 | `bad-upper-bound-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-tail-gap-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `monotone-convergence-lean-horizon` | `not-run` | Lean horizon |
 
 The finite rows check only listed sequence values, listed inequalities, and
@@ -89,13 +90,38 @@ checks only the final exact-rational contradiction:
 The solver search is untrusted. The accepted evidence is rechecked
 `UnsatFarkas` arithmetic over the source artifact.
 
+## Check The Tail-Gap Refutation
+
+The second promoted bad row claims the finite tail starting at `n = 2` is
+already within `epsilon = 1/4` of the proposed limit `1`.
+
+Exact replay finds:
+
+```text
+a_2 = 2/3
+1 - a_2 = 1/3
+1/3 - 1/4 = 1/12
+```
+
+The committed SMT-LIB artifact
+[`bad-tail-gap-farkas-conflict.smt2`](../../../artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-tail-gap-farkas-conflict.smt2)
+checks only the final exact-rational contradiction:
+
+```text
+tail_excess = 1/12
+tail_excess <= 0
+```
+
+As before, the solver search is not trusted. The accepted evidence is the
+independently rechecked `UnsatFarkas` certificate over the source artifact.
+
 ## Run It
 
 From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-monotone-sequence-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes bounded_monotone_sequence_bad_upper_bound_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes bounded_monotone_sequence_bad_
 ```
 
 Expected validator output:

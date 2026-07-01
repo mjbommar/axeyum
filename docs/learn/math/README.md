@@ -163,8 +163,8 @@ Companion maps:
   QF_LRA/Farkas max-distance certificate, and the general limit Lean horizon.
 - [Bounded Monotone Sequence](bounded-monotone-sequence-end-to-end.md):
   follows exact rational monotone-prefix replay, finite prefix supremum, finite
-  tail-gap replay, checked QF_LRA/Farkas bad upper-bound rejection, and the
-  monotone-convergence Lean horizon.
+  tail-gap replay, checked QF_LRA/Farkas bad upper-bound and bad tail-gap
+  rejections, and the monotone-convergence Lean horizon.
 - [Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md):
   follows Fibonacci prefix replay, affine recurrence replay, companion-matrix
   state replay, a checked QF_LRA/Farkas bad-value rejection, and the general

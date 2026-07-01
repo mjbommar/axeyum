@@ -208,6 +208,7 @@ python3 scripts/query-foundational-resources.py checks --field real_analysis --r
 python3 scripts/query-foundational-resources.py packs --concept bridge_metric_ball --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_metric_ball --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_bounded_epsilon_delta_shadow --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack bounded-monotone-sequence-v0 --route Farkas --proof-status checked --text tail --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-root-finding-v0 --route Farkas --proof-status checked --require-any >/dev/null

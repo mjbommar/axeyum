@@ -30,6 +30,16 @@ bound for the prefix. Since `6/7 <= 5/6` is false, the committed SMT-LIB
 artifact checks the final exact-rational contradiction through QF_LRA/Farkas
 evidence.
 
+## `bad-tail-gap-rejected`
+
+Expected result: `unsat`.
+
+Finite replay computes `a_2 = 2/3`, so the gap to the proposed limit `1` is
+`1/3`. The malformed row claims the finite tail starting at `n = 2` is within
+`epsilon = 1/4`. Since the gap exceeds epsilon by `1/12`, the committed SMT-LIB
+artifact checks the final exact-rational contradiction through QF_LRA/Farkas
+evidence.
+
 ## `monotone-convergence-lean-horizon`
 
 Expected result: `not-run`.

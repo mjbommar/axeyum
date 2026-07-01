@@ -1489,7 +1489,7 @@
           "id": "bounded-monotone-sequence-v0",
           "status": "validated",
           "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
-          "notes": "Finite monotone-prefix, supremum, tail-gap, and bad upper-bound checks."
+          "notes": "Finite monotone-prefix, supremum, tail-gap, bad upper-bound, and bad tail-gap checks."
         },
         {
           "id": "finite-recurrence-prefix-v0",
@@ -4485,7 +4485,7 @@
           "id": "bounded-monotone-sequence-v0",
           "status": "validated",
           "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
-          "notes": "Finite monotone-prefix, finite supremum, and tail-gap checks for monotone-convergence shadows."
+          "notes": "Finite monotone-prefix, finite supremum, tail-gap, and bad tail-gap checks for monotone-convergence shadows."
         },
         {
           "id": "finite-recurrence-prefix-v0",
@@ -4703,7 +4703,7 @@
           "id": "bounded-monotone-sequence-v0",
           "status": "validated",
           "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
-          "notes": "Finite monotone-prefix and bad upper-bound checks for monotone-convergence shadows."
+          "notes": "Finite monotone-prefix, bad upper-bound, and bad tail-gap checks for monotone-convergence shadows."
         }
       ],
       "proof_routes": [

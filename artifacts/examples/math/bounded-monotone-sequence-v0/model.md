@@ -50,5 +50,23 @@ The QF_LRA artifact checks only the final conflict:
 6/7 <= 5/6
 ```
 
+## Bad Tail Gap
+
+The promoted bad tail-gap row claims the finite tail starting at `n = 2` is
+already within `epsilon = 1/4` of the proposed limit `1`. Exact replay computes:
+
+```text
+a_2 = 2/3
+1 - a_2 = 1/3
+1/3 - 1/4 = 1/12
+```
+
+The QF_LRA artifact checks only the final conflict:
+
+```text
+tail_excess = 1/12
+tail_excess <= 0
+```
+
 These rows are finite exact-rational replay targets. They are not a proof that
 every bounded monotone sequence converges.

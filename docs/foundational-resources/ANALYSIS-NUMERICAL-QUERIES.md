@@ -195,6 +195,13 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --pack bounded-monotone-sequence-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text tail \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --pack finite-euler-method-v0 \
   --route Farkas \
   --proof-status checked \

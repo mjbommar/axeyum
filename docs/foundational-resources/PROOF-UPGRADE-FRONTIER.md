@@ -241,8 +241,9 @@ First targets:
   no-counterexample row after exact finite replay computes the maximum pairwise
   distance)
 - [bounded-monotone-sequence-v0](../../artifacts/examples/math/bounded-monotone-sequence-v0/)
-  (source-linked Farkas regression landed for the bad upper-bound row after
-  exact finite-prefix replay computes the offending sequence value)
+  (source-linked Farkas regressions landed for the bad upper-bound and bad
+  tail-gap rows after exact finite-prefix and finite-tail replay compute the
+  offending sequence values)
 - [finite-recurrence-prefix-v0](../../artifacts/examples/math/finite-recurrence-prefix-v0/)
   (source-linked Farkas regression landed for the bad finite recurrence value
   after exact prefix replay computes `F_6 = 8`)

@@ -33,8 +33,8 @@ The committed public query boundary currently reports:
 - 111 concept rows: 23 curriculum nodes, 18 field rows, 65 bridge concepts, and
   5 example-family rows.
 - 108 non-template math example packs.
-- 612 expected checks: 334 `sat`, 207 `unsat`, and 71 `not-run`.
-- 289 checked proof/evidence rows, 252 replay-only rows, and 71 Lean-horizon
+- 613 expected checks: 334 `sat`, 208 `unsat`, and 71 `not-run`.
+- 290 checked proof/evidence rows, 252 replay-only rows, and 71 Lean-horizon
   rows.
 - 108 promoted solver-reuse packs.
 - 0 unclassified solver-reuse packs.

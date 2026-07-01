@@ -337,7 +337,7 @@ CURRICULUM_MAP = {
         "extra_packs": [
             (
                 "bounded-monotone-sequence-v0",
-                "Finite monotone-prefix, supremum, tail-gap, and bad upper-bound checks.",
+                "Finite monotone-prefix, supremum, tail-gap, bad upper-bound, and bad tail-gap checks.",
             ),
             (
                 "finite-recurrence-prefix-v0",
@@ -2838,7 +2838,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "bounded-monotone-sequence-v0",
-                "Finite monotone-prefix, finite supremum, and tail-gap checks for monotone-convergence shadows.",
+                "Finite monotone-prefix, finite supremum, tail-gap, and bad tail-gap checks for monotone-convergence shadows.",
             ),
             (
                 "finite-recurrence-prefix-v0",
@@ -3026,7 +3026,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "bounded-monotone-sequence-v0",
-                "Finite monotone-prefix and bad upper-bound checks for monotone-convergence shadows.",
+                "Finite monotone-prefix, bad upper-bound, and bad tail-gap checks for monotone-convergence shadows.",
             ),
         ],
         "proof_routes": [

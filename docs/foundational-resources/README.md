@@ -225,8 +225,8 @@ schemas, examples, and validation workflows.
   finite Cauchy-tail check, and a general convergence Lean-horizon row.
 - [`artifacts/examples/math/bounded-monotone-sequence-v0/`](../../artifacts/examples/math/bounded-monotone-sequence-v0/)
   validates finite monotone-prefix replay, finite prefix supremum, finite tail
-  gaps, checked rejection of a false upper-bound claim, and a monotone
-  convergence Lean-horizon row.
+  gaps, checked rejection of false upper-bound and tail-gap claims, and a
+  monotone convergence Lean-horizon row.
 - [`artifacts/examples/math/finite-recurrence-prefix-v0/`](../../artifacts/examples/math/finite-recurrence-prefix-v0/)
   validates Fibonacci prefix replay, affine recurrence replay,
   companion-matrix state replay, checked rejection of a false finite
