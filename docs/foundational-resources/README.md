@@ -130,6 +130,9 @@ schemas, examples, and validation workflows.
 - [ROADMAP.md](ROADMAP.md) is the implementation roadmap.
 - [../learn/math/README.md](../learn/math/README.md) is the learner-facing
   math path built from the curriculum, concept atlas, and validated packs.
+- [../learn/math/proof-route-learner-snippets.md](../learn/math/proof-route-learner-snippets.md)
+  gives reusable learner-facing trust-boundary snippets for Boolean CNF/LRAT,
+  QF_LRA/Farkas, QF_UF/Alethe, QF_LIA/Diophantine, and QF_BV/DRAT rows.
 - [generated/math-coverage.md](generated/math-coverage.md) is generated
   curriculum-node coverage from the current concept atlas.
 - [generated/curriculum-status-audit.md](generated/curriculum-status-audit.md)

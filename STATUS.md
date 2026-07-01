@@ -205,6 +205,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Proof-route learner snippets landed.**
+  [`proof-route-learner-snippets.md`](docs/learn/math/proof-route-learner-snippets.md)
+  now gives reusable learner-facing trust-boundary snippets for Boolean
+  CNF/LRAT, QF_LRA/Farkas, QF_UF/Alethe, QF_LIA/Diophantine, and QF_BV/DRAT
+  rows. The comprehensive resource queue now treats the route-snippet refresh
+  as landed, with future proof-route work focused on distinct finite-table,
+  graph, algebra, arithmetic, and bit-width promotions rather than duplicate
+  checked rows.
+
 - **Proof-route family selector landed.**
   [`PROOF-ROUTE-FAMILY-SELECTION.md`](docs/foundational-resources/PROOF-ROUTE-FAMILY-SELECTION.md)
   now picks one representative replay-heavy family per active proof route

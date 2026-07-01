@@ -195,6 +195,8 @@ Audience: proof contributors, reviewers, and users who need assurance.
 Use [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md) as the
 compact selector for the current representative proof families before adding
 another checked negative row.
+Use [Proof Route Learner Snippets](../learn/math/proof-route-learner-snippets.md)
+for compact learner-facing route wording on focused pack pages.
 
 Route plan:
 

@@ -163,6 +163,10 @@ The proof-route family selector is
 it picks one representative replay-heavy family per active proof route and
 states when another compact negative row is worth promoting to checked
 evidence.
+The proof-route learner snippets guide is
+[`docs/learn/math/proof-route-learner-snippets.md`](docs/learn/math/proof-route-learner-snippets.md);
+it gives reusable trust-boundary wording for Boolean CNF/LRAT, QF_LRA/Farkas,
+QF_UF/Alethe, QF_LIA/Diophantine, and QF_BV/DRAT rows.
 The matrix computation consumer query guide is
 [`docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md`](docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md);
 it records exact concept-plus-route queries for LU/nullspace, residual,

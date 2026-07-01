@@ -203,6 +203,8 @@ interprets is
 [generated/learner-proof-upgrade-dashboard.md](generated/learner-proof-upgrade-dashboard.md).
 The compact representative-family selector is
 [PROOF-ROUTE-FAMILY-SELECTION.md](PROOF-ROUTE-FAMILY-SELECTION.md).
+The reusable learner-facing route wording lives in
+[Proof Route Learner Snippets](../learn/math/proof-route-learner-snippets.md).
 
 Priority proof upgrades:
 

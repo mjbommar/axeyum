@@ -53,6 +53,9 @@ For proof-route coverage queries, use the
 For the compact execution selector that picks one replay-heavy family per proof
 route and states when another negative row should be promoted, use the
 [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md).
+For reusable learner-facing trust-boundary snippets across the checked proof
+routes, use
+[Proof Route Learner Snippets](../learn/math/proof-route-learner-snippets.md).
 For matrix computation discovery by bridge concept and proof route, use the
 [Matrix Computation Consumer Queries](MATRIX-COMPUTATION-QUERIES.md).
 For probability/statistics discovery by bridge concept and proof route, use the

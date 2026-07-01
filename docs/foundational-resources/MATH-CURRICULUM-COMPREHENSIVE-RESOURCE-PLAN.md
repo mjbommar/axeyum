@@ -459,8 +459,9 @@ Prefer one row, page, route upgrade, or query surface per commit.
    picks one representative replay-heavy family per active proof route,
    records the current checked-row representative, and defines when another
    compact negative row is worth promoting.
-4. Add or refresh route-specific learner snippets for Farkas, Alethe,
-   Diophantine, CNF/LRAT, and QF_BV DRAT rows.
+4. Landed: [Proof Route Learner Snippets](../learn/math/proof-route-learner-snippets.md)
+   gives reusable trust-boundary snippets for Farkas, Alethe, Diophantine,
+   CNF/LRAT, and QF_BV DRAT rows.
 5. Deepen probability/measure rows by promoting the next distinct finite table
    conflict, not another duplicate product-table check.
 6. Deepen graph resources by adding small CNF/LRAT examples where the source

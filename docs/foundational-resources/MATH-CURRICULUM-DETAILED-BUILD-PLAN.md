@@ -151,6 +151,9 @@ Selection aid: [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md)
 records the current representative family for Boolean CNF/LRAT, QF_BV,
 QF_LIA/Diophantine, QF_LRA/Farkas, QF_UF/Alethe, and Lean-horizon resources,
 and states when another compact negative row is worth promoting.
+[Proof Route Learner Snippets](../learn/math/proof-route-learner-snippets.md)
+gives the reusable learner-facing trust-boundary wording for those checked
+routes.
 
 | Route | Curriculum Pressure | Build Pattern | Stop Condition |
 |---|---|---|---|

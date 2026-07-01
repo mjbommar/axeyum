@@ -140,6 +140,9 @@ Goal: make checked evidence normal for representative negative rows.
 Use [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md) before
 adding another checked row, so each promotion has a distinct proof shape or
 trust-boundary reason.
+Use [Proof Route Learner Snippets](../learn/math/proof-route-learner-snippets.md)
+when a focused lesson needs compact, reusable route wording instead of a full
+certificate-anatomy walkthrough.
 
 Priority order:
 

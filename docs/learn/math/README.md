@@ -31,6 +31,9 @@ validated pack data and the repo-root command that replays it.
 
 Companion maps:
 
+- [Proof Route Learner Snippets](proof-route-learner-snippets.md):
+  gives reusable trust-boundary snippets for Boolean CNF/LRAT, QF_LRA/Farkas,
+  QF_UF/Alethe, QF_LIA/Diophantine, and QF_BV/DRAT rows.
 - [Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md):
   separates educational matrix resources, solver regressions, benchmark-corpus
   rows, and theorem horizons.
