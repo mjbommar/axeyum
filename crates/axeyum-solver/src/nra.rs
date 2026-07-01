@@ -151,11 +151,14 @@ fn check_with_nra_impl(
         return Ok(result);
     }
 
-    // Eliminate real division first: `x/y → r` with `(y = 0) ∨ (x = r·y)`,
-    // matching SMT-LIB's unspecified division by zero. The `r·y` product is then
-    // handled by the nonlinear abstraction below (or is linear when `y` is
-    // constant). Exact encoding, so soundness is preserved.
-    let assertions = &eliminate_real_div(arena, assertions)?;
+    // The TRUE original assertions (with real division intact) — the replay target
+    // for every `sat` candidate below. Division elimination (next) rewrites `x/y`
+    // to a fresh `r` constrained by `(y=0) ∨ (x=r·y)`, so a candidate can satisfy
+    // the *eliminated* form via the `y=0` branch with `r` free while the original
+    // `x/0` evaluates (ground evaluator) to a fixed value that does not. Replaying
+    // against THIS rejects such spurious candidates and lets the search find a
+    // genuine model (e.g. `1/w < 0` at `w < 0`, not the spurious `w = 0`).
+    let original: Vec<TermId> = assertions.to_vec();
 
     // Wall-clock deadline (only when a timeout is configured): an *absolute*
     // instant shared by every sub-solve below, so the branch-and-bound, the
@@ -164,26 +167,31 @@ fn check_with_nra_impl(
     // once here so the clock is not reset per call.
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
 
-    let products = nonlinear_products(arena, assertions);
-    if products.is_empty() {
-        // Already linear — straight to LRA.
-        return check_with_lra_dpll_within(arena, assertions, config, deadline);
-    }
-
-    // Boolean structure over nonlinear atoms: the flat-conjunction CAD (above)
-    // declined, so this query is *not* a single conjunction — it has
-    // `or`/`distinct`/`ite`/`=>` structure. Run the NRA lazy-SMT loop, which
-    // case-splits the Boolean skeleton and decides each conjunctive cube with the
-    // exact sign-cell / CAD decider — unlocking the decision-complete polynomial
-    // engine on Boolean-structured `QF_NRA` (the measured dominant gap; see the
-    // P2.5 evaluation doc). It drives `decide_real_poly_constraint` per cube and
-    // never re-enters `check_with_nra`, so there is no recursion. On a cube the CAD
-    // cannot decide it returns `unknown`; we then fall through to the relaxation
-    // below, so this is strictly additive — it only turns a prior `unknown` into a
-    // decision. Confirmed `DISAGREE=0` on `nra_differential_fuzz` vs Z3.
-    match check_with_nra_dpll_within(arena, assertions, config, deadline)? {
+    // Boolean structure over nonlinear atoms (the flat-conjunction CAD above
+    // declined): run the NRA lazy-SMT loop on the ORIGINAL assertions, **before**
+    // division elimination, so its `finish_sat` replays against the true division
+    // semantics. A cube that still contains `x/y` is non-polynomial → the CAD
+    // declines it → `unknown` → we fall through to elimination + relaxation. This
+    // handles original Boolean structure (e.g. `distinct`/`and` over nonlinear
+    // atoms) without ever asserting a division-induced spurious model. Strictly
+    // additive; `DISAGREE=0` on `nra_differential_fuzz` (incl. division) vs Z3.
+    match check_with_nra_dpll_within(arena, &original, config, deadline)? {
         result @ (CheckResult::Sat(_) | CheckResult::Unsat) => return Ok(result),
         CheckResult::Unknown(_) => {}
+    }
+
+    // Eliminate real division: `x/y → r` with `(y = 0) ∨ (x = r·y)` (+ the division
+    // congruence axioms in `eliminate_real_div`). The eliminated form drives the
+    // abstraction/relaxation below; every `sat` candidate is replayed against
+    // `original` (with division), never the eliminated form.
+    let assertions = &eliminate_real_div(arena, &original)?;
+
+    let products = nonlinear_products(arena, assertions);
+    if products.is_empty() {
+        // Already linear (after elimination). The LRA loop replays internally
+        // against the eliminated form; the `check_with_nra` wrapper's final guard
+        // re-checks any `sat` against `original`, so div-by-zero stays sound.
+        return check_with_lra_dpll_within(arena, assertions, config, deadline);
     }
 
     // Abstract each distinct nonlinear product with a fresh real variable,
@@ -291,7 +299,10 @@ fn check_with_nra_impl(
     // otherwise explore ~2^depth boxes × refinement rounds, *and* is threaded into
     // each lazy-SMT solve so no single solve overruns the budget (#15).
     branch_and_bound(
-        arena, &base, &triples, &products, assertions, config, &bounds, 0, deadline,
+        // Replay target = the TRUE original (with division), so a candidate is
+        // accepted only if it satisfies the real `x/y` semantics — never the
+        // div-eliminated form (which a `y=0`/free-`r` spurious model would satisfy).
+        arena, &base, &triples, &products, &original, config, &bounds, 0, deadline,
     )
 }
 
