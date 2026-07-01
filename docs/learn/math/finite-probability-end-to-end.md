@@ -42,6 +42,7 @@ Concept rows:
 | `bad-expectation-through-pushforward-rejected` | `unsat` | checked |
 | `conditional-expectation-partition-witness` | `sat` | replay-only |
 | `law-total-expectation-witness` | `sat` | replay-only |
+| `bad-total-expectation-rejected` | `unsat` | checked |
 | `tower-property-witness` | `sat` | replay-only |
 | `bad-conditional-expectation-rejected` | `unsat` | checked |
 | `bad-tower-property-rejected` | `unsat` | checked |
@@ -265,8 +266,9 @@ E[E[X | G]] = E[X] = 7/2
 ```
 
 It also checks a finite tower-property row for a two-block partition refining
-the one-block partition, and rejects a false tower value with checked
-QF_LRA/Farkas evidence.
+the one-block partition, rejects a false total-expectation value after exact
+replay computes `E[X]=E[E[X|G]]=7/2`, and rejects a false tower value with
+checked QF_LRA/Farkas evidence.
 
 For a fuller focused trace, read
 [End To End: Finite Conditional Expectation](finite-conditional-expectation-end-to-end.md).
@@ -357,13 +359,17 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_product_measure_bad_marginal_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_independence_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_total_expectation_artifact_emits_checked_farkas
 ```
 
-Expected output for each command:
+Expected output for each validation command:
 
 ```text
 validated 1 foundational example pack(s)
 ```
+
+Each focused cargo regression should pass its named test and filter the rest of
+`math_resource_lra_routes`.
 
 ## Trust Boundary
 

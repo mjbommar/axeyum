@@ -10,6 +10,7 @@ The examples are:
 - a law-of-total-expectation witness;
 - a finite tower-property witness over nested partitions;
 - checked QF_LRA/Farkas rejection of a false conditional expectation table;
+- checked QF_LRA/Farkas rejection of a false total-expectation value;
 - checked QF_LRA/Farkas rejection of a false tower-property table;
 - a general conditional-expectation and martingale Lean-horizon row.
 
@@ -32,9 +33,10 @@ conditioning family is a partition of the atom set, recomputes every blockwise
 conditional average with exact rational arithmetic, checks the law of total
 expectation, and checks the finite tower property for nested partitions.
 
-This pack is checked finite evidence for the bad conditional-expectation and
-bad tower-property rows. The false high-block and false tower tables are routed
-through Axeyum's checked `UnsatFarkas` evidence path. It is not a proof of
+This pack is checked finite evidence for the bad conditional-expectation, bad
+total-expectation, and bad tower-property rows. The false high-block, false
+total-expectation, and false tower tables are routed through Axeyum's checked
+`UnsatFarkas` evidence path. It is not a proof of
 general conditional expectation, Radon-Nikodym construction, martingales,
 stopping times, or regular conditional probabilities.
 
@@ -42,4 +44,5 @@ Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-conditional-expectation-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_total_expectation_artifact_emits_checked_farkas
 ```

@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-conditional-expectation bad total-expectation QF_LRA row landed.**
+  `finite-conditional-expectation-v0` now includes a third checked Farkas row:
+  exact finite partition replay computes `E[X]=7/2` and
+  `E[E[X|G]]=7/2`, while the malformed source SMT-LIB artifact claims
+  `E[E[X|G]]=4` under the finite law-of-total-expectation equality. The
+  validator pins the source witness, atom table, partition, conditional
+  expectation table, replayed expectation values, claimed value, artifact path,
+  and regression; the shared `math_resource_lra_routes` regression parses the
+  artifact and checks `UnsatFarkas` evidence. Generated dashboards and the
+  public query summary now report 111 concept rows, 108 non-template packs,
+  601 expected checks, 280 checked rows, 250 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Finite-probability bad independence QF_LRA row landed.**
   `finite-probability-v0` now includes a replayed finite independence witness
   and a checked bad-independence row: exact atom-table replay computes

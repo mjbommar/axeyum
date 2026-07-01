@@ -96,6 +96,45 @@
       "notes": "The validator recomputes E[X] and E[E[X|G]] exactly from the atom table."
     },
     {
+      "id": "bad-total-expectation-rejected",
+      "claim": "The expectation of the listed conditional expectation is 4 while still satisfying total expectation.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_total_expectation_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "four-atom-partition-conditional-expectation",
+        "atoms": [
+          {"id": "a", "probability": "1/4"},
+          {"id": "b", "probability": "1/4"},
+          {"id": "c", "probability": "1/4"},
+          {"id": "d", "probability": "1/4"}
+        ],
+        "random_variable_values": {
+          "a": "0",
+          "b": "2",
+          "c": "4",
+          "d": "8"
+        },
+        "partition": [
+          {"id": "low", "atoms": ["a", "b"]},
+          {"id": "high", "atoms": ["c", "d"]}
+        ],
+        "conditional_expectation": {
+          "a": "1",
+          "b": "1",
+          "c": "6",
+          "d": "6"
+        },
+        "source_expectation": "7/2",
+        "conditional_expectation_expectation": "7/2",
+        "claimed_conditional_expectation_expectation": "4",
+        "farkas_claim": "conditional_expectation_expectation = 4",
+        "smt2_artifact": "artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-total-expectation-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_total_expectation_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator recomputes E[X]=7/2 and E[E[X|G]]=7/2; the source artifact checks that the malformed conditional-expectation expectation 4 violates the finite total-expectation equality."
+    },
+    {
       "id": "tower-property-witness",
       "claim": "For the fine partition refining the coarse partition, E[E[X|G]|H] = E[X|H].",
       "expected_result": "sat",

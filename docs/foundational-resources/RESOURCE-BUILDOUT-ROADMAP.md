@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 600 expected checks.
-- 279 checked proof/evidence rows.
+- 601 expected checks.
+- 280 checked proof/evidence rows.
 - 250 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1278,13 +1278,16 @@ Pick one item per commit unless the change is purely navigational.
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_tail_bound_emits_checked_farkas`.
 26. Landed: promote `finite-conditional-expectation-v0` through source-linked
-    QF_LRA/Farkas regressions for `bad-conditional-expectation-rejected` and
-    `bad-tower-property-rejected`. The artifacts
-    `artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-conditional-expectation-farkas-conflict.smt2`
+    QF_LRA/Farkas regressions for `bad-conditional-expectation-rejected`,
+    `bad-total-expectation-rejected`, and `bad-tower-property-rejected`. The
+    artifacts are
+    `artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-conditional-expectation-farkas-conflict.smt2`,
+    `artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-total-expectation-farkas-conflict.smt2`,
     and
-    `artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-tower-property-farkas-conflict.smt2`
-    are checked by
-    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_table_emits_checked_farkas` and
+    `artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-tower-property-farkas-conflict.smt2`;
+    they are checked by
+    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_table_emits_checked_farkas`,
+    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_total_expectation_artifact_emits_checked_farkas`, and
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_tower_property_artifact_emits_checked_farkas`.
 27. Landed: promote `finite-hitting-times-v0` through source-linked
     QF_LRA/Farkas regressions for `bad-survival-mass-rejected` and

@@ -1,0 +1,7 @@
+(set-logic QF_LRA)
+(declare-const source_expectation Real)
+(declare-const conditional_expectation_expectation Real)
+(assert (= source_expectation (/ 7 2)))
+(assert (= conditional_expectation_expectation source_expectation))
+(assert (= conditional_expectation_expectation 4))
+(check-sat)

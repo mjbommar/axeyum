@@ -635,8 +635,8 @@ random-variable Lean-horizon row.
 [`finite-conditional-expectation-v0`](../../artifacts/examples/math/finite-conditional-expectation-v0/)
 validates exact finite partition conditional expectations, law of total
 expectation, tower property replay, checked rejection of false
-conditional-expectation and tower-property tables, and a general
-conditional-expectation Lean-horizon row.
+conditional-expectation, total-expectation, and tower-property tables, and a
+general conditional-expectation Lean-horizon row.
 [`bounded-dynamics-v0`](../../artifacts/examples/math/bounded-dynamics-v0/)
 validates exact rational recurrence traces, bounded invariant witnesses, and
 threshold reachability replay.

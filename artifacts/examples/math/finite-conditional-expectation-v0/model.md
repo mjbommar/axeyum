@@ -47,6 +47,15 @@ E[X] = 0*(1/4) + 2*(1/4) + 4*(1/4) + 8*(1/4) = 7/2
 E[E[X | partition]] = 1*(1/2) + 6*(1/2) = 7/2
 ```
 
+The false total-expectation row keeps the same conditional-expectation table
+but asserts `E[E[X | partition]] = 4`. The checked linear contradiction is:
+
+```text
+source_expectation = 7/2
+conditional_expectation_expectation = source_expectation
+conditional_expectation_expectation = 4
+```
+
 ## Tower Property
 
 For the coarser partition `{a,b,c,d}`, the checker recomputes:

@@ -18870,6 +18870,65 @@ def validate_finite_conditional_expectation(expected: dict[str, Any]) -> None:
     if source_expectation != conditional_expectation_expectation:
         fail("law-total-expectation-witness expectations do not match")
 
+    bad_total = checks["bad-total-expectation-rejected"]
+    if bad_total["expected_result"] != "unsat":
+        fail("bad-total-expectation-rejected must expect unsat")
+    if bad_total["proof_status"] != "checked":
+        fail("bad-total-expectation-rejected must be checked")
+    if bad_total["validation"] != "finite_bad_total_expectation_refutation":
+        fail("bad-total-expectation-rejected must use finite_bad_total_expectation_refutation validation")
+    data = bad_total.get("data", {})
+    if data.get("source_witness") != "four-atom-partition-conditional-expectation":
+        fail("bad-total-expectation-rejected must cite the source total-expectation witness")
+    atoms = require_probability_atoms("bad total expectation atoms", data.get("atoms"), require_events=False)
+    require_normalized_atoms("bad-total-expectation-rejected", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    variable_values = require_atom_value_table(
+        "bad total expectation random_variable_values",
+        data.get("random_variable_values"),
+        atom_ids,
+    )
+    partition = require_atom_partition("bad total expectation partition", data.get("partition"), atom_ids)
+    conditional_table = require_atom_value_table(
+        "bad total expectation conditional_expectation",
+        data.get("conditional_expectation"),
+        atom_ids,
+    )
+    computed_table = finite_conditional_expectation(atoms, variable_values, partition)
+    if computed_table != conditional_table:
+        fail("bad-total-expectation-rejected conditional expectation table is incorrect")
+    source_expectation = require_fraction(
+        "bad total expectation source_expectation",
+        data.get("source_expectation"),
+    )
+    conditional_expectation_expectation = require_fraction(
+        "bad total expectation conditional_expectation_expectation",
+        data.get("conditional_expectation_expectation"),
+    )
+    claimed_conditional_expectation_expectation = require_fraction(
+        "bad total expectation claimed_conditional_expectation_expectation",
+        data.get("claimed_conditional_expectation_expectation"),
+    )
+    if finite_expected_value(atoms, variable_values) != source_expectation:
+        fail("bad-total-expectation-rejected source_expectation is incorrect")
+    if finite_expected_value(atoms, conditional_table) != conditional_expectation_expectation:
+        fail("bad-total-expectation-rejected conditional_expectation_expectation is incorrect")
+    if source_expectation != conditional_expectation_expectation:
+        fail("bad-total-expectation-rejected source and conditional expectations must match before the bad claim")
+    if claimed_conditional_expectation_expectation == conditional_expectation_expectation:
+        fail("bad-total-expectation-rejected must document a false conditional-expectation expectation")
+    farkas_claim = data.get("farkas_claim")
+    require_string("bad total expectation farkas_claim", farkas_claim)
+    if farkas_claim != "conditional_expectation_expectation = 4":
+        fail("bad-total-expectation-rejected must document the Farkas claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad total expectation smt2_artifact", smt2_artifact)
+    check_source("bad total expectation smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad total expectation farkas_regression", regression)
+    if "finite_conditional_expectation_bad_total_expectation_artifact_emits_checked_farkas" not in regression:
+        fail("bad-total-expectation-rejected must link the Farkas regression")
+
     tower = checks["tower-property-witness"]
     if tower["expected_result"] != "sat":
         fail("tower-property-witness must expect sat")

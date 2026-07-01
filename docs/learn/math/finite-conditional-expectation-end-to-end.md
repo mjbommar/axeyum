@@ -20,6 +20,7 @@ Concept rows:
 |---|---|---|
 | `conditional-expectation-partition-witness` | `sat` | replay-only |
 | `law-total-expectation-witness` | `sat` | replay-only |
+| `bad-total-expectation-rejected` | `unsat` | checked |
 | `tower-property-witness` | `sat` | replay-only |
 | `bad-conditional-expectation-rejected` | `unsat` | checked |
 | `bad-tower-property-rejected` | `unsat` | checked |
@@ -115,6 +116,40 @@ E[E[X | partition]] = 1*(1/2) + 6*(1/2)
 
 The law-of-total-expectation row is replay-only evidence that these exact
 rational sums agree on the finite table.
+
+## Reject A False Total Expectation
+
+The negative total-expectation row keeps the same atom table, random variable,
+partition, and conditional-expectation table, but claims:
+
+```text
+claimed E[E[X | partition]] = 4
+```
+
+The checker recomputes:
+
+```text
+E[X]                  = 7/2
+E[E[X | partition]]   = 7/2
+```
+
+and rejects the claim because:
+
+```text
+7/2 != 4
+```
+
+The source artifact is
+[`bad-total-expectation-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-total-expectation-farkas-conflict.smt2).
+It checks the final scalar contradiction as `QF_LRA`:
+
+```text
+conditional_expectation_expectation = source_expectation
+source_expectation = 7/2
+conditional_expectation_expectation = 4
+```
+
+That `unsat` result must carry checked `Evidence::UnsatFarkas`.
 
 ## Replay The Tower Property
 
@@ -233,6 +268,7 @@ blockwise weighted averages
 law of total expectation
 nested-partition tower property
 bad conditional-expectation-table refutations
+bad total-expectation refutations
 bad tower-property refutations
 ```
 
@@ -255,6 +291,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-conditional-expectation-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_total_expectation_artifact_emits_checked_farkas
 ```
 
 Expected output:
@@ -262,6 +299,9 @@ Expected output:
 ```text
 validated 1 foundational example pack(s)
 ```
+
+The focused cargo regression should pass one test and filter the rest of
+`math_resource_lra_routes`.
 
 ## Trust Boundary
 
@@ -277,5 +317,6 @@ remaining horizon -> general conditional-expectation theory
 The graduation target is to encode finite conditioning sigma-algebras as
 partitions of probability atoms, replay finite conditional expectations, total
 expectation, and tower-property witnesses by exact rational model evaluation,
-and emit checked QF_LRA/Farkas evidence for rejected conditional-expectation or
-tower-property tables when the final contradiction is linear.
+and emit checked QF_LRA/Farkas evidence for rejected conditional-expectation,
+total-expectation, or tower-property tables when the final contradiction is
+linear.

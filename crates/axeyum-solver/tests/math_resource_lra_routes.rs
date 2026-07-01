@@ -199,6 +199,9 @@ const FINITE_RANDOM_VARIABLES_BAD_EXPECTATION_THROUGH_PUSHFORWARD: &str = includ
 const FINITE_CONDITIONAL_EXPECTATION_BAD_TOWER_PROPERTY: &str = include_str!(
     "../../../artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-tower-property-farkas-conflict.smt2"
 );
+const FINITE_CONDITIONAL_EXPECTATION_BAD_TOTAL_EXPECTATION: &str = include_str!(
+    "../../../artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-total-expectation-farkas-conflict.smt2"
+);
 const FINITE_MARTINGALES_BAD_STOPPED_EXPECTATION: &str = include_str!(
     "../../../artifacts/examples/math/finite-martingales-v0/smt2/bad-stopped-expectation-farkas-conflict.smt2"
 );
@@ -1193,6 +1196,14 @@ fn finite_conditional_expectation_bad_table_emits_checked_farkas() {
         "finite-conditional-expectation-v0 bad-conditional-expectation-rejected",
         &arena,
         &[block_average_equation, false_claim],
+    );
+}
+
+#[test]
+fn finite_conditional_expectation_bad_total_expectation_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-conditional-expectation-v0 bad-total-expectation SMT-LIB artifact",
+        FINITE_CONDITIONAL_EXPECTATION_BAD_TOTAL_EXPECTATION,
     );
 }
 

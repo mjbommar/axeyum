@@ -164,7 +164,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 600 expected checks, 279 checked
+111 concept rows, 108 non-template packs, 601 expected checks, 280 checked
 rows, 250 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -192,8 +192,10 @@ mass and row marginal, plus finite random-variables' bad pushforward row after
 replay computes the outcome mass and bad expectation-through-pushforward row
 after replay computes `E[X] = 20`, finite-integration's bad expectation row
 after replay computes the integral, finite-conditional-expectation's bad
-tower-property row after nested-partition replay computes `7/2` rather than
-`4`, finite-measure's bad complement row after finite replay computes the event
+total-expectation row after replay computes `E[X] = E[E[X|G]] = 7/2` while the
+bad row claims `4`, and its bad tower-property row after nested-partition
+replay computes `7/2` rather than `4`, finite-measure's bad complement row
+after finite replay computes the event
 and total measures, finite-measure-monotonicity's bad subset-measure and
 union-subadditivity rows after finite replay computes the subset/superset
 measures and the union bound `mu(A)+mu(B)=4/3`, finite-martingales'
@@ -588,7 +590,7 @@ tail-bound and bad union-bound obstructions, with finite hitting times now sourc
 promoted for the bad survival-mass and bad expected-time equations; least-squares regression is now
 promoted for the bad coefficient row, and bounded rational real analysis for
 the bad linear-delta row, with finite conditional expectation now promoted for
-the bad high-block and tower-property tables, finite Euler method now source-linked and promoted
+the bad high-block, total-expectation, and tower-property tables, finite Euler method now source-linked and promoted
 for its bad max-error and bad fixed-step rows, bounded dynamics now promoted
 for its bad invariant-bound conflict, and finite probability now promoted for
 bad conditional-probability, bad Bayes-posterior, and bad independence

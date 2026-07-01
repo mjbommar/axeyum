@@ -14,6 +14,19 @@ Expected result: `sat`.
 The validator recomputes `E[X]` and `E[E[X | G]]` exactly and checks that the
 two rational values match.
 
+## `bad-total-expectation-rejected`
+
+Expected result: `unsat`.
+
+The validator rejects the claimed total-expectation row because exact replay
+computes both `E[X]` and `E[E[X | G]]` as `7/2`, not `4`.
+
+The source-linked Axeyum regression checks the final scalar contradiction as
+`QF_LRA`: `source_expectation = 7/2`,
+`conditional_expectation_expectation = source_expectation`, and
+`conditional_expectation_expectation = 4`, requiring rechecked
+`UnsatFarkas` evidence.
+
 ## `tower-property-witness`
 
 Expected result: `sat`.

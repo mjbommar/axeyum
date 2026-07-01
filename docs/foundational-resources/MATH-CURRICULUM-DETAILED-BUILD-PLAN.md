@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 600 expected checks.
-- 279 checked proof/evidence rows.
+- 601 expected checks.
+- 280 checked proof/evidence rows.
 - 250 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1083,6 +1083,14 @@ Pick one row per commit unless the change is purely navigational.
      shared QF_LRA/Farkas route now checks normalization, conditioning, Bayes,
      and independence contradictions without claiming continuous
      distributions, sampling guarantees, or asymptotic probability theory.
+131. Landed: extend `finite-conditional-expectation-v0` with a checked bad
+     total-expectation row. Exact finite partition replay recomputes
+     `E[X]=7/2` and `E[E[X|G]]=7/2`, while the malformed source SMT-LIB
+     artifact claims `E[E[X|G]]=4` under the law-of-total-expectation
+     equality; the shared QF_LRA/Farkas route now checks bad high-block,
+     total-expectation, and tower-property contradictions without claiming
+     Radon-Nikodym construction, regular conditional probabilities, optional
+     stopping, or general measure-theoretic conditional expectation.
 
 ## Validation Checklist
 

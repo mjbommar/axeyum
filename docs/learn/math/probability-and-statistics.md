@@ -45,7 +45,8 @@ integrals, finite random-variable pushforwards, expectations through
 pushforward distributions, independence checks, a checked QF_LRA bad
 expectation-through-pushforward certificate, finite partition conditional
 expectations, the law of total expectation, tower property replay, checked
-QF_LRA bad high-block and bad tower-property certificates, finite
+QF_LRA bad high-block, bad total-expectation, and bad tower-property
+certificates, finite
 stochastic-kernel normalization, pushforward, joint disintegration, kernel
 composition, finite first-hit distributions, survival probabilities,
 absorption-probability equations, expected hitting-time equations, finite
@@ -125,7 +126,8 @@ E[X | {c,d}] = 6
 
 The `finite-conditional-expectation-v0` validator recomputes block averages,
 `E[E[X|G]] = E[X]`, a finite tower-property row for nested partitions, and a
-checked Farkas certificate for the bad high-block table and false tower value.
+checked Farkas certificate for the bad high-block table, false
+total-expectation value, and false tower value.
 Finite kernels check conditional distributions as source-to-target tables:
 
 ```text

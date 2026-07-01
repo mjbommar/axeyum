@@ -183,7 +183,8 @@ one of:
       `real_analysis`, `set_theory_and_foundations`.
     - Checks: finite partition conditional expectations, law of total
       expectation, tower property replay, bad conditional-expectation
-      rejection, and bad tower-property rejection.
+      rejection, bad total-expectation rejection, and bad tower-property
+      rejection.
 13. `artifacts/examples/math/finite-martingales-v0/`
     - Fields: `probability_theory`, `statistics`, `measure_theory`,
       `real_analysis`, `set_theory_and_foundations`.

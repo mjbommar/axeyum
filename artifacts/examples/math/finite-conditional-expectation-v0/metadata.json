@@ -40,10 +40,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-conditional-expectation-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite conditional-expectation bad high-block and tower QF_LRA/Farkas regression seeds",
-    "pressure": "Malformed finite conditioning rows where exact replay computes the high-block weighted average as 6 but the row claims high_block_expectation = 5, and where nested-partition tower replay computes 7/2 but the row claims 4.",
+    "target": "finite conditional-expectation bad high-block, total-expectation, and tower-property QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed finite conditioning rows where exact replay computes the high-block weighted average as 6 but the row claims high_block_expectation = 5, where total-expectation replay computes E[X]=E[E[X|G]]=7/2 but the row claims 4, and where nested-partition tower replay computes 7/2 but the row claims 4.",
     "evidence": [
       "bad-conditional-expectation-rejected",
+      "bad-total-expectation-rejected",
       "bad-tower-property-rejected"
     ],
     "next_step": "Promote additional total-expectation, stopping-time, or conditional-distribution rows only when they add distinct exact-linear solver pressure; keep Radon-Nikodym construction, stopping-time theorems, and regular conditional probabilities in the Lean-horizon lane."
@@ -59,12 +60,14 @@
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-conditional-expectation-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-total-expectation-farkas-conflict.smt2",
     "artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-tower-property-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "conditional-expectation-partition-witness",
     "law-total-expectation-witness",
+    "bad-total-expectation-rejected",
     "tower-property-witness",
     "bad-conditional-expectation-rejected",
     "bad-tower-property-rejected",
@@ -73,7 +76,7 @@
   "graduation_criteria": [
     "Encode finite conditioning sigma-algebras as partitions of probability atoms.",
     "Replay finite conditional expectations, total expectation, and tower-property witnesses by exact rational model evaluation.",
-    "Route false finite conditional-expectation and tower-property tables through checked QF_LRA/Farkas certificates when the contradiction is linear.",
+    "Route false finite conditional-expectation, total-expectation, and tower-property tables through checked QF_LRA/Farkas certificates when the contradiction is linear.",
     "Keep general conditional expectation, Radon-Nikodym construction, martingales, stopping times, and regular conditional probabilities marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

@@ -305,8 +305,8 @@ First targets:
   (resource-backed Farkas regression landed for the finite metric-space
   bad-delta row)
 - [finite-conditional-expectation-v0](../../artifacts/examples/math/finite-conditional-expectation-v0/)
-  (source-linked solver-reuse promotions landed for the bad high-block and
-  tower-property tables)
+  (source-linked solver-reuse promotions landed for the bad high-block,
+  total-expectation, and tower-property tables)
 - [finite-stochastic-kernels-v0](../../artifacts/examples/math/finite-stochastic-kernels-v0/)
   (resource-backed Farkas regressions landed for the bad kernel-row
   normalization conflict and bad composed-entry conflict)
