@@ -64,7 +64,25 @@ added. So A.1 must be sliced to keep each commit compiling:
    load-bearing, the term's `SeqEmpty` key carries the true sort); a precise
    empty-seq value-sort needs the element key in the variant (a later ADR).
 3. **Slice A.1c — SMT-LIB read/write** round-trip for the sort + core ops.
+   **Design caution (scoped 2026-07-01 — do NOT rush this):** A.1c *intersects the
+   validated bounded string encoder* and must not regress it (DISAGREE=0 / 371).
+   Concretely: `parse_sort` currently maps `String → Sort::BitVec(STRING_TOTAL)`
+   (the bounded `(len, content)` representation), and A.1b's writer maps
+   `Op::SeqLen → "str.len"`, `Op::SeqConcat → "str.++"` — **the same SMT-LIB names
+   the bounded encoder already owns**. So the safe A.1c is:
+   - **Keep `String → bounded BV`** for now (the pre-check stays the decision path);
+     do NOT re-route `String` to `Sort::Seq` here — that is A.2's job once
+     `len`↔LIA can actually decide the first-class path.
+   - **Parse the general `(Seq E)` sort → `Sort::Seq(E)`** and the `seq.*` operator
+     names into the new `Op` variants; the `str.*` names stay dispatched to the
+     bounded encoder **unless the operand's sort is `Seq`** (route by operand sort,
+     not by name alone) — that operand-sort routing is the one subtle piece.
+   - Round-trip test on an explicit `(Seq (_ BitVec 8))` term through the new ops,
+     asserting no change to any existing `String`/`str.*` bounded test.
 4. **A.2** (`len`↔LIA Nelson–Oppen) and the ADR follow once the sort is load-bearing.
+   This is the Phase-A **exit criterion** (the `str.len`-unsat gap) and the point at
+   which re-routing `String → Sort::Seq` becomes correct (the first-class path can
+   then decide via the `len` combination, not just the bounded encoder).
 
 > **Pre-existing lint (unrelated to this keystone, flagged 2026-07-01):** the A.1b
 > sweep surfaced a `clippy::needless_raw_string_hashes` warning at
