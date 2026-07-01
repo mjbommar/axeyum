@@ -324,7 +324,8 @@ schemas, examples, and validation workflows.
   probabilities, and checked rejection of a false trace-square moment.
 - [`artifacts/examples/math/finite-markov-chain-v0/`](../../artifacts/examples/math/finite-markov-chain-v0/)
   validates exact stochastic matrices, finite-horizon distribution evolution,
-  stationary distributions, and checked rejection of a malformed transition row.
+  stationary distributions, and checked rejection of a malformed transition row
+  plus a false stationary-distribution row.
 - [`artifacts/examples/math/exact-statistical-tests-v0/`](../../artifacts/examples/math/exact-statistical-tests-v0/)
   validates exact binomial tails, hypergeometric point probabilities,
   one-sided and probability-ordered two-sided Fisher p-values, probability-

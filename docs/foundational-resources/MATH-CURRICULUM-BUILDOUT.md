@@ -956,7 +956,7 @@ checked QF_LRA/Farkas rejection of a false trace-square moment.
 `artifacts/examples/math/finite-markov-chain-v0/` now validates exact
 row-stochastic matrix replay, finite-horizon distribution evolution,
 stationary-distribution replay, and checked QF_LRA/Farkas rejection of a
-malformed transition row.
+malformed transition row plus a false stationary-distribution row.
 `artifacts/examples/math/exact-statistical-tests-v0/` now validates exact
 binomial tails, hypergeometric point probabilities, one-sided and
 probability-ordered two-sided Fisher p-values, probability-ordered exact
@@ -1019,7 +1019,8 @@ Recommended order:
     exact moments, Gram expectations, rank distributions, and a checked
     QF_LRA/Farkas bad trace-square certificate.
 15. `finite-markov-chain-v0`: stochastic matrices, finite-horizon
-    distribution replay, stationary distributions, and bad transition rows.
+    distribution replay, stationary distributions, bad transition rows, and
+    checked bad stationary claims.
 16. `exact-statistical-tests-v0`: exact binomial and hypergeometric p-values
     for finite statistical tests, plus a checked QF_LIA bad-count certificate.
 17. `spectral-linear-algebra-v0`: exact eigenpairs, orthogonal eigenbases,
@@ -1448,7 +1449,8 @@ across linear algebra, probability, statistics, and
 numerical analysis, now with a checked QF_LRA/Farkas bad trace-square
 regression. `finite-markov-chain-v0` now adds the first exact finite
 stochastic-process bridge across probability, linear algebra, statistics, and
-dynamics, with a checked QF_LRA/Farkas bad stochastic-row regression.
+dynamics, with checked QF_LRA/Farkas bad stochastic-row and bad stationary
+distribution regressions.
 `exact-statistical-tests-v0` now adds the first exact finite
 statistical-test slice for p-values as rational finite sums, with a checked
 QF_LRA/Farkas bad Fisher left-tail, two-sided, and multinomial rows and a
@@ -1842,7 +1844,8 @@ checked bad concentration-bound rejection, and the general concentration Lean
 horizon.
 `finite-markov-chain-v0` now has a learner-facing end-to-end lesson for exact
 row-stochastic transition matrices, finite-horizon distribution replay,
-stationary distributions, checked QF_LRA/Farkas bad transition-row rejection,
+stationary distributions, checked QF_LRA/Farkas bad transition-row and
+bad stationary-distribution rejection,
 and the Markov-chain convergence Lean horizon.
 `generating-functions-v0` now has a learner-facing end-to-end lesson for finite
 coefficient extraction, Cauchy product convolution, bounded Fibonacci
@@ -1955,8 +1958,9 @@ checked Farkas evidence path after finite replay computes `mu(A) = 1/3` and
 `finite-measure-monotonicity-v0` routes its bad subset-measure row through the
 same checked Farkas evidence path after finite replay computes
 `mu({a}) = 1/6` and `mu({a,b}) = 1/2`.
-`finite-markov-chain-v0` now routes its bad stochastic-row rejection through
-the same checked Farkas evidence path after exact replay computes the row sum.
+`finite-markov-chain-v0` now routes its bad stochastic-row and
+bad stationary-distribution rejections through the same checked Farkas evidence
+path after exact replay computes the row sum and the next distribution.
 `finite-stochastic-kernels-v0` now routes its bad kernel-row rejection through
 the same checked Farkas evidence path after exact replay computes the malformed
 row sum `3/5 + 3/5 = 6/5`.

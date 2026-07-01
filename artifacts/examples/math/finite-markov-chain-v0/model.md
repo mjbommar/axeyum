@@ -61,3 +61,22 @@ row_sum = 1
 
 Exact replay computes `row_sum = 2/3`; the final contradiction is linear over
 exact rationals and is checked by an `UnsatFarkas` regression.
+
+## Bad Stationary Distribution
+
+The stationary-distribution negative row reuses the valid two-state transition
+matrix but proposes the wrong distribution:
+
+```text
+pi = [1/2, 1/2]
+```
+
+Exact replay computes:
+
+```text
+pi * P = [3/8, 5/8]
+```
+
+The first coordinate must equal `1/2` if the distribution is stationary, but
+the replayed value is `3/8`; the final contradiction is linear over exact
+rationals and is checked by an `UnsatFarkas` regression.

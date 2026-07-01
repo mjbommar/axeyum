@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 592 expected checks.
-- 272 checked proof/evidence rows.
+- 593 expected checks.
+- 273 checked proof/evidence rows.
 - 249 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1030,6 +1030,14 @@ Pick one row per commit unless the change is purely navigational.
      checks both residual-bound and iteration-error contradictions without
      claiming floating-point accuracy, conditioning, backward stability, or
      general Jacobi convergence.
+124. Landed: extend `finite-markov-chain-v0` with a checked bad stationary
+     distribution row. Exact row-vector transition replay computes
+     `[1/2,1/2] * P = [3/8,5/8]` for the fixed two-state chain, while the
+     malformed source SMT-LIB artifact claims the first next-coordinate is
+     `1/2`; the shared QF_LRA/Farkas route now checks both malformed
+     stochastic-row and false stationary-distribution contradictions without
+     claiming countably infinite chains, mixing times, convergence theorems,
+     recurrence/transience, or stochastic-process limit laws.
 
 ## Validation Checklist
 

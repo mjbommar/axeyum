@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 592 expected checks.
-- 272 checked proof/evidence rows.
+- 593 expected checks.
+- 273 checked proof/evidence rows.
 - 249 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1254,10 +1254,14 @@ Pick one item per commit unless the change is purely navigational.
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_martingales_bad_conditional_expectation_emits_checked_farkas`.
 23. Landed: promote `finite-markov-chain-v0` at the solver-reuse metadata layer
-    for `bad-stochastic-row-rejected`. The existing source artifact
+    for `bad-stochastic-row-rejected` and
+    `bad-stationary-distribution-rejected`. The source artifacts
     `artifacts/examples/math/finite-markov-chain-v0/smt2/bad-stochastic-row-farkas-conflict.smt2`
-    is checked by
-    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_markov_chain_bad_stochastic_row_emits_checked_farkas`.
+    and
+    `artifacts/examples/math/finite-markov-chain-v0/smt2/bad-stationary-distribution-farkas-conflict.smt2`
+    are checked by
+    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_markov_chain_bad_stochastic_row_emits_checked_farkas` and
+    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_markov_chain_bad_stationary_distribution_artifact_emits_checked_farkas`.
 24. Landed: revisited the library boundary decision after promoted solver-reuse
     rows reached the consumer query layer. The decision remains JSON-first and
     in-repo: `scripts/query-foundational-resources.py packs --solver-reuse

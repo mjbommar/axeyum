@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const pi_next_a Real)
+(assert (= (* 8 pi_next_a) 3))
+(assert (= pi_next_a (/ 1 2)))
+(check-sat)

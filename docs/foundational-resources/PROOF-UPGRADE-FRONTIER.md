@@ -290,7 +290,8 @@ First targets:
   (resource-backed Farkas regression landed for the bad martingale row after
   exact finite filtration replay computes the up-block conditional expectation)
 - [finite-markov-chain-v0](../../artifacts/examples/math/finite-markov-chain-v0/)
-  (resource-backed Farkas regression landed for the bad stochastic row)
+  (resource-backed Farkas regressions landed for the bad stochastic row and
+  bad stationary-distribution row)
 - [finite-hitting-times-v0](../../artifacts/examples/math/finite-hitting-times-v0/)
   (source-linked solver-reuse promotion landed for the bad expected-time row)
 - [least-squares-regression-v0](../../artifacts/examples/math/least-squares-regression-v0/)

@@ -379,6 +379,13 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-markov-chain-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text stationary \
+  --require-any
 ```
 
 For a field where the useful finite slice crosses several recent learner pages,

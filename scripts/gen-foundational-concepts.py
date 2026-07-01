@@ -5216,7 +5216,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-markov-chain-v0",
-                "Finite stochastic matrices, one-step distributions, stationarity, and bad stochastic-row checks.",
+                "Finite stochastic matrices, one-step distributions, stationarity, and bad stochastic-row/stationary checks.",
             ),
             (
                 "finite-hitting-times-v0",
@@ -6979,7 +6979,7 @@ EXAMPLE_FAMILIES = [
             ),
             (
                 "finite-markov-chain-v0",
-                "Malformed stochastic-row equation rejected after row-sum replay.",
+                "Malformed stochastic-row and stationary-distribution equations rejected after row-sum and transition replay.",
             ),
             (
                 "finite-hitting-times-v0",

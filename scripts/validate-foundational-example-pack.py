@@ -20265,6 +20265,53 @@ def validate_finite_markov_chain(expected: dict[str, Any]) -> None:
     if "finite_markov_chain_bad_stochastic_row_emits_checked_farkas" not in regression:
         fail("bad-stochastic-row-rejected must link the Farkas regression")
 
+    bad_stationary = checks["bad-stationary-distribution-rejected"]
+    if bad_stationary["expected_result"] != "unsat":
+        fail("bad-stationary-distribution-rejected must expect unsat")
+    data = bad_stationary.get("data", {})
+    matrix = require_stochastic_matrix(
+        "bad stationary transition matrix",
+        data.get("transition_matrix"),
+    )
+    distribution = require_normalized_probability_vector(
+        "bad stationary claimed_distribution",
+        data.get("claimed_distribution"),
+    )
+    computed_next = require_normalized_probability_vector(
+        "bad stationary computed_next_distribution",
+        data.get("computed_next_distribution"),
+    )
+    if row_vec_mat(distribution, matrix) != computed_next:
+        fail("bad-stationary-distribution-rejected computed next distribution is incorrect")
+    mismatch_index = require_nonnegative_int(
+        "bad stationary mismatch_index",
+        data.get("mismatch_index"),
+    )
+    if mismatch_index >= len(distribution):
+        fail("bad-stationary-distribution-rejected mismatch_index is outside the distribution")
+    actual_next_value = require_fraction(
+        "bad stationary actual_next_value",
+        data.get("actual_next_value"),
+    )
+    claimed_next_value = require_fraction(
+        "bad stationary claimed_next_value",
+        data.get("claimed_next_value"),
+    )
+    if computed_next[mismatch_index] != actual_next_value:
+        fail("bad-stationary-distribution-rejected actual_next_value is incorrect")
+    if distribution[mismatch_index] != claimed_next_value:
+        fail("bad-stationary-distribution-rejected claimed_next_value must match the claimed distribution")
+    if actual_next_value == claimed_next_value:
+        fail("bad-stationary-distribution-rejected mismatch unexpectedly satisfies stationarity")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad stationary smt2_artifact", smt2_artifact)
+    if not (ROOT / smt2_artifact).is_file():
+        fail("bad-stationary-distribution-rejected smt2_artifact is missing")
+    regression = data.get("farkas_regression")
+    require_string("bad stationary farkas_regression", regression)
+    if "finite_markov_chain_bad_stationary_distribution_artifact_emits_checked_farkas" not in regression:
+        fail("bad-stationary-distribution-rejected must link the Farkas regression")
+
 
 def require_state_transition_matrix(
     context: str,

@@ -2,7 +2,7 @@
 
 This lesson follows one finite Markov-chain resource from exact rational
 transition matrices to finite-horizon evolution, stationary distributions, and
-bad row rejection. It uses
+bad row/stationary-claim rejection. It uses
 [finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/).
 
 Concept rows:
@@ -23,6 +23,7 @@ Concept rows:
 | `finite-horizon-distribution-replay` | `sat` | replay-only |
 | `stationary-distribution-witness` | `sat` | replay-only |
 | `bad-stochastic-row-rejected` | `unsat` | checked |
+| `bad-stationary-distribution-rejected` | `unsat` | checked |
 
 Every checked row is exact rational arithmetic over finite matrices and finite
 distributions. The pack does not prove countably infinite Markov-chain theory,
@@ -177,6 +178,43 @@ row_sum = 1
 That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
 certificate check.
 
+## Reject A Bad Stationary Distribution
+
+The second bad row reuses the valid two-state chain but proposes:
+
+```text
+pi_bad = [1/2, 1/2]
+```
+
+The checker recomputes:
+
+```text
+(pi_bad * P)(a) = (1/2)*(1/2) + (1/2)*(1/4)
+                = 1/4 + 1/8
+                = 3/8
+
+(pi_bad * P)(b) = (1/2)*(1/2) + (1/2)*(3/4)
+                = 1/4 + 3/8
+                = 5/8
+```
+
+So:
+
+```text
+pi_bad * P = [3/8, 5/8] != [1/2, 1/2]
+```
+
+The resource regression checks the first-coordinate contradiction as `QF_LRA`:
+
+```text
+8 * pi_next_a = 3
+pi_next_a = 1/2
+```
+
+That keeps the trust boundary small: matrix evolution is replayed from the
+source rational table, then the final false stationary equality is checked with
+Farkas evidence.
+
 ## Name The Lean Horizon
 
 The finite pack checks:
@@ -189,6 +227,7 @@ fixed-horizon distribution replay
 fixed-horizon absorption probability
 stationary distribution replay
 bad transition-row refutations
+bad stationary-distribution refutations
 ```
 
 The following remain proof-assistant targets:

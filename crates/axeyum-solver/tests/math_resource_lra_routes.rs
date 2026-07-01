@@ -181,6 +181,9 @@ const FINITE_EULER_BAD_MAX_ERROR_BOUND: &str = include_str!(
 const NUMERICAL_LINEAR_ALGEBRA_BAD_JACOBI_ERROR_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-jacobi-error-bound-farkas-conflict.smt2"
 );
+const FINITE_MARKOV_CHAIN_BAD_STATIONARY_DISTRIBUTION: &str = include_str!(
+    "../../../artifacts/examples/math/finite-markov-chain-v0/smt2/bad-stationary-distribution-farkas-conflict.smt2"
+);
 const FINITE_PRODUCT_MEASURE_BAD_MARGINAL: &str = include_str!(
     "../../../artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-marginal-farkas-conflict.smt2"
 );
@@ -1031,6 +1034,14 @@ fn finite_markov_chain_bad_stochastic_row_emits_checked_farkas() {
             row_sum_matches_entries,
             row_sum_is_one,
         ],
+    );
+}
+
+#[test]
+fn finite_markov_chain_bad_stationary_distribution_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-markov-chain-v0 bad-stationary-distribution SMT-LIB artifact",
+        FINITE_MARKOV_CHAIN_BAD_STATIONARY_DISTRIBUTION,
     );
 }
 

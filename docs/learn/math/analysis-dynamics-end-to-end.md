@@ -40,6 +40,7 @@ Concept rows:
 | `bad-invariant-bound-rejected` | `unsat` | checked |
 | `finite-horizon-distribution-replay` | `sat` | replay-only |
 | `stationary-distribution-witness` | `sat` | replay-only |
+| `bad-stationary-distribution-rejected` | `unsat` | checked |
 | `first-hit-distribution-witness` | `sat` | replay-only |
 | `absorption-probability-equations` | `sat` | replay-only |
 | `expected-hitting-time-equations` | `sat` | replay-only |

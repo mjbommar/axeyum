@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Markov-chain stationary QF_LRA row landed.**
+  `finite-markov-chain-v0` now includes a checked bad stationary-distribution
+  row: exact replay computes `[1/2,1/2] * P = [3/8,5/8]` for the fixed
+  two-state chain, then rejects the malformed stationary claim that the first
+  next-coordinate is `1/2` through a source SMT-LIB artifact on the shared
+  QF_LRA/Farkas route. The validator pins the transition matrix, claimed
+  distribution, computed next distribution, mismatch coordinate, artifact
+  path, and regression; the shared `math_resource_lra_routes` regression
+  parses the artifact and checks `UnsatFarkas` evidence. Generated dashboards
+  and the public query summary now report 111 concept rows, 108 non-template
+  packs, 593 expected checks, 273 checked rows, 249 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Numerical-linear-algebra Jacobi QF_LRA row landed.**
   `numerical-linear-algebra-v0` now includes a checked bad Jacobi first-step
   error-bound row: exact replay recomputes the fixed Jacobi update
@@ -216,7 +229,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   artifact path, and regression; the shared `math_resource_lra_routes`
   regression parses the artifact and checks `UnsatFarkas` evidence. Generated
   dashboards and the public query summary now report 111 concept rows,
-  108 non-template packs, 592 expected checks, 272 checked rows, 249
+  108 non-template packs, 593 expected checks, 273 checked rows, 249
   replay-only rows, and 71 Lean-horizon rows.
 
 - **Exact-statistical-tests multinomial QF_LRA row landed.**
@@ -2724,7 +2737,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`finite-markov-chain-end-to-end.md`](docs/learn/math/finite-markov-chain-end-to-end.md)
   as the learner-facing trace for the finite-Markov-chain pack: exact
   row-stochastic transition matrices, finite-horizon distribution replay,
-  stationary distributions, checked bad transition-row rejection, and the
+  stationary distributions, checked bad transition-row and bad stationary
+  distribution rejection, and the
   Markov-chain convergence Lean horizon. The lesson is linked from the math
   learning index plus the probability/statistics and analysis/dynamics paths.
 
@@ -3765,7 +3779,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the first exact stochastic-process bridge across probability, linear
   algebra, statistics, and dynamics. The pack validates row-stochastic
   transition matrices, finite-horizon distribution replay, stationary
-  distribution replay, and checked rejection of a malformed transition row. The
+  distribution replay, and checked rejection of a malformed transition row plus
+  a false stationary-distribution row. The
   foundational example-pack validator now checks exact rational stochastic
   matrices, normalized distributions, row-vector transition multiplication,
   fixed-horizon absorption probability, and stationarity.

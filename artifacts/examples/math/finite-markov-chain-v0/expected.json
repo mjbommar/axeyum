@@ -79,6 +79,27 @@
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_markov_chain_bad_stochastic_row_emits_checked_farkas"
       },
       "notes": "The validator recomputes the second row sum as 2/3, so the fixed matrix is rejected as a Markov transition matrix; the Axeyum regression refutes row_sum = p10 + p11, p10 = 1/3, p11 = 1/3, row_sum = 1 with rechecked Farkas evidence."
+    },
+    {
+      "id": "bad-stationary-distribution-rejected",
+      "claim": "The distribution [1/2, 1/2] is stationary for the two-state chain.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_stationary_distribution_refutation",
+      "proof_status": "checked",
+      "data": {
+        "transition_matrix": [
+          ["1/2", "1/2"],
+          ["1/4", "3/4"]
+        ],
+        "claimed_distribution": ["1/2", "1/2"],
+        "computed_next_distribution": ["3/8", "5/8"],
+        "mismatch_index": 0,
+        "actual_next_value": "3/8",
+        "claimed_next_value": "1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-markov-chain-v0/smt2/bad-stationary-distribution-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_markov_chain_bad_stationary_distribution_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator recomputes pi*P = [3/8, 5/8], so the claimed distribution [1/2, 1/2] is normalized but not stationary; the Axeyum regression refutes pi_next_a = 3/8 together with pi_next_a = 1/2 using rechecked Farkas evidence."
     }
   ]
 }

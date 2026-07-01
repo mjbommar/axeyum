@@ -164,7 +164,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 592 expected checks, 272 checked
+111 concept rows, 108 non-template packs, 593 expected checks, 273 checked
 rows, 249 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -197,8 +197,9 @@ tower-property row after nested-partition replay computes `7/2` rather than
 and total measures, finite-measure-monotonicity's bad subset-measure row after
 finite replay computes the subset and superset measures, finite-martingales'
 bad conditional-expectation row after finite filtration replay computes the
-up-block expectation, and finite Markov-chain's existing bad stochastic-row
-artifact now explicitly promoted in solver-reuse metadata. The statistics
+up-block expectation, and finite Markov-chain's bad stochastic-row and false
+stationary-distribution rows now explicitly promoted in solver-reuse metadata.
+The statistics
 QF_LRA/Farkas lane now also promotes exact-statistical-tests' bad Fisher
 left-tail and probability-ordered two-sided rows after fixed-margin replay
 computes `17/70` rather than `1/4` and `17/35` rather than `1/2`,
@@ -574,7 +575,7 @@ bad-step count arithmetic-DPLL row, bounded natural arithmetic is now promoted
 for its bad negative domain row, and the finite-probability
 bad-normalization row now has a checked
 QF_LRA/Farkas regression, with finite Markov chains now promoted for the bad
-stochastic-row obstruction and finite concentration now promoted for the bad
+stochastic-row obstruction and false stationary-distribution row, and finite concentration now promoted for the bad
 tail-bound obstruction, with finite hitting times now source-linked and
 promoted for the bad expected-time equation; least-squares regression is now
 promoted for the bad coefficient row, and bounded rational real analysis for
@@ -604,7 +605,7 @@ bad expectation-through-pushforward conflicts and finite integration now
 promoted for the bad expectation conflict, and finite
 martingales now promoted for the bad conditional-expectation conflict, with
 finite Markov chains carrying explicit promoted solver-reuse metadata for the
-existing bad stochastic-row conflict and finite concentration carrying a
+bad stochastic-row and false stationary-distribution conflicts and finite concentration carrying a
 source-linked promoted bad tail-bound conflict, while sequence-limit shadows
 now promote a bounded Cauchy-tail max-distance threshold conflict, and
 multivariable calculus now promotes a bad exact gradient-component conflict,

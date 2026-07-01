@@ -6993,7 +6993,7 @@
           "id": "finite-markov-chain-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-markov-chain-v0",
-          "notes": "Finite stochastic matrices, one-step distributions, stationarity, and bad stochastic-row checks."
+          "notes": "Finite stochastic matrices, one-step distributions, stationarity, and bad stochastic-row/stationary checks."
         },
         {
           "id": "finite-hitting-times-v0",
@@ -8956,7 +8956,7 @@
           "id": "finite-markov-chain-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-markov-chain-v0",
-          "notes": "Malformed stochastic-row equation rejected after row-sum replay."
+          "notes": "Malformed stochastic-row and stationary-distribution equations rejected after row-sum and transition replay."
         },
         {
           "id": "finite-hitting-times-v0",

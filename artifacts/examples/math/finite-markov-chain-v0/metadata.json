@@ -34,10 +34,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite Markov-chain bad stochastic-row QF_LRA/Farkas regression seed",
-    "pressure": "Malformed transition row where exact replay computes row sum 2/3 but row-stochasticity claims 1.",
+    "target": "finite Markov-chain bad stochastic-row/stationary-distribution QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed transition row where exact replay computes row sum 2/3 but row-stochasticity claims 1, plus a false stationary-distribution row where pi*P has first coordinate 3/8 but the row claims 1/2.",
     "evidence": [
-      "bad-stochastic-row-rejected"
+      "bad-stochastic-row-rejected",
+      "bad-stationary-distribution-rejected"
     ],
     "next_step": "Promote additional stationary-distribution, finite-horizon, or absorbing-chain rows only when they add distinct exact-linear solver pressure; keep countably infinite chains, mixing times, and convergence theorems in the future theorem-prover backlog."
   },
@@ -50,18 +51,20 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "artifacts/examples/math/finite-markov-chain-v0/smt2/bad-stochastic-row-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-markov-chain-v0/smt2/bad-stationary-distribution-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "stochastic-matrix-witness",
     "finite-horizon-distribution-replay",
     "stationary-distribution-witness",
-    "bad-stochastic-row-rejected"
+    "bad-stochastic-row-rejected",
+    "bad-stationary-distribution-rejected"
   ],
   "graduation_criteria": [
     "Encode stochastic-matrix and finite-horizon distribution checks as deterministic QF_LRA obligations.",
     "Replay transition matrices, distributions, and stationary witnesses through exact rational matrix evaluation.",
-    "Keep the malformed stochastic-row rejection on Axeyum's checked Farkas evidence path.",
+    "Keep the malformed stochastic-row and false stationary-distribution rejections on Axeyum's checked Farkas evidence path.",
     "Add finite hitting-time and absorbing-probability certificates before claiming broader stochastic-process coverage.",
     "Keep countably infinite chains, convergence theorems, and mixing-time bounds under Lean/proof-horizon metadata."
   ]

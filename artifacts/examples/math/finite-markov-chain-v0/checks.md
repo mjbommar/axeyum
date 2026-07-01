@@ -32,3 +32,18 @@ cannot be row-stochastic.
 The resource-backed Axeyum regression checks the final linear obligation as
 `QF_LRA`: `p10 = 1/3`, `p11 = 1/3`, `row_sum = p10 + p11`, and
 `row_sum = 1`, requiring rechecked `UnsatFarkas` evidence.
+
+## `bad-stationary-distribution-rejected`
+
+Expected result: `unsat`.
+
+The claimed distribution `[1/2, 1/2]` is normalized but not stationary for the
+two-state chain. Exact replay computes:
+
+```text
+[1/2, 1/2] * P = [3/8, 5/8]
+```
+
+The resource-backed Axeyum regression checks the first-coordinate contradiction
+as `QF_LRA`: `8 * pi_next_a = 3` and `pi_next_a = 1/2`, requiring rechecked
+`UnsatFarkas` evidence.

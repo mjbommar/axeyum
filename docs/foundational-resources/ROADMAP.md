@@ -536,7 +536,8 @@ validates exact finite random-matrix moments, expected Gram matrices, rank
 probabilities, and checked rejection of a false trace-square moment.
 [`finite-markov-chain-v0`](../../artifacts/examples/math/finite-markov-chain-v0/)
 validates exact stochastic matrices, finite-horizon distribution evolution,
-stationary distributions, and checked rejection of a malformed transition row.
+stationary distributions, and checked rejection of a malformed transition row
+plus a false stationary-distribution row.
 [`finite-hitting-times-v0`](../../artifacts/examples/math/finite-hitting-times-v0/)
 validates exact finite first-hit distributions, survival probabilities,
 absorption-probability equations, expected hitting-time equations, and checked

@@ -62,7 +62,8 @@ causal-graph-shaped examples. The random-matrix pack checks
 finite matrix-valued probability tables, exact moments, expected Gram matrices,
 and rank probabilities. The Markov-chain pack checks exact stochastic matrices,
 finite-horizon distribution evolution, stationary distributions, and a checked
-`UnsatFarkas` certificate for a malformed transition row.
+`UnsatFarkas` certificate for a malformed transition row plus a false
+stationary-distribution row.
 
 For a focused finite Markov-chain trace, read
 [End To End: Finite Markov Chains](finite-markov-chain-end-to-end.md).
