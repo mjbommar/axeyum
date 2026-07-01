@@ -13816,6 +13816,84 @@ def validate_finite_cyclic_geometry(expected: dict[str, Any]) -> None:
     if angle_d_dot != 0:
         fail("cyclic angle at D must be right in this witness")
 
+    ptolemy = checks["cyclic-ptolemy-rectangle-witness"]
+    if ptolemy["expected_result"] != "sat":
+        fail("cyclic-ptolemy-rectangle-witness must expect sat")
+    if ptolemy["validation"] != "exact_cyclic_ptolemy_replay":
+        fail("cyclic-ptolemy-rectangle-witness must use exact_cyclic_ptolemy_replay validation")
+    ptolemy_values = single_witness_values(ptolemy, witnesses)
+    ptolemy_center = require_point2("cyclic ptolemy center", ptolemy_values.get("center"))
+    ptolemy_radius_squared = require_fraction(
+        "cyclic ptolemy radius_squared",
+        ptolemy_values.get("radius_squared"),
+    )
+    if ptolemy_radius_squared <= 0:
+        fail("cyclic-ptolemy-rectangle-witness radius_squared must be positive")
+    raw_ptolemy_points = ptolemy_values.get("points")
+    if not isinstance(raw_ptolemy_points, list) or len(raw_ptolemy_points) != 4:
+        fail("cyclic-ptolemy-rectangle-witness points must contain four points")
+    ptolemy_points = [
+        require_point2(f"cyclic ptolemy points[{index}]", point)
+        for index, point in enumerate(raw_ptolemy_points)
+    ]
+    ptolemy_point_radius_squared = require_fraction_vector(
+        "cyclic ptolemy point_radius_squared",
+        ptolemy_values.get("point_radius_squared"),
+    )
+    require_vector_length("cyclic ptolemy point_radius_squared", ptolemy_point_radius_squared, 4)
+    for index, point in enumerate(ptolemy_points):
+        if distance_squared2(ptolemy_center, point) != ptolemy_point_radius_squared[index]:
+            fail("cyclic-ptolemy-rectangle-witness point_radius_squared entry is incorrect")
+        if ptolemy_point_radius_squared[index] != ptolemy_radius_squared:
+            fail("cyclic-ptolemy-rectangle-witness points must lie on the same circle")
+    side_lengths = require_fraction_vector(
+        "cyclic ptolemy side_lengths",
+        ptolemy_values.get("side_lengths"),
+    )
+    require_vector_length("cyclic ptolemy side_lengths", side_lengths, 4)
+    diagonal_lengths = require_fraction_vector(
+        "cyclic ptolemy diagonal_lengths",
+        ptolemy_values.get("diagonal_lengths"),
+    )
+    require_vector_length("cyclic ptolemy diagonal_lengths", diagonal_lengths, 2)
+    side_pairs = [(0, 1), (1, 2), (2, 3), (3, 0)]
+    for index, (left, right) in enumerate(side_pairs):
+        if side_lengths[index] <= 0:
+            fail("cyclic-ptolemy-rectangle-witness side lengths must be positive")
+        if side_lengths[index] * side_lengths[index] != distance_squared2(
+            ptolemy_points[left],
+            ptolemy_points[right],
+        ):
+            fail("cyclic-ptolemy-rectangle-witness side length is incorrect")
+    diagonal_pairs = [(0, 2), (1, 3)]
+    for index, (left, right) in enumerate(diagonal_pairs):
+        if diagonal_lengths[index] <= 0:
+            fail("cyclic-ptolemy-rectangle-witness diagonal lengths must be positive")
+        if diagonal_lengths[index] * diagonal_lengths[index] != distance_squared2(
+            ptolemy_points[left],
+            ptolemy_points[right],
+        ):
+            fail("cyclic-ptolemy-rectangle-witness diagonal length is incorrect")
+    ptolemy_lhs = require_fraction("cyclic ptolemy_lhs", ptolemy_values.get("ptolemy_lhs"))
+    ptolemy_rhs_terms = require_fraction_vector(
+        "cyclic ptolemy_rhs_terms",
+        ptolemy_values.get("ptolemy_rhs_terms"),
+    )
+    require_vector_length("cyclic ptolemy_rhs_terms", ptolemy_rhs_terms, 2)
+    ptolemy_rhs = require_fraction("cyclic ptolemy_rhs", ptolemy_values.get("ptolemy_rhs"))
+    if diagonal_lengths[0] * diagonal_lengths[1] != ptolemy_lhs:
+        fail("cyclic-ptolemy-rectangle-witness ptolemy_lhs is incorrect")
+    expected_rhs_terms = [
+        side_lengths[0] * side_lengths[2],
+        side_lengths[1] * side_lengths[3],
+    ]
+    if ptolemy_rhs_terms != expected_rhs_terms:
+        fail("cyclic-ptolemy-rectangle-witness ptolemy_rhs_terms are incorrect")
+    if sum(ptolemy_rhs_terms, Fraction(0)) != ptolemy_rhs:
+        fail("cyclic-ptolemy-rectangle-witness ptolemy_rhs is incorrect")
+    if ptolemy_lhs != ptolemy_rhs:
+        fail("cyclic-ptolemy-rectangle-witness must satisfy Ptolemy")
+
     bad_intersection = checks["bad-cyclic-diagonal-intersection-rejected"]
     if (
         bad_intersection["expected_result"] != "unsat"
@@ -13936,6 +14014,74 @@ def validate_finite_cyclic_geometry(expected: dict[str, Any]) -> None:
     require_string("bad cyclic angle certificate", certificate)
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-cyclic-opposite-angle-rejected certificate must document checked Farkas evidence")
+
+    bad_ptolemy = checks["bad-cyclic-ptolemy-rejected"]
+    if (
+        bad_ptolemy["expected_result"] != "unsat"
+        or bad_ptolemy.get("proof_status") != "checked"
+    ):
+        fail("bad-cyclic-ptolemy-rejected must be a checked unsat row")
+    if bad_ptolemy["validation"] != "exact_bad_cyclic_ptolemy_refutation":
+        fail("bad-cyclic-ptolemy-rejected must use exact_bad_cyclic_ptolemy_refutation validation")
+    data = bad_ptolemy.get("data", {})
+    witness = data.get("witness")
+    require_string("bad cyclic ptolemy witness", witness)
+    if witness != "ptolemy-rectangle":
+        fail("bad-cyclic-ptolemy-rejected must cite the ptolemy-rectangle witness")
+    bad_side_lengths = require_fraction_vector(
+        "bad cyclic ptolemy side_lengths",
+        data.get("side_lengths"),
+    )
+    require_vector_length("bad cyclic ptolemy side_lengths", bad_side_lengths, 4)
+    if bad_side_lengths != side_lengths:
+        fail("bad-cyclic-ptolemy-rejected must reuse the replayed side lengths")
+    bad_diagonal_lengths = require_fraction_vector(
+        "bad cyclic ptolemy diagonal_lengths",
+        data.get("diagonal_lengths"),
+    )
+    require_vector_length("bad cyclic ptolemy diagonal_lengths", bad_diagonal_lengths, 2)
+    if bad_diagonal_lengths != diagonal_lengths:
+        fail("bad-cyclic-ptolemy-rejected must reuse the replayed diagonal lengths")
+    computed_lhs = require_fraction("bad cyclic ptolemy computed_lhs", data.get("computed_lhs"))
+    computed_rhs_terms = require_fraction_vector(
+        "bad cyclic ptolemy computed_rhs_terms",
+        data.get("computed_rhs_terms"),
+    )
+    require_vector_length("bad cyclic ptolemy computed_rhs_terms", computed_rhs_terms, 2)
+    computed_rhs = require_fraction("bad cyclic ptolemy computed_rhs", data.get("computed_rhs"))
+    claimed_rhs = require_fraction("bad cyclic ptolemy claimed_rhs", data.get("claimed_rhs"))
+    if computed_lhs != ptolemy_lhs:
+        fail("bad-cyclic-ptolemy-rejected computed_lhs is incorrect")
+    if computed_rhs_terms != ptolemy_rhs_terms:
+        fail("bad-cyclic-ptolemy-rejected computed_rhs_terms are incorrect")
+    if computed_rhs != ptolemy_rhs:
+        fail("bad-cyclic-ptolemy-rejected computed_rhs is incorrect")
+    if computed_lhs != computed_rhs:
+        fail("bad-cyclic-ptolemy-rejected must document a true replayed Ptolemy equality")
+    if computed_rhs != 25 or claimed_rhs != 24:
+        fail("bad-cyclic-ptolemy-rejected is fixed to Ptolemy RHS 25 versus claimed 24")
+    if computed_rhs == claimed_rhs:
+        fail("bad-cyclic-ptolemy-rejected must document a false Ptolemy claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad cyclic ptolemy smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-cyclic-geometry-v0/smt2/"
+        "bad-ptolemy-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail(
+            "bad-cyclic-ptolemy-rejected smt2_artifact must "
+            "name the checked source artifact"
+        )
+    check_source("bad cyclic ptolemy smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad cyclic ptolemy farkas_regression", regression)
+    if "finite_cyclic_geometry_bad_ptolemy_artifact_emits_checked_farkas" not in regression:
+        fail("bad-cyclic-ptolemy-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad cyclic ptolemy certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-cyclic-ptolemy-rejected certificate must document checked Farkas evidence")
 
     horizon = checks["general-cyclic-geometry-lean-horizon"]
     if horizon["expected_result"] != "not-run":

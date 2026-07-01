@@ -33,6 +33,27 @@
         ],
         "angle_d_dot": "0"
       }
+    },
+    {
+      "id": "ptolemy-rectangle",
+      "description": "A 4-by-3 rectangle as a rational cyclic quadrilateral with rational side and diagonal lengths.",
+      "values": {
+        "labels": ["A", "B", "C", "D"],
+        "center": ["0", "0"],
+        "radius_squared": "25/4",
+        "points": [
+          ["-2", "-3/2"],
+          ["2", "-3/2"],
+          ["2", "3/2"],
+          ["-2", "3/2"]
+        ],
+        "point_radius_squared": ["25/4", "25/4", "25/4", "25/4"],
+        "side_lengths": ["4", "3", "4", "3"],
+        "diagonal_lengths": ["5", "5"],
+        "ptolemy_lhs": "25",
+        "ptolemy_rhs_terms": ["16", "9"],
+        "ptolemy_rhs": "25"
+      }
     }
   ],
   "checks": [
@@ -62,6 +83,15 @@
       "proof_status": "replay-only",
       "witnesses": ["unit-circle-square"],
       "notes": "The validator recomputes the two angle vector pairs and checks both dot products are zero."
+    },
+    {
+      "id": "cyclic-ptolemy-rectangle-witness",
+      "claim": "The 4-by-3 rectangle satisfies Ptolemy's product identity as 5*5 = 4*4 + 3*3.",
+      "expected_result": "sat",
+      "validation": "exact_cyclic_ptolemy_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["ptolemy-rectangle"],
+      "notes": "The validator checks all four vertices are cyclic, squares the listed rational side and diagonal lengths against coordinate distances, and recomputes 25 = 16 + 9."
     },
     {
       "id": "bad-cyclic-diagonal-intersection-rejected",
@@ -102,6 +132,26 @@
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
       "notes": "Exact opposite-angle replay computes (A-B).(C-B)=0, while the malformed row claims dot product 1; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
+      "id": "bad-cyclic-ptolemy-rejected",
+      "claim": "The Ptolemy right-hand side for the 4-by-3 cyclic rectangle is 24.",
+      "expected_result": "unsat",
+      "validation": "exact_bad_cyclic_ptolemy_refutation",
+      "proof_status": "checked",
+      "data": {
+        "witness": "ptolemy-rectangle",
+        "side_lengths": ["4", "3", "4", "3"],
+        "diagonal_lengths": ["5", "5"],
+        "computed_lhs": "25",
+        "computed_rhs_terms": ["16", "9"],
+        "computed_rhs": "25",
+        "claimed_rhs": "24",
+        "smt2_artifact": "artifacts/examples/math/finite-cyclic-geometry-v0/smt2/bad-ptolemy-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_ptolemy_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact Ptolemy replay computes AB*CD + BC*DA = 16 + 9 = 25, while the malformed row claims 24; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
     },
     {
       "id": "general-cyclic-geometry-lean-horizon",

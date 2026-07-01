@@ -437,9 +437,9 @@ schemas, examples, and validation workflows.
   inverse-coordinate claim, and an inversion-geometry Lean-horizon row.
 - [`artifacts/examples/math/finite-cyclic-geometry-v0/`](../../artifacts/examples/math/finite-cyclic-geometry-v0/)
   validates exact cyclic quadrilateral replay, diagonal-intersection and
-  opposite-angle dot-product checks, checked QF_LRA/Farkas rejection of bad
-  diagonal-intersection and opposite-angle claims, and a cyclic-geometry
-  Lean-horizon row.
+  opposite-angle dot-product checks, rational Ptolemy replay, checked
+  QF_LRA/Farkas rejection of bad diagonal-intersection, opposite-angle, and
+  Ptolemy claims, and a cyclic-geometry Lean-horizon row.
 - [`artifacts/examples/math/finite-topology-v0/`](../../artifacts/examples/math/finite-topology-v0/)
   validates finite topology axioms, closure/interior computation, and exact
   finite metric-ball replay, plus checked rejection of a missing-empty-set

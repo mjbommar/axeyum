@@ -2,14 +2,14 @@
 
 This lesson follows
 [finite-cyclic-geometry-v0](../../../artifacts/examples/math/finite-cyclic-geometry-v0/)
-from exact coordinate replay through a checked Farkas contradiction. It is a
+from exact coordinate replay through checked Farkas contradictions. It is a
 finite rational coordinate certificate, not a proof of general cyclic
 quadrilateral geometry.
 
 ## Concept
 
 A cyclic quadrilateral has all vertices on one circle. This resource uses a
-fixed square on the unit circle:
+fixed square on the unit circle for diagonal and angle rows:
 
 ```text
 A = (1,0)
@@ -18,8 +18,10 @@ C = (-1,0)
 D = (0,-1)
 ```
 
-Because all values are rational, the checker can replay the circle membership,
-diagonal, and angle claims without diagrams or floating-point tolerances.
+It also uses a rational `4 x 3` rectangle for a finite Ptolemy shadow. Because
+all values are rational, the checker can replay the circle membership,
+diagonal, angle, and product-sum claims without diagrams or floating-point
+tolerances.
 
 ## What Gets Checked
 
@@ -28,8 +30,10 @@ diagonal, and angle claims without diagrams or floating-point tolerances.
 | `cyclic-quadrilateral-witness` | `sat` | replay-only |
 | `cyclic-diagonal-intersection-witness` | `sat` | replay-only |
 | `cyclic-opposite-right-angles-witness` | `sat` | replay-only |
+| `cyclic-ptolemy-rectangle-witness` | `sat` | replay-only |
 | `bad-cyclic-diagonal-intersection-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `bad-cyclic-opposite-angle-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-cyclic-ptolemy-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-cyclic-geometry-lean-horizon` | `not-run` | Lean horizon |
 
 ## Cyclic Witness
@@ -94,6 +98,38 @@ The checked bad opposite-angle row keeps the replayed angle at `B` but claims:
 Exact replay computes the dot product as `0`, and the promoted source row
 checks the final exact-rational conflict with `UnsatFarkas` evidence.
 
+## Ptolemy Rectangle
+
+The finite Ptolemy row uses a `4 x 3` rectangle centered at the origin:
+
+```text
+A = (-2,-3/2)
+B = ( 2,-3/2)
+C = ( 2, 3/2)
+D = (-2, 3/2)
+```
+
+All four vertices lie on the circle with squared radius `25/4`. The side
+lengths are `4,3,4,3`, and both diagonals have length `5`, so the replayed
+Ptolemy arithmetic is:
+
+```text
+AC * BD = 5 * 5 = 25
+AB * CD + BC * DA = 4 * 4 + 3 * 3 = 25
+```
+
+The checked bad Ptolemy row keeps the replayed rectangle but claims the
+right-hand side is `24`. The source artifact checks only the final exact
+linear conflict:
+
+```smt2
+(set-logic QF_LRA)
+(declare-const ptolemy_rhs Real)
+(assert (= ptolemy_rhs 25))
+(assert (= ptolemy_rhs 24))
+(check-sat)
+```
+
 ## Bad Diagonal Row
 
 The malformed row claims that the diagonal intersection has x-coordinate
@@ -119,8 +155,8 @@ checks the certificate.
 ## What This Does Not Prove
 
 The pack does not prove general cyclic quadrilateral theorems. It does not
-prove Ptolemy, general angle chasing, the inscribed-angle theorem, or
-circle-line correspondences.
+prove the general Ptolemy theorem, general angle chasing, the inscribed-angle
+theorem, or circle-line correspondences.
 
 Those remain named in the Lean-horizon row:
 
@@ -135,4 +171,5 @@ general cyclic geometry: future Lean reconstruction
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_opposite_angle_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_ptolemy_artifact_emits_checked_farkas
 ```

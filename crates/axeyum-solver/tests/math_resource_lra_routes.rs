@@ -103,6 +103,9 @@ const FINITE_CYCLIC_GEOMETRY_BAD_DIAGONAL_INTERSECTION: &str = include_str!(
 const FINITE_CYCLIC_GEOMETRY_BAD_OPPOSITE_ANGLE: &str = include_str!(
     "../../../artifacts/examples/math/finite-cyclic-geometry-v0/smt2/bad-opposite-angle-farkas-conflict.smt2"
 );
+const FINITE_CYCLIC_GEOMETRY_BAD_PTOLEMY: &str = include_str!(
+    "../../../artifacts/examples/math/finite-cyclic-geometry-v0/smt2/bad-ptolemy-farkas-conflict.smt2"
+);
 const INCIDENCE_GEOMETRY_BAD_POINT_ON_LINE: &str = include_str!(
     "../../../artifacts/examples/math/incidence-geometry-v0/smt2/bad-incidence-farkas-conflict.smt2"
 );
@@ -630,6 +633,14 @@ fn finite_cyclic_geometry_bad_opposite_angle_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-cyclic-geometry-v0 bad-opposite-angle SMT-LIB artifact",
         FINITE_CYCLIC_GEOMETRY_BAD_OPPOSITE_ANGLE,
+    );
+}
+
+#[test]
+fn finite_cyclic_geometry_bad_ptolemy_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-cyclic-geometry-v0 bad-ptolemy SMT-LIB artifact",
+        FINITE_CYCLIC_GEOMETRY_BAD_PTOLEMY,
     );
 }
 

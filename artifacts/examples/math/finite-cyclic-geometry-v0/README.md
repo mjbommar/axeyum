@@ -2,9 +2,9 @@
 
 This pack turns one exact rational cyclic quadrilateral into resource rows. It
 checks a square on the unit circle, diagonal intersection and perpendicularity,
-opposite right angles, false diagonal-intersection and opposite-angle claims,
-and one general theorem horizon. It does not prove general cyclic quadrilateral
-theorems.
+opposite right angles, a rational Ptolemy rectangle, false
+diagonal-intersection, opposite-angle, and Ptolemy claims, and one general
+theorem horizon. It does not prove general cyclic quadrilateral theorems.
 
 ## Audience
 
@@ -22,10 +22,14 @@ theorems.
   the shared intersection, both diagonal directions, and the zero dot product.
 - `cyclic-opposite-right-angles-witness`: recomputes angle vectors at the
   opposite vertices `B` and `D` and checks both dot products are zero.
+- `cyclic-ptolemy-rectangle-witness`: checks a `4 x 3` cyclic rectangle with
+  diagonals `5` and verifies `5*5 = 4*4 + 3*3`.
 - `bad-cyclic-diagonal-intersection-rejected`: rejects the malformed claim that
   the diagonal intersection has x-coordinate `1/2`.
 - `bad-cyclic-opposite-angle-rejected`: rejects the malformed claim that the
   angle at `B` has dot product `1` after replay computes `0`.
+- `bad-cyclic-ptolemy-rejected`: rejects the malformed claim that the replayed
+  Ptolemy right-hand side is `24` after replay computes `25`.
 - `general-cyclic-geometry-lean-horizon`: names the future proof route for
   general cyclic quadrilateral, Ptolemy, and angle-chasing theorems.
 
@@ -35,11 +39,13 @@ theorems.
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_opposite_angle_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_ptolemy_artifact_emits_checked_farkas
 ```
 
 ## Trust Boundary
 
 Untrusted search may propose a cyclic configuration, angle claim, diagonal
-intersection, or general theorem instance. The trusted work is small: exact
-rational coordinate replay and checked `UnsatFarkas` evidence over source
-SMT-LIB rows for final false coordinate and dot-product claims.
+intersection, Ptolemy arithmetic, or general theorem instance. The trusted work
+is small: exact rational coordinate replay and checked `UnsatFarkas` evidence
+over source SMT-LIB rows for final false coordinate, dot-product, and
+product-sum claims.

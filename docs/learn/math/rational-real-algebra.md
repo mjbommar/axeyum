@@ -458,6 +458,19 @@ computes `0`, and the source QF_LRA artifact checks that final conflict with
 `1`; exact replay computes `0`, and the source QF_LRA artifact checks that
 final conflict with the same evidence route.
 
+The same pack also uses a rational `4 x 3` rectangle centered at the origin for
+a finite Ptolemy shadow:
+
+```text
+side lengths = 4, 3, 4, 3
+diagonal lengths = 5, 5
+5*5 = 4*4 + 3*3 = 25
+```
+
+The bad Ptolemy row claims the replayed right-hand side is `24`; exact replay
+computes `25`, and the source QF_LRA artifact checks that final equality
+conflict with `UnsatFarkas` evidence.
+
 Run the checks from the repository root:
 
 ```sh
@@ -510,6 +523,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geo
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_opposite_angle_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_ptolemy_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 ```

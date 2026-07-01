@@ -64,8 +64,10 @@ Concept rows:
 | `cyclic-quadrilateral-witness` | `sat` | replay-only |
 | `cyclic-diagonal-intersection-witness` | `sat` | replay-only |
 | `cyclic-opposite-right-angles-witness` | `sat` | replay-only |
+| `cyclic-ptolemy-rectangle-witness` | `sat` | replay-only |
 | `bad-cyclic-diagonal-intersection-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `bad-cyclic-opposite-angle-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-cyclic-ptolemy-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-affine-geometry-lean-horizon` | `not-run` | lean-horizon |
 | `general-oriented-geometry-lean-horizon` | `not-run` | lean-horizon |
 | `general-circle-geometry-lean-horizon` | `not-run` | lean-horizon |
@@ -319,6 +321,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geo
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_opposite_angle_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_ptolemy_artifact_emits_checked_farkas
 ```
 
 Expected output for each command:

@@ -35,13 +35,14 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite cyclic-geometry diagonal-intersection and angle-dot QF_LRA/Farkas regression seeds",
-    "pressure": "Exact cyclic-quadrilateral replay computes the square's diagonal intersection x-coordinate as 0 while one malformed row claims x-coordinate 1/2, and computes the opposite-angle dot product at B as 0 while another malformed row claims 1.",
+    "target": "finite cyclic-geometry diagonal-intersection, angle-dot, and Ptolemy QF_LRA/Farkas regression seeds",
+    "pressure": "Exact cyclic-quadrilateral replay computes the square's diagonal intersection x-coordinate as 0 while one malformed row claims x-coordinate 1/2, computes the opposite-angle dot product at B as 0 while another row claims 1, and computes the Ptolemy right-hand side for a 4-by-3 rectangle as 25 while another row claims 24.",
     "evidence": [
       "bad-cyclic-diagonal-intersection-rejected",
-      "bad-cyclic-opposite-angle-rejected"
+      "bad-cyclic-opposite-angle-rejected",
+      "bad-cyclic-ptolemy-rejected"
     ],
-    "next_step": "Promote additional cyclic-geometry rows only when they add distinct Ptolemy, circle-line correspondence, or higher-degree polynomial-geometry pressure; keep general cyclic-quadrilateral theorems in the Lean-horizon lane."
+    "next_step": "Promote additional cyclic-geometry rows only when they add distinct nontrivial circle-line correspondence, higher-degree polynomial-geometry, or theorem-reconstruction pressure; keep general cyclic-quadrilateral theorems in the Lean-horizon lane."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -56,20 +57,23 @@
     "docs/learn/math/finite-cyclic-geometry-end-to-end.md",
     "artifacts/examples/math/finite-cyclic-geometry-v0/smt2/bad-diagonal-intersection-farkas-conflict.smt2",
     "artifacts/examples/math/finite-cyclic-geometry-v0/smt2/bad-opposite-angle-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-cyclic-geometry-v0/smt2/bad-ptolemy-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "cyclic-quadrilateral-witness",
     "cyclic-diagonal-intersection-witness",
     "cyclic-opposite-right-angles-witness",
+    "cyclic-ptolemy-rectangle-witness",
     "bad-cyclic-diagonal-intersection-rejected",
     "bad-cyclic-opposite-angle-rejected",
+    "bad-cyclic-ptolemy-rejected",
     "general-cyclic-geometry-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode fixed rational cyclic-geometry rows as deterministic exact-coordinate replay obligations.",
-    "Replay point-on-circle, diagonal-intersection, diagonal-perpendicularity, and opposite-angle witnesses over exact rationals.",
-    "Route rejected finite diagonal-intersection and opposite-angle dot-product claims through checked QF_LRA/Farkas evidence after replay computes the exact coordinate or dot product.",
-    "Keep general cyclic-quadrilateral theorems, Ptolemy, angle-chasing, and circle-line correspondence marked Lean-horizon until proof artifacts exist."
+    "Replay point-on-circle, diagonal-intersection, diagonal-perpendicularity, opposite-angle, and rational Ptolemy witnesses over exact rationals.",
+    "Route rejected finite diagonal-intersection, opposite-angle dot-product, and Ptolemy claims through checked QF_LRA/Farkas evidence after replay computes the exact coordinate, dot product, or product-sum value.",
+    "Keep general cyclic-quadrilateral theorems, angle-chasing, and circle-line correspondence marked Lean-horizon until proof artifacts exist."
   ]
 }

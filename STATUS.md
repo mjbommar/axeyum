@@ -205,6 +205,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite cyclic-geometry bad Ptolemy QF_LRA row landed.**
+  `finite-cyclic-geometry-v0` now has a rational Ptolemy replay witness and a
+  third checked Farkas row: finite replay checks the origin-centered `4 x 3`
+  rectangle, side lengths `4,3,4,3`, diagonal lengths `5,5`, and Ptolemy
+  equality `5*5 = 4*4 + 3*3 = 25`, while the malformed row claims the replayed
+  right-hand side is `24`. The new source SMT-LIB artifact isolates the final
+  exact equality conflict, the shared `math_resource_lra_routes` regression
+  parses it and checks `UnsatFarkas` evidence, and the validator pins the
+  cyclic rectangle, side/diagonal lengths, product terms, artifact path,
+  regression, and certificate note. The cyclic pack docs, learner pages, proof
+  frontier, field matrix, and buildout ledgers now reference all three checked
+  cyclic-geometry rows. Generated dashboards and the public query summary now
+  report 111 concept rows, 108 non-template packs, 566 expected checks, 248
+  checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite circle-geometry bad line-intersection QF_LRA row landed.**
   `finite-circle-geometry-v0` now has a second checked Farkas row plus a new
   replay witness: finite circle-line replay checks the horizontal diameter

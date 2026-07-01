@@ -314,9 +314,10 @@ First targets:
   (source-linked Farkas regression landed for the bad inverse-coordinate row
   after exact inversion replay computes the inverse x-coordinate)
 - [finite-cyclic-geometry-v0](../../artifacts/examples/math/finite-cyclic-geometry-v0/)
-  (source-linked Farkas regressions landed for the bad diagonal-intersection
-  and bad opposite-angle rows after exact cyclic-configuration replay computes
-  the intersection x-coordinate and angle dot product)
+  (source-linked Farkas regressions landed for the bad diagonal-intersection,
+  bad opposite-angle, and bad Ptolemy rows after exact cyclic-configuration
+  replay computes the intersection x-coordinate, angle dot product, and
+  Ptolemy product-sum value)
 - [finite-operator-v0](../../artifacts/examples/math/finite-operator-v0/)
   (source-linked Farkas regression landed for the bad operator-bound row after
   exact matrix/operator replay computes the image infinity norm)
@@ -374,8 +375,9 @@ Secondary targets:
   Farkas checks the final bad-distance equality conflict.
   Finite cyclic geometry now contributes the cyclic-configuration version of
   that boundary: exact replay computes circle membership, diagonal midpoints,
-  and angle dot products, then Farkas checks the final bad-intersection
-  equality conflict.
+  angle dot products, and a rational Ptolemy product-sum row, then Farkas
+  checks the final bad-intersection, bad-angle, and bad-Ptolemy equality
+  conflicts.
   Finite operators now contribute the functional-analysis version of that
   boundary: exact replay computes the matrix image and infinity norm, then
   Farkas checks the final bad-bound inequality conflict.

@@ -42,9 +42,9 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 561 expected checks.
-- 245 checked proof/evidence rows.
-- 245 replay-only rows.
+- 566 expected checks.
+- 248 checked proof/evidence rows.
+- 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -223,7 +223,7 @@ Exit criteria:
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | LP objective/Farkas, rational convexity/gradient bridge rows, finite root-finding step replay, finite hyperplane-separation replay, finite KKT replay, finite active-set QP face/slack replay, finite SDP primal/dual replay, finite gradient-descent replay, finite Armijo line-search replay, finite Wolfe line-search replay, finite projected-gradient interval replay, and finite proximal-gradient replay landed; add only distinct duality, degenerate active-set variants, working-set pivots, higher-dimensional SDP, strong-Wolfe/nonconvex line-search, box-plus-L1, or stochastic/convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | maintain landed finite dynamics/Euler bridge and keep numerical-honesty rows distinct from promoted exact residual/error certificates | QF_LRA/Farkas, replay, Lean horizon |
 | `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | maintain landed finite dynamics/Euler bridge; add only distinct transition, reachability, invariant, stochastic, or finite-error pressure | QF_LRA/Farkas, replay, Lean horizon |
-| `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, circle, inversion, and cyclic rational geometry | maintain landed coordinate/oriented replay and finite circle/inversion/cyclic replay bridge rows; add only distinct nontrivial circle-line correspondence, angle variants beyond the current square dot-product witness, Ptolemy shadows, or higher-degree polynomial-geometry pressure | QF_LRA/Farkas, finite replay |
+| `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, circle, inversion, and cyclic rational geometry | maintain landed coordinate/oriented replay and finite circle/inversion/cyclic replay bridge rows; add only distinct nontrivial circle-line correspondence, higher-degree polynomial-geometry, or theorem-reconstruction pressure beyond the current circle-line, square angle-dot, and Ptolemy rows | QF_LRA/Farkas, finite replay |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now has a checked bad-bound row and finite-Chebyshev now has checked duplicate-node, bad-interpolation, and bad-alternation rows; add only distinct norm, recurrence, alternation variants, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
 
 ## Curriculum Node Build Ledger
@@ -240,7 +240,7 @@ Exit criteria:
 | `naturals` | maintain | keep bounded prefix and LIA/BV width limits explicit |
 | `integers` | maintain | group common Diophantine obstructions |
 | `rationals` | maintain | exact rational order and Farkas conflicts are already the model |
-| `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding has a source-linked bad-iterate row, separation has a source-linked bad-separator row, KKT has a source-linked bad-stationarity row, active-set QP has a source-linked bad-free-gradient row, SDP has a source-linked bad-objective row, gradient descent has a source-linked bad-decrease row, finite circle geometry has source-linked bad-radius and bad line-intersection rows, finite inversion geometry has a source-linked bad inverse-coordinate row, and finite cyclic geometry has source-linked bad diagonal-intersection and bad opposite-angle rows; keep completeness, convergence, separation, KKT sufficiency, active-set method theory, SDP duality, descent-rate, general circle/inversion/cyclic geometry, and broad CAD/SOS/RCF claims horizon |
+| `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding has a source-linked bad-iterate row, separation has a source-linked bad-separator row, KKT has a source-linked bad-stationarity row, active-set QP has a source-linked bad-free-gradient row, SDP has a source-linked bad-objective row, gradient descent has a source-linked bad-decrease row, finite circle geometry has source-linked bad-radius and bad line-intersection rows, finite inversion geometry has a source-linked bad inverse-coordinate row, and finite cyclic geometry has source-linked bad diagonal-intersection, bad opposite-angle, and bad Ptolemy rows; keep completeness, convergence, separation, KKT sufficiency, active-set method theory, SDP duality, descent-rate, general circle/inversion/cyclic geometry, and broad CAD/SOS/RCF claims horizon |
 | `complex` | deepen | complex-plane bad unit-square real-part row now has a source-linked QF_LRA/Farkas regression; keep analytic theorems Lean-horizon |
 | `divisibility-and-euclid` | maintain | use gcd/Bezout rows as arithmetic-certificate examples |
 | `modular-arithmetic` | maintain | keep LIA nonunit/CRT and BV fixed-width Fermat-unit residue routes distinct |
@@ -542,10 +542,10 @@ Pick one row per commit unless the change is purely navigational.
 61. Landed: add `finite-cyclic-geometry-v0` as the next distinct cyclic
     geometry pack. The pack validates exact cyclic quadrilateral replay,
     diagonal-intersection and diagonal-perpendicularity replay, opposite-angle
-    dot-product replay, checked QF_LRA/Farkas rejection of false
-    diagonal-intersection and opposite-angle claims, a focused learner page,
-    and concept links under reals, polynomials, linear algebra, and the shared
-    coordinate-geometry bridge.
+    dot-product replay, rational Ptolemy replay, checked QF_LRA/Farkas
+    rejection of false diagonal-intersection, opposite-angle, and Ptolemy
+    claims, a focused learner page, and concept links under reals,
+    polynomials, linear algebra, and the shared coordinate-geometry bridge.
 62. Landed: add
     [`matrix-computation-index.md`](../learn/math/matrix-computation-index.md)
     as the route-oriented learner index for LU, rank/nullity, residual,
@@ -873,6 +873,14 @@ Pick one row per commit unless the change is purely navigational.
      x-coordinate `2`; the shared QF_LRA/Farkas route now checks both the
      radius and line-intersection circle conflicts without claiming general
      circle-line theorem coverage.
+103. Landed: extend `finite-cyclic-geometry-v0` with a rational Ptolemy
+     rectangle witness and checked bad Ptolemy row. Exact replay checks the
+     origin-centered `4 x 3` rectangle, side lengths `4,3,4,3`, diagonal
+     lengths `5,5`, and Ptolemy equality `5*5 = 4*4 + 3*3 = 25`, while the
+     malformed source SMT-LIB artifact claims the replayed right-hand side is
+     `24`; the shared QF_LRA/Farkas route now checks diagonal-intersection,
+     opposite-angle, and Ptolemy cyclic conflicts without claiming the general
+     Ptolemy theorem.
 
 ## Validation Checklist
 
