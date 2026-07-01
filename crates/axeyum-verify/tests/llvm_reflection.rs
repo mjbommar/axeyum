@@ -167,6 +167,17 @@ fn lower_rhs(
             arena.bv_uge(a, b).unwrap()
         };
         (arena.ite(cond, a, b).unwrap(), w)
+    } else if toks[0] == "zext" || toks[0] == "sext" || toks[0] == "trunc" {
+        // zext/sext/trunc iSRC %v to iDST  (mixed-width: byte<->word field ops)
+        let src_w = width_of(toks[1]);
+        let src = resolve(arena, env, toks[2], src_w);
+        let dst_w = width_of(toks[4]);
+        let t = match toks[0] {
+            "zext" => arena.zero_ext(dst_w - src_w, src).unwrap(),
+            "sext" => arena.sign_ext(dst_w - src_w, src).unwrap(),
+            _ => arena.extract(dst_w - 1, 0, src).unwrap(),
+        };
+        (t, dst_w)
     } else {
         // binary int op: OP [flags..] iW %a, %b   (operands follow the type)
         let op = toks[0];
@@ -491,4 +502,163 @@ fn two_llvm_clamp_forms_proved_equivalent() {
         ),
         "the umin and icmp/select clamp forms must be provably equivalent"
     );
+}
+
+// ---- M: mixed width (zext) + if-converted branches -----------------------------
+
+/// `fn be16(hi:u8, lo:u8)->u16 { ((hi as u16)<<8) | (lo as u16) }` — byte→word
+/// field packing (`zext` + `shl` + `or`), the shape of every packet-header combine.
+const BE16_LL: &str = r"
+define noundef i16 @be16(i8 noundef %hi, i8 noundef %lo) unnamed_addr {
+start:
+  %_4 = zext i8 %hi to i16
+  %_3 = shl nuw i16 %_4, 8
+  %_5 = zext i8 %lo to i16
+  %_0 = or disjoint i16 %_3, %_5
+  ret i16 %_0
+}
+";
+
+/// `if x<10 {1} else if x<100 {2} else {3}` — `-O` if-converts to nested selects.
+const CLASSIFY_LL: &str = r"
+define noundef range(i32 1, 4) i32 @classify(i32 noundef %x) unnamed_addr {
+start:
+  %_2 = icmp ult i32 %x, 10
+  %_3 = icmp ult i32 %x, 100
+  %. = select i1 %_3, i32 2, i32 3
+  %_0.sroa.0.0 = select i1 %_2, i32 1, i32 %.
+  ret i32 %_0.sroa.0.0
+}
+";
+
+/// `match x { 0=>7,1=>8,2=>9,_=>0 }` — `-O` lowered the match to `icmp`+`add`+`select`.
+const DAY_LL: &str = r"
+define noundef range(i32 0, 10) i32 @day(i32 noundef %x) unnamed_addr {
+start:
+  %0 = icmp ult i32 %x, 3
+  %switch.offset = add nsw i32 %x, 7
+  %spec.select = select i1 %0, i32 %switch.offset, i32 0
+  ret i32 %spec.select
+}
+";
+
+fn be16(hi: u8, lo: u8) -> u16 {
+    (u16::from(hi) << 8) | u16::from(lo)
+}
+fn classify(x: u32) -> u32 {
+    if x < 10 {
+        1
+    } else if x < 100 {
+        2
+    } else {
+        3
+    }
+}
+fn day(x: u32) -> u32 {
+    match x {
+        0 => 7,
+        1 => 8,
+        2 => 9,
+        _ => 0,
+    }
+}
+
+/// Byte↔word field round-trip over the *real compiled* `be16` IR: extracting the
+/// two bytes back from the packed `u16` yields exactly the inputs, proven for all
+/// `hi`/`lo`. The core correctness property of packet-header field packing.
+#[test]
+fn llvm_be16_field_roundtrip() {
+    let mut r = reflect_ll(BE16_LL);
+    let hi = r.param("hi");
+    let lo = r.param("lo");
+    let hi_back = r.arena.extract(15, 8, r.result).unwrap();
+    let lo_back = r.arena.extract(7, 0, r.result).unwrap();
+    let g_hi = r.arena.eq(hi_back, hi).unwrap();
+    let g_lo = r.arena.eq(lo_back, lo).unwrap();
+    let goal = r.arena.and(g_hi, g_lo).unwrap();
+    assert!(
+        matches!(r.prove_goal(goal), ProofOutcome::Proved(_)),
+        "be16 parse∘pack round-trip (high byte == hi, low byte == lo) must hold"
+    );
+}
+
+/// `classify` (reflected from nested `select`s) always returns `1..=3` — the
+/// reflector already spans if-converted branchy leaf functions.
+#[test]
+fn llvm_classify_in_range() {
+    let mut r = reflect_ll(CLASSIFY_LL);
+    let one = r.arena.bv_const(32, 1).unwrap();
+    let three = r.arena.bv_const(32, 3).unwrap();
+    let ge = r.arena.bv_uge(r.result, one).unwrap();
+    let le = r.arena.bv_ule(r.result, three).unwrap();
+    let goal = r.arena.and(ge, le).unwrap();
+    assert!(
+        matches!(r.prove_goal(goal), ProofOutcome::Proved(_)),
+        "classify(x) must be in 1..=3"
+    );
+}
+
+/// `day` (reflected from the `icmp`+`add`+`select` the match lowered to) is always
+/// `<= 9`.
+#[test]
+fn llvm_day_bounded() {
+    let mut r = reflect_ll(DAY_LL);
+    let nine = r.arena.bv_const(32, 9).unwrap();
+    let goal = r.arena.bv_ule(r.result, nine).unwrap();
+    assert!(
+        matches!(r.prove_goal(goal), ProofOutcome::Proved(_)),
+        "day(x) must be <= 9"
+    );
+}
+
+/// The mixed-width / if-converted reflections match the real Rust on a large
+/// sample (fuzz cross-check, DISAGREE = 0).
+#[test]
+fn llvm_mixed_width_matches_real_rust_under_fuzz() {
+    let be16_r = reflect_ll(BE16_LL);
+    let classify_r = reflect_ll(CLASSIFY_LL);
+    let day_r = reflect_ll(DAY_LL);
+    let mut rng = 0x1357_9BDF_u64;
+    for _ in 0..50_000 {
+        let bytes = lcg(&mut rng).to_le_bytes();
+        let (hi, lo) = (bytes[1], bytes[0]);
+        assert_eq!(
+            u16::try_from(eval_u32(
+                &be16_r,
+                &[
+                    (
+                        "hi",
+                        Value::Bv {
+                            width: 8,
+                            value: u128::from(hi)
+                        }
+                    ),
+                    (
+                        "lo",
+                        Value::Bv {
+                            width: 8,
+                            value: u128::from(lo)
+                        }
+                    ),
+                ]
+            ))
+            .unwrap(),
+            be16(hi, lo),
+            "reflected be16 diverged at hi={hi}, lo={lo}"
+        );
+        let x = lcg(&mut rng);
+        let xv = [(
+            "x",
+            Value::Bv {
+                width: 32,
+                value: u128::from(x),
+            },
+        )];
+        assert_eq!(
+            eval_u32(&classify_r, &xv),
+            classify(x),
+            "classify diverged at x={x}"
+        );
+        assert_eq!(eval_u32(&day_r, &xv), day(x), "day diverged at x={x}");
+    }
 }
