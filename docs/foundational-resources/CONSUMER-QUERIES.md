@@ -321,12 +321,34 @@ python3 scripts/query-foundational-resources.py fields \
   --require-any
 ```
 
-Use the atlas lookup for reusable finite-probability vocabulary:
+Use the atlas lookup for reusable finite-probability and finite random-matrix
+vocabulary:
 
 ```sh
 python3 scripts/query-foundational-resources.py concepts \
   --field probability_theory \
   --text probability \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field probability_theory \
+  --text random \
+  --require-any
+```
+
+Concept-plus-route queries can find finite random-matrix moment packs and
+checked rows without hard-coding the pack id:
+
+```sh
+python3 scripts/query-foundational-resources.py packs \
+  --concept bridge_random_matrix_finite_moment \
+  --route Farkas \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_random_matrix_finite_moment \
+  --route Farkas \
+  --proof-status checked \
   --require-any
 ```
 
@@ -1318,7 +1340,10 @@ python3 scripts/query-foundational-resources.py checks --field graph_theory --ex
 python3 scripts/query-foundational-resources.py concepts --kind example-family --format json --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field probability_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field probability_theory --text probability --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field probability_theory --text random --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field probability_theory --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_random_matrix_finite_moment --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_random_matrix_finite_moment --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field logic_and_proof --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field logic_and_proof --text proof --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field logic_and_proof --route boolean --proof-status checked --require-any >/dev/null
@@ -1380,6 +1405,7 @@ python3 scripts/query-foundational-resources.py checks --field measure_theory --
 python3 scripts/query-foundational-resources.py fields --field statistics --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field statistics --text tail --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field statistics --text finite --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field statistics --text random --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field statistics --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field statistics --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field linear_algebra --route Farkas --require-any >/dev/null
@@ -1391,7 +1417,6 @@ python3 scripts/query-foundational-resources.py checks --field linear_algebra --
 python3 scripts/query-foundational-resources.py packs --concept bridge_lu_replay --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_rank_nullity --route Alethe --require-any >/dev/null
-python3 scripts/query-foundational-resources.py packs --concept bridge_random_matrix_finite_moment --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field abstract_algebra --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text homomorphism --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text ideal --require-any >/dev/null

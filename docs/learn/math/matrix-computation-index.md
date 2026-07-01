@@ -12,6 +12,8 @@ For downstream discovery by computation family plus proof route, see
 [Matrix Computation Consumer Queries](../../foundational-resources/MATRIX-COMPUTATION-QUERIES.md).
 For the focused finite-operator and Chebyshev slice, see
 [Chebyshev And Operator Replay Index](chebyshev-operator-index.md).
+For finite matrix-valued probability tables and moment replay, see
+[Random Matrix Moment Index](random-matrix-moment-index.md).
 
 Concept rows:
 
@@ -101,6 +103,7 @@ experimental artifact.
 - [Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md)
 - [Matrix Invariants](matrix-invariants-end-to-end.md)
 - [Finite Random Matrices](random-matrix-finite-end-to-end.md)
+- [Random Matrix Moment Index](random-matrix-moment-index.md)
 - [Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md)
 - [Chebyshev And Operator Replay Index](chebyshev-operator-index.md)
 - [Finite-Dimensional Operators](finite-operator-end-to-end.md)

@@ -100,6 +100,12 @@ python3 scripts/query-foundational-resources.py packs \
   --concept bridge_random_matrix_finite_moment \
   --route Farkas \
   --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_random_matrix_finite_moment \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
 ```
 
 Display checked finite torsion-homology matrix rows:

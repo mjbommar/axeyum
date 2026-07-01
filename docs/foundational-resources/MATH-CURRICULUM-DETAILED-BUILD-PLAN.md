@@ -815,6 +815,16 @@ Pick one row per commit unless the change is purely navigational.
     concept-scoped Farkas route queries while keeping Banach/Hilbert-space,
     compact-operator, Haar-space, minimax, alternation-theorem, and
     infinite-dimensional approximation claims in the Lean-horizon lane.
+96. Landed: add `random-matrix-moment-index.md` as the cross-pack learner path
+    for finite matrix-valued probability tables, exact trace/determinant
+    moments, expected Gram matrices, rank-mixture probabilities, checked
+    QF_LRA/Farkas bad trace-square evidence, and adjacent finite
+    probability/statistics table patterns. The probability/statistics consumer
+    smoke now exposes `bridge_random_matrix_finite_moment` through
+    concept-scoped Farkas route queries while keeping asymptotic spectral laws,
+    universality, concentration theorems, simulation quality, and
+    high-dimensional random-matrix claims in the theorem/numerical-honesty
+    lanes.
 
 ## Validation Checklist
 

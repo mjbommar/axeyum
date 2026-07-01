@@ -205,6 +205,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Random-matrix moment learner index landed.**
+  `random-matrix-moment-index.md` now ties finite matrix-valued atom tables,
+  exact trace/determinant moments, expected Gram matrices, rank-mixture
+  probabilities, checked QF_LRA/Farkas bad trace-square refutation, and
+  adjacent finite probability/statistics table patterns into one learner
+  path. The consumer guide, field-readiness matrix, atlas source refs, matrix
+  query guide, probability/statistics pages, and resource smoke now expose
+  `bridge_random_matrix_finite_moment` through concept-scoped Farkas route
+  queries. The boundary stays finite: exact rational atom-table, matrix,
+  expectation, Gram, and rank replay are current evidence; asymptotic spectral
+  laws, universality, concentration theorems, simulation quality, and
+  high-dimensional random-matrix claims remain theorem/numerical-honesty
+  horizons.
+
 - **Chebyshev/operator learner index landed.**
   `chebyshev-operator-index.md` now ties finite-dimensional operator bounds,
   Chebyshev recurrence values, Vandermonde interpolation matrices,

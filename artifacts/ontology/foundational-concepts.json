@@ -6487,6 +6487,7 @@
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/matrix-computation-index.md",
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
+            "docs/learn/math/random-matrix-moment-index.md",
             "docs/learn/math/random-matrix-finite-end-to-end.md",
             "docs/learn/math/probability-and-statistics.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
@@ -6500,6 +6501,7 @@
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/learn/math/matrix-computation-index.md",
         "docs/learn/math/matrix-corpus-benchmark-boundary.md",
+        "docs/learn/math/random-matrix-moment-index.md",
         "docs/learn/math/random-matrix-finite-end-to-end.md",
         "docs/learn/math/probability-and-statistics.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",

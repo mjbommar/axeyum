@@ -611,6 +611,7 @@ replay, read
 [End To End: Matrix Invariants](matrix-invariants-end-to-end.md),
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md),
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md),
+[Random Matrix Moment Index](random-matrix-moment-index.md),
 [End To End: Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md),
 [End To End: Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md),
 [End To End: Finite Root Finding](finite-root-finding-end-to-end.md),

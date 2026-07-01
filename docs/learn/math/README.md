@@ -38,6 +38,10 @@ Companion maps:
   connects finite operator bounds, Chebyshev recurrences, interpolation
   matrices, alternating residuals, spectral rows, checked Farkas evidence, and
   functional-analysis theorem horizons.
+- [Random Matrix Moment Index](random-matrix-moment-index.md):
+  connects finite matrix-valued atom tables, exact moments, expected Gram
+  matrices, rank-mixture probabilities, checked Farkas evidence, and
+  random-matrix asymptotic horizons.
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md):
   maps finite analysis, calculus, optimization, measure, dynamics, and operator
   shadows to their missing Lean/theorem reconstruction routes.

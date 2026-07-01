@@ -225,12 +225,15 @@ cohomology-operation laws, and
 general algebraic-topology theorems stay in the theorem-horizon lane.
 The public foundational-resource consumer query layer now also exercises the
 statistics lane: Farkas field readiness, finite-table/tail-count bridge
-lookups, and checked Farkas/Diophantine rows for exact finite tests,
-contingency tables, regression, random matrices, probability/process tables,
-concentration, and stochastic kernels are smoke-checked through the committed
-JSON contract, while floating-point inference, asymptotic sampling, MCMC, VI,
-and model-calibration claims stay in numerical-honesty or theorem-horizon
-lanes.
+lookups, random-matrix bridge lookups, concept-scoped
+`bridge_random_matrix_finite_moment` Farkas pack and checked-row queries, and
+checked Farkas/Diophantine rows for exact finite tests, contingency tables,
+regression, random matrices, probability/process tables, concentration, and
+stochastic kernels are smoke-checked through the committed JSON contract,
+while floating-point inference, asymptotic sampling, MCMC, VI,
+model-calibration claims, random-matrix asymptotics, universality, simulation
+quality, and high-dimensional limit laws stay in numerical-honesty or
+theorem-horizon lanes.
 The public foundational-resource consumer query layer now also exercises the
 linear-algebra lane: Farkas/Alethe field readiness, rank/projection bridge
 lookups, and checked rows for exact rational matrices, residual/eigen

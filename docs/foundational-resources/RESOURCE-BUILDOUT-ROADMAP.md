@@ -1715,6 +1715,15 @@ Pick one item per commit unless the change is purely navigational.
      while keeping Banach/Hilbert-space, compact-operator, Haar-space,
      minimax, alternation-theorem, and infinite-dimensional approximation
      claims in the theorem-horizon lane.
+107. Landed: add `random-matrix-moment-index.md`, wiring finite
+     matrix-valued probability tables, exact trace/determinant moments,
+     expected Gram matrices, rank-mixture probabilities, and checked
+     QF_LRA/Farkas bad trace-square evidence into one probability/matrix
+     learner path. The probability/statistics field readiness and smoke
+     queries now expose concept-scoped `bridge_random_matrix_finite_moment`
+     Farkas route lookups while keeping asymptotic spectra, universality,
+     concentration theorems, simulation quality, and high-dimensional
+     random-matrix claims in theorem/numerical-honesty lanes.
 
 ## Validation Checklist
 

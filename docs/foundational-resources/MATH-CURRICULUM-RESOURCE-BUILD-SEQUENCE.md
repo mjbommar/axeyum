@@ -374,8 +374,10 @@ Pick one item per commit unless the change is purely navigational.
    finite operator/Chebyshev bridge replays exact operator bounds,
    interpolation matrices, sign alternation, recurrence values, residual rows,
    spectral rows, or characteristic-polynomial arithmetic.
-7. Add random-matrix depth only as exact finite moment/table replay before
-   asymptotic statements.
+7. Landed: add random-matrix learner and query coverage only as exact finite
+   matrix-valued atom tables, moment replay, expected Gram replay,
+   rank-mixture replay, and checked QF_LRA/Farkas bad-moment rows before any
+   asymptotic statement.
 8. Promote one replay-heavy QF_UF topology/algebra row through Alethe.
 9. Promote one small graph or set-family Boolean row through CNF/LRAT.
 10. Add the next rules/law example only by reusing an existing math proof

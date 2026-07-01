@@ -251,8 +251,8 @@ losing the curriculum anchor.
 | `graph_theory` | sets, relations, counting | `graph-coloring-v0`, then reachability, search runtime/cost counters, matching, cuts, and d-separation. |
 | `topology` | sets, reals, sequences-and-limits, linear algebra | `finite-topology-v0`, `finite-specialization-order-v0`, `finite-simplicial-homology-v0`, then metric balls, closure/interior, specialization preorder replay, checked finite axiom conflicts, continuous maps, compactness, connectedness, and finite chain-complex checks. |
 | `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-measure-monotonicity-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-martingales-v0`, `finite-hitting-times-v0`, and `finite-concentration-v0` over finite universes; Lebesgue and convergence theory remain horizon. |
-| `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, finite random variables, finite conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, product tables, exact discrete distributions. |
-| `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, `least-squares-regression-v0`, contingency tables, exact small tests, least-squares normal equations, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, and finite concentration checks. |
+| `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, finite random variables, finite conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, product tables, exact discrete distributions, finite random-matrix moment tables, and the random-matrix moment learner-query index. |
+| `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, `least-squares-regression-v0`, contingency tables, exact small tests, least-squares normal equations, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, finite concentration checks, and finite random-matrix moment checks. |
 | `optimization_and_convexity` | rationals, reals, linear algebra | `linear-optimization-v0`, `convexity-rational-v0`, `multivariable-calculus-rational-v0`, `finite-separation-v0`, `finite-kkt-v0`, `finite-active-set-qp-v0`, `finite-sdp-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0`, `finite-projected-gradient-v0`, `finite-proximal-gradient-v0`, LP feasibility, dual/Farkas certificates, finite convexity, gradients, Hessian checks, threshold checks, KKT witnesses, active-set QP witnesses, SDP primal/dual slack replay, finite descent-step checks, finite Armijo/Wolfe line-search replay, finite projected-gradient replay, and finite proximal-gradient replay. |
 | `numerical_analysis` | linear algebra, real algebra | `numerical-linear-algebra-v0`, `finite-euler-method-v0`, `multivariable-calculus-rational-v0`, LU replay, interval bounds, error recurrences, Jacobian/Hessian replay, and finite ODE step replay. |
 | `differential_equations_and_dynamical_systems` | calculus, linear algebra | `bounded-dynamics-v0`, `finite-euler-method-v0`, recurrence traces, Euler-method steps, finite error replay, and invariant checks before continuous theory. |
@@ -2050,13 +2050,16 @@ connectedness, specialization-order theorems, homeomorphism invariance,
 homology invariance, exact sequences, or cohomology theorems.
 The consumer query layer now also exposes statistics readiness:
 `CONSUMER-QUERIES.md` shows the Farkas field summary, finite-table and
-tail-count bridge lookups, and checked Farkas/Diophantine statistics row
-drill-downs. The foundational-resource smoke check runs those same queries so
-exact finite tests, contingency tables, least-squares regression,
-random-matrix finite moments, finite probability/process tables,
-concentration rows, and stochastic-kernel checks stay visible through the
-public JSON boundary without promoting floating-point inference, asymptotic
-sampling, MCMC, VI, or model-calibration claims.
+tail-count bridge lookups, random-matrix bridge lookups, concept-scoped
+`bridge_random_matrix_finite_moment` pack and checked-row drill-downs, and
+checked Farkas/Diophantine statistics row drill-downs. The
+foundational-resource smoke check runs those same queries so exact finite
+tests, contingency tables, least-squares regression, random-matrix finite
+moments, finite probability/process tables, concentration rows, and
+stochastic-kernel checks stay visible through the public JSON boundary without
+promoting floating-point inference, asymptotic sampling, MCMC, VI,
+model-calibration claims, random-matrix asymptotics, universality, simulation
+quality, or high-dimensional limit laws.
 The consumer query layer now also exposes linear-algebra readiness:
 `CONSUMER-QUERIES.md` shows Farkas and Alethe field summaries, rank and
 projection bridge lookups, and checked exact-rational/equality-heavy
@@ -2161,6 +2164,12 @@ which groups finite operator bounds, Chebyshev recurrence values,
 Vandermonde interpolation matrices, alternating residuals, spectral rows, and
 characteristic-polynomial arithmetic by exact replay, QF_LRA/Farkas evidence,
 and functional-analysis theorem horizons.
+The learner layer now also has
+[`random-matrix-moment-index.md`](../learn/math/random-matrix-moment-index.md),
+which groups finite matrix-valued atom tables, exact trace/determinant
+moments, expected Gram matrices, rank-mixture probabilities, checked
+QF_LRA/Farkas bad trace-square evidence, and random-matrix asymptotic or
+simulation horizons.
 The learner/planning layer now also has
 [`matrix-corpus-benchmark-boundary.md`](../learn/math/matrix-corpus-benchmark-boundary.md),
 which separates educational matrix resources, solver regressions,

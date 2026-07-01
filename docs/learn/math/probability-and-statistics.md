@@ -262,6 +262,8 @@ For exact finite statistics and regression replay, read
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md).
 For finite matrix-valued probability tables, read
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md).
+For the cross-pack finite random-matrix query map, read
+[Random Matrix Moment Index](random-matrix-moment-index.md).
 For exact finite statistical-test p-values, read
 [End To End: Exact Statistical Tests](exact-statistical-tests-end-to-end.md).
 For finite counting identities and the first pigeonhole refutation, read
