@@ -225,8 +225,8 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 630 expected checks (334 `sat`,
-225 `unsat`, 71 `not-run`), 307 checked rows, 252 replay-only rows, and 71
+111 concept rows, 108 non-template packs, 631 expected checks (334 `sat`,
+226 `unsat`, 71 `not-run`), 308 checked rows, 252 replay-only rows, and 71
 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -238,6 +238,10 @@ replay isolates `phi(1+1)=1` versus `phi(1)+phi(1)=0`. The finite
 linear-algebra lane now also promotes the bad nullspace-component row through
 QF_LRA/Farkas after exact matrix replay computes `A*v = 0` for
 `v = [2, -1]` while the bad row claims the first component is `1`. The finite
+metric-continuity lane now also promotes the bad open-ball preimage row through
+QF_LRA/Farkas after exact finite replay computes the output-ball preimage as
+`{p0, p1}` while the bad row claims `p2` is inside even though
+`|f(p2)-0| = 1`. The finite
 order/lattice lane now also promotes the false Boolean-lattice top-element row
 through Bool/CNF DRAT/LRAT after exact relation replay isolates `B !<= A`
 while the bad claim that `A` is top requires `B <= A`. The modular-arithmetic

@@ -114,7 +114,8 @@ the finite `delta`-ball from the listed samples, checks the linear output
 distances, and rejects the false claim that `delta = 3/4` works using
 `x = 2/3`, with checked `UnsatFarkas` evidence for the final output bound.
 The adjacent `metric-continuity-v0` pack now carries the same checked
-QF_LRA/Farkas route for a finite metric-space bad-delta row.
+QF_LRA/Farkas route for finite metric-space bad-delta and bad open-ball
+preimage rows.
 
 For a small real-algebra shadow, encode a nonlinear witness or a one-variable
 quadratic obstruction:

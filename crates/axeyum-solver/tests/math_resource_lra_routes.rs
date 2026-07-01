@@ -55,6 +55,9 @@ const POLYNOMIAL_FACTORIZATION_IRREDUCIBLE_QUADRATIC_DISCRIMINANT: &str = includ
 const REALS_RCF_NEGATIVE_DISCRIMINANT: &str = include_str!(
     "../../../artifacts/examples/math/reals-rcf-shadow-v0/smt2/negative-discriminant-farkas-conflict.smt2"
 );
+const METRIC_CONTINUITY_BAD_OPEN_BALL_PREIMAGE: &str = include_str!(
+    "../../../artifacts/examples/math/metric-continuity-v0/smt2/bad-open-ball-preimage-farkas-conflict.smt2"
+);
 const COMPLEX_ALGEBRAIC_BAD_NORM_SQUARED: &str = include_str!(
     "../../../artifacts/examples/math/complex-algebraic-v0/smt2/bad-norm-squared-farkas-conflict.smt2"
 );
@@ -1445,6 +1448,14 @@ fn metric_continuity_bad_delta_emits_checked_farkas() {
         "metric-continuity-v0 bad-delta-rejected",
         &arena,
         &[output_distance_is_epsilon, false_output_bound],
+    );
+}
+
+#[test]
+fn metric_continuity_bad_open_ball_preimage_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "metric-continuity-v0 bad-open-ball-preimage SMT-LIB artifact",
+        METRIC_CONTINUITY_BAD_OPEN_BALL_PREIMAGE,
     );
 }
 

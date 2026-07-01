@@ -33,6 +33,18 @@ The resource-backed Axeyum regression checks the final strict output-bound
 contradiction as `QF_LRA`: `output_distance = 1` and
 `output_distance < 1`, requiring rechecked `UnsatFarkas` evidence.
 
+## `bad-open-ball-preimage-rejected`
+
+Expected result: `unsat`.
+
+The validator recomputes the finite preimage of the open output ball around
+`0` with radius `1`. The malformed row includes `p2`, but
+`|f(p2) - 0| = 1`, so `p2` is not strictly inside that open ball.
+
+The resource-backed Axeyum regression parses the source `QF_LRA` artifact and
+checks the final open-ball membership contradiction: `output_distance = 1` and
+`output_distance < 1`, requiring rechecked `UnsatFarkas` evidence.
+
 ## `general-continuity-lean-horizon`
 
 Expected result: `not-run`.

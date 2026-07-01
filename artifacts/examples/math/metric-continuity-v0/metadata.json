@@ -33,10 +33,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "metric continuity bad-delta QF_LRA/Farkas regression seed",
-    "pressure": "Finite epsilon-delta bad-delta row where a counterexample has output distance exactly epsilon but the false continuity claim requires strict output_distance < epsilon.",
+    "target": "metric continuity bad-delta and bad open-ball preimage QF_LRA/Farkas regression seeds",
+    "pressure": "Finite epsilon-delta bad-delta and open-ball preimage rows where a counterexample has output distance exactly epsilon but the false continuity or preimage claim requires strict output_distance < epsilon.",
     "evidence": [
-      "bad-delta-rejected"
+      "bad-delta-rejected",
+      "bad-open-ball-preimage-rejected"
     ],
     "next_step": "Promote additional metric/topology rows only when they add distinct exact-linear solver pressure; keep fully quantified continuity and arbitrary topological-space theorems in the Lean-horizon lane."
   },
@@ -50,6 +51,7 @@
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "artifacts/examples/math/metric-continuity-v0/smt2/bad-delta-farkas-conflict.smt2",
+    "artifacts/examples/math/metric-continuity-v0/smt2/bad-open-ball-preimage-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
@@ -57,12 +59,13 @@
     "epsilon-delta-continuity-witness",
     "open-ball-preimage-witness",
     "bad-delta-rejected",
+    "bad-open-ball-preimage-rejected",
     "general-continuity-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite epsilon-delta and open-ball preimage checks as deterministic exact-rational obligations.",
     "Replay SAT witnesses through Axeyum model evaluation over finite metric spaces.",
-    "Emit checked arithmetic evidence for bounded bad-delta refutations; the bad-delta output-bound conflict now has checked QF_LRA/Farkas evidence.",
+    "Emit checked arithmetic evidence for bounded bad-delta and bad preimage refutations; the bad-delta output-bound conflict and bad open-ball preimage conflict now have checked QF_LRA/Farkas evidence.",
     "Keep general continuity, compactness, and topological-space theorems marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

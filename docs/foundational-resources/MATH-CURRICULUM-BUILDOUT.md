@@ -748,8 +748,8 @@ Recommended order:
     calculus Lean-horizon metadata.
 23. `real-analysis-rational-v0` (landed): exact rational interval/ball
     inclusion, bounded epsilon-delta samples, squeeze-style polynomial side
-    conditions, QF_LRA/Farkas bad-delta rejection, and general real-analysis
-    Lean-horizon metadata.
+    conditions, QF_LRA/Farkas bad-delta rejection, adjacent metric-continuity
+    bad-preimage evidence, and general real-analysis Lean-horizon metadata.
 
 Exit criteria:
 
@@ -846,7 +846,8 @@ checked Bool/CNF DRAT/LRAT rejection of a malformed open-set family that omits
 the empty set.
 `artifacts/examples/math/metric-continuity-v0/` now validates finite
 Lipschitz, epsilon-delta, and open-ball preimage checks with exact rational
-metrics, plus checked QF_LRA/Farkas rejection of an overlarge delta.
+metrics, plus checked QF_LRA/Farkas rejection of an overlarge delta and a
+malformed open-ball preimage row.
 `artifacts/examples/math/finite-compactness-v0/` now validates finite
 open-cover/subcover checks, minimal subcover enumeration,
 finite-intersection-family replay, checked Bool/CNF bad-cover rejection, and a
@@ -1080,8 +1081,8 @@ Recommended order:
     roots, Cayley-Hamilton replay, finite eigenvalue intervals, and
     QF_LRA/Farkas bad-trace and bad-characteristic-polynomial rejections.
 19. `metric-continuity-v0`: finite Lipschitz, epsilon-delta, open-ball
-    preimage, and checked QF_LRA/Farkas bad-delta checks over exact rational
-    metric spaces.
+    preimage, and checked QF_LRA/Farkas bad-delta and bad-preimage checks over
+    exact rational metric spaces.
 20. `finite-compactness-v0`: finite open covers, minimal subcover
     enumeration, finite-intersection families, and checked Bool/CNF bad-cover
     rejection.
@@ -1864,8 +1865,8 @@ bad tail-count certificate, and the statistical
 numerical-honesty horizon.
 `metric-continuity-v0` now has a learner-facing end-to-end lesson for finite
 metric-table replay, finite Lipschitz checks, epsilon-delta containment,
-open-ball preimage replay, checked QF_LRA/Farkas bad-delta rejection, and the
-continuity Lean horizon.
+open-ball preimage replay, checked QF_LRA/Farkas bad-delta and bad-preimage
+rejections, and the continuity Lean horizon.
 `finite-compactness-v0` now has a learner-facing end-to-end lesson for finite
 open-cover replay, subcover replay, minimal-subcover enumeration,
 finite-intersection-family replay, checked Bool/CNF bad-cover rejection, and

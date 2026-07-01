@@ -79,7 +79,9 @@ linear epsilon-delta witness, and a checked bad-delta certificate.
 Move to [Metric Continuity](metric-continuity-end-to-end.md) when the same
 shape is represented as a finite metric table. The finite domain ball around
 `p0` must map into the finite output ball around `f(p0)`, and bad deltas become
-source-linked QF_LRA/Farkas regressions.
+source-linked QF_LRA/Farkas regressions. The same pack also checks a malformed
+open-ball preimage row by replaying the output-ball membership table before
+checking the final strict-bound contradiction.
 
 Use [Sequence And Limit Shadows](sequence-limit-shadow-end-to-end.md) for the
 epsilon-N version of the same boundary. The pack checks only listed tails,

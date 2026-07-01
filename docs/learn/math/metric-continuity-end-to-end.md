@@ -20,12 +20,13 @@ Concept rows:
 | `epsilon-delta-continuity-witness` | `sat` | replay-only |
 | `open-ball-preimage-witness` | `sat` | replay-only |
 | `bad-delta-rejected` | `unsat` | checked |
+| `bad-open-ball-preimage-rejected` | `unsat` | checked |
 | `general-continuity-lean-horizon` | `not-run` | lean-horizon |
 
 Every checked row is finite replay over exact rational distances and function
-values. The bad-delta row also has a checked `UnsatFarkas` certificate for the
-final strict output-bound contradiction. The pack does not prove general
-continuity on real metric spaces.
+values. The bad-delta and bad open-ball preimage rows also have checked
+`UnsatFarkas` certificates for the final strict output-bound contradictions.
+The pack does not prove general continuity on real metric spaces.
 
 ## Encode A Finite Metric Slice
 
@@ -128,6 +129,30 @@ checks that it matches the finite domain ball around `p0` of radius `1/2`.
 This is the topological form of the same finite continuity shadow: preimages of
 open balls are checked by exact finite enumeration.
 
+## Reject A Bad Open-Ball Preimage
+
+The malformed preimage row claims that `p2` belongs to the same open output
+ball:
+
+```text
+|f(p2) - 0| < 1
+```
+
+Exact replay rejects the claim before the solver route is trusted:
+
+```text
+|f(p2) - 0| = |1 - 0| = 1
+```
+
+The source SMT-LIB artifact isolates the final linear contradiction:
+
+```text
+output_distance = 1
+output_distance < 1
+```
+
+Axeyum parses that artifact and must return rechecked `UnsatFarkas` evidence.
+
 ## Reject A Bad Delta
 
 The negative row claims that:
@@ -174,6 +199,7 @@ finite Lipschitz inequality
 one epsilon-delta witness
 one open-ball preimage
 one bad-delta refutation
+one bad open-ball preimage refutation
 ```
 
 The general theorem shape remains a proof-assistant target:
@@ -195,6 +221,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/metric-continuity-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes metric_continuity_bad_delta_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes metric_continuity_bad_open_ball_preimage_artifact_emits_checked_farkas
 ```
 
 Expected output:
@@ -209,7 +236,7 @@ This lesson shows Axeyum's current metric-continuity resource pattern:
 
 ```text
 untrusted fast search -> finite metric, delta, preimage, or counterexample row
-trusted small checking -> exact rational distances, finite enumeration, and a Farkas certificate for the linear bad-delta refutation
+trusted small checking -> exact rational distances, finite enumeration, and Farkas certificates for the linear bad-delta and bad-preimage refutations
 remaining horizon -> fully quantified real metric-space continuity
 ```
 

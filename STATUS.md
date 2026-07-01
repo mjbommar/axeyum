@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Metric-continuity bad open-ball-preimage QF_LRA row landed.**
+  `metric-continuity-v0` now includes a checked rejection for a malformed
+  open-ball preimage row: exact finite metric replay computes the preimage of
+  `|y - 0| < 1` as `{p0, p1}`, while the bad row claims `p2` is included even
+  though `|f(p2) - 0| = 1`. The validator pins the finite points, function
+  values, target value, epsilon, actual preimage, claimed point, source SMT-LIB
+  artifact, and route regression. The shared `math_resource_lra_routes`
+  regression parses the source QF_LRA artifact and checks the `UnsatFarkas`
+  evidence. Generated dashboards and the public query summary now report 111
+  concept rows, 108 non-template packs, 631 expected checks, 308 checked rows,
+  252 replay-only rows, and 71 Lean-horizon rows.
+
 - **Linear algebra bad nullspace-component QF_LRA row landed.**
   `linear-algebra-rational-v0` now includes a checked rejection for a
   malformed nullspace row: exact replay checks `A*v = [0, 0]` for
@@ -214,8 +226,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   SMT-LIB artifact, and route regression. The shared
   `math_resource_lra_routes` regression parses the source QF_LRA artifact and
   checks the `UnsatFarkas` evidence. Generated dashboards and the public query
-  summary now report 111 concept rows, 108 non-template packs, 630 expected
-  checks, 307 checked rows, 252 replay-only rows, and 71 Lean-horizon rows.
+  summary were refreshed for that increment.
 
 - **Numerical-linear-algebra bad solution-box QF_LRA row landed.**
   `numerical-linear-algebra-v0` now includes a checked rejection for a

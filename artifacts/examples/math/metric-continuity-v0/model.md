@@ -72,5 +72,30 @@ output_distance = 1
 output_distance < 1
 ```
 
-The pack keeps this contradiction on the checked `UnsatFarkas` route. This is
-a finite exact refutation, not a proof of any general theorem.
+The pack keeps this contradiction on the checked `UnsatFarkas` route.
+
+## Bad Open-Ball Preimage
+
+The open output ball around `0` with radius `1` contains exactly the points
+whose output value is strictly less than `1` away from `0`:
+
+```text
+{p | |f(p) - 0| < 1} = {p0, p1}
+```
+
+The malformed preimage row claims `p2` is also in that preimage. Exact replay
+rejects it:
+
+```text
+|f(p2) - 0| = 1
+1 < 1 is false
+```
+
+The final strict-membership contradiction is again linear:
+
+```text
+output_distance = 1
+output_distance < 1
+```
+
+This is a finite exact refutation, not a proof of any general theorem.

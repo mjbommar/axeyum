@@ -219,8 +219,8 @@ Companion maps:
   rejection with QF_LRA/Farkas certificates, and the calculus Lean horizons.
 - [Metric Continuity](metric-continuity-end-to-end.md): follows finite metric
   table replay, finite Lipschitz checks, epsilon-delta containment,
-  open-ball preimage replay, checked QF_LRA/Farkas bad-delta rejection, and
-  the continuity Lean horizon.
+  open-ball preimage replay, checked QF_LRA/Farkas bad-delta and bad-preimage
+  rejections, and the continuity Lean horizon.
 - [Metric Balls And Epsilon-Delta Index](metric-ball-epsilon-delta-index.md):
   groups bounded real-analysis, metric-continuity, finite-topology,
   compactness, connectedness, and open-preimage resources by exact replay

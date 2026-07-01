@@ -98,6 +98,32 @@
       "notes": "The validator checks the documented counterexample by exact rational metric and output-distance arithmetic. The SMT-LIB artifact isolates the false strict output-bound claim, and Axeyum emits checked Farkas evidence."
     },
     {
+      "id": "bad-open-ball-preimage-rejected",
+      "claim": "The listed open-ball preimage wrongly includes p2 even though f(p2) is at output distance 1 from the target value.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_open_ball_preimage_refutation",
+      "proof_status": "checked",
+      "data": {
+        "points": ["p0", "p1", "p2", "p3"],
+        "function_values": {
+          "p0": "0",
+          "p1": "1/2",
+          "p2": "1",
+          "p3": "2"
+        },
+        "target_value": "0",
+        "epsilon": "1",
+        "actual_preimage": ["p0", "p1"],
+        "claimed_point": "p2",
+        "output_distance": "1",
+        "farkas_preimage_claim": "output_distance < epsilon",
+        "smt2_artifact": "artifacts/examples/math/metric-continuity-v0/smt2/bad-open-ball-preimage-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes metric_continuity_bad_open_ball_preimage_artifact_emits_checked_farkas",
+        "certificate": "produce_lra_evidence emits Evidence::UnsatFarkas checked by Evidence::check for output_distance = 1 together with the false strict open-ball membership claim output_distance < 1"
+      },
+      "notes": "The validator recomputes the finite output-ball preimage exactly and confirms p2 is excluded. The SMT-LIB artifact isolates the final false strict output-ball membership claim, and Axeyum emits checked Farkas evidence."
+    },
+    {
       "id": "general-continuity-lean-horizon",
       "claim": "General epsilon-delta continuity over real metric spaces requires future Lean resources.",
       "expected_result": "not-run",

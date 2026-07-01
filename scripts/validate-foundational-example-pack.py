@@ -19101,6 +19101,51 @@ def validate_metric_continuity(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "Evidence::check" not in certificate:
         fail("bad-delta-rejected certificate must document checked Farkas evidence")
 
+    bad_preimage = checks["bad-open-ball-preimage-rejected"]
+    if bad_preimage["expected_result"] != "unsat" or bad_preimage.get("proof_status") != "checked":
+        fail("bad-open-ball-preimage-rejected must be a checked unsat row")
+    data = bad_preimage.get("data", {})
+    points = require_string_list("bad preimage points", data.get("points"))
+    function_values = require_point_values("bad preimage function_values", data.get("function_values"), points)
+    target_value = require_fraction("bad preimage target_value", data.get("target_value"))
+    epsilon = require_fraction("bad preimage epsilon", data.get("epsilon"))
+    if epsilon <= 0:
+        fail("bad-open-ball-preimage-rejected epsilon must be positive")
+    actual_preimage = require_subset("bad preimage actual_preimage", data.get("actual_preimage"), points)
+    claimed_point = data.get("claimed_point")
+    require_string("bad preimage claimed_point", claimed_point)
+    if claimed_point not in set(points):
+        fail("bad-open-ball-preimage-rejected claimed_point must be listed")
+    computed_preimage = frozenset(
+        point
+        for point in points
+        if abs(function_values[point] - target_value) < epsilon
+    )
+    if computed_preimage != actual_preimage:
+        fail("bad-open-ball-preimage-rejected actual_preimage is incorrect")
+    if claimed_point in computed_preimage:
+        fail("bad-open-ball-preimage-rejected claimed_point unexpectedly belongs to the preimage")
+    output_distance = require_fraction("bad preimage output_distance", data.get("output_distance"))
+    if abs(function_values[claimed_point] - target_value) != output_distance:
+        fail("bad-open-ball-preimage-rejected output_distance is incorrect")
+    preimage_claim = data.get("farkas_preimage_claim")
+    require_string("bad preimage farkas_preimage_claim", preimage_claim)
+    if preimage_claim != "output_distance < epsilon":
+        fail("bad-open-ball-preimage-rejected must document the Farkas preimage claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad preimage smt2_artifact", smt2_artifact)
+    check_source("bad preimage smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/metric-continuity-v0/smt2/bad-open-ball-preimage-farkas-conflict.smt2":
+        fail("bad-open-ball-preimage-rejected smt2_artifact must name the checked QF_LRA artifact")
+    regression = data.get("farkas_regression")
+    require_string("bad preimage farkas_regression", regression)
+    if "metric_continuity_bad_open_ball_preimage_artifact_emits_checked_farkas" not in regression:
+        fail("bad-open-ball-preimage-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad preimage certificate", certificate)
+    if "UnsatFarkas" not in certificate or "Evidence::check" not in certificate:
+        fail("bad-open-ball-preimage-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-continuity-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-continuity-lean-horizon must be not-run")

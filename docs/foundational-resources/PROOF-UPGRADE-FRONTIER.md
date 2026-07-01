@@ -324,8 +324,8 @@ First targets:
 - [real-analysis-rational-v0](../../artifacts/examples/math/real-analysis-rational-v0/)
   (resource-backed Farkas regression landed for the bad linear-delta row)
 - [metric-continuity-v0](../../artifacts/examples/math/metric-continuity-v0/)
-  (resource-backed Farkas regression landed for the finite metric-space
-  bad-delta row)
+  (resource-backed Farkas regressions landed for the finite metric-space
+  bad-delta and bad open-ball preimage rows)
 - [finite-conditional-expectation-v0](../../artifacts/examples/math/finite-conditional-expectation-v0/)
   (source-linked solver-reuse promotions landed for the bad high-block,
   total-expectation, and tower-property tables)

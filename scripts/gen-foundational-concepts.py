@@ -2854,7 +2854,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "metric-continuity-v0",
-                "Finite metric continuity examples with an explicit general-continuity horizon.",
+                "Finite metric continuity examples with checked bad-delta and bad-preimage rows plus an explicit general-continuity horizon.",
             ),
             (
                 "finite-concentration-v0",
@@ -2937,7 +2937,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "metric-continuity-v0",
-                "Finite domain and output balls used by bounded continuity examples.",
+                "Finite domain/output balls and checked bad open-ball preimage evidence used by bounded continuity examples.",
             ),
         ],
         "proof_routes": [
@@ -3018,7 +3018,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "metric-continuity-v0",
-                "Finite metric continuity rows with a checked strict output-bound conflict.",
+                "Finite metric continuity rows with checked bad-delta and bad-preimage strict output-bound conflicts.",
             ),
             (
                 "sequence-limit-shadow-v0",
@@ -3279,7 +3279,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "metric-continuity-v0",
-                "Metric epsilon-delta and open-ball preimage rows over finite rational metric spaces.",
+                "Metric epsilon-delta and open-ball preimage rows, including a checked bad-preimage strict-bound certificate.",
             ),
             (
                 "relations-functions-v0",
@@ -3294,19 +3294,23 @@ BRIDGE_CONCEPTS = [
                 "lean_status": "required",
                 "sources": [
                     "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
                     "docs/learn/math/finite-continuous-maps-end-to-end.md",
                     "docs/learn/math/metric-ball-epsilon-delta-index.md",
                 ],
                 "notes": (
                     "The validator recomputes every listed preimage from the "
-                    "function table and checks openness in the domain; general "
+                    "function table and checks openness in the domain; malformed "
+                    "metric open-ball membership rows can isolate a small "
+                    "QF_LRA/Farkas strict-bound contradiction, while general "
                     "continuity theorems remain Lean-horizon."
                 ),
             }
         ],
         "source_refs": [
             "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/finite-continuous-maps-end-to-end.md",
             "docs/learn/math/analysis-topology-proof-horizons.md",
@@ -3316,7 +3320,7 @@ BRIDGE_CONCEPTS = [
         ],
         "open_gaps": [
             "Finite preimage replay does not prove continuous-image, homeomorphism-invariance, compactness-preservation, or connectedness-preservation theorems.",
-            "Future solver reuse needs a source-linked artifact for the bad-continuity rows before treating them as certificate-backed.",
+            "Only fixed finite bad-preimage rows with source-linked artifacts are certificate-backed; arbitrary topological preservation remains proof-horizon.",
         ],
         "graduation": {
             "status": "validated",

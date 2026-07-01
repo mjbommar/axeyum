@@ -276,8 +276,8 @@ schemas, examples, and validation workflows.
   box-proximal claims, and a proximal-gradient convergence Lean-horizon row.
 - [`artifacts/examples/math/metric-continuity-v0/`](../../artifacts/examples/math/metric-continuity-v0/)
   validates finite Lipschitz, epsilon-delta, and open-ball preimage checks
-  with exact rational metrics, plus checked QF_LRA/Farkas rejection of an
-  overlarge delta.
+  with exact rational metrics, plus checked QF_LRA/Farkas rejections of an
+  overlarge delta and a malformed open-ball preimage row.
 - [`artifacts/examples/math/finite-compactness-v0/`](../../artifacts/examples/math/finite-compactness-v0/)
   validates finite open-cover/subcover checks, minimal subcover enumeration,
   finite-intersection families, checked Bool/CNF bad-cover rejection, and a
