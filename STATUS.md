@@ -4028,8 +4028,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **Session 2026-06-30 (later) — Nonlinear (P2.5) in execution: baseline corrected, measured vs Z3, case-split attempt reverted.**
-  Three things superseded the plan-writing entry below:
+- **Session 2026-06-30/07-01 — Nonlinear (P2.5) in execution: baseline corrected, measured vs Z3, Boolean case-split LANDED (9→10).**
+  Four things superseded the plan-writing entry below:
   1. **Baseline corrected.** Reading the code + ADRs (0044/0045/0046) showed the
      NRA engine is *far more built* than the program's first draft assumed — the
      bignum algebraic core (polynomials, Sturm, resultants, real algebraic numbers,
@@ -4043,15 +4043,27 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
      structure (`or`/`distinct`/`ite`) over nonlinear atoms declines and falls to
      the ≤2-cross-product relaxation. The dominant NRA lever is a DPLL(T)/case-split
      feeding conjunctive cubes to the existing CAD (P2.5 Phase B).
-  3. **Landed** a graceful-`unknown` fix for an i128 LRA-replay overflow (was a hard
-     backend error). **Attempted + reverted** a Boolean-case-split prototype
-     (`check_with_nra_dpll`): it unlocked +1 (`issue3656`, 9→10) but the
-     **`nra_differential_fuzz` vs Z3 caught a wrong verdict**, so it was reverted in
-     full (soundness floor). The tree is sound; baseline stays 9/36. Root-causing
-     that wrong verdict is the current top NRA task and blocks re-landing.
-  Strings (P2.7) remains at the planning stage; first increment = Phase A
-  (first-class `Seq`/`String` IR sort + String+LIA over `len`, closing
-  `str.len`-unsat). See [`docs/plan/track-2-theories/P2.5-nra/08-evaluation-and-soundness.md`](docs/plan/track-2-theories/P2.5-nra/08-evaluation-and-soundness.md).
+  3. **Landed** a graceful-`unknown` fix for an i128 LRA-replay overflow (`1f615670`),
+     then **LANDED the Boolean case-split** `check_with_nra_dpll` (`5ede57f4`):
+     **QF_NRA 9→10** (unlocks `issue3656`, a `distinct`/`and` over nonlinear atoms).
+     The first prototype was reverted after `nra_differential_fuzz` failed — but
+     full-capture diagnosis (#68) showed the failure was **not** a wrong verdict, it
+     was `finish_sat` propagating an i128 eval-overflow as an error instead of a
+     graceful `unknown` (same class as `1f615670`). Fixed `finish_sat`, then landed
+     with **`nra`+`nia` fuzz DISAGREE=0**, lib 613/613, clippy clean.
+  4. **Guardrail found (#69).** A follow-up equality-recombination experiment
+     (recombine split `≤∧≥` cubes back into `=`) produced a **wrong sat vs z3 on
+     division instances** — reverted. Root: `decide_real_poly_constraint`'s
+     equality-substitution path has a latent wrong-sat on free-multiplier equalities
+     (`x = r·y` from `eliminate_real_div`); currently **unreachable** by the shipped
+     solver (normal path declines division; the case-split always feeds split-form
+     cubes, which safely decline). Do not add eq-recombination until #69 is fixed +
+     division fuzz coverage added.
+  Broader scoreboard (curated, DISAGREE=0): axeyum is at/above z3 on most divisions
+  (QF_UF 42v41, QF_SEQ 16v14 ahead; FP/DT/AX/ALIA/UFLIA parity; LRA/LIA −1). The
+  real frontier stays **NRA (10/36) + NIA (20/28)**. Strings (P2.7) at planning;
+  first increment = Phase A (`Seq`/`String` IR sort + String+LIA over `len`).
+  See [`docs/plan/track-2-theories/P2.5-nra/08-evaluation-and-soundness.md`](docs/plan/track-2-theories/P2.5-nra/08-evaluation-and-soundness.md).
 
 - **Session 2026-06-30 — Next focus set: the two theory frontiers (strings + nonlinear).**
   The two largest remaining decide-rate gaps vs Z3/cvc5 now have full top-down
