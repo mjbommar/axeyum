@@ -1810,7 +1810,10 @@ disconnected no-path refutation, and edge-cut separation.
 finite BFS/DFS visited-node counter replay, shortcut-tail family checks,
 checked bad DFS-bound rejection, a source-linked QF_LIA arithmetic-DPLL
 regression for the bad finite cost bound, and the asymptotic graph-search
-runtime Lean horizon.
+runtime Lean horizon. `graph-traversal-runtime-index.md` now ties finite
+reachability, deterministic BFS/DFS traces, shortcut-tail visited-node
+counters, checked QF_LIA cost refutations, and asymptotic runtime horizons
+into one graph learner path.
 `graph-matching-v0` now has a learner-facing end-to-end lesson for finite
 matching witness replay, overlapping-edge rejection, augmenting-path flip
 replay, checked `K3` perfect-matching refutation, and the general matching
@@ -2069,8 +2072,9 @@ graph-theory readiness: `CONSUMER-QUERIES.md` shows abstract-algebra Alethe
 field summaries, homomorphism/ideal bridge lookups, checked Alethe and
 fixed-width QF_BV finite-algebra rows, number-theory Diophantine field
 summaries with finite-family lookups and checked integer-arithmetic rows, and
-graph-theory Boolean field summaries with checked finite coloring,
-reachability, matching, cut, and d-separation rows. The foundational-resource
+graph-theory Boolean and LIA field summaries with checked finite coloring,
+reachability, matching, cut, d-separation, and BFS/DFS runtime-counter rows.
+The foundational-resource
 smoke check runs those same queries so the core curriculum lanes are visible
 through the public JSON boundary without promoting arbitrary algebraic
 structure theorems, unbounded number-theory claims, asymptotic graph

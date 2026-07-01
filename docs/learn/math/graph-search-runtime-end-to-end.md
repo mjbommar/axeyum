@@ -142,6 +142,9 @@ Axeyum can check all three for explicit finite instances. General runtime
 theorems and asymptotic lower bounds need proof-assistant artifacts, so the
 pack keeps that row at Lean-horizon status.
 
+For the cross-pack path from reachability to traversal counters, read
+[Graph Traversal Runtime Index](graph-traversal-runtime-index.md).
+
 ## Run It
 
 From the repository root:

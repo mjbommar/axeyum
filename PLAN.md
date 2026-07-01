@@ -243,9 +243,10 @@ The public foundational-resource consumer query layer now also exercises the
 core algebra/number/graph lanes: abstract-algebra Alethe readiness,
 homomorphism/ideal bridge lookups, checked Alethe and fixed-width QF_BV rows;
 number-theory Diophantine readiness, finite-family lookups, and checked
-integer-arithmetic rows; and graph-theory Boolean readiness, graph-family
-lookups, and checked finite coloring/reachability/matching/cut/d-separation
-rows. These are smoke-checked through the committed JSON contract without
+integer-arithmetic rows; and graph-theory Boolean plus LIA readiness,
+graph-family/runtime lookups, checked finite
+coloring/reachability/matching/cut/d-separation rows, and checked finite
+BFS/DFS cost-counter rows. These are smoke-checked through the committed JSON contract without
 promoting arbitrary algebraic-structure theorems, unbounded number-theory
 claims, asymptotic graph algorithms, or general graph theorems.
 The public foundational-resource consumer query layer now also exercises the

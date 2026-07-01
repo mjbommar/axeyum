@@ -1700,6 +1700,12 @@ Pick one item per commit unless the change is purely navigational.
      metric-ball and bounded epsilon-delta bridge discovery without promoting
      quantified continuity, compactness, connectedness, or convergence
      theorems.
+105. Landed: add `graph-traversal-runtime-index.md`, wiring finite
+     reachability, BFS/DFS traversal traces, shortcut-tail cost counters, and
+     checked QF_LIA bad-bound refutations into one graph learner path. The
+     graph field readiness and smoke queries now expose the LIA runtime route
+     while keeping asymptotic algorithm analysis and graph-family lower bounds
+     in the theorem-horizon lane.
 
 ## Validation Checklist
 

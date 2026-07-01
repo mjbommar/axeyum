@@ -111,11 +111,16 @@ python3 scripts/query-foundational-resources.py concepts --field number_theory -
 python3 scripts/query-foundational-resources.py concepts --field number_theory --text CRT --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field number_theory --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field graph_theory --route boolean --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field graph_theory --route LIA --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field graph_theory --text graph --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field graph_theory --text reachability --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field graph_theory --text runtime --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field graph_theory --route LIA --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_graph_replay_obstruction --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_graph_replay_obstruction --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_finite_graph_replay_obstruction --route LIA --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_graph_replay_obstruction --route LIA --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field real_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text epsilon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text metric --require-any >/dev/null

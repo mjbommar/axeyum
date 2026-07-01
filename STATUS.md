@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Graph traversal runtime learner index landed.**
+  `graph-traversal-runtime-index.md` now ties finite reachability,
+  deterministic BFS/DFS traces, shortcut-tail visited-node counters, checked
+  QF_LIA bad-bound refutations, and asymptotic runtime horizons into one
+  graph learner path. The graph consumer guide, field-readiness matrix, atlas
+  source refs, and resource smoke now expose
+  `bridge_finite_graph_replay_obstruction` through LIA route queries alongside
+  the existing Boolean graph rows. The boundary stays finite: queue/stack
+  replay and checked arithmetic-DPLL evidence are current evidence; asymptotic
+  BFS/DFS complexity, graph-family lower bounds, average-case traversal, and
+  heuristic/parallel search guarantees remain Lean-horizon.
+
 - **Metric-ball / epsilon-delta learner index landed.**
   `metric-ball-epsilon-delta-index.md` now ties bounded rational balls,
   finite metric continuity, sequence-tail shadows, finite compactness, finite

@@ -47,6 +47,7 @@
     "docs/curriculum/00-foundations/relations-and-functions.md",
     "docs/curriculum/02-structures/counting.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "artifacts/examples/math/graph-search-runtime-v0/smt2/bad-dfs-cost-bound-lia-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lia_routes.rs"

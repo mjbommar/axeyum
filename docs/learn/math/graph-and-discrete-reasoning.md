@@ -26,6 +26,10 @@ Example packs:
 - [graph-cut-v0](../../../artifacts/examples/math/graph-cut-v0/)
 - [proof-methods-refutation-v0](../../../artifacts/examples/math/proof-methods-refutation-v0/)
 
+Companion map:
+
+- [Graph Traversal Runtime Index](graph-traversal-runtime-index.md)
+
 ## What Axeyum Checks
 
 The discrete path starts with finite counting and graph coloring. The counting

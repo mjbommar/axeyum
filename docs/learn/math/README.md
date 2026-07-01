@@ -40,6 +40,9 @@ Companion maps:
 - [Metric Balls And Epsilon-Delta Index](metric-ball-epsilon-delta-index.md):
   connects bounded rational balls, finite metric continuity, sequence-tail
   shadows, finite compactness, finite connectedness, and open-preimage replay.
+- [Graph Traversal Runtime Index](graph-traversal-runtime-index.md): separates
+  finite reachability, BFS/DFS traces, visited-node counters, checked LIA cost
+  refutations, and asymptotic runtime horizons.
 
 ## End-To-End Lessons
 
@@ -98,6 +101,10 @@ Companion maps:
   follows finite BFS and DFS visited-node counter replay, shortcut-tail family
   checks, checked QF_LIA arithmetic-DPLL bad DFS-bound rejection, and the
   asymptotic runtime Lean horizon.
+- [Graph Traversal Runtime Index](graph-traversal-runtime-index.md): groups
+  reachability, deterministic traversal traces, shortcut-tail runtime
+  counters, checked LIA cost rows, and asymptotic graph-search theorem
+  horizons.
 - [Graph Matching And Augmenting Paths](graph-matching-end-to-end.md): follows
   finite matching witness replay, overlapping-edge rejection, augmenting-path
   flip replay, and a `K3` perfect-matching refutation.

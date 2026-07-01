@@ -800,6 +800,12 @@ Pick one row per commit unless the change is purely navigational.
     real-analysis queries while keeping quantified continuity, compactness,
     connectedness, convergence, and arbitrary-space theorem claims in the
     Lean-horizon lane.
+94. Landed: add `graph-traversal-runtime-index.md` as the cross-pack learner
+    path for finite reachability, deterministic BFS/DFS traces,
+    shortcut-tail visited-node counters, checked QF_LIA cost refutations, and
+    asymptotic graph-search theorem horizons. The graph consumer smoke now
+    exposes `bridge_finite_graph_replay_obstruction` through LIA route queries
+    alongside the existing Boolean graph rows.
 
 ## Validation Checklist
 
