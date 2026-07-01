@@ -33,9 +33,10 @@ successor/addition facts, fixed addition and multiplication identities,
 bounded Peano-style no-counterexample rows, signed integer order facts, linear
 integer equations, interval infeasibility, gcd and Bezout witnesses,
 divisibility quotient witnesses, congruences, CRT witnesses, modular inverses,
-bounded quadratic-residue and sum-of-two-squares checks, rational density
-witnesses, Farkas-checked fixed trichotomy and order-transitivity refutations,
-and algebraic complex arithmetic as real-pair data. The complex-plane pack adds
+bounded quadratic-residue and sum-of-two-squares checks, bounded Diophantine
+witnesses and gcd obstructions, rational density witnesses, Farkas-checked
+fixed trichotomy and order-transitivity refutations, and algebraic complex
+arithmetic as real-pair data. The complex-plane pack adds
 unit-root cycles, conjugation/product replay, exact rational Mobius transforms,
 and a checked counterexample to a false unit-complex-square claim.
 

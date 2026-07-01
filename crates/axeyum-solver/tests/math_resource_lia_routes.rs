@@ -45,6 +45,9 @@ const INTEGER_LIA_DIOPHANTINE_GCD_OBSTRUCTION: &str = include_str!(
 const GCD_BEZOUT_DIOPHANTINE_GCD_OBSTRUCTION: &str = include_str!(
     "../../../artifacts/examples/math/gcd-bezout-v0/smt2/diophantine-gcd-obstruction-conflict.smt2"
 );
+const NUMBER_THEORY_DIOPHANTINE_GCD_OBSTRUCTION: &str = include_str!(
+    "../../../artifacts/examples/math/number-theory-v0/smt2/diophantine-gcd-obstruction-conflict.smt2"
+);
 const NATURAL_ARITHMETIC_BOUNDED_NEGATIVE: &str = include_str!(
     "../../../artifacts/examples/math/natural-arithmetic-v0/smt2/bounded-natural-negative-lia-conflict.smt2"
 );
@@ -145,6 +148,14 @@ fn gcd_bezout_diophantine_gcd_obstruction_emits_checked_diophantine_evidence() {
     assert_resource_diophantine(
         "gcd-bezout-v0 Diophantine gcd obstruction",
         GCD_BEZOUT_DIOPHANTINE_GCD_OBSTRUCTION,
+    );
+}
+
+#[test]
+fn number_theory_diophantine_gcd_obstruction_emits_checked_diophantine_evidence() {
+    assert_resource_diophantine(
+        "number-theory-v0 Diophantine gcd obstruction",
+        NUMBER_THEORY_DIOPHANTINE_GCD_OBSTRUCTION,
     );
 }
 

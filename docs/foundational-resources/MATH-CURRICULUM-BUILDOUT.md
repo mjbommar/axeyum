@@ -237,7 +237,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `polynomials` | `abstract_algebra`, `real_analysis`, `complex_analysis` | `polynomial-identities-v0`, `polynomial-factorization-rational-v0`, `generating-functions-v0`, `finite-root-finding-v0`, `finite-circle-geometry-v0`, `finite-inversion-geometry-v0`, `finite-cyclic-geometry-v0` | Fixed-degree identities, factor theorem, root witness replay, rational factor products, polynomial division, Euclidean GCD, square-free decomposition, irreducible-quadratic rejection with QF_LRA/Farkas evidence, coefficient extraction, finite convolution, exact polynomial evaluation inside bisection/Newton steps, finite circle equations/tangent/chord dot products, finite inversion image/distance-product replay, and finite cyclic-configuration replay. |
 | `sequences-and-limits` | `real_analysis`, `topology` | `sequence-limit-shadow-v0`, `bounded-monotone-sequence-v0`, `finite-recurrence-prefix-v0`, `real-analysis-rational-v0`, `generating-functions-v0` | Bounded epsilon/N and epsilon-delta templates, algebraic sequence checks, finite monotone-prefix/supremum/tail-gap replay, finite recurrence-prefix and companion-matrix replay, and finite generating-function prefixes; general limits marked Lean-horizon. |
 | `counting` | `discrete_math`, `probability_theory` | `counting-v0`, `finite-permutation-groups-v0`, `finite-group-actions-v0`, `finite-recurrence-prefix-v0`, `generating-functions-v0` | Permutations, combinations, pigeonhole finite instances, finite cycle/sign replay, finite orbit counting, Burnside fixed-point averages, recurrence-prefix replay, coefficient extraction, and Cauchy-product counting prefixes. |
-| `number-theory` | `number_theory` | `number-theory-v0` | CRT, quadratic residues, sum of squares, bounded Diophantine checks. |
+| `number-theory` | `number_theory` | `number-theory-v0` | CRT, quadratic residues, sum of squares, bounded Diophantine witnesses and gcd obstructions. |
 | `linear-algebra` | `linear_algebra`, `numerical_analysis`, `optimization_and_convexity` | `linear-algebra-rational-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `inner-product-spaces-rational-v0`, `finite-modules-v0`, `finite-tensor-products-v0`, `multivariable-calculus-rational-v0`, `finite-separation-v0`, `finite-kkt-v0`, `finite-active-set-qp-v0`, `finite-sdp-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0`, `finite-projected-gradient-v0`, `finite-proximal-gradient-v0`, `finite-circle-geometry-v0`, `finite-inversion-geometry-v0`, `finite-cyclic-geometry-v0` | Fixed rational matrices, finite vector spaces and modules, finite dual spaces, covectors, annihilators, transpose maps, exact rational inner products, Gram matrices, projections, Gram-Schmidt replay, finite tensor products, bilinear maps, LU replay, inverse checks, inconsistent systems, subspaces, linear maps, quotient modules, rank-nullity replay, Jacobians, Hessians, exact separating-hyperplane dot-product replay, finite KKT stationarity/complementarity replay, finite active-face stationarity and inactive-slack replay, finite SDP PSD/slack/objective replay, finite gradient-descent matrix-step replay, finite Armijo/Wolfe line-search replay, finite projected-gradient interval replay, finite proximal-gradient soft-threshold replay, finite circle tangent/chord dot-product replay, finite inversion scalar-vector/determinant replay, and finite cyclic diagonal/angle dot-product replay. |
 | `calculus` | `real_analysis`, `differential_equations_and_dynamical_systems`, `numerical_analysis` | `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, `multivariable-calculus-rational-v0`, `real-analysis-rational-v0`, `finite-root-finding-v0`, `finite-kkt-v0`, `finite-active-set-qp-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0`, `finite-projected-gradient-v0`, `finite-proximal-gradient-v0` | Polynomial derivative identities, exact rational gradients/Jacobians/Hessians, finite Riemann sums, antiderivative endpoint replay, bounded epsilon-delta shadows, finite root-finding iteration replay, finite KKT stationarity replay, finite active-set free-gradient replay, finite gradient-descent step replay, finite Armijo/Wolfe line-search replay, finite projected-gradient interval replay, finite proximal-gradient soft-threshold replay, and algebraic inequalities; general integration, KKT sufficiency, active-set method theory, descent-rate, Wolfe/line-search/projected/proximal-gradient convergence, and convergence marked Lean-horizon. |
 
@@ -489,9 +489,10 @@ validates gcd/common-divisor replay, Bezout coefficient replay, direct
 divisibility witnesses, and a source-linked checked linear Diophantine gcd
 obstruction.
 `number-theory-v0` now validates bounded CRT compatibility, quadratic-residue
-replay, checked nonresidue enumeration plus a QF_BV/DRAT proof-route row,
-sum-of-two-squares replay, checked mod-4 two-squares obstruction, and bounded
-Diophantine replay. `integer-lia-v0`
+replay, checked nonresidue enumeration plus QF_BV/DRAT proof-route rows,
+sum-of-two-squares replay, checked mod-4 two-squares obstruction, bounded
+Diophantine replay, and a checked QF_LIA/Diophantine gcd obstruction.
+`integer-lia-v0`
 now validates signed trichotomy, order transitivity, integer ring-identity
 replay, linear equation witnesses, checked interval infeasibility, and a fixed
 GCD-test Diophantine obstruction. `natural-arithmetic-v0` now validates
@@ -657,8 +658,8 @@ Recommended order:
    counting witnesses, finite cycle/sign replay, finite orbit counts, and
    Burnside fixed-point averages.
 10. `number-theory-v0` (landed): CRT compatibility, quadratic residues,
-    QF_BV/DRAT nonresidue evidence, sum-of-two-squares, and bounded
-    Diophantine checks.
+    QF_BV/DRAT residue evidence, sum-of-two-squares, bounded Diophantine
+    witnesses, and checked QF_LIA gcd obstruction evidence.
 11. `integer-lia-v0` (landed): signed order facts, linear equations,
     interval infeasibility, and GCD-test refutations.
 12. `natural-arithmetic-v0` (landed): bounded successor/addition replay,
@@ -1861,7 +1862,8 @@ The QF_LIA/Diophantine proof-upgrade lane now also has
 `finite-simplicial-homology-v0` promoted for its bad boundary coefficient row,
 `induction-patterns-v0` promoted for its finite even-product parity row, and
 `descriptive-statistics-v0` promoted for its bad contingency total row, with
-`integer-lia-v0` now promoted for its gcd divisibility obstruction. The
+`integer-lia-v0` and `number-theory-v0` now promoted for gcd divisibility
+obstructions. The
 related LIA arithmetic-DPLL solver-reuse lane also has
 `induction-obligations-v0` promoted for its bounded bad-step count row,
 `graph-search-runtime-v0` promoted for its bad finite DFS cost-bound row, and

@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Bounded number-theory Diophantine QF_LIA row landed.**
+  `number-theory-v0` now has a checked unsat counterpart to the existing
+  `14*x + 21*y = 7` witness: the new row encodes `14*x + 21*y = 5`, records
+  `gcd(14,21)=7`, and rejects the claim because `7` does not divide `5`.
+  The new SMT-LIB artifact is checked by `math_resource_lia_routes` through
+  `UnsatDiophantine` evidence, the validator pins the coefficients, gcd,
+  artifact path, regression, and certificate note, generated dashboards now
+  show `number-theory-v0` at 10 checked rows, and the public query summary is
+  111 concept rows, 108 non-template packs, 557 expected checks, 241 checked
+  rows, 245 replay-only rows, and 71 Lean-horizon rows.
+
 - **Bounded number-theory bad square-witness QF_BV row landed.**
   `number-theory-v0` now has a second fixed-width residue contradiction:
   exact replay computes `2^2 mod 7 = 4` while the malformed square-root claim

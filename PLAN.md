@@ -148,7 +148,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-06-30): the public JSON layer reports
-111 concept rows, 108 non-template packs, 556 expected checks, 240 checked
+111 concept rows, 108 non-template packs, 557 expected checks, 241 checked
 rows, 245 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -448,7 +448,9 @@ proof objects, while
 `bad-dfs-cost-bound-rejected` now has a source-linked
 QF_LIA artifact checked by the `math_resource_lia_routes` arithmetic-DPLL
 regression and `diophantine-gcd-obstruction` now has a source-linked QF_LIA
-artifact checked by the `math_resource_lia_routes` Diophantine regression, and
+artifact checked by the `math_resource_lia_routes` Diophantine regression,
+`diophantine-gcd-obstruction-qf-lia` now adds the same checked route for
+`number-theory-v0`, and
 `bounded-natural-negative-rejected` now has a source-linked QF_LIA artifact
 checked by the `math_resource_lia_routes` arithmetic-DPLL regression, while
 `quadratic-nonresidue-qf-bv-drat` and `bad-square-witness-qf-bv-drat` now have
@@ -634,7 +636,8 @@ finite generating-functions QF_LIA/Diophantine coefficient-convolution
 promotion, PHP(3,2) counting/refutation Bool/CNF promotions, and the replay-only
 classification pass for bounded dynamics, plus finite-rings bad
 multiplicative-identity, finite-fields bad inverse-candidate, and
-number-theory bad square-root QF_BV promotions, plus the earlier
+number-theory bad square-root QF_BV plus gcd-obstruction QF_LIA promotions,
+plus the earlier
 rational-order, gcd/Bezout, Bool/CNF finite-set/proof-method, QF_LRA
 linear-algebra/optimization/convexity, finite-probability, QF_UF, QF_LIA, and
 QF_BV source-metadata promotion batches;

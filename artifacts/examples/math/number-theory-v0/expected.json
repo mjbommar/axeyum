@@ -150,6 +150,22 @@
       "proof_status": "checked",
       "witnesses": ["diophantine-14-21-7"],
       "notes": "The validator checks the listed integer solution satisfies the equation exactly."
+    },
+    {
+      "id": "diophantine-gcd-obstruction-qf-lia",
+      "claim": "There exist integers x and y such that 14*x + 21*y = 5.",
+      "expected_result": "unsat",
+      "validation": "gcd_divisibility_refutation",
+      "proof_status": "checked",
+      "data": {
+        "coefficients": [14, 21],
+        "target": 5,
+        "gcd": 7,
+        "smt2_artifact": "artifacts/examples/math/number-theory-v0/smt2/diophantine-gcd-obstruction-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_lia_routes number_theory_diophantine_gcd_obstruction_emits_checked_diophantine_evidence",
+        "certificate": "produce_diophantine_evidence emits Evidence::UnsatDiophantine checked by Evidence::check; the certificate records gcd(14,21) does not divide 5"
+      },
+      "notes": "The validator checks gcd(14,21) = 7 and 7 does not divide 5. The SMT-LIB artifact encodes 14*x + 21*y = 5, and Axeyum emits a Diophantine certificate for the divisibility obstruction."
     }
   ]
 }

@@ -27,7 +27,7 @@ Candidate route totals:
 |---|---:|---|
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 16 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 4 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
-| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 11 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions, including finite graph traversal cost counters. |
+| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 12 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions, including finite graph traversal cost counters. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 57 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 19 | Equality-heavy finite structures and congruence conflicts. |
 | [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 78 | General theorem statements that remain outside bounded SMT replay. |
@@ -558,6 +558,10 @@ First targets:
 - [integer-lia-v0](../../artifacts/examples/math/integer-lia-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the
   `2*x + 4*y = 3` gcd divisibility obstruction)
+- [number-theory-v0](../../artifacts/examples/math/number-theory-v0/)
+  (resource-backed QF_LIA/Diophantine regression landed for the
+  `14*x + 21*y = 5` gcd divisibility obstruction after the same pack replays
+  the satisfiable equation `14*x + 21*y = 7`)
 - [cardinality-principles-v0](../../artifacts/examples/math/cardinality-principles-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the
   overlap-additivity count contradiction after finite replay computes
@@ -584,7 +588,6 @@ Reference packs already on the route:
 - [gcd-bezout-v0](../../artifacts/examples/math/gcd-bezout-v0/)
   (source-linked solver-reuse promotion landed for the fixed Diophantine gcd
   obstruction)
-- [number-theory-v0](../../artifacts/examples/math/number-theory-v0/)
 
 Expected artifact:
 

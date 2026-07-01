@@ -25,6 +25,7 @@ Concept rows:
 | `sum-two-squares-witness` | `sat` | checked |
 | `sum-two-squares-mod4-rejected` | `unsat` | checked |
 | `bounded-diophantine-witness` | `sat` | checked |
+| `diophantine-gcd-obstruction-qf-lia` | `unsat` | checked |
 
 The pack is a bounded compute-and-check surface. It does not claim the full
 Chinese remainder theorem, quadratic reciprocity, the two-squares theorem, or
@@ -128,9 +129,19 @@ The validator checks:
 14*(-1) + 21*1 = 7
 ```
 
-This row complements the gcd/Bezout and integer-LIA obstruction rows: here the
-gcd divisibility condition is satisfiable, and the pack gives a concrete
-solution.
+The QF_LIA row records the matching unsatisfiable shape:
+
+```text
+14*x + 21*y = 5
+gcd(14, 21) = 7
+7 does not divide 5
+```
+
+The SMT-LIB artifact encodes the fixed equation. Axeyum emits
+`UnsatDiophantine` evidence and rechecks the gcd-divisibility obstruction
+against the original terms. Together, the two rows show both sides of the
+bounded Diophantine boundary: a satisfiable equation with a witness and an
+impossible equation with a small certificate.
 
 ## Name The Lean Horizon
 
@@ -154,6 +165,7 @@ From the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
 cargo test -p axeyum-solver --test math_resource_bv_routes number_theory_quadratic_nonresidue_emits_checked_bv_drat
 cargo test -p axeyum-solver --test math_resource_bv_routes number_theory_bad_square_witness_emits_checked_bv_drat
+cargo test -p axeyum-solver --test math_resource_lia_routes number_theory_diophantine_gcd_obstruction_emits_checked_diophantine_evidence
 ```
 
 Expected output:
@@ -168,11 +180,11 @@ This lesson shows Axeyum's current number-theory resource pattern:
 
 ```text
 untrusted fast search -> residue, square-sum, or Diophantine candidate
-trusted small checking -> exact integer replay, finite enumeration, mod obstruction, checked DRAT
+trusted small checking -> exact integer replay, finite enumeration, mod obstruction, checked DRAT or UnsatDiophantine
 ```
 
 The first graduation steps are now landed for residue checks: the modulo-7
 nonresidue search and the bad square-root witness are tied to deterministic
-QF_BV/DRAT evidence. Remaining graduation work is QF_LIA evidence for
-Diophantine rows and carefully scoped BV/LIA artifacts for CRT or two-squares
-examples that add new solver pressure.
+QF_BV/DRAT evidence. The Diophantine obstruction now also has checked QF_LIA
+evidence. Remaining graduation work is carefully scoped BV/LIA artifacts for
+CRT or two-squares examples that add new solver pressure.

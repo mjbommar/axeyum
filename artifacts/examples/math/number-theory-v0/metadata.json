@@ -29,11 +29,12 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "bounded quadratic-residue QF_BV/DRAT regression seeds",
-    "pressure": "Modulo-7 nonresidue search and false square-root witness with checked bit-blast/DRAT rechecking.",
+    "target": "bounded residue and Diophantine regression seeds",
+    "pressure": "Modulo-7 residue search/bad-witness rows with checked bit-blast/DRAT rechecking, plus a gcd-divisibility Diophantine obstruction with checked QF_LIA evidence.",
     "evidence": [
       "quadratic-nonresidue-qf-bv-drat",
-      "bad-square-witness-qf-bv-drat"
+      "bad-square-witness-qf-bv-drat",
+      "diophantine-gcd-obstruction-qf-lia"
     ],
     "next_step": "Promote CRT, two-squares, or Diophantine rows only when they add distinct BV/LIA regression pressure; keep deep number-theory theorems out of benchmark scoring."
   },
@@ -48,6 +49,8 @@
     "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
     "artifacts/examples/math/number-theory-v0/smt2/quadratic-nonresidue-mod7-bitblast-conflict.smt2",
     "artifacts/examples/math/number-theory-v0/smt2/bad-square-witness-mod7-bitblast-conflict.smt2",
+    "artifacts/examples/math/number-theory-v0/smt2/diophantine-gcd-obstruction-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
     "crates/axeyum-solver/tests/math_resource_bv_routes.rs"
   ],
   "expected_results": [
@@ -59,12 +62,13 @@
     "bad-square-witness-qf-bv-drat",
     "sum-two-squares-witness",
     "sum-two-squares-mod4-rejected",
-    "bounded-diophantine-witness"
+    "bounded-diophantine-witness",
+    "diophantine-gcd-obstruction-qf-lia"
   ],
   "graduation_criteria": [
     "Encode fixed residue searches and bad residue witnesses as deterministic BV/enumeration obligations; the modulo-7 nonresidue and false square-root rows now have checked QF_BV/DRAT evidence.",
     "Replay SAT witnesses through Axeyum model evaluation.",
-    "Emit checked BV/CNF or LIA evidence for bounded UNSAT rows.",
+    "Emit checked BV/CNF or LIA evidence for bounded UNSAT rows; the first number-theory Diophantine obstruction now has checked QF_LIA evidence.",
     "Keep quadratic reciprocity, the full two-squares theorem, unique factorization, and infinitude of primes marked Lean-horizon."
   ]
 }

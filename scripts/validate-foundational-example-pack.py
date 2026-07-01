@@ -6846,6 +6846,42 @@ def validate_number_theory(expected: dict[str, Any]) -> None:
     if total != target:
         fail("bounded-diophantine-witness solution does not satisfy the equation")
 
+    diophantine_obstruction = checks["diophantine-gcd-obstruction-qf-lia"]
+    if diophantine_obstruction["expected_result"] != "unsat":
+        fail("diophantine-gcd-obstruction-qf-lia must expect unsat")
+    if diophantine_obstruction["proof_status"] != "checked":
+        fail("diophantine-gcd-obstruction-qf-lia must be checked")
+    if diophantine_obstruction["validation"] != "gcd_divisibility_refutation":
+        fail("diophantine-gcd-obstruction-qf-lia must use gcd_divisibility_refutation validation")
+    data = diophantine_obstruction.get("data", {})
+    coefficients = require_int_list("number theory Diophantine obstruction coefficients", data.get("coefficients"))
+    target = require_int("number theory Diophantine obstruction target", data.get("target"))
+    expected_gcd = require_int("number theory Diophantine obstruction gcd", data.get("gcd"))
+    coefficient_gcd = 0
+    for coefficient in coefficients:
+        coefficient_gcd = gcd(coefficient_gcd, abs(coefficient))
+    if coefficient_gcd == 0:
+        fail("diophantine-gcd-obstruction-qf-lia coefficients must not all be zero")
+    if coefficient_gcd != expected_gcd:
+        fail("diophantine-gcd-obstruction-qf-lia records the wrong gcd")
+    if target % coefficient_gcd == 0:
+        fail("diophantine-gcd-obstruction-qf-lia data is satisfiable by the gcd criterion")
+    if coefficients != [14, 21] or target != 5 or coefficient_gcd != 7:
+        fail("diophantine-gcd-obstruction-qf-lia solver promotion is fixed to 14*x + 21*y = 5")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("number theory Diophantine obstruction smt2_artifact", smt2_artifact)
+    check_source("number theory Diophantine obstruction smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/number-theory-v0/smt2/diophantine-gcd-obstruction-conflict.smt2":
+        fail("diophantine-gcd-obstruction-qf-lia smt2_artifact must name the checked QF_LIA artifact")
+    proof_regression = data.get("proof_regression")
+    require_string("number theory Diophantine obstruction proof_regression", proof_regression)
+    if "number_theory_diophantine_gcd_obstruction_emits_checked_diophantine_evidence" not in proof_regression:
+        fail("diophantine-gcd-obstruction-qf-lia proof_regression must name the LIA resource test")
+    certificate = data.get("certificate")
+    require_string("number theory Diophantine obstruction certificate", certificate)
+    if "UnsatDiophantine" not in certificate or "Evidence::check" not in certificate:
+        fail("diophantine-gcd-obstruction-qf-lia certificate must document checked Diophantine evidence")
+
 
 def integer_relation(left: int, right: int) -> str:
     if left < right:

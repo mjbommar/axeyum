@@ -112,3 +112,17 @@ The witness checks:
 ```text
 14*(-1) + 21*1 = 7
 ```
+
+## `diophantine-gcd-obstruction-qf-lia`
+
+Expected result: `unsat`.
+
+The fixed false claim is that integers `x,y` satisfy:
+
+```text
+14*x + 21*y = 5
+```
+
+The validator recomputes `gcd(14,21) = 7` and checks that `7` does not divide
+`5`. The QF_LIA artifact encodes the same linear equation, and the route test
+requires checked `UnsatDiophantine` evidence.

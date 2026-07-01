@@ -16,7 +16,8 @@ The examples are exact finite arithmetic artifacts:
   evidence;
 - replay `65 = 1^2 + 8^2`;
 - reject `7 = a^2 + b^2` by the mod-4 square obstruction;
-- replay `14*(-1) + 21*1 = 7`.
+- replay `14*(-1) + 21*1 = 7`;
+- reject `14*x + 21*y = 5` by gcd divisibility and checked QF_LIA evidence.
 
 These checks do not claim the full Chinese remainder theorem, quadratic
 reciprocity, the two-squares theorem, the fundamental theorem of arithmetic, or
@@ -49,10 +50,16 @@ The bad square-root witness has the same proof-route shape in
 the artifact computes `2*2 mod 7 = 4` at fixed width and refutes the malformed
 target `2`.
 
+The Diophantine obstruction has a QF_LIA proof-route artifact:
+[`smt2/diophantine-gcd-obstruction-conflict.smt2`](smt2/diophantine-gcd-obstruction-conflict.smt2).
+It encodes `14*x + 21*y = 5`, and the checked `UnsatDiophantine` certificate
+records that `gcd(14,21)=7` does not divide `5`.
+
 Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
 cargo test -p axeyum-solver --test math_resource_bv_routes number_theory_quadratic_nonresidue_emits_checked_bv_drat
 cargo test -p axeyum-solver --test math_resource_bv_routes number_theory_bad_square_witness_emits_checked_bv_drat
+cargo test -p axeyum-solver --test math_resource_lia_routes number_theory_diophantine_gcd_obstruction_emits_checked_diophantine_evidence
 ```
