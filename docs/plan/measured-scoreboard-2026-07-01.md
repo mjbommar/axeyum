@@ -10,7 +10,7 @@ syntax) or that don't flat-parse.
 
 | Division | axeyum | z3 | gap | note |
 |---|---|---|---|---|
-| **QF_NRA** | **10 / 36** | 36 / 36 | **−26** | the frontier; Boolean structure + CAD reach ([P2.5](track-2-theories/P2.5-nra/)) |
+| **QF_NRA** | **11 / 36** | 36 / 36 | **−25** | the frontier; Boolean structure + CAD reach ([P2.5](track-2-theories/P2.5-nra/)) |
 | **QF_NIA** | **20 / 28** | 28 / 28 | **−8** | second frontier; UNSAT-side (incr. linearization, [P2.5 Phase E](track-2-theories/P2.5-nra/07-phaseE-nia.md)) |
 | QF_ABV | 175 / 177 | 177 / 177 | −2 | very strong |
 | QF_AUFLIA | 4 / 6 | 6 / 6 | −2 | `bug330` deadline hang (#63) |
@@ -44,14 +44,20 @@ syntax) or that don't flat-parse.
   the deep residual noted in prior sessions. Scattered single-instance work, lower
   ROI than the NRA/NIA frontier.
 
-## Soundness footnote (2026-07-01)
+## Soundness finding + fix (2026-07-01)
 
-An eq-recombination experiment on the NRA case-split surfaced a **div-by-zero
-congruence gap** in `eliminate_real_div` (fresh `r` per division occurrence loses
-`x=y ⟹ (/x 0)=(/y 0)`); it is **not reachable by the shipped solver** (the landed
-case-split feeds split-form cubes that decline these) and is tracked as #69 with a
-guardrail. `DISAGREE=0` holds on the shipped solver across all divisions above,
-including the division instances (`div.04`/`div.07`).
+Adding **division coverage to `nra_differential_fuzz`** (previously it generated
+none) caught a **pre-existing wrong-sat** in the NRA division path: the internal
+engine replays candidates against the div-*eliminated* form (`x/y → r`,
+`(y=0) ∨ (x=r·y)`), so a `y=0`/free-`r` candidate satisfies the eliminated form
+while the original `x/0` evaluates (in the ground evaluator) to a fixed value that
+does not — e.g. `1/w < 0` returned `sat` with `w=0`. Fixed (commits `0761bf8e`
+division congruence + `b38c0439` a final replay guard: every `sat` re-checked
+against the *original* assertions, declining to `unknown` on violation). Verified
+`DISAGREE=0` + no wrong-sat on the enhanced division fuzz, `nia` fuzz, and lib
+613/613. This is why the frontier work is worth the fuzz-hardening discipline —
+extending the adversarial gate found a real latent bug. Follow-up #70 recovers the
+genuine division sats (replay against the true original *in-engine*).
 
 ## How to reproduce
 
