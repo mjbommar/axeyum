@@ -22,7 +22,8 @@ Concept rows:
 | `dual-basis-pairing-replay` | `sat` | checked |
 | `annihilator-replay` | `sat` | checked |
 | `transpose-map-replay` | `sat` | checked |
-| `bad-covector-rejected` | `unsat` | checked QF_UF/Alethe |
+| `bad-covector-rejected` | `unsat` | checked finite replay |
+| `qf-uf-bad-covector-additivity` | `unsat` | checked QF_UF/Alethe |
 | `general-duality-theory-lean-horizon` | `not-run` | lean-horizon |
 
 The finite rows are table checks over `F2^2`. The pack does not claim general
@@ -211,10 +212,12 @@ f(10) + f(01) = 1 + 1 = 0
 ```
 
 Because `1 != 0`, the function is not linear and the covector claim is
-rejected. The linked `QF_UF` artifact records `10 + 01 = 11`, the malformed
-evaluation table, `1 + 1 = 0`, and the fixed additivity equality
-`f(10+01) = f(10)+f(01)`; Axeyum emits and independently rechecks an
-`UnsatAletheProof` for that equality conflict.
+rejected by the `bad-covector-rejected` replay row.
+
+The separate `qf-uf-bad-covector-additivity` row links a `QF_UF` artifact that
+records `10 + 01 = 11`, the malformed evaluation table, `1 + 1 = 0`, and the
+fixed additivity equality `f(10+01) = f(10)+f(01)`. Axeyum emits and
+independently rechecks an `UnsatAletheProof` for that equality conflict.
 
 ## Run It
 
@@ -237,7 +240,7 @@ This lesson shows Axeyum's resource pattern for finite duality:
 ```text
 untrusted fast search -> covector tables, pairings, annihilator, transpose map
 trusted small checking -> linearity, pointwise operations, evaluation identities
-checked proof object -> QF_UF/Alethe certificate for the bad covector row
+checked proof object -> QF_UF/Alethe certificate for the isolated additivity row
 ```
 
 General duality, bidual theorems, adjoints, topological duals,

@@ -522,9 +522,9 @@ checked exact non-submodule replay, an explicit QF_UF/Alethe scalar-closure
 membership row, and a general module-theory Lean-horizon row.
 `finite-dual-spaces-v0` now adds the finite dual-space bridge with `F2^2`
 covector linearity replay, pointwise dual operations, dual-basis pairing,
-annihilator recomputation, transpose-map replay, checked QF_UF/Alethe
-bad-covector rejection, and a general duality/functional-analysis Lean-horizon
-row.
+annihilator recomputation, transpose-map replay, checked bad-covector replay,
+an explicit QF_UF/Alethe covector-additivity row, and a general
+duality/functional-analysis Lean-horizon row.
 `finite-tensor-products-v0` now adds the finite multilinear-algebra bridge:
 `F2^2 tensor F2` basis/dimension replay, finite bilinear-map table replay,
 universal-factorization shadow through a linear map, Kronecker-product matrix
@@ -1696,8 +1696,9 @@ explicit QF_UF/Alethe additive-closure membership row, and a
 vector-space/module Lean-horizon row.
 `finite-dual-spaces-v0` now adds the exact finite dual-space bridge over `F2`:
 covector linearity, pointwise dual operations, dual-basis pairing,
-annihilator recomputation, transpose-map replay, checked QF_UF/Alethe
-bad-covector rejection, and a duality/functional-analysis Lean-horizon row.
+annihilator recomputation, transpose-map replay, checked bad-covector replay,
+an explicit QF_UF/Alethe covector-additivity row, and a
+duality/functional-analysis Lean-horizon row.
 `finite-group-actions-v0` now adds the exact finite group-action bridge:
 action-law replay, orbit/stabilizer recomputation, orbit-stabilizer
 cardinality, Burnside fixed-point counting, checked QF_UF/Alethe bad
@@ -2662,6 +2663,11 @@ The finite vector-space pack now also splits its bad-subspace closure evidence:
 `10 + 01 = 11` outside `{00,10,01}`, while
 `qf-uf-bad-subspace-addition-closure` owns the checked QF_UF/Alethe
 membership-conflict artifact and direct pack/route/text query.
+The finite dual-space pack now also splits its bad-covector additivity evidence:
+`bad-covector-rejected` remains the exact finite replay row that computes
+`10 + 01 = 11`, `f(11)=1`, and `f(10)+f(01)=0`, while
+`qf-uf-bad-covector-additivity` owns the checked QF_UF/Alethe
+additivity-conflict artifact and direct pack/route/text query.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

@@ -289,13 +289,37 @@
           "right": "01",
           "claimed": "1",
           "actual_sum": "0"
+        }
+      },
+      "notes": "The validator checks f(10 + 01) differs from f(10) + f(01), so the function is not linear; the separate QF_UF row owns the proof-object refutation for the fixed additivity equality claim."
+    },
+    {
+      "id": "qf-uf-bad-covector-additivity",
+      "claim": "The malformed function can map 10, 01, and 11 to 1 while satisfying covector additivity on 10 + 01.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
+      "data": {
+        "field": "F2",
+        "space": "F2^2",
+        "functional_values": {
+          "10": "1",
+          "01": "1",
+          "11": "1"
+        },
+        "failing_additivity": {
+          "left": "10",
+          "right": "01",
+          "sum_vector": "11",
+          "claimed": "1",
+          "actual_sum": "0"
         },
         "alethe_additivity_claim": "f(10+01) = f(10)+f(01)",
         "smt2_artifact": "artifacts/examples/math/finite-dual-spaces-v0/smt2/bad-covector-additivity-conflict.smt2",
         "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_dual_spaces_bad_covector_emits_checked_alethe",
         "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
       },
-      "notes": "The validator checks f(10 + 01) differs from f(10) + f(01), so the function is not linear; the linked QF_UF artifact emits a zero-trust Alethe refutation for the fixed additivity equality claim."
+      "notes": "The SMT-LIB artifact isolates the additivity equality contradiction after exact replay computes 10 + 01 = 11 and 1 + 1 = 0."
     },
     {
       "id": "general-duality-theory-lean-horizon",

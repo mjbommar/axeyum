@@ -47,8 +47,8 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 644 expected checks.
-- 319 checked proof/evidence rows.
+- 645 expected checks.
+- 320 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1475,6 +1475,14 @@ Pick one row per commit unless the change is purely navigational.
      `finite_vector_spaces_bad_subspace_emits_checked_alethe` regression. The
      public query surface now reports 644 checks, 319 checked rows, and
      row-scoped Alethe lookup for the pack returns the addition-closure row.
+173. Landed: split the `finite-dual-spaces-v0` covector-additivity proof-object
+     check into the explicit `qf-uf-bad-covector-additivity` row. Exact finite
+     replay still owns `bad-covector-rejected` by computing `10 + 01 = 11`,
+     `f(11) = 1`, and `f(10)+f(01)=0`; the source SMT-LIB artifact separately
+     rejects the malformed fixed additivity equality through the existing
+     `finite_dual_spaces_bad_covector_emits_checked_alethe` regression. The
+     public query surface now reports 645 checks, 320 checked rows, and
+     row-scoped Alethe lookup for the pack returns the additivity row.
 
 ## Validation Checklist
 

@@ -253,8 +253,8 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-120 concept rows, 108 non-template packs, 644 expected checks (336 `sat`,
-237 `unsat`, 71 `not-run`), 319 checked rows, 254 replay-only rows, and 71
+120 concept rows, 108 non-template packs, 645 expected checks (336 `sat`,
+238 `unsat`, 71 `not-run`), 320 checked rows, 254 replay-only rows, and 71
 Lean-horizon rows. The learner coverage audit records all 108 non-template
 packs as focused-lesson linked, with no path-only, index-only, or missing
 learner buckets. The first QF_UF/Alethe
@@ -262,8 +262,9 @@ proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
 finite group actions, with finite continuous-map preimage membership,
 finite module scalar-closure membership, finite vector-space additive-closure
-membership, finite quotient-topology, finite specialization-order, finite
-cohomology, finite universal-coefficient shadow, and finite cup-product
+membership, finite dual-space covector additivity, finite quotient-topology,
+finite specialization-order, finite cohomology, finite universal-coefficient
+shadow, and finite cup-product
 extensions. The
 finite algebra-homomorphism lane now also promotes the
 concrete bad group-homomorphism row through QF_UF/Alethe after exact table

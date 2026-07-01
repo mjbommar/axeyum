@@ -303,8 +303,9 @@ one of:
       `functional_analysis_and_operator_theory`.
     - Checks: finite dual-space covector linearity over `F2`, pointwise dual
       operations, dual-basis pairings, annihilator recomputation,
-      transpose-map replay, bad-covector rejection, and a general
-      duality/functional-analysis Lean-horizon row.
+      transpose-map replay, bad-covector replay, checked QF_UF/Alethe
+      covector-additivity evidence, and a general duality/functional-analysis
+      Lean-horizon row.
 32. `artifacts/examples/math/inner-product-spaces-rational-v0/`
     - Fields: `linear_algebra`, `functional_analysis_and_operator_theory`,
       `numerical_analysis`, `optimization_and_convexity`, `real_analysis`.

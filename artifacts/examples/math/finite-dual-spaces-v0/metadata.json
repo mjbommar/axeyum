@@ -40,7 +40,7 @@
     "target": "finite dual-space covector additivity QF_UF/Alethe regression seed",
     "pressure": "Covector additivity conflict where 10 + 01 = 11 and 1 + 1 = 0, but the malformed row forces f(11) = 1 and additivity.",
     "evidence": [
-      "bad-covector-rejected"
+      "qf-uf-bad-covector-additivity"
     ],
     "next_step": "Promote additional finite dual-space rows only when they add distinct pairing, annihilator, or transpose-map solver pressure; keep bidual, adjoint, Hahn-Banach, and topological-dual theorems in the Lean-horizon lane."
   },
@@ -62,6 +62,7 @@
     "annihilator-replay",
     "transpose-map-replay",
     "bad-covector-rejected",
+    "qf-uf-bad-covector-additivity",
     "general-duality-theory-lean-horizon"
   ],
   "graduation_criteria": [

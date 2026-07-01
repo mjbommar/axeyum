@@ -205,6 +205,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite dual-space covector-additivity Alethe row split landed.**
+  `finite-dual-spaces-v0` now keeps the malformed covector rejection as exact
+  finite replay and exposes the QF_UF/Alethe proof-object check as the explicit
+  `qf-uf-bad-covector-additivity` row. The replay row computes
+  `10 + 01 = 11`, `f(11) = 1`, and `f(10)+f(01)=0`; the source SMT-LIB
+  artifact separately checks the fixed additivity equality contradiction
+  `f(10+01) = f(10)+f(01)`. Focused validation passes; the public summary now
+  reports 120 concept rows, 108 packs, 645 expected checks, 320 checked rows,
+  254 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite vector-space additive-closure Alethe row split landed.**
   `finite-vector-spaces-v0` now keeps the malformed `{00,10,01}` subspace
   rejection as exact finite replay and exposes the QF_UF/Alethe proof-object

@@ -67,8 +67,9 @@ images, rank-nullity, checked bad-subspace replay, and an explicit QF_UF/Alethe
 additive-closure membership row. The
 finite-dual-spaces pack checks covectors as
 finite field-valued function tables, pointwise dual operations, dual-basis
-pairing, annihilator recomputation, transpose maps, and checked QF_UF/Alethe
-bad-covector refutations. The finite-modules pack checks finite rings acting
+pairing, annihilator recomputation, transpose maps, checked bad-covector
+replay, and an explicit QF_UF/Alethe additivity row. The finite-modules pack
+checks finite rings acting
 on finite additive groups, generated submodules, module homomorphisms,
 quotient module tables, kernels, images, and checked QF_UF/Alethe
 bad-submodule refutations. The finite-tensor-products pack checks finite
@@ -247,7 +248,9 @@ The `finite-dual-spaces-v0` pack checks that each covector is linear, dual
 addition and scalar multiplication are pointwise, `x,y` pair with the primal
 basis as the identity matrix, the annihilator is exactly the covectors that
 vanish on the listed subspace, and the transpose map satisfies
-`(T* phi)(v) = phi(Tv)`.
+`(T* phi)(v) = phi(Tv)`. The malformed covector row replays the failed
+additivity equation; `qf-uf-bad-covector-additivity` carries the checked
+QF_UF/Alethe equality certificate.
 
 For a finite module example, use `Z/4Z` acting on itself:
 
@@ -438,7 +441,7 @@ examples start as
 the validator recomputes operation tables, finite maps, coefficients, and
 residue arithmetic from the source data. Equality-heavy algebra conflicts such
 as bad associativity, non-bijection, homomorphism preservation,
-submodule/ideal closure, and bilinear-map additivity use
+submodule/ideal closure, covector additivity, and bilinear-map additivity use
 [QF_UF / Alethe Congruence Evidence](../../proof-cookbook/recipes/qf-uf-congruence-alethe.md).
 Fixed finite residue arithmetic and finite ring or field table contradictions
 use [QF_BV Bit-Blast Evidence](../../proof-cookbook/recipes/qf-bv-bitblast.md)

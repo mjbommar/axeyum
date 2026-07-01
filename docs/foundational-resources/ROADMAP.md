@@ -435,7 +435,8 @@ vector-space/module Lean-horizon row.
 [`finite-dual-spaces-v0`](../../artifacts/examples/math/finite-dual-spaces-v0/)
 validates finite dual-space covectors over `F2`, pointwise dual operations,
 dual-basis pairing, annihilator recomputation, transpose-map replay, checked
-bad-covector rejection, and a duality/functional-analysis Lean-horizon row.
+bad-covector replay, an explicit QF_UF/Alethe covector-additivity row, and a
+duality/functional-analysis Lean-horizon row.
 [`inner-product-spaces-rational-v0`](../../artifacts/examples/math/inner-product-spaces-rational-v0/)
 adds the exact rational inner-product bridge: Gram matrices, positive-definite
 principal minors, fixed Cauchy-Schwarz replay, orthogonal projection replay,
@@ -489,7 +490,8 @@ subspaces, spans, linear maps, kernels, images, rank-nullity, and bad-subspace
 rejection.
 [`finite-dual-spaces-v0`](../../artifacts/examples/math/finite-dual-spaces-v0/)
 adds the finite dual-space bridge: covector linearity, dual-basis pairings,
-annihilators, transpose maps, and bad-covector rejection over `F2`.
+annihilators, transpose maps, bad-covector replay, and a checked
+QF_UF/Alethe covector-additivity row over `F2`.
 [`inner-product-spaces-rational-v0`](../../artifacts/examples/math/inner-product-spaces-rational-v0/)
 adds the exact rational inner-product bridge: symmetric positive-definite Gram
 matrices, Cauchy-Schwarz arithmetic, orthogonal projections, Gram-Schmidt

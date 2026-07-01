@@ -353,7 +353,8 @@ Companion maps:
   rejection.
 - [Finite Dual Spaces](finite-dual-spaces-end-to-end.md): follows covector
   linearity, pointwise dual operations, dual-basis pairing, annihilator replay,
-  transpose-map replay, and checked QF_UF/Alethe bad-covector rejection.
+  transpose-map replay, finite bad-covector replay, and checked QF_UF/Alethe
+  bad-covector additivity evidence.
 - [Finite Modules](finite-modules-end-to-end.md): follows `Z/4Z` module-law
   replay, generated submodule replay, multiplication-by-`2` kernel/image,
   quotient-module table replay, and checked QF_UF/Alethe bad-submodule

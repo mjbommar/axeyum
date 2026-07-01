@@ -55,8 +55,8 @@ As of 2026-07-01, the committed resource query reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 644 expected checks.
-- 319 checked proof/evidence rows.
+- 645 expected checks.
+- 320 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -313,7 +313,7 @@ Next useful increments:
 | `discrete_math` | counting, generating functions, graph resources, finite actions | landed finite-counting replay bridge for finite enumeration, pigeonhole, double-counting, coefficient extraction, finite orbit counts, and exact tail counts; add recurrence/asymptotic rows only when reused | Bool/CNF, QF_LIA, finite replay | each row names universe size and theorem horizon |
 | `graph_theory` | coloring, reachability, search runtime, matching, cuts, d-separation | landed finite graph replay/obstruction bridge across the graph packs; add theorem/asymptotic rows only when reused | Bool/CNF, QF_BV, QF_LIA, finite replay | graph resources query by route, bridge concept, and source artifact |
 | `number_theory` | gcd, modular arithmetic, residues, finite fields, bounded Diophantine rows | recurring divisibility/CRT/residue obstructions and fixed-width contrasts | QF_LIA/Diophantine, QF_BV | bounded search and theorem claims are visibly separated |
-| `linear_algebra` | rational matrices, finite vector/dual/module/tensor, spectral, invariant, optimization/numerical rows | matrix-computation index plus matrix-corpus boundary by LU/rank/nullity/projection/residual/eigen/characteristic/random-moment; LU now has a source-linked checked bad product-entry row | QF_LRA/Farkas, finite replay, QF_UF/Alethe | solver regressions cite source pack and pack cites regression before benchmark claims |
+| `linear_algebra` | rational matrices, finite vector/dual/module/tensor, spectral, invariant, optimization/numerical rows | matrix-computation index plus matrix-corpus boundary by LU/rank/nullity/projection/residual/eigen/characteristic/random-moment; LU/nullspace Farkas rows and finite vector/module/dual Alethe closure-additivity rows now have source-linked checked evidence | QF_LRA/Farkas, finite replay, QF_UF/Alethe | solver regressions cite source pack and pack cites regression before benchmark claims |
 | `abstract_algebra` | finite groups, rings, fields, monoids, actions, homomorphisms, ideals, modules, tensors | narrower rows only for reused concepts: orbit/stabilizer, Burnside, units/idempotents, representation horizons | QF_UF/Alethe, QF_BV, finite replay, Lean horizon | table replay remains distinct from structure-theorem proof |
 | `real_analysis` | rational intervals, metric continuity, sequences, compactness/connectedness, root-finding, optimization shadows | bounded-vs-theorem bridge rows, theorem-horizon map for completeness and convergence | QF_LRA/Farkas, QF_NRA/RCF shadows, Lean horizon | every lesson states finite/bounded shadow vs theorem |
 | `complex_analysis` | real-pair algebra and transforms | polynomial-root, conjugation/norm, Mobius rows only if distinct; analytic horizon rows | real-pair LRA/NRA, finite replay, Lean horizon | no algebraic row is described as analytic coverage |

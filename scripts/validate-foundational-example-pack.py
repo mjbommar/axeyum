@@ -3886,21 +3886,72 @@ def validate_finite_dual_spaces(expected: dict[str, Any]) -> None:
         fail("bad-covector-rejected actual_sum does not match f(left) + f(right)")
     if claimed == actual_sum:
         fail("bad-covector-rejected failing_additivity unexpectedly agrees")
-    alethe_claim = data.get("alethe_additivity_claim")
-    require_string("bad covector alethe_additivity_claim", alethe_claim)
-    if alethe_claim != f"f({left}+{right}) = f({left})+f({right})":
-        fail("bad-covector-rejected must document the Alethe additivity claim")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad covector smt2_artifact", smt2_artifact)
-    check_source("bad covector smt2_artifact", smt2_artifact)
-    proof_regression = data.get("proof_regression")
-    require_string("bad covector proof_regression", proof_regression)
+    qf_uf = checks["qf-uf-bad-covector-additivity"]
+    if qf_uf["expected_result"] != "unsat":
+        fail("qf-uf-bad-covector-additivity must expect unsat")
+    if qf_uf["proof_status"] != "checked":
+        fail("qf-uf-bad-covector-additivity must be checked")
+    if qf_uf["validation"] != "qf_uf_congruence_alethe":
+        fail(
+            "qf-uf-bad-covector-additivity must use qf_uf_congruence_alethe validation"
+        )
+    qf_data = qf_uf.get("data", {})
+    if qf_data.get("field") != "F2":
+        fail("qf-uf-bad-covector-additivity field must be F2")
+    if qf_data.get("space") != "F2^2":
+        fail("qf-uf-bad-covector-additivity space must be F2^2")
+    values = qf_data.get("functional_values")
+    if not isinstance(values, dict):
+        fail("qf-uf-bad-covector-additivity functional_values must be an object")
+    for vector in (left, right, vector_sum):
+        require_string(
+            f"qf-uf bad covector functional_values[{vector}]",
+            values.get(vector),
+        )
+        if values[vector] != functional[vector]:
+            fail(
+                "qf-uf-bad-covector-additivity functional_values must match bad-covector-rejected"
+            )
+    qf_failure = qf_data.get("failing_additivity")
+    if not isinstance(qf_failure, dict):
+        fail("qf-uf-bad-covector-additivity failing_additivity must be an object")
+    if qf_failure.get("left") != left:
+        fail("qf-uf-bad-covector-additivity left vector must match bad-covector-rejected")
+    if qf_failure.get("right") != right:
+        fail("qf-uf-bad-covector-additivity right vector must match bad-covector-rejected")
+    if qf_failure.get("sum_vector") != vector_sum:
+        fail("qf-uf-bad-covector-additivity sum_vector must match bad-covector-rejected")
+    if qf_failure.get("claimed") != claimed:
+        fail("qf-uf-bad-covector-additivity claimed value must match bad-covector-rejected")
+    if qf_failure.get("actual_sum") != actual_sum:
+        fail("qf-uf-bad-covector-additivity actual_sum must match bad-covector-rejected")
+    qf_alethe_claim = qf_data.get("alethe_additivity_claim")
+    require_string("qf-uf bad covector alethe_additivity_claim", qf_alethe_claim)
+    if qf_alethe_claim != f"f({left}+{right}) = f({left})+f({right})":
+        fail(
+            "qf-uf-bad-covector-additivity must document the Alethe additivity claim"
+        )
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-uf bad covector smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-dual-spaces-v0/smt2/"
+        "bad-covector-additivity-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail(
+            "qf-uf-bad-covector-additivity smt2_artifact must name the checked source artifact"
+        )
+    check_source("qf-uf bad covector smt2_artifact", smt2_artifact)
+    proof_regression = qf_data.get("proof_regression")
+    require_string("qf-uf bad covector proof_regression", proof_regression)
     if "finite_dual_spaces_bad_covector_emits_checked_alethe" not in proof_regression:
-        fail("bad-covector-rejected must link the Alethe regression")
-    certificate = data.get("certificate")
-    require_string("bad covector certificate", certificate)
+        fail("qf-uf-bad-covector-additivity must link the Alethe regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-uf bad covector certificate", certificate)
     if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
-        fail("bad-covector-rejected certificate must document zero-trust Alethe evidence")
+        fail(
+            "qf-uf-bad-covector-additivity certificate must document zero-trust Alethe evidence"
+        )
 
     horizon = checks["general-duality-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

@@ -558,7 +558,8 @@ First targets:
   `qf-uf-bad-subspace-addition-closure` for the bad additive-closure membership
   conflict)
 - [finite-dual-spaces-v0](../../artifacts/examples/math/finite-dual-spaces-v0/)
-  (resource-backed QF_UF/Alethe regression landed for the bad covector-additivity conflict)
+  (resource-backed QF_UF/Alethe regression landed as
+  `qf-uf-bad-covector-additivity` for the bad covector-additivity conflict)
 - [finite-modules-v0](../../artifacts/examples/math/finite-modules-v0/)
   (resource-backed QF_UF/Alethe regression landed as
   `qf-uf-bad-submodule-scalar-closure` for the bad scalar-closure membership

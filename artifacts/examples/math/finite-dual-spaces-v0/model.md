@@ -50,9 +50,10 @@ Additivity of a covector would require:
 f(10 + 01) = f(10) + f(01)
 ```
 
-The linked `QF_UF` artifact is therefore unsatisfiable by equality reasoning.
-The resource regression checks that Axeyum emits independently rechecked
-`UnsatAletheProof` evidence with no trusted reduction step.
+The separate `qf-uf-bad-covector-additivity` row links the `QF_UF` artifact that
+is unsatisfiable by equality reasoning. The resource regression checks that
+Axeyum emits independently rechecked `UnsatAletheProof` evidence with no trusted
+reduction step.
 
 General duality over arbitrary vector spaces, topological duals, adjoints, and
 Hahn-Banach-style theorems remain Lean-horizon.

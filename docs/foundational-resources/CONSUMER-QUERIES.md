@@ -1685,17 +1685,28 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
-For functional analysis and operator theory, query the same exact-rational
-route to group finite-dimensional operator bounds, inner-product positivity,
-projection-orthogonality, Chebyshev duplicate-node grids, spectral/eigenpair
-and Rayleigh witnesses, and dual-space rows while keeping Banach, Hilbert,
-compact-operator, minimax, and infinite-dimensional approximation claims in
-the proof-horizon lane:
+For functional analysis and operator theory, query the exact-rational route to
+group finite-dimensional operator bounds, inner-product positivity,
+projection-orthogonality, Chebyshev duplicate-node grids, spectral/eigenpair,
+and Rayleigh witnesses while keeping Banach, Hilbert, compact-operator,
+minimax, and infinite-dimensional approximation claims in the proof-horizon
+lane:
 
 ```sh
 python3 scripts/query-foundational-resources.py fields \
   --field functional_analysis_and_operator_theory \
   --route Farkas \
+  --require-any
+```
+
+Use the Alethe route for finite dual-space and tensor equality certificates:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-dual-spaces-v0 \
+  --route Alethe \
+  --proof-status checked \
+  --text additivity \
   --require-any
 ```
 

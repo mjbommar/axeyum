@@ -179,6 +179,13 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --require-any
 
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-dual-spaces-v0 \
+  --route Alethe \
+  --proof-status checked \
+  --text additivity \
+  --require-any
+
 python3 scripts/query-foundational-resources.py packs \
   --concept bridge_tensor_bilinearity \
   --route Alethe \

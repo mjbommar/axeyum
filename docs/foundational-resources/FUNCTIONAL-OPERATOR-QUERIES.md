@@ -61,7 +61,7 @@ spectral rows. Use `Alethe` for finite dual/tensor equality rows.
 | Operator display rows | pack `finite-operator-v0` | `Farkas` | `checks --pack finite-operator-v0 --route Farkas --proof-status checked` |
 | Chebyshev-system display rows | pack `finite-chebyshev-systems-v0` | `Farkas` | `checks --pack finite-chebyshev-systems-v0 --route Farkas --proof-status checked` |
 | Spectral display rows | pack `spectral-linear-algebra-v0` | `Farkas` | `checks --pack spectral-linear-algebra-v0 --route Farkas --proof-status checked` |
-| Dual-space display rows | pack `finite-dual-spaces-v0` | `Alethe` | `checks --pack finite-dual-spaces-v0 --route Alethe --proof-status checked` |
+| Dual-space additivity certificate rows | pack `finite-dual-spaces-v0` | `Alethe` | `checks --pack finite-dual-spaces-v0 --route Alethe --proof-status checked --text additivity` |
 
 ## Copyable Examples
 
@@ -166,6 +166,7 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-dual-spaces-v0 \
   --route Alethe \
   --proof-status checked \
+  --text additivity \
   --require-any
 ```
 

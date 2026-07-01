@@ -370,8 +370,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-dual-spaces-v0/`](../../artifacts/examples/math/finite-dual-spaces-v0/)
   validates finite dual-space covector linearity over `F2`, pointwise dual
   operations, dual-basis pairing, annihilator recomputation, transpose-map
-  replay, checked rejection of a bad covector, and a duality/functional-analysis
-  Lean-horizon row.
+  replay, checked rejection of a bad covector, an explicit QF_UF/Alethe
+  additivity-conflict row, and a duality/functional-analysis Lean-horizon row.
 - [`artifacts/examples/math/inner-product-spaces-rational-v0/`](../../artifacts/examples/math/inner-product-spaces-rational-v0/)
   validates exact rational Gram matrices, positive-definite principal minors,
   Cauchy-Schwarz replay for fixed vectors, orthogonal projection replay,

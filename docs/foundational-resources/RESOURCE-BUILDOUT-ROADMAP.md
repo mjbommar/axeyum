@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 644 expected checks.
-- 319 checked proof/evidence rows.
+- 645 expected checks.
+- 320 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -2157,6 +2157,12 @@ Pick one item per commit unless the change is purely navigational.
      new `qf-uf-bad-subspace-addition-closure` row isolates the membership
      contradiction for checked Alethe evidence and gives consumers a direct
      pack/route/text query.
+146. Landed: split the `finite-dual-spaces-v0` covector-additivity proof-object
+     check into an explicit QF_UF/Alethe row. The finite replay row still
+     rejects the malformed functional by computing `10 + 01 = 11`, `f(11)=1`,
+     and `f(10)+f(01)=0`; the new `qf-uf-bad-covector-additivity` row isolates
+     the additivity equality contradiction for checked Alethe evidence and
+     gives consumers a direct pack/route/text query.
 
 ## Validation Checklist
 
