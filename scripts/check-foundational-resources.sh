@@ -180,6 +180,7 @@ python3 scripts/query-foundational-resources.py concepts --field abstract_algebr
 python3 scripts/query-foundational-resources.py checks --field abstract_algebra --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_algebra_equality_certificate_boundary --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_algebra_equality_certificate_boundary --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-monoids-v0 --route Alethe --proof-status checked --text associativity --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_homomorphism_preservation --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_group_action --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-group-actions-v0 --route Alethe --proof-status checked --text compatibility --require-any >/dev/null

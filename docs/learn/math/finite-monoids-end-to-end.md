@@ -19,7 +19,8 @@ Concept rows:
 | `two-point-transformation-monoid-laws` | `sat` | checked |
 | `function-composition-table-replay` | `sat` | checked |
 | `units-and-idempotents-replay` | `sat` | checked |
-| `bad-nonassociative-table-rejected` | `unsat` | checked |
+| `bad-nonassociative-table-rejected` | `unsat` | replay-only |
+| `qf-uf-bad-monoid-associativity` | `unsat` | checked QF_UF/Alethe |
 | `general-monoid-theory-lean-horizon` | `not-run` | lean-horizon |
 
 The checked rows are exact finite table replay. The pack does not claim general
@@ -145,7 +146,8 @@ b*(b*b) = b*a = b
 ```
 
 Because `a != b`, the fixed claim that this table is an associative monoid is
-rejected. The linked `QF_UF` artifact states the three table equalities, the
+rejected by exact replay. The separate `qf-uf-bad-monoid-associativity` row
+links the `QF_UF` artifact that states the three table equalities, the
 associativity claim `(b*b)*b = b*(b*b)`, and `a != b`; Axeyum emits and
 independently rechecks an `UnsatAletheProof` for the resulting EUF
 contradiction.
@@ -171,7 +173,7 @@ This lesson shows Axeyum's resource pattern for finite algebra:
 ```text
 untrusted fast search -> candidate function tables, operation table, units
 trusted small checking -> composition replay, identity, associativity, units, idempotents
-checked proof object -> QF_UF/Alethe certificate for the bad associativity row
+checked proof object -> QF_UF/Alethe certificate for the bad monoid associativity row
 ```
 
 General semigroup and monoid theory, free monoids, presentations, quotient

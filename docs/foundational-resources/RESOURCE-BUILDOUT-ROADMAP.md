@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 649 expected checks.
+- 650 expected checks.
 - 322 checked proof/evidence rows.
-- 256 replay-only rows.
+- 257 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -2217,6 +2217,12 @@ Pick one item per commit unless the change is purely navigational.
      `qf-uf-bad-nonbijection-injectivity` row isolates the duplicate-preimage
      injectivity contradiction for checked Alethe evidence and gives consumers
      a direct pack/route/text query.
+150. Landed: split the `finite-monoids-v0` bad-nonassociative-table
+     proof-object check into an explicit QF_UF/Alethe row. The finite replay
+     row still rejects the malformed table by computing `(b*b)*b = a` and
+     `b*(b*b) = b`; the new `qf-uf-bad-monoid-associativity` row isolates the
+     associativity equality contradiction for checked Alethe evidence and
+     gives consumers a direct pack/route/text query.
 
 ## Validation Checklist
 

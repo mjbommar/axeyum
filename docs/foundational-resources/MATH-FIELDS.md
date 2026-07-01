@@ -335,7 +335,8 @@ one of:
       `set_theory_and_foundations`.
     - Checks: finite monoid identity/associativity replay, transformation
       composition table replay from finite functions, unit and idempotent
-      recomputation, bad non-associative table rejection, and a general
+      recomputation, bad non-associative table replay, explicit
+      QF_UF/Alethe bad-monoid-associativity evidence, and a general
       monoid/semigroup Lean-horizon row.
 36. `artifacts/examples/math/finite-permutation-groups-v0/`
     - Fields: `abstract_algebra`, `discrete_math`,

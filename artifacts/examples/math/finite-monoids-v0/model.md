@@ -35,10 +35,10 @@ Associativity on the failing triple would require:
 (b*b)*b = b*(b*b)
 ```
 
-Together with `a != b`, the linked `QF_UF` artifact is unsatisfiable by pure
-EUF congruence and transitivity. The resource regression checks that Axeyum
-emits independently rechecked `UnsatAletheProof` evidence with no trusted
-reduction step.
+Together with `a != b`, the separate `qf-uf-bad-monoid-associativity` row links
+the `QF_UF` artifact, which is unsatisfiable by pure EUF congruence and
+transitivity. The resource regression checks that Axeyum emits independently
+rechecked `UnsatAletheProof` evidence with no trusted reduction step.
 
 General semigroup/monoid theory, Green's relations, presentations, free
 monoids, and category-theoretic constructions remain proof-assistant horizon

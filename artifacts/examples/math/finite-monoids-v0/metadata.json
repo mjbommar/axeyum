@@ -34,7 +34,7 @@
     "target": "finite monoid associativity QF_UF/Alethe regression seed",
     "pressure": "Associativity conflict where fixed table facts force (b*b)*b = a and b*(b*b) = b while the malformed row asserts associativity and a != b.",
     "evidence": [
-      "bad-nonassociative-table-rejected"
+      "qf-uf-bad-monoid-associativity"
     ],
     "next_step": "Promote additional finite monoid rows only when they add distinct associativity, identity, or finite-function solver pressure; keep free monoids, presentations, and general semigroup theory in the Lean-horizon lane."
   },
@@ -54,12 +54,13 @@
     "function-composition-table-replay",
     "units-and-idempotents-replay",
     "bad-nonassociative-table-rejected",
+    "qf-uf-bad-monoid-associativity",
     "general-monoid-theory-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode fixed finite monoids as deterministic table obligations.",
     "Replay transformation-monoid multiplication from finite function tables.",
-    "Route finite associativity conflicts through checked QF_UF/Alethe evidence once exact table replay identifies the failing triple.",
+    "Keep bad finite associativity replay separate from the checked QF_UF/Alethe associativity-conflict row once exact table replay identifies the failing triple.",
     "Keep free monoids, presentations, Green's relations, and general semigroup/monoid theory under Lean horizon until formal routes exist."
   ]
 }

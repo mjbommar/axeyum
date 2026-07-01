@@ -47,7 +47,8 @@ checks and a `Z/4Z` zero-divisor witness, then promotes both a bad
 distributivity row and a bad multiplicative-identity row through QF_BV/DRAT
 evidence. The finite-monoids pack checks a finite transformation monoid under
 function composition, recomputes its units and idempotents, and
-rejects a non-associative table with checked QF_UF/Alethe evidence. The
+separates non-associative-table replay from checked QF_UF/Alethe associativity
+evidence. The
 finite-permutation-groups pack checks `S3` as bijective function tables under
 composition, recomputes cycle lengths and signs, checks the sign homomorphism,
 replays the natural action, and rejects a non-bijection with checked
@@ -139,8 +140,8 @@ idempotents = {id, zero, one}
 
 The `finite-monoids-v0` pack checks identity and associativity, recomputes the
 composition table from the four finite functions, recomputes units and
-idempotents, and rejects a malformed table with a concrete associativity
-failure using a checked QF_UF/Alethe certificate.
+idempotents, rejects a malformed table with a concrete associativity failure,
+and exposes the separate checked `qf-uf-bad-monoid-associativity` row.
 
 For a finite permutation-group example, use `S3` as bijections on `{1,2,3}`:
 

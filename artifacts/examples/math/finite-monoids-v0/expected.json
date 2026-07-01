@@ -71,7 +71,7 @@
       "claim": "The malformed table with identity e is an associative monoid.",
       "expected_result": "unsat",
       "validation": "finite_monoid_axiom_refutation",
-      "proof_status": "checked",
+      "proof_status": "replay-only",
       "data": {
         "carrier": ["e", "a", "b"],
         "identity": "e",
@@ -82,13 +82,27 @@
         ],
         "failing_triple": ["b", "b", "b"],
         "left_associated": "a",
+        "right_associated": "b"
+      },
+      "notes": "The validator checks that (b*b)*b differs from b*(b*b). This row is exact finite replay; the separate QF_UF row owns the proof-object refutation for the associativity equality."
+    },
+    {
+      "id": "qf-uf-bad-monoid-associativity",
+      "claim": "The fixed malformed associativity claim for the bad table is impossible.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
+      "data": {
+        "carrier": ["e", "a", "b"],
+        "failing_triple": ["b", "b", "b"],
+        "left_associated": "a",
         "right_associated": "b",
         "alethe_associativity_claim": "(b*b)*b = b*(b*b)",
         "smt2_artifact": "artifacts/examples/math/finite-monoids-v0/smt2/nonassociative-table-alethe-conflict.smt2",
         "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_monoids_associativity_failure_emits_checked_alethe",
         "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
       },
-      "notes": "The validator checks that (b*b)*b differs from b*(b*b), and the linked QF_UF artifact emits a zero-trust Alethe refutation for the associativity conflict."
+      "notes": "Exact replay identifies the failing triple; the source QF_UF artifact isolates the malformed associativity equality and checks it with zero-trust Alethe evidence."
     },
     {
       "id": "general-monoid-theory-lean-horizon",

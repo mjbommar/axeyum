@@ -47,7 +47,8 @@ quotient congruence row. The function-composition pack checks finite composition
 image/preimage replay, inverse tables, associativity, and non-injective inverse
 counterexamples, plus a QF_UF/Alethe composition-application row. The
 finite-monoids pack checks when a closed set of finite
-functions forms a monoid under composition, including units and idempotents.
+functions forms a monoid under composition, including units, idempotents, and
+a separate checked associativity-conflict row.
 The finite-permutation-groups pack narrows finite endofunctions to bijections,
 checks `S3` under composition, recomputes cycle/sign data, and replays the
 natural action on the underlying set. Its bad nonbijection replay is separated

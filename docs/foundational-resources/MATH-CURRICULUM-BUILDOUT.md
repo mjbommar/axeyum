@@ -501,8 +501,9 @@ identity-action and action-compatibility rejections, and a general
 group-action Lean-horizon row.
 `finite-monoids-v0` now validates finite monoid identity/associativity,
 transformation-composition table replay from finite functions,
-units/idempotents, a checked QF_UF/Alethe non-associative table rejection, and
-a general monoid Lean-horizon row. `finite-rings-v0` now validates finite ring
+units/idempotents, exact bad-nonassociative-table replay, an explicit
+QF_UF/Alethe bad-monoid-associativity row, and a general monoid Lean-horizon
+row. `finite-rings-v0` now validates finite ring
 tables, zero-divisor replay, checked non-distributive and bad
 multiplicative-identity tables, and resource-backed QF_BV/DRAT proof-route
 rows for both conflicts.
@@ -1708,8 +1709,9 @@ identity-action and action-compatibility rejections, and a group-action
 Lean-horizon row.
 `finite-monoids-v0` now adds the exact finite function/algebra bridge:
 monoid identity/associativity replay, transformation-composition table replay,
-unit and idempotent recomputation, checked QF_UF/Alethe non-associative table
-rejection, and a monoid/semigroup Lean-horizon row.
+unit and idempotent recomputation, exact bad-nonassociative-table replay, an
+explicit QF_UF/Alethe bad-monoid-associativity row, and a monoid/semigroup
+Lean-horizon row.
 `finite-permutation-groups-v0` now adds the exact finite permutation bridge:
 `S3` group-law replay, composition-table replay from bijective function maps,
 cycle-length and sign homomorphism replay, natural action orbit/stabilizer

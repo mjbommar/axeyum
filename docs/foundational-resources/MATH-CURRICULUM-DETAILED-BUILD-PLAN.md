@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 649 expected checks.
+- 650 expected checks.
 - 322 checked proof/evidence rows.
-- 256 replay-only rows.
+- 257 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1522,6 +1522,15 @@ Pick one row per commit unless the change is purely navigational.
      regression. The public query surface now reports 649 checks, 322 checked
      rows, 256 replay-only rows, and row-scoped Alethe lookup for the pack
      returns the injectivity row.
+178. Landed: split the `finite-monoids-v0` bad-nonassociative-table
+     proof-object check into the explicit `qf-uf-bad-monoid-associativity`
+     row. Exact finite replay still owns `bad-nonassociative-table-rejected`
+     by computing `(b*b)*b = a` and `b*(b*b) = b`; the source SMT-LIB artifact
+     separately rejects the malformed fixed associativity equality through the
+     existing `finite_monoids_associativity_failure_emits_checked_alethe`
+     regression. The public query surface now reports 650 checks, 322 checked
+     rows, 257 replay-only rows, and row-scoped Alethe lookup for the pack
+     returns the associativity row.
 
 ## Validation Checklist
 

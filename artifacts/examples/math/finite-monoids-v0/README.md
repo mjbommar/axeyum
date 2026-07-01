@@ -9,7 +9,8 @@ It checks:
 - finite monoid identity and associativity laws;
 - composition-table replay from the underlying function tables;
 - units and idempotents in the monoid;
-- checked QF_UF/Alethe rejection of a malformed non-associative table;
+- exact replay rejection of a malformed non-associative table;
+- checked QF_UF/Alethe evidence for the malformed associativity equality;
 - general monoid and semigroup theory as Lean horizon.
 
 Run from the repository root:

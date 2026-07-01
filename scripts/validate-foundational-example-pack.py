@@ -5553,8 +5553,8 @@ def validate_finite_monoids(expected: dict[str, Any]) -> None:
         fail("units-and-idempotents-replay listed idempotents are incorrect")
 
     bad = checks["bad-nonassociative-table-rejected"]
-    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
-        fail("bad-nonassociative-table-rejected must be a checked unsat row")
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "replay-only":
+        fail("bad-nonassociative-table-rejected must be a replay-only unsat row")
     data = bad.get("data", {})
     if not isinstance(data, dict):
         fail("bad-nonassociative-table-rejected data must be an object")
@@ -5582,21 +5582,46 @@ def validate_finite_monoids(expected: dict[str, Any]) -> None:
         fail("bad-nonassociative-table-rejected right_associated is incorrect")
     if left_associated == right_associated:
         fail("bad-nonassociative-table-rejected failing_triple is not an associativity failure")
+
+    bad_alethe = checks["qf-uf-bad-monoid-associativity"]
+    if bad_alethe["expected_result"] != "unsat" or bad_alethe.get("proof_status") != "checked":
+        fail("qf-uf-bad-monoid-associativity must be a checked unsat row")
+    if bad_alethe["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-bad-monoid-associativity must use qf_uf_congruence_alethe validation")
+    data = bad_alethe.get("data", {})
+    qf_carrier = require_string_list("qf-uf bad monoid carrier", data.get("carrier"))
+    if qf_carrier != carrier:
+        fail("qf-uf-bad-monoid-associativity carrier must match bad-nonassociative-table-rejected")
+    qf_triple = data.get("failing_triple")
+    if not isinstance(qf_triple, list) or len(qf_triple) != 3:
+        fail("qf-uf-bad-monoid-associativity failing_triple must have three elements")
+    for index, item in enumerate(qf_triple):
+        require_string(f"qf-uf bad monoid failing_triple[{index}]", item)
+    if qf_triple != failing_triple:
+        fail("qf-uf-bad-monoid-associativity failing_triple must match bad-nonassociative-table-rejected")
+    qf_left_associated = data.get("left_associated")
+    qf_right_associated = data.get("right_associated")
+    require_string("qf-uf bad monoid left_associated", qf_left_associated)
+    require_string("qf-uf bad monoid right_associated", qf_right_associated)
+    if qf_left_associated != left_associated:
+        fail("qf-uf-bad-monoid-associativity left_associated must match replay")
+    if qf_right_associated != right_associated:
+        fail("qf-uf-bad-monoid-associativity right_associated must match replay")
     alethe_claim = data.get("alethe_associativity_claim")
-    require_string("bad monoid alethe_associativity_claim", alethe_claim)
+    require_string("qf-uf bad monoid alethe_associativity_claim", alethe_claim)
     if alethe_claim != "(b*b)*b = b*(b*b)":
-        fail("bad-nonassociative-table-rejected must document the Alethe associativity claim")
+        fail("qf-uf-bad-monoid-associativity must document the Alethe associativity claim")
     smt2_artifact = data.get("smt2_artifact")
-    require_string("bad monoid smt2_artifact", smt2_artifact)
-    check_source("bad monoid smt2_artifact", smt2_artifact)
+    require_string("qf-uf bad monoid smt2_artifact", smt2_artifact)
+    check_source("qf-uf bad monoid smt2_artifact", smt2_artifact)
     proof_regression = data.get("proof_regression")
-    require_string("bad monoid proof_regression", proof_regression)
+    require_string("qf-uf bad monoid proof_regression", proof_regression)
     if "finite_monoids_associativity_failure_emits_checked_alethe" not in proof_regression:
-        fail("bad-nonassociative-table-rejected must link the Alethe regression")
+        fail("qf-uf-bad-monoid-associativity must link the Alethe regression")
     certificate = data.get("certificate")
-    require_string("bad monoid certificate", certificate)
+    require_string("qf-uf bad monoid certificate", certificate)
     if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
-        fail("bad-nonassociative-table-rejected certificate must document zero-trust Alethe evidence")
+        fail("qf-uf-bad-monoid-associativity certificate must document zero-trust Alethe evidence")
 
     horizon = checks["general-monoid-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

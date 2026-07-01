@@ -205,6 +205,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite monoid associativity Alethe row split landed.**
+  `finite-monoids-v0` now keeps the malformed associativity-table rejection as
+  exact finite replay and exposes the QF_UF/Alethe proof-object check as the
+  explicit `qf-uf-bad-monoid-associativity` row. The replay row computes
+  `(b*b)*b = a` and `b*(b*b) = b`; the source SMT-LIB artifact separately
+  checks the fixed malformed associativity equality `(b*b)*b = b*(b*b)`
+  against `a != b`. Focused validation passes; the public summary now reports
+  120 concept rows, 108 packs, 650 expected checks, 322 checked rows, 257
+  replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite permutation injectivity Alethe row split landed.**
   `finite-permutation-groups-v0` now keeps the malformed self-map rejection as
   exact finite replay and exposes the QF_UF/Alethe proof-object check as the

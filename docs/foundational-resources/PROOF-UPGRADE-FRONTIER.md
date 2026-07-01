@@ -546,7 +546,8 @@ First targets:
 - [finite-algebra-homomorphisms-v0](../../artifacts/examples/math/finite-algebra-homomorphisms-v0/)
   (resource-backed QF_UF/Alethe regression landed for homomorphism preservation)
 - [finite-monoids-v0](../../artifacts/examples/math/finite-monoids-v0/)
-  (resource-backed QF_UF/Alethe regression landed for the bad associativity conflict)
+  (resource-backed QF_UF/Alethe regression landed as
+  `qf-uf-bad-monoid-associativity` for the bad associativity conflict)
 - [finite-order-lattices-v0](../../artifacts/examples/math/finite-order-lattices-v0/)
   (resource-backed QF_UF/Alethe regression landed as
   `qf-uf-bad-partial-order-antisymmetry` for the bad antisymmetry conflict; the

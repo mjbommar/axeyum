@@ -5,7 +5,8 @@
 | `two-point-transformation-monoid-laws` | `sat` | Check identity and associativity over the listed composition table. |
 | `function-composition-table-replay` | `sat` | Recompute every table entry from the finite function maps. |
 | `units-and-idempotents-replay` | `sat` | Recompute invertible elements and idempotents from the monoid table. |
-| `bad-nonassociative-table-rejected` | `unsat` | Reject a table with an identity but a concrete associativity failure and checked QF_UF/Alethe evidence. |
+| `bad-nonassociative-table-rejected` | `unsat` | Reject a table with an identity but a concrete associativity failure by exact replay. |
+| `qf-uf-bad-monoid-associativity` | `unsat` | Check the fixed malformed associativity equality with QF_UF/Alethe evidence. |
 | `general-monoid-theory-lean-horizon` | `not-run` | Names the Lean route for general semigroup and monoid theorems. |
 
 The checked rows are exact finite table rows. They are not claims about

@@ -58,7 +58,7 @@ route explicitly instead.
 | Pack | Replay Story | Certificate Story | Horizon |
 |---|---|---|---|
 | `finite-groups-v0` | Cayley-table closure, identity, inverse, and associativity replay. | Binary operation congruence: equal operands must give equal products. | arbitrary group theorems, Lagrange, Sylow, classification |
-| `finite-monoids-v0` | Transformation-table composition, units, idempotents, and associativity replay. | A malformed associativity row is isolated as one equality conflict. | arbitrary monoid theory and semigroup structure theorems |
+| `finite-monoids-v0` | Transformation-table composition, units, idempotents, and associativity replay. | Bad associativity now has separate replay and `qf-uf-bad-monoid-associativity` equality-conflict rows. | arbitrary monoid theory and semigroup structure theorems |
 | `finite-permutation-groups-v0` | Finite self-map composition, cycle/sign replay, action replay. | Bad nonbijection now has separate replay and `qf-uf-bad-nonbijection-injectivity` duplicate-image rows. | general permutation-group and representation theory |
 | `finite-group-actions-v0` | Identity and compatibility laws, orbit/stabilizer replay, Burnside average. | Malformed rows isolate `e.x = x` and `g.(h.x) = (g*h).x` as separate equality conflicts. | orbit-stabilizer and Burnside/Cauchy-Frobenius in full generality |
 | `finite-algebra-homomorphisms-v0` | Group/ring homomorphism table replay, kernel/image, quotient, induced map. | Preservation congruence and concrete bad-map equality conflicts are checked separately. | first isomorphism theorem, normal subgroup and ideal quotient theory |
