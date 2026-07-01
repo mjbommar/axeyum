@@ -1886,6 +1886,15 @@ Pick one item per commit unless the change is purely navigational.
      route now checks both bad coefficient and bad RSS-improvement rows without
      promoting statistical inference, asymptotics, model-selection guarantees,
      or floating-point regression behavior.
+121. Landed: add
+     [GEOMETRY-RESOURCE-QUERIES.md](GEOMETRY-RESOURCE-QUERIES.md), making the
+     geometry lane queryable by bridge concept plus proof route. The guide and
+     foundational smoke cover concept-scoped Farkas pack/check queries for
+     `bridge_coordinate_orientation_geometry` and
+     `bridge_finite_circle_inversion_cyclic_replay`, keeping finite
+     coordinate/incidence/rigid/affine/orientation rows and
+     circle/inversion/cyclic rows discoverable without promoting broad geometry
+     theorem claims.
 
 ## Validation Checklist
 

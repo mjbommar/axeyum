@@ -172,6 +172,8 @@ python3 scripts/query-foundational-resources.py fields --field geometry --route 
 python3 scripts/query-foundational-resources.py concepts --field geometry --text coordinate --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field geometry --text circle --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field geometry --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_coordinate_orientation_geometry --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_coordinate_orientation_geometry --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_circle_inversion_cyclic_replay --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_circle_inversion_cyclic_replay --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field functional_analysis_and_operator_theory --route Farkas --require-any >/dev/null

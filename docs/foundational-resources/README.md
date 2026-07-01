@@ -65,6 +65,9 @@ schemas, examples, and validation workflows.
   copyable concept-plus-route queries for checked LU rows, residuals,
   rank/nullity, eigenpairs, random matrices, tensor/module rows, operators,
   and Chebyshev systems.
+- [GEOMETRY-RESOURCE-QUERIES.md](GEOMETRY-RESOURCE-QUERIES.md) gives copyable
+  concept-plus-route queries for finite coordinate/incidence/rigid/affine
+  geometry and finite circle/inversion/cyclic geometry rows.
 - [RULES-LAW-CROSSWALK.md](RULES-LAW-CROSSWALK.md) maps the math-resource
   patterns into rules/law checks for finite predicates, thresholds, graph
   reachability, precedence, proof routes, and current rules-as-code packs,

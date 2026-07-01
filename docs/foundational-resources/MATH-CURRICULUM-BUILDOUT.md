@@ -42,6 +42,8 @@ For proof-route coverage queries, use the
 [Proof Route Query Matrix](PROOF-ROUTE-QUERY-MATRIX.md).
 For matrix computation discovery by bridge concept and proof route, use the
 [Matrix Computation Consumer Queries](MATRIX-COMPUTATION-QUERIES.md).
+For finite geometry discovery by bridge concept and proof route, use the
+[Geometry Resource Consumer Queries](GEOMETRY-RESOURCE-QUERIES.md).
 This file remains the phase contract and landed-history log.
 
 The product is not a textbook and not a formal-library clone. It is a set of
@@ -2221,6 +2223,13 @@ The matrix-resource consumer layer now also has
 `packs` and `checks`. This makes LU, residual, rank/nullity, eigenpair,
 random-matrix, tensor/module, operator, and Chebyshev rows discoverable by
 bridge concept plus proof route while preserving the JSON-first R6 boundary.
+The finite-geometry consumer layer now also has
+[`GEOMETRY-RESOURCE-QUERIES.md`](GEOMETRY-RESOURCE-QUERIES.md). The guide and
+resource smoke expose `bridge_coordinate_orientation_geometry` and
+`bridge_finite_circle_inversion_cyclic_replay` through concept-scoped Farkas
+pack/check queries, making coordinate/incidence/rigid/affine/orientation rows
+and circle/inversion/cyclic rows discoverable while keeping broad geometry
+theorems in the proof-horizon lane.
 The proof-route consumer layer now also has
 [`PROOF-ROUTE-QUERY-MATRIX.md`](PROOF-ROUTE-QUERY-MATRIX.md), and
 `query-foundational-resources.py routes` summarizes route coverage from

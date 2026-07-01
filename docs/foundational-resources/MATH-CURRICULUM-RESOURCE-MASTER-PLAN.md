@@ -428,6 +428,11 @@ Use one row per commit unless the change is purely navigational.
    `query-foundational-resources.py routes` summary command, making finite
    replay, Boolean, QF_BV, QF_LIA, QF_LRA, QF_UF, and Lean-horizon coverage
    queryable by route and optional field.
+21a. Landed: add
+   [GEOMETRY-RESOURCE-QUERIES.md](GEOMETRY-RESOURCE-QUERIES.md), making finite
+   coordinate/incidence/rigid/affine/orientation and circle/inversion/cyclic
+   geometry rows queryable by bridge concept plus Farkas route without adding
+   a typed API or claiming broad geometry theorem coverage.
 22. Landed: add number-system semantic-boundary bridge rows for
    exact-vs-floating arithmetic and totality conventions, plus consumer smoke
    queries for number-theory totality and numerical-analysis floating-boundary

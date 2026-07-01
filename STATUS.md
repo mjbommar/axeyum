@@ -860,6 +860,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   compact-operator, Haar-space, minimax, alternation-theorem, and
   infinite-dimensional approximation claims remain Lean-horizon.
 
+- **Geometry resource query guide landed.**
+  `GEOMETRY-RESOURCE-QUERIES.md` now gives downstream consumers copyable
+  concept-plus-route queries for finite geometry resources. It separates
+  `bridge_coordinate_orientation_geometry` (coordinate, incidence, rigid,
+  affine, and orientation rows) from
+  `bridge_finite_circle_inversion_cyclic_replay` (circle, inversion, and
+  cyclic rows), and `check-foundational-resources.sh` now smoke-checks both
+  concept-scoped Farkas pack/check paths. This is count-neutral and keeps
+  synthetic, projective, differential, global, higher-degree, and numerical
+  robustness geometry claims in the proof-horizon lane.
+
 - **Graph traversal runtime learner index landed.**
   `graph-traversal-runtime-index.md` now ties finite reachability,
   deterministic BFS/DFS traces, shortcut-tail visited-node counters, checked

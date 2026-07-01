@@ -1133,6 +1133,15 @@ Pick one row per commit unless the change is purely navigational.
      exact-minimizer and curvature contradictions without claiming Wolfe
      existence, strong-Wolfe variants, convergence, stochastic line search, or
      floating-point stability.
+138. Landed: add
+     [`GEOMETRY-RESOURCE-QUERIES.md`](GEOMETRY-RESOURCE-QUERIES.md) as the
+     finite-geometry consumer query guide. The guide and resource smoke now
+     exercise concept-scoped Farkas pack/check queries for
+     `bridge_coordinate_orientation_geometry` and
+     `bridge_finite_circle_inversion_cyclic_replay`, making
+     coordinate/incidence/rigid/affine/orientation rows and
+     circle/inversion/cyclic rows discoverable without claiming synthetic,
+     projective, differential, global, or higher-degree geometry theorems.
 
 ## Validation Checklist
 
