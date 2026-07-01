@@ -200,6 +200,11 @@ The functional-analysis/operator consumer query guide is
 it records exact concept-plus-route queries for finite operators, Chebyshev
 rows, inner-product/projection rows, spectral rows, and dual/tensor equality
 resources.
+The analysis/numerical consumer query guide is
+[`docs/foundational-resources/ANALYSIS-NUMERICAL-QUERIES.md`](docs/foundational-resources/ANALYSIS-NUMERICAL-QUERIES.md);
+it records exact concept-plus-route queries for bounded real-analysis rows,
+numerical-method rows, residuals, dynamics/Euler rows, and complex real-pair
+resources.
 The rules/law transfer crosswalk that maps finite predicates, arithmetic
 thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
@@ -634,6 +639,15 @@ Farkas/Alethe queries, so downstream consumers can discover finite
 functional/operator resources without promoting Banach/Hilbert-space,
 compact-operator, topological-dual, minimax, alternation-theorem, stability, or
 infinite-dimensional approximation claims.
+The analysis/numerical/complex lane now has
+[`ANALYSIS-NUMERICAL-QUERIES.md`](docs/foundational-resources/ANALYSIS-NUMERICAL-QUERIES.md),
+and the foundational smoke checks bounded epsilon-delta, metric-ball,
+algebraic derivative/integral, Newton/root-finding, finite dynamics/Euler,
+residual, exact-vs-floating, and complex real-pair rows through Farkas queries,
+so downstream consumers can discover finite analysis resources without
+promoting completeness, IVT/MVT/FTC, convergence, numerical stability,
+floating-point error, holomorphicity, contour-integration,
+analytic-continuation, or algebraic-closure claims.
 The proof-route lane now has
 [`PROOF-ROUTE-QUERY-MATRIX.md`](docs/foundational-resources/PROOF-ROUTE-QUERY-MATRIX.md),
 and the query helper accepts `routes` summaries with route aliases and optional

@@ -182,6 +182,13 @@ python3 scripts/query-foundational-resources.py concepts --field real_analysis -
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text metric --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text gradient --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field real_analysis --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_metric_ball --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_metric_ball --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_bounded_epsilon_delta_shadow --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-root-finding-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field numerical_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text residual --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text operator --require-any >/dev/null
@@ -191,6 +198,8 @@ python3 scripts/query-foundational-resources.py checks --pack numerical-linear-a
 python3 scripts/query-foundational-resources.py fields --field complex_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field complex_analysis --text real-pair --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field complex_analysis --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_complex_real_pair_transform --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_complex_real_pair_transform --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field optimization_and_convexity --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text objective --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text convexity --require-any >/dev/null

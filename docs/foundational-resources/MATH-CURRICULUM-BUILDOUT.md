@@ -59,6 +59,9 @@ For optimization/convexity discovery by bridge concept and proof route, use the
 For functional-analysis/operator discovery by bridge concept and proof route,
 use the
 [Functional Analysis And Operator Resource Consumer Queries](FUNCTIONAL-OPERATOR-QUERIES.md).
+For real-analysis, numerical-analysis, and complex-analysis discovery by bridge
+concept and proof route, use the
+[Analysis And Numerical Resource Consumer Queries](ANALYSIS-NUMERICAL-QUERIES.md).
 This file remains the phase contract and landed-history log.
 
 The product is not a textbook and not a formal-library clone. It is a set of
@@ -2300,6 +2303,16 @@ rows through concept-scoped Farkas and Alethe queries, making finite
 functional/operator resources discoverable while keeping Banach/Hilbert-space,
 compact-operator, topological-dual, minimax, Haar-space, alternation-theorem,
 stability, and infinite-dimensional approximation claims in the horizon lanes.
+The analysis/numerical/complex consumer layer now also has
+[`ANALYSIS-NUMERICAL-QUERIES.md`](ANALYSIS-NUMERICAL-QUERIES.md). The guide and
+resource smoke expose bounded epsilon-delta and metric-ball rows, algebraic
+derivative/integral rows, Newton/root-finding rows, finite dynamics/Euler rows,
+residual and numerical-linear-algebra rows, exact-vs-floating boundary rows,
+and complex real-pair rows through concept-scoped or pack-scoped Farkas
+queries, making finite analysis resources discoverable while keeping
+completeness, IVT/MVT/FTC, convergence, numerical stability, floating-point
+error, holomorphicity, contour-integration, analytic-continuation, and
+algebraic-closure claims in the horizon lanes.
 The proof-route consumer layer now also has
 [`PROOF-ROUTE-QUERY-MATRIX.md`](PROOF-ROUTE-QUERY-MATRIX.md), and
 `query-foundational-resources.py routes` summarizes route coverage from
