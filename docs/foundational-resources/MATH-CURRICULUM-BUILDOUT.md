@@ -756,8 +756,8 @@ mean/variance identities, checked rejection of a bad variance claim,
 contingency-table margins, and a Simpson's paradox count-table witness.
 `artifacts/examples/math/least-squares-regression-v0/` now validates exact
 least-squares normal equations, residual orthogonality, mean-baseline RSS
-comparison, checked QF_LRA/Farkas rejection of bad coefficients, and a
-regression-statistics Lean-horizon row.
+comparison, checked QF_LRA/Farkas rejection of bad RSS-improvement and bad
+coefficient claims, and a regression-statistics Lean-horizon row.
 `artifacts/examples/math/linear-optimization-v0/` now validates LP feasibility
 witnesses, objective-threshold replay, and a tiny checked Farkas certificate.
 `artifacts/examples/math/convexity-rational-v0/` now validates exact rational
@@ -981,7 +981,8 @@ Recommended order:
 3. `descriptive-statistics-v0` and `least-squares-regression-v0`:
    mean/variance identities, checked bad-variance rejection, contingency
    tables, Simpson witness, least-squares normal equations, residual
-   orthogonality, and bad-coefficient rejection.
+   orthogonality, bad RSS-improvement rejection, and bad-coefficient
+   rejection.
 4. `linear-optimization-v0`: LP feasibility, threshold cliffs, Farkas links.
 5. `convexity-rational-v0`: midpoint convexity, finite second differences,
    monotonicity thresholds, and bad midpoint-convexity rejection.
@@ -1584,8 +1585,8 @@ Mobius-transform replay, checked rejection of a false unit-square real-part
 claim, and a complex-analysis Lean-horizon row.
 `least-squares-regression-v0` now adds the next exact finite statistics bridge:
 least-squares normal equations, residual orthogonality, mean-baseline RSS
-comparison, checked QF_LRA/Farkas rejection of bad coefficients, and a
-regression-statistics Lean-horizon row.
+comparison, checked QF_LRA/Farkas rejection of bad RSS-improvement and bad
+coefficient claims, and a regression-statistics Lean-horizon row.
 `generating-functions-v0` now adds the next exact finite discrete/polynomial
 bridge: coefficient extraction, Cauchy product convolution, Fibonacci
 generating-function prefix replay, checked rejection of a bad convolution
@@ -1713,8 +1714,8 @@ and the floating-point/stability/convergence horizon.
 learner-facing end-to-end lesson for exact mean/variance replay, checked bad
 variance rejection, contingency table margins, Simpson's paradox counts,
 least-squares normal equations, residual orthogonality, RSS comparison,
-checked QF_LRA/Farkas bad-coefficients rejection, and the statistical
-inference/numerical regression horizon.
+checked QF_LRA/Farkas bad RSS-improvement and bad-coefficients rejection, and
+the statistical inference/numerical regression horizon.
 `coordinate-geometry-v0`, `incidence-geometry-v0`,
 `rigid-configuration-geometry-v0`, `affine-geometry-v0`,
 `orientation-area-geometry-v0`, `finite-circle-geometry-v0`,
@@ -1985,8 +1986,9 @@ composed transition `(K;L)(rainy, early) = 22/75`.
 rows through source-linked checked Farkas evidence paths after exact first-hit
 replay computes `P(T > 4)=5/16` and clearing denominators in the finite
 expected-time equation, and its metadata promotes those rows for solver reuse.
-`least-squares-regression-v0` now routes its bad coefficient row through the
-same checked Farkas evidence path using the first failed normal equation.
+`least-squares-regression-v0` now routes its bad coefficient and bad
+RSS-improvement rows through the same checked Farkas evidence path using the
+first failed normal equation and exact mean-baseline RSS replay.
 `real-analysis-rational-v0` now routes its bad linear-delta row through the
 same checked Farkas evidence path using the final output-bound contradiction.
 `bounded-monotone-sequence-v0` now routes its bad upper-bound row through the
@@ -2144,7 +2146,7 @@ tail-count bridge lookups, random-matrix bridge lookups, concept-scoped
 `bridge_random_matrix_finite_moment` pack and checked-row drill-downs, and
 checked Farkas/Diophantine statistics row drill-downs. The
 foundational-resource smoke check runs those same queries so exact finite
-tests, contingency tables, least-squares regression, random-matrix finite
+tests, contingency tables, least-squares RSS/normal-equation rows, random-matrix finite
 moments, finite probability/process tables, concentration rows, and
 stochastic-kernel checks stay visible through the public JSON boundary without
 promoting floating-point inference, asymptotic sampling, MCMC, VI,
@@ -2154,7 +2156,7 @@ The consumer query layer now also exposes linear-algebra readiness:
 `CONSUMER-QUERIES.md` shows Farkas and Alethe field summaries, rank and
 projection bridge lookups, and checked exact-rational/equality-heavy
 linear-algebra row drill-downs. The foundational-resource smoke check runs
-those same queries so rational systems, residual bounds, least-squares,
+those same queries so rational systems, residual bounds, least-squares RSS rows,
 eigenpair checks, matrix invariants, finite vector spaces, dual spaces,
 modules, tensors, geometry dot products, finite SDP/KKT/active-set rows, and
 matrix-process equations stay visible through the public JSON boundary without
@@ -2223,7 +2225,7 @@ The consumer query layer now also exposes optimization/convexity readiness:
 `CONSUMER-QUERIES.md` shows the Farkas field summary, LP-objective and
 convexity bridge lookups, and checked optimization/convexity Farkas row
 drill-downs. The foundational-resource smoke check runs the same queries so
-exact LP thresholds, finite convexity shadows, least-squares normal equations,
+exact LP thresholds, finite convexity shadows, least-squares normal equations and RSS rows,
 gradient/Hessian replay, KKT stationarity replay, finite active-set QP replay,
 finite SDP objective/slack replay, finite gradient-descent replay, finite
 line-search replay, residual bounds, finite Wolfe line-search replay, finite

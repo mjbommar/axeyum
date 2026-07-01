@@ -2,7 +2,8 @@
 
 This lesson follows two exact finite statistics resources from mean/variance
 and count-table replay to least-squares normal equations, residual
-orthogonality, and checked bad regression coefficients. It uses
+orthogonality, checked bad RSS-improvement, and checked bad regression
+coefficients. It uses
 [descriptive-statistics-v0](../../../artifacts/examples/math/descriptive-statistics-v0/)
 and
 [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/).
@@ -28,6 +29,7 @@ Concept rows:
 | `perfect-line-normal-equations` | `sat` | replay-only |
 | `least-squares-residual-orthogonality` | `sat` | replay-only |
 | `mean-baseline-rss-comparison` | `sat` | replay-only |
+| `bad-rss-improvement-rejected` | `unsat` | checked |
 | `bad-regression-coefficients-rejected` | `unsat` | checked |
 | `general-regression-statistics-lean-horizon` | `not-run` | lean-horizon |
 
@@ -205,6 +207,32 @@ RSS improvement = 9/2
 
 The validator recomputes both residual-sum-of-squares values exactly.
 
+## Reject Bad RSS Improvement
+
+The bad row claims the same finite replay improves RSS by:
+
+```text
+RSS improvement = 4
+```
+
+The validator has already replayed:
+
+```text
+baseline RSS = 14/3
+model RSS = 1/6
+actual improvement = 9/2
+```
+
+The source SMT-LIB artifact keeps only the final equality conflict:
+
+```text
+rss_improvement = 9/2
+rss_improvement = 4
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
+
 ## Reject Bad Coefficients
 
 The bad row claims that:
@@ -260,6 +288,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes least_squares_bad_rss_improvement_artifact_emits_checked_farkas
 ```
 
 Expected output for each command:
@@ -274,11 +303,11 @@ This lesson shows Axeyum's current exact statistics/regression resource
 pattern:
 
 ```text
-untrusted fast search -> statistic, table, coefficient, or counterexample row
+untrusted fast search -> statistic, table, RSS, coefficient, or counterexample row
 trusted small checking -> exact rational arithmetic, count tables, matrix replay, Diophantine certificates, and Farkas certificates
 remaining horizon -> inference, asymptotics, floating point, and model theory
 ```
 
 The graduation route is deterministic finite replay plus checked proof objects
-for false coefficient or table claims before inference or numerical regression
-claims are promoted.
+for false RSS, coefficient, or table claims before inference or numerical
+regression claims are promoted.

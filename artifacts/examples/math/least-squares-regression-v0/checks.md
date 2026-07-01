@@ -24,6 +24,17 @@ The validator checks the mean-only baseline for the same response vector,
 recomputes baseline residuals, and verifies that the least-squares model
 improves residual sum of squares by `9/2`.
 
+## `bad-rss-improvement-rejected`
+
+Expected result: `unsat`.
+
+The validator rejects the claim that the least-squares fit improves residual
+sum of squares by `4`; exact replay computes baseline RSS `14/3`, model RSS
+`1/6`, and improvement `9/2`.
+
+The resource-backed Axeyum regression checks the final equality conflict as
+`QF_LRA`, requiring rechecked `UnsatFarkas` evidence.
+
 ## `bad-regression-coefficients-rejected`
 
 Expected result: `unsat`.

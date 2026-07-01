@@ -1316,7 +1316,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "least-squares-regression-v0",
-                "Normal-equation and residual rows checked as exact rational linear algebra, not floating-point regression.",
+                "Normal-equation, residual, and bad RSS-improvement rows checked as exact rational linear algebra, not floating-point regression.",
             ),
             (
                 "finite-root-finding-v0",
@@ -1413,7 +1413,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "least-squares-regression-v0",
-                "Normal-equation and bad-coefficient rows that reduce a fixed least-squares claim to exact linear constraints.",
+                "Normal-equation, bad-coefficient, and bad RSS-improvement rows that reduce fixed least-squares claims to exact linear constraints.",
             ),
             (
                 "numerical-linear-algebra-v0",
@@ -1523,7 +1523,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "least-squares-regression-v0",
-                "Normal-equation, residual-orthogonality, and regression coefficient rows over exact rationals.",
+                "Normal-equation, residual-orthogonality, RSS-improvement, and regression coefficient rows over exact rationals.",
             ),
             (
                 "finite-separation-v0",
@@ -4450,7 +4450,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "least-squares-regression-v0",
-                "Normal-equation, residual-orthogonality, and bad coefficient rows.",
+                "Normal-equation, residual-orthogonality, bad RSS-improvement, and bad coefficient rows.",
             ),
             (
                 "inner-product-spaces-rational-v0",
@@ -6988,7 +6988,7 @@ EXAMPLE_FAMILIES = [
             ),
             (
                 "least-squares-regression-v0",
-                "Bad regression coefficients rejected through a normal-equation conflict.",
+                "Bad regression coefficients and bad RSS-improvement claims rejected through exact linear conflicts.",
             ),
             (
                 "real-analysis-rational-v0",

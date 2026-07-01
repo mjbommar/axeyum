@@ -25,6 +25,9 @@ const CONVEXITY_BAD_MIDPOINT: &str = include_str!(
 const DESCRIPTIVE_STATS_BAD_VARIANCE: &str = include_str!(
     "../../../artifacts/examples/math/descriptive-statistics-v0/smt2/bad-variance-farkas-conflict.smt2"
 );
+const LEAST_SQUARES_BAD_RSS_IMPROVEMENT: &str = include_str!(
+    "../../../artifacts/examples/math/least-squares-regression-v0/smt2/bad-rss-improvement-farkas-conflict.smt2"
+);
 const EXACT_STATS_BAD_FISHER_LEFT_TAIL: &str = include_str!(
     "../../../artifacts/examples/math/exact-statistical-tests-v0/smt2/bad-fisher-left-tail-farkas-conflict.smt2"
 );
@@ -1164,6 +1167,14 @@ fn least_squares_bad_coefficients_emit_checked_farkas() {
         "least-squares-regression-v0 bad-regression-coefficients-rejected",
         &arena,
         &[beta0_is_one, beta1_is_one, first_normal_equation],
+    );
+}
+
+#[test]
+fn least_squares_bad_rss_improvement_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "least-squares-regression-v0 bad-rss-improvement SMT-LIB artifact",
+        LEAST_SQUARES_BAD_RSS_IMPROVEMENT,
     );
 }
 

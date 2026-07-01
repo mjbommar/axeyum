@@ -52,6 +52,9 @@ The mean-only baseline has mean `7/3` and residual sum of squares `14/3`. The
 least-squares fit has residual sum of squares `1/6`, so the improvement is
 `9/2`.
 
+A malformed row that claims improvement `4` contradicts this exact replay. The
+pack keeps that final equality conflict on the checked `UnsatFarkas` route.
+
 ## False Coefficients
 
 The coefficients `(1, 1)` give fitted values `(1, 2, 3)` and residuals

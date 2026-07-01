@@ -809,7 +809,7 @@ python3 scripts/query-foundational-resources.py checks \
 ```
 
 For statistics, query the Farkas route to keep exact finite tests,
-contingency tables, least-squares regression, random-matrix finite moments,
+contingency tables, least-squares RSS rows, random-matrix finite moments,
 finite probability/process tables, concentration rows, and stochastic-kernel
 checks grouped while leaving floating-point inference, asymptotic sampling,
 MCMC, VI, and model-calibration claims in numerical-honesty or proof-horizon
@@ -896,7 +896,7 @@ python3 scripts/query-foundational-resources.py checks \
 ```
 
 For linear algebra, query the Farkas route to keep exact rational systems,
-residual bounds, least-squares normal equations, Rayleigh/eigenpair checks,
+residual bounds, least-squares normal equations and RSS rows, Rayleigh/eigenpair checks,
 matrix-invariant rows, geometry dot-product rows, finite SDP/KKT/active-set
 rows, and finite dynamics/process matrix equations grouped while keeping
 spectral theorems, conditioning/stability, and general vector-space/module
@@ -1300,7 +1300,7 @@ python3 scripts/query-foundational-resources.py concepts \
 
 To display concrete checked optimization, convexity, finite SDP, finite
 active-set QP, finite gradient-descent, finite line-search, finite Wolfe
-line-search, finite projected-gradient, finite proximal-gradient, least-squares, gradient,
+line-search, finite projected-gradient, finite proximal-gradient, least-squares RSS, gradient,
 residual, Rayleigh, or eigenpair rows, drill
 into checked Farkas examples:
 
@@ -1584,6 +1584,7 @@ python3 scripts/query-foundational-resources.py concepts --field statistics --te
 python3 scripts/query-foundational-resources.py concepts --field statistics --text random --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field statistics --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack descriptive-statistics-v0 --route Farkas --proof-status checked --text variance --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack least-squares-regression-v0 --route Farkas --proof-status checked --text RSS --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack exact-statistical-tests-v0 --route Farkas --proof-status checked --text Fisher --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack exact-statistical-tests-v0 --route Farkas --proof-status checked --text two-sided --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack exact-statistical-tests-v0 --route Farkas --proof-status checked --text multinomial --require-any >/dev/null

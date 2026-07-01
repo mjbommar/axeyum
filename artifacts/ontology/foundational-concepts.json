@@ -2816,7 +2816,7 @@
           "id": "least-squares-regression-v0",
           "status": "validated",
           "path": "artifacts/examples/math/least-squares-regression-v0",
-          "notes": "Normal-equation and residual rows checked as exact rational linear algebra, not floating-point regression."
+          "notes": "Normal-equation, residual, and bad RSS-improvement rows checked as exact rational linear algebra, not floating-point regression."
         },
         {
           "id": "finite-root-finding-v0",
@@ -2924,7 +2924,7 @@
           "id": "least-squares-regression-v0",
           "status": "validated",
           "path": "artifacts/examples/math/least-squares-regression-v0",
-          "notes": "Normal-equation and bad-coefficient rows that reduce a fixed least-squares claim to exact linear constraints."
+          "notes": "Normal-equation, bad-coefficient, and bad RSS-improvement rows that reduce fixed least-squares claims to exact linear constraints."
         },
         {
           "id": "numerical-linear-algebra-v0",
@@ -3036,7 +3036,7 @@
           "id": "least-squares-regression-v0",
           "status": "validated",
           "path": "artifacts/examples/math/least-squares-regression-v0",
-          "notes": "Normal-equation, residual-orthogonality, and regression coefficient rows over exact rationals."
+          "notes": "Normal-equation, residual-orthogonality, RSS-improvement, and regression coefficient rows over exact rationals."
         },
         {
           "id": "finite-separation-v0",
@@ -6161,7 +6161,7 @@
           "id": "least-squares-regression-v0",
           "status": "validated",
           "path": "artifacts/examples/math/least-squares-regression-v0",
-          "notes": "Normal-equation, residual-orthogonality, and bad coefficient rows."
+          "notes": "Normal-equation, residual-orthogonality, bad RSS-improvement, and bad coefficient rows."
         },
         {
           "id": "inner-product-spaces-rational-v0",
@@ -8968,7 +8968,7 @@
           "id": "least-squares-regression-v0",
           "status": "validated",
           "path": "artifacts/examples/math/least-squares-regression-v0",
-          "notes": "Bad regression coefficients rejected through a normal-equation conflict."
+          "notes": "Bad regression coefficients and bad RSS-improvement claims rejected through exact linear conflicts."
         },
         {
           "id": "real-analysis-rational-v0",

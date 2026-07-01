@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 603 expected checks.
-- 282 checked proof/evidence rows.
+- 604 expected checks.
+- 283 checked proof/evidence rows.
 - 250 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1105,6 +1105,13 @@ Pick one row per commit unless the change is purely navigational.
      `T3+1=1/2`; the shared QF_LRA/Farkas route now checks the recurrence
      value conflict without promoting Haar-space, minimax, Banach/Hilbert, or
      infinite-dimensional approximation theorems.
+134. Landed: extend `least-squares-regression-v0` with a checked bad
+     RSS-improvement row. Exact mean-baseline replay computes baseline RSS
+     `14/3`, model RSS `1/6`, and improvement `9/2`, while the malformed
+     source SMT-LIB artifact claims improvement `4`; the shared QF_LRA/Farkas
+     route now checks both normal-equation coefficient and RSS-improvement
+     contradictions without claiming Gauss-Markov, inference, asymptotic, or
+     floating-point regression coverage.
 
 ## Validation Checklist
 

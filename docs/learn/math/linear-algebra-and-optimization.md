@@ -61,8 +61,8 @@ QF_LRA/Farkas evidence, validates a row-scaling inconsistency certificate,
 checks LP feasibility witnesses, checks a tiny Farkas infeasibility
 certificate, and replays finite convexity/threshold and finite-dimensional
 norm/operator examples. The least-squares regression slice checks normal equations,
-residual orthogonality, RSS comparison, and a checked `UnsatFarkas`
-bad-coefficients certificate. The finite-vector-space slice adds `F2^2`,
+residual orthogonality, RSS comparison, and checked `UnsatFarkas`
+bad-RSS and bad-coefficients certificates. The finite-vector-space slice adds `F2^2`,
 subspace/span replay,
 linear-map kernel/image replay, rank-nullity by finite cardinality, and
 checked QF_UF/Alethe non-subspace rejection. The finite-dual-space slice adds covectors as

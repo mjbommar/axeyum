@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Least-squares bad RSS-improvement QF_LRA row landed.**
+  `least-squares-regression-v0` now includes a second checked Farkas row:
+  exact mean-baseline replay computes baseline RSS `14/3`, model RSS `1/6`,
+  and improvement `9/2`, while the malformed source SMT-LIB artifact claims
+  improvement `4`. The validator pins the source witness, response, mean,
+  replayed RSS values, computed and claimed improvements, artifact path, and
+  regression; the shared `math_resource_lra_routes` regression parses the
+  artifact and checks `UnsatFarkas` evidence. Generated dashboards and the
+  public query summary now report 111 concept rows, 108 non-template packs,
+  604 expected checks, 283 checked rows, 250 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Finite-operator bad Chebyshev-prefix QF_LRA row landed.**
   `finite-operator-v0` now includes a third checked Farkas row: exact
   Chebyshev recurrence replay at `x=1/2` computes `T3=-1`, while the

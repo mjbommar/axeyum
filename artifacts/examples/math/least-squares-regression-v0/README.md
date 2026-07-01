@@ -9,6 +9,7 @@ The pack covers:
 - exact normal-equation replay for a perfect affine fit;
 - residual orthogonality for a non-perfect least-squares fit;
 - mean-baseline residual-sum-of-squares comparison;
+- checked rejection of a bad RSS-improvement claim;
 - checked rejection of bad regression coefficients;
 - a Lean-horizon row for general statistical regression theory.
 
@@ -27,6 +28,10 @@ The validator parses the design matrix, response vector, coefficients, fitted
 values, residuals, normal equations, and residual sums of squares as exact
 rational strings. It recomputes every matrix-vector product and dot product
 without floating point.
+
+The malformed RSS-improvement and coefficient rows are checked by the
+QF_LRA/Farkas route after exact replay computes improvement `9/2` and the
+failed normal-equation residual.
 
 This is a finite deterministic regression replay pack. It does not claim
 Gauss-Markov optimality, distributional assumptions, confidence intervals,

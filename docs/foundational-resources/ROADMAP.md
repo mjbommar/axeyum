@@ -590,8 +590,8 @@ rejection of a bad total-count claim, and a Simpson's paradox count-table
 witness.
 [`least-squares-regression-v0`](../../artifacts/examples/math/least-squares-regression-v0/)
 validates exact least-squares normal equations, residual orthogonality,
-mean-baseline RSS comparison, checked rejection of bad coefficients, and a
-regression-statistics Lean-horizon row.
+mean-baseline RSS comparison, checked rejection of bad RSS-improvement and bad
+coefficient claims, and a regression-statistics Lean-horizon row.
 [`linear-optimization-v0`](../../artifacts/examples/math/linear-optimization-v0/)
 validates exact LP feasibility witnesses, objective-threshold replay, and a
 tiny checked Farkas infeasibility certificate.

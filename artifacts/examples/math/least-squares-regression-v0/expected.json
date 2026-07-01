@@ -74,6 +74,27 @@
       "notes": "The validator recomputes the baseline mean, residuals, RSS, and model improvement exactly."
     },
     {
+      "id": "bad-rss-improvement-rejected",
+      "claim": "The least-squares fit improves residual sum of squares over the mean-only baseline by exactly 4.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_regression_rss_improvement_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "mean-baseline-comparison",
+        "response": ["1", "2", "4"],
+        "mean": "7/3",
+        "baseline_rss": "14/3",
+        "model_rss": "1/6",
+        "computed_improvement": "9/2",
+        "claimed_improvement": "4",
+        "rss_equation": "baseline_rss - model_rss = rss_improvement",
+        "smt2_artifact": "artifacts/examples/math/least-squares-regression-v0/smt2/bad-rss-improvement-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes least_squares_bad_rss_improvement_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes baseline RSS 14/3, model RSS 1/6, and improvement 9/2, so the malformed improvement claim 4 is rejected through the checked QF_LRA/Farkas route."
+    },
+    {
       "id": "bad-regression-coefficients-rejected",
       "claim": "The coefficients (1, 1) solve the non-perfect least-squares problem.",
       "expected_result": "unsat",

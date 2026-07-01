@@ -56,8 +56,8 @@ stopping-time replay, finite product-measure tables, rectangle probabilities,
 marginals, finite Fubini sums, exact
 mean/variance identities, a checked QF_LRA bad-variance certificate,
 contingency table margins, a checked QF_LIA bad contingency-total certificate,
-least-squares normal equations, and a checked QF_LRA bad-coefficients
-certificate. It also checks a Simpson's paradox count-table witness.
+least-squares normal equations, checked QF_LRA bad-RSS and bad-coefficients
+certificates, and a Simpson's paradox count-table witness.
 The d-separation pack adds a finite DAG bridge:
 it checks whether conditioning blocks or opens paths in small
 causal-graph-shaped examples. The random-matrix pack checks

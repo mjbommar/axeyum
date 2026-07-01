@@ -21668,6 +21668,53 @@ def validate_least_squares_regression(expected: dict[str, Any]) -> None:
     if rss_improvement <= 0:
         fail("mean-baseline-rss-comparison must show a strict RSS improvement")
 
+    bad_rss = checks["bad-rss-improvement-rejected"]
+    if bad_rss["expected_result"] != "unsat" or bad_rss.get("proof_status") != "checked":
+        fail("bad-rss-improvement-rejected must be a checked unsat row")
+    if bad_rss["validation"] != "finite_bad_regression_rss_improvement_refutation":
+        fail("bad-rss-improvement-rejected must use finite_bad_regression_rss_improvement_refutation validation")
+    data = bad_rss.get("data", {})
+    if data.get("source_witness") != "mean-baseline-comparison":
+        fail("bad-rss-improvement-rejected must cite the mean-baseline-comparison witness")
+    bad_response = require_fraction_vector("bad RSS response", data.get("response"))
+    bad_mean = require_fraction("bad RSS mean", data.get("mean"))
+    bad_baseline_rss = require_fraction("bad RSS baseline_rss", data.get("baseline_rss"))
+    bad_model_rss = require_fraction("bad RSS model_rss", data.get("model_rss"))
+    computed_improvement = require_fraction("bad RSS computed_improvement", data.get("computed_improvement"))
+    claimed_improvement = require_fraction("bad RSS claimed_improvement", data.get("claimed_improvement"))
+    if bad_response != response or bad_mean != mean:
+        fail("bad-rss-improvement-rejected must reuse the mean-baseline response and mean")
+    if bad_baseline_rss != baseline_rss or bad_model_rss != model_rss:
+        fail("bad-rss-improvement-rejected must reuse the replayed RSS values")
+    if computed_improvement != rss_improvement:
+        fail("bad-rss-improvement-rejected computed improvement is incorrect")
+    if bad_baseline_rss - bad_model_rss != computed_improvement:
+        fail("bad-rss-improvement-rejected RSS equation is incorrect")
+    if claimed_improvement == computed_improvement:
+        fail("bad-rss-improvement-rejected claimed improvement unexpectedly matches")
+    equation = data.get("rss_equation")
+    require_string("bad RSS equation", equation)
+    if equation != "baseline_rss - model_rss = rss_improvement":
+        fail("bad-rss-improvement-rejected must document the RSS improvement equation")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad RSS smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/least-squares-regression-v0/smt2/"
+        "bad-rss-improvement-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-rss-improvement-rejected smt2_artifact must name the checked source artifact")
+    if not (ROOT / smt2_artifact).is_file():
+        fail("bad-rss-improvement-rejected smt2_artifact is missing")
+    regression = data.get("farkas_regression")
+    require_string("bad RSS farkas_regression", regression)
+    if "least_squares_bad_rss_improvement_artifact_emits_checked_farkas" not in regression:
+        fail("bad-rss-improvement-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad RSS certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("bad-rss-improvement-rejected certificate must document Farkas evidence")
+
     bad_coefficients = checks["bad-regression-coefficients-rejected"]
     if bad_coefficients["expected_result"] != "unsat" or bad_coefficients.get("proof_status") != "checked":
         fail("bad-regression-coefficients-rejected must be a checked unsat row")

@@ -266,7 +266,7 @@ Companion maps:
   certificate, contingency-table margins, Simpson's paradox counts, a
   QF_LIA/Diophantine bad total-count certificate,
   least-squares normal equations, residual orthogonality, RSS comparison, and
-  a QF_LRA/Farkas bad-coefficients certificate.
+  QF_LRA/Farkas bad-RSS and bad-coefficients certificates.
 - [Exact Statistical Tests](exact-statistical-tests-end-to-end.md): follows a
   one-sided exact binomial tail, hypergeometric point probability, one-sided
   Fisher tail, probability-ordered two-sided Fisher tail, probability-ordered

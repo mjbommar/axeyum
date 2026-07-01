@@ -298,7 +298,8 @@ First targets:
   (source-linked solver-reuse promotions landed for the bad survival-mass and
   bad expected-time rows)
 - [least-squares-regression-v0](../../artifacts/examples/math/least-squares-regression-v0/)
-  (resource-backed Farkas regression landed for the bad coefficient row)
+  (resource-backed Farkas regressions landed for the bad coefficient and bad
+  RSS-improvement rows)
 - [real-analysis-rational-v0](../../artifacts/examples/math/real-analysis-rational-v0/)
   (resource-backed Farkas regression landed for the bad linear-delta row)
 - [metric-continuity-v0](../../artifacts/examples/math/metric-continuity-v0/)
