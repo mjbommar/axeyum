@@ -66,5 +66,44 @@ then lets QF_LRA/Farkas reject only the final rational contradiction:
 fisher_two_sided_p_value = 1/2
 ```
 
+## Exact Multinomial Probability-Ordered Tail
+
+For the three-category multinomial row, the null probabilities are uniform and
+the observed counts are `[3,0,0]`:
+
+```text
+n = 3
+p = [1/3, 1/3, 1/3]
+observed counts = [3,0,0]
+```
+
+The observed point probability is:
+
+```text
+3!/(3!*0!*0!) * (1/3)^3 = 1/27
+```
+
+The probability-ordered convention includes every count vector with point
+probability no larger than `1/27`, namely the three all-in-one-category
+vectors:
+
+```text
+[3,0,0], [0,3,0], [0,0,3]
+```
+
+So the exact multinomial p-value is:
+
+```text
+1/27 + 1/27 + 1/27 = 1/9
+```
+
+The checked bad multinomial row keeps that finite enumeration outside the
+solver, then lets QF_LRA/Farkas reject only the final rational contradiction:
+
+```text
+9 * multinomial_p_value = 1
+multinomial_p_value = 1/6
+```
+
 These fixed checks are finite exact replay targets. They do not claim
 asymptotic test calibration or floating-point statistical-library equivalence.

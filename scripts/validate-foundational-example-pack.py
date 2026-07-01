@@ -21234,11 +21234,56 @@ def fisher_two_sided_probability(row1: int, row2: int, col1: int, observed_top_l
     )
 
 
-def require_fisher_two_sided_convention(context: str, value: Any) -> str:
+def require_probability_ordered_convention(context: str, value: Any) -> str:
     require_string(context, value)
     if value != "probability_less_equal_observed_point":
         fail(f"{context} must be probability_less_equal_observed_point")
     return value
+
+
+def count_vectors(total: int, categories: int) -> list[list[int]]:
+    if categories == 1:
+        return [[total]]
+    vectors: list[list[int]] = []
+    for count in range(total + 1):
+        for suffix in count_vectors(total - count, categories - 1):
+            vectors.append([count, *suffix])
+    return vectors
+
+
+def multinomial_coefficient(counts: list[int]) -> int:
+    denominator = 1
+    for count in counts:
+        denominator *= factorial(count)
+    return factorial(sum(counts)) // denominator
+
+
+def multinomial_point_probability(counts: list[int], probabilities: list[Fraction]) -> Fraction:
+    probability = Fraction(multinomial_coefficient(counts))
+    for count, category_probability in zip(counts, probabilities):
+        probability *= category_probability**count
+    return probability
+
+
+def multinomial_probability_ordered_counts(
+    probabilities: list[Fraction],
+    observed_counts: list[int],
+) -> list[list[int]]:
+    observed = multinomial_point_probability(observed_counts, probabilities)
+    return [
+        counts
+        for counts in count_vectors(sum(observed_counts), len(observed_counts))
+        if multinomial_point_probability(counts, probabilities) <= observed
+    ]
+
+
+def require_count_vector_list(context: str, value: Any) -> list[list[int]]:
+    if not isinstance(value, list) or not value:
+        fail(f"{context} must be a non-empty list")
+    return [
+        require_nonnegative_int_list(f"{context}[{index}]", item)
+        for index, item in enumerate(value)
+    ]
 
 
 def validate_exact_statistical_tests(expected: dict[str, Any]) -> None:
@@ -21304,7 +21349,7 @@ def validate_exact_statistical_tests(expected: dict[str, Any]) -> None:
         values.get("observed_top_left"),
     )
     two_sided_p_value = require_probability("fisher two-sided p_value", values.get("two_sided_p_value"))
-    require_fisher_two_sided_convention(
+    require_probability_ordered_convention(
         "fisher two-sided convention",
         values.get("two_sided_convention"),
     )
@@ -21325,6 +21370,58 @@ def validate_exact_statistical_tests(expected: dict[str, Any]) -> None:
     two_sided_counts = fisher_two_sided_counts(row1, row2, col1, observed_top_left)
     if two_sided_probability != two_sided_p_value:
         fail("fisher-two-sided-pvalue p_value is incorrect")
+
+    multinomial = checks["multinomial-probability-ordered-pvalue"]
+    if multinomial["expected_result"] != "sat":
+        fail("multinomial-probability-ordered-pvalue must expect sat")
+    if multinomial["validation"] != "exact_multinomial_probability_ordered_replay":
+        fail("multinomial-probability-ordered-pvalue must use exact_multinomial_probability_ordered_replay")
+    values = single_witness_values(multinomial, witnesses)
+    multinomial_trials = require_positive_int("multinomial trials", values.get("trials"))
+    multinomial_probabilities = require_probability_vector(
+        "multinomial category_probabilities",
+        values.get("category_probabilities"),
+    )
+    if sum(multinomial_probabilities, Fraction(0)) != 1:
+        fail("multinomial category_probabilities must sum to 1")
+    observed_counts = require_nonnegative_int_list("multinomial observed_counts", values.get("observed_counts"))
+    if len(observed_counts) != len(multinomial_probabilities):
+        fail("multinomial observed_counts length must match category_probabilities")
+    if sum(observed_counts) != multinomial_trials:
+        fail("multinomial observed_counts must sum to trials")
+    require_probability_ordered_convention(
+        "multinomial test_convention",
+        values.get("test_convention"),
+    )
+    multinomial_point = require_probability("multinomial point_probability", values.get("point_probability"))
+    multinomial_p_value = require_probability("multinomial p_value", values.get("p_value"))
+    multinomial_included = require_count_vector_list(
+        "multinomial included_count_vectors",
+        values.get("included_count_vectors"),
+    )
+    for included in multinomial_included:
+        if len(included) != len(observed_counts):
+            fail("multinomial included_count_vectors lengths must match observed_counts")
+        if sum(included) != multinomial_trials:
+            fail("multinomial included_count_vectors must sum to trials")
+    computed_multinomial_point = multinomial_point_probability(observed_counts, multinomial_probabilities)
+    if computed_multinomial_point != multinomial_point:
+        fail("multinomial-probability-ordered-pvalue point_probability is incorrect")
+    computed_multinomial_included = multinomial_probability_ordered_counts(
+        multinomial_probabilities,
+        observed_counts,
+    )
+    if sorted(multinomial_included) != sorted(computed_multinomial_included):
+        fail("multinomial-probability-ordered-pvalue included_count_vectors are incorrect")
+    computed_multinomial_p_value = sum(
+        (
+            multinomial_point_probability(counts, multinomial_probabilities)
+            for counts in computed_multinomial_included
+        ),
+        Fraction(0),
+    )
+    if computed_multinomial_p_value != multinomial_p_value:
+        fail("multinomial-probability-ordered-pvalue p_value is incorrect")
 
     bad_fisher = checks["bad-fisher-left-tail-rejected"]
     if bad_fisher["expected_result"] != "unsat":
@@ -21394,7 +21491,7 @@ def validate_exact_statistical_tests(expected: dict[str, Any]) -> None:
         "bad two-sided Fisher observed_top_left",
         data.get("observed_top_left"),
     )
-    require_fisher_two_sided_convention(
+    require_probability_ordered_convention(
         "bad two-sided Fisher convention",
         data.get("two_sided_convention"),
     )
@@ -21435,6 +21532,63 @@ def validate_exact_statistical_tests(expected: dict[str, Any]) -> None:
     require_string("bad two-sided Fisher farkas_regression", regression)
     if "exact_stats_bad_fisher_two_sided_artifact_emits_checked_farkas" not in regression:
         fail("bad-fisher-two-sided-rejected must name the checked Farkas regression")
+
+    bad_multinomial = checks["bad-multinomial-pvalue-rejected"]
+    if bad_multinomial["expected_result"] != "unsat":
+        fail("bad-multinomial-pvalue-rejected must expect unsat")
+    if bad_multinomial["proof_status"] != "checked":
+        fail("bad-multinomial-pvalue-rejected must be checked")
+    if bad_multinomial["validation"] != "qf_lra_bad_multinomial_pvalue_refutation":
+        fail("bad-multinomial-pvalue-rejected must use qf_lra_bad_multinomial_pvalue_refutation")
+    data = bad_multinomial.get("data", {})
+    bad_multinomial_trials = require_positive_int("bad multinomial trials", data.get("trials"))
+    bad_multinomial_probabilities = require_probability_vector(
+        "bad multinomial category_probabilities",
+        data.get("category_probabilities"),
+    )
+    bad_multinomial_counts = require_nonnegative_int_list(
+        "bad multinomial observed_counts",
+        data.get("observed_counts"),
+    )
+    require_probability_ordered_convention(
+        "bad multinomial test_convention",
+        data.get("test_convention"),
+    )
+    if bad_multinomial_trials != multinomial_trials:
+        fail("bad-multinomial-pvalue-rejected trials must match multinomial replay witness")
+    if bad_multinomial_probabilities != multinomial_probabilities:
+        fail("bad-multinomial-pvalue-rejected probabilities must match multinomial replay witness")
+    if bad_multinomial_counts != observed_counts:
+        fail("bad-multinomial-pvalue-rejected observed_counts must match multinomial replay witness")
+    bad_multinomial_included = require_count_vector_list(
+        "bad multinomial included_count_vectors",
+        data.get("included_count_vectors"),
+    )
+    if sorted(bad_multinomial_included) != sorted(computed_multinomial_included):
+        fail("bad-multinomial-pvalue-rejected included_count_vectors are incorrect")
+    tail_numerator = require_positive_int("bad multinomial tail_numerator", data.get("tail_numerator"))
+    tail_denominator = require_positive_int("bad multinomial tail_denominator", data.get("tail_denominator"))
+    actual = require_probability("bad multinomial actual_p_value", data.get("actual_p_value"))
+    claimed = require_probability("bad multinomial claimed_p_value", data.get("claimed_p_value"))
+    if actual != computed_multinomial_p_value:
+        fail("bad-multinomial-pvalue-rejected actual_p_value is incorrect")
+    if tail_numerator != computed_multinomial_p_value.numerator:
+        fail("bad-multinomial-pvalue-rejected tail_numerator is incorrect")
+    if tail_denominator != computed_multinomial_p_value.denominator:
+        fail("bad-multinomial-pvalue-rejected tail_denominator is incorrect")
+    if claimed == actual:
+        fail("bad-multinomial-pvalue-rejected claimed p-value unexpectedly matches")
+    equation = data.get("farkas_tail_equation")
+    require_string("bad multinomial farkas_tail_equation", equation)
+    if equation != "tail_denominator * multinomial_p_value = tail_numerator":
+        fail("bad-multinomial-pvalue-rejected must document the Farkas tail equation")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad multinomial smt2_artifact", smt2_artifact)
+    check_source("bad multinomial smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad multinomial farkas_regression", regression)
+    if "exact_stats_bad_multinomial_pvalue_artifact_emits_checked_farkas" not in regression:
+        fail("bad-multinomial-pvalue-rejected must name the checked Farkas regression")
 
     bad = checks["bad-binomial-pvalue-rejected"]
     if bad["expected_result"] != "unsat":

@@ -44,9 +44,9 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 589 expected checks.
-- 270 checked proof/evidence rows.
-- 248 replay-only rows.
+- 591 expected checks.
+- 271 checked proof/evidence rows.
+- 249 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1013,6 +1013,15 @@ Pick one row per commit unless the change is purely navigational.
      contradictions while keeping other two-sided conventions, exact
      multinomial tests, asymptotics, and floating-point library behavior
      outside the claim.
+122. Landed: extend `exact-statistical-tests-v0` with a probability-ordered
+     exact multinomial replay row and checked bad multinomial p-value row.
+     Exact finite enumeration over three uniform categories with `n = 3`
+     includes `[3,0,0]`, `[0,3,0]`, and `[0,0,3]`, computing
+     `3 * (1/27) = 1/9`, while the malformed source SMT-LIB artifact claims
+     `1/6`; the shared QF_LRA/Farkas route now checks exact multinomial
+     p-value contradictions while keeping asymptotic tests, floating-point
+     library behavior, and broad exact-test-family coverage outside the
+     claim.
 
 ## Validation Checklist
 

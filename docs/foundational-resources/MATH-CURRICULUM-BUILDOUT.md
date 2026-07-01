@@ -959,8 +959,9 @@ stationary-distribution replay, and checked QF_LRA/Farkas rejection of a
 malformed transition row.
 `artifacts/examples/math/exact-statistical-tests-v0/` now validates exact
 binomial tails, hypergeometric point probabilities, one-sided and
-probability-ordered two-sided Fisher p-values, checked QF_LRA/Farkas rejection
-of false Fisher p-values, and a checked QF_LIA bad tail-count obstruction.
+probability-ordered two-sided Fisher p-values, probability-ordered exact
+multinomial p-values, checked QF_LRA/Farkas rejection of false Fisher and
+multinomial p-values, and a checked QF_LIA bad tail-count obstruction.
 
 Recommended order:
 
@@ -1449,8 +1450,8 @@ stochastic-process bridge across probability, linear algebra, statistics, and
 dynamics, with a checked QF_LRA/Farkas bad stochastic-row regression.
 `exact-statistical-tests-v0` now adds the first exact finite
 statistical-test slice for p-values as rational finite sums, with a checked
-QF_LRA/Farkas bad Fisher left-tail and two-sided rows and a checked
-QF_LIA/Diophantine bad tail-count row.
+QF_LRA/Farkas bad Fisher left-tail, two-sided, and multinomial rows and a
+checked QF_LIA/Diophantine bad tail-count row.
 `proof-methods-patterns-v0` now deepens the proof-methods curriculum row with
 finite direct proof, contrapositive, proof-by-cases, contradiction, invalid
 converse counterexample, and natural-deduction Lean-horizon examples.
@@ -1781,8 +1782,8 @@ horizon.
 `exact-statistical-tests-v0` now has a learner-facing end-to-end lesson for
 one-sided exact binomial tails, hypergeometric point probability, one-sided
 Fisher tail replay, probability-ordered two-sided Fisher replay, checked
-QF_LRA/Farkas bad Fisher p-value rejection, a checked QF_LIA bad tail-count
-certificate, and the statistical
+QF_LRA/Farkas bad Fisher and multinomial p-value rejection, a checked QF_LIA
+bad tail-count certificate, and the statistical
 numerical-honesty horizon.
 `metric-continuity-v0` now has a learner-facing end-to-end lesson for finite
 metric-table replay, finite Lipschitz checks, epsilon-delta containment,

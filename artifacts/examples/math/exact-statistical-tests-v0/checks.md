@@ -30,6 +30,15 @@ sums every fixed-margin table whose hypergeometric point probability is no
 larger than the observed table probability. For this table, those are top-left
 counts `0`, `1`, `3`, and `4`.
 
+## `multinomial-probability-ordered-pvalue`
+
+Expected result: `sat`.
+
+The validator enumerates every three-category count vector summing to `3`
+under uniform category probabilities. With observed counts `[3,0,0]`, the
+observed point probability is `1/27`, so the probability-ordered convention
+includes exactly `[3,0,0]`, `[0,3,0]`, and `[0,0,3]`, for p-value `1/9`.
+
 ## `bad-fisher-left-tail-rejected`
 
 Expected result: `unsat`.
@@ -61,6 +70,23 @@ fisher_two_sided_p_value = 1/2
 
 Proof route: checked QF_LRA/Farkas evidence. The finite hypergeometric count
 sum and the two-sided convention remain replayed by the pack validator.
+
+## `bad-multinomial-pvalue-rejected`
+
+Expected result: `unsat`.
+
+The validator recomputes the exact probability-ordered multinomial p-value as
+`3 * (1/27) = 1/9`. The source artifact asks QF_LRA to reject the final linear
+conflict:
+
+```text
+9 * multinomial_p_value = 1
+multinomial_p_value = 1/6
+```
+
+Proof route: checked QF_LRA/Farkas evidence. The finite multinomial
+enumeration and probability-order convention remain replayed by the pack
+validator.
 
 ## `bad-binomial-pvalue-rejected`
 

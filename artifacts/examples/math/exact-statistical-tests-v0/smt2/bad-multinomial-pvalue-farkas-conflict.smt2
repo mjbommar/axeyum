@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const multinomial_p_value Real)
+(assert (= (* 9 multinomial_p_value) 1))
+(assert (= multinomial_p_value (/ 1 6)))
+(check-sat)

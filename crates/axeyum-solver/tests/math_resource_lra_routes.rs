@@ -31,6 +31,9 @@ const EXACT_STATS_BAD_FISHER_LEFT_TAIL: &str = include_str!(
 const EXACT_STATS_BAD_FISHER_TWO_SIDED: &str = include_str!(
     "../../../artifacts/examples/math/exact-statistical-tests-v0/smt2/bad-fisher-two-sided-farkas-conflict.smt2"
 );
+const EXACT_STATS_BAD_MULTINOMIAL_PVALUE: &str = include_str!(
+    "../../../artifacts/examples/math/exact-statistical-tests-v0/smt2/bad-multinomial-pvalue-farkas-conflict.smt2"
+);
 const CALCULUS_RIEMANN_FALSE_INTEGRAL: &str = include_str!(
     "../../../artifacts/examples/math/calculus-riemann-sum-v0/smt2/false-integral-farkas-conflict.smt2"
 );
@@ -520,6 +523,14 @@ fn exact_stats_bad_fisher_two_sided_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "exact-statistical-tests-v0 bad-Fisher-two-sided SMT-LIB artifact",
         EXACT_STATS_BAD_FISHER_TWO_SIDED,
+    );
+}
+
+#[test]
+fn exact_stats_bad_multinomial_pvalue_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "exact-statistical-tests-v0 bad-multinomial-pvalue SMT-LIB artifact",
+        EXACT_STATS_BAD_MULTINOMIAL_PVALUE,
     );
 }
 

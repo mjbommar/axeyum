@@ -19,8 +19,10 @@ Concept rows:
 | `hypergeometric-point-probability` | `sat` | replay-only |
 | `fisher-left-tail-pvalue` | `sat` | replay-only |
 | `fisher-two-sided-pvalue` | `sat` | replay-only |
+| `multinomial-probability-ordered-pvalue` | `sat` | replay-only |
 | `bad-fisher-left-tail-rejected` | `unsat` | checked |
 | `bad-fisher-two-sided-rejected` | `unsat` | checked |
+| `bad-multinomial-pvalue-rejected` | `unsat` | checked |
 | `bad-binomial-pvalue-rejected` | `unsat` | checked |
 | `qf-lia-bad-binomial-tail-count` | `unsat` | checked |
 
@@ -114,13 +116,47 @@ two-sided p-value = 34/70 = 17/35
 This row is intentionally convention-specific. Other two-sided definitions are
 not silently treated as equivalent.
 
-## Check The Fisher P-Value Certificates
+## Replay A Probability-Ordered Exact Multinomial Tail
 
-The checked Fisher rows keep the finite counting step outside the solver:
+The multinomial row uses three categories with uniform null probabilities:
+
+```text
+n = 3
+p = [1/3, 1/3, 1/3]
+observed counts = [3,0,0]
+```
+
+The observed point probability is:
+
+```text
+3!/(3!*0!*0!) * (1/3)^3 = 1/27
+```
+
+Under the same probability-ordered convention, the included count vectors are
+exactly the three all-in-one-category outcomes:
+
+```text
+[3,0,0], [0,3,0], [0,0,3]
+```
+
+So the exact multinomial p-value is:
+
+```text
+1/27 + 1/27 + 1/27 = 1/9
+```
+
+This is still a finite exact test. It does not claim asymptotic chi-square
+behavior or a floating-point statistics implementation.
+
+## Check The Fisher And Multinomial P-Value Certificates
+
+The checked Fisher and multinomial rows keep the finite counting step outside
+the solver:
 
 ```text
 actual left-tail p-value = 17/70
 actual probability-ordered two-sided p-value = 17/35
+actual probability-ordered multinomial p-value = 1/9
 ```
 
 Then they ask QF_LRA to reject only the final exact-rational contradictions:
@@ -131,6 +167,9 @@ fisher_left_tail_p_value = 1/4
 
 35 * fisher_two_sided_p_value = 17
 fisher_two_sided_p_value = 1/2
+
+9 * multinomial_p_value = 1
+multinomial_p_value = 1/6
 ```
 
 Axeyum derives Farkas certificates for those inconsistent linear real systems
@@ -203,8 +242,10 @@ binomial finite tails
 hypergeometric point probabilities
 one-sided Fisher tails
 probability-ordered two-sided Fisher tails
+probability-ordered multinomial tails
 bad p-value refutations
 QF_LRA Fisher p-value contradictions
+QF_LRA multinomial p-value contradictions
 QF_LIA tail-count contradictions
 ```
 
@@ -212,7 +253,7 @@ The following remain outside this proof claim:
 
 ```text
 other two-sided Fisher conventions
-exact multinomial tests
+larger exact multinomial conventions
 asymptotic chi-square and z tests
 normal approximations
 multiple-testing correction policy
@@ -231,6 +272,7 @@ From the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes exact_stats_bad_fisher_left_tail_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes exact_stats_bad_fisher_two_sided_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes exact_stats_bad_multinomial_pvalue_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lia_routes exact_stats_bad_binomial_tail_count_emits_checked_diophantine_evidence
 ```
 
@@ -251,5 +293,6 @@ remaining horizon -> asymptotics, policy choices, and floating-point statistics
 ```
 
 The graduation target is to encode these claims as deterministic finite-count
-and rational-arithmetic obligations, replay witnesses through Axeyum, and add
-exact multinomial tests before claiming broader exact-test coverage.
+and rational-arithmetic obligations, replay witnesses through Axeyum, and keep
+larger or alternative exact-test conventions explicit before claiming broader
+exact-test coverage.
