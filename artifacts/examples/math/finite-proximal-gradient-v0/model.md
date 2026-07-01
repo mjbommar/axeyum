@@ -54,6 +54,35 @@ F(1) = 2 + 1 = 3
 decrease = 3/2
 ```
 
+The constrained box-plus-L1 witness uses the same smooth objective, step size,
+and L1 penalty, but constrains the proximal subproblem to:
+
+```text
+0 <= x <= 3/4
+```
+
+The ordinary trial point is still `3/2`, and the unconstrained soft-threshold
+point is still `1`. The box-constrained proximal point clips to the active
+upper bound:
+
+```text
+box_prox_x = 3/4
+projection distance = 1 - 3/4 = 1/4
+```
+
+On the positive L1 branch, the derivative of the proximal subproblem at the
+box point is:
+
+```text
+(3/4 - 3/2) / (1/2) + 1 = -1/2
+```
+
+The upper-bound multiplier is `1/2`, so stationarity is exact:
+
+```text
+-1/2 + 1/2 = 0
+```
+
 This is a single exact replay check. It does not prove proximal-gradient
 convergence, nonsmooth optimality theory, rate bounds, stochastic variants, or
 floating-point behavior.
@@ -61,3 +90,7 @@ floating-point behavior.
 The checked bad row claims that `1/4` satisfies the same positive-branch
 optimality equation. Exact replay computes residual `-3/2`, so the required
 zero-residual claim is false.
+
+The checked boxed bad row claims that the unconstrained soft-threshold point
+`1` is feasible for the upper bound `3/4`. Exact replay computes a box
+violation of `1/4`, so the required nonpositive-violation claim is false.

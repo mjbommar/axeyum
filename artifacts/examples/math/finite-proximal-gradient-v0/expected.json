@@ -23,6 +23,27 @@
         "composite_value_prox": "3",
         "composite_decrease": "3/2"
       }
+    },
+    {
+      "id": "box-l1-proximal-step",
+      "description": "One exact box-constrained L1 proximal step for f(x)=1/2*(x-3)^2 plus |x| over [0,3/4].",
+      "values": {
+        "smooth_polynomial": ["9/2", "-3", "1/2"],
+        "start_x": "0",
+        "lambda": "1",
+        "gradient": "-3",
+        "step_size": "1/2",
+        "trial_x": "3/2",
+        "soft_threshold": "1/2",
+        "unconstrained_prox_x": "1",
+        "lower_bound": "0",
+        "upper_bound": "3/4",
+        "box_prox_x": "3/4",
+        "box_projection_distance": "1/4",
+        "box_branch_derivative": "-1/2",
+        "upper_multiplier": "1/2",
+        "stationarity_residual": "0"
+      }
     }
   ],
   "checks": [
@@ -63,6 +84,15 @@
       "notes": "The validator evaluates the smooth quadratic and the L1 penalty at the start and proximal point."
     },
     {
+      "id": "box-plus-l1-prox-replay",
+      "claim": "The box-plus-L1 proximal subproblem over [0,3/4] clips the unconstrained soft-threshold point 1 to 3/4 with active upper multiplier 1/2.",
+      "expected_result": "sat",
+      "validation": "finite_box_l1_prox_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["box-l1-proximal-step"],
+      "notes": "The validator recomputes the trial point, soft-threshold value, box projection, active-bound derivative, and stationarity residual."
+    },
+    {
       "id": "bad-proximal-point-rejected",
       "claim": "The malformed proximal point 1/4 satisfies the positive-branch optimality equation.",
       "expected_result": "unsat",
@@ -80,6 +110,24 @@
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
       "notes": "Exact replay computes the true prox point as 1; the malformed point 1/4 leaves a nonzero positive-branch optimality residual and is rejected by checked Farkas evidence."
+    },
+    {
+      "id": "bad-box-proximal-point-rejected",
+      "claim": "The malformed box-plus-L1 proximal point 1 is feasible for the upper bound 3/4.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_box_proximal_point_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "box-l1-proximal-step",
+        "computed_box_prox_x": "3/4",
+        "claimed_box_prox_x": "1",
+        "upper_bound": "3/4",
+        "box_violation": "1/4",
+        "smt2_artifact": "artifacts/examples/math/finite-proximal-gradient-v0/smt2/bad-box-proximal-point-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_proximal_gradient_bad_box_proximal_point_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the constrained proximal point as the active upper bound 3/4; the malformed unconstrained point 1 violates the box constraint and is rejected by checked Farkas evidence."
     },
     {
       "id": "general-proximal-gradient-convergence-lean-horizon",

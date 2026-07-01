@@ -34,12 +34,13 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-proximal-gradient-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite proximal-gradient bad proximal point QF_LRA/Farkas regression seed",
-    "pressure": "Exact L1 proximal replay computes prox_x=1 for trial point 3/2 and threshold 1/2, so the malformed point 1/4 has nonzero optimality residual.",
+    "target": "finite proximal-gradient bad proximal point and bad box-plus-L1 proximal point QF_LRA/Farkas regression seeds",
+    "pressure": "Exact L1 proximal replay computes prox_x=1 for trial point 3/2 and threshold 1/2, while the box-plus-L1 replay clips the unconstrained point 1 to the upper bound 3/4 with active multiplier 1/2. Malformed rows now exercise both nonzero optimality residuals and upper-bound feasibility violations.",
     "evidence": [
-      "bad-proximal-point-rejected"
+      "bad-proximal-point-rejected",
+      "bad-box-proximal-point-rejected"
     ],
-    "next_step": "Promote additional proximal rows only when they add distinct box-plus-L1, group-lasso, active-set, stochastic, or convergence pressure; keep general proximal-gradient convergence and rate theorems in horizon lanes."
+    "next_step": "Promote additional proximal rows only when they add distinct group-lasso, active-set, stochastic, or convergence pressure; keep general proximal-gradient convergence and rate theorems in horizon lanes."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -51,6 +52,7 @@
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "docs/learn/math/finite-proximal-gradient-end-to-end.md",
     "artifacts/examples/math/finite-proximal-gradient-v0/smt2/bad-proximal-point-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-proximal-gradient-v0/smt2/bad-box-proximal-point-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
@@ -58,13 +60,15 @@
     "proximal-trial-step-replay",
     "soft-threshold-prox-replay",
     "composite-decrease-replay",
+    "box-plus-l1-prox-replay",
     "bad-proximal-point-rejected",
+    "bad-box-proximal-point-rejected",
     "general-proximal-gradient-convergence-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite proximal-gradient witnesses as deterministic exact-rational replay rows.",
-    "Replay derivatives, trial points, L1 soft-threshold values, optimality residuals, and composite objective values over exact rationals.",
-    "Route false proximal-optimality claims through checked QF_LRA/Farkas evidence after replay computes the proximal residual.",
+    "Replay derivatives, trial points, L1 soft-threshold values, box projections, active-bound multipliers, optimality residuals, and composite objective values over exact rationals.",
+    "Route false proximal-optimality and false box-feasibility claims through checked QF_LRA/Farkas evidence after replay computes the proximal residual or bound violation.",
     "Keep general proximal-gradient convergence, nonsmooth convex analysis, stochastic variants, and floating-point stability claims marked Lean-horizon until proof artifacts exist."
   ]
 }

@@ -2,9 +2,9 @@
 
 This lesson follows
 [finite-proximal-gradient-v0](../../../artifacts/examples/math/finite-proximal-gradient-v0/)
-from one exact nonsmooth optimization step through soft-threshold replay and
-checked Farkas evidence. It is a finite proximal-gradient certificate, not a
-general convergence theorem.
+from exact nonsmooth optimization steps through soft-threshold replay,
+box-plus-L1 constrained replay, and checked Farkas evidence. It is a finite
+proximal-gradient certificate, not a general convergence theorem.
 
 ## Concept
 
@@ -34,7 +34,7 @@ alpha = 1/2
 
 ## What Gets Checked
 
-The pack has six rows:
+The pack has eight rows:
 
 | Row | Result | Evidence |
 |---|---|---|
@@ -42,7 +42,9 @@ The pack has six rows:
 | `proximal-trial-step-replay` | `sat` | replay-only |
 | `soft-threshold-prox-replay` | `sat` | replay-only |
 | `composite-decrease-replay` | `sat` | replay-only |
+| `box-plus-l1-prox-replay` | `sat` | replay-only |
 | `bad-proximal-point-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-box-proximal-point-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-proximal-gradient-convergence-lean-horizon` | `not-run` | Lean horizon |
 
 The replay rows use exact rational arithmetic. They do not use floating-point
@@ -107,6 +109,35 @@ decrease = 3/2
 This checks one exact proximal-gradient step. It does not prove a rate theorem
 or general convergence.
 
+## Box-Plus-L1 Proximal Step
+
+The second witness uses the same trial point and L1 penalty, but constrains the
+proximal subproblem to:
+
+```text
+0 <= x <= 3/4
+```
+
+The unconstrained soft-threshold point is still `1`, so the box-constrained
+proximal point is the active upper bound:
+
+```text
+box prox point = 3/4
+projection distance = 1/4
+```
+
+The positive-branch derivative of the proximal subproblem at `3/4` is:
+
+```text
+(3/4 - 3/2) / (1/2) + 1 = -1/2
+```
+
+The upper-bound multiplier is `1/2`, so the trusted stationarity replay is:
+
+```text
+-1/2 + 1/2 = 0
+```
+
 ## Bad Proximal Point Row
 
 The malformed row claims that `1/4` satisfies the positive-branch optimality
@@ -132,6 +163,31 @@ that the error is zero:
 Axeyum parses that source row, emits `UnsatFarkas` evidence, and independently
 checks the certificate.
 
+## Bad Box-Proximal Point Row
+
+The malformed boxed row claims that the unconstrained point `1` is feasible for
+the upper bound `3/4`:
+
+```text
+claimed box prox point = 1
+upper bound = 3/4
+violation = 1/4
+```
+
+The source SMT-LIB artifact fixes the replayed violation as `1/4` and also
+asserts that the violation is nonpositive:
+
+```smt2
+(set-logic QF_LRA)
+(declare-const box_violation Real)
+(assert (= box_violation (/ 1 4)))
+(assert (<= box_violation 0))
+(check-sat)
+```
+
+Axeyum parses that source row, emits `UnsatFarkas` evidence, and independently
+checks the certificate.
+
 ## What This Does Not Prove
 
 The pack does not prove proximal-gradient convergence for arbitrary composite
@@ -150,5 +206,5 @@ general proximal-gradient theorem: future Lean reconstruction
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-proximal-gradient-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_proximal_gradient_bad_proximal_point_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_proximal_gradient_bad_
 ```

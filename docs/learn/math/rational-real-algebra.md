@@ -348,10 +348,12 @@ alpha = 1/2
 
 The `finite-proximal-gradient-v0` validator recomputes the derivative,
 ordinary trial point `3/2`, L1 soft-threshold point `1`, the zero
-positive-branch optimality residual, and exact composite decrease. Its bad row
-claims `1/4` satisfies the proximal optimality equation; replay computes
-residual `-3/2`, and the final nonzero-residual contradiction is checked
-through QF_LRA/Farkas evidence. For a focused trace, read
+positive-branch optimality residual, exact composite decrease, and a
+box-plus-L1 constrained prox point `3/4` with active multiplier `1/2`. Its bad
+rows claim `1/4` satisfies the proximal optimality equation and that the
+unconstrained point `1` is feasible for the upper bound `3/4`; replay computes
+residual `-3/2` and box violation `1/4`, and the final contradictions are
+checked through QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md).
 
 For a matrix-invariant check, encode a fixed matrix and its characteristic

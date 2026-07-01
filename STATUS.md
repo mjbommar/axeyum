@@ -205,6 +205,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-proximal-gradient box-plus-L1 QF_LRA row landed.**
+  `finite-proximal-gradient-v0` now includes a box-constrained L1 proximal
+  replay row: exact replay computes the ordinary trial point `3/2`, the
+  unconstrained soft-threshold point `1`, clips it to the upper bound `3/4`,
+  and checks the active upper multiplier `1/2` by stationarity. A new checked
+  Farkas row rejects the malformed unconstrained point as a feasible boxed
+  proximal point because exact replay computes box violation `1/4`. The
+  validator pins the boxed witness, violation arithmetic, source SMT-LIB
+  artifact, and regression; the shared `math_resource_lra_routes` regression
+  parses the artifact and checks `UnsatFarkas` evidence. Generated dashboards
+  and the public query summary now report 111 concept rows, 108 non-template
+  packs, 611 expected checks, 288 checked rows, 252 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Finite-active-set degenerate multiplier QF_LRA row landed.**
   `finite-active-set-qp-v0` now includes a degenerate active-bound replay row:
   exact quadratic replay computes a tight `x <= 1` active constraint at the

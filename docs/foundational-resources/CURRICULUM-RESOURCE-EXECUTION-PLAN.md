@@ -178,7 +178,8 @@ High-priority focused lessons still worth auditing or adding:
 - finite projected gradient now has a standalone exact interval-projection and
   projected-descent replay bridge.
 - finite proximal gradient now has a standalone exact L1 soft-threshold,
-  composite-decrease, and bad-proximal-point replay bridge.
+  box-plus-L1 constrained proximal replay, composite-decrease, and
+  bad-proximal-point plus bad box-proximal-point replay bridge.
 
 Exit criteria:
 

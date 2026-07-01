@@ -280,9 +280,10 @@ First targets:
   (source-linked Farkas regression landed for the bad projection row after
   exact projected-gradient replay rejects `3/2` for the interval `[0,1]`)
 - [finite-proximal-gradient-v0](../../artifacts/examples/math/finite-proximal-gradient-v0/)
-  (source-linked Farkas regression landed for the bad proximal point row after
+  (source-linked Farkas regressions landed for the bad proximal point row after
   exact L1 soft-threshold replay computes residual `-3/2` for the malformed
-  point)
+  point and for the bad box-proximal point row after exact constrained replay
+  computes upper-bound violation `1/4`)
 - [finite-product-measure-v0](../../artifacts/examples/math/finite-product-measure-v0/)
   (resource-backed Farkas regressions landed for the bad product-probability
   and bad marginal rows after exact finite product replay computes the product

@@ -104,8 +104,9 @@ sufficient-decrease and curvature replay plus checked bad-minimizer and
 bad-curvature certificates. The finite projected-gradient slice adds exact interval
 projection after a trial step and a checked QF_LRA/Farkas bad-projection
 certificate. The finite proximal-gradient slice adds exact L1 soft-threshold
-replay after a trial step and a checked QF_LRA/Farkas bad-proximal-point
-certificate. The finite random-matrix slice adds exact
+replay after a trial step, exact box-plus-L1 constrained replay with an active
+upper multiplier, and checked QF_LRA/Farkas bad-proximal-point plus bad
+box-proximal-point certificates. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, rank distributions, and checked QF_LRA/Farkas bad trace-square and
 bad expected-rank certificates. The spectral slice checks exact finite

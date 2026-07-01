@@ -12445,6 +12445,150 @@ def validate_finite_proximal_gradient(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-proximal-point-rejected certificate must document checked Farkas evidence")
 
+    box = checks["box-plus-l1-prox-replay"]
+    if box["expected_result"] != "sat":
+        fail("box-plus-l1-prox-replay must expect sat")
+    box_values = single_witness_values(box, witnesses)
+    box_smooth_polynomial = require_quadratic(
+        "box-plus-L1 proximal smooth_polynomial",
+        box_values.get("smooth_polynomial"),
+    )
+    box_start_x = require_fraction(
+        "box-plus-L1 proximal start_x",
+        box_values.get("start_x"),
+    )
+    box_lambda = require_fraction(
+        "box-plus-L1 proximal lambda",
+        box_values.get("lambda"),
+    )
+    box_gradient = require_fraction(
+        "box-plus-L1 proximal gradient",
+        box_values.get("gradient"),
+    )
+    box_step_size = require_fraction(
+        "box-plus-L1 proximal step_size",
+        box_values.get("step_size"),
+    )
+    box_trial_x = require_fraction(
+        "box-plus-L1 proximal trial_x",
+        box_values.get("trial_x"),
+    )
+    box_soft_threshold = require_fraction(
+        "box-plus-L1 proximal soft_threshold",
+        box_values.get("soft_threshold"),
+    )
+    unconstrained_prox_x = require_fraction(
+        "box-plus-L1 proximal unconstrained_prox_x",
+        box_values.get("unconstrained_prox_x"),
+    )
+    lower_bound = require_fraction(
+        "box-plus-L1 proximal lower_bound",
+        box_values.get("lower_bound"),
+    )
+    upper_bound = require_fraction(
+        "box-plus-L1 proximal upper_bound",
+        box_values.get("upper_bound"),
+    )
+    box_prox_x = require_fraction(
+        "box-plus-L1 proximal box_prox_x",
+        box_values.get("box_prox_x"),
+    )
+    box_projection_distance = require_fraction(
+        "box-plus-L1 proximal box_projection_distance",
+        box_values.get("box_projection_distance"),
+    )
+    box_branch_derivative = require_fraction(
+        "box-plus-L1 proximal box_branch_derivative",
+        box_values.get("box_branch_derivative"),
+    )
+    upper_multiplier = require_fraction(
+        "box-plus-L1 proximal upper_multiplier",
+        box_values.get("upper_multiplier"),
+    )
+    stationarity_residual = require_fraction(
+        "box-plus-L1 proximal stationarity_residual",
+        box_values.get("stationarity_residual"),
+    )
+    if box_step_size <= 0:
+        fail("box-plus-l1-prox-replay step_size must be positive")
+    if box_lambda <= 0:
+        fail("box-plus-l1-prox-replay lambda must be positive")
+    if lower_bound > upper_bound:
+        fail("box-plus-l1-prox-replay lower_bound must not exceed upper_bound")
+    if quadratic_derivative_value(box_smooth_polynomial, box_start_x) != box_gradient:
+        fail("box-plus-l1-prox-replay gradient is incorrect")
+    if box_start_x - box_step_size * box_gradient != box_trial_x:
+        fail("box-plus-l1-prox-replay trial_x is incorrect")
+    if box_step_size * box_lambda != box_soft_threshold:
+        fail("box-plus-l1-prox-replay soft_threshold must equal alpha * lambda")
+    if box_trial_x <= box_soft_threshold:
+        fail("box-plus-l1-prox-replay should exercise the positive soft-threshold branch")
+    if box_trial_x - box_soft_threshold != unconstrained_prox_x:
+        fail("box-plus-l1-prox-replay unconstrained_prox_x is incorrect")
+    if unconstrained_prox_x <= upper_bound:
+        fail("box-plus-l1-prox-replay should exercise active upper-bound clipping")
+    if box_prox_x != upper_bound:
+        fail("box-plus-l1-prox-replay box_prox_x must equal the active upper bound")
+    if box_prox_x < lower_bound or box_prox_x > upper_bound:
+        fail("box-plus-l1-prox-replay box_prox_x must be feasible")
+    if unconstrained_prox_x - upper_bound != box_projection_distance:
+        fail("box-plus-l1-prox-replay box_projection_distance is incorrect")
+    expected_box_derivative = (box_prox_x - box_trial_x) / box_step_size + box_lambda
+    if box_branch_derivative != expected_box_derivative:
+        fail("box-plus-l1-prox-replay box_branch_derivative is incorrect")
+    if upper_multiplier != -box_branch_derivative:
+        fail("box-plus-l1-prox-replay upper_multiplier must cancel the branch derivative")
+    if upper_multiplier <= 0:
+        fail("box-plus-l1-prox-replay upper_multiplier must be positive")
+    if box_branch_derivative + upper_multiplier != stationarity_residual:
+        fail("box-plus-l1-prox-replay stationarity_residual is incorrect")
+    if stationarity_residual != 0:
+        fail("box-plus-l1-prox-replay expected zero stationarity residual")
+
+    bad_box = checks["bad-box-proximal-point-rejected"]
+    if bad_box["expected_result"] != "unsat" or bad_box.get("proof_status") != "checked":
+        fail("bad-box-proximal-point-rejected must be a checked unsat row")
+    data = bad_box.get("data", {})
+    if data.get("source_witness") != "box-l1-proximal-step":
+        fail("bad-box-proximal-point-rejected must cite the box-l1-proximal-step witness")
+    computed_box_prox_x = require_fraction(
+        "bad box proximal computed_box_prox_x",
+        data.get("computed_box_prox_x"),
+    )
+    claimed_box_prox_x = require_fraction(
+        "bad box proximal claimed_box_prox_x",
+        data.get("claimed_box_prox_x"),
+    )
+    bad_box_upper_bound = require_fraction(
+        "bad box proximal upper_bound",
+        data.get("upper_bound"),
+    )
+    box_violation = require_fraction(
+        "bad box proximal box_violation",
+        data.get("box_violation"),
+    )
+    if computed_box_prox_x != box_prox_x:
+        fail("bad-box-proximal-point-rejected computed_box_prox_x does not match replay")
+    if bad_box_upper_bound != upper_bound:
+        fail("bad-box-proximal-point-rejected upper_bound does not match replay")
+    if claimed_box_prox_x - upper_bound != box_violation:
+        fail("bad-box-proximal-point-rejected box_violation is incorrect")
+    if box_violation <= 0:
+        fail("bad-box-proximal-point-rejected malformed point must exceed the upper bound")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad box proximal smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-proximal-gradient-v0/smt2/bad-box-proximal-point-farkas-conflict.smt2":
+        fail("bad-box-proximal-point-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad box proximal smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad box proximal farkas_regression", regression)
+    if "finite_proximal_gradient_bad_box_proximal_point_artifact_emits_checked_farkas" not in regression:
+        fail("bad-box-proximal-point-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad box proximal certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-box-proximal-point-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-proximal-gradient-convergence-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-proximal-gradient-convergence-lean-horizon must be not-run")
