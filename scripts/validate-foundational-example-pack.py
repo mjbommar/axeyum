@@ -6597,6 +6597,50 @@ def validate_modular_arithmetic(expected: dict[str, Any]) -> None:
         if gcd(a, modulus) == 1 and pow(a, exponent, modulus) != 1:
             fail(f"fermat counterexample found: a={a}, modulus={modulus}, exponent={exponent}")
 
+    fermat_qf_bv = checks["fermat-units-mod-prime-qf-bv-drat"]
+    if fermat_qf_bv["expected_result"] != "unsat":
+        fail("fermat-units-mod-prime-qf-bv-drat must expect unsat")
+    if fermat_qf_bv["proof_status"] != "checked":
+        fail("fermat-units-mod-prime-qf-bv-drat must be checked")
+    if fermat_qf_bv["validation"] != "qf_bv_bitblast_drat":
+        fail("fermat-units-mod-prime-qf-bv-drat must use qf_bv_bitblast_drat validation")
+    data = fermat_qf_bv.get("data", {})
+    modulus = require_modulus("Fermat QF_BV modulus", data.get("modulus"))
+    if not is_prime(modulus):
+        fail("fermat-units-mod-prime-qf-bv-drat must use a prime modulus")
+    exponent = require_int("Fermat QF_BV exponent", data.get("exponent"))
+    if exponent != modulus - 1:
+        fail("fermat-units-mod-prime-qf-bv-drat exponent must be p - 1")
+    unit_residues = require_int_list("Fermat QF_BV unit_residues", data.get("unit_residues"))
+    expected_units = [residue for residue in range(1, modulus) if gcd(residue, modulus) == 1]
+    if unit_residues != expected_units:
+        fail("fermat-units-mod-prime-qf-bv-drat must list exactly the nonzero units modulo p")
+    for residue in unit_residues:
+        if pow(residue, exponent, modulus) != 1:
+            fail(f"Fermat QF_BV row lists a counterexample residue unexpectedly: {residue}")
+    residue_width = require_int("Fermat QF_BV residue_width", data.get("residue_width"))
+    power_width = require_int("Fermat QF_BV power_width", data.get("power_width"))
+    if 2**residue_width <= modulus:
+        fail("fermat-units-mod-prime-qf-bv-drat residue_width must encode every residue and the modulus")
+    max_power = max(residue**exponent for residue in unit_residues)
+    if 2**power_width <= max_power:
+        fail("fermat-units-mod-prime-qf-bv-drat power_width must encode the largest listed power exactly")
+    if modulus != 5 or exponent != 4 or residue_width != 3 or power_width != 9:
+        fail("fermat-units-mod-prime-qf-bv-drat is fixed to modulo 5 with a 3-bit residue and 9-bit power")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("fermat-units-mod-prime-qf-bv-drat smt2_artifact", smt2_artifact)
+    check_source("fermat-units-mod-prime-qf-bv-drat smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/modular-arithmetic-v0/smt2/fermat-units-mod5-bitblast-conflict.smt2":
+        fail("fermat-units-mod-prime-qf-bv-drat smt2_artifact must name the checked QF_BV artifact")
+    proof_regression = data.get("proof_regression")
+    require_string("fermat-units-mod-prime-qf-bv-drat proof_regression", proof_regression)
+    if "modular_arithmetic_fermat_units_mod5_emits_checked_bv_drat" not in proof_regression:
+        fail("fermat-units-mod-prime-qf-bv-drat proof_regression must name the BV route test")
+    certificate = data.get("certificate")
+    require_string("fermat-units-mod-prime-qf-bv-drat certificate", certificate)
+    if "DRAT" not in certificate or "bit-blast/Tseitin" not in certificate:
+        fail("fermat-units-mod-prime-qf-bv-drat certificate must document DRAT and lowering trust")
+
 
 def positive_divisors(value: int) -> list[int]:
     value = abs(value)

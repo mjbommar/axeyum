@@ -48,6 +48,9 @@ a^4 == 1 (mod 5)
 ```
 
 This is a finite check of a small prime modulus, not a general theorem proof.
+The promoted QF_BV row uses a 3-bit residue guard `0 < a < 5` and a 9-bit
+power computation so the largest listed unit power, `4^4 = 256`, is exact
+before reducing modulo `5`.
 
 ### Incompatible CRT Pair
 

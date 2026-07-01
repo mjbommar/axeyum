@@ -55,3 +55,13 @@ Expected result: `unsat`.
 The checked query is the absence of a counterexample to `a^4 == 1 (mod 5)` over
 the units modulo `5`. This is finite exhaustive replay, not a general Fermat
 theorem certificate.
+
+## `fermat-units-mod-prime-qf-bv-drat`
+
+Expected result: `unsat`.
+
+The SMT-LIB artifact represents the same fixed finite search as a 3-bit
+residue `a` with `0 < a < 5`, computes `a^4` exactly after zero-extension to
+9 bits, and asserts the impossible counterexample `a^4 mod 5 != 1`. The
+QF_BV route bit-blasts the formula and rechecks the emitted DIMACS/DRAT
+refutation.

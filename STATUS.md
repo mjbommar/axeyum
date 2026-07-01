@@ -205,6 +205,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Modular Fermat-unit QF_BV/DRAT row landed.**
+  `modular-arithmetic-v0` now has a checked fixed-width residue proof route
+  for the Fermat-style modulo-5 search. The finite replay row still enumerates
+  units directly; the new solver-facing row encodes a 3-bit residue
+  `0 < a < 5`, computes `a^4` at 9-bit width so `4^4 = 256` is exact, asserts
+  `a^4 mod 5 != 1`, and checks the resulting QF_BV contradiction through
+  DIMACS/DRAT evidence. The pack validator pins the modulus, exponent, unit
+  residues, bit widths, SMT-LIB artifact, regression, and certificate note.
+  Modular arithmetic, number-systems, proof-frontier, field matrix, and
+  buildout ledgers now reference the row. Generated dashboards and the public
+  query summary now report 111 concept rows, 108 non-template packs, 560
+  expected checks, 244 checked rows, 245 replay-only rows, and 71 Lean-horizon
+  rows.
+
 - **Finite-Chebyshev bad interpolation-sample QF_LRA row landed.**
   `finite-chebyshev-systems-v0` now has a second checked Farkas row:
   finite replay recomputes `p(1)=4` for `p(x)=2 - x + 3*x^2`, while the

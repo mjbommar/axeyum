@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 559 expected checks.
-- 243 checked proof/evidence rows.
+- 560 expected checks.
+- 244 checked proof/evidence rows.
 - 245 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1636,9 +1636,10 @@ Pick one item per commit unless the change is purely navigational.
 93. Landed: add the modular CRT/inverse witness bridge row, tying
     `modular-arithmetic-v0`, `number-theory-v0`, `finite-fields-v0`, and
     `finite-ideals-v0` to concrete CRT congruence replay, modular inverse
-    replay, fixed residue searches, finite-field unit/nonunit contrasts, and
-    checked nonunit Diophantine evidence. The foundational smoke check now
-    exercises number-theory CRT concept lookup.
+    replay, fixed residue searches, finite-field unit/nonunit contrasts,
+    checked nonunit/CRT Diophantine evidence, and checked fixed-width
+    Fermat-unit QF_BV evidence. The foundational smoke check now exercises
+    number-theory CRT concept lookup.
 94. Landed: add the finite-counting replay bridge row, tying `counting-v0`,
     `proof-methods-refutation-v0`, `cardinality-principles-v0`,
     `generating-functions-v0`, `finite-group-actions-v0`, and
@@ -1766,6 +1767,12 @@ Pick one item per commit unless the change is purely navigational.
      inverse claim requires `1`; the new SMT-LIB artifact is checked by
      `math_resource_bv_routes`, and the learner page keeps the prime-field bad
      candidate distinct from the composite-modulus no-inverse row.
+112. Landed: extend the fixed-width modular-arithmetic QF_BV/DRAT lane with
+     the `fermat-units-mod-prime-qf-bv-drat` row in `modular-arithmetic-v0`.
+     Finite replay enumerates the units modulo `5`; the new SMT-LIB artifact
+     asks for a 3-bit residue `0 < a < 5` with `a^4 mod 5 != 1`, checks the
+     bit-blasted DRAT refutation through `math_resource_bv_routes`, and keeps
+     Fermat's little theorem itself in the theorem-horizon lane.
 
 ## Validation Checklist
 

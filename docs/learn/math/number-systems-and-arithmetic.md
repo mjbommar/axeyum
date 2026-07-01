@@ -33,7 +33,8 @@ successor/addition facts, fixed addition and multiplication identities,
 bounded Peano-style no-counterexample rows, signed integer order facts, linear
 integer equations, interval infeasibility, gcd and Bezout witnesses,
 divisibility quotient witnesses, congruences, CRT witnesses, modular inverses,
-checked incompatible CRT obstructions, bounded quadratic-residue and
+checked incompatible CRT obstructions, a checked fixed-width Fermat-unit
+residue search, bounded quadratic-residue and
 sum-of-two-squares checks, bounded Diophantine witnesses and gcd obstructions,
 rational density witnesses, Farkas-checked
 fixed trichotomy and order-transitivity refutations, and algebraic complex
@@ -112,9 +113,12 @@ The validator checks both congruences and confirms the moduli are coprime. For
 the nonunit inverse row, the pack also encodes `2*b == 1 mod 6` as
 `2*b - 6*k = 1` and checks the Diophantine gcd obstruction. For the
 incompatible CRT row, it derives `4*a - 6*b = 1` from `x == 1 mod 4` and
-`x == 2 mod 6`, then checks that `gcd(4,6)` does not divide `1`. These rows
-now share the `bridge_modular_crt_inverse_witness` concept: the small checked
-object is the listed congruence, inverse, finite residue search, or gcd
+`x == 2 mod 6`, then checks that `gcd(4,6)` does not divide `1`. The
+Fermat-style row also has a QF_BV/DRAT twin: a 3-bit residue `a` with
+`0 < a < 5` is extended to 9 bits, `a^4 mod 5 != 1` is asserted, and the
+bit-blasted CNF refutation is checked by DRAT replay. These rows now share the
+`bridge_modular_crt_inverse_witness` concept: the small checked object is the
+listed congruence, inverse, finite residue search, fixed-width BV proof, or gcd
 obstruction, not the full Chinese remainder theorem or arbitrary field theory.
 For the destination number-theory slice, encode bounded residue and square-sum
 witnesses:
@@ -156,6 +160,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/in
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gcd-bezout-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 cargo test -p axeyum-solver --test math_resource_lia_routes modular_nonunit_inverse_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --test math_resource_bv_routes modular_arithmetic_fermat_units_mod5_emits_checked_bv_drat
 cargo test -p axeyum-solver --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0

@@ -134,8 +134,8 @@ Companion maps:
   fixed Diophantine gcd obstruction.
 - [Modular Arithmetic](modular-arithmetic-end-to-end.md): follows a CRT
   witness, modular inverse witness, finite composite non-unit search, a
-  checked QF_LIA/Diophantine nonunit obstruction, and a Fermat-style finite
-  unit search.
+  checked QF_LIA/Diophantine nonunit obstruction, an incompatible CRT
+  certificate, and a checked QF_BV/DRAT Fermat-style finite unit search.
 - [Diophantine Certificate Anatomy](diophantine-certificate-anatomy-end-to-end.md):
   follows a nonunit modular-inverse obstruction through source SMT-LIB, emitted
   `UnsatDiophantine` evidence, and corrupted-certificate rejection.

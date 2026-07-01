@@ -148,7 +148,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-06-30): the public JSON layer reports
-111 concept rows, 108 non-template packs, 559 expected checks, 243 checked
+111 concept rows, 108 non-template packs, 560 expected checks, 244 checked
 rows, 245 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -162,11 +162,13 @@ through Bool/CNF DRAT/LRAT after exact relation replay isolates `B !<= A`
 while the bad claim that `A` is top requires `B <= A`. The modular-arithmetic
 QF_LIA/Diophantine lane now also includes the incompatible non-coprime CRT row:
 `x == 1 mod 4` and `x == 2 mod 6` reduce to `4*a - 6*b = 1`, where
-`gcd(4,6)=2` does not divide `1`. The topology QF_LIA/Diophantine lane now
-also includes finite chain-complex torsion via one-entry Smith diagonal replay
-and checked rejection of `2*k = 1`. The measure/probability QF_LRA/Farkas lane now
-also promotes finite product-measure's bad product-probability row through a
-source-linked exact
+`gcd(4,6)=2` does not divide `1`, and the fixed-width QF_BV lane now includes
+the modulo-5 Fermat-unit counterexample search: no 3-bit residue `0 < a < 5`
+satisfies `a^4 mod 5 != 1`, with checked DIMACS/DRAT evidence. The topology
+QF_LIA/Diophantine lane now also includes finite chain-complex torsion via
+one-entry Smith diagonal replay and checked rejection of `2*k = 1`. The
+measure/probability QF_LRA/Farkas lane now also promotes finite
+product-measure's bad product-probability row through a source-linked exact
 linear contradiction after replay computes the product mass, plus finite
 random-variables' bad pushforward row after replay computes the outcome mass
 and finite-integration's bad expectation row after replay computes the integral,

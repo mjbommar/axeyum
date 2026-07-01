@@ -42,8 +42,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 559 expected checks.
-- 243 checked proof/evidence rows.
+- 560 expected checks.
+- 244 checked proof/evidence rows.
 - 245 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -211,7 +211,7 @@ Exit criteria:
 | `set_theory_and_foundations` | finite sets, relations, functions, quotients, lattices, cardinality | maintain landed finite Boolean algebra, partition/relation, image/preimage/inverse, finite cardinality, and cardinality-horizon bridge rows | finite replay, Bool/CNF, QF_UF/Alethe, Lean horizon |
 | `discrete_math` | counting, generating functions, graph resources, finite actions | maintain landed finite-counting replay bridge and add new rows only for distinct counting, recurrence, or asymptotic-boundary pressure | Bool/CNF, QF_LIA, finite replay |
 | `graph_theory` | coloring, reachability, search runtime, matching, cuts, d-separation | maintain landed finite graph replay/obstruction bridge; add theorem/asymptotic horizons only as proof targets | Bool/CNF, QF_BV, QF_LIA, finite replay |
-| `number_theory` | gcd, modular arithmetic, residues, bounded Diophantine checks | group recurring divisibility and residue obstructions | QF_LIA/Diophantine, QF_BV |
+| `number_theory` | gcd, modular arithmetic, residues, bounded Diophantine checks | group recurring divisibility and residue obstructions; modular Fermat-unit search now has a fixed-width QF_BV/DRAT row | QF_LIA/Diophantine, QF_BV |
 | `linear_algebra` | exact matrices, vector spaces, duals, modules, tensors, spectral rows, active-set QP rows, SDP rows, descent-step rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | make matrix rows queryable by computation type and solver route | QF_LRA/Farkas, finite replay, QF_UF/Alethe |
 | `abstract_algebra` | finite groups/rings/fields, homomorphisms, ideals, modules, tensors | add narrower rows only when multiple packs reuse them | QF_UF/Alethe, QF_BV, finite replay |
 | `real_analysis` | bounded rational intervals, metric continuity, RCF shadows, calculus shadows, root-finding shadows, separation/KKT/active-set/SDP/gradient-descent/line-search/Wolfe/projected-gradient/proximal-gradient shadows | keep bounded shadows distinct from completeness/convergence/separation/KKT/active-set/SDP/descent/line-search/Wolfe/projected/proximal-gradient theorems | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon |
@@ -243,7 +243,7 @@ Exit criteria:
 | `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding has a source-linked bad-iterate row, separation has a source-linked bad-separator row, KKT has a source-linked bad-stationarity row, active-set QP has a source-linked bad-free-gradient row, SDP has a source-linked bad-objective row, gradient descent has a source-linked bad-decrease row, finite circle geometry has a source-linked bad-radius row, finite inversion geometry has a source-linked bad inverse-coordinate row, and finite cyclic geometry has a source-linked bad diagonal-intersection row; keep completeness, convergence, separation, KKT sufficiency, active-set method theory, SDP duality, descent-rate, general circle/inversion/cyclic geometry, and broad CAD/SOS/RCF claims horizon |
 | `complex` | deepen | complex-plane bad unit-square real-part row now has a source-linked QF_LRA/Farkas regression; keep analytic theorems Lean-horizon |
 | `divisibility-and-euclid` | maintain | use gcd/Bezout rows as arithmetic-certificate examples |
-| `modular-arithmetic` | maintain | keep LIA nonunit and BV fixed-width residue routes distinct |
+| `modular-arithmetic` | maintain | keep LIA nonunit/CRT and BV fixed-width Fermat-unit residue routes distinct |
 | `groups` | maintain | table replay plus Alethe equality conflicts |
 | `rings` | maintain | BV fixed finite rings only when width is conceptually relevant |
 | `fields` | maintain | finite fields plus linear-algebra links; arbitrary-field facts horizon |

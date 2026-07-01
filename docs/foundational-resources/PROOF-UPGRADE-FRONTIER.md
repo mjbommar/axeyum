@@ -26,7 +26,7 @@ Candidate route totals:
 | Route | Pack Count | Meaning |
 |---|---:|---|
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 16 | Boolean refutations that should carry checked CNF proof objects. |
-| [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 4 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
+| [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 7 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 13 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions, including finite graph traversal cost counters. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 57 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 19 | Equality-heavy finite structures and congruence conflicts. |
@@ -652,6 +652,10 @@ First targets:
 - [number-theory-v0](../../artifacts/examples/math/number-theory-v0/)
   (resource-backed QF_BV/DRAT regression landed for the modulo-7 quadratic
   nonresidue row and the bad square-root witness row)
+- [modular-arithmetic-v0](../../artifacts/examples/math/modular-arithmetic-v0/)
+  (resource-backed QF_BV/DRAT regression landed for the fixed modulo-5
+  Fermat-unit counterexample search, keeping the finite theorem shadow
+  separate from the general Fermat little theorem horizon)
 - [finite-simplicial-cup-products-v0](../../artifacts/examples/math/finite-simplicial-cup-products-v0/)
   (resource-backed QF_BV/DRAT regression landed for the one-bit F2
   cup-product value conflict)
@@ -676,6 +680,7 @@ Validation:
 cargo test -p axeyum-solver --test math_resource_bv_routes
 cargo test -p axeyum-solver --test math_resource_bv_routes qf_bv_resource_route_rejects_tampered_drat_certificate
 cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
+cargo test -p axeyum-solver --test math_resource_bv_routes modular_arithmetic_fermat_units_mod5_emits_checked_bv_drat
 cargo test -p axeyum-solver --test math_resource_bv_routes finite_simplicial_cup_product_bad_value_emits_checked_bv_drat
 cargo test -p axeyum-solver --test evidence unsat_evidence_carries_a_recheckable_drat_certificate
 cargo test -p axeyum-solver --test evidence qf_bv_drat_unsat_reports_bitblast_tseitin_sat_steps

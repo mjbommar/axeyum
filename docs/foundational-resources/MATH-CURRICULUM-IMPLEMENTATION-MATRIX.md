@@ -74,7 +74,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `reals` | RCF shadow, bounded real analysis, metric continuity, finite root finding, finite separation, finite KKT, finite active-set QP, finite SDP, finite gradient descent, finite line search, finite Wolfe line search, finite projected gradient, finite proximal gradient, finite circle, inversion, and cyclic geometry | Add concept rows for balls, limits, continuity, compactness, root-finding, separation, KKT, active-set QP, SDP, gradient descent, line search, Wolfe line search, projected gradient, proximal gradient, finite circle/inversion/cyclic geometry, and completeness/convergence/geometry-theorem horizons. | QF_LRA/Farkas for bounded bad-delta, bad-iterate, bad-separator, bad-stationarity, bad-free-gradient, bad-objective, bad-decrease, bad-Armijo, bad-Wolfe-curvature, bad-projection, bad-proximal-point, bad-radius, bad-inverse-coordinate, and bad-diagonal-intersection rows, QF_LRA/NRA for algebraic shadows; Lean horizon for completeness/general topology, separation, KKT sufficiency, active-set method theory, SDP duality, descent-rate, Wolfe/line-search/projected/proximal-gradient convergence, circle/inversion/cyclic geometry, and convergence. | Each epsilon-delta/root-finding/separation/KKT/active-set/SDP/descent/line-search/Wolfe/projected/proximal-gradient/circle/inversion/cyclic pack says fixed rational instance vs theorem, and metric-continuity, finite-root-finding, finite-separation, finite-KKT, finite-active-set-QP, finite-SDP, finite-gradient-descent, finite-line-search, finite-wolfe-line-search, finite-projected-gradient, finite-proximal-gradient, finite-circle-geometry, finite-inversion-geometry, plus finite-cyclic-geometry now have checked finite bad-row routes. |
 | `complex` | complex algebraic and transform packs | Add real-pair encoding note and analytic-horizon rows. | NRA/LRA real-pair replay; Lean horizon for holomorphic theory. | Algebraic complex checks avoid claiming analytic coverage. |
 | `divisibility-and-euclid` | `gcd-bezout-v0` | Landed reusable gcd/divisibility witness bridge row for number-theory and algebra packs. | Computed witness replay; QF_LIA/Diophantine for divisibility obstructions. | Bezout rows validate both gcd and coefficient identity, and gcd obstruction rows carry checked evidence where promoted. |
-| `modular-arithmetic` | modular arithmetic and finite ideals | Landed modular CRT/inverse bridge row, checked nonunit inverse and incompatible non-coprime CRT Diophantine rows, and adjacent quotient/ideal bridge rows; add narrower quotient-ring rows only when reuse demands them. | QF_LIA/Diophantine, QF_UF/Alethe quotient congruence, and QF_BV fixed-width finite residues. | Nonunit inverse and incompatible CRT rows carry checked arithmetic evidence; quotient rows distinguish table replay from representative congruence. |
+| `modular-arithmetic` | modular arithmetic and finite ideals | Landed modular CRT/inverse bridge row, checked nonunit inverse and incompatible non-coprime CRT Diophantine rows, checked fixed-width Fermat-unit QF_BV row, and adjacent quotient/ideal bridge rows; add narrower quotient-ring rows only when reuse demands them. | QF_LIA/Diophantine, QF_UF/Alethe quotient congruence, and QF_BV fixed-width finite residues. | Nonunit inverse, incompatible CRT, and Fermat-unit rows carry checked arithmetic evidence; quotient rows distinguish table replay from representative congruence. |
 | `groups` | finite groups, monoids, permutations, actions, homomorphisms | Landed bridge rows for homomorphism preservation, kernel/image replay, quotient maps, and finite group actions; orbit-stabilizer and Burnside can split later if reused broadly. | QF_UF/Alethe for table congruence and action-law conflicts. | Table checks keep associativity/action-law replay explicit. |
 | `rings` | finite rings, ideals, modules, homomorphisms | Maintain the landed bad distributivity and bad multiplicative-identity BV routes; add more finite ring-table contradictions only when they introduce distinct fixed-width pressure. | QF_BV bit-blast/DRAT plus QF_UF/Alethe for homomorphism preservation and quotient representative congruence. | Unsat finite-ring rows carry checked CNF or Alethe evidence without overclaiming Lean. |
 | `fields` | finite fields, vector/dual/tensor packs | Maintain the landed composite no-inverse and bad inverse-candidate BV routes; add more fixed finite-field contradictions only when they introduce distinct inverse, distributivity, or table pressure. | QF_BV for finite fields; QF_UF/Alethe for table equality conflicts. | Composite-modulus non-field and bad inverse-candidate contrasts have checked routes. |
@@ -231,9 +231,9 @@ Build sequence:
 7. Recurring fixed-width finite algebra, residue, and one-bit graph
    obstructions now have the `family_fixed_width_bv_drat` example-family row,
    backed by the shared `math_resource_bv_routes` regression across finite
-   fields, finite rings, graph coloring, and bounded number-theory residue
-   search/bad-witness packs. Continue QF_BV promotions only when fixed width is
-   part of the educational claim.
+   fields, finite rings, graph coloring, modular arithmetic, and bounded
+   number-theory residue search/bad-witness packs. Continue QF_BV promotions
+   only when fixed width is part of the educational claim.
 8. First route-specific proof-upgrade note pass landed on the highest-use
    learner pages: logic/proof, graph/discrete, linear algebra/optimization,
    probability/statistics, and algebra/number theory.
@@ -333,6 +333,10 @@ Build sequence:
     and `bad-square-witness-qf-bv-drat` to
     `artifacts/examples/math/number-theory-v0/smt2/bad-square-witness-mod7-bitblast-conflict.smt2`,
     both checked by the `math_resource_bv_routes` QF_BV/DRAT regression.
+    `modular-arithmetic-v0` now links
+    `fermat-units-mod-prime-qf-bv-drat` to
+    `artifacts/examples/math/modular-arithmetic-v0/smt2/fermat-units-mod5-bitblast-conflict.smt2`,
+    also checked by the shared QF_BV/DRAT route regression.
     `finite-chebyshev-systems-v0` now links
     `bad-duplicate-node-grid-rejected` and
     `bad-interpolation-sample-rejected` to source-level QF_LRA/Farkas

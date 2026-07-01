@@ -14,17 +14,18 @@
   ],
   "field_ids": ["number_theory", "abstract_algebra"],
   "curriculum_nodes": ["modular-arithmetic", "divisibility-and-euclid", "fields"],
-  "axeyum_fragments": ["BV / LIA", "LIA / enumeration", "QF_LIA / Diophantine"],
+  "axeyum_fragments": ["BV / LIA", "LIA / enumeration", "QF_LIA / Diophantine", "QF_BV / DRAT"],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "modular inverse and CRT QF_LIA/Diophantine regression seeds",
-    "pressure": "Nonunit inverse obstruction where 2*b - 6*k = 1 and incompatible CRT obstruction where 4*a - 6*b = 1 have no integer solution because the relevant gcd does not divide the right-hand side.",
+    "target": "modular inverse, CRT, and fixed-width Fermat-unit regression seeds",
+    "pressure": "Nonunit inverse obstruction where 2*b - 6*k = 1 and incompatible CRT obstruction where 4*a - 6*b = 1 have no integer solution because the relevant gcd does not divide the right-hand side, plus a fixed-width residue search proving no modulo-5 unit violates a^4 = 1.",
     "evidence": [
       "qf-lia-nonunit-diophantine",
-      "qf-lia-incompatible-crt-diophantine"
+      "qf-lia-incompatible-crt-diophantine",
+      "fermat-units-mod-prime-qf-bv-drat"
     ],
-    "next_step": "Promote additional modular arithmetic rows only when they add distinct divisibility, CRT, or finite-field solver pressure; keep deeper number-theory theorems in Lean-horizon resources."
+    "next_step": "Promote additional modular arithmetic rows only when they add distinct divisibility, CRT, fixed-width residue, or finite-field solver pressure; keep deeper number-theory theorems in Lean-horizon resources."
   },
   "source_refs": [
     "docs/curriculum/02-structures/modular-arithmetic.md",
@@ -34,10 +35,13 @@
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
+    "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
     "docs/learn/math/diophantine-certificate-anatomy-end-to-end.md",
     "artifacts/examples/math/modular-arithmetic-v0/smt2/nonunit-inverse-diophantine-conflict.smt2",
     "artifacts/examples/math/modular-arithmetic-v0/smt2/incompatible-crt-diophantine-conflict.smt2",
-    "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
+    "artifacts/examples/math/modular-arithmetic-v0/smt2/fermat-units-mod5-bitblast-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
+    "crates/axeyum-solver/tests/math_resource_bv_routes.rs"
   ],
   "expected_results": [
     "crt-coprime-witness",
@@ -45,13 +49,14 @@
     "composite-nonunit-no-inverse",
     "qf-lia-nonunit-diophantine",
     "qf-lia-incompatible-crt-diophantine",
-    "fermat-units-mod-prime"
+    "fermat-units-mod-prime",
+    "fermat-units-mod-prime-qf-bv-drat"
   ],
   "graduation_criteria": [
     "Encode each check as deterministic Bool/BV or LIA formulas.",
     "Replay all SAT witnesses through Axeyum model evaluation.",
-    "Keep the promoted Diophantine obstructions tied to source artifacts, checked certificate regressions, and tamper-rejection learner coverage before claiming proof-object coverage.",
-    "Keep adding checked proof evidence for UNSAT finite-search claims beyond the promoted nonunit Diophantine obstruction.",
+    "Keep the promoted Diophantine and QF_BV obstructions tied to source artifacts, checked certificate regressions, and tamper-rejection learner coverage before claiming proof-object coverage.",
+    "Keep adding checked proof evidence for UNSAT finite-search claims only when the fixed modulus, residue width, or integer obstruction is part of the lesson.",
     "Promote related finite-field examples into finite-fields-v0."
   ]
 }

@@ -677,9 +677,10 @@ Next buildout:
 12. Landed: add the modular CRT/inverse witness bridge row and number-theory
     CRT consumer smoke lookup, making concrete CRT congruence witnesses,
     modular inverse witnesses, fixed residue searches, finite-field unit
-    contrasts, and the checked nonunit Diophantine certificate discoverable from
-    the atlas without claiming the full Chinese remainder theorem or arbitrary
-    field theory.
+    contrasts, checked nonunit/CRT Diophantine certificates, and checked
+    fixed-width Fermat-unit QF_BV evidence discoverable from the atlas without
+    claiming the full Chinese remainder theorem, Fermat's little theorem, or
+    arbitrary field theory.
 13. Landed: add the finite-counting replay bridge row and discrete-math
     counting consumer smoke lookups, making permutation/Pascal rows,
     pigeonhole proofs, double-counting tables, coefficient extraction, finite

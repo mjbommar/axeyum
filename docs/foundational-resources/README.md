@@ -159,7 +159,9 @@ schemas, examples, and validation workflows.
   LIA witnesses, gcd/Bezout replay, and bounded number-theory checks.
 - [`artifacts/examples/math/modular-arithmetic-v0/`](../../artifacts/examples/math/modular-arithmetic-v0/)
   validates small CRT, modular inverse, composite non-unit, and Fermat-style
-  finite checks by replay/exhaustive search.
+  finite checks by replay/exhaustive search, with checked QF_LIA/Diophantine
+  rows for nonunit/CRT obstructions and checked QF_BV/DRAT evidence for the
+  fixed modulo-5 Fermat-unit search.
 - [`artifacts/examples/math/rationals-lra-v0/`](../../artifacts/examples/math/rationals-lra-v0/)
   validates exact rational density, additive inverse, trichotomy, and
   transitivity checks using rational replay.

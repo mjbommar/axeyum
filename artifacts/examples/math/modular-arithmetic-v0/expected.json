@@ -100,6 +100,24 @@
         "exponent": 4
       },
       "notes": "The validator checks every unit modulo 5 and finds no counterexample."
+    },
+    {
+      "id": "fermat-units-mod-prime-qf-bv-drat",
+      "claim": "The modulo-5 Fermat-unit counterexample search lowers to a fixed-width QF_BV contradiction with checked DRAT evidence.",
+      "expected_result": "unsat",
+      "validation": "qf_bv_bitblast_drat",
+      "proof_status": "checked",
+      "data": {
+        "modulus": 5,
+        "exponent": 4,
+        "unit_residues": [1, 2, 3, 4],
+        "residue_width": 3,
+        "power_width": 9,
+        "smt2_artifact": "artifacts/examples/math/modular-arithmetic-v0/smt2/fermat-units-mod5-bitblast-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_bv_routes modular_arithmetic_fermat_units_mod5_emits_checked_bv_drat",
+        "certificate": "export_qf_bv_unsat_proof emits a DRAT certificate for the bit-blasted CNF; UnsatProof::recheck validates the CNF refutation while modular exponent lowering and bit-blast/Tseitin remain explicit trust steps until Lean reconstruction covers the original formula."
+      },
+      "notes": "The artifact quantifies a 3-bit residue a with 0 < a < 5, computes a^4 exactly after zero-extension to 9 bits, and refutes a^4 mod 5 != 1 through a checked DIMACS/DRAT pair."
     }
   ]
 }

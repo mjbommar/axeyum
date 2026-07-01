@@ -31,6 +31,9 @@ const NUMBER_THEORY_QUADRATIC_NONRESIDUE: &str = include_str!(
 const NUMBER_THEORY_BAD_SQUARE_WITNESS: &str = include_str!(
     "../../../artifacts/examples/math/number-theory-v0/smt2/bad-square-witness-mod7-bitblast-conflict.smt2"
 );
+const MODULAR_ARITHMETIC_FERMAT_UNITS_MOD5: &str = include_str!(
+    "../../../artifacts/examples/math/modular-arithmetic-v0/smt2/fermat-units-mod5-bitblast-conflict.smt2"
+);
 const FINITE_SIMPLICIAL_CUP_PRODUCT_BAD_VALUE: &str = include_str!(
     "../../../artifacts/examples/math/finite-simplicial-cup-products-v0/smt2/bad-cup-product-bitblast-conflict.smt2"
 );
@@ -88,6 +91,14 @@ fn number_theory_bad_square_witness_emits_checked_bv_drat() {
     assert_resource_qf_bv_drat(
         "number-theory-v0 bad square witness mod 7 bit-blast conflict",
         NUMBER_THEORY_BAD_SQUARE_WITNESS,
+    );
+}
+
+#[test]
+fn modular_arithmetic_fermat_units_mod5_emits_checked_bv_drat() {
+    assert_resource_qf_bv_drat(
+        "modular-arithmetic-v0 Fermat units mod 5 bit-blast conflict",
+        MODULAR_ARITHMETIC_FERMAT_UNITS_MOD5,
     );
 }
 

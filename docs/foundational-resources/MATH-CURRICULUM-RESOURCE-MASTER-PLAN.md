@@ -52,8 +52,8 @@ As of 2026-06-30, the committed resource query reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 559 expected checks.
-- 243 checked proof/evidence rows.
+- 560 expected checks.
+- 244 checked proof/evidence rows.
 - 245 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -433,9 +433,9 @@ Use one row per commit unless the change is purely navigational.
 24. Landed: add the modular CRT/inverse witness bridge row and number-theory
    CRT consumer smoke lookup, making concrete CRT congruence witnesses,
    modular inverse witnesses, fixed residue searches, finite-field unit
-   contrasts, and the checked nonunit Diophantine certificate queryable from
-   the atlas while keeping full CRT, field, and quotient-ring theorems in the
-   horizon lane.
+   contrasts, the checked nonunit/CRT Diophantine certificates, and the checked
+   fixed-width Fermat-unit QF_BV row queryable from the atlas while keeping
+   full CRT, field, Fermat, and quotient-ring theorems in the horizon lane.
 25. Landed: add the finite-counting replay bridge row and discrete-math
    counting consumer smoke lookups, making finite enumeration, pigeonhole
    proofs, double-counting tables, coefficient extraction, finite orbit counts,

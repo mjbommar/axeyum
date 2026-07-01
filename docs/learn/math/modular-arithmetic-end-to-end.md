@@ -23,12 +23,15 @@ Concept rows:
 | `qf-lia-nonunit-diophantine` | `unsat` | checked |
 | `qf-lia-incompatible-crt-diophantine` | `unsat` | checked |
 | `fermat-units-mod-prime` | `unsat` | replay-only |
+| `fermat-units-mod-prime-qf-bv-drat` | `unsat` | checked |
 
 The finite rows still recompute arithmetic directly. The
 `qf-lia-nonunit-diophantine` and `qf-lia-incompatible-crt-diophantine` rows are
 the promoted solver-form proof artifacts in this pack: Axeyum emits and checks
 `UnsatDiophantine` certificates for the nonunit inverse and incompatible CRT
-obstructions.
+obstructions. The Fermat-unit QF_BV row is a fixed-width proof artifact for the
+same modulo-5 finite search: Axeyum bit-blasts the residue formula and rechecks
+the emitted DIMACS/DRAT refutation.
 
 ## Replay A CRT Witness
 
@@ -137,6 +140,12 @@ The validator enumerates the units modulo `5` and finds no counterexample.
 The row is a fixed finite check of the theorem shape, not a proof of Fermat's
 little theorem for every prime.
 
+The promoted QF_BV row represents the candidate as a 3-bit word with
+`0 < a < 5`, computes `a^4` at 9-bit width so `4^4 = 256` is exact, reduces
+modulo `5`, and asserts the impossible branch `a^4 mod 5 != 1`. The checked
+object is the DRAT refutation of that fixed-width formula; the modular
+exponent lowering and bit-blast/Tseitin steps remain explicit trust steps.
+
 ## Name The Proof Gap
 
 The pack's graduation criteria are explicit:
@@ -157,6 +166,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
 cargo test -p axeyum-solver --test math_resource_lia_routes modular_incompatible_crt_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --test math_resource_bv_routes modular_arithmetic_fermat_units_mod5_emits_checked_bv_drat
 ```
 
 Expected output:
@@ -172,10 +182,10 @@ This lesson shows Axeyum's current modular-arithmetic resource pattern:
 ```text
 untrusted fast search -> congruence witness or residue-search claim
 trusted small checking -> exact modular arithmetic replay,
-                          QF_LIA/Diophantine certificate checking
-remaining gap -> checked solver/proof evidence for the remaining finite-search rows
+                          QF_LIA/Diophantine certificate checking,
+                          QF_BV DIMACS/DRAT proof checking
+remaining gap -> checked solver/proof evidence for replayed sat rows and broader theorems
 ```
 
-The next graduation target is deterministic BV/LIA encoding with checked
-evidence for the replayed `sat` rows and the remaining finite-search `unsat`
-rows.
+The next graduation target is deterministic evidence for replayed `sat` rows
+or a Lean theorem route for the general number-theory statements.
