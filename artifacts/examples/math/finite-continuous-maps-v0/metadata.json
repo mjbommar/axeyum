@@ -37,7 +37,8 @@
     "target": "finite continuous-map bad preimage QF_UF/Alethe regression seed",
     "pressure": "For a fixed finite function and codomain open set, preimage membership must agree with membership of the mapped point in the codomain set; the EUF row refutes a malformed preimage table before the finite topology replay checks openness.",
     "evidence": [
-      "bad-continuous-map-rejected"
+      "bad-continuous-map-rejected",
+      "qf-uf-bad-preimage-membership"
     ],
     "next_step": "Promote additional continuity rows only when they add distinct function/preimage congruence pressure; keep arbitrary continuous-image, compactness-preservation, connectedness-preservation, and homeomorphism-invariance theorems in the Lean-horizon lane."
   },
@@ -58,6 +59,7 @@
     "open-preimage-witness",
     "finite-homeomorphism-witness",
     "bad-continuous-map-rejected",
+    "qf-uf-bad-preimage-membership",
     "bad-homeomorphism-claim-rejected",
     "general-continuous-map-lean-horizon"
   ],

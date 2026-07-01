@@ -46,7 +46,8 @@ The preimage of the open set `{u}` is `{0}`, which is not open in `X`. The
 checker uses this finite counterexample to reject both the continuity claim and
 the homeomorphism claim.
 
-The QF_UF proof-route artifact isolates the function/preimage part: `f(0)=u`
-and `u` is in the codomain open set force `0` to be in the preimage. A malformed
-preimage table that excludes `0` is rejected by checked Alethe evidence; the
-fact that `{0}` is not domain-open remains an exact finite-topology replay.
+The `qf-uf-bad-preimage-membership` proof-route artifact isolates the
+function/preimage part: `f(0)=u` and `u` is in the codomain open set force `0`
+to be in the preimage. A malformed preimage table that excludes `0` is rejected
+by checked Alethe evidence; the fact that `{0}` is not domain-open remains an
+exact finite-topology replay.

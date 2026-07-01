@@ -26,9 +26,17 @@ continuous inverse.
 Expected result: `unsat`.
 
 The validator rejects continuity for the map into the discrete topology because
-the codomain open set `{u}` has preimage `{0}`, which is not domain-open. The
-linked QF_UF/Alethe artifact checks the smaller consistency obligation that
-membership in the preimage agrees with membership of the mapped point in `{u}`.
+the codomain open set `{u}` has preimage `{0}`, which is not domain-open.
+
+## `qf-uf-bad-preimage-membership`
+
+Expected result: `unsat`.
+
+The SMT-LIB artifact checks the smaller consistency obligation behind the bad
+continuity row: membership in the preimage must agree with membership of the
+mapped point in `{u}`. The malformed table excludes `0` from the preimage even
+though `f(0)=u` and `u` is in `{u}`, so Axeyum emits and rechecks an Alethe
+certificate for the EUF conflict.
 
 ## `bad-homeomorphism-claim-rejected`
 

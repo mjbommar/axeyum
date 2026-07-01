@@ -568,7 +568,9 @@ First targets:
   (resource-backed QF_UF/Alethe regressions landed for the bad identity-action
   and action-compatibility conflicts)
 - [finite-continuous-maps-v0](../../artifacts/examples/math/finite-continuous-maps-v0/)
-  (resource-backed QF_UF/Alethe regression landed for the bad preimage-membership conflict)
+  (resource-backed QF_UF/Alethe regression landed as the explicit
+  `qf-uf-bad-preimage-membership` row for the malformed preimage-membership
+  conflict)
 - [finite-quotient-topology-v0](../../artifacts/examples/math/finite-quotient-topology-v0/)
   (resource-backed QF_UF/Alethe regressions landed for the bad
   fiber-representative conflict after same-fiber replay and the bad
@@ -587,8 +589,9 @@ Secondary targets:
 
 - initial module/ideal/tensor equality-heavy secondary set is covered, including
   the finite-ideals quotient representative congruence row and the finite
-  group-action identity and compatibility rows; the topology lane now has small preimage-membership,
-  quotient-open-status, specialization-antisymmetry, cohomology coboundary-value, and finite
+  group-action identity and compatibility rows; the topology lane now has a
+  queryable continuous-map preimage-membership row, quotient-open-status,
+  specialization-antisymmetry, cohomology coboundary-value, and finite
   universal-coefficient group-identity EUF certificates.
   Pick the next equality-heavy pack only when it exposes a small fixed EUF
   certificate.

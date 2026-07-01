@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite continuous-map preimage Alethe row split landed.**
+  `finite-continuous-maps-v0` now exposes the hidden preimage-membership
+  artifact as a first-class checked row,
+  `qf-uf-bad-preimage-membership`. The finite replay row still owns the
+  topological failure that `preimage({u}) = {0}` is not Sierpinski-open; the
+  QF_UF/Alethe row separately checks the malformed table that excludes `0`
+  despite `f(0)=u` and `u in {u}`. Focused validation and the existing
+  `finite_continuous_maps_bad_preimage_emits_checked_alethe` regression pass;
+  the public summary now reports 120 concept rows, 108 packs, 640 expected
+  checks, 315 checked rows, 254 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite conditional-variance decomposition row landed.**
   `finite-conditional-expectation-v0` now replays the finite law of total
   variance for the four-atom conditioning table:

@@ -24,12 +24,15 @@ Concept rows:
 | `open-preimage-witness` | `sat` | replay-only |
 | `finite-homeomorphism-witness` | `sat` | replay-only |
 | `bad-continuous-map-rejected` | `unsat` | checked |
+| `qf-uf-bad-preimage-membership` | `unsat` | checked |
 | `bad-homeomorphism-claim-rejected` | `unsat` | checked |
 | `general-continuous-map-lean-horizon` | `not-run` | lean-horizon |
 
-Every checked row is finite function-table and open-set enumeration. The pack
-does not prove continuous-image theorems, homeomorphism invariance, compactness
-preservation, or connectedness preservation for arbitrary spaces.
+The finite checked rows are function-table and open-set enumeration. The
+QF_UF/Alethe row checks only the smaller preimage-membership consistency
+conflict. The pack does not prove continuous-image theorems, homeomorphism
+invariance, compactness preservation, or connectedness preservation for
+arbitrary spaces.
 
 ## Encode Two Finite Topologies
 
@@ -134,6 +137,21 @@ preimage({u}) = {0}
 
 Since `{0}` is not open in the Sierpinski domain, the continuity claim is
 rejected.
+
+## Check Preimage Membership
+
+The separate QF_UF/Alethe row isolates the equality part of that failure:
+
+```text
+f(0) = u
+u in {u}
+0 not in preimage({u})   # malformed table
+```
+
+The solver can search for the EUF contradiction, but the accepted result is
+the checked Alethe proof that preimage membership agrees with membership of
+the mapped point in the codomain open set. The topological fact that `{0}` is
+not open remains a finite replay obligation.
 
 ## Reject A False Homeomorphism Claim
 

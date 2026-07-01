@@ -48,8 +48,8 @@ As of 2026-07-01, the public resource query reports:
 - 120 concept rows: 23 curriculum nodes, 18 math fields, 74 bridge concepts, and
   5 example families.
 - 108 non-template math packs.
-- 639 expected checks: 336 `sat`, 232 `unsat`, and 71 `not-run`.
-- 314 checked proof/evidence rows.
+- 640 expected checks: 336 `sat`, 233 `unsat`, and 71 `not-run`.
+- 315 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.

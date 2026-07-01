@@ -149,6 +149,13 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --pack finite-continuous-maps-v0 \
+  --route Alethe \
+  --proof-status checked \
+  --text preimage \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --concept bridge_finite_quotient_topology_replay \
   --route Alethe \
   --proof-status checked \

@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 639 expected checks.
-- 314 checked proof/evidence rows.
+- 640 expected checks.
+- 315 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1286,7 +1286,7 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/finite-group-actions-v0/smt2/bad-compatibility-action-alethe-conflict.smt2`
     are checked by the corresponding `math_resource_uf_routes` regressions.
 18. Landed: promote `finite-continuous-maps-v0` through a source-linked
-    QF_UF/Alethe regression for `bad-continuous-map-rejected`. The artifact
+    QF_UF/Alethe regression for the finite preimage-membership conflict. The artifact
     `artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_uf_routes finite_continuous_maps_bad_preimage_emits_checked_alethe`.
@@ -2131,6 +2131,12 @@ Pick one item per commit unless the change is purely navigational.
      emitted DRAT, elaborated LRAT, and independent proof checks without
      promoting causal identification or probabilistic graphical-model
      semantics.
+142. Landed: split the `finite-continuous-maps-v0` QF_UF/Alethe preimage
+     artifact into the explicit `qf-uf-bad-preimage-membership` expected row.
+     The finite continuity failure still replays the non-open preimage `{0}`;
+     the source SMT-LIB artifact separately checks the malformed table that
+     excludes `0` despite `f(0)=u` and `u in {u}`. This makes the topology
+     preimage route directly queryable by pack, field, route, and proof status.
 
 ## Validation Checklist
 

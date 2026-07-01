@@ -18984,6 +18984,67 @@ def validate_finite_continuous_maps(expected: dict[str, Any]) -> None:
     if not topology_continuity_failures(domain_open_sets, codomain_open_sets, mapping):
         fail("bad-continuous-map-rejected map is unexpectedly continuous")
 
+    qf_uf = checks["qf-uf-bad-preimage-membership"]
+    if qf_uf["expected_result"] != "unsat":
+        fail("qf-uf-bad-preimage-membership must expect unsat")
+    if qf_uf["proof_status"] != "checked":
+        fail("qf-uf-bad-preimage-membership must be checked")
+    if qf_uf["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-bad-preimage-membership must use qf_uf_congruence_alethe validation")
+    data = qf_uf.get("data", {})
+    qf_domain = require_string_list("qf-uf preimage domain_universe", data.get("domain_universe"))
+    qf_codomain = require_string_list("qf-uf preimage codomain_universe", data.get("codomain_universe"))
+    if qf_domain != domain or qf_codomain != codomain:
+        fail("qf-uf-bad-preimage-membership universe data must match bad-continuous-map-rejected")
+    qf_mapping = require_total_function_map(
+        "qf-uf preimage map",
+        data.get("map"),
+        qf_domain,
+        qf_codomain,
+    )
+    if qf_mapping != mapping:
+        fail("qf-uf-bad-preimage-membership map must match bad-continuous-map-rejected")
+    point = data.get("point")
+    require_string("qf-uf preimage point", point)
+    if point not in domain:
+        fail("qf-uf-bad-preimage-membership point must be in the domain")
+    image = data.get("image")
+    require_string("qf-uf preimage image", image)
+    if qf_mapping[point] != image:
+        fail("qf-uf-bad-preimage-membership image must match map(point)")
+    qf_open_set = require_subset("qf-uf preimage codomain_open_set", data.get("codomain_open_set"), qf_codomain)
+    if qf_open_set != failing_open:
+        fail("qf-uf-bad-preimage-membership codomain_open_set must match the failing open set")
+    if image not in qf_open_set:
+        fail("qf-uf-bad-preimage-membership image must belong to the codomain open set")
+    if point not in actual_preimage:
+        fail("qf-uf-bad-preimage-membership point must belong to the recomputed preimage")
+    if data.get("actual_membership") != "present":
+        fail("qf-uf-bad-preimage-membership actual_membership must be present")
+    if data.get("claimed_preimage_membership") != "absent":
+        fail("qf-uf-bad-preimage-membership claimed_preimage_membership must be absent")
+    alethe_claim = data.get("alethe_preimage_claim")
+    require_string("qf-uf preimage alethe_preimage_claim", alethe_claim)
+    if alethe_claim != "0 in f^{-1}({u}) iff f(0) in {u}":
+        fail("qf-uf-bad-preimage-membership must document the preimage-membership claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-uf preimage smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-continuous-maps-v0/smt2/"
+        "bad-preimage-membership-alethe-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-uf-bad-preimage-membership smt2_artifact must name the checked source artifact")
+    check_source("qf-uf preimage smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("qf-uf preimage proof_regression", proof_regression)
+    if "finite_continuous_maps_bad_preimage_emits_checked_alethe" not in proof_regression:
+        fail("qf-uf-bad-preimage-membership must link the Alethe regression")
+    certificate = data.get("certificate")
+    require_string("qf-uf preimage certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "Evidence::check" not in certificate:
+        fail("qf-uf-bad-preimage-membership certificate must document checked Alethe evidence")
+
     bad_homeomorphism = checks["bad-homeomorphism-claim-rejected"]
     if bad_homeomorphism["expected_result"] != "unsat":
         fail("bad-homeomorphism-claim-rejected must expect unsat")

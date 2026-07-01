@@ -80,13 +80,34 @@
           "1": "v"
         },
         "failing_open": ["u"],
-        "preimage": ["0"],
+        "preimage": ["0"]
+      },
+      "notes": "The validator rejects continuity because the preimage of {u} is {0}, which is not open in the Sierpinski domain; the separate qf-uf-bad-preimage-membership row checks the malformed preimage-membership consistency conflict."
+    },
+    {
+      "id": "qf-uf-bad-preimage-membership",
+      "claim": "A malformed preimage table excludes 0 even though f(0)=u and u is in the codomain open set {u}.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
+      "data": {
+        "domain_universe": ["0", "1"],
+        "codomain_universe": ["u", "v"],
+        "map": {
+          "0": "u",
+          "1": "v"
+        },
+        "point": "0",
+        "image": "u",
+        "codomain_open_set": ["u"],
+        "actual_membership": "present",
+        "claimed_preimage_membership": "absent",
         "alethe_preimage_claim": "0 in f^{-1}({u}) iff f(0) in {u}",
         "smt2_artifact": "artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2",
         "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_continuous_maps_bad_preimage_emits_checked_alethe",
         "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
       },
-      "notes": "The validator rejects continuity because the preimage of {u} is {0}, which is not open in the Sierpinski domain; the linked QF_UF artifact separately checks the preimage-membership consistency conflict with zero-trust Alethe evidence."
+      "notes": "The SMT-LIB artifact isolates only the function/preimage membership obligation. Finite topology replay still owns the separate claim that the computed preimage {0} is not domain-open."
     },
     {
       "id": "bad-homeomorphism-claim-rejected",

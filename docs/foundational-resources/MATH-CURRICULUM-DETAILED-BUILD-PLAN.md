@@ -47,8 +47,8 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 639 expected checks.
-- 314 checked proof/evidence rows.
+- 640 expected checks.
+- 315 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -235,7 +235,7 @@ Exit criteria:
 | `abstract_algebra` | finite groups/rings/fields, homomorphisms, ideals, modules, tensors | add narrower rows only when multiple packs reuse them | QF_UF/Alethe, QF_BV, finite replay |
 | `real_analysis` | bounded rational intervals, metric continuity, RCF shadows, calculus shadows, root-finding shadows, separation/KKT/active-set/SDP/gradient-descent/line-search/Wolfe/projected-gradient/proximal-gradient shadows | keep bounded shadows distinct from completeness/convergence/separation/KKT/active-set/SDP/descent/line-search/Wolfe/projected/proximal-gradient theorems; metric continuity now has source-linked bad-delta and bad open-ball preimage rows, finite KKT now has source-linked bad stationarity and bad complementarity rows, finite SDP now has source-linked bad objective, bad duality-gap, and bad slack-entry rows, finite gradient descent now has source-linked bad decrease, bad step-coordinate, and bad descent-bound rows, finite line search has source-linked bad Armijo, bad descent-direction, and bad accepted-candidate rows, finite Wolfe line search has source-linked bad minimizer, bad sufficient-decrease, and bad curvature rows, and finite proximal gradient has source-linked bad proximal-point, bad composite-decrease, and bad box-proximal-point rows | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon |
 | `complex_analysis` | real-pair algebra and transformations | complex algebra now has checked bad product-coordinate and bad norm-squared rows; add only distinct real-pair arithmetic, polynomial-root, or algebraic-identity pressure | real-pair LRA/NRA, finite replay, Lean horizon |
-| `topology` | finite topologies, quotient topologies, compactness, connectedness, continuous maps, specialization orders, homology, torsion homology, cohomology, cup products | maintain landed topology-shadow, finite topology-operator/homeomorphism, finite quotient-topology with checked representative/open conflicts, finite specialization-order, finite boundary-operator, finite chain-complex/homology, finite torsion-homology, finite cohomology, and finite cup-product bridge rows; add only distinct cohomology-ring quotienting or theorem-invariance pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, QF_BV, Lean horizon |
+| `topology` | finite topologies, quotient topologies, compactness, connectedness, continuous maps, specialization orders, homology, torsion homology, cohomology, cup products | maintain landed topology-shadow, finite topology-operator/homeomorphism with checked continuous-map preimage membership, finite quotient-topology with checked representative/open conflicts, finite specialization-order, finite boundary-operator, finite chain-complex/homology, finite torsion-homology, finite cohomology, and finite cup-product bridge rows; add only distinct cohomology-ring quotienting or theorem-invariance pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, QF_BV, Lean horizon |
 | `measure_theory` | finite measures, monotonicity/subadditivity, product measure, integration, random variables | finite measure/additivity, monotonicity/subadditivity, and finite product/integration bridge rows landed; monotonicity now checks both subset and union-subadditivity conflicts, and product-measure checks both product atom and marginal conflicts; promote only distinct convergence-horizon, countable-measure, or new measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | standalone finite probability mass-table lesson landed; keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
@@ -1438,6 +1438,14 @@ Pick one row per commit unless the change is purely navigational.
      route checks this representative-consistency conflict without claiming
      quotient topology universal properties, quotient-map theorem schemas, or
      arbitrary quotient-space invariance.
+169. Landed: split the hidden QF_UF/Alethe preimage-membership artifact in
+     `finite-continuous-maps-v0` into the explicit checked row
+     `qf-uf-bad-preimage-membership`. Exact finite topology replay still owns
+     the bad continuity claim that `preimage({u}) = {0}` is not open in the
+     Sierpinski domain; the source SMT-LIB artifact separately rejects the
+     malformed preimage table that excludes `0` even though `f(0)=u` and
+     `u in {u}`. The public query surface now reports 640 checks, 315 checked
+     rows, and 53 checked QF_UF/Alethe rows.
 
 ## Validation Checklist
 
