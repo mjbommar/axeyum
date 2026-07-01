@@ -1982,6 +1982,20 @@ fn dispatch_nonlinear_int_tail(
         }
         let result = dispatch_int_blast_width_ladder(arena, assertions, config)?;
         with_recorder(rec, |t| t.record_result("int-blast-ladder", &result));
+        // Last resort — the **integer nonlinear UNSAT refuter** (Phase E first
+        // slice): only when the ladder gives up, so it never slows a decided case.
+        // Abstract each integer product `a·b` to a fresh `Int` var, add the valid
+        // integer sign/zero lemmas, solve over the integer DPLL(T); an `unsat`
+        // transfers soundly. Unlike the real relaxation, it keeps integrality
+        // (`q<1 ⟹ q≤0` combines with `q≤0 ∧ n≥0 ⟹ q·n≤0`), refuting cases unsat
+        // over ℤ but sat over ℝ (e.g. Euclidean-eliminated `div`). `unsat`-only.
+        if matches!(result, CheckResult::Unknown(_))
+            && let Some(refuted) =
+                crate::nia_linearize::refute_nia_by_sign_lemmas(arena, assertions, config)?
+        {
+            with_recorder(rec, |t| t.record_result("nia-sign-lemmas", &refuted));
+            return Ok(refuted);
+        }
         Ok(result)
     }
 }

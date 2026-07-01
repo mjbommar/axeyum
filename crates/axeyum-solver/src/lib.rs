@@ -87,6 +87,7 @@ mod lra_online;
 mod maxsat;
 mod mbp;
 mod model;
+mod nia_linearize;
 mod nia_square;
 mod nra;
 mod nra_even_power;
