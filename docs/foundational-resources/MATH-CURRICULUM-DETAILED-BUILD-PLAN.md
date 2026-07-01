@@ -806,6 +806,15 @@ Pick one row per commit unless the change is purely navigational.
     asymptotic graph-search theorem horizons. The graph consumer smoke now
     exposes `bridge_finite_graph_replay_obstruction` through LIA route queries
     alongside the existing Boolean graph rows.
+95. Landed: add `chebyshev-operator-index.md` as the cross-pack learner path
+    for finite-dimensional operator bounds, Chebyshev recurrence values,
+    Vandermonde interpolation matrices, alternating residuals, checked
+    QF_LRA/Farkas bad-grid and bad-bound rows, spectral rows, and
+    characteristic-polynomial arithmetic. The functional-analysis/operator
+    consumer smoke now exposes `bridge_finite_operator_chebyshev` through
+    concept-scoped Farkas route queries while keeping Banach/Hilbert-space,
+    compact-operator, Haar-space, minimax, alternation-theorem, and
+    infinite-dimensional approximation claims in the Lean-horizon lane.
 
 ## Validation Checklist
 

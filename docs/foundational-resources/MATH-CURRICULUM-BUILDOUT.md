@@ -257,7 +257,7 @@ losing the curriculum anchor.
 | `numerical_analysis` | linear algebra, real algebra | `numerical-linear-algebra-v0`, `finite-euler-method-v0`, `multivariable-calculus-rational-v0`, LU replay, interval bounds, error recurrences, Jacobian/Hessian replay, and finite ODE step replay. |
 | `differential_equations_and_dynamical_systems` | calculus, linear algebra | `bounded-dynamics-v0`, `finite-euler-method-v0`, recurrence traces, Euler-method steps, finite error replay, and invariant checks before continuous theory. |
 | `geometry` | reals, polynomials, linear algebra | `coordinate-geometry-v0`, `incidence-geometry-v0`, `rigid-configuration-geometry-v0`, `affine-geometry-v0`, `orientation-area-geometry-v0`, `finite-circle-geometry-v0`, `finite-inversion-geometry-v0`, `finite-cyclic-geometry-v0`, distance, midpoint, collinearity, line equations, distance tables, affine maps, signed area, barycentric replay, finite incidence preservation, finite isometry shadows, circle points, tangent lines, chord-midpoint perpendicularity, inversion images, inverse-distance products, cyclic quadrilateral replay, diagonal intersections, and opposite-angle dot products. |
-| `functional_analysis_and_operator_theory` | linear algebra, real analysis | `finite-operator-v0`, `inner-product-spaces-rational-v0`, `finite-chebyshev-systems-v0`, norms, inner products, projections, matrices as operators, Chebyshev polynomial slices, finite interpolation/sign-pattern checks. |
+| `functional_analysis_and_operator_theory` | linear algebra, real analysis | `finite-operator-v0`, `inner-product-spaces-rational-v0`, `finite-chebyshev-systems-v0`, norms, inner products, projections, matrices as operators, Chebyshev polynomial slices, finite interpolation/sign-pattern checks, and the Chebyshev/operator learner-query index. |
 
 ## Phased Build Plan
 
@@ -2138,20 +2138,29 @@ promoting duality, KKT sufficiency, SDP strong duality, gradient-descent,
 line-search, active-set method theory, Wolfe line-search, projected-gradient
 convergence, proximal-gradient convergence, or convergence-theorem claims.
 The consumer query layer now also exposes functional-analysis/operator
-readiness: `CONSUMER-QUERIES.md` shows the Farkas field summary, operator
-bridge lookup, and checked finite-operator, inner-product, Chebyshev, and
-spectral Farkas row drill-downs. The foundational-resource smoke check runs
-those same queries so finite-dimensional operator bounds, inner-product
-positivity, Chebyshev duplicate-node grids, spectral/eigenpair witnesses, and
+readiness: `CONSUMER-QUERIES.md` shows the Farkas field summary,
+operator/Chebyshev bridge lookup, concept-scoped
+`bridge_finite_operator_chebyshev` pack and checked-row drill-downs, and
+checked finite-operator, inner-product, Chebyshev, spectral, and
+characteristic-polynomial Farkas rows. The foundational-resource smoke check
+runs those same queries so finite-dimensional operator bounds, inner-product
+positivity, Chebyshev duplicate-node grids, interpolation/residual rows,
+spectral/eigenpair witnesses, characteristic-polynomial arithmetic, and
 dual-space rows remain visible through the public JSON boundary without
-promoting Banach, Hilbert, compact-operator, minimax, or infinite-dimensional
-approximation theorem claims.
+promoting Banach, Hilbert, compact-operator, Haar-space, minimax, alternation,
+or infinite-dimensional approximation theorem claims.
 The learner layer now also has
 [`matrix-computation-index.md`](../learn/math/matrix-computation-index.md),
 which groups LU, rank/nullity, residual, projection, eigenpair,
 characteristic-polynomial, finite random-matrix, chain-complex, operator,
 module, and tensor rows by replay, QF_LRA/Farkas, QF_UF/Alethe,
 QF_LIA/Diophantine, Lean-horizon, and numerical-honesty boundaries.
+The learner layer now also has
+[`chebyshev-operator-index.md`](../learn/math/chebyshev-operator-index.md),
+which groups finite operator bounds, Chebyshev recurrence values,
+Vandermonde interpolation matrices, alternating residuals, spectral rows, and
+characteristic-polynomial arithmetic by exact replay, QF_LRA/Farkas evidence,
+and functional-analysis theorem horizons.
 The learner/planning layer now also has
 [`matrix-corpus-benchmark-boundary.md`](../learn/math/matrix-corpus-benchmark-boundary.md),
 which separates educational matrix resources, solver regressions,

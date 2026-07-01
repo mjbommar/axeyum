@@ -300,11 +300,14 @@ sufficiency, active-set method theory, SDP strong duality, general separation, a
 algorithm-convergence claims in the Lean-horizon lane.
 The public foundational-resource consumer query layer now also exercises the
 functional-analysis/operator lane: field readiness over
-`functional_analysis_and_operator_theory`, the shared operator bridge lookup,
-and checked Farkas rows for finite operators, inner products, Chebyshev grids,
-and spectral examples are smoke-checked through the committed JSON contract,
-while Banach/Hilbert/compact-operator/minimax and infinite-dimensional claims
-stay in the theorem-horizon lane.
+`functional_analysis_and_operator_theory`, the shared operator/Chebyshev
+bridge lookup, concept-scoped `bridge_finite_operator_chebyshev` Farkas pack
+and checked-row queries, and checked Farkas rows for finite operators, inner
+products, Chebyshev grids, interpolation/residual rows, spectral examples, and
+characteristic-polynomial arithmetic are smoke-checked through the committed
+JSON contract, while Banach/Hilbert/compact-operator/Haar-space/minimax/
+alternation-theorem and infinite-dimensional claims stay in the theorem-horizon
+lane.
 The first route-note pass has also landed on the high-use learner cluster
 pages for logic/proof, graph/discrete reasoning, linear algebra/optimization,
 probability/statistics, and algebra/number theory.

@@ -1706,6 +1706,15 @@ Pick one item per commit unless the change is purely navigational.
      graph field readiness and smoke queries now expose the LIA runtime route
      while keeping asymptotic algorithm analysis and graph-family lower bounds
      in the theorem-horizon lane.
+106. Landed: add `chebyshev-operator-index.md`, wiring finite-dimensional
+     operator bounds, Chebyshev recurrence values, Vandermonde interpolation,
+     alternating residuals, spectral rows, and characteristic-polynomial
+     arithmetic into one functional-analysis/operator learner path. The
+     functional-analysis field readiness and smoke queries now expose
+     concept-scoped `bridge_finite_operator_chebyshev` Farkas route lookups
+     while keeping Banach/Hilbert-space, compact-operator, Haar-space,
+     minimax, alternation-theorem, and infinite-dimensional approximation
+     claims in the theorem-horizon lane.
 
 ## Validation Checklist
 

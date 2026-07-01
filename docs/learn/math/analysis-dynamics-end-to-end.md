@@ -20,6 +20,8 @@ For a focused finite Euler transition and error-table trace, read
 [End To End: Finite Euler Method](finite-euler-method-end-to-end.md).
 For a focused finite-dimensional operator and norm-bound trace, read
 [End To End: Finite-Dimensional Operators](finite-operator-end-to-end.md).
+For the cross-pack operator/Chebyshev query map, read
+[Chebyshev And Operator Replay Index](chebyshev-operator-index.md).
 
 Concept rows:
 

@@ -370,8 +370,10 @@ Pick one item per commit unless the change is purely navigational.
    connectedness, and finite continuity/preimage topology shadows.
 5. Landed: add graph BFS/DFS runtime-pathology learner and query coverage only
    as finite trace/cost replay, with asymptotic runtime as theorem horizon.
-6. Add Chebyshev-system depth only where the finite operator/Chebyshev bridge
-   can replay exact interpolation, sign, recurrence, or residual rows.
+6. Landed: add Chebyshev/operator learner and query coverage only where the
+   finite operator/Chebyshev bridge replays exact operator bounds,
+   interpolation matrices, sign alternation, recurrence values, residual rows,
+   spectral rows, or characteristic-polynomial arithmetic.
 7. Add random-matrix depth only as exact finite moment/table replay before
    asymptotic statements.
 8. Promote one replay-heavy QF_UF topology/algebra row through Alethe.

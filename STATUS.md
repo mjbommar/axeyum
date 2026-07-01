@@ -205,6 +205,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Chebyshev/operator learner index landed.**
+  `chebyshev-operator-index.md` now ties finite-dimensional operator bounds,
+  Chebyshev recurrence values, Vandermonde interpolation matrices,
+  alternating residuals, checked QF_LRA/Farkas bad-grid and bad-bound
+  refutations, spectral rows, and characteristic-polynomial arithmetic into
+  one functional-analysis/operator learner path. The consumer guide,
+  field-readiness matrix, atlas source refs, matrix query guide, and resource
+  smoke now expose `bridge_finite_operator_chebyshev` through concept-scoped
+  Farkas route queries. The boundary stays finite: exact rational matrix,
+  polynomial, norm, determinant, residual, eigenpair, and characteristic
+  polynomial replay are current evidence; Banach/Hilbert-space,
+  compact-operator, Haar-space, minimax, alternation-theorem, and
+  infinite-dimensional approximation claims remain Lean-horizon.
+
 - **Graph traversal runtime learner index landed.**
   `graph-traversal-runtime-index.md` now ties finite reachability,
   deterministic BFS/DFS traces, shortcut-tail visited-node counters, checked

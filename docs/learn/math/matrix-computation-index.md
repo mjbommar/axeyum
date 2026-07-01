@@ -10,6 +10,8 @@ and benchmark-corpus claims, see
 [Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md).
 For downstream discovery by computation family plus proof route, see
 [Matrix Computation Consumer Queries](../../foundational-resources/MATRIX-COMPUTATION-QUERIES.md).
+For the focused finite-operator and Chebyshev slice, see
+[Chebyshev And Operator Replay Index](chebyshev-operator-index.md).
 
 Concept rows:
 
@@ -100,6 +102,7 @@ experimental artifact.
 - [Matrix Invariants](matrix-invariants-end-to-end.md)
 - [Finite Random Matrices](random-matrix-finite-end-to-end.md)
 - [Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md)
+- [Chebyshev And Operator Replay Index](chebyshev-operator-index.md)
 - [Finite-Dimensional Operators](finite-operator-end-to-end.md)
 - [Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md)
 

@@ -138,6 +138,12 @@ python3 scripts/query-foundational-resources.py packs \
   --concept bridge_finite_operator_chebyshev \
   --route Farkas \
   --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_operator_chebyshev \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
 ```
 
 ## Boundary

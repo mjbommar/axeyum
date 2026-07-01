@@ -1194,12 +1194,34 @@ python3 scripts/query-foundational-resources.py fields \
   --require-any
 ```
 
-Use the atlas query to expose the shared operator bridge vocabulary:
+Use the atlas query to expose the shared operator and Chebyshev bridge
+vocabulary:
 
 ```sh
 python3 scripts/query-foundational-resources.py concepts \
   --field functional_analysis_and_operator_theory \
   --text operator \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field functional_analysis_and_operator_theory \
+  --text Chebyshev \
+  --require-any
+```
+
+Concept-plus-route queries can find the finite operator, Chebyshev,
+spectral, and characteristic-polynomial packs without hard-coding pack ids:
+
+```sh
+python3 scripts/query-foundational-resources.py packs \
+  --concept bridge_finite_operator_chebyshev \
+  --route Farkas \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_operator_chebyshev \
+  --route Farkas \
+  --proof-status checked \
   --require-any
 ```
 
@@ -1417,6 +1439,9 @@ python3 scripts/query-foundational-resources.py packs --concept bridge_finite_ci
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_circle_inversion_cyclic_replay --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field functional_analysis_and_operator_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field functional_analysis_and_operator_theory --text operator --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field functional_analysis_and_operator_theory --text Chebyshev --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_finite_operator_chebyshev --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_operator_chebyshev --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field functional_analysis_and_operator_theory --route Farkas --proof-status checked --require-any >/dev/null
 ```
 

@@ -34,6 +34,10 @@ Companion maps:
 - [Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md):
   separates educational matrix resources, solver regressions, benchmark-corpus
   rows, and theorem horizons.
+- [Chebyshev And Operator Replay Index](chebyshev-operator-index.md):
+  connects finite operator bounds, Chebyshev recurrences, interpolation
+  matrices, alternating residuals, spectral rows, checked Farkas evidence, and
+  functional-analysis theorem horizons.
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md):
   maps finite analysis, calculus, optimization, measure, dynamics, and operator
   shadows to their missing Lean/theorem reconstruction routes.
