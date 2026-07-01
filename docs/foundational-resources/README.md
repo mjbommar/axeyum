@@ -257,8 +257,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-line-search-v0/`](../../artifacts/examples/math/finite-line-search-v0/)
   validates exact Armijo descent-direction replay, trial-step rejection,
   accepted backtracked-step replay, checked rejection of false Armijo
-  acceptance and accepted-candidate claims, and a line-search convergence
-  Lean-horizon row.
+  acceptance, false descent-direction, and accepted-candidate claims, and a
+  line-search convergence Lean-horizon row.
 - [`artifacts/examples/math/finite-wolfe-line-search-v0/`](../../artifacts/examples/math/finite-wolfe-line-search-v0/)
   validates exact Wolfe descent-direction replay, exact line minimization,
   sufficient-decrease and curvature checks, checked rejection of false
@@ -470,8 +470,9 @@ schemas, examples, and validation workflows.
   gradient-descent convergence Lean-horizon row.
 - [`artifacts/examples/math/finite-line-search-v0/`](../../artifacts/examples/math/finite-line-search-v0/)
   validates exact one-variable Armijo line-search replay, trial rejection,
-  accepted backtracking, checked bad-acceptance and bad accepted-candidate
-  rejection, and a general line-search convergence Lean-horizon row.
+  accepted backtracking, checked bad-acceptance, bad descent-direction, and bad
+  accepted-candidate rejection, and a general line-search convergence
+  Lean-horizon row.
 - [`artifacts/examples/math/finite-wolfe-line-search-v0/`](../../artifacts/examples/math/finite-wolfe-line-search-v0/)
   validates exact one-variable Wolfe line-search replay, sufficient decrease,
   curvature, checked bad-minimizer, bad sufficient-decrease, and bad-curvature

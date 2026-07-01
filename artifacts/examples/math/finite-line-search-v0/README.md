@@ -3,8 +3,9 @@
 This pack turns one exact rational Armijo backtracking line-search step into
 resource rows. It checks only the listed quadratic, descent direction,
 rejected trial step, accepted backtracked step, false-Armijo obstruction, and
-false accepted-candidate obstruction; general line-search convergence and
-optimization-algorithm theorems remain proof horizons.
+false descent-direction and accepted-candidate obstructions; general
+line-search convergence and optimization-algorithm theorems remain proof
+horizons.
 
 ## Audience
 
@@ -23,6 +24,8 @@ optimization-algorithm theorems remain proof horizons.
   satisfies the Armijo inequality with exact slack.
 - `bad-armijo-acceptance-rejected`: rejects the malformed claim that the
   rejected trial step satisfies Armijo.
+- `bad-descent-direction-rejected`: rejects the malformed claim that the listed
+  direction has nonnegative directional derivative.
 - `bad-accepted-candidate-rejected`: rejects the malformed claim that the
   accepted backtracked candidate is `x=1/4`; exact replay computes `x=0`.
 - `general-line-search-convergence-lean-horizon`: names the future proof route
@@ -33,6 +36,7 @@ optimization-algorithm theorems remain proof horizons.
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-line-search-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_armijo_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_descent_direction_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_accepted_candidate_artifact_emits_checked_farkas
 ```
 

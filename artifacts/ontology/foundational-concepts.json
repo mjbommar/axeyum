@@ -813,7 +813,7 @@
           "id": "finite-line-search-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-line-search-v0",
-          "notes": "Finite exact Armijo line-search replay with checked bad-acceptance and bad accepted-candidate rejections."
+          "notes": "Finite exact Armijo line-search replay with checked bad-acceptance, bad descent-direction, and bad accepted-candidate rejections."
         },
         {
           "id": "finite-wolfe-line-search-v0",
@@ -1797,7 +1797,7 @@
           "id": "finite-line-search-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-line-search-v0",
-          "notes": "Exact Armijo trial rejection, backtracked-step acceptance, and bad-acceptance plus bad accepted-candidate rejection."
+          "notes": "Exact Armijo trial rejection, descent-direction replay, backtracked-step acceptance, and bad-acceptance plus bad accepted-candidate rejection."
         },
         {
           "id": "finite-wolfe-line-search-v0",
@@ -1924,7 +1924,7 @@
           "id": "finite-line-search-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-line-search-v0",
-          "notes": "Finite exact Armijo rejection/acceptance replay, accepted-candidate replay, and convergence-theorem horizon rows."
+          "notes": "Finite exact Armijo rejection/acceptance replay, descent-direction replay, accepted-candidate replay, and convergence-theorem horizon rows."
         },
         {
           "id": "finite-wolfe-line-search-v0",
@@ -3066,7 +3066,7 @@
           "id": "finite-line-search-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-line-search-v0",
-          "notes": "Finite exact Armijo rejection/acceptance, bad-acceptance, and bad accepted-candidate rows over exact rationals."
+          "notes": "Finite exact Armijo rejection/acceptance, bad-acceptance, bad descent-direction, and bad accepted-candidate rows over exact rationals."
         },
         {
           "id": "finite-wolfe-line-search-v0",
@@ -11278,7 +11278,7 @@
           "id": "finite-line-search-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-line-search-v0",
-          "notes": "Finite Armijo line-search replay with checked bad-acceptance and bad accepted-candidate rejections."
+          "notes": "Finite Armijo line-search replay with checked bad-acceptance, bad descent-direction, and bad accepted-candidate rejections."
         },
         {
           "id": "finite-wolfe-line-search-v0",

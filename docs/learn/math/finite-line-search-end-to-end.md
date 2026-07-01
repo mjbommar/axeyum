@@ -3,8 +3,9 @@
 This lesson follows
 [finite-line-search-v0](../../../artifacts/examples/math/finite-line-search-v0/)
 from one exact Armijo backtracking step through rejected-step replay,
-accepted-step replay, accepted-candidate replay, and checked Farkas evidence.
-It is a finite line-search certificate, not a general convergence theorem.
+accepted-step replay, descent-direction replay, accepted-candidate replay, and
+checked Farkas evidence. It is a finite line-search certificate, not a general
+convergence theorem.
 
 ## Concept
 
@@ -26,7 +27,7 @@ c = 1/4
 
 ## What Gets Checked
 
-The pack has six rows:
+The pack has seven rows:
 
 | Row | Result | Evidence |
 |---|---|---|
@@ -34,6 +35,7 @@ The pack has six rows:
 | `armijo-rejection-replay` | `sat` | replay-only |
 | `armijo-acceptance-replay` | `sat` | replay-only |
 | `bad-armijo-acceptance-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-descent-direction-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `bad-accepted-candidate-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-line-search-convergence-lean-horizon` | `not-run` | Lean horizon |
 
@@ -111,6 +113,31 @@ nonpositive:
 Axeyum parses that source row, emits `UnsatFarkas` evidence, and independently
 checks the certificate.
 
+## Bad Descent Direction Row
+
+The malformed row changes only the sign claim for the directional derivative:
+
+```text
+gradient = 2
+direction = -2
+directional derivative = -4
+claimed directional derivative >= 0
+```
+
+The source SMT-LIB artifact fixes the derivative as `-4` and also asserts it is
+nonnegative:
+
+```smt2
+(set-logic QF_LRA)
+(declare-const directional_derivative Real)
+(assert (= directional_derivative (- 4.0)))
+(assert (>= directional_derivative 0.0))
+(check-sat)
+```
+
+This checks the descent-direction sign as a separate exact-linear conflict from
+the Armijo inequality and accepted-candidate arithmetic.
+
 ## Bad Accepted Candidate Row
 
 The second malformed row claims the accepted backtracked step lands at the
@@ -152,5 +179,6 @@ general line-search theorem: future Lean reconstruction
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-line-search-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_armijo_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_descent_direction_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_accepted_candidate_artifact_emits_checked_farkas
 ```

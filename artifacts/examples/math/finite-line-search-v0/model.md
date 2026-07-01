@@ -42,6 +42,13 @@ Wolfe conditions, convergence rates, or floating-point behavior.
 The checked bad row claims the rejected trial step satisfies Armijo. Exact
 replay computes violation `1`, so the nonpositive-violation claim is false.
 
+The checked bad descent-direction row changes the sign claim for the listed
+direction. Exact replay computes:
+
+```text
+directional derivative = 2 * (-2) = -4
+```
+
 The checked bad accepted-candidate row changes the accepted point to `1/4`.
 Exact replay computes:
 

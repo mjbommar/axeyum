@@ -12267,6 +12267,56 @@ def validate_finite_line_search(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-armijo-acceptance-rejected certificate must document checked Farkas evidence")
 
+    bad_direction = checks["bad-descent-direction-rejected"]
+    if bad_direction["expected_result"] != "unsat" or bad_direction.get("proof_status") != "checked":
+        fail("bad-descent-direction-rejected must be a checked unsat row")
+    if bad_direction["validation"] != "finite_bad_line_search_direction_refutation":
+        fail("bad-descent-direction-rejected must use finite_bad_line_search_direction_refutation validation")
+    data = bad_direction.get("data", {})
+    if data.get("source_witness") != "quadratic-armijo-backtrack":
+        fail("bad-descent-direction-rejected must cite the quadratic-armijo-backtrack witness")
+    bad_gradient = require_fraction("bad line-search direction gradient", data.get("gradient"))
+    bad_descent_direction = require_fraction(
+        "bad line-search direction descent_direction",
+        data.get("descent_direction"),
+    )
+    computed_directional_derivative = require_fraction(
+        "bad line-search direction computed_directional_derivative",
+        data.get("computed_directional_derivative"),
+    )
+    claimed_lower_bound = require_fraction(
+        "bad line-search direction claimed_directional_derivative_lower_bound",
+        data.get("claimed_directional_derivative_lower_bound"),
+    )
+    if bad_gradient != gradient or bad_descent_direction != descent_direction:
+        fail("bad-descent-direction-rejected must reuse the replayed gradient and direction")
+    if computed_directional_derivative != directional_derivative:
+        fail("bad-descent-direction-rejected computed derivative does not match replay")
+    if bad_gradient * bad_descent_direction != computed_directional_derivative:
+        fail("bad-descent-direction-rejected directional derivative equation is incorrect")
+    if computed_directional_derivative >= claimed_lower_bound:
+        fail("bad-descent-direction-rejected malformed lower bound must contradict replay")
+    equation = data.get("direction_equation")
+    require_string("bad line-search direction equation", equation)
+    if equation != "directional_derivative = gradient * descent_direction":
+        fail("bad-descent-direction-rejected must document the direction equation")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad line-search direction smt2_artifact", smt2_artifact)
+    if smt2_artifact != (
+        "artifacts/examples/math/finite-line-search-v0/smt2/"
+        "bad-descent-direction-farkas-conflict.smt2"
+    ):
+        fail("bad-descent-direction-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad line-search direction smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad line-search direction farkas_regression", regression)
+    if "finite_line_search_bad_descent_direction_artifact_emits_checked_farkas" not in regression:
+        fail("bad-descent-direction-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad line-search direction certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-descent-direction-rejected certificate must document checked Farkas evidence")
+
     bad_candidate = checks["bad-accepted-candidate-rejected"]
     if bad_candidate["expected_result"] != "unsat" or bad_candidate.get("proof_status") != "checked":
         fail("bad-accepted-candidate-rejected must be a checked unsat row")

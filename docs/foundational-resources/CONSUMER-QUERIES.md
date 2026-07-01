@@ -1542,6 +1542,17 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+For the exact line-search descent-direction certificate:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-line-search-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text direction \
+  --require-any
+```
+
 For the exact Wolfe line-minimizer certificate:
 
 ```sh

@@ -33,10 +33,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-line-search-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite line-search bad Armijo and bad accepted-candidate QF_LRA/Farkas regression seeds",
-    "pressure": "Exact Armijo replay computes violation 1 for trial step alpha=1, so the malformed nonpositive-violation row is inconsistent; exact backtracking replay computes accepted_x = 0 for alpha=1/2, so the malformed accepted-candidate row claiming x=1/4 is contradictory.",
+    "target": "finite line-search bad Armijo, bad descent-direction, and bad accepted-candidate QF_LRA/Farkas regression seeds",
+    "pressure": "Exact derivative replay computes directional derivative -4 for direction -2, so the malformed nonnegative-directional-derivative row is inconsistent; exact Armijo replay computes violation 1 for trial step alpha=1, so the malformed nonpositive-violation row is inconsistent; exact backtracking replay computes accepted_x = 0 for alpha=1/2, so the malformed accepted-candidate row claiming x=1/4 is contradictory.",
     "evidence": [
       "bad-armijo-acceptance-rejected",
+      "bad-descent-direction-rejected",
       "bad-accepted-candidate-rejected"
     ],
     "next_step": "Promote additional line-search rows only when they add distinct Wolfe, exact line minimization, projected-step, stochastic, or convergence pressure; keep general line-search termination and rates in horizon lanes."
@@ -51,6 +52,7 @@
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "docs/learn/math/finite-line-search-end-to-end.md",
     "artifacts/examples/math/finite-line-search-v0/smt2/bad-armijo-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-line-search-v0/smt2/bad-descent-direction-farkas-conflict.smt2",
     "artifacts/examples/math/finite-line-search-v0/smt2/bad-accepted-candidate-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
@@ -59,13 +61,14 @@
     "armijo-rejection-replay",
     "armijo-acceptance-replay",
     "bad-armijo-acceptance-rejected",
+    "bad-descent-direction-rejected",
     "bad-accepted-candidate-rejected",
     "general-line-search-convergence-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite line-search witnesses as deterministic exact-rational replay rows.",
     "Replay derivatives, descent directions, trial candidates, Armijo right-hand sides, rejected-step violations, accepted-step slack, and backtracking factors over exact rationals.",
-    "Route false Armijo acceptance and accepted-candidate claims through checked QF_LRA/Farkas evidence after replay computes the offending exact-rational conflict.",
+    "Route false descent-direction, Armijo acceptance, and accepted-candidate claims through checked QF_LRA/Farkas evidence after replay computes the offending exact-rational conflict.",
     "Keep general termination, Wolfe conditions, convergence rates, stochastic variants, and floating-point stability claims marked Lean-horizon until proof artifacts exist."
   ]
 }

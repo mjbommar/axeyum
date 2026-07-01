@@ -278,9 +278,10 @@ First targets:
   replay computes decrease `11/4`, decrease error `3/4`, next x-coordinate
   `1/2`, and descent slack `1/4`)
 - [finite-line-search-v0](../../artifacts/examples/math/finite-line-search-v0/)
-  (source-linked Farkas regressions landed for the bad Armijo and bad
-  accepted-candidate rows after exact line-search replay computes
-  rejected-step violation `1` and accepted point `0`)
+  (source-linked Farkas regressions landed for the bad Armijo, bad
+  descent-direction, and bad accepted-candidate rows after exact line-search
+  replay computes rejected-step violation `1`, directional derivative `-4`,
+  and accepted point `0`)
 - [finite-wolfe-line-search-v0](../../artifacts/examples/math/finite-wolfe-line-search-v0/)
   (source-linked Farkas regressions landed for the bad minimizer, bad
   sufficient-decrease, and bad curvature rows after exact Wolfe replay computes

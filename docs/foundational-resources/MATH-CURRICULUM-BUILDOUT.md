@@ -605,8 +605,9 @@ false descent-bound claims, and a general gradient-descent convergence
 Lean-horizon row.
 `finite-line-search-v0` now validates exact descent-direction replay, Armijo
 trial-step rejection, accepted backtracked-step replay, checked QF_LRA/Farkas
-rejection of false Armijo acceptance and accepted-candidate claims, and a
-general line-search convergence Lean-horizon row.
+rejection of false descent-direction, Armijo acceptance, and
+accepted-candidate claims, and a general line-search convergence Lean-horizon
+row.
 `finite-wolfe-line-search-v0` now validates exact descent-direction replay,
 exact line-minimizer replay, Wolfe sufficient-decrease and curvature replay,
 checked QF_LRA/Farkas rejection of false line-minimizer and curvature claims,
@@ -968,8 +969,8 @@ convergence Lean-horizon row.
 `artifacts/examples/math/finite-line-search-v0/` now validates exact
 descent-direction replay, rejected Armijo trial-step arithmetic,
 accepted backtracked-step replay, checked QF_LRA/Farkas rejection of a false
-Armijo acceptance claim and a false accepted-candidate claim, and a line-search
-convergence Lean-horizon row.
+descent-direction claim, a false Armijo acceptance claim, and a false
+accepted-candidate claim, and a line-search convergence Lean-horizon row.
 `artifacts/examples/math/finite-wolfe-line-search-v0/` now validates exact
 descent-direction replay, exact one-dimensional line minimization,
 Wolfe sufficient-decrease and curvature checks, checked QF_LRA/Farkas
@@ -1149,8 +1150,9 @@ Recommended order:
     claims.
 39. `finite-line-search-v0`: exact Armijo descent-direction replay, trial-step
     rejection, accepted-backtrack replay, and checked QF_LRA/Farkas bad-Armijo
-    and bad accepted-candidate rejections, while strong Wolfe variants,
-    projected/stochastic line search, and convergence theorems remain horizon claims.
+    bad descent-direction, and bad accepted-candidate rejections, while strong
+    Wolfe variants, projected/stochastic line search, and convergence theorems
+    remain horizon claims.
 40. `finite-wolfe-line-search-v0`: exact descent-direction replay, exact
     line-minimizer replay, Wolfe sufficient-decrease/curvature replay, and
     checked QF_LRA/Farkas bad-minimizer, bad sufficient-decrease, and
@@ -1729,8 +1731,9 @@ step-coordinate plus bad descent-bound rejections with QF_LRA/Farkas evidence,
 and the general convergence Lean horizon.
 `finite-line-search-v0` now has a learner-facing end-to-end lesson for exact
 descent-direction replay, Armijo trial rejection, accepted-backtrack replay,
-checked bad-Armijo and bad accepted-candidate rejection with QF_LRA/Farkas
-evidence, and the general line-search convergence Lean horizon.
+checked bad-Armijo, bad descent-direction, and bad accepted-candidate
+rejection with QF_LRA/Farkas evidence, and the general line-search convergence
+Lean horizon.
 `finite-wolfe-line-search-v0` now has a learner-facing end-to-end lesson for
 exact descent-direction replay, exact line-minimizer replay, Wolfe
 sufficient-decrease and curvature replay, checked bad-minimizer and
@@ -2081,9 +2084,10 @@ bottom-right slack-entry gap `1/2`.
 and bad descent-bound rows through the same checked Farkas evidence path after
 exact descent-step replay computes decrease `11/4`, decrease error `3/4`,
 `next_x = 1/2`, and descent slack `1/4`.
-`finite-line-search-v0` now routes its bad Armijo and bad accepted-candidate
-rows through the same checked Farkas evidence path after exact line-search
-replay computes rejected-step violation `1` and accepted point `0`.
+`finite-line-search-v0` now routes its bad Armijo, bad descent-direction, and
+bad accepted-candidate rows through the same checked Farkas evidence path after
+exact line-search replay computes rejected-step violation `1`, directional
+derivative `-4`, and accepted point `0`.
 `finite-wolfe-line-search-v0` now routes its bad minimizer, bad
 sufficient-decrease, and bad curvature rows through the same checked Farkas
 evidence path after exact Wolfe replay computes minimizer `alpha=1/2`,

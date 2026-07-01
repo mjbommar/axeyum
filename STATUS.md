@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-line-search bad descent-direction QF_LRA row landed.**
+  `finite-line-search-v0` now includes a checked rejection for a malformed
+  descent-direction row: exact replay computes directional derivative
+  `2 * (-2) = -4`, while the bad row claims the same derivative is
+  nonnegative. The validator pins the source witness, gradient, direction,
+  computed derivative, source SMT-LIB artifact, regression, and independently
+  checked `UnsatFarkas` certificate. The shared `math_resource_lra_routes`
+  regression parses the artifact and checks the Farkas evidence. Generated
+  dashboards and the public query summary now report 111 concept rows, 108
+  non-template packs, 625 expected checks, 302 checked rows, 252 replay-only
+  rows, and 71 Lean-horizon rows.
+
 - **Finite-gradient-descent bad descent-bound QF_LRA row landed.**
   `finite-gradient-descent-v0` now includes a checked rejection for a malformed
   finite descent-bound row: exact replay computes decrease `11/4`, descent
