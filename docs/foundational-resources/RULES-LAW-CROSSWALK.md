@@ -41,7 +41,7 @@ or Lean horizon until the formal dependency is clear.
 | Complete fact patterns, eligibility predicates, required conditions | finite predicate logic and Boolean replay | [`finite-predicate-v0`](../../artifacts/examples/math/finite-predicate-v0/), [`logic-basics-v0`](../../artifacts/examples/math/logic-basics-v0/) | Bool/CNF, finite replay, later CNF/LRAT | consistency and coverage in [`benefit-eligibility-v0`](../rules-as-code/examples/benefit-eligibility-v0/) |
 | Membership, roles, jurisdictions, actor/resource relations | finite sets, relations, functions, equivalence classes | [`finite-sets-v0`](../../artifacts/examples/math/finite-sets-v0/), [`relations-functions-v0`](../../artifacts/examples/math/relations-functions-v0/), [`equivalence-classes-v0`](../../artifacts/examples/math/equivalence-classes-v0/) | finite replay, QF_UF/Alethe for functional conflicts | tenant/resource role tables in [`authorization-policy-v0`](../rules-as-code/examples/authorization-policy-v0/) |
 | Thresholds, ages, dates, deadlines, counts | integer and rational arithmetic | [`integer-lia-v0`](../../artifacts/examples/math/integer-lia-v0/), [`natural-arithmetic-v0`](../../artifacts/examples/math/natural-arithmetic-v0/), [`rationals-lra-v0`](../../artifacts/examples/math/rationals-lra-v0/) | QF_LIA/Diophantine, arithmetic-DPLL, QF_LRA/Farkas | income threshold, age cutoff, effective date split in [`benefit-eligibility-v0`](../rules-as-code/examples/benefit-eligibility-v0/) and tax phase-out thresholds in [`tax-benefit-arithmetic-v0`](../rules-as-code/examples/tax-benefit-arithmetic-v0/) |
-| Threshold cliffs, caps, and monotonicity | optimization and convexity shadows | [`linear-optimization-v0`](../../artifacts/examples/math/linear-optimization-v0/), [`convexity-rational-v0`](../../artifacts/examples/math/convexity-rational-v0/) | QF_LRA/Farkas or QF_LIA for exact-linear impossibility; finite replay for examples | "one dollar above threshold" witnesses, cap checks, and phase-out monotonicity in [`tax-benefit-arithmetic-v0`](../rules-as-code/examples/tax-benefit-arithmetic-v0/) |
+| Threshold cliffs, caps, deadlines, and monotonicity | optimization and convexity shadows | [`linear-optimization-v0`](../../artifacts/examples/math/linear-optimization-v0/), [`convexity-rational-v0`](../../artifacts/examples/math/convexity-rational-v0/) | QF_LRA/Farkas or QF_LIA for exact-linear impossibility; finite replay for examples | "one dollar above threshold" witnesses, cap checks, and phase-out monotonicity in [`tax-benefit-arithmetic-v0`](../rules-as-code/examples/tax-benefit-arithmetic-v0/), plus bid-cap/deadline/score monotonicity in [`procurement-scoring-v0`](../rules-as-code/examples/procurement-scoring-v0/) |
 | Workflow state, dependency chains, delegated authority, forbidden paths | graph reachability and cuts | [`graph-reachability-v0`](../../artifacts/examples/math/graph-reachability-v0/), [`graph-cut-v0`](../../artifacts/examples/math/graph-cut-v0/), [`graph-d-separation-v0`](../../artifacts/examples/math/graph-d-separation-v0/) | Bool/CNF with DRAT/LRAT for small refutations; finite replay for paths | tenant-isolation boundary checks in [`authorization-policy-v0`](../rules-as-code/examples/authorization-policy-v0/) |
 | Precedence, hierarchy, explicit deny, override, classification levels | finite orders and lattices | [`finite-order-lattices-v0`](../../artifacts/examples/math/finite-order-lattices-v0/) | finite relation replay, Bool/CNF for set-family top/precedence conflicts, QF_UF/Alethe for equality conflicts | explicit deny over role/admin permit in [`authorization-policy-v0`](../rules-as-code/examples/authorization-policy-v0/) |
 | Versioned rules and transition points | bounded finite dynamics and arithmetic dates | [`bounded-dynamics-v0`](../../artifacts/examples/math/bounded-dynamics-v0/), [`finite-euler-method-v0`](../../artifacts/examples/math/finite-euler-method-v0/) | finite transition replay, QF_LIA/QF_LRA for bounded transitions | old-threshold versus new-threshold eligibility examples |
@@ -110,6 +110,21 @@ pack exercises the threshold/cap/phase-out slice of this crosswalk:
 | `temporal_transition` | concrete witnesses replay | versioned arithmetic dates | keep only intended threshold changes replayable across effective-date boundaries |
 | `implementation_equivalence` | source-linked Bool/QF_LIA mismatch fixture with checked Axeyum evidence for the active linear phase-out slice, plus executable witness replay | bounded equivalence | broaden to generated mismatch queries over all bounded income/date/household rows |
 
+## Procurement Scoring V0 Mapping
+
+The current
+[`procurement-scoring-v0`](../rules-as-code/examples/procurement-scoring-v0/)
+pack exercises the exclusion/deadline/bid-cap/bonus slice of this crosswalk:
+
+| Pack Check | Current Evidence | Crosswalk Pattern | Next Axeyum Upgrade |
+|---|---|---|---|
+| `debarment_exclusion` | source-linked Bool/QF_LIA fixture with checked Axeyum evidence | finite predicates and explicit exclusions | broaden from the fixed debarment contradiction to generated exclusion queries over multiple policy dimensions |
+| `late_submission_exclusion` | source-linked Bool/QF_LIA fixture with checked Axeyum evidence | encoded dates and temporal deadlines | add richer effective-window rows if a later policy pack needs multi-version deadlines |
+| `bid_cap_respected` | source-linked Bool/QF_LIA fixture with checked Axeyum evidence | threshold caps and exact-linear bounds | add allocation/scoring variants only when they introduce distinct LIA/LRA pressure |
+| `score_bonus_threshold` | concrete witnesses replay | threshold cliffs with exceptions | produce minimized witnesses around each bonus boundary |
+| `score_monotonicity` | source-linked Bool/QF_LIA fixture with checked Axeyum evidence, plus finite-sample replay over the bounded domain | arithmetic monotonicity | broaden to generated monotonicity queries over multiple scoring components |
+| `implementation_equivalence` | source-linked Bool/QF_LIA mismatch fixture with checked Axeyum evidence, plus executable witness replay | bounded equivalence | broaden to generated mismatch queries over all bounded procurement fact rows |
+
 ## Proof Route Reuse
 
 | Proof Route | Rules/Law Use | Existing Recipe |
@@ -152,9 +167,15 @@ exists.
    and monotonicity checks.
 5. Landed: add deterministic generated query-row JSON under
    [`../rules-as-code/generated/queries/`](../rules-as-code/generated/queries/)
-   for all three current rule packs; `validate-rules-as-code.py` replays those
+   for all three initial rule packs; `validate-rules-as-code.py` replays those
    1,374 rows from the committed source models.
-6. Promote only those rows that have deterministic replay plus a source-linked
+6. Landed: add
+   [`procurement-scoring-v0`](../rules-as-code/examples/procurement-scoring-v0/),
+   reusing finite predicates, bid caps, deadline arithmetic, bonus threshold
+   witnesses, quality-score monotonicity, and Bool/QF_LIA proof fixtures. The
+   generated query-row JSON now broadens the bounded bid/score/date/exclusion
+   domain into award replay and adjacent-score monotonicity rows.
+7. Promote only those rows that have deterministic replay plus a source-linked
    regression or proof route.
 
 ## Non-Goals

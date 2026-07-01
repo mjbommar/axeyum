@@ -365,9 +365,14 @@ Use one row per commit unless the change is purely navigational.
    [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
    plus deterministic query-row JSON under
    [`../rules-as-code/generated/queries/`](../rules-as-code/generated/queries/)
-   so the three rule packs expose replayed bounded sample rows and
+   so the initial rule packs expose replayed bounded sample rows and
    generated-query families before new law-specific schema fields are created.
-11. Landed: add functional-analysis/operator consumer-query coverage through
+11. Landed: add
+   [`procurement-scoring-v0`](../rules-as-code/examples/procurement-scoring-v0/)
+   as a rules/law pack that reuses finite predicate exclusions, bid caps,
+   encoded deadlines, bonus thresholds, quality-score monotonicity, and
+   Bool/QF_LIA proof fixtures through the current JSON boundary.
+12. Landed: add functional-analysis/operator consumer-query coverage through
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
    `scripts/check-foundational-resources.sh`, making finite operator bounds,
    inner-product positivity and projection orthogonality, Chebyshev grids,
@@ -489,10 +494,13 @@ Use one row per commit unless the change is purely navigational.
    proofs, double-counting tables, coefficient extraction, finite orbit counts,
    and exact finite tail counts queryable from the atlas while keeping
    asymptotic counting and unbounded combinatorics in the horizon lane.
-26. Add future rules/law crosswalk examples only by reusing existing
+26. Landed: add `procurement-scoring-v0` as the next rules/law crosswalk
+    example, reusing finite predicates, bid caps, encoded dates, bonus
+    thresholds, monotonicity, and checked Bool/QF_LIA fixtures.
+27. Add future rules/law crosswalk examples only by reusing existing
     math-resource patterns; do not create a separate rule ontology until the
     current JSON boundary is exercised by more consumers.
-27. Landed: add `bridge_finite_chain_homology_replay` so finite
+28. Landed: add `bridge_finite_chain_homology_replay` so finite
     simplicial-complex closure, boundary replay, boundary-squared-zero,
     Betti-rank replay, and the checked bad-boundary coefficient row are
     discoverable as a shared topology/linear-algebra bridge without promoting

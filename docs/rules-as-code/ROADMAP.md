@@ -39,11 +39,12 @@ for formalized rule obligations.
 
 ## Current Status
 
-The first three rule packs have landed:
+The first four rule packs have landed:
 
 - [Benefit Eligibility V0](examples/benefit-eligibility-v0/README.md)
 - [Authorization Policy V0](examples/authorization-policy-v0/README.md)
 - [Tax Benefit Arithmetic V0](examples/tax-benefit-arithmetic-v0/README.md)
+- [Procurement Scoring V0](examples/procurement-scoring-v0/README.md)
 
 The first metadata schema lives at
 [rules-core.schema.json](../../artifacts/ontology/rules-core.schema.json).
@@ -57,15 +58,18 @@ monotonicity, and bounded implementation equivalence now have source-linked
 Bool/QF_LIA fixtures; authorization tenant isolation, explicit deny precedence,
 admin tenant guarding, and bounded implementation equivalence do as well; and
 tax/benefit non-negativity, cap, active phase-out monotonicity, and bounded
-implementation equivalence now have checked fixtures. They are checked by
+implementation equivalence now have checked fixtures. Procurement debarment,
+late submission, bid-cap, score-monotonicity, and bounded implementation
+equivalence checks also have checked fixtures. They are checked by
 `cargo test -p axeyum-solver --test rules_as_code_examples`; benefit threshold
-and temporal-transition rows, authorization version-delta rows, and tax/benefit
-threshold-cliff and temporal-transition rows remain replayed witnesses.
+and temporal-transition rows, authorization version-delta rows, tax/benefit
+threshold-cliff and temporal-transition rows, and procurement bonus-threshold
+rows remain replayed witnesses.
 The generated
-[Rules Query Dashboard](generated/rules-query-dashboard.md) now reads the three
-pack JSON files and exposes 738 bounded sample rows plus 1,374 deterministic
+[Rules Query Dashboard](generated/rules-query-dashboard.md) now reads the four
+pack JSON files and exposes 882 bounded sample rows plus 1,626 deterministic
 generated query rows for coverage, income monotonicity, version deltas,
-threshold/cap checks, and phase-out monotonicity.
+threshold/cap checks, deadlines, bid-cap exclusions, and monotonicity.
 
 The cross-resource reuse map is
 [Rules/Law Crosswalk For Foundational Resources](../foundational-resources/RULES-LAW-CROSSWALK.md).
@@ -226,6 +230,32 @@ Checks:
 - implementation agrees with the logical model on bounded inputs.
 
 This pack exercises LIA/optimization and counterexample minimization.
+
+## Fourth Example Pack: Procurement Scoring
+
+Status: landed as
+[Procurement Scoring V0](examples/procurement-scoring-v0/README.md), with
+source-linked Bool/QF_LIA proof fixtures for debarment exclusion, late
+submission exclusion, bid-cap enforcement, score monotonicity, and bounded
+implementation equivalence.
+
+Model a tiny procurement award rule:
+
+- debarred vendors are excluded;
+- late submissions are excluded;
+- bids above a cap are excluded;
+- small-business status adds a fixed score bonus;
+- adjusted score must meet an award threshold.
+
+Checks:
+
+- excluded vendors, late submissions, and over-cap bids cannot be awarded;
+- the small-business bonus flips the intended threshold edge;
+- increasing quality score cannot lose an award when other facts stay fixed;
+- implementation agrees with the logical model on bounded inputs.
+
+This pack exercises finite predicates, integer thresholds, encoded dates,
+monotonicity, and checked implementation-equivalence fixtures.
 
 ## Validation Checks
 

@@ -1121,16 +1121,19 @@ Detailed mapping:
 [RULES-LAW-CROSSWALK.md](RULES-LAW-CROSSWALK.md) records the reusable check
 shapes, source math packs, Axeyum fragments, proof routes, and the current
 `benefit-eligibility-v0`, `authorization-policy-v0`, and
-`tax-benefit-arithmetic-v0` mappings.
+`tax-benefit-arithmetic-v0` mappings, plus the
+`procurement-scoring-v0` exclusion/deadline/bid-cap/bonus mapping.
 
 Next work:
 
 - Use the completed `benefit-eligibility-v0`, `authorization-policy-v0`, and
-  `tax-benefit-arithmetic-v0` Bool/QF_LIA proof harnesses as reference patterns
-  for generated multi-row coverage/equivalence and threshold/cap queries.
+  `tax-benefit-arithmetic-v0` Bool/QF_LIA proof harnesses, plus the
+  `procurement-scoring-v0` debarment/deadline/bid-cap/monotonicity fixtures, as
+  reference patterns for generated multi-row coverage/equivalence and
+  threshold/cap/deadline queries.
   Status: the deterministic generated query-row JSON under
   [`../rules-as-code/generated/queries/`](../rules-as-code/generated/queries/)
-  now materializes 1,374 replayed rows from the three current rule packs, and
+  now materializes 1,626 replayed rows from the four current rule packs, and
   the generated
   [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
   exposes the bounded row counts, generated row counts, query artifacts, and
@@ -1188,15 +1191,20 @@ Pick one item per commit unless the change is purely navigational.
 10. Landed: add the generated
    [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
    for bounded coverage, equivalence, threshold, cap, version-delta, and
-   monotonicity query-family counts across the current rule packs.
+   monotonicity query-family counts across the initial rule packs.
 11. Landed: add deterministic generated query-row JSON under
    [`../rules-as-code/generated/queries/`](../rules-as-code/generated/queries/)
-   for the current rules/law packs: complete applicant coverage and
+   for the first three rules/law packs: complete applicant coverage and
    income-monotonicity rows, bounded role/action/version requests and adjacent
    version-delta rows, and tax/benefit amount plus phase-out rows. The
    rules-as-code validator replays all 1,374 rows from committed source pack
    models, and the standard rules check now fails on generated drift.
-12. Landed: add a consumer-query recipe for "find all packs for a field and
+12. Landed: add `procurement-scoring-v0` as the fourth rules/law pack, with
+   source-linked Bool/QF_LIA proof fixtures for debarment exclusion, late
+   submission, bid-cap enforcement, score monotonicity, and bounded
+   implementation equivalence. The generated query-row JSON now brings the
+   rules/law surface to 1,626 replayed rows across four packs.
+13. Landed: add a consumer-query recipe for "find all packs for a field and
    route" through the `--route` filter in
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md).
@@ -1633,11 +1641,17 @@ Pick one item per commit unless the change is purely navigational.
     effective-date, finite replay, and Bool/QF_LIA proof-route patterns.
 77. Landed: add
     [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
-    as the generated bounded-query surface for the current rules/law packs.
+    as the generated bounded-query surface for the initial rules/law packs.
 77a. Landed: add deterministic rules/law query-row JSON under
     [`../rules-as-code/generated/queries/`](../rules-as-code/generated/queries/),
     materializing 1,374 replayed coverage, monotonicity, version-delta,
-    threshold, cap, and phase-out rows from the three current rule packs.
+    threshold, cap, and phase-out rows from the first three rule packs.
+77b. Landed: add
+    [`procurement-scoring-v0`](../rules-as-code/examples/procurement-scoring-v0/)
+    as a rules/law pack that reuses finite predicate exclusions, bid caps,
+    encoded deadlines, small-business bonus thresholds, score monotonicity, and
+    Bool/QF_LIA checked fixtures. The generated rules query surface now reports
+    882 bounded sample rows and 1,626 generated query rows across four packs.
 78. Landed: add functional-analysis/operator field-readiness consumer queries
     through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational
     smoke check, covering Farkas field readiness, the operator bridge lookup,

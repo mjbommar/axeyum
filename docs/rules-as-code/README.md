@@ -26,11 +26,13 @@ docs/rules-as-code/
     queries/
       authorization-policy-v0.json
       benefit-eligibility-v0.json
+      procurement-scoring-v0.json
       tax-benefit-arithmetic-v0.json
     rules-query-dashboard.md
   examples/
     benefit-eligibility-v0/
     authorization-policy-v0/
+    procurement-scoring-v0/
     tax-benefit-arithmetic-v0/
 artifacts/ontology/
   rules-core.schema.json
@@ -43,6 +45,7 @@ Current example packs:
 - [Benefit Eligibility V0](examples/benefit-eligibility-v0/README.md)
 - [Authorization Policy V0](examples/authorization-policy-v0/README.md)
 - [Tax Benefit Arithmetic V0](examples/tax-benefit-arithmetic-v0/README.md)
+- [Procurement Scoring V0](examples/procurement-scoring-v0/README.md)
 
 ## Roadmap
 
@@ -84,6 +87,12 @@ The third pack,
 reuses integer thresholds, phase-out monotonicity, caps, effective-date
 transitions, and bounded implementation-equivalence checks for a tax/benefit
 arithmetic shape.
+
+The fourth pack,
+[Procurement Scoring V0](examples/procurement-scoring-v0/README.md), reuses
+finite predicates, bid caps, score thresholds, submission deadlines,
+small-business bonus edge cases, monotonicity, and bounded
+implementation-equivalence checks for a procurement award shape.
 
 Validate the current packs with:
 

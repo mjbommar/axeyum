@@ -746,10 +746,15 @@ thresholds, household-size adjustments, caps, active phase-out monotonicity,
 effective-date witnesses, and checked Bool/QF_LIA fixtures for non-negative
 benefit, cap, active phase-out monotonicity, and bounded implementation
 equivalence, with the validator replaying the full piecewise finite sample.
+`procurement-scoring-v0` now adds the fourth rules/law pack: finite predicate
+exclusions, bid caps, encoded submission deadlines, small-business
+bonus-threshold witnesses, score monotonicity, and checked Bool/QF_LIA fixtures
+for debarment, late submission, bid-cap, monotonicity, and bounded
+implementation-equivalence obligations.
 The rules/law lane now also has a generated query dashboard that reads the
-three committed rule-pack JSON files, exposes 738 bounded sample rows, and
-links deterministic generated query-row JSON for 1,374 coverage, equivalence,
-threshold, cap, version-delta, and monotonicity rows without promoting the
+four committed rule-pack JSON files, exposes 882 bounded sample rows, and
+links deterministic generated query-row JSON for 1,626 coverage, equivalence,
+threshold, cap, deadline, version-delta, and monotonicity rows without promoting the
 packs to legal or solver benchmarks.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, finite tensor products, and finite

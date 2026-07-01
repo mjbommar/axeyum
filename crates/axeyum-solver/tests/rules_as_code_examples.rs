@@ -43,6 +43,21 @@ const TAX_BENEFIT_ARITHMETIC_PHASEOUT_MONOTONICITY: &str = include_str!(
 const TAX_BENEFIT_ARITHMETIC_IMPLEMENTATION_EQUIVALENCE: &str = include_str!(
     "../../../docs/rules-as-code/examples/tax-benefit-arithmetic-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2"
 );
+const PROCUREMENT_SCORING_DEBARMENT_EXCLUSION: &str = include_str!(
+    "../../../docs/rules-as-code/examples/procurement-scoring-v0/smt2/debarment-exclusion-bool-qf-lia-conflict.smt2"
+);
+const PROCUREMENT_SCORING_LATE_SUBMISSION_EXCLUSION: &str = include_str!(
+    "../../../docs/rules-as-code/examples/procurement-scoring-v0/smt2/late-submission-exclusion-bool-qf-lia-conflict.smt2"
+);
+const PROCUREMENT_SCORING_BID_CAP_RESPECTED: &str = include_str!(
+    "../../../docs/rules-as-code/examples/procurement-scoring-v0/smt2/bid-cap-respected-bool-qf-lia-conflict.smt2"
+);
+const PROCUREMENT_SCORING_SCORE_MONOTONICITY: &str = include_str!(
+    "../../../docs/rules-as-code/examples/procurement-scoring-v0/smt2/score-monotonicity-bool-qf-lia-conflict.smt2"
+);
+const PROCUREMENT_SCORING_IMPLEMENTATION_EQUIVALENCE: &str = include_str!(
+    "../../../docs/rules-as-code/examples/procurement-scoring-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2"
+);
 
 #[test]
 fn benefit_eligibility_consistency_emits_checked_evidence() {
@@ -137,6 +152,46 @@ fn tax_benefit_arithmetic_implementation_equivalence_emits_checked_evidence() {
     assert_rule_unsat_evidence(
         "tax-benefit-arithmetic-v0 implementation equivalence",
         TAX_BENEFIT_ARITHMETIC_IMPLEMENTATION_EQUIVALENCE,
+    );
+}
+
+#[test]
+fn procurement_scoring_debarment_exclusion_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "procurement-scoring-v0 debarment exclusion",
+        PROCUREMENT_SCORING_DEBARMENT_EXCLUSION,
+    );
+}
+
+#[test]
+fn procurement_scoring_late_submission_exclusion_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "procurement-scoring-v0 late submission exclusion",
+        PROCUREMENT_SCORING_LATE_SUBMISSION_EXCLUSION,
+    );
+}
+
+#[test]
+fn procurement_scoring_bid_cap_respected_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "procurement-scoring-v0 bid cap respected",
+        PROCUREMENT_SCORING_BID_CAP_RESPECTED,
+    );
+}
+
+#[test]
+fn procurement_scoring_score_monotonicity_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "procurement-scoring-v0 score monotonicity",
+        PROCUREMENT_SCORING_SCORE_MONOTONICITY,
+    );
+}
+
+#[test]
+fn procurement_scoring_implementation_equivalence_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "procurement-scoring-v0 implementation equivalence",
+        PROCUREMENT_SCORING_IMPLEMENTATION_EQUIVALENCE,
     );
 }
 

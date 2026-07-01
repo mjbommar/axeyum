@@ -98,6 +98,15 @@ class TaxBenefitFacts:
     application_date: str
 
 
+@dataclass(frozen=True)
+class ProcurementFacts:
+    bid_amount: int
+    quality_score: int
+    small_business: bool
+    debarred: bool
+    received_date: str
+
+
 def benefit_facts_from_json(context: str, value: Any) -> BenefitFacts:
     if not isinstance(value, dict):
         fail(f"{context} must be an object")
@@ -155,6 +164,31 @@ def tax_benefit_facts_from_json(context: str, value: Any) -> TaxBenefitFacts:
         application_date=require_date(
             f"{context}.application_date", value["application_date"]
         ),
+    )
+
+
+def procurement_facts_from_json(context: str, value: Any) -> ProcurementFacts:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    require_keys(
+        context,
+        value,
+        {
+            "bid_amount",
+            "quality_score",
+            "small_business",
+            "debarred",
+            "received_date",
+        },
+    )
+    return ProcurementFacts(
+        bid_amount=require_int(f"{context}.bid_amount", value["bid_amount"]),
+        quality_score=require_int(f"{context}.quality_score", value["quality_score"]),
+        small_business=require_bool(
+            f"{context}.small_business", value["small_business"]
+        ),
+        debarred=require_bool(f"{context}.debarred", value["debarred"]),
+        received_date=require_date(f"{context}.received_date", value["received_date"]),
     )
 
 
@@ -216,6 +250,25 @@ def tax_benefit(facts: TaxBenefitFacts, params: dict[str, Any]) -> int:
     capped_base = min(base, params["credit_cap"])
     phaseout = params["phaseout_rate"] * max(0, facts.income - phase_start)
     return max(0, capped_base - phaseout)
+
+
+def procurement_award(facts: ProcurementFacts, params: dict[str, Any]) -> bool:
+    if facts.bid_amount < 0:
+        fail(f"bid_amount must be nonnegative: {facts.bid_amount}")
+    if facts.quality_score < params["min_quality_score"]:
+        fail(f"quality_score below bounded domain: {facts.quality_score}")
+    if facts.quality_score > params["max_quality_score"]:
+        fail(f"quality_score above bounded domain: {facts.quality_score}")
+
+    adjusted_score = facts.quality_score
+    if facts.small_business:
+        adjusted_score += params["small_business_bonus"]
+    return (
+        not facts.debarred
+        and facts.received_date <= params["deadline"]
+        and facts.bid_amount <= params["max_bid"]
+        and adjusted_score >= params["award_threshold"]
+    )
 
 
 def validate_metadata(pack_dir: Path, metadata: dict[str, Any]) -> None:
@@ -282,6 +335,8 @@ def validate_expected(pack_dir: Path, metadata: dict[str, Any], expected: dict[s
         witness_ids = validate_authorization_expected(expected, citations)
     elif pack_id == "tax_benefit_arithmetic_v0":
         witness_ids = validate_tax_benefit_expected(expected, citations)
+    elif pack_id == "procurement_scoring_v0":
+        witness_ids = validate_procurement_expected(expected, citations)
     else:
         fail(f"unsupported rules-as-code pack id {pack_id}")
 
@@ -439,6 +494,59 @@ def validate_tax_benefit_expected(expected: dict[str, Any], citations: set[str])
         validate_citations(witness_id, witness["source_citations"], citations)
 
     validate_tax_benefit_finite_sample(expected["sample_domain"], params)
+    return witness_ids
+
+
+def validate_procurement_expected(
+    expected: dict[str, Any], citations: set[str]
+) -> set[str]:
+    params = expected["parameters"]
+    require_keys(
+        "parameters",
+        params,
+        {
+            "deadline",
+            "max_bid",
+            "award_threshold",
+            "small_business_bonus",
+            "min_quality_score",
+            "max_quality_score",
+        },
+    )
+    require_date("parameters.deadline", params["deadline"])
+    for key in (
+        "max_bid",
+        "award_threshold",
+        "small_business_bonus",
+        "min_quality_score",
+        "max_quality_score",
+    ):
+        if not isinstance(params[key], int) or params[key] < 0:
+            fail(f"parameters.{key} must be a non-negative integer")
+    if params["min_quality_score"] > params["max_quality_score"]:
+        fail("parameters.min_quality_score must not exceed max_quality_score")
+
+    witness_ids: set[str] = set()
+    for index, witness in enumerate(expected["witnesses"]):
+        require_keys(
+            f"witnesses[{index}]",
+            witness,
+            {"id", "facts", "expected_award", "source_citations", "explanation"},
+        )
+        witness_id = witness["id"]
+        if witness_id in witness_ids:
+            fail(f"duplicate witness id {witness_id}")
+        witness_ids.add(witness_id)
+        expected_award = require_bool(
+            f"{witness_id}.expected_award", witness["expected_award"]
+        )
+        facts = procurement_facts_from_json(f"{witness_id}.facts", witness["facts"])
+        actual = procurement_award(facts, params)
+        if actual != expected_award:
+            fail(f"{witness_id} replay mismatch: expected {expected_award}, got {actual}")
+        validate_citations(witness_id, witness["source_citations"], citations)
+
+    validate_procurement_finite_sample(expected["sample_domain"], params)
     return witness_ids
 
 
@@ -610,6 +718,78 @@ def validate_tax_benefit_finite_sample(
         fail("tax benefit finite sample was empty")
 
 
+def validate_procurement_finite_sample(
+    sample_domain: dict[str, Any], params: dict[str, Any]
+) -> None:
+    require_keys(
+        "sample_domain",
+        sample_domain,
+        {"bid_amounts", "quality_scores", "dates", "booleans"},
+    )
+    bid_amounts = sorted(sample_domain["bid_amounts"])
+    quality_scores = sorted(sample_domain["quality_scores"])
+    dates = sample_domain["dates"]
+    booleans = sample_domain["booleans"]
+    if booleans != [False, True]:
+        fail("procurement sample_domain.booleans must be [false, true]")
+    for bid_amount in bid_amounts:
+        if not isinstance(bid_amount, int) or bid_amount < 0:
+            fail("procurement sample_domain.bid_amounts must be non-negative integers")
+    for quality_score in quality_scores:
+        if (
+            not isinstance(quality_score, int)
+            or quality_score < params["min_quality_score"]
+            or quality_score > params["max_quality_score"]
+        ):
+            fail("procurement sample_domain.quality_scores out of bounded range")
+    for date in dates:
+        require_date("sample_domain.dates[]", date)
+
+    checked = 0
+    for bid_amount in bid_amounts:
+        for quality_score in quality_scores:
+            for date in dates:
+                for small_business in booleans:
+                    for debarred in booleans:
+                        facts = ProcurementFacts(
+                            bid_amount,
+                            quality_score,
+                            small_business,
+                            debarred,
+                            date,
+                        )
+                        award = procurement_award(facts, params)
+                        if debarred and award:
+                            fail(f"debarment exclusion failed for {facts}")
+                        if date > params["deadline"] and award:
+                            fail(f"late-submission exclusion failed for {facts}")
+                        if bid_amount > params["max_bid"] and award:
+                            fail(f"bid-cap exclusion failed for {facts}")
+                        checked += 1
+
+    for bid_amount in bid_amounts:
+        for date in dates:
+            for small_business in booleans:
+                for debarred in booleans:
+                    previous_award = False
+                    for quality_score in quality_scores:
+                        facts = ProcurementFacts(
+                            bid_amount,
+                            quality_score,
+                            small_business,
+                            debarred,
+                            date,
+                        )
+                        award = procurement_award(facts, params)
+                        if previous_award and not award:
+                            fail(f"score monotonicity failed for {facts}")
+                        if award:
+                            previous_award = True
+
+    if checked == 0:
+        fail("procurement finite sample was empty")
+
+
 def validate_generated_queries(
     pack_dir: Path, metadata: dict[str, Any], expected: dict[str, Any]
 ) -> None:
@@ -649,6 +829,8 @@ def validate_generated_queries(
         validate_authorization_generated_queries(expected, families)
     elif pack_id == "tax_benefit_arithmetic_v0":
         validate_tax_benefit_generated_queries(expected, families)
+    elif pack_id == "procurement_scoring_v0":
+        validate_procurement_generated_queries(expected, families)
     else:
         fail(f"unsupported generated query pack id {pack_id}")
 
@@ -973,6 +1155,106 @@ def validate_tax_benefit_generated_queries(
             fail(f"generated tax phaseout row {index} has wrong holds flag")
         if not holds:
             fail(f"generated tax phaseout row {index} violates phaseout monotonicity")
+
+
+def validate_procurement_generated_queries(
+    expected: dict[str, Any], families: dict[str, dict[str, Any]]
+) -> None:
+    require_exact_families(
+        "procurement",
+        families,
+        {"bounded_awards", "quality_monotonicity_adjacent"},
+    )
+    params = expected["parameters"]
+    sample = expected["sample_domain"]
+    award_rows = families["bounded_awards"]["rows"]
+    expected_awards = (
+        len(sample["bid_amounts"])
+        * len(sample["quality_scores"])
+        * len(sample["dates"])
+        * len(sample["booleans"])
+        * len(sample["booleans"])
+    )
+    if len(award_rows) != expected_awards:
+        fail("procurement award generated row count mismatch")
+    for index, row in enumerate(award_rows):
+        if row["id"] != f"award-{index:04d}":
+            fail("procurement award generated row ids must be sequential")
+        facts = procurement_facts_from_json(
+            f"generated procurement award {index}.facts",
+            row.get("facts"),
+        )
+        expected_award = require_bool(
+            f"generated procurement award {index}.expected_award",
+            row.get("expected_award"),
+        )
+        if procurement_award(facts, params) != expected_award:
+            fail(f"generated procurement award row {index} replay mismatch")
+
+    monotonicity_rows = families["quality_monotonicity_adjacent"]["rows"]
+    expected_monotonicity = (
+        len(sample["bid_amounts"])
+        * len(sample["dates"])
+        * len(sample["booleans"])
+        * len(sample["booleans"])
+        * max(len(sample["quality_scores"]) - 1, 0)
+    )
+    if len(monotonicity_rows) != expected_monotonicity:
+        fail("procurement quality monotonicity generated row count mismatch")
+    adjacent = set(zip(sample["quality_scores"], sample["quality_scores"][1:]))
+    for index, row in enumerate(monotonicity_rows):
+        if row["id"] != f"quality-monotonicity-{index:04d}":
+            fail("procurement quality monotonicity generated row ids must be sequential")
+        lower = procurement_facts_from_json(
+            f"generated procurement monotonicity {index}.lower_facts",
+            row.get("lower_facts"),
+        )
+        higher = procurement_facts_from_json(
+            f"generated procurement monotonicity {index}.higher_facts",
+            row.get("higher_facts"),
+        )
+        if (lower.quality_score, higher.quality_score) not in adjacent:
+            fail(
+                f"generated procurement monotonicity row {index} "
+                "must use adjacent quality scores"
+            )
+        lower_key = (
+            lower.bid_amount,
+            lower.small_business,
+            lower.debarred,
+            lower.received_date,
+        )
+        higher_key = (
+            higher.bid_amount,
+            higher.small_business,
+            higher.debarred,
+            higher.received_date,
+        )
+        if lower_key != higher_key:
+            fail(
+                f"generated procurement monotonicity row {index} "
+                "changed non-quality facts"
+            )
+        lower_award = require_bool(
+            f"generated procurement monotonicity {index}.lower_award",
+            row.get("lower_award"),
+        )
+        higher_award = require_bool(
+            f"generated procurement monotonicity {index}.higher_award",
+            row.get("higher_award"),
+        )
+        if procurement_award(lower, params) != lower_award:
+            fail(f"generated procurement monotonicity row {index} lower replay mismatch")
+        if procurement_award(higher, params) != higher_award:
+            fail(f"generated procurement monotonicity row {index} higher replay mismatch")
+        holds = require_bool(
+            f"generated procurement monotonicity {index}.nondecreasing_holds",
+            row.get("nondecreasing_holds"),
+        )
+        if holds != (not (lower_award and not higher_award)):
+            fail(f"generated procurement monotonicity row {index} has wrong holds flag")
+        if not holds:
+            fail(f"generated procurement monotonicity row {index} violates monotonicity")
 
 
 def validate_pack(pack_dir: Path) -> str:

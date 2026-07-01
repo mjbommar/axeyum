@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "pack_id": "procurement_scoring_v0",
+  "parameters": {
+    "deadline": "2026-08-01",
+    "max_bid": 100,
+    "award_threshold": 75,
+    "small_business_bonus": 5,
+    "min_quality_score": 0,
+    "max_quality_score": 100
+  },
+  "sample_domain": {
+    "bid_amounts": [99, 100, 101],
+    "quality_scores": [69, 70, 74, 75],
+    "dates": ["2026-07-31", "2026-08-01", "2026-08-02"],
+    "booleans": [false, true]
+  },
+  "witnesses": [
+    {
+      "id": "ordinary_threshold_award",
+      "facts": {
+        "bid_amount": 100,
+        "quality_score": 75,
+        "small_business": false,
+        "debarred": false,
+        "received_date": "2026-08-01"
+      },
+      "expected_award": true,
+      "source_citations": ["Example Rule 4(a)", "Example Rule 4(b)", "Example Rule 4(d)"],
+      "explanation": "A timely non-debarred bid at the cap with score 75 exactly meets the award threshold."
+    },
+    {
+      "id": "ordinary_bonus_cut_denied",
+      "facts": {
+        "bid_amount": 100,
+        "quality_score": 70,
+        "small_business": false,
+        "debarred": false,
+        "received_date": "2026-08-01"
+      },
+      "expected_award": false,
+      "source_citations": ["Example Rule 4(a)", "Example Rule 4(e)"],
+      "explanation": "Quality score 70 misses the threshold when no bonus applies."
+    },
+    {
+      "id": "small_business_bonus_award",
+      "facts": {
+        "bid_amount": 100,
+        "quality_score": 70,
+        "small_business": true,
+        "debarred": false,
+        "received_date": "2026-08-01"
+      },
+      "expected_award": true,
+      "source_citations": ["Example Rule 4(a)", "Example Rule 4(e)"],
+      "explanation": "The 5-point small-business bonus raises adjusted score 70 to the threshold 75."
+    },
+    {
+      "id": "late_submission_denied",
+      "facts": {
+        "bid_amount": 99,
+        "quality_score": 75,
+        "small_business": false,
+        "debarred": false,
+        "received_date": "2026-08-02"
+      },
+      "expected_award": false,
+      "source_citations": ["Example Rule 4(d)"],
+      "explanation": "A bid received one day after the deadline is excluded."
+    },
+    {
+      "id": "debarred_vendor_denied",
+      "facts": {
+        "bid_amount": 99,
+        "quality_score": 75,
+        "small_business": true,
+        "debarred": true,
+        "received_date": "2026-08-01"
+      },
+      "expected_award": false,
+      "source_citations": ["Example Rule 4(c)"],
+      "explanation": "Debarment excludes an otherwise awardable bid."
+    },
+    {
+      "id": "bid_above_cap_denied",
+      "facts": {
+        "bid_amount": 101,
+        "quality_score": 75,
+        "small_business": true,
+        "debarred": false,
+        "received_date": "2026-08-01"
+      },
+      "expected_award": false,
+      "source_citations": ["Example Rule 4(b)"],
+      "explanation": "The bid amount is above the 100-unit cap even though score and deadline facts are favorable."
+    }
+  ],
+  "checks": [
+    {
+      "id": "debarment_exclusion",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 4(c)", "Example Rule 4(f)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/procurement-scoring-v0/smt2/debarment-exclusion-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples procurement_scoring_debarment_exclusion_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "late_submission_exclusion",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 4(d)", "Example Rule 4(f)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/procurement-scoring-v0/smt2/late-submission-exclusion-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples procurement_scoring_late_submission_exclusion_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "bid_cap_respected",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 4(b)", "Example Rule 4(f)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/procurement-scoring-v0/smt2/bid-cap-respected-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples procurement_scoring_bid_cap_respected_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "score_bonus_threshold",
+      "expected_result": "sat",
+      "validation": "witness_replay",
+      "witnesses": ["ordinary_bonus_cut_denied", "small_business_bonus_award"],
+      "proof_status": "replayed",
+      "source_citations": ["Example Rule 4(a)", "Example Rule 4(e)"]
+    },
+    {
+      "id": "score_monotonicity",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 4(a)", "Example Rule 4(e)", "Example Rule 4(f)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/procurement-scoring-v0/smt2/score-monotonicity-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples procurement_scoring_score_monotonicity_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "implementation_equivalence",
+      "expected_result": "unsat",
+      "validation": "bool_qf_lia_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 4(a)", "Example Rule 4(b)", "Example Rule 4(c)", "Example Rule 4(d)", "Example Rule 4(e)", "Example Rule 4(f)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/procurement-scoring-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples procurement_scoring_implementation_equivalence_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      },
+      "notes": "The SMT-LIB mismatch query compares two identical formalizations of the bounded procurement award rule; the validator replays the full finite sample from the JSON rule model."
+    }
+  ]
+}

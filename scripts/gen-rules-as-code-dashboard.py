@@ -91,6 +91,18 @@ def tax_benefit(facts: dict[str, Any], params: dict[str, Any]) -> int:
     return max(0, capped_base - phaseout)
 
 
+def procurement_award(facts: dict[str, Any], params: dict[str, Any]) -> bool:
+    adjusted_score = facts["quality_score"]
+    if facts["small_business"]:
+        adjusted_score += params["small_business_bonus"]
+    return (
+        not facts["debarred"]
+        and facts["received_date"] <= params["deadline"]
+        and facts["bid_amount"] <= params["max_bid"]
+        and adjusted_score >= params["award_threshold"]
+    )
+
+
 def benefit_metrics(expected: dict[str, Any]) -> tuple[int, list[tuple[str, int]], str]:
     sample = expected["sample_domain"]
     booleans = len(sample["booleans"])
@@ -163,6 +175,33 @@ def tax_benefit_metrics(expected: dict[str, Any]) -> tuple[int, list[tuple[str, 
         ("checked Bool/QF_LIA fixtures", check_counts(expected)["checked"]),
     ]
     return rows, families, "Generate threshold, cap, and phase-out fixtures across the bounded income/date/household domain."
+
+
+def procurement_metrics(expected: dict[str, Any]) -> tuple[int, list[tuple[str, int]], str]:
+    sample = expected["sample_domain"]
+    rows = product(
+        [
+            len(sample["bid_amounts"]),
+            len(sample["quality_scores"]),
+            len(sample["dates"]),
+            len(sample["booleans"]),
+            len(sample["booleans"]),
+        ]
+    )
+    monotonicity_scans = (
+        len(sample["bid_amounts"])
+        * len(sample["dates"])
+        * len(sample["booleans"])
+        * len(sample["booleans"])
+        * max(len(sample["quality_scores"]) - 1, 0)
+    )
+    families = [
+        ("bounded procurement award rows", rows),
+        ("quality-score adjacent scans", monotonicity_scans),
+        ("bonus-threshold replay witnesses", witness_count(expected, {"score_bonus_threshold"})),
+        ("checked Bool/QF_LIA fixtures", check_counts(expected)["checked"]),
+    ]
+    return rows, families, "Generate debarment, deadline, bid-cap, bonus-threshold, and score-monotonicity fixtures across the bounded procurement domain."
 
 
 def generic_metrics(expected: dict[str, Any]) -> tuple[int, list[tuple[str, int]], str]:
@@ -389,16 +428,92 @@ def tax_benefit_query_families(expected: dict[str, Any]) -> list[dict[str, Any]]
     ]
 
 
+def procurement_query_families(expected: dict[str, Any]) -> list[dict[str, Any]]:
+    params = expected["parameters"]
+    sample = expected["sample_domain"]
+    booleans = sample["booleans"]
+    award_rows = []
+    for bid_amount in sample["bid_amounts"]:
+        for quality_score in sample["quality_scores"]:
+            for date in sample["dates"]:
+                for small_business in booleans:
+                    for debarred in booleans:
+                        facts = {
+                            "bid_amount": bid_amount,
+                            "quality_score": quality_score,
+                            "small_business": small_business,
+                            "debarred": debarred,
+                            "received_date": date,
+                        }
+                        award_rows.append(
+                            {
+                                "id": f"award-{len(award_rows):04d}",
+                                "facts": facts,
+                                "expected_award": procurement_award(facts, params),
+                            }
+                        )
+
+    monotonicity_rows = []
+    quality_scores = sample["quality_scores"]
+    for bid_amount in sample["bid_amounts"]:
+        for date in sample["dates"]:
+            for small_business in booleans:
+                for debarred in booleans:
+                    for lower_score, higher_score in zip(
+                        quality_scores, quality_scores[1:]
+                    ):
+                        lower_facts = {
+                            "bid_amount": bid_amount,
+                            "quality_score": lower_score,
+                            "small_business": small_business,
+                            "debarred": debarred,
+                            "received_date": date,
+                        }
+                        higher_facts = {
+                            **lower_facts,
+                            "quality_score": higher_score,
+                        }
+                        lower_award = procurement_award(lower_facts, params)
+                        higher_award = procurement_award(higher_facts, params)
+                        monotonicity_rows.append(
+                            {
+                                "id": f"quality-monotonicity-{len(monotonicity_rows):04d}",
+                                "lower_facts": lower_facts,
+                                "higher_facts": higher_facts,
+                                "lower_award": lower_award,
+                                "higher_award": higher_award,
+                                "nondecreasing_holds": not (
+                                    lower_award and not higher_award
+                                ),
+                            }
+                        )
+
+    return [
+        {
+            "id": "bounded_awards",
+            "description": "Complete bounded bid/score/date/exclusion rows with replayed award output.",
+            "rows": award_rows,
+        },
+        {
+            "id": "quality_monotonicity_adjacent",
+            "description": "Adjacent quality-score pairs for fixed non-score facts; higher quality must not lose an award already won.",
+            "rows": monotonicity_rows,
+        },
+    ]
+
+
 METRIC_DISPATCH = {
     "benefit_eligibility_v0": benefit_metrics,
     "authorization_policy_v0": authorization_metrics,
     "tax_benefit_arithmetic_v0": tax_benefit_metrics,
+    "procurement_scoring_v0": procurement_metrics,
 }
 
 QUERY_DISPATCH = {
     "benefit_eligibility_v0": benefit_query_families,
     "authorization_policy_v0": authorization_query_families,
     "tax_benefit_arithmetic_v0": tax_benefit_query_families,
+    "procurement_scoring_v0": procurement_query_families,
 }
 
 

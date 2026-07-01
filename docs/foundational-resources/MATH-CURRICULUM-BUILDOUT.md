@@ -2192,7 +2192,7 @@ Recurring fixed-width finite algebra, residue, and one-bit graph encodings now
 also have `family_fixed_width_bv_drat`, spanning finite fields, finite rings,
 graph coloring, and bounded number-theory residue search/bad-witness packs
 backed by the shared `math_resource_bv_routes` regression.
-The rules/law transfer lane now has three concrete packs beyond the crosswalk:
+The rules/law transfer lane now has four concrete packs beyond the crosswalk:
 `authorization-policy-v0` reuses finite predicates, tenant/resource relations,
 explicit deny precedence, bounded version-delta witnesses, and checked
 Bool/QF_LIA evidence for tenant isolation, deny precedence, admin tenant
@@ -2201,13 +2201,17 @@ integer thresholds, household-size adjustments, caps, active phase-out
 monotonicity, effective-date witnesses, and checked Bool/QF_LIA evidence for
 non-negative benefit, cap, active phase-out monotonicity, and bounded
 implementation equivalence, while the rules validator replays the full
-piecewise finite sample.
+piecewise finite sample; `procurement-scoring-v0` reuses finite predicate
+exclusions, bid caps, deadline arithmetic, small-business bonus-threshold
+witnesses, score monotonicity, and checked Bool/QF_LIA evidence for debarment,
+late submission, bid-cap, score-monotonicity, and bounded
+implementation-equivalence obligations.
 The rules/law lane now also has a generated
 [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
-that reads the committed rule-pack JSON and exposes 738 bounded sample rows,
+that reads the committed rule-pack JSON and exposes 882 bounded sample rows,
 links deterministic generated query-row JSON under
-[`generated/queries/`](../rules-as-code/generated/queries/), and replays 1,374
-coverage, equivalence, threshold, cap, version-delta, and monotonicity rows
+[`generated/queries/`](../rules-as-code/generated/queries/), and replays 1,626
+coverage, equivalence, threshold, cap, deadline, version-delta, and monotonicity rows
 through the rules validator.
 The consumer query layer now also exposes topology readiness:
 `CONSUMER-QUERIES.md` shows the Boolean/Diophantine field summaries,

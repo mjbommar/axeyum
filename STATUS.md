@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Procurement scoring rules/law pack landed.**
+  `procurement-scoring-v0` now adds the fourth rules-as-code pack, reusing
+  finite predicate exclusions, bid caps, encoded submission deadlines,
+  small-business bonus-threshold witnesses, score monotonicity, and bounded
+  implementation-equivalence checks. Five source-linked Bool/QF_LIA obligations
+  now emit certified evidence through the shared
+  `rules_as_code_examples` regression: debarment exclusion, late submission,
+  bid-cap enforcement, score monotonicity, and implementation equivalence. The
+  generated rules query dashboard now reports 4 packs, 882 bounded sample rows,
+  1,626 generated query rows, 17 checked rows, and 6 replayed rows.
+
 - **Polynomial coefficient/factor bridge row landed.**
   The generated concept atlas now includes
   `bridge_polynomial_coefficient_factor_replay`, grouping fixed coefficient
@@ -1655,12 +1666,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Rules/law generated-query dashboard landed.**
   [`rules-query-dashboard.md`](docs/rules-as-code/generated/rules-query-dashboard.md)
-  is generated from the three committed rules-as-code packs and reports 738
+  was first generated from the three initial rules-as-code packs and reports 738
   bounded sample rows, 12 checked rows, 5 replayed rows, and per-pack query
   families for coverage, equivalence, threshold, cap, version-delta, and
   monotonicity checks. The generator now also writes deterministic query-row
   JSON under [`docs/rules-as-code/generated/queries/`](docs/rules-as-code/generated/queries/),
-  materializing 1,374 replayed rows from the current packs. `just rules-as-code`
+  materializing 1,374 replayed rows from those initial packs. `just rules-as-code`
   now regenerates the dashboard and query artifacts, validates them, and fails
   on generated drift.
 
@@ -1672,8 +1683,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Bool/QF_LIA fixtures for non-negative benefit, cap, active phase-out
   monotonicity, and bounded implementation equivalence; the validator replays
   the full piecewise finite sample. The focused
-  `rules_as_code_examples` regression now checks 12 obligations with certified
-  evidence across the three rule packs.
+  `rules_as_code_examples` regression now checks the first 12 obligations with
+  certified evidence across those three initial rule packs.
 
 - **Matrix corpus/benchmark boundary note landed.**
   [`matrix-corpus-benchmark-boundary.md`](docs/learn/math/matrix-corpus-benchmark-boundary.md)

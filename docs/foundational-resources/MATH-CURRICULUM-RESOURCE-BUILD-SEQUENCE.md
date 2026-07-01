@@ -122,7 +122,7 @@ Work by layer:
 | Core structures | divisibility, modular arithmetic, groups, rings, fields, polynomials, sequences, counting | gcd/CRT certificates, finite algebra tables, quotients, modules, tensors, polynomial factor/replay, recurrence prefixes, finite counting and generating functions |
 | Destinations | number theory, linear algebra, calculus | bounded Diophantine checks, matrix computation index, LU checked product-entry rows, rank/residual/eigen/random-matrix rows, exact derivative/integral shadows, root-finding and optimization steps |
 | Field extensions | graph theory, topology, measure/probability/statistics, optimization, numerical analysis, dynamics, geometry, functional analysis | graph coloring/search/runtime, finite topologies and homology shadows, exact finite probability/measure tables, Farkas optimization rows, Euler/root-finding/line-search rows, coordinate/circle/inversion geometry, finite operator and Chebyshev rows |
-| Rules/law transfer | eligibility, authorization, tax/benefit arithmetic, future policy packs | finite predicates, thresholds, caps, temporal versions, precedence, reachability, monotonicity, and checked proof fixtures reused from math packs |
+| Rules/law transfer | eligibility, authorization, tax/benefit arithmetic, procurement scoring, future policy packs | finite predicates, thresholds, caps, deadlines, temporal versions, precedence, reachability, monotonicity, and checked proof fixtures reused from math packs |
 
 Exit:
 
@@ -392,8 +392,12 @@ Pick one item per commit unless the change is purely navigational.
     polynomial identities, factor/division witnesses, coefficient windows,
     root-finding steps, derivative shadows, and polynomial geometry obligations
     are discoverable through concept-scoped Diophantine and Farkas queries.
-11. Add the next rules/law example only by reusing an existing math proof
-    shape and the current JSON boundary.
+11. Landed: add `procurement-scoring-v0` as the next rules/law example,
+    reusing finite predicate exclusions, bid caps, encoded deadline arithmetic,
+    bonus-threshold witnesses, quality-score monotonicity, and Bool/QF_LIA
+    checked fixtures through the current JSON boundary.
+12. Add the next rules/law example only if it exercises a distinct current
+    math proof shape or a repeated consumer need.
 
 ## Maintenance Commands
 

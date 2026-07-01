@@ -9,11 +9,11 @@ generated coverage, equivalence, threshold, cap, or monotonicity checks.
 
 ## Summary
 
-- Rule packs: 3
-- Bounded sample rows: 738
-- Generated query rows: 1374
-- Check results: sat:5, unsat:12
-- Proof statuses: checked:12, replayed:5
+- Rule packs: 4
+- Bounded sample rows: 882
+- Generated query rows: 1626
+- Check results: sat:6, unsat:17
+- Proof statuses: checked:17, replayed:6
 
 ## Pack Query Surface
 
@@ -21,6 +21,7 @@ generated coverage, equivalence, threshold, cap, or monotonicity checks.
 |---|---:|---:|---|---|---|---|
 | [Example Authorization Policy With Tenant Isolation](../examples/authorization-policy-v0/README.md) | 96 | 144 | [queries/authorization-policy-v0.json](queries/authorization-policy-v0.json) | bounded role/action/version rows: 96<br>adjacent version-delta comparisons: 48<br>version-delta replay witnesses: 2<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:1 | Generate tenant/action/version coverage and equivalence queries across the bounded request domain. |
 | [Example Benefit Eligibility With Exceptions](../examples/benefit-eligibility-v0/README.md) | 576 | 1104 | [queries/benefit-eligibility-v0.json](queries/benefit-eligibility-v0.json) | complete eligibility coverage rows: 576<br>income monotonicity adjacent scans: 528<br>threshold/temporal replay witnesses: 4<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:2 | Generate coverage and equivalence fixtures across the full bounded applicant domain. |
+| [Example Procurement Scoring With Deadline And Exclusions](../examples/procurement-scoring-v0/README.md) | 144 | 252 | [queries/procurement-scoring-v0.json](queries/procurement-scoring-v0.json) | bounded procurement award rows: 144<br>quality-score adjacent scans: 108<br>bonus-threshold replay witnesses: 2<br>checked Bool/QF_LIA fixtures: 5 | checked:5, replayed:1 | Generate debarment, deadline, bid-cap, bonus-threshold, and score-monotonicity fixtures across the bounded procurement domain. |
 | [Example Tax Benefit Arithmetic With Phase-Out](../examples/tax-benefit-arithmetic-v0/README.md) | 66 | 126 | [queries/tax-benefit-arithmetic-v0.json](queries/tax-benefit-arithmetic-v0.json) | bounded benefit replay rows: 66<br>income phase-out adjacent scans: 60<br>threshold/temporal replay witnesses: 4<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:2 | Generate threshold, cap, and phase-out fixtures across the bounded income/date/household domain. |
 
 ## Trust Boundary

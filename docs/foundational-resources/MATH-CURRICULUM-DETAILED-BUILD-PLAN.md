@@ -593,7 +593,14 @@ Pick one row per commit unless the change is purely navigational.
     committed rule-pack JSON and reports bounded sample rows, generated row
     counts, and coverage, equivalence, threshold, cap, version-delta, and
     monotonicity query-family counts.
-67. Landed: add functional-analysis/operator field-readiness consumer query
+67. Landed: add
+    [`procurement-scoring-v0`](../rules-as-code/examples/procurement-scoring-v0/)
+    as the fourth rules/law pack. The pack reuses finite predicate exclusions,
+    bid-cap and encoded-deadline arithmetic, bonus-threshold witnesses,
+    score-monotonicity rows, and checked Bool/QF_LIA proof fixtures while the
+    rules validator replays the bounded procurement sample and generated query
+    rows.
+68. Landed: add functional-analysis/operator field-readiness consumer query
     coverage. `CONSUMER-QUERIES.md` and
     `check-foundational-resources.sh` now exercise the
     `functional_analysis_and_operator_theory` Farkas field summary, the

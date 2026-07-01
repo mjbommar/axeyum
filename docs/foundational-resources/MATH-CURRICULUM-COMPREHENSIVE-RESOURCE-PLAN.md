@@ -469,11 +469,17 @@ Prefer one row, page, route upgrade, or query surface per commit.
     polynomial coefficients, factor/division witnesses, coefficient windows,
     root-finding steps, derivative shadows, and polynomial geometry obligations;
     keep general factorization and algebraic closure as proof horizons.
-11. Add rules/law examples only by reusing existing math proof shapes and the
+11. Landed: add
+    [`procurement-scoring-v0`](../rules-as-code/examples/procurement-scoring-v0/)
+    as the next rules/law example, reusing finite predicate exclusions,
+    bid-cap and deadline arithmetic, bonus-threshold replay, score
+    monotonicity, and Bool/QF_LIA proof fixtures through the current JSON
+    boundary.
+12. Add rules/law examples only by reusing existing math proof shapes and the
     current JSON boundary.
-12. Add schema fields only after validators and query scripts show repeated
+13. Add schema fields only after validators and query scripts show repeated
     awkwardness.
-13. Revisit crate/repo boundaries after consumer scripts have at least three
+14. Revisit crate/repo boundaries after consumer scripts have at least three
     duplicated access patterns.
 
 ## Validation Protocol

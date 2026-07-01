@@ -302,6 +302,10 @@ Build sequence:
    `benefit-eligibility-v0` now has checked Bool/QF_LIA fixtures for
    consistency, coverage, fixed no-exception monotonicity, and active-threshold
    implementation equivalence through `rules_as_code_examples`.
+18. `procurement-scoring-v0` now adds a fourth rules/law pack, reusing finite
+   predicate exclusions, bid-cap and deadline arithmetic, bonus-threshold
+   witnesses, score monotonicity, and Bool/QF_LIA checked fixtures through the
+   current JSON boundary.
    `authorization-policy-v0` now adds the access-control slice with checked
    Bool/QF_LIA fixtures for tenant isolation, explicit deny precedence, admin
    tenant guarding, and bounded implementation equivalence.
@@ -498,7 +502,11 @@ Build sequence:
     rows, generated-query families, and deterministic query-row JSON under
     [`../rules-as-code/generated/queries/`](../rules-as-code/generated/queries/)
     from committed rule-pack JSON.
-46. Functional-analysis/operator field-readiness consumer queries now land in
+46. [`procurement-scoring-v0`](../rules-as-code/examples/procurement-scoring-v0/)
+    now adds debarment, late-submission, bid-cap, score-monotonicity, and
+    implementation-equivalence proof fixtures plus generated award and adjacent
+    quality-score query rows to the rules/law lane.
+47. Functional-analysis/operator field-readiness consumer queries now land in
     [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
     `scripts/check-foundational-resources.sh`, covering the Farkas field
     summary, operator bridge lookup, and checked finite-operator,

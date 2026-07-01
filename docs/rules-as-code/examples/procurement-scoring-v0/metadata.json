@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "procurement_scoring_v0",
+  "title": "Example Procurement Scoring With Deadline And Exclusions",
+  "domain": "procurement",
+  "jurisdiction": "example",
+  "source_citations": [
+    {"label": "Example Rule 4(a)", "uri": "source.md#rule-4a-award-threshold"},
+    {"label": "Example Rule 4(b)", "uri": "source.md#rule-4b-bid-cap"},
+    {"label": "Example Rule 4(c)", "uri": "source.md#rule-4c-debarment-exclusion"},
+    {"label": "Example Rule 4(d)", "uri": "source.md#rule-4d-submission-deadline"},
+    {"label": "Example Rule 4(e)", "uri": "source.md#rule-4e-small-business-bonus"},
+    {"label": "Example Rule 4(f)", "uri": "source.md#rule-4f-implementation"}
+  ],
+  "effective_interval": {
+    "from": "2026-01-01",
+    "to": null
+  },
+  "actors": ["vendor", "procurement_office"],
+  "inputs": [
+    {"name": "bid_amount", "sort": "Int"},
+    {"name": "quality_score", "sort": "Int"},
+    {"name": "small_business", "sort": "Bool"},
+    {"name": "debarred", "sort": "Bool"},
+    {"name": "received_date", "sort": "Date"}
+  ],
+  "outputs": [
+    {"name": "award", "sort": "Bool"}
+  ],
+  "checks": [
+    "debarment_exclusion",
+    "late_submission_exclusion",
+    "bid_cap_respected",
+    "score_bonus_threshold",
+    "score_monotonicity",
+    "implementation_equivalence"
+  ],
+  "axeyum_fragments": ["Bool", "QF_LIA", "finite replay"],
+  "proof_expectation": "Debarment, late-submission, bid-cap, quality monotonicity, and bounded implementation-equivalence checks have source-linked Bool/QF_LIA fixtures. The small-business threshold edge remains finite witness replay."
+}
