@@ -352,8 +352,8 @@ First targets:
   (resource-backed Farkas regressions landed for the bad trace-square moment
   and bad expected-rank rows)
 - [affine-geometry-v0](../../artifacts/examples/math/affine-geometry-v0/)
-  (resource-backed Farkas regressions landed for the bad midpoint-coordinate
-  and bad distance-preservation rows)
+  (resource-backed Farkas regressions landed for the bad midpoint-coordinate,
+  bad collinearity-determinant, and bad distance-preservation rows)
 - [coordinate-geometry-v0](../../artifacts/examples/math/coordinate-geometry-v0/)
   (source-linked Farkas regressions landed for the bad midpoint-coordinate and
   bad squared-distance rows after exact coordinate replay computes the midpoint

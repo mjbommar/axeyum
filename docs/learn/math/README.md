@@ -300,8 +300,9 @@ Companion maps:
   follows exact midpoint, collinearity, distance, affine-map, area-scaling,
   barycentric, QF_LRA/Farkas bad midpoint-coordinate, QF_LRA/Farkas bad
   squared-distance, QF_LRA/Farkas bad affine midpoint-coordinate,
-  QF_LRA/Farkas bad-distance-preservation, QF_LRA/Farkas bad area-scaling, and
-  QF_LRA/Farkas bad-orientation checks.
+  QF_LRA/Farkas bad affine collinearity, QF_LRA/Farkas
+  bad-distance-preservation, QF_LRA/Farkas bad area-scaling, and QF_LRA/Farkas
+  bad-orientation checks.
 - [Incidence Geometry](incidence-geometry-end-to-end.md): follows exact line
   equations, non-parallel line intersection, point-on-line replay, checked
   QF_LRA/Farkas bad intersection-coordinate and bad-incidence rejection, and

@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 634 expected checks.
-- 310 checked proof/evidence rows.
-- 253 replay-only rows.
+- 638 expected checks.
+- 313 checked proof/evidence rows.
+- 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1004,8 +1004,8 @@ Build next:
   distance-table rows tied to exact replay plus the source QF_LRA/Farkas
   artifacts.
 - Keep `affine-geometry-v0`'s promoted bad midpoint-coordinate and
-  bad-distance-preservation rows tied to exact affine replay plus the source
-  QF_LRA/Farkas artifacts.
+  bad collinearity-determinant and bad distance-preservation rows tied to
+  exact affine replay plus the source QF_LRA/Farkas artifacts.
 - Keep `orientation-area-geometry-v0`'s promoted bad affine-area-scaling and
   bad orientation rows tied to exact signed-area replay plus the source
   QF_LRA/Farkas artifacts.

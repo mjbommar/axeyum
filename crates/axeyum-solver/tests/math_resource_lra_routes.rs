@@ -232,6 +232,9 @@ const RIGID_CONFIGURATION_BAD_TRANSLATION_IMAGE_X: &str = include_str!(
 const AFFINE_GEOMETRY_BAD_MIDPOINT_IMAGE_Y: &str = include_str!(
     "../../../artifacts/examples/math/affine-geometry-v0/smt2/bad-midpoint-image-y-farkas-conflict.smt2"
 );
+const AFFINE_GEOMETRY_BAD_COLLINEARITY_DETERMINANT: &str = include_str!(
+    "../../../artifacts/examples/math/affine-geometry-v0/smt2/bad-collinearity-determinant-farkas-conflict.smt2"
+);
 const ORIENTATION_AREA_BAD_AFFINE_AREA_SCALING: &str = include_str!(
     "../../../artifacts/examples/math/orientation-area-geometry-v0/smt2/bad-affine-area-scaling-farkas-conflict.smt2"
 );
@@ -1712,6 +1715,14 @@ fn affine_geometry_bad_midpoint_image_y_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "affine-geometry-v0 bad-midpoint-image-y SMT-LIB artifact",
         AFFINE_GEOMETRY_BAD_MIDPOINT_IMAGE_Y,
+    );
+}
+
+#[test]
+fn affine_geometry_bad_collinearity_determinant_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "affine-geometry-v0 bad-collinearity-determinant SMT-LIB artifact",
+        AFFINE_GEOMETRY_BAD_COLLINEARITY_DETERMINANT,
     );
 }
 

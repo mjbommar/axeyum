@@ -9174,7 +9174,7 @@
           "id": "affine-geometry-v0",
           "status": "validated",
           "path": "artifacts/examples/math/affine-geometry-v0",
-          "notes": "Affine map composition, barycentric interpolation, fixed coordinate transforms, and bad distance-preservation rows."
+          "notes": "Affine map composition, barycentric interpolation, fixed coordinate transforms, and bad collinearity/distance-preservation rows."
         },
         {
           "id": "finite-circle-geometry-v0",
@@ -10029,7 +10029,7 @@
           "id": "affine-geometry-v0",
           "status": "validated",
           "path": "artifacts/examples/math/affine-geometry-v0",
-          "notes": "False distance-preservation claim rejected after squared-distance replay."
+          "notes": "False collinearity-determinant and distance-preservation claims rejected after affine replay."
         },
         {
           "id": "inner-product-spaces-rational-v0",

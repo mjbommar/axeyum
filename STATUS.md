@@ -1043,6 +1043,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   artifact path, regression, and certificate note. This advanced the generated
   dashboard and public query-summary counters by one checked row.
 
+- **Affine-geometry bad collinearity-determinant QF_LRA row landed.**
+  `affine-geometry-v0` now has a third checked Farkas row: exact affine replay
+  sends the collinear triple `(0,0)`, `(1,1)`, `(3,3)` to
+  `(1,-1)`, `(4,3)`, `(10,11)` and computes transformed collinearity
+  determinant `0`, then rejects the malformed claim that the determinant is
+  `1`. The source SMT-LIB artifact isolates that final exact-linear conflict,
+  the shared `math_resource_lra_routes` regression checks `UnsatFarkas`
+  evidence, and the validator pins the map, determinant, source/image triples,
+  artifact path, regression, and certificate note.
+
 - **Complex-algebraic bad product-coordinate QF_LRA row landed.**
   `complex-algebraic-v0` now has a second checked Farkas row: exact real-pair
   replay computes `(1 + 2i) * (3 - i) = 5 + 5i`, then rejects the malformed
@@ -2877,12 +2887,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Affine-geometry QF_LRA/Farkas regression landed.**
   [`affine-geometry-v0`](artifacts/examples/math/affine-geometry-v0/)
-  now binds its bad midpoint-coordinate and distance-preservation rows to
-  Axeyum's evidence path. The source SMT-LIB artifacts encode
-  `image_midpoint_y = 4` versus `5`, and `original_distance_squared = 1`
-  versus `transformed_distance_squared = 5` with a false equality between
-  them; the shared LRA resource regressions require `Evidence::UnsatFarkas`
-  and recheck the rational certificates independently.
+  now binds its bad midpoint-coordinate, collinearity-determinant, and
+  distance-preservation rows to Axeyum's evidence path. The source SMT-LIB
+  artifacts encode `image_midpoint_y = 4` versus `5`,
+  `image_collinearity_determinant = 0` versus `1`, and
+  `original_distance_squared = 1` versus `transformed_distance_squared = 5`
+  with a false equality between them; the shared LRA resource regressions
+  require `Evidence::UnsatFarkas` and recheck the rational certificates
+  independently.
 
 - **Inner-product-spaces QF_LRA/Farkas regression landed.**
   [`inner-product-spaces-rational-v0`](artifacts/examples/math/inner-product-spaces-rational-v0/)
@@ -4255,11 +4267,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the exact finite affine-map bridge after coordinate geometry. The pack
   validates affine point-image replay, midpoint preservation, collinearity
   preservation under an invertible affine map, checked rejection of false
-  midpoint-coordinate and Euclidean distance-preservation claims, and a general
-  affine-geometry Lean-horizon row. The foundational example-pack validator
-  now checks the affine map, determinant, midpoint, collinearity, midpoint
-  coordinate conflict, and distance counterexample rows by exact rational
-  replay.
+  midpoint-coordinate, collinearity-determinant, and Euclidean
+  distance-preservation claims, and a general affine-geometry Lean-horizon
+  row. The foundational example-pack validator now checks the affine map,
+  determinant, midpoint, collinearity, midpoint coordinate conflict,
+  collinearity determinant conflict, and distance counterexample rows by exact
+  rational replay.
 
 - **Foundational resource library-boundary decision landed.** Added
   [`LIBRARY-BOUNDARY-DECISION.md`](docs/foundational-resources/LIBRARY-BOUNDARY-DECISION.md)

@@ -68,6 +68,15 @@ determinant `5`, so the finite witness uses an invertible affine map. Their
 images `(1, -1)`, `(4, 3)`, and `(10, 11)` are collinear because the
 two-dimensional determinant is exactly zero.
 
+The rejected collinearity row keeps the same replay but claims:
+
+```text
+image_collinearity_determinant = 1
+```
+
+Exact replay computes `image_collinearity_determinant = 0`, and the source
+`QF_LRA` artifact checks only that final determinant conflict.
+
 ### False Distance Preservation
 
 Affine maps do not generally preserve Euclidean distance. For `P = (0, 0)` and

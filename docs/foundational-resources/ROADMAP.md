@@ -604,8 +604,9 @@ validates exact midpoint, collinearity, squared-distance coordinate checks, and
 checked rejection of bad midpoint-coordinate and squared-distance claims.
 [`affine-geometry-v0`](../../artifacts/examples/math/affine-geometry-v0/)
 validates exact affine point-image replay, midpoint preservation, collinearity
-preservation, checked rejection of false midpoint-coordinate and distance
-preservation claims, and an affine-geometry Lean-horizon row.
+preservation, checked rejection of false midpoint-coordinate,
+collinearity-determinant, and distance-preservation claims, and an
+affine-geometry Lean-horizon row.
 [`orientation-area-geometry-v0`](../../artifacts/examples/math/orientation-area-geometry-v0/)
 validates exact signed-area/orientation replay, affine area scaling,
 barycentric point-inside replay, checked rejection of false affine-area scaling

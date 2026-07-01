@@ -406,9 +406,12 @@ now also rejects a bad midpoint-coordinate claim: exact replay computes
 midpoint x-coordinate `2`, while the source QF_LRA artifact checks the
 malformed claim `3` with `UnsatFarkas` evidence. For optimization, encode
 linear constraints and a candidate assignment; the checker evaluates each
-constraint exactly. The pack also rejects a bad squared-distance claim: exact
-replay computes `25` for `(1,1)` to `(4,5)`, while the source QF_LRA artifact
-checks the malformed claim `26`.
+constraint exactly. The affine pack also rejects a bad collinearity
+determinant: exact replay computes transformed determinant `0`, while the
+source QF_LRA artifact checks the malformed claim `1`. The coordinate pack
+also rejects a bad squared-distance claim: exact replay computes `25` for
+`(1,1)` to `(4,5)`, while the source QF_LRA artifact checks the malformed
+claim `26`.
 
 For an incidence-geometry check, encode a line as exact rational coefficients:
 

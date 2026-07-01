@@ -47,6 +47,7 @@ Concept rows:
 | `affine-midpoint-preservation` | `sat` | replay-only |
 | `bad-midpoint-image-y-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `affine-collinearity-preservation` | `sat` | replay-only |
+| `bad-collinearity-determinant-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `bad-distance-preservation-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `triangle-orientation-witness` | `sat` | replay-only |
 | `affine-area-scaling` | `sat` | replay-only |
@@ -216,6 +217,10 @@ determinant `5` and sends the points to:
 ```
 
 The validator recomputes the image determinant and checks collinearity.
+
+The bad collinearity row keeps the same image triple. Exact replay computes
+image determinant `0`, while the source QF_LRA artifact checks the malformed
+claim that the image determinant is `1`.
 
 ## Reject False Distance Preservation
 

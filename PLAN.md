@@ -253,8 +253,8 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-120 concept rows, 108 non-template packs, 634 expected checks (335 `sat`,
-228 `unsat`, 71 `not-run`), 310 checked rows, 253 replay-only rows, and 71
+120 concept rows, 108 non-template packs, 638 expected checks (336 `sat`,
+231 `unsat`, 71 `not-run`), 313 checked rows, 254 replay-only rows, and 71
 Lean-horizon rows. The learner coverage audit records all 108 non-template
 packs as focused-lesson linked, with no path-only, index-only, or missing
 learner buckets. The first QF_UF/Alethe
@@ -863,7 +863,7 @@ for its bad affine-area-scaling and bad fixed-orientation claims and numerical
 linear algebra now promoted for its bad residual-bound, solution-box
 upper-bound, and Jacobi error-bound rows, and random matrix finite now promoted for its bad
 trace-square moment and bad expected-rank rows, with affine geometry now promoted for its bad
-midpoint-coordinate and distance-preservation rows and inner-product spaces now
+midpoint-coordinate, collinearity-determinant, and distance-preservation rows and inner-product spaces now
 promoted for its bad negative-norm and projection-orthogonality rows, and
 spectral linear algebra now promoted for its bad eigenpair and bad
 Rayleigh-quotient rows, with matrix

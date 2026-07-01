@@ -7203,7 +7203,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "affine-geometry-v0",
-                "Affine map composition, barycentric interpolation, fixed coordinate transforms, and bad distance-preservation rows.",
+                "Affine map composition, barycentric interpolation, fixed coordinate transforms, and bad collinearity/distance-preservation rows.",
             ),
             (
                 "finite-circle-geometry-v0",
@@ -7957,7 +7957,7 @@ EXAMPLE_FAMILIES = [
             ),
             (
                 "affine-geometry-v0",
-                "False distance-preservation claim rejected after squared-distance replay.",
+                "False collinearity-determinant and distance-preservation claims rejected after affine replay.",
             ),
             (
                 "inner-product-spaces-rational-v0",

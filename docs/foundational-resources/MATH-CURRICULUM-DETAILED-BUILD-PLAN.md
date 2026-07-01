@@ -47,8 +47,8 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 637 expected checks.
-- 312 checked proof/evidence rows.
+- 638 expected checks.
+- 313 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -242,7 +242,7 @@ Exit criteria:
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | LP objective/Farkas, rational convexity/gradient bridge rows with checked bad midpoint and affine-threshold evidence, finite root-finding step and bisection-width replay, finite hyperplane-separation replay, finite KKT replay with checked bad stationarity and complementarity evidence, finite active-set QP face/slack replay with checked bad free-gradient, bad inactive-slack, and bad degenerate-multiplier rows, finite degenerate active-bound replay, finite SDP primal/dual replay with checked bad objective, bad duality-gap, and bad slack-entry rows, finite gradient-descent replay with checked bad decrease, bad step-coordinate, and bad descent-bound rows, finite Armijo line-search replay with checked bad Armijo, bad descent-direction, and bad accepted-candidate rows, finite Wolfe line-search replay with checked bad minimizer, bad sufficient-decrease, and bad curvature rows, finite projected-gradient interval/decrease replay with checked bad projection and bad projected-decrease rows, finite proximal soft-threshold/composite-decrease replay, and finite box-plus-L1 proximal replay landed with checked bad proximal-point, bad composite-decrease, and bad box-proximal-point rows; add only distinct duality, working-set pivots, higher-dimensional SDP, strong-Wolfe/nonconvex line-search, group-lasso, active-set proximal, or stochastic/convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | maintain landed finite dynamics/Euler bridge and keep numerical-honesty rows distinct from promoted exact residual/error certificates; bounded dynamics now checks false transition-step, threshold-step, and invariant-bound arithmetic, finite line-search and finite Wolfe now check descent-direction, accepted-candidate, exact-minimizer, sufficient-decrease, and curvature arithmetic conflicts, and finite proximal-gradient now checks false composite-decrease arithmetic | QF_LRA/Farkas, replay, Lean horizon |
 | `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | maintain landed finite dynamics/Euler and bounded-family/asymptotic-boundary bridges; bounded dynamics now has checked bad transition-step, bad threshold-step, and bad invariant-bound rows; add only distinct transition, reachability, invariant, stochastic, finite-error, or theorem-boundary pressure | QF_LRA/Farkas, replay, Lean horizon |
-| `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, circle, inversion, and cyclic rational geometry | maintain landed coordinate/oriented replay and finite circle/inversion/cyclic replay bridge rows; add only distinct nontrivial affine-coordinate, circle-line correspondence, higher-degree polynomial-geometry, or theorem-reconstruction pressure beyond the current midpoint-coordinate, area-scaling, circle-line, square angle-dot, and Ptolemy rows | QF_LRA/Farkas, finite replay |
+| `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, circle, inversion, and cyclic rational geometry | maintain landed coordinate/oriented replay and finite circle/inversion/cyclic replay bridge rows; add only distinct nontrivial affine-coordinate, circle-line correspondence, higher-degree polynomial-geometry, or theorem-reconstruction pressure beyond the current midpoint-coordinate, affine collinearity-determinant, area-scaling, circle-line, square angle-dot, and Ptolemy rows | QF_LRA/Farkas, finite replay |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now has checked bad `l1` norm, bad operator-bound, and bad Chebyshev-prefix rows, inner-product now has checked bad negative-norm and projection-orthogonality rows, and finite-Chebyshev now has checked duplicate-node, bad-interpolation, and bad-alternation rows; add only distinct norm, projection, recurrence, alternation variants, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
 
 ## Curriculum Node Build Ledger
@@ -1008,9 +1008,10 @@ Pick one row per commit unless the change is purely navigational.
      midpoint-coordinate row. Exact affine replay computes midpoint
      `M = (2,1)` for the segment `(0,0)` to `(4,2)` and `T(M) = (6,4)`, while
      the malformed source SMT-LIB artifact claims image y-coordinate `5`; the
-     shared QF_LRA/Farkas route now checks both midpoint-coordinate and
-     distance-preservation conflicts without claiming general affine-space,
-     projective, differential, or synthetic geometry theorems.
+     shared QF_LRA/Farkas route now checks midpoint-coordinate,
+     collinearity-determinant, and distance-preservation conflicts without
+     claiming general affine-space, projective, differential, or synthetic
+     geometry theorems.
 114. Landed: extend `incidence-geometry-v0` with a checked bad
      intersection-coordinate row. Exact line-intersection replay checks
      `(2,1)` for `x + y - 3 = 0` and `x - y - 1 = 0`, while the malformed
@@ -1422,6 +1423,14 @@ Pick one row per commit unless the change is purely navigational.
      `finite_group_actions_bad_compatibility_emits_checked_alethe`, leaving
      orbit-stabilizer, Burnside/Cauchy-Frobenius, quotient actions, and
      representation theory in the Lean-horizon lane.
+167. Landed: extend `affine-geometry-v0` with a checked
+     `bad-collinearity-determinant-rejected` row. Exact affine replay sends
+     the collinear triple `(0,0)`, `(1,1)`, `(3,3)` to
+     `(1,-1)`, `(4,3)`, `(10,11)` and computes image determinant `0`; the
+     source QF_LRA artifact rejects the malformed determinant `1` claim via
+     `affine_geometry_bad_collinearity_determinant_artifact_emits_checked_farkas`,
+     adding a distinct incidence/collinearity proof shape without claiming
+     general affine-geometry theorems.
 
 ## Validation Checklist
 

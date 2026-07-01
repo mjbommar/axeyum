@@ -32,6 +32,15 @@ The validator checks the matrix determinant, recomputes the three listed
 images, and verifies that both the source triple and image triple have zero
 two-dimensional collinearity determinant.
 
+## `bad-collinearity-determinant-rejected`
+
+Expected result: `unsat`.
+
+The validator recomputes the image triple determinant as `0`. The malformed
+row claims transformed determinant `1`, and the final determinant conflict is
+also checked by a linked `QF_LRA` artifact and a resource-backed
+`UnsatFarkas` regression.
+
 ## `bad-distance-preservation-rejected`
 
 Expected result: `unsat`.

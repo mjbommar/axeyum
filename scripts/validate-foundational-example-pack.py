@@ -16520,6 +16520,75 @@ def validate_affine_geometry(expected: dict[str, Any]) -> None:
     if collinearity_determinant(images[0], images[1], images[2]) != 0:
         fail("affine-collinearity-preservation image points are not collinear")
 
+    bad_collinear = checks["bad-collinearity-determinant-rejected"]
+    if bad_collinear["expected_result"] != "unsat" or bad_collinear.get("proof_status") != "checked":
+        fail("bad-collinearity-determinant-rejected must be a checked unsat row")
+    data = bad_collinear.get("data", {})
+    matrix = require_matrix2("bad affine collinearity matrix", data.get("matrix"))
+    translation = require_point2("bad affine collinearity translation", data.get("translation"))
+    determinant = require_fraction("bad affine collinearity determinant", data.get("determinant"))
+    if matrix_determinant(matrix) != determinant:
+        fail("bad-collinearity-determinant-rejected determinant does not match matrix")
+    if determinant == 0:
+        fail("bad-collinearity-determinant-rejected should use an invertible affine map")
+    raw_points = data.get("points")
+    raw_images = data.get("images")
+    if not isinstance(raw_points, list) or not isinstance(raw_images, list):
+        fail("bad-collinearity-determinant-rejected points and images must be lists")
+    points = [
+        require_point2(f"bad affine collinearity points[{index}]", point)
+        for index, point in enumerate(raw_points)
+    ]
+    images = [
+        require_point2(f"bad affine collinearity images[{index}]", image)
+        for index, image in enumerate(raw_images)
+    ]
+    if len(points) != 3 or len(images) != 3:
+        fail("bad-collinearity-determinant-rejected requires exactly three source points and three images")
+    if [affine_image(matrix, translation, point) for point in points] != images:
+        fail("bad-collinearity-determinant-rejected images do not match A*p + b")
+    source_det = require_fraction(
+        "bad affine source_collinearity_determinant",
+        data.get("source_collinearity_determinant"),
+    )
+    image_det = require_fraction(
+        "bad affine image_collinearity_determinant",
+        data.get("image_collinearity_determinant"),
+    )
+    claimed_image_det = require_fraction(
+        "bad affine claimed_image_collinearity_determinant",
+        data.get("claimed_image_collinearity_determinant"),
+    )
+    if collinearity_determinant(points[0], points[1], points[2]) != source_det:
+        fail("bad-collinearity-determinant-rejected source determinant is incorrect")
+    if collinearity_determinant(images[0], images[1], images[2]) != image_det:
+        fail("bad-collinearity-determinant-rejected image determinant is incorrect")
+    if source_det != 0 or image_det != 0:
+        fail("bad-collinearity-determinant-rejected should replay collinear source and image triples")
+    if image_det == claimed_image_det:
+        fail("bad-collinearity-determinant-rejected must document a false image determinant")
+    farkas_claim = data.get("farkas_collinearity_claim")
+    require_string("bad affine collinearity farkas_collinearity_claim", farkas_claim)
+    if farkas_claim != "image_collinearity_determinant = 1":
+        fail("bad-collinearity-determinant-rejected must document the Farkas determinant claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad affine collinearity smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/affine-geometry-v0/smt2/"
+        "bad-collinearity-determinant-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-collinearity-determinant-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad affine collinearity smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad affine collinearity farkas_regression", regression)
+    if "affine_geometry_bad_collinearity_determinant_artifact_emits_checked_farkas" not in regression:
+        fail("bad-collinearity-determinant-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad affine collinearity certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("bad-collinearity-determinant-rejected certificate must document Farkas evidence")
+
     bad_distance = checks["bad-distance-preservation-rejected"]
     if bad_distance["expected_result"] != "unsat" or bad_distance.get("proof_status") != "checked":
         fail("bad-distance-preservation-rejected must be a checked unsat row")
