@@ -4987,6 +4987,32 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **Session 2026-07-01 (cont.) — Strings keystone (P2.7) INITIATED: ADR + Phase-A slice A.1a landed.**
+  Strings are the largest decide-rate gap by count (~117) and were unrepresentable
+  (no string/sequence sort in the IR — only the length-≤16 bounded BV encoder).
+  Opened the keystone with process discipline:
+  - **ADR-0051** (the required decision before touching the foundational `Sort`
+    enum): first-class `Sort::Seq(ArraySortKey)` — **Copy-preserving** (a `Box<Sort>`
+    would have broken `Sort: Copy` at ~138 use sites; instead it carries the same
+    flat element key arrays use), with `String = Seq(BitVec(18))` (`2^18 > 0x2FFFF`;
+    the unsigned BV order is the Unicode code-point order). Strings become ordinary
+    terms; the bounded encoder stays a sound pre-check; the `axeyum-strings` crate is
+    deferred to Phase B.
+  - **Slice A.1a landed** (`c88ebcf8`, `91672c8f`, `928951a8`): the `Sort::Seq`
+    variant + `Sort::string()` + **39 decline-cleanly `Seq` arms across 16 crate
+    files** (sub-agent sweep, diff reviewed — each arm mirrors its `Int`/`Real`/
+    `Array` sibling exactly; no existing logic changed; **adds no capability**, just
+    makes the sort representable). Verified green: `cargo build --workspace
+    --all-features --all-targets`, `axeyum-ir` tests, `axeyum-solver` lib 627/627,
+    workspace `clippy -D warnings`; a hardening test confirms `String` declares /
+    round-trips / displays as `(Seq (_ BitVec 18))`.
+  - **Next:** slice **A.1b** — the first sequence *capability*: `Op` variants
+    (`seq.empty`/`seq.unit`/`str.++`/`str.len`) + arena builders + a `Value::Seq`
+    (routes via `FullValue`) + ground-evaluator support; then A.1c SMT-LIB
+    round-trip, then A.2 (`len`↔LIA Nelson–Oppen, closing the `str.len`-unsat gap).
+    NB the `Op` enum has NO dedicated string ops today, so A.1b needs an `Op`-enum
+    sweep like A.1a's `Sort` sweep.
+
 - **Session 2026-07-01 (cont.) — FM→simplex keystone (P1.9) BUILT + INTEGRATED + validated.**
   The measured bottleneck behind the NRA/LRA frontier is Fourier–Motzkin's
   doubly-exponential blowup (both `check_with_lra` entry points are FM, ADR-0015).
