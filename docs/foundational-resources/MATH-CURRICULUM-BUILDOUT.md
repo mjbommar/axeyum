@@ -44,6 +44,8 @@ For matrix computation discovery by bridge concept and proof route, use the
 [Matrix Computation Consumer Queries](MATRIX-COMPUTATION-QUERIES.md).
 For probability/statistics discovery by bridge concept and proof route, use the
 [Probability And Statistics Resource Consumer Queries](PROBABILITY-STATISTICS-QUERIES.md).
+For finite measure discovery by bridge concept and proof route, use the
+[Measure Theory Resource Consumer Queries](MEASURE-THEORY-QUERIES.md).
 For topology/homology discovery by bridge concept and proof route, use the
 [Topology And Homology Resource Consumer Queries](TOPOLOGY-HOMOLOGY-QUERIES.md).
 For finite algebra discovery by bridge concept and proof route, use the
@@ -2253,6 +2255,17 @@ Farkas queries, making exact finite-table rows discoverable while keeping
 continuous probability, asymptotic statistics, stochastic-process limits,
 simulation quality, and floating-point inference claims in proof-horizon or
 numerical-honesty lanes.
+The measure-theory consumer layer now also has
+[`MEASURE-THEORY-QUERIES.md`](MEASURE-THEORY-QUERIES.md). The guide and
+resource smoke expose finite measure additivity, complement, monotonicity,
+subadditivity, product measure, marginals, integration, pushforward,
+conditional expectation, martingale/stopped expectation, stochastic-kernel,
+hitting-time, and concentration rows through concept-scoped and pack-scoped
+Farkas queries, making finite measure resources discoverable while keeping
+sigma-algebra construction, countable additivity, Lebesgue measure,
+product-measure existence, convergence theorems, almost-everywhere reasoning,
+stochastic-process limits, simulation quality, and floating-point claims in
+the horizon lanes.
 The topology/homology consumer layer now also has
 [`TOPOLOGY-HOMOLOGY-QUERIES.md`](TOPOLOGY-HOMOLOGY-QUERIES.md). The guide and
 resource smoke expose metric, bounded epsilon-delta, compactness,

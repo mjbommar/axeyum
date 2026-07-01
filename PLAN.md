@@ -165,6 +165,11 @@ it records exact concept-plus-route queries for finite probability tables,
 finite measure, product/integration, pushforwards, conditional expectation,
 stochastic kernels, tail counts, exact tests, and finite random-matrix
 moments.
+The measure-theory consumer query guide is
+[`docs/foundational-resources/MEASURE-THEORY-QUERIES.md`](docs/foundational-resources/MEASURE-THEORY-QUERIES.md);
+it records exact concept-plus-route queries for finite measure additivity,
+product/integration, pushforwards, conditional expectation, martingales,
+kernels, hitting times, and concentration resources.
 The topology/homology consumer query guide is
 [`docs/foundational-resources/TOPOLOGY-HOMOLOGY-QUERIES.md`](docs/foundational-resources/TOPOLOGY-HOMOLOGY-QUERIES.md);
 it records exact concept-plus-route queries for metric balls, finite topology,
@@ -591,6 +596,16 @@ expectation, stochastic kernels, tail counts, and random-matrix moments, so
 downstream consumers can discover exact finite-table resources without
 promoting continuous probability, asymptotic statistics, stochastic-process
 limit, simulation-quality, or floating-point inference claims.
+The measure-theory lane now has
+[`MEASURE-THEORY-QUERIES.md`](docs/foundational-resources/MEASURE-THEORY-QUERIES.md),
+and the foundational smoke checks finite measure additivity, complement,
+monotonicity, subadditivity, product measure, marginals, integration,
+pushforward, conditional expectation, martingale/stopped expectation,
+stochastic-kernel, hitting-time, and concentration rows through Farkas queries,
+so downstream consumers can discover finite measure resources without
+promoting countable additivity, Lebesgue construction, convergence theorems,
+almost-everywhere reasoning, stochastic-process limits, simulation quality, or
+floating-point claims.
 The topology/homology lane now has
 [`TOPOLOGY-HOMOLOGY-QUERIES.md`](docs/foundational-resources/TOPOLOGY-HOMOLOGY-QUERIES.md),
 and the foundational smoke checks concept-scoped Boolean, Farkas, Alethe,

@@ -69,6 +69,10 @@ schemas, examples, and validation workflows.
   copyable concept-plus-route queries for finite probability tables, measure
   additivity, product/integration, pushforwards, stochastic kernels, tail
   counts, exact tests, and finite random-matrix moments.
+- [MEASURE-THEORY-QUERIES.md](MEASURE-THEORY-QUERIES.md) gives copyable
+  concept-plus-route queries for finite measure additivity, product/integration,
+  pushforwards, conditional expectation, martingales, kernels, hitting times,
+  and concentration rows.
 - [TOPOLOGY-HOMOLOGY-QUERIES.md](TOPOLOGY-HOMOLOGY-QUERIES.md) gives copyable
   concept-plus-route queries for metric balls, finite topology, compactness,
   connectedness, quotient/specialization rows, finite homology, cohomology,

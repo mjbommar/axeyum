@@ -23,6 +23,8 @@ For concept-plus-route matrix discovery, see
 [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md).
 For concept-plus-route probability/statistics discovery, see
 [PROBABILITY-STATISTICS-QUERIES.md](PROBABILITY-STATISTICS-QUERIES.md).
+For concept-plus-route finite measure discovery, see
+[MEASURE-THEORY-QUERIES.md](MEASURE-THEORY-QUERIES.md).
 For concept-plus-route topology and homology discovery, see
 [TOPOLOGY-HOMOLOGY-QUERIES.md](TOPOLOGY-HOMOLOGY-QUERIES.md).
 For concept-plus-route finite algebra discovery, see
