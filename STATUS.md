@@ -5042,12 +5042,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
     translate gate *before* `apply`, so no panic). Reviewed for soundness; verified
     green (workspace `--all-targets`, axeyum-ir tests incl. 3 seq tests, clippy
     `--all-features -D`).
-  - **Next:** slice **A.1c** — SMT-LIB read/write round-trip for the `(Seq E)`/
-    `String` sort + the core ops (confined to `axeyum-smtlib` — no workspace sweep,
-    so smaller than A.1a/A.1b); then **A.2** (`len`↔LIA Nelson–Oppen, closing the
-    `str.len`-unsat gap — the Phase-A exit criterion). *(Pre-existing unrelated
-    clippy `needless_raw_string_hashes` at `smtlib.rs:2781` under `--all-targets`,
-    flagged for hygiene.)*
+  - **Slice A.1c — write half landed; parse half BLOCKED on a representation fork**
+    (`3d0ad49c`, docs `af41ab48`). Landed safely: first-class ops now write as
+    `seq.len`/`seq.++`/`seq.unit`/`seq.empty` (safe — `Op::Seq*` are produced only by
+    the arena builders, never a bounded encoder) + 2 tests incl. a no-regression
+    guard; 197/197 smtlib tests; the pre-existing `smtlib.rs:2781` clippy nit fixed.
+    **⚠ Architectural finding:** the committed **bounded finite-sequences encoder
+    (ADR-0029)** already owns `(Seq E)` (→ packed BV) + every `seq.*` name with
+    soundness tests — so the first-class `Sort::Seq` (A.1a) **collides** with it on
+    syntax. Re-routing `parse_sort` would regress ADR-0029; so `Sort::Seq` sits
+    *above* the front-end for now (reachable via `arena.seq_*`, not via parsing).
+  - **Next:** **A.2** — now owns two coupled deliverables: (1) `len`↔LIA
+    Nelson–Oppen (the Phase-A exit criterion, `str.len`-unsat gap), and (2) a
+    **dedicated ADR reconciling `Sort::Seq` ↔ ADR-0029** (leading option: the bounded
+    encoder becomes a lowering *pass* over `Sort::Seq` — unbounded ⇒ first-class,
+    provably-bounded ⇒ packed-BV pre-check). Do NOT re-route `parse_sort` until that
+    ADR lands.
 
 - **Session 2026-07-01 (cont.) — FM→simplex keystone (P1.9) BUILT + INTEGRATED + validated.**
   The measured bottleneck behind the NRA/LRA frontier is Fourier–Motzkin's
