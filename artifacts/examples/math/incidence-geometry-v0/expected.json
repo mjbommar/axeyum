@@ -51,6 +51,24 @@
       "notes": "The validator checks the determinant is nonzero and evaluates both line equations at the listed point."
     },
     {
+      "id": "bad-intersection-x-rejected",
+      "claim": "The listed non-parallel lines intersect at a point with x-coordinate 3.",
+      "expected_result": "unsat",
+      "validation": "exact_bad_line_intersection_refutation",
+      "proof_status": "checked",
+      "data": {
+        "line_a": {"a": "1", "b": "1", "c": "-3"},
+        "line_b": {"a": "1", "b": "-1", "c": "-1"},
+        "determinant": "-2",
+        "computed_intersection": ["2", "1"],
+        "claimed_intersection_x": "3",
+        "smt2_artifact": "artifacts/examples/math/incidence-geometry-v0/smt2/bad-intersection-x-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes incidence_geometry_bad_intersection_x_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact line-intersection replay checks both line equations at (2,1), while the malformed row claims x-coordinate 3; the source QF_LRA artifact isolates the final coordinate equality conflict for Farkas checking."
+    },
+    {
       "id": "point-on-line-witness",
       "claim": "The listed point lies on the listed line.",
       "expected_result": "sat",

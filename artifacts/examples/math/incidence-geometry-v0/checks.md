@@ -14,6 +14,21 @@ Expected result: `sat`.
 The validator checks that `x + y - 3 = 0` and `x - y - 1 = 0` are non-parallel
 and intersect at `(2,1)`.
 
+## `bad-intersection-x-rejected`
+
+Expected result: `unsat`.
+
+For the same two non-parallel lines, exact replay checks that `(2,1)` lies on
+both lines. The malformed row claims the intersection x-coordinate is `3`.
+The source SMT-LIB artifact isolates the final exact-linear conflict:
+
+```text
+intersection_x = 2
+intersection_x = 3
+```
+
+The QF_LRA route must emit checked `UnsatFarkas` evidence.
+
 ## `point-on-line-witness`
 
 Expected result: `sat`.

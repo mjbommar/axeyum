@@ -374,8 +374,9 @@ Build sequence:
     certificates and require independent checker rejection.
 26. `incidence-geometry-v0` now lands as the next geometry pack: exact
     line-equation replay, non-parallel line intersection, point-on-line replay,
-    checked QF_LRA/Farkas bad-incidence rejection, a focused learner page, and
-    a bridge-row update under `bridge_coordinate_orientation_geometry`.
+    checked QF_LRA/Farkas bad intersection-coordinate and bad-incidence
+    rejection, a focused learner page, and a bridge-row update under
+    `bridge_coordinate_orientation_geometry`.
 27. `rigid-configuration-geometry-v0` now lands as the next geometry pack:
     exact triangle distance-table replay, translation isometry replay,
     congruent-triangle distance replay, checked QF_LRA/Farkas bad-distance

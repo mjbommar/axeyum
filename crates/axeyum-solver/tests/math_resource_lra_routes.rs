@@ -118,6 +118,9 @@ const FINITE_CYCLIC_GEOMETRY_BAD_PTOLEMY: &str = include_str!(
 const INCIDENCE_GEOMETRY_BAD_POINT_ON_LINE: &str = include_str!(
     "../../../artifacts/examples/math/incidence-geometry-v0/smt2/bad-incidence-farkas-conflict.smt2"
 );
+const INCIDENCE_GEOMETRY_BAD_INTERSECTION_X: &str = include_str!(
+    "../../../artifacts/examples/math/incidence-geometry-v0/smt2/bad-intersection-x-farkas-conflict.smt2"
+);
 const RIGID_CONFIGURATION_BAD_DISTANCE_TABLE: &str = include_str!(
     "../../../artifacts/examples/math/rigid-configuration-geometry-v0/smt2/bad-rigid-distance-table-farkas-conflict.smt2"
 );
@@ -695,6 +698,14 @@ fn incidence_geometry_bad_point_on_line_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "incidence-geometry-v0 bad-incidence SMT-LIB artifact",
         INCIDENCE_GEOMETRY_BAD_POINT_ON_LINE,
+    );
+}
+
+#[test]
+fn incidence_geometry_bad_intersection_x_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "incidence-geometry-v0 bad-intersection-x SMT-LIB artifact",
+        INCIDENCE_GEOMETRY_BAD_INTERSECTION_X,
     );
 }
 

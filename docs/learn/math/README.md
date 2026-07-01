@@ -277,8 +277,8 @@ Companion maps:
   QF_LRA/Farkas bad-orientation checks.
 - [Incidence Geometry](incidence-geometry-end-to-end.md): follows exact line
   equations, non-parallel line intersection, point-on-line replay, checked
-  QF_LRA/Farkas bad-incidence rejection, and the projective/synthetic geometry
-  Lean horizon.
+  QF_LRA/Farkas bad intersection-coordinate and bad-incidence rejection, and
+  the projective/synthetic geometry Lean horizon.
 - [Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md):
   follows triangle distance-table replay, translation isometry replay,
   congruent-triangle distance replay, checked QF_LRA/Farkas bad-distance-table

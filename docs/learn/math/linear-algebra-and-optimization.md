@@ -130,8 +130,9 @@ Chebyshev-system slice checks Vandermonde unisolvence, interpolation replay,
 alternating residual signs, duplicate-node rejection, and a checked bad
 interpolation sample plus a checked bad alternation-magnitude claim over exact
 rational sample grids. The incidence-geometry slice checks line equations and
-non-parallel line intersections as tiny exact linear systems, then rejects a
-bad point-on-line row through QF_LRA/Farkas evidence. The
+non-parallel line intersections as tiny exact linear systems, then rejects bad
+intersection-coordinate and point-on-line rows through QF_LRA/Farkas evidence.
+The
 rigid-configuration slice treats pairwise squared-distance tables as finite
 matrix-like data, checks translation and congruent-triangle witnesses, and
 rejects a bad distance-table row through QF_LRA/Farkas evidence.

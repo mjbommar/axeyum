@@ -14393,6 +14393,49 @@ def validate_incidence_geometry(expected: dict[str, Any]) -> None:
     if line_value(line_b, point) != 0:
         fail("line-intersection-witness point is not on line_b")
 
+    bad_intersection = checks["bad-intersection-x-rejected"]
+    if bad_intersection["expected_result"] != "unsat" or bad_intersection.get("proof_status") != "checked":
+        fail("bad-intersection-x-rejected must be a checked unsat row")
+    data = bad_intersection.get("data", {})
+    line_a = require_line2("bad incidence intersection line_a", data.get("line_a"))
+    line_b = require_line2("bad incidence intersection line_b", data.get("line_b"))
+    determinant = require_fraction("bad incidence intersection determinant", data.get("determinant"))
+    computed_intersection = require_point2(
+        "bad incidence computed_intersection",
+        data.get("computed_intersection"),
+    )
+    claimed_intersection_x = require_fraction(
+        "bad incidence claimed_intersection_x",
+        data.get("claimed_intersection_x"),
+    )
+    if line_determinant(line_a, line_b) != determinant:
+        fail("bad-intersection-x-rejected determinant is incorrect")
+    if determinant == 0:
+        fail("bad-intersection-x-rejected must use non-parallel lines")
+    if line_value(line_a, computed_intersection) != 0:
+        fail("bad-intersection-x-rejected intersection is not on line_a")
+    if line_value(line_b, computed_intersection) != 0:
+        fail("bad-intersection-x-rejected intersection is not on line_b")
+    if computed_intersection[0] == claimed_intersection_x:
+        fail("bad-intersection-x-rejected must document a false x-coordinate claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad incidence intersection smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/incidence-geometry-v0/smt2/"
+        "bad-intersection-x-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-intersection-x-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad incidence intersection smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad incidence intersection farkas_regression", regression)
+    if "incidence_geometry_bad_intersection_x_artifact_emits_checked_farkas" not in regression:
+        fail("bad-intersection-x-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad incidence intersection certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("bad-intersection-x-rejected certificate must document Farkas evidence")
+
     point_on_line = checks["point-on-line-witness"]
     if point_on_line["expected_result"] != "sat":
         fail("point-on-line-witness must expect sat")

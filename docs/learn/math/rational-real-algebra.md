@@ -400,10 +400,12 @@ For an incidence-geometry check, encode a line as exact rational coefficients:
 2x - y + 1 = 0
 ```
 
-The incidence checker evaluates `a*x + b*y + c` at each listed point. The bad
-row computes line value `3` for `(2,2)` but the malformed point-on-line claim
-requires `0`; the source QF_LRA artifact checks that final conflict with
-`UnsatFarkas` evidence.
+The incidence checker evaluates `a*x + b*y + c` at each listed point and
+checks non-parallel intersections by exact substitution. The bad rows compute
+intersection x-coordinate `2` while a malformed row claims `3`, and line value
+`3` for `(2,2)` while the malformed point-on-line claim requires `0`; the
+source QF_LRA artifacts check those final conflicts with `UnsatFarkas`
+evidence.
 
 For a finite circle-geometry check, encode one rational circle point, its
 tangent, and one horizontal circle-line intersection:

@@ -309,6 +309,10 @@ First targets:
 - [coordinate-geometry-v0](../../artifacts/examples/math/coordinate-geometry-v0/)
   (source-linked Farkas regression landed for the bad squared-distance row
   after exact coordinate replay computes the squared distance)
+- [incidence-geometry-v0](../../artifacts/examples/math/incidence-geometry-v0/)
+  (source-linked Farkas regressions landed for the bad intersection-coordinate
+  and bad point-on-line rows after exact line replay computes the intersection
+  and line value)
 - [finite-circle-geometry-v0](../../artifacts/examples/math/finite-circle-geometry-v0/)
   (source-linked Farkas regressions landed for the bad radius and bad
   line-intersection rows after exact coordinate replay computes the squared
@@ -379,6 +383,10 @@ Secondary targets:
   Coordinate geometry now contributes the geometry version of the
   replay-then-Farkas boundary: exact replay computes the squared distance, then
   Farkas checks the final bad-distance equality conflict.
+  Incidence geometry now contributes the line-system version of that boundary:
+  exact replay computes the non-parallel line intersection and the point-line
+  value, then Farkas checks the final bad-coordinate and bad-incidence equality
+  conflicts.
   Affine geometry now contributes the affine-map version of that boundary:
   exact replay computes the midpoint image and transformed squared distance,
   then Farkas checks the final bad-coordinate and bad-distance equality
@@ -427,6 +435,7 @@ cargo test -p axeyum-solver --test evidence lra_unsat_evidence_carries_a_recheck
 cargo test -p axeyum-solver --test evidence tampered_farkas_evidence_fails_its_own_check
 cargo test -p axeyum-solver --test math_resource_lra_routes qf_lra_resource_route_rejects_tampered_farkas_certificate
 cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes incidence_geometry_bad_intersection_x_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas

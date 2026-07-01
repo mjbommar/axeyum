@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Incidence-geometry bad intersection-coordinate QF_LRA row landed.**
+  `incidence-geometry-v0` now has a second checked Farkas row: exact
+  line-intersection replay checks `(2,1)` for `x + y - 3 = 0` and
+  `x - y - 1 = 0`, then rejects the malformed claim that the intersection
+  x-coordinate is `3`. The new source SMT-LIB artifact isolates the final
+  exact-linear coordinate conflict, the shared `math_resource_lra_routes`
+  regression parses it and checks `UnsatFarkas` evidence, and the validator
+  pins both lines, determinant, computed intersection, claimed coordinate,
+  artifact path, regression, and certificate note. Generated dashboards and
+  the public query summary now report 111 concept rows, 108 non-template
+  packs, 577 expected checks, 259 checked rows, 247 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Affine-geometry bad midpoint-coordinate QF_LRA row landed.**
   `affine-geometry-v0` now has a second checked Farkas row: exact affine replay
   computes midpoint `M = (2,1)` for the segment `(0,0)` to `(4,2)` and
@@ -213,10 +226,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   exact-linear coordinate conflict, the shared `math_resource_lra_routes`
   regression parses it and checks `UnsatFarkas` evidence, and the validator
   pins the map, segment, midpoint, replayed image, claimed coordinate,
-  artifact path, regression, and certificate note. Generated dashboards and
-  the public query summary now report 111 concept rows, 108 non-template
-  packs, 576 expected checks, 258 checked rows, 247 replay-only rows, and 71
-  Lean-horizon rows.
+  artifact path, regression, and certificate note. This advanced the generated
+  dashboard and public query-summary counters by one checked row.
 
 - **Complex-algebraic bad product-coordinate QF_LRA row landed.**
   `complex-algebraic-v0` now has a second checked Farkas row: exact real-pair
@@ -13090,7 +13101,8 @@ plan is built and committed on the current branch:
   [`incidence-geometry-end-to-end.md`](docs/learn/math/incidence-geometry-end-to-end.md)
   as the next exact geometry bridge. The pack validates line-equation replay,
   non-parallel line intersection, point-on-line replay, a source-linked checked
-  QF_LRA/Farkas rejection for a false incidence claim, and a
+  QF_LRA/Farkas rejection for false intersection-coordinate and incidence
+  claims, and a
   projective/synthetic geometry Lean-horizon row. It establishes the
   line-incidence bridge that later finite-geometry resources build on.
 

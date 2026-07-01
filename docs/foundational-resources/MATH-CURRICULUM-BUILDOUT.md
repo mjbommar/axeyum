@@ -769,8 +769,8 @@ collinearity, squared-distance coordinate checks, and checked QF_LRA/Farkas
 rejection of a bad squared-distance claim.
 `artifacts/examples/math/incidence-geometry-v0/` now validates exact
 line-equation replay, non-parallel line intersection, point-on-line replay,
-checked QF_LRA/Farkas rejection of a false incidence claim, and a
-projective/synthetic geometry Lean-horizon row.
+checked QF_LRA/Farkas rejection of false intersection-coordinate and incidence
+claims, and a projective/synthetic geometry Lean-horizon row.
 `artifacts/examples/math/rigid-configuration-geometry-v0/` now validates exact
 triangle distance-table replay, translation isometry replay, congruent-triangle
 distance replay, checked QF_LRA/Farkas rejection of a false distance-table
@@ -1521,8 +1521,8 @@ and alternation-sign bridge toward Chebyshev-system, Haar-space, minimax, and
 approximation-theory horizons.
 `incidence-geometry-v0` now adds the exact finite incidence bridge for
 geometry: line-equation replay, non-parallel line intersection, point-on-line
-replay, checked QF_LRA/Farkas rejection of false incidence, and a
-projective/synthetic geometry Lean-horizon row.
+replay, checked QF_LRA/Farkas rejection of false intersection-coordinate and
+incidence claims, and a projective/synthetic geometry Lean-horizon row.
 `rigid-configuration-geometry-v0` now adds the exact finite rigidity bridge for
 geometry: triangle distance-table replay, translation isometry replay,
 congruent-triangle distance replay, checked QF_LRA/Farkas rejection of false
@@ -1699,7 +1699,7 @@ affine-map, signed-area, area-scaling, barycentric, point-on-circle,
 tangent-line/radius perpendicularity, chord-midpoint perpendicularity,
 circle-line intersection replay, unit-circle inversion replay, inverse-distance products, inversion
 collinearity, cyclic quadrilateral replay, diagonal-intersection replay,
-opposite-angle dot-product replay, rational Ptolemy replay, checked QF_LRA/Farkas bad squared-distance, checked QF_LRA/Farkas bad incidence,
+opposite-angle dot-product replay, rational Ptolemy replay, checked QF_LRA/Farkas bad squared-distance, checked QF_LRA/Farkas bad intersection-coordinate and bad incidence,
 checked QF_LRA/Farkas bad distance-table data, checked QF_LRA/Farkas
 bad affine midpoint-coordinate and bad-distance-preservation, checked QF_LRA/Farkas bad area-scaling,
 checked QF_LRA/Farkas bad-orientation, checked QF_LRA/Farkas bad-radius and bad line-intersection, checked QF_LRA/Farkas bad inverse-coordinate,
@@ -1997,8 +1997,9 @@ for solver reuse.
 `orientation-area-geometry-v0` now routes its bad affine-area-scaling and bad
 fixed-orientation rows through the same checked Farkas evidence path after
 exact signed-area replay.
-`incidence-geometry-v0` now routes its bad point-on-line row through the same
-checked Farkas evidence path after exact line-value replay.
+`incidence-geometry-v0` now routes its bad intersection-coordinate and bad
+point-on-line rows through the same checked Farkas evidence path after exact
+line-intersection and line-value replay.
 `rigid-configuration-geometry-v0` now routes its bad distance-table row through
 the same checked Farkas evidence path after exact squared-distance replay.
 `numerical-linear-algebra-v0` now routes its bad residual-bound row through the

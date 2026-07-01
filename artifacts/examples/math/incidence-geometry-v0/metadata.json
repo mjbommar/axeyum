@@ -33,9 +33,10 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/incidence-geometry-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "incidence geometry bad point-on-line QF_LRA/Farkas regression seed",
-    "pressure": "Malformed line-incidence row where exact replay computes line_value = 3 for (2,2) on 2x - y + 1 = 0, but the row claims line_value = 0.",
+    "target": "incidence geometry bad intersection-coordinate and bad point-on-line QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed line-incidence rows where exact replay computes the intersection as (2,1) but a row claims x-coordinate 3, and computes line_value = 3 for (2,2) on 2x - y + 1 = 0 but a row claims line_value = 0.",
     "evidence": [
+      "bad-intersection-x-rejected",
       "bad-incidence-rejected"
     ],
     "next_step": "Promote additional incidence rows only when they add distinct exact-linear solver pressure; keep projective, synthetic, and configuration theorems in the Lean-horizon lane."
@@ -50,12 +51,14 @@
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "docs/learn/math/incidence-geometry-end-to-end.md",
+    "artifacts/examples/math/incidence-geometry-v0/smt2/bad-intersection-x-farkas-conflict.smt2",
     "artifacts/examples/math/incidence-geometry-v0/smt2/bad-incidence-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "line-equation-through-two-points",
     "line-intersection-witness",
+    "bad-intersection-x-rejected",
     "point-on-line-witness",
     "bad-incidence-rejected",
     "general-incidence-geometry-lean-horizon"
@@ -63,6 +66,7 @@
   "graduation_criteria": [
     "Encode fixed line-equation and point-incidence checks as deterministic QF_LRA formulas.",
     "Replay SAT witnesses through exact rational line evaluation.",
+    "Route false line-intersection coordinate claims through checked QF_LRA/Farkas evidence after exact replay computes the intersection.",
     "Route false point-on-line claims through checked QF_LRA/Farkas evidence after exact replay computes the line value.",
     "Keep projective, synthetic, and configuration theorems under Lean horizon until formal proof routes exist."
   ]

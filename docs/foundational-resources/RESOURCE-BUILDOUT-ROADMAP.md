@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 576 expected checks.
-- 258 checked proof/evidence rows.
+- 577 expected checks.
+- 259 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -964,8 +964,9 @@ Build next:
   determinant scaling, isometry shadow, and rigidity horizon.
 - Keep `coordinate-geometry-v0`'s promoted bad squared-distance row tied to
   exact replay plus the source QF_LRA/Farkas artifact.
-- Keep `incidence-geometry-v0`'s promoted bad point-on-line row tied to exact
-  replay plus the source QF_LRA/Farkas artifact.
+- Keep `incidence-geometry-v0`'s promoted bad intersection-coordinate and
+  point-on-line rows tied to exact replay plus the source QF_LRA/Farkas
+  artifacts.
 - Keep `rigid-configuration-geometry-v0`'s promoted bad distance-table row
   tied to exact distance replay plus the source QF_LRA/Farkas artifact.
 - Keep `affine-geometry-v0`'s promoted bad midpoint-coordinate and
@@ -1449,7 +1450,8 @@ Pick one item per commit unless the change is purely navigational.
 58. Landed: add `incidence-geometry-v0`.
     The new geometry pack validates exact line-equation replay, non-parallel
     line intersection, point-on-line replay, checked QF_LRA/Farkas rejection of
-    a false incidence claim, and a projective/synthetic geometry Lean horizon.
+    false intersection-coordinate and incidence claims, and a
+    projective/synthetic geometry Lean horizon.
     `bridge_coordinate_orientation_geometry` now includes the incidence pack,
     and the learner path includes a focused incidence end-to-end page.
 59. Landed: add `rigid-configuration-geometry-v0`.

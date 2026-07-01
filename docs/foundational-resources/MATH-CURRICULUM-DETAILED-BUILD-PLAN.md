@@ -42,8 +42,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 576 expected checks.
-- 258 checked proof/evidence rows.
+- 577 expected checks.
+- 259 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -444,8 +444,9 @@ Pick one row per commit unless the change is purely navigational.
 46. Landed: add `incidence-geometry-v0` as the next curriculum-adjacent
    geometry pack. The pack validates exact line-equation replay, non-parallel
    line intersection, point-on-line replay, checked QF_LRA/Farkas rejection of
-   a false incidence claim, a focused learner page, and a bridge-row update so
-   geometry queries expose incidence as a first-class promoted pack.
+   false intersection-coordinate and incidence claims, a focused learner page,
+   and a bridge-row update so geometry queries expose incidence as a
+   first-class promoted pack.
 47. Landed: add `rigid-configuration-geometry-v0` as the next distinct
    geometry pack. The pack validates exact triangle distance-table replay,
    translation isometry replay, congruent-triangle distance replay, checked
@@ -949,6 +950,13 @@ Pick one row per commit unless the change is purely navigational.
      shared QF_LRA/Farkas route now checks both midpoint-coordinate and
      distance-preservation conflicts without claiming general affine-space,
      projective, differential, or synthetic geometry theorems.
+114. Landed: extend `incidence-geometry-v0` with a checked bad
+     intersection-coordinate row. Exact line-intersection replay checks
+     `(2,1)` for `x + y - 3 = 0` and `x - y - 1 = 0`, while the malformed
+     source SMT-LIB artifact claims intersection x-coordinate `3`; the shared
+     QF_LRA/Farkas route now checks both intersection-coordinate and
+     point-on-line conflicts without claiming projective, synthetic, or
+     configuration geometry theorems.
 
 ## Validation Checklist
 

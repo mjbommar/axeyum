@@ -46,6 +46,18 @@ have determinant:
 Since the determinant is nonzero, the fixed intersection witness `(2,1)` is
 checked by evaluating both line equations at that point.
 
+## Bad Intersection Coordinate Claim
+
+The promoted bad intersection row uses the same two non-parallel lines. Exact
+replay checks the intersection point `(2,1)`, while the malformed row claims
+the x-coordinate is `3`. The QF_LRA artifact checks only the final coordinate
+conflict:
+
+```text
+intersection_x = 2
+intersection_x = 3
+```
+
 ## Bad Incidence Claim
 
 The promoted bad row uses the line `2x - y + 1 = 0` and the point `(2,2)`.

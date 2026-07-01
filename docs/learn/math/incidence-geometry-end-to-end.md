@@ -2,9 +2,9 @@
 
 This lesson follows
 [incidence-geometry-v0](../../../artifacts/examples/math/incidence-geometry-v0/)
-from exact line-equation replay to a checked false point-on-line claim. It is a
-small coordinate resource for `field_geometry`, not a synthetic geometry
-chapter.
+from exact line-equation replay to checked false intersection-coordinate and
+point-on-line claims. It is a small coordinate resource for `field_geometry`,
+not a synthetic geometry chapter.
 
 Concept rows:
 
@@ -19,6 +19,7 @@ Concept rows:
 |---|---|---|
 | `line-equation-through-two-points` | `sat` | replay-only |
 | `line-intersection-witness` | `sat` | replay-only |
+| `bad-intersection-x-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `point-on-line-witness` | `sat` | replay-only |
 | `bad-incidence-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-incidence-geometry-lean-horizon` | `not-run` | lean-horizon |
@@ -66,6 +67,27 @@ The determinant of the coefficient matrix is:
 Since the determinant is nonzero, the two lines are not parallel. The listed
 point `(2,1)` is checked by direct substitution into both equations.
 
+## Reject A False Intersection Coordinate
+
+The bad intersection row keeps the same two lines:
+
+```text
+x + y - 3 = 0
+x - y - 1 = 0
+```
+
+Exact replay checks that `(2,1)` lies on both. The malformed row claims the
+intersection x-coordinate is `3`, so the source SMT-LIB artifact isolates this
+final conflict:
+
+```text
+intersection_x = 2
+intersection_x = 3
+```
+
+Axeyum must emit `Evidence::UnsatFarkas`, and the independent evidence checker
+must accept it.
+
 ## Reject A False Incidence Claim
 
 The bad row reuses the line:
@@ -111,6 +133,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/incidence-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes incidence_geometry_bad_point_on_line_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes incidence_geometry_bad_intersection_x_artifact_emits_checked_farkas
 ```
 
 ## Axeyum Identity
