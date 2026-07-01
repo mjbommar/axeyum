@@ -236,6 +236,17 @@ properties symbolically. 6 tests green.
 | reflected terms vs the real Rust fn, 50k-sample fuzz | **DISAGREE = 0** |
 | **`clamp` from C (clang) AND Rust (rustc)** | both **Proved `<= 100`** through one reflector |
 | **`@llvm.umin` clamp ≡ `icmp`+`select` clamp** | **Proved equivalent** (non-trivial — different terms) |
+| **`be16` byte→word field pack** (`zext`+`shl`+`or`) | **parse∘pack round-trip Proved** (extract bytes back == inputs) |
+| `classify` (nested `select` after `-O` if-conversion) | in `1..=3` **Proved** |
+| `day` (a `match`, `-O`-lowered to `icmp`+`add`+`select`) | `<= 9` **Proved** |
+
+**Measured (`-O` if-conversion, 2026-06-30):** `-O` collapses branchy leaf
+functions to `select` — `classify`'s `if/else-if` → *nested selects*, a `match`
+→ `icmp`+`add`+`select` (the `switch` vanished). So the single-block reflector
+already spans **straight-line + if-converted-branch + mixed-width** leaf
+functions — the bulk of a protocol parser's per-field code. True `br`/`switch`/
+`phi` blocks appear with **loops**, which are the deferred PDR / transition-system
+path, not acyclic reflection.
 
 Headline: **one front end verifies code from two source languages**, and proves
 two structurally-different LLVM forms of the same function equivalent. Measured
