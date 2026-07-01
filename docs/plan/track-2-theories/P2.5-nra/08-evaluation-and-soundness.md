@@ -10,41 +10,35 @@ binary on the curated non-incremental corpus (`measure_corpus`, 5 s cap, via
 
 | Division | axeyum decided | z3 decided | DISAGREE | axeyum PAR-2 | z3 PAR-2 |
 |---|---|---|---|---|---|
-| **QF_NRA** (curated, 36 considered) | **9 / 36 (25%)** | 36 / 36 | **0** | 7.524 s | 0.010 s |
+| **QF_NRA** (curated, 36 considered) | 9 → **10 / 36** (28%) | 36 / 36 | **0** | ~7.3 s | 0.01 s |
 | **QF_NIA** (curated, 28 considered) | **20 / 28 (71%)** | 28 / 28 | **0** | 2.985 s | 0.025 s |
 
-> **Attempt + REVERT 2026-06-30 — Boolean case-split (B.0b) exposed a latent
-> wrong-UNSAT; reverted (soundness floor).** A prototype `check_with_nra_dpll`
-> (lazy-SMT loop deciding each Boolean-skeleton cube with `decide_real_poly_
-> constraint`) *did* unlock the Boolean-structured `issue3656` on the curated
-> corpus (9→10, DISAGREE=0 there, 613/613 lib tests) — **but the adversarial
-> `nra_differential_fuzz` vs Z3 FAILED (a DISAGREE)**, so the change was reverted
-> in full. The case-split is sound *by design* (sat is replay-gated by
-> `finish_sat`; the only unsound path is `decide_real_poly_constraint` returning a
-> wrong `Some(Unsat)` for a cube, which then becomes a blocked clause). Two
-> hypotheses, to be distinguished by the repro:
-> 1. **A latent wrong-`Unsat` in `decide_real_poly_constraint`** on cube shapes the
->    normal dispatch rarely feeds it — a conjunction with **negated atoms**
->    (`¬(p ⋈ 0)` via `match_real_poly_constraint`'s `BoolNot` flip) or a coupled
->    cube. If so it is *also* reachable by the shipped solver (top-level negated /
->    coupled conjunctions go through the same entry) and is a current soundness bug
->    the standard fuzz simply never generates the trigger for.
-> 2. **A faithfulness bug in the prototype loop** (cube construction / equality
->    abstraction) — in which case there is no shipped-solver bug, only a defect in
->    the reverted prototype.
+> **LANDED 2026-06-30 — Boolean case-split (B.0b) shipped: QF_NRA 9 → 10** (commit
+> `5ede57f4`). `check_with_nra_dpll` (a lazy-SMT loop deciding each Boolean-skeleton
+> cube with `decide_real_poly_constraint`) unlocked the Boolean-structured
+> `issue3656` (`(distinct (and (>= c …)(< c …)) (= (* b c) 0))`), which the
+> flat-conjunction CAD declines.
 >
-> The repro determines which; #68 tracks it. Either way the case-split does not
-> re-land until the fuzz is DISAGREE=0.
+> **The soundness gate earned its keep.** The first prototype *failed the
+> `nra_differential_fuzz`* and was reverted in full before any commit. Full-capture
+> diagnosis (task #68) showed the failure was **not** a DISAGREE / wrong verdict —
+> it was `"solve returned an error"`: `finish_sat` propagated an **i128 eval-overflow
+> during sat-replay** as a `SolverError::Backend` instead of a graceful `unknown`
+> (the same class as the `lra.rs` fix, commit `1f615670`). So the case-split was
+> **sound all along**; the blocker was a benign robustness gap. Fixing `finish_sat`
+> (eval-error → graceful `unknown`; a *definitely-violated* model stays a loud
+> alarm) let the case-split land. Verified: `nra_differential_fuzz` 2000 seeds
+> **DISAGREE=0, no error**; `nia_differential_fuzz` **DISAGREE=0**; lib 613/613;
+> clippy clean.
 >
-> **This is now a soundness investigation that BLOCKS B.0b** (and is independently
-> important — it is a latent wrong-unsat in a shipped decider, merely masked by the
-> narrow dispatch gate). Repro: re-run `cargo test -p axeyum-solver --features z3
-> --test nra_differential_fuzz -- --nocapture` *with the case-split re-applied* (or,
-> safer, add a direct unit test that calls `decide_real_poly_constraint` on
-> negated-atom conjunctions and adjudicates vs Z3) to capture the disagreeing
-> instance, then root-cause the wrong verdict in `nra_real_root.rs`. Only after
-> that is fixed (and re-fuzzed DISAGREE=0) does the case-split re-land. **The
-> measured baseline stays 9/36 until then.**
+> **Next NRA levers** (the case-split only gains where each cube is within CAD
+> reach): most remaining Boolean-structured curated instances (`ones`,
+> `simple-mono-unsat`) have cubes with higher-degree / more-variable products
+> (`a·b·c·d`) that the CAD *component* decider (`decide_component` at
+> `nra_real_root.rs`) declines, or > 2 cross-products the relaxation caps. So the
+> next gains are **(Phase D)** widening `decide_two_var_component` /
+> `decide_*_cad_nvar` reach (degree/variable) and **(Phase B)** a proper
+> incremental-linearization tier lifting the ≤ 2-cross-product cap.
 
 **Reading:** soundness holds (DISAGREE=0). The CAD is decision-complete *in
 principle* but decides only 25% of curated QF_NRA within 5 s — axeyum's high PAR-2
