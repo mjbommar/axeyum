@@ -81,6 +81,13 @@ fn op_name(op: Op) -> String {
         Op::DtConstruct { constructor, .. } => format!("!construct{}", constructor.index()),
         Op::DtSelect { constructor, index } => format!("!select{}_{index}", constructor.index()),
         Op::DtTest(constructor) => format!("!is{}", constructor.index()),
+        // Sequences (ADR-0051, P2.7). `seq.empty` is a nullary constant; SMT-LIB
+        // spells it `(as seq.empty (Seq ...))`, but the element sort needs the
+        // whole term, so this operator-name view renders the bare `seq.empty`.
+        Op::SeqLen => "str.len".into(),
+        Op::SeqEmpty(_) => "seq.empty".into(),
+        Op::SeqUnit => "seq.unit".into(),
+        Op::SeqConcat => "str.++".into(),
     }
 }
 

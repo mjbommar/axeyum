@@ -742,7 +742,12 @@ fn rewrite_app(
         | Op::Exists(_)
         | Op::DtConstruct { .. }
         | Op::DtSelect { .. }
-        | Op::DtTest(_) => None,
+        | Op::DtTest(_)
+        // Sequences (ADR-0051, P2.7): no canonicalization rule yet — decline.
+        | Op::SeqLen
+        | Op::SeqEmpty(_)
+        | Op::SeqUnit
+        | Op::SeqConcat => None,
     };
 
     if let Some(local) = local {
@@ -1602,6 +1607,11 @@ pub fn build_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermI
         Op::DtConstruct { constructor, .. } => arena.construct(constructor, args),
         Op::DtSelect { constructor, index } => arena.dt_select(constructor, index, args[0]),
         Op::DtTest(constructor) => arena.dt_test(constructor, args[0]),
+        // Sequences (ADR-0051, P2.7): reassemble via the sequence builders.
+        Op::SeqLen => arena.seq_len(args[0]),
+        Op::SeqEmpty(element) => Ok(arena.seq_empty(element)),
+        Op::SeqUnit => arena.seq_unit(args[0]),
+        Op::SeqConcat => arena.seq_concat(args[0], args[1]),
     }
 }
 
@@ -1705,6 +1715,11 @@ fn value_to_term(arena: &mut TermArena, value: Value) -> Result<TermId, IrError>
             expected: "Bool or BitVec",
             found: Sort::Uninterpreted(sort),
         }),
+        // A sequence value has no constant-term encoding yet (ADR-0051, P2.7):
+        // sequences are not const-folded back into terms here — decline exactly.
+        Value::Seq(_) => Err(IrError::Unsupported(
+            "sequence value has no constant term (ADR-0051)",
+        )),
     }
 }
 

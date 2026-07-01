@@ -919,7 +919,12 @@ impl<'a> LoweringBuilder<'a> {
                 | Op::Exists(_)
                 | Op::DtConstruct { .. }
                 | Op::DtSelect { .. }
-                | Op::DtTest(_) => {
+                | Op::DtTest(_)
+                // Sequences (ADR-0051, P2.7) have no bit-vector lowering.
+                | Op::SeqLen
+                | Op::SeqEmpty(_)
+                | Op::SeqUnit
+                | Op::SeqConcat => {
                     return Err(BitLowerError::UnsupportedOp { term, op });
                 }
             };

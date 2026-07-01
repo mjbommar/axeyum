@@ -62,6 +62,12 @@ pub fn value_to_lsb_bits(value: Value) -> Result<Vec<bool>, IrError> {
             expected: "Bool or BitVec",
             found: Sort::Uninterpreted(sort),
         }),
+        // A sequence has no scalar bit encoding; decline exactly like the
+        // array/datatype siblings (ADR-0051, P2.7).
+        Value::Seq(elements) => Err(IrError::SortMismatch {
+            expected: "Bool or BitVec",
+            found: Value::Seq(elements).sort(),
+        }),
     }
 }
 

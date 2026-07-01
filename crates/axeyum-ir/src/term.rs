@@ -309,6 +309,23 @@ pub enum Op {
         /// Significand bits (including the hidden bit) of the result float.
         sig: u32,
     },
+    // --- sequences (ADR-0051, P2.7) ----------------------------------------
+    /// `str.len`: the length of a sequence, as an `Int`. The single argument is
+    /// any [`Sort::Seq`]; the result is [`Sort::Int`] (the shared `len` term that
+    /// bridges the sequence theory and LIA, Nelson–Oppen-style).
+    SeqLen,
+    /// `seq.empty`: the empty sequence of element key `element` (a nullary
+    /// constant); result sort `Seq(element)`. The element key is carried here
+    /// (like [`Op::ConstArray`]'s index) because there is no argument to read it
+    /// from.
+    SeqEmpty(ArraySortKey),
+    /// `seq.unit`: the one-element sequence `[x]`. The single argument `x` has any
+    /// *scalar* element sort `E`; the result is `Seq(E)`. Nested sequences
+    /// (`Seq(Seq …)`) are deferred, so the builder rejects a sequence argument.
+    SeqUnit,
+    /// `str.++`: concatenation of two sequences of the same sort `Seq(E)`; result
+    /// is that same `Seq(E)`.
+    SeqConcat,
 }
 
 /// The structural body of a term, used as the hash-consing key.

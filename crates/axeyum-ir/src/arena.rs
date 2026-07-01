@@ -1371,6 +1371,71 @@ impl TermArena {
         Ok(self.app(Op::FpFromBits { exp, sig }, &[x], Sort::Float { exp, sig }))
     }
 
+    // ----- sequences (ADR-0051, P2.7) -----------------------------------
+
+    /// `str.len`: the length of a sequence, as an `Int`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `x` is a sequence.
+    pub fn seq_len(&mut self, x: TermId) -> Result<TermId, IrError> {
+        match self.sort_of(x) {
+            Sort::Seq(_) => Ok(self.app(Op::SeqLen, &[x], Sort::Int)),
+            found => Err(IrError::SortMismatch {
+                expected: "Seq",
+                found,
+            }),
+        }
+    }
+
+    /// `seq.empty`: the empty sequence over element key `element` (a nullary
+    /// constant); result sort `Seq(element)`.
+    pub fn seq_empty(&mut self, element: ArraySortKey) -> TermId {
+        self.app(Op::SeqEmpty(element), &[], Sort::Seq(element))
+    }
+
+    /// `seq.unit`: the one-element sequence `[x]`, of sort `Seq(E)` where `E` is
+    /// `x`'s (scalar) sort.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::Unsupported`] if `x`'s sort is not a scalar element
+    /// sort (a nested sequence or array element is deferred, exactly as nested
+    /// arrays are).
+    pub fn seq_unit(&mut self, x: TermId) -> Result<TermId, IrError> {
+        let element = ArraySortKey::from_sort(self.sort_of(x))
+            .ok_or(IrError::Unsupported("seq.unit over a nested sequence/array element"))?;
+        Ok(self.app(Op::SeqUnit, &[x], Sort::Seq(element)))
+    }
+
+    /// `str.++`: concatenation of two sequences of the same sort; the result has
+    /// that same `Seq` sort.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless both operands are sequences, or
+    /// [`IrError::SortsDiffer`] if their element sorts differ.
+    pub fn seq_concat(&mut self, a: TermId, b: TermId) -> Result<TermId, IrError> {
+        let sa = self.sort_of(a);
+        let sb = self.sort_of(b);
+        if !matches!(sa, Sort::Seq(_)) {
+            return Err(IrError::SortMismatch {
+                expected: "Seq",
+                found: sa,
+            });
+        }
+        if !matches!(sb, Sort::Seq(_)) {
+            return Err(IrError::SortMismatch {
+                expected: "Seq",
+                found: sb,
+            });
+        }
+        if sa != sb {
+            return Err(IrError::SortsDiffer(sa, sb));
+        }
+        Ok(self.app(Op::SeqConcat, &[a, b], sa))
+    }
+
     fn expect_array(&self, t: TermId) -> Result<(Sort, Sort), IrError> {
         match self.sort_of(t) {
             Sort::Array { index, element } => Ok((index.to_sort(), element.to_sort())),

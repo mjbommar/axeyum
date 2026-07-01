@@ -61,6 +61,10 @@ pub enum Value {
         /// A deterministic model token for one equivalence class.
         value: u128,
     },
+    /// A concrete sequence value (ADR-0051, P2.7): the ordered element values.
+    /// The empty sequence is `Seq(vec![])`; a `str.unit(x)` value is
+    /// `Seq(vec![x])`. All elements share the sequence's scalar element sort.
+    Seq(Vec<Value>),
 }
 
 /// A concrete array value: a default element plus index→element overrides.
@@ -651,10 +655,23 @@ impl Value {
             Value::Real(_) => panic!("scalar encoding of a real value"),
             Value::RealAlgebraic(_) => panic!("scalar encoding of a real-algebraic value"),
             Value::Datatype { .. } => panic!("scalar encoding of a datatype value"),
+            // A sequence is not a `u128` scalar (it routes through FullValue
+            // storage, like arrays); mirror the array/datatype sibling guards.
+            Value::Seq(_) => panic!("scalar encoding of a sequence value"),
         }
     }
 
     /// The sort of this value.
+    ///
+    /// A [`Value::Seq`] recovers its element key from its first element. An
+    /// **empty** sequence carries no element (the value shape is `Seq(Vec)`), so
+    /// its element sort cannot be recovered here; the documented fallback is the
+    /// `String` element (`BitVec(18)`). This is only a fallback — the evaluator
+    /// always knows an empty sequence's true sort from the term's
+    /// [`crate::Op::SeqEmpty`] element key, so this path is not load-bearing for
+    /// well-sorted evaluation.
+    // TODO(P2.7): if empty non-string sequences need a precise value-level sort,
+    // carry the element `ArraySortKey` in `Value::Seq` (superseding ADR).
     pub fn sort(&self) -> Sort {
         match self {
             Value::Bool(_) => Sort::Bool,
@@ -672,6 +689,13 @@ impl Value {
             Value::Real(_) | Value::RealAlgebraic(_) => Sort::Real,
             Value::Datatype { datatype, .. } => Sort::Datatype(*datatype),
             Value::Uninterpreted { sort, .. } => Sort::Uninterpreted(*sort),
+            Value::Seq(elements) => {
+                let element = elements
+                    .first()
+                    .and_then(|e| ArraySortKey::from_sort(e.sort()))
+                    .unwrap_or(ArraySortKey::BitVec(Sort::STRING_ELEM_WIDTH));
+                Sort::Seq(element)
+            }
         }
     }
 
@@ -687,7 +711,8 @@ impl Value {
             | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
             | Value::Uninterpreted { .. }
-            | Value::WideBv(_) => None,
+            | Value::WideBv(_)
+            | Value::Seq(_) => None,
         }
     }
 
@@ -703,7 +728,8 @@ impl Value {
             | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
             | Value::Uninterpreted { .. }
-            | Value::WideBv(_) => None,
+            | Value::WideBv(_)
+            | Value::Seq(_) => None,
         }
     }
 
@@ -719,7 +745,8 @@ impl Value {
             | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
             | Value::Uninterpreted { .. }
-            | Value::WideBv(_) => None,
+            | Value::WideBv(_)
+            | Value::Seq(_) => None,
         }
     }
 
@@ -736,7 +763,8 @@ impl Value {
             | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
             | Value::Uninterpreted { .. }
-            | Value::WideBv(_) => None,
+            | Value::WideBv(_)
+            | Value::Seq(_) => None,
         }
     }
 
@@ -752,7 +780,8 @@ impl Value {
             | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
             | Value::Uninterpreted { .. }
-            | Value::WideBv(_) => None,
+            | Value::WideBv(_)
+            | Value::Seq(_) => None,
         }
     }
 
@@ -772,7 +801,8 @@ impl Value {
             | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
             | Value::Uninterpreted { .. }
-            | Value::WideBv(_) => None,
+            | Value::WideBv(_)
+            | Value::Seq(_) => None,
         }
     }
 
@@ -838,6 +868,13 @@ impl core::fmt::Display for Value {
                 write!(f, ")")
             }
             Value::Uninterpreted { sort, value } => write!(f, "@u{}:{value}", sort.index()),
+            Value::Seq(elements) => {
+                write!(f, "(seq")?;
+                for element in elements {
+                    write!(f, " {element}")?;
+                }
+                write!(f, ")")
+            }
         }
     }
 }

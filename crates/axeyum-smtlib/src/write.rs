@@ -521,5 +521,13 @@ fn op_str(op: Op) -> String {
         Op::DtConstruct { constructor, .. } => format!("construct/{}", constructor.index()),
         Op::DtSelect { constructor, index } => format!("select/{}/{index}", constructor.index()),
         Op::DtTest(constructor) => format!("is/{}", constructor.index()),
+        // Sequences (ADR-0051, P2.7). `seq.empty` is a nullary constant whose
+        // fully-qualified `(as seq.empty (Seq ...))` form needs the element sort;
+        // this operator-name view renders the bare symbol (round-trip of the
+        // empty constant is the A.1c slice, not this one).
+        Op::SeqLen => "str.len".into(),
+        Op::SeqEmpty(_) => "seq.empty".into(),
+        Op::SeqUnit => "seq.unit".into(),
+        Op::SeqConcat => "str.++".into(),
     }
 }

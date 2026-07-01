@@ -783,6 +783,32 @@ fn apply(op: Op, vals: &[Value]) -> Result<Value, IrError> {
         Op::RealLe => Value::Bool(real_cmp(&vals[0], &vals[1])?.is_le()),
         Op::RealGt => Value::Bool(real_cmp(&vals[0], &vals[1])?.is_gt()),
         Op::RealGe => Value::Bool(real_cmp(&vals[0], &vals[1])?.is_ge()),
+        // --- sequences (ADR-0051, P2.7) ------------------------------------------
+        // The empty sequence; its element key lives in the operator, not a value.
+        Op::SeqEmpty(_) => Value::Seq(Vec::new()),
+        // The one-element sequence `[x]` (the builder guarantees `x` is scalar).
+        Op::SeqUnit => Value::Seq(vec![vals[0].clone()]),
+        Op::SeqLen => match &vals[0] {
+            Value::Seq(elements) => {
+                // Length as an `Int` (the shared `len` term). A length exceeding
+                // the `i128` reference range is impossible in practice; report it
+                // gracefully rather than wrapping — the evaluator never lies.
+                let len = i128::try_from(elements.len())
+                    .map_err(|_| IrError::ArithmeticOverflow { op: "seq_len" })?;
+                Value::Int(len)
+            }
+            // Well-sorted terms guarantee a `Seq` operand; decline gracefully
+            // (never panic) if that invariant is somehow violated.
+            _ => return Err(IrError::Unsupported("str.len of a non-sequence value")),
+        },
+        Op::SeqConcat => match (&vals[0], &vals[1]) {
+            (Value::Seq(a), Value::Seq(b)) => {
+                let mut out = a.clone();
+                out.extend(b.iter().cloned());
+                Value::Seq(out)
+            }
+            _ => return Err(IrError::Unsupported("str.++ of non-sequence values")),
+        },
         // Handled in `eval` (they bind a variable and enumerate its domain).
         Op::Forall(_) | Op::Exists(_) => {
             unreachable!("quantifiers are evaluated by enumeration in `eval`")

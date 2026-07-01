@@ -282,6 +282,9 @@ impl InputBinding {
             | Value::Real(_)
             | Value::RealAlgebraic(_)
             | Value::Datatype { .. }
+            // A sequence value is outside the native scalar Rust surface
+            // (ADR-0051, P2.7); decline like the array/datatype siblings.
+            | Value::Seq(_)
             | Value::Uninterpreted { .. } => Err(PropertyError::UnsupportedRustLiteral {
                 name: self.name.clone(),
                 value: self.value.clone(),

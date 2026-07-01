@@ -86,6 +86,81 @@ fn string_sort_is_declarable_and_displays(/* P2.7 A.1a / ADR-0051 */) {
     assert_eq!(s2, Sort::string());
 }
 
+#[test]
+fn seq_builders_type_check(/* P2.7 A.1b / ADR-0051 */) {
+    let mut a = TermArena::new();
+
+    // seq.empty over BitVec(18) has sort Seq(BitVec(18)) = String.
+    let empty = a.seq_empty(ArraySortKey::BitVec(18));
+    assert_eq!(a.sort_of(empty), Sort::string());
+
+    // seq.unit of a scalar (BitVec(18)) is a Seq of that element.
+    let cp = a.bv_const(18, 0x41).unwrap();
+    let unit = a.seq_unit(cp).unwrap();
+    assert_eq!(a.sort_of(unit), Sort::Seq(ArraySortKey::BitVec(18)));
+
+    // str.len of any sequence is Int.
+    let len = a.seq_len(unit).unwrap();
+    assert_eq!(a.sort_of(len), Sort::Int);
+
+    // str.++ of two same-sort sequences is that same Seq sort.
+    let cat = a.seq_concat(unit, empty).unwrap();
+    assert_eq!(a.sort_of(cat), Sort::Seq(ArraySortKey::BitVec(18)));
+
+    // seq.unit over a nested sequence element is deferred (Unsupported).
+    assert!(matches!(a.seq_unit(empty), Err(IrError::Unsupported(_))));
+
+    // str.len of a non-sequence is a SortMismatch.
+    let i = a.bv_const(8, 3).unwrap();
+    assert!(matches!(a.seq_len(i), Err(IrError::SortMismatch { .. })));
+}
+
+#[test]
+fn seq_concat_of_mismatched_sorts_errors(/* P2.7 A.1b */) {
+    let mut a = TermArena::new();
+    let c18 = a.bv_const(18, 1).unwrap();
+    let seq18 = a.seq_unit(c18).unwrap();
+    // Concatenating a sequence with a non-sequence operand is a SortMismatch.
+    let c8 = a.bv_const(8, 1).unwrap();
+    assert!(matches!(
+        a.seq_concat(seq18, c8),
+        Err(IrError::SortMismatch { .. })
+    ));
+    // Two sequences with different element sorts differ.
+    let c8b = a.bv_const(8, 2).unwrap();
+    let seq8 = a.seq_unit(c8b).unwrap();
+    assert!(matches!(
+        a.seq_concat(seq18, seq8),
+        Err(IrError::SortsDiffer(_, _))
+    ));
+}
+
+#[test]
+fn seq_len_evaluates_to_element_count(/* P2.7 A.1b / ADR-0051 */) {
+    let mut a = TermArena::new();
+
+    // str.len(str.++(seq.unit(a), seq.unit(b))) == 2 for concrete a, b.
+    let ca = a.bv_const(18, 0x41).unwrap();
+    let cb = a.bv_const(18, 0x42).unwrap();
+    let ua = a.seq_unit(ca).unwrap();
+    let ub = a.seq_unit(cb).unwrap();
+    let cat = a.seq_concat(ua, ub).unwrap();
+    let len = a.seq_len(cat).unwrap();
+    assert_eq!(eval(&a, len, &Assignment::new()), Ok(Value::Int(2)));
+
+    // The concatenation itself evaluates to the two-element sequence.
+    assert_eq!(
+        eval(&a, cat, &Assignment::new()),
+        Ok(Value::Seq(vec![bv(18, 0x41), bv(18, 0x42)]))
+    );
+
+    // str.len(seq.empty) == 0.
+    let empty = a.seq_empty(ArraySortKey::BitVec(18));
+    let elen = a.seq_len(empty).unwrap();
+    assert_eq!(eval(&a, elen, &Assignment::new()), Ok(Value::Int(0)));
+    assert_eq!(eval(&a, empty, &Assignment::new()), Ok(Value::Seq(vec![])));
+}
+
 // ----- build-time validation ---------------------------------------------
 
 #[test]

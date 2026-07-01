@@ -437,10 +437,15 @@ fn translate(
                         | Op::Bv2Nat
                         | Op::Int2Bv { .. }
                         | Op::FpFromBits { .. }
+                        // Sequences (ADR-0051, P2.7): decline before translation.
+                        | Op::SeqLen
+                        | Op::SeqEmpty(_)
+                        | Op::SeqUnit
+                        | Op::SeqConcat
                 ) {
                     return Err(SolverError::Unsupported(
                         "z3 oracle does not support uninterpreted functions, integer/real \
-                         arithmetic, datatypes, quantifiers, or floating point yet"
+                         arithmetic, datatypes, quantifiers, floating point, or sequences yet"
                             .to_owned(),
                     ));
                 }
@@ -568,9 +573,14 @@ fn apply(op: Op, args: &[TermId], cache: &HashMap<TermId, Z3Term>) -> Z3Term {
         | Op::RealIsInt
         | Op::Bv2Nat
         | Op::Int2Bv { .. }
-        | Op::FpFromBits { .. } => {
+        | Op::FpFromBits { .. }
+        // Sequences (ADR-0051, P2.7) are rejected before z3 translation.
+        | Op::SeqLen
+        | Op::SeqEmpty(_)
+        | Op::SeqUnit
+        | Op::SeqConcat => {
             unreachable!(
-                "array, UF, integer, real, quantifier, datatype, and floating-point terms are rejected during z3 translation"
+                "array, UF, integer, real, quantifier, datatype, floating-point, and sequence terms are rejected during z3 translation"
             )
         }
     }

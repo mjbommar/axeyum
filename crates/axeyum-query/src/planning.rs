@@ -683,6 +683,14 @@ fn update_op(hash: &mut u64, op: Op) {
             update_u64(hash, 65);
             update_u64(hash, u64::try_from(constructor.index()).unwrap_or(u64::MAX));
         }
+        // Sequences (ADR-0051, P2.7): distinct structural hash tags.
+        Op::SeqLen => update_u64(hash, 76),
+        Op::SeqEmpty(element) => {
+            update_u64(hash, 77);
+            update_array_sort_key(hash, element);
+        }
+        Op::SeqUnit => update_u64(hash, 78),
+        Op::SeqConcat => update_u64(hash, 79),
     }
 }
 
