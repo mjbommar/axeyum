@@ -875,7 +875,7 @@ checked QF_LRA/Farkas rejection of a bad Euler step, and an ODE-theory
 Lean-horizon row.
 `artifacts/examples/math/finite-operator-v0/` now validates exact
 finite-dimensional norm, matrix-operator, Chebyshev recurrence checks, and a
-checked QF_LRA/Farkas bad operator-bound row.
+checked QF_LRA/Farkas bad `l1` norm row plus a bad operator-bound row.
 `artifacts/examples/math/inner-product-spaces-rational-v0/` now validates
 exact rational Gram matrices, positive-definite principal minors,
 Cauchy-Schwarz replay for fixed vectors, orthogonal projection replay,
@@ -1722,8 +1722,9 @@ tables, monotone invariant checking, checked QF_LRA/Farkas bad-step rejection,
 and the ODE/numerical-analysis Lean horizon.
 `finite-operator-v0` now also has a standalone finite-dimensional operator
 lesson for exact `l1` norm replay, row-sum operator-bound replay, finite
-Chebyshev recurrence replay, checked QF_LRA/Farkas bad operator-bound
-rejection, and the Banach/Hilbert/compact-operator Lean horizon.
+Chebyshev recurrence replay, checked QF_LRA/Farkas bad `l1` norm and bad
+operator-bound rejection, and the Banach/Hilbert/compact-operator Lean
+horizon.
 `proof-methods-refutation-v0` now also has a proof-object anatomy lesson that
 follows the PHP(3,2) source claim through committed CNF, emitted DRAT/LRAT
 proof objects, and same-artifact corrupted-proof rejection.
@@ -2170,7 +2171,7 @@ The consumer query layer now also exposes functional-analysis/operator
 readiness: `CONSUMER-QUERIES.md` shows the Farkas field summary,
 operator/Chebyshev bridge lookup, concept-scoped
 `bridge_finite_operator_chebyshev` pack and checked-row drill-downs, and
-checked finite-operator, inner-product, Chebyshev, spectral, and
+checked finite-operator norm/bound, inner-product, Chebyshev, spectral, and
 characteristic-polynomial Farkas rows. The foundational-resource smoke check
 runs those same queries so finite-dimensional operator bounds, inner-product
 positivity, Chebyshev duplicate-node grids, interpolation/residual rows,

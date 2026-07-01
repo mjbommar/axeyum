@@ -115,6 +115,9 @@ const RIGID_CONFIGURATION_BAD_DISTANCE_TABLE: &str = include_str!(
 const FINITE_OPERATOR_BAD_OPERATOR_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/finite-operator-v0/smt2/bad-operator-bound-farkas-conflict.smt2"
 );
+const FINITE_OPERATOR_BAD_L1_SUM_NORM: &str = include_str!(
+    "../../../artifacts/examples/math/finite-operator-v0/smt2/bad-l1-sum-norm-farkas-conflict.smt2"
+);
 const FINITE_CHEBYSHEV_BAD_INTERPOLATION_SAMPLE: &str = include_str!(
     "../../../artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-interpolation-sample-farkas-conflict.smt2"
 );
@@ -657,6 +660,14 @@ fn rigid_configuration_bad_distance_table_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "rigid-configuration-geometry-v0 bad-distance-table SMT-LIB artifact",
         RIGID_CONFIGURATION_BAD_DISTANCE_TABLE,
+    );
+}
+
+#[test]
+fn finite_operator_bad_l1_sum_norm_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-operator-v0 bad-l1-sum-norm SMT-LIB artifact",
+        FINITE_OPERATOR_BAD_L1_SUM_NORM,
     );
 }
 

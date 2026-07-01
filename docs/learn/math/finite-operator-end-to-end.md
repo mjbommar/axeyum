@@ -20,6 +20,7 @@ Concept rows:
 | Check | Expected | Evidence Status |
 |---|---|---|
 | `l1-triangle-witness` | `sat` | replay-only |
+| `bad-l1-sum-norm-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `matrix-operator-bound` | `sat` | replay-only |
 | `chebyshev-recurrence-witness` | `sat` | replay-only |
 | `bad-operator-bound-rejected` | `unsat` | checked QF_LRA/Farkas |
@@ -55,6 +56,24 @@ Then it verifies the finite triangle inequality instance:
 
 No solver result is trusted here. The row is accepted only because the small
 exact-rational replay succeeds.
+
+The bad norm row keeps the same replayed vectors but claims:
+
+```text
+||u + v||_1 <= 4
+```
+
+Replay computes `||u+v||_1 = 5`, so the committed SMT-LIB artifact
+[`bad-l1-sum-norm-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-operator-v0/smt2/bad-l1-sum-norm-farkas-conflict.smt2)
+isolates the final contradiction:
+
+```text
+sum_norm = 5
+sum_norm <= 4
+```
+
+The checked certificate proves only this exact finite inequality conflict. It
+does not prove the general triangle inequality for every normed space.
 
 ## Replay A Matrix Operator Bound
 
@@ -138,6 +157,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_l1_sum_norm_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
 ```
 

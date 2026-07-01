@@ -54,6 +54,22 @@ The bad-bound row reuses the same exact source object but claims:
 Exact replay computes `||A*x||_infty = 3`, so the final inequality is a small
 QF_LRA/Farkas contradiction.
 
+The bad `l1` norm row uses the triangle witness but claims:
+
+```text
+||u + v||_1 <= 4
+```
+
+Exact replay computes `||u+v||_1 = 5`, so the source QF_LRA artifact reduces
+the row to:
+
+```text
+sum_norm = 5
+sum_norm <= 4
+```
+
+The Farkas route checks only that final exact linear contradiction.
+
 ## Chebyshev Recurrence Witness
 
 For `x = 1/2`, the listed values are:

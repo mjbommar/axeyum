@@ -1271,8 +1271,8 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
-To display concrete checked finite-operator, inner-product, Chebyshev, and
-spectral rows, drill into checked Farkas examples:
+To display concrete checked finite-operator norm/bound, inner-product,
+Chebyshev, and spectral rows, drill into checked Farkas examples:
 
 ```sh
 python3 scripts/query-foundational-resources.py checks \

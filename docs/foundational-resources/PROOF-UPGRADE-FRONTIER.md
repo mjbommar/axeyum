@@ -319,8 +319,9 @@ First targets:
   replay computes the intersection x-coordinate, angle dot product, and
   Ptolemy product-sum value)
 - [finite-operator-v0](../../artifacts/examples/math/finite-operator-v0/)
-  (source-linked Farkas regression landed for the bad operator-bound row after
-  exact matrix/operator replay computes the image infinity norm)
+  (source-linked Farkas regressions landed for the bad `l1` sum-norm and bad
+  operator-bound rows after exact vector/operator replay computes the sum norm
+  and image infinity norm)
 - [inner-product-spaces-rational-v0](../../artifacts/examples/math/inner-product-spaces-rational-v0/)
   (resource-backed Farkas regression landed for the bad negative-norm row)
 - [spectral-linear-algebra-v0](../../artifacts/examples/math/spectral-linear-algebra-v0/)
@@ -379,8 +380,9 @@ Secondary targets:
   checks the final bad-intersection, bad-angle, and bad-Ptolemy equality
   conflicts.
   Finite operators now contribute the functional-analysis version of that
-  boundary: exact replay computes the matrix image and infinity norm, then
-  Farkas checks the final bad-bound inequality conflict.
+  boundary: exact replay computes the vector sum norm, matrix image, and
+  infinity norm, then Farkas checks the final bad-norm and bad-bound
+  inequality conflicts.
   Finite root finding now contributes the numerical-analysis version of that
   boundary: exact replay computes the bisection/Newton data and the next
   iterate, then Farkas checks the final bad-step equality conflict.

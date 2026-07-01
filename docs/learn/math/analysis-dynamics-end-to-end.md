@@ -44,6 +44,7 @@ Concept rows:
 | `expected-hitting-time-equations` | `sat` | replay-only |
 | `bad-expected-time-rejected` | `unsat` | checked |
 | `matrix-operator-bound` | `sat` | replay-only |
+| `bad-l1-sum-norm-rejected` | `unsat` | checked |
 | `bad-operator-bound-rejected` | `unsat` | checked |
 | `chebyshev-recurrence-witness` | `sat` | replay-only |
 | `vandermonde-unisolvence-witness` | `sat` | replay-only |
@@ -102,16 +103,18 @@ at most `6`. Exact replay computes terminal/max state `8`, then the source
 QF_LRA artifact checks `terminal_state = 8` with `terminal_state <= 6` through
 Farkas evidence.
 
-For the operator row, the checker recomputes `A*x`, the infinity norms, the
-row-sum norm, and the bound:
+For the operator/norm rows, the checker recomputes `u+v`, `A*x`, the `l1` and
+infinity norms, the row-sum norm, and the bound:
 
 ```text
+||u+v||_1 = 5 <= 3 + 4
 ||A*x||_infty = 3 <= 3 * 2 = 6
 ```
 
-The bad-bound row reuses the same exact matrix-vector replay but claims
-`||A*x||_infty <= 2`. Exact replay computes `3`, then the source QF_LRA
-artifact checks the final contradiction through Farkas evidence.
+The bad norm row reuses the exact vector replay but claims `||u+v||_1 <= 4`;
+the bad-bound row reuses the same exact matrix-vector replay but claims
+`||A*x||_infty <= 2`. Exact replay computes `5` and `3`, then the source
+QF_LRA artifacts check the final contradictions through Farkas evidence.
 
 For the Chebyshev row, it checks the finite recurrence at `x = 1/2`:
 
@@ -183,6 +186,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_l1_sum_norm_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0

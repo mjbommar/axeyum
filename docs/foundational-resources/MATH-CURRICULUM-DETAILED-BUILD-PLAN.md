@@ -42,8 +42,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 566 expected checks.
-- 248 checked proof/evidence rows.
+- 567 expected checks.
+- 249 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -224,7 +224,7 @@ Exit criteria:
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | maintain landed finite dynamics/Euler bridge and keep numerical-honesty rows distinct from promoted exact residual/error certificates | QF_LRA/Farkas, replay, Lean horizon |
 | `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | maintain landed finite dynamics/Euler bridge; add only distinct transition, reachability, invariant, stochastic, or finite-error pressure | QF_LRA/Farkas, replay, Lean horizon |
 | `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, circle, inversion, and cyclic rational geometry | maintain landed coordinate/oriented replay and finite circle/inversion/cyclic replay bridge rows; add only distinct nontrivial circle-line correspondence, higher-degree polynomial-geometry, or theorem-reconstruction pressure beyond the current circle-line, square angle-dot, and Ptolemy rows | QF_LRA/Farkas, finite replay |
-| `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now has a checked bad-bound row and finite-Chebyshev now has checked duplicate-node, bad-interpolation, and bad-alternation rows; add only distinct norm, recurrence, alternation variants, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
+| `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now has checked bad `l1` norm and bad operator-bound rows, and finite-Chebyshev now has checked duplicate-node, bad-interpolation, and bad-alternation rows; add only distinct norm, recurrence, alternation variants, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
 
 ## Curriculum Node Build Ledger
 
@@ -376,8 +376,8 @@ Pick one row per commit unless the change is purely navigational.
    bridge lesson.
 36. Landed: add standalone finite-operator learner page, splitting exact
    finite-dimensional `l1` norm replay, row-sum operator-bound replay,
-   Chebyshev recurrence replay, and checked QF_LRA/Farkas bad-bound evidence
-   out of the broad bounded-dynamics/operator bridge lesson.
+   Chebyshev recurrence replay, and checked QF_LRA/Farkas bad norm/bound
+   evidence out of the broad bounded-dynamics/operator bridge lesson.
 37. Landed: add standalone bounded-dynamics learner page, splitting exact
    recurrence trace replay, finite invariant checking, threshold reachability,
    and checked QF_LRA/Farkas bad invariant-bound evidence out of the combined
@@ -812,7 +812,7 @@ Pick one row per commit unless the change is purely navigational.
 95. Landed: add `chebyshev-operator-index.md` as the cross-pack learner path
     for finite-dimensional operator bounds, Chebyshev recurrence values,
     Vandermonde interpolation matrices, alternating residuals, checked
-    QF_LRA/Farkas bad-grid and bad-bound rows, spectral rows, and
+    QF_LRA/Farkas bad-grid, bad-norm, and bad-bound rows, spectral rows, and
     characteristic-polynomial arithmetic. The functional-analysis/operator
     consumer smoke now exposes `bridge_finite_operator_chebyshev` through
     concept-scoped Farkas route queries while keeping Banach/Hilbert-space,
@@ -881,6 +881,12 @@ Pick one row per commit unless the change is purely navigational.
      `24`; the shared QF_LRA/Farkas route now checks diagonal-intersection,
      opposite-angle, and Ptolemy cyclic conflicts without claiming the general
      Ptolemy theorem.
+104. Landed: extend `finite-operator-v0` with a checked bad `l1` sum-norm
+     row. Exact replay checks `u=(1,2)`, `v=(3,-1)`, `u+v=(4,1)`,
+     `||u||_1=3`, `||v||_1=4`, and `||u+v||_1=5`, while the malformed source
+     SMT-LIB artifact claims `||u+v||_1 <= 4`; the shared QF_LRA/Farkas route
+     now checks both finite-operator norm and operator-bound conflicts without
+     claiming general normed-space theorem coverage.
 
 ## Validation Checklist
 

@@ -39,7 +39,7 @@ These rows live in the
 
 | Question | Packs | Trusted Check | Horizon |
 |---|---|---|---|
-| Does a finite operator-bound row replay? | `finite-operator-v0` | matrix-vector replay, exact infinity norm, row-sum bound, checked bad-bound Farkas row | Banach/Hilbert-space operator theory |
+| Does a finite operator/norm row replay? | `finite-operator-v0` | vector-sum replay, exact `l1` norm, matrix-vector replay, exact infinity norm, row-sum bound, checked bad-norm and bad-bound Farkas rows | Banach/Hilbert-space operator theory |
 | Does a Chebyshev recurrence prefix replay? | `finite-operator-v0` | fixed rational recurrence values such as `T0`, `T1`, `T2`, `T3` at `x = 1/2` | general Chebyshev polynomial theory |
 | Is a finite interpolation grid unisolvent? | `finite-chebyshev-systems-v0` | exact Vandermonde matrix and determinant replay | Haar-space and Chebyshev-system theorems |
 | Do finite samples match listed coefficients? | `finite-chebyshev-systems-v0` | exact evaluation-matrix times coefficient-vector replay plus checked bad-sample Farkas row | general interpolation and approximation theory |
@@ -48,9 +48,15 @@ These rows live in the
 
 ## Checkable Shapes
 
-Finite operator rows are exact rational matrix calculations:
+Finite operator rows are exact rational vector and matrix calculations:
 
 ```text
+u = [1, 2]
+v = [3, -1]
+u + v = [4, 1]
+||u + v||_1 = 5
+claimed_l1_bound = 4
+
 A = [[1, 2],
      [0, 3]]
 x = [1, 1]
@@ -59,9 +65,10 @@ A*x = [3, 3]
 claimed_upper_bound = 2
 ```
 
-The validator recomputes the image and norm before the final contradiction is
-handed to the QF_LRA/Farkas route. The certificate checks the small rational
-conflict; it does not prove a general operator-norm theorem.
+The validator recomputes the vector sum, matrix image, and norms before the
+final contradiction is handed to the QF_LRA/Farkas route. The certificate
+checks the small rational conflict; it does not prove a general operator-norm
+theorem.
 
 Finite Chebyshev-system rows use an explicit grid and basis:
 
@@ -118,7 +125,7 @@ as a QF_LRA/Farkas row.
 
 Start with [Finite-Dimensional Operators](finite-operator-end-to-end.md) for
 exact vector norms, matrix row-sum bounds, Chebyshev recurrence replay, and the
-checked bad operator-bound row.
+checked bad norm and bad operator-bound rows.
 
 Then read [Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md)
 for Vandermonde unisolvence, interpolation values, alternating residuals, and

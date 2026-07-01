@@ -7,6 +7,14 @@ Expected result: `sat`.
 The validator recomputes `u + v`, the three `l1` norms, and checks
 `||u + v||_1 <= ||u||_1 + ||v||_1`.
 
+## `bad-l1-sum-norm-rejected`
+
+Expected result: `unsat`.
+
+The validator reuses the same exact vectors, recomputes `u + v = (4, 1)` and
+`||u + v||_1 = 5`, then checks the source QF_LRA artifact for the malformed
+claim `||u + v||_1 <= 4` through checked Farkas evidence.
+
 ## `matrix-operator-bound`
 
 Expected result: `sat`.

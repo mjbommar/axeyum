@@ -9966,6 +9966,67 @@ def validate_finite_operator(expected: dict[str, Any]) -> None:
     if norm_sum > norm_u + norm_v:
         fail("l1 triangle witness violates the triangle inequality")
 
+    bad_l1 = checks["bad-l1-sum-norm-rejected"]
+    if bad_l1["expected_result"] != "unsat" or bad_l1.get("proof_status") != "checked":
+        fail("bad-l1-sum-norm-rejected must be a checked unsat row")
+    if bad_l1["validation"] != "exact_rational_l1_bad_bound_refutation":
+        fail("bad-l1-sum-norm-rejected must use exact_rational_l1_bad_bound_refutation validation")
+    data = bad_l1.get("data", {})
+    bad_u = require_fraction_vector("bad l1 u", data.get("u"))
+    bad_v = require_fraction_vector("bad l1 v", data.get("v"))
+    bad_sum = require_fraction_vector("bad l1 computed_sum", data.get("computed_sum"))
+    require_same_vector_length("bad l1 u/v", bad_u, bad_v)
+    require_same_vector_length("bad l1 u/sum", bad_u, bad_sum)
+    if bad_u != u_vector or bad_v != v_vector:
+        fail("bad-l1-sum-norm-rejected must reuse the l1 triangle vectors")
+    if [u + v for u, v in zip(bad_u, bad_v)] != bad_sum:
+        fail("bad-l1-sum-norm-rejected computed_sum does not equal u + v")
+    computed_norm_u = require_fraction("bad l1 computed_norm_u", data.get("computed_norm_u"))
+    computed_norm_v = require_fraction("bad l1 computed_norm_v", data.get("computed_norm_v"))
+    computed_norm_sum = require_fraction(
+        "bad l1 computed_norm_sum",
+        data.get("computed_norm_sum"),
+    )
+    computed_triangle_bound = require_fraction(
+        "bad l1 computed_triangle_bound",
+        data.get("computed_triangle_bound"),
+    )
+    claimed_sum_norm_bound = require_fraction(
+        "bad l1 claimed_sum_norm_bound",
+        data.get("claimed_sum_norm_bound"),
+    )
+    if l1_norm(bad_u) != computed_norm_u:
+        fail("bad-l1-sum-norm-rejected computed_norm_u is incorrect")
+    if l1_norm(bad_v) != computed_norm_v:
+        fail("bad-l1-sum-norm-rejected computed_norm_v is incorrect")
+    if l1_norm(bad_sum) != computed_norm_sum:
+        fail("bad-l1-sum-norm-rejected computed_norm_sum is incorrect")
+    if computed_norm_u != norm_u or computed_norm_v != norm_v or computed_norm_sum != norm_sum:
+        fail("bad-l1-sum-norm-rejected must match the replayed l1 triangle norms")
+    if computed_triangle_bound != computed_norm_u + computed_norm_v:
+        fail("bad-l1-sum-norm-rejected triangle bound is incorrect")
+    if computed_norm_sum > computed_triangle_bound:
+        fail("bad-l1-sum-norm-rejected must preserve the true triangle inequality")
+    if computed_norm_sum <= claimed_sum_norm_bound:
+        fail("bad-l1-sum-norm-rejected must document a false norm upper bound")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad l1 smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-operator-v0/smt2/"
+        "bad-l1-sum-norm-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-l1-sum-norm-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad l1 smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad l1 farkas_regression", regression)
+    if "finite_operator_bad_l1_sum_norm_artifact_emits_checked_farkas" not in regression:
+        fail("bad-l1-sum-norm-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad l1 certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-l1-sum-norm-rejected certificate must document checked Farkas evidence")
+
     operator = checks["matrix-operator-bound"]
     if operator["expected_result"] != "sat":
         fail("matrix-operator-bound must expect sat")

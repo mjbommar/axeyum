@@ -276,12 +276,15 @@ det(A)*I = 0`, and validates finite eigenvalue intervals.
 For an operator example, the finite-operator pack checks:
 
 ```text
+||u+v||_1 <= ||u||_1 + ||v||_1
 ||A*x||_infty <= ||A||_row-sum * ||x||_infty
 ```
 
-using exact rational arithmetic. Its bad-bound row also rejects the malformed
-claim `||A*x||_infty <= 2` after replay computes `||A*x||_infty = 3`, with the
-final inequality conflict checked by QF_LRA/Farkas evidence.
+using exact rational arithmetic. Its bad norm row rejects
+`||u+v||_1 <= 4` after replay computes `||u+v||_1 = 5`; its bad-bound row also
+rejects the malformed claim `||A*x||_infty <= 2` after replay computes
+`||A*x||_infty = 3`, with both final inequality conflicts checked by
+QF_LRA/Farkas evidence.
 
 For a finite root-finding example, the validator keeps the numerical method as
 an exact finite trace:

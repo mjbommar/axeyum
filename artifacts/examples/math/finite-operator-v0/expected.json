@@ -50,6 +50,27 @@
       "notes": "The validator recomputes the vector sum and all l1 norms exactly."
     },
     {
+      "id": "bad-l1-sum-norm-rejected",
+      "claim": "The listed vector sum has l1 norm at most 4.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_l1_bad_bound_refutation",
+      "proof_status": "checked",
+      "data": {
+        "u": ["1", "2"],
+        "v": ["3", "-1"],
+        "computed_sum": ["4", "1"],
+        "computed_norm_u": "3",
+        "computed_norm_v": "4",
+        "computed_norm_sum": "5",
+        "computed_triangle_bound": "7",
+        "claimed_sum_norm_bound": "4",
+        "smt2_artifact": "artifacts/examples/math/finite-operator-v0/smt2/bad-l1-sum-norm-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_l1_sum_norm_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact norm replay computes ||u+v||_1 = 5, while the malformed row claims it is at most 4; the source QF_LRA artifact isolates that final inequality conflict for Farkas checking."
+    },
+    {
       "id": "matrix-operator-bound",
       "claim": "The listed matrix-vector image satisfies the row-sum/infinity-norm operator bound.",
       "expected_result": "sat",

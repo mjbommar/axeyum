@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 566 expected checks.
-- 248 checked proof/evidence rows.
+- 567 expected checks.
+- 249 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1003,8 +1003,8 @@ Build next:
   alternating residual witnesses.
 - Add narrower concept rows for dual spaces, adjoints, spectral decomposition,
   or Banach/Hilbert horizons only when multiple packs need the same vocabulary.
-- Keep `finite-operator-v0`'s promoted bad operator-bound row tied to exact
-  replay plus the source QF_LRA/Farkas artifact.
+- Keep `finite-operator-v0`'s promoted bad `l1` norm and bad operator-bound
+  rows tied to exact replay plus the source QF_LRA/Farkas artifacts.
 - Promote additional finite-dimensional bad norm/operator/interpolation rows
   through QF_LRA/Farkas where exact rational constraints apply.
 - Keep Banach-space theorems, compact operators, general Chebyshev spaces,
@@ -1357,7 +1357,7 @@ Pick one item per commit unless the change is purely navigational.
     `docs/learn/math/finite-operator-end-to-end.md` follows
     `finite-operator-v0` through exact finite-dimensional `l1` norm replay,
     row-sum operator-bound replay, finite Chebyshev recurrence replay,
-    checked QF_LRA/Farkas bad-bound evidence, and the
+    checked QF_LRA/Farkas bad norm/bound evidence, and the
     Banach/Hilbert/compact-operator Lean horizon.
 48. Landed: add standalone bounded-dynamics learner page.
     `docs/learn/math/bounded-dynamics-end-to-end.md` follows
@@ -1565,7 +1565,8 @@ Pick one item per commit unless the change is purely navigational.
 78. Landed: add functional-analysis/operator field-readiness consumer queries
     through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational
     smoke check, covering Farkas field readiness, the operator bridge lookup,
-    and checked finite-operator, inner-product, Chebyshev, and spectral rows.
+    and checked finite-operator norm/bound, inner-product, Chebyshev, and
+    spectral rows.
 79. Landed: add topology field-readiness consumer queries through
     [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational smoke
     check, covering Boolean field readiness, compactness/preimage bridge
@@ -1781,6 +1782,12 @@ Pick one item per commit unless the change is purely navigational.
      asks for a 3-bit residue `0 < a < 5` with `a^4 mod 5 != 1`, checks the
      bit-blasted DRAT refutation through `math_resource_bv_routes`, and keeps
      Fermat's little theorem itself in the theorem-horizon lane.
+113. Landed: extend `finite-operator-v0` with a checked bad `l1` sum-norm
+     row. Finite replay computes `u+v=(4,1)` and `||u+v||_1 = 5` from the
+     existing triangle witness while the malformed source SMT-LIB artifact
+     claims the sum norm is at most `4`; the shared QF_LRA/Farkas route now
+     checks both the finite norm conflict and the existing operator-bound
+     conflict without promoting Banach/Hilbert-space norm theorems.
 
 ## Validation Checklist
 
