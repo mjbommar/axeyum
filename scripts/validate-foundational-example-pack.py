@@ -13365,6 +13365,69 @@ def validate_finite_circle_geometry(expected: dict[str, Any]) -> None:
     if perpendicular_dot != 0:
         fail("chord-midpoint-perpendicular-witness radius and chord must be perpendicular")
 
+    line_intersection = checks["circle-line-intersection-witness"]
+    if line_intersection["expected_result"] != "sat":
+        fail("circle-line-intersection-witness must expect sat")
+    if line_intersection["validation"] != "exact_circle_line_intersection_replay":
+        fail("circle-line-intersection-witness must use exact_circle_line_intersection_replay validation")
+    line_values = single_witness_values(line_intersection, witnesses)
+    line_center = require_point2("circle line center", line_values.get("center"))
+    line_radius_squared = require_fraction(
+        "circle line radius_squared",
+        line_values.get("radius_squared"),
+    )
+    secant_line = require_line2("circle line line", line_values.get("line"))
+    raw_line_endpoints = line_values.get("endpoints")
+    if not isinstance(raw_line_endpoints, list) or len(raw_line_endpoints) != 2:
+        fail("circle-line-intersection-witness endpoints must contain two points")
+    line_endpoints = [
+        require_point2(f"circle line endpoints[{index}]", endpoint)
+        for index, endpoint in enumerate(raw_line_endpoints)
+    ]
+    line_endpoint_radius_squared = require_fraction_vector(
+        "circle line endpoint_radius_squared",
+        line_values.get("endpoint_radius_squared"),
+    )
+    require_vector_length("circle line endpoint_radius_squared", line_endpoint_radius_squared, 2)
+    endpoint_line_values = require_fraction_vector(
+        "circle line endpoint_line_values",
+        line_values.get("endpoint_line_values"),
+    )
+    require_vector_length("circle line endpoint_line_values", endpoint_line_values, 2)
+    line_midpoint = require_point2("circle line midpoint", line_values.get("midpoint"))
+    line_chord_direction = require_point2(
+        "circle line chord_direction",
+        line_values.get("chord_direction"),
+    )
+    right_intersection = require_point2(
+        "circle line right_intersection",
+        line_values.get("right_intersection"),
+    )
+    if line_radius_squared <= 0:
+        fail("circle-line-intersection-witness radius_squared must be positive")
+    for index, endpoint in enumerate(line_endpoints):
+        if distance_squared2(line_center, endpoint) != line_endpoint_radius_squared[index]:
+            fail("circle-line-intersection-witness endpoint radius is incorrect")
+        if line_endpoint_radius_squared[index] != line_radius_squared:
+            fail("circle-line-intersection-witness endpoint must lie on the circle")
+        if line_value(secant_line, endpoint) != endpoint_line_values[index]:
+            fail("circle-line-intersection-witness endpoint line value is incorrect")
+        if endpoint_line_values[index] != 0:
+            fail("circle-line-intersection-witness endpoint must lie on the line")
+    if midpoint2(line_endpoints[0], line_endpoints[1]) != line_midpoint:
+        fail("circle-line-intersection-witness midpoint is incorrect")
+    if line_midpoint != line_center:
+        fail("circle-line-intersection-witness diameter midpoint must equal the center")
+    computed_line_chord_direction = (
+        line_endpoints[1][0] - line_endpoints[0][0],
+        line_endpoints[1][1] - line_endpoints[0][1],
+    )
+    if computed_line_chord_direction != line_chord_direction:
+        fail("circle-line-intersection-witness chord_direction is incorrect")
+    computed_right_intersection = max(line_endpoints, key=lambda point: (point[0], point[1]))
+    if computed_right_intersection != right_intersection:
+        fail("circle-line-intersection-witness right_intersection is incorrect")
+
     bad_radius = checks["bad-circle-radius-rejected"]
     if bad_radius["expected_result"] != "unsat" or bad_radius.get("proof_status") != "checked":
         fail("bad-circle-radius-rejected must be a checked unsat row")
@@ -13397,6 +13460,58 @@ def validate_finite_circle_geometry(expected: dict[str, Any]) -> None:
     require_string("bad circle certificate", certificate)
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-circle-radius-rejected certificate must document checked Farkas evidence")
+
+    bad_line = checks["bad-circle-line-intersection-rejected"]
+    if bad_line["expected_result"] != "unsat" or bad_line.get("proof_status") != "checked":
+        fail("bad-circle-line-intersection-rejected must be a checked unsat row")
+    if bad_line["validation"] != "exact_bad_circle_line_intersection_refutation":
+        fail("bad-circle-line-intersection-rejected must use exact_bad_circle_line_intersection_refutation validation")
+    data = bad_line.get("data", {})
+    bad_line_equation = require_line2("bad circle line line", data.get("line"))
+    computed_right = require_point2(
+        "bad circle line computed_right_intersection",
+        data.get("computed_right_intersection"),
+    )
+    claimed_right = require_point2(
+        "bad circle line claimed_right_intersection",
+        data.get("claimed_right_intersection"),
+    )
+    computed_x = require_fraction("bad circle line computed_x", data.get("computed_x"))
+    claimed_x = require_fraction("bad circle line claimed_x", data.get("claimed_x"))
+    if bad_line_equation != secant_line:
+        fail("bad-circle-line-intersection-rejected must reuse the replayed line")
+    if computed_right != right_intersection:
+        fail("bad-circle-line-intersection-rejected computed_right_intersection is incorrect")
+    if computed_x != computed_right[0]:
+        fail("bad-circle-line-intersection-rejected computed_x must match the replayed point")
+    if claimed_x != claimed_right[0]:
+        fail("bad-circle-line-intersection-rejected claimed_x must match the claimed point")
+    if line_value(secant_line, claimed_right) != 0:
+        fail("bad-circle-line-intersection-rejected claimed point must remain on the replayed line")
+    if computed_x != 1 or claimed_x != 2:
+        fail("bad-circle-line-intersection-rejected is fixed to right_intersection_x=1 versus claimed 2")
+    if computed_x == claimed_x:
+        fail("bad-circle-line-intersection-rejected must document a false intersection claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad circle line smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-circle-geometry-v0/smt2/"
+        "bad-line-intersection-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail(
+            "bad-circle-line-intersection-rejected smt2_artifact must "
+            "name the checked source artifact"
+        )
+    check_source("bad circle line smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad circle line farkas_regression", regression)
+    if "finite_circle_geometry_bad_line_intersection_artifact_emits_checked_farkas" not in regression:
+        fail("bad-circle-line-intersection-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad circle line certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-circle-line-intersection-rejected certificate must document checked Farkas evidence")
 
     horizon = checks["general-circle-geometry-lean-horizon"]
     if horizon["expected_result"] != "not-run":

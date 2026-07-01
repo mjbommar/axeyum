@@ -205,6 +205,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite circle-geometry bad line-intersection QF_LRA row landed.**
+  `finite-circle-geometry-v0` now has a second checked Farkas row plus a new
+  replay witness: finite circle-line replay checks the horizontal diameter
+  `y=0`, endpoints `(-1,0)` and `(1,0)`, midpoint `(0,0)`, and the right
+  intersection `(1,0)`, while the malformed row claims right-intersection
+  x-coordinate `2`. The new source SMT-LIB artifact isolates the final exact
+  equality conflict, the shared `math_resource_lra_routes` regression parses it
+  and checks `UnsatFarkas` evidence, and the validator pins the line equation,
+  endpoint radii, line values, midpoint, chord direction, computed/claimed
+  intersection coordinates, artifact path, regression, and certificate note.
+  The circle pack docs, learner pages, proof frontier, field matrix, and
+  buildout ledgers now reference both checked circle-geometry rows. Generated
+  dashboards and the public query summary now report 111 concept rows, 108
+  non-template packs, 564 expected checks, 247 checked rows, 246 replay-only
+  rows, and 71 Lean-horizon rows.
+
 - **Finite cyclic-geometry bad opposite-angle QF_LRA row landed.**
   `finite-cyclic-geometry-v0` now has a second checked Farkas row in addition
   to the bad diagonal-intersection conflict: finite cyclic replay computes the
@@ -522,7 +538,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `bridge_finite_circle_inversion_cyclic_replay` now makes finite
   circle-geometry, inversion-geometry, and cyclic-geometry rows queryable from
   one shared atlas concept, with exact coordinate replay and checked
-  QF_LRA/Farkas bad-radius, bad-inverse-coordinate, and
+  QF_LRA/Farkas bad-radius, bad-line-intersection, bad-inverse-coordinate, and
   bad-diagonal-intersection and bad-opposite-angle rows kept separate from
   general circle, inversion, cyclic-quadrilateral, Ptolemy, and synthetic
   geometry theorems. `CONSUMER-QUERIES.md`, `FIELD-READINESS-QUERY-MATRIX.md`,
@@ -809,8 +825,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   now add exact circle point, tangent-line, and chord-midpoint replay to the
   geometry, real-analysis, linear-algebra, and polynomial resource paths. The
   pack validates point-on-circle replay, tangent-line/radius perpendicularity,
-  chord-midpoint perpendicularity, a source-linked checked QF_LRA/Farkas
-  rejection for a false radius claim, and a circle-geometry Lean-horizon row.
+  chord-midpoint perpendicularity, circle-line intersection replay,
+  source-linked checked QF_LRA/Farkas rejections for false radius and
+  line-intersection claims, and a circle-geometry Lean-horizon row.
   The generated resource summary at landing was 100 promoted non-template packs,
   506 checks, 220 checked rows, 223 replay-only rows, and 63 Lean-horizon rows.
 

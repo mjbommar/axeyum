@@ -307,8 +307,9 @@ First targets:
   (source-linked Farkas regression landed for the bad squared-distance row
   after exact coordinate replay computes the squared distance)
 - [finite-circle-geometry-v0](../../artifacts/examples/math/finite-circle-geometry-v0/)
-  (source-linked Farkas regression landed for the bad radius row after exact
-  coordinate replay computes the squared radius)
+  (source-linked Farkas regressions landed for the bad radius and bad
+  line-intersection rows after exact coordinate replay computes the squared
+  radius and right intersection coordinate)
 - [finite-inversion-geometry-v0](../../artifacts/examples/math/finite-inversion-geometry-v0/)
   (source-linked Farkas regression landed for the bad inverse-coordinate row
   after exact inversion replay computes the inverse x-coordinate)

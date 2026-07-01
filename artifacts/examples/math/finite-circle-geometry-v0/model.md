@@ -34,5 +34,21 @@ M = (3,0)
 The chord direction is `(0,-8)`, the radius to the midpoint is `(3,0)`, and
 their dot product is zero.
 
+The circle-line witness uses the horizontal diameter of the unit circle:
+
+```text
+y = 0
+L = (0,1,0)
+A = (-1,0)
+B = (1,0)
+```
+
+Exact replay checks both endpoints satisfy the line equation and
+`x^2 + y^2 = 1`, recomputes their midpoint as the center, and identifies the
+right intersection as `(1,0)`.
+
 The bad row uses `Q = (1,1)`. Exact replay computes `|Q|^2 = 2`, while the
 malformed row claims `|Q|^2 = 1`.
+
+The bad circle-line row reuses the horizontal diameter replay. It computes the
+right intersection x-coordinate as `1`, while the malformed row claims `2`.

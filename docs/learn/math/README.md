@@ -283,8 +283,9 @@ Companion maps:
   rejection, and the graph-rigidity Lean horizon.
 - [Finite Circle Geometry](finite-circle-geometry-end-to-end.md): follows
   exact point-on-circle replay, tangent-line/radius perpendicularity,
-  chord-midpoint perpendicularity, checked QF_LRA/Farkas bad-radius rejection,
-  and the general circle-geometry Lean horizon.
+  chord-midpoint perpendicularity, circle-line intersection replay, checked
+  QF_LRA/Farkas bad-radius and bad-line-intersection rejection, and the general
+  circle-geometry Lean horizon.
 - [Finite Inversion Geometry](finite-inversion-geometry-end-to-end.md):
   follows exact unit-circle inversion replay, inverse-distance product
   checking, collinearity replay, checked QF_LRA/Farkas bad inverse-coordinate

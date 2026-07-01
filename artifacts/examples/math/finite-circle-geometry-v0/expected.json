@@ -37,6 +37,28 @@
         "radius_to_midpoint": ["3", "0"],
         "perpendicular_dot": "0"
       }
+    },
+    {
+      "id": "horizontal-diameter-line",
+      "description": "The horizontal diameter line intersects the unit circle at two rational points.",
+      "values": {
+        "center": ["0", "0"],
+        "radius_squared": "1",
+        "line": {
+          "a": "0",
+          "b": "1",
+          "c": "0"
+        },
+        "endpoints": [
+          ["-1", "0"],
+          ["1", "0"]
+        ],
+        "endpoint_radius_squared": ["1", "1"],
+        "endpoint_line_values": ["0", "0"],
+        "midpoint": ["0", "0"],
+        "chord_direction": ["2", "0"],
+        "right_intersection": ["1", "0"]
+      }
     }
   ],
   "checks": [
@@ -68,6 +90,15 @@
       "notes": "The validator checks both endpoints lie on x^2+y^2=25, recomputes the midpoint, and checks a zero dot product."
     },
     {
+      "id": "circle-line-intersection-witness",
+      "claim": "The line y=0 intersects the unit circle at (-1,0) and (1,0).",
+      "expected_result": "sat",
+      "validation": "exact_circle_line_intersection_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["horizontal-diameter-line"],
+      "notes": "The validator checks both endpoints lie on y=0 and x^2+y^2=1, recomputes their midpoint, and identifies the right intersection."
+    },
+    {
       "id": "bad-circle-radius-rejected",
       "claim": "The point (1,1) lies on the unit circle centered at the origin.",
       "expected_result": "unsat",
@@ -83,6 +114,28 @@
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
       "notes": "Exact coordinate replay computes squared radius 2 for (1,1), while the malformed row claims squared radius 1; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
+      "id": "bad-circle-line-intersection-rejected",
+      "claim": "The right intersection of y=0 with the unit circle has x-coordinate 2.",
+      "expected_result": "unsat",
+      "validation": "exact_bad_circle_line_intersection_refutation",
+      "proof_status": "checked",
+      "data": {
+        "line": {
+          "a": "0",
+          "b": "1",
+          "c": "0"
+        },
+        "computed_right_intersection": ["1", "0"],
+        "claimed_right_intersection": ["2", "0"],
+        "computed_x": "1",
+        "claimed_x": "2",
+        "smt2_artifact": "artifacts/examples/math/finite-circle-geometry-v0/smt2/bad-line-intersection-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geometry_bad_line_intersection_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact circle-line replay computes the right intersection as (1,0), while the malformed row claims x-coordinate 2; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
     },
     {
       "id": "general-circle-geometry-lean-horizon",

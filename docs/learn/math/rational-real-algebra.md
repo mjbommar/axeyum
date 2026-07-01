@@ -405,21 +405,24 @@ row computes line value `3` for `(2,2)` but the malformed point-on-line claim
 requires `0`; the source QF_LRA artifact checks that final conflict with
 `UnsatFarkas` evidence.
 
-For a finite circle-geometry check, encode one rational circle point and its
-tangent:
+For a finite circle-geometry check, encode one rational circle point, its
+tangent, and one horizontal circle-line intersection:
 
 ```text
 C = (0,0)
 P = (3/5,4/5)
 r^2 = 1
 tangent line = (3/5)x + (4/5)y - 1 = 0
+y = 0 intersects at (-1,0) and (1,0)
 ```
 
 The validator recomputes `|P-C|^2 = 1`, checks that `P` lies on the tangent
 line, and checks that tangent direction `(-4/5,3/5)` has dot product `0` with
-the radius vector. The bad row claims `(1,1)` lies on the unit circle; exact
-replay computes squared radius `2`, while the source QF_LRA artifact asserts
-the malformed value `1` and checks that final equality conflict with
+the radius vector. It also checks the horizontal diameter endpoints and records
+the right intersection as `(1,0)`. The bad rows claim `(1,1)` lies on the unit
+circle and that the right intersection has x-coordinate `2`; exact replay
+computes squared radius `2` and right-intersection x-coordinate `1`, while the
+source QF_LRA artifacts check those final equality conflicts with
 `UnsatFarkas` evidence.
 
 For a finite inversion-geometry check, encode one rational point outside the
@@ -501,6 +504,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/af
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-circle-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geometry_bad_radius_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geometry_bad_line_intersection_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-inversion-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_x_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0

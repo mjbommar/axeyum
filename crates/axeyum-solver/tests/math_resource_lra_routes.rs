@@ -91,6 +91,9 @@ const COORDINATE_GEOMETRY_BAD_DISTANCE_SQUARED: &str = include_str!(
 const FINITE_CIRCLE_GEOMETRY_BAD_RADIUS: &str = include_str!(
     "../../../artifacts/examples/math/finite-circle-geometry-v0/smt2/bad-radius-farkas-conflict.smt2"
 );
+const FINITE_CIRCLE_GEOMETRY_BAD_LINE_INTERSECTION: &str = include_str!(
+    "../../../artifacts/examples/math/finite-circle-geometry-v0/smt2/bad-line-intersection-farkas-conflict.smt2"
+);
 const FINITE_INVERSION_GEOMETRY_BAD_INVERSE_X: &str = include_str!(
     "../../../artifacts/examples/math/finite-inversion-geometry-v0/smt2/bad-inversion-x-farkas-conflict.smt2"
 );
@@ -595,6 +598,14 @@ fn finite_circle_geometry_bad_radius_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-circle-geometry-v0 bad-radius SMT-LIB artifact",
         FINITE_CIRCLE_GEOMETRY_BAD_RADIUS,
+    );
+}
+
+#[test]
+fn finite_circle_geometry_bad_line_intersection_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-circle-geometry-v0 bad-line-intersection SMT-LIB artifact",
+        FINITE_CIRCLE_GEOMETRY_BAD_LINE_INTERSECTION,
     );
 }
 

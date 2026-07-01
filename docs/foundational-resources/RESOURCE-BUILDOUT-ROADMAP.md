@@ -964,8 +964,9 @@ Build next:
   replay plus the source QF_LRA/Farkas artifact.
 - Keep `rigid-configuration-geometry-v0`'s promoted bad distance-table row
   tied to exact distance replay plus the source QF_LRA/Farkas artifact.
-- Keep `finite-circle-geometry-v0`'s promoted bad radius row tied to exact
-  circle-coordinate replay plus the source QF_LRA/Farkas artifact.
+- Keep `finite-circle-geometry-v0`'s promoted bad radius and bad
+  line-intersection rows tied to exact circle-coordinate replay plus the source
+  QF_LRA/Farkas artifacts.
 - Keep `finite-inversion-geometry-v0`'s promoted bad inverse-coordinate row
   tied to exact inversion replay plus the source QF_LRA/Farkas artifact.
 - Keep `finite-cyclic-geometry-v0`'s promoted bad diagonal-intersection and
@@ -973,7 +974,7 @@ Build next:
   source QF_LRA/Farkas artifacts.
 - Promote additional false affine/distance/orientation/incidence/circle/inversion/cyclic
   claims through QF_LRA/Farkas or NRA only when they add distinct exact-rational
-  circle-line, Ptolemy, or polynomial-geometry pressure.
+  nontrivial circle-line, Ptolemy, or polynomial-geometry pressure.
 - Keep differential geometry, algebraic geometry, global geometry, and
   topology-heavy geometry as Lean-horizon.
 
@@ -1509,9 +1510,10 @@ Pick one item per commit unless the change is purely navigational.
 70. Landed: add `finite-circle-geometry-v0`.
     The new geometry, linear-algebra, and real-analysis pack validates exact
     point-on-circle replay, tangent-line/radius perpendicularity,
-    chord-midpoint perpendicularity, checked QF_LRA/Farkas rejection of a false
-    radius claim, and a circle-geometry Lean horizon. The learner path now
-    includes a focused finite circle-geometry end-to-end page.
+    chord-midpoint perpendicularity, circle-line intersection replay, checked
+    QF_LRA/Farkas rejection of false radius and line-intersection claims, and a
+    circle-geometry Lean horizon. The learner path now includes a focused
+    finite circle-geometry end-to-end page.
 71. Landed: add `finite-inversion-geometry-v0`.
     The new geometry, linear-algebra, and real-analysis pack validates exact
     unit-circle inversion replay, inverse-distance product checking,

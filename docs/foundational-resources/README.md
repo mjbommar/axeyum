@@ -428,8 +428,9 @@ schemas, examples, and validation workflows.
   claim, and an oriented-geometry Lean-horizon row.
 - [`artifacts/examples/math/finite-circle-geometry-v0/`](../../artifacts/examples/math/finite-circle-geometry-v0/)
   validates exact point-on-circle replay, tangent-line/radius perpendicularity,
-  chord-midpoint perpendicularity, checked QF_LRA/Farkas rejection of a bad
-  radius claim, and a circle-geometry Lean-horizon row.
+  chord-midpoint perpendicularity, circle-line intersection replay, checked
+  QF_LRA/Farkas rejection of bad radius and line-intersection claims, and a
+  circle-geometry Lean-horizon row.
 - [`artifacts/examples/math/finite-inversion-geometry-v0/`](../../artifacts/examples/math/finite-inversion-geometry-v0/)
   validates exact unit-circle inversion replay, inverse-distance product
   checking, collinearity replay, checked QF_LRA/Farkas rejection of a bad

@@ -135,9 +135,9 @@ rigid-configuration slice treats pairwise squared-distance tables as finite
 matrix-like data, checks translation and congruent-triangle witnesses, and
 rejects a bad distance-table row through QF_LRA/Farkas evidence.
 The finite circle-geometry slice checks point-on-circle equations,
-tangent-line/radius perpendicularity, and chord-midpoint perpendicularity as
-small exact vector calculations, then rejects a bad radius row through
-QF_LRA/Farkas evidence.
+tangent-line/radius perpendicularity, chord-midpoint perpendicularity, and
+circle-line intersections as small exact vector calculations, then rejects bad
+radius and bad line-intersection rows through QF_LRA/Farkas evidence.
 The finite inversion-geometry slice checks unit-circle inversion as scalar
 vector replay, inverse-distance products, and collinearity determinants, then
 rejects a bad inverse-coordinate row through QF_LRA/Farkas evidence.
@@ -350,21 +350,23 @@ evidence. For a focused trace, read
 [End To End: Finite Active-Set QP Checks](finite-active-set-qp-end-to-end.md).
 
 For a finite circle-geometry example, encode a point, tangent direction, and
-chord as exact rational vectors:
+circle-line chord as exact rational vectors:
 
 ```text
 P = (3/5,4/5)
 radius = (3/5,4/5)
 tangent_direction = (-4/5,3/5)
 A = (3,4), B = (3,-4), midpoint = (3,0)
+line y = 0, endpoints = (-1,0),(1,0)
 ```
 
 The `finite-circle-geometry-v0` validator recomputes the unit-circle equation,
-the tangent-line value, the tangent/radius dot product, both chord endpoint
-radii, the midpoint, and the radius/chord dot product. Its bad row claims
-`(1,1)` lies on the unit circle; exact replay computes squared radius `2`, and
-the final `2 = 1` conflict is checked through QF_LRA/Farkas evidence. For a
-focused trace, read
+the tangent-line value, the tangent/radius dot product, chord endpoint radii,
+midpoints, the radius/chord dot product, and the horizontal line intersections.
+Its checked bad rows reject `(1,1)` as a unit-circle point and reject a false
+right-intersection x-coordinate `2`; exact replay computes squared radius `2`
+and right-intersection x-coordinate `1`, and both final conflicts are checked
+through QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Circle Geometry](finite-circle-geometry-end-to-end.md).
 
 For a finite inversion-geometry example, encode the point and inverse image as
@@ -593,6 +595,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/af
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-circle-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geometry_bad_radius_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geometry_bad_line_intersection_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-inversion-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_x_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0

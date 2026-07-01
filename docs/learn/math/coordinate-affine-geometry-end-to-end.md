@@ -54,7 +54,9 @@ Concept rows:
 | `point-on-circle-witness` | `sat` | replay-only |
 | `tangent-line-witness` | `sat` | replay-only |
 | `chord-midpoint-perpendicular-witness` | `sat` | replay-only |
+| `circle-line-intersection-witness` | `sat` | replay-only |
 | `bad-circle-radius-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-circle-line-intersection-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `inversion-image-witness` | `sat` | replay-only |
 | `inverse-distance-product-witness` | `sat` | replay-only |
 | `inversion-collinearity-witness` | `sat` | replay-only |
