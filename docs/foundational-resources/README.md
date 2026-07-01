@@ -386,8 +386,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-tensor-products-v0/`](../../artifacts/examples/math/finite-tensor-products-v0/)
   validates finite tensor-product basis/dimension replay over `F2`,
   bilinear-map table replay, universal-factorization shadow through a linear
-  map, Kronecker-product replay, checked bad-bilinear-map rejection, and a
-  tensor-theory Lean-horizon row.
+  map, Kronecker-product replay, checked bad-bilinear-map replay, explicit
+  QF_UF/Alethe left-additivity evidence, and a tensor-theory Lean-horizon row.
 - [`artifacts/examples/math/finite-ideals-v0/`](../../artifacts/examples/math/finite-ideals-v0/)
   validates finite ideal laws over `Z/6Z`, principal ideal generation,
   ring-homomorphism kernel/image replay, quotient-ring table replay, checked

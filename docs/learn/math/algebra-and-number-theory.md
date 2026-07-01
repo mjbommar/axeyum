@@ -74,8 +74,8 @@ on finite additive groups, generated submodules, module homomorphisms,
 quotient module tables, kernels, images, and checked QF_UF/Alethe
 bad-submodule refutations. The finite-tensor-products pack checks finite
 tensor-product basis/dimension replay, bilinear maps, factorization through a
-tensor map, Kronecker products, and checked QF_UF/Alethe bad-bilinear-map
-refutations. The finite universal-coefficient shadow pack checks one
+tensor map, Kronecker products, checked bad-bilinear replay, and an explicit
+QF_UF/Alethe left-additivity row. The finite universal-coefficient shadow pack checks one
 finitely generated abelian-group Hom/Ext bookkeeping row, `H^1 = Z/2`, and a
 checked QF_UF/Alethe bad group-identification row. The gcd/Bezout
 pack adds exact divisibility and fixed linear Diophantine checks. The

@@ -394,13 +394,40 @@
           "right": "1",
           "claimed": "00",
           "actual_sum": "11"
+        }
+      },
+      "notes": "The validator checks beta(10 + 01, 1) differs from beta(10,1) + beta(01,1), so the listed table is not bilinear; the separate QF_UF row owns the proof-object refutation for the fixed left-additivity equality claim."
+    },
+    {
+      "id": "qf-uf-bad-bilinear-left-additivity",
+      "claim": "The malformed bilinear table can force beta(11,1)=00 while satisfying left additivity on 10 + 01.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
+      "data": {
+        "field": "F2",
+        "left_space": "F2^2",
+        "right_space": "F2",
+        "target_space": "F2^2",
+        "table_values": {
+          "beta(10,1)": "10",
+          "beta(01,1)": "01",
+          "beta(11,1)": "00"
+        },
+        "failing_left_additivity": {
+          "left_a": "10",
+          "left_b": "01",
+          "left_sum": "11",
+          "right": "1",
+          "claimed": "00",
+          "actual_sum": "11"
         },
         "alethe_left_additivity_claim": "beta(10+01,1) = beta(10,1)+beta(01,1)",
         "smt2_artifact": "artifacts/examples/math/finite-tensor-products-v0/smt2/bad-bilinear-left-additivity-conflict.smt2",
         "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_tensor_products_bad_bilinear_emits_checked_alethe",
         "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
       },
-      "notes": "The validator checks beta(10 + 01, 1) differs from beta(10,1) + beta(01,1); the linked QF_UF artifact emits a zero-trust Alethe refutation for the fixed left-additivity equality claim."
+      "notes": "The SMT-LIB artifact isolates the additivity equality contradiction after exact replay computes 10 + 01 = 11, beta(11,1) = 00, and beta(10,1) + beta(01,1) = 11."
     },
     {
       "id": "general-tensor-theory-lean-horizon",

@@ -21,7 +21,8 @@ Concept rows:
 | `bilinear-map-table-replay` | `sat` | checked |
 | `universal-factorization-replay` | `sat` | checked |
 | `kronecker-product-replay` | `sat` | checked |
-| `bad-bilinear-map-rejected` | `unsat` | checked QF_UF/Alethe |
+| `bad-bilinear-map-rejected` | `unsat` | checked finite replay |
+| `qf-uf-bad-bilinear-left-additivity` | `unsat` | checked QF_UF/Alethe |
 | `general-tensor-theory-lean-horizon` | `not-run` | lean-horizon |
 
 The checked rows are exact finite replay rows over `F2`. The pack does not
@@ -175,7 +176,8 @@ beta(10, 1) + beta(01, 1) = 10 + 01 = 11
 ```
 
 The bad table claims `00` for the left side, while the recomputed sum is `11`.
-The checker rejects the bilinearity claim. The linked `QF_UF` artifact records
+The checker rejects the bilinearity claim by finite replay. The separate
+`qf-uf-bad-bilinear-left-additivity` row links the `QF_UF` artifact recording
 `10 + 01 = 11`, `beta(11,1) = 00`, `beta(10,1) = 10`,
 `beta(01,1) = 01`, `10 + 01 = 11`, and the fixed left-additivity equality
 `beta(10+01,1) = beta(10,1)+beta(01,1)`; Axeyum emits and independently
@@ -202,7 +204,7 @@ This lesson shows Axeyum's resource pattern for finite multilinear algebra:
 ```text
 untrusted fast search -> tensor basis, bilinear map, factor map, matrix product
 trusted small checking -> basis span, bilinear laws, factorization, matrix replay
-checked proof object -> QF_UF/Alethe certificate for the bad bilinear row
+checked proof object -> QF_UF/Alethe certificate for the explicit additivity row
 ```
 
 General tensor products, universal properties, multilinear maps, exterior and

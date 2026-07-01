@@ -295,8 +295,9 @@ one of:
       `set_theory_and_foundations`.
     - Checks: finite tensor-product basis/dimension replay over `F2`,
       bilinear-map table replay, universal-factorization shadow through a
-      linear map, Kronecker-product replay, bad-bilinear-map rejection, and a
-      general tensor-theory Lean-horizon row.
+      linear map, Kronecker-product replay, bad-bilinear-map replay, explicit
+      QF_UF/Alethe left-additivity evidence, and a general tensor-theory
+      Lean-horizon row.
 31. `artifacts/examples/math/finite-dual-spaces-v0/`
     - Fields: `linear_algebra`, `abstract_algebra`,
       `set_theory_and_foundations`,

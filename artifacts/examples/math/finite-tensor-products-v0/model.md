@@ -39,7 +39,7 @@ over arbitrary modules remains Lean-horizon.
 
 ## Bad Bilinear Certificate
 
-For the rejected map, exact replay computes:
+For the rejected map, exact replay computes the finite-table failure:
 
 ```text
 10 + 01 = 11
@@ -56,5 +56,6 @@ beta(10 + 01, 1) = beta(10,1) + beta(01,1)
 ```
 
 The linked `QF_UF` artifact is therefore unsatisfiable by equality reasoning.
-The resource regression checks that Axeyum emits independently rechecked
-`UnsatAletheProof` evidence with no trusted reduction step.
+The separate `qf-uf-bad-bilinear-left-additivity` row owns that proof-object
+boundary: the resource regression checks that Axeyum emits independently
+rechecked `UnsatAletheProof` evidence with no trusted reduction step.

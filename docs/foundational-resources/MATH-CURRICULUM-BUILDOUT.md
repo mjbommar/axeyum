@@ -528,8 +528,8 @@ duality/functional-analysis Lean-horizon row.
 `finite-tensor-products-v0` now adds the finite multilinear-algebra bridge:
 `F2^2 tensor F2` basis/dimension replay, finite bilinear-map table replay,
 universal-factorization shadow through a linear map, Kronecker-product matrix
-replay, checked QF_UF/Alethe bad-bilinear-map rejection, and a general
-tensor-theory Lean-horizon row.
+replay, checked bad-bilinear replay, explicit QF_UF/Alethe left-additivity
+evidence, and a general tensor-theory Lean-horizon row.
 `finite-ideals-v0` now adds the finite quotient-ring bridge with `Z/6Z`
 ideal replay, principal ideal generation, modulo-2 ring-homomorphism
 kernel/image replay, quotient-ring table replay, checked QF_UF/Alethe
@@ -1726,8 +1726,8 @@ module-theory Lean-horizon row.
 `finite-tensor-products-v0` now adds the exact finite multilinear-algebra
 bridge over `F2`: tensor-product basis/dimension replay, bilinear-map table
 replay, universal-factorization shadow through a linear map, Kronecker-product
-matrix replay, checked QF_UF/Alethe bad-bilinear-map rejection, and a
-tensor-theory Lean-horizon row.
+matrix replay, checked bad-bilinear replay, explicit QF_UF/Alethe
+left-additivity evidence, and a tensor-theory Lean-horizon row.
 `finite-ideals-v0` now adds the exact finite quotient-ring bridge over `Z/6Z`:
 ideal laws, principal ideal generation, modulo-2 ring-homomorphism
 kernel/image replay, quotient-ring tables, checked QF_UF/Alethe non-ideal
@@ -2668,6 +2668,12 @@ The finite dual-space pack now also splits its bad-covector additivity evidence:
 `10 + 01 = 11`, `f(11)=1`, and `f(10)+f(01)=0`, while
 `qf-uf-bad-covector-additivity` owns the checked QF_UF/Alethe
 additivity-conflict artifact and direct pack/route/text query.
+The finite tensor-product pack now also splits its bad-bilinear additivity
+evidence: `bad-bilinear-map-rejected` remains the exact finite replay row that
+computes `10 + 01 = 11`, `beta(11,1)=00`, and
+`beta(10,1)+beta(01,1)=11`, while
+`qf-uf-bad-bilinear-left-additivity` owns the checked QF_UF/Alethe
+left-additivity artifact and direct pack/route/text query.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite tensor-product left-additivity Alethe row split landed.**
+  `finite-tensor-products-v0` now keeps the malformed bilinear-map rejection as
+  exact finite replay and exposes the QF_UF/Alethe proof-object check as the
+  explicit `qf-uf-bad-bilinear-left-additivity` row. The replay row computes
+  `10 + 01 = 11`, `beta(11,1) = 00`, and
+  `beta(10,1)+beta(01,1)=11`; the source SMT-LIB artifact separately checks
+  the fixed additivity equality contradiction
+  `beta(10+01,1) = beta(10,1)+beta(01,1)`. Focused validation passes; the
+  public summary now reports 120 concept rows, 108 packs, 646 expected checks,
+  321 checked rows, 254 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite dual-space covector-additivity Alethe row split landed.**
   `finite-dual-spaces-v0` now keeps the malformed covector rejection as exact
   finite replay and exposes the QF_UF/Alethe proof-object check as the explicit

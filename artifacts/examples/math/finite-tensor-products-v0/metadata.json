@@ -38,7 +38,7 @@
     "target": "finite tensor-product bad bilinear map QF_UF/Alethe regression seed",
     "pressure": "Left-additivity conflict where 10 + 01 = 11 and beta(10,1)+beta(01,1)=11, but the malformed row forces beta(11,1)=00.",
     "evidence": [
-      "bad-bilinear-map-rejected"
+      "qf-uf-bad-bilinear-left-additivity"
     ],
     "next_step": "Promote additional finite tensor rows only when they add distinct bilinearity, factorization, or finite-matrix solver pressure; keep arbitrary universal properties, multilinear algebra, and homological algebra in the Lean-horizon lane."
   },
@@ -60,6 +60,7 @@
     "universal-factorization-replay",
     "kronecker-product-replay",
     "bad-bilinear-map-rejected",
+    "qf-uf-bad-bilinear-left-additivity",
     "general-tensor-theory-lean-horizon"
   ],
   "graduation_criteria": [

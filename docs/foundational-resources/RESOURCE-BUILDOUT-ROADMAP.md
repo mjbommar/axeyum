@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 645 expected checks.
-- 320 checked proof/evidence rows.
+- 646 expected checks.
+- 321 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -2163,6 +2163,13 @@ Pick one item per commit unless the change is purely navigational.
      and `f(10)+f(01)=0`; the new `qf-uf-bad-covector-additivity` row isolates
      the additivity equality contradiction for checked Alethe evidence and
      gives consumers a direct pack/route/text query.
+147. Landed: split the `finite-tensor-products-v0` bad-bilinear proof-object
+     check into an explicit QF_UF/Alethe row. The finite replay row still
+     rejects the malformed table by computing `10 + 01 = 11`,
+     `beta(11,1)=00`, and `beta(10,1)+beta(01,1)=11`; the new
+     `qf-uf-bad-bilinear-left-additivity` row isolates the additivity equality
+     contradiction for checked Alethe evidence and gives consumers a direct
+     pack/route/text query.
 
 ## Validation Checklist
 

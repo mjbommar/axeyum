@@ -66,7 +66,7 @@ route explicitly instead.
 | `finite-vector-spaces-v0` | Finite subspaces, spans, linear maps, kernel/image, rank-nullity replay. | Bad subspace closure now has separate replay and QF_UF/Alethe additive-closure membership rows. | arbitrary vector-space theorem schemas |
 | `finite-dual-spaces-v0` | Finite covector tables, dual basis, annihilator, transpose replay. | Bad covector additivity now has separate replay and `qf-uf-bad-covector-additivity` equality-conflict rows. | general dual-space and functorial theorem statements |
 | `finite-modules-v0` | Module action, generated submodule, module homomorphism, quotient-module replay. | Bad scalar closure now has separate replay and QF_UF/Alethe membership-conflict rows. | exact sequences, projective/injective modules, homological algebra |
-| `finite-tensor-products-v0` | Tensor basis/dimension, bilinear map, factorization, Kronecker replay. | Bad left-additivity is checked as a finite map equality conflict. | tensor-product universal property and multilinear algebra in general |
+| `finite-tensor-products-v0` | Tensor basis/dimension, bilinear map, factorization, Kronecker replay. | Bad left-additivity now has separate replay and `qf-uf-bad-bilinear-left-additivity` equality-conflict rows. | tensor-product universal property and multilinear algebra in general |
 
 ## Query It
 

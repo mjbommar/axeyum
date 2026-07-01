@@ -504,8 +504,8 @@ quotient-module tables, and bad-submodule rejection.
 [`finite-tensor-products-v0`](../../artifacts/examples/math/finite-tensor-products-v0/)
 adds the finite multilinear-algebra bridge: tensor-product basis/dimension
 replay over `F2`, bilinear-map tables, universal-factorization shadow,
-Kronecker-product replay, bad-bilinear-map rejection, and a tensor-theory
-Lean-horizon row.
+Kronecker-product replay, bad-bilinear replay, explicit QF_UF/Alethe
+left-additivity evidence, and a tensor-theory Lean-horizon row.
 [`numerical-linear-algebra-v0`](../../artifacts/examples/math/numerical-linear-algebra-v0/)
 validates exact residual bounds, rational solution boxes, Jacobi one-step
 contraction replay, and checked rejection of false residual, solution-box, and

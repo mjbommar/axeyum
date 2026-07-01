@@ -4233,21 +4233,70 @@ def validate_finite_tensor_products(expected: dict[str, Any]) -> None:
         fail("bad-bilinear-map-rejected actual_sum is incorrect")
     if claimed == actual_sum:
         fail("bad-bilinear-map-rejected malformed map unexpectedly satisfies the documented additivity row")
-    alethe_claim = data.get("alethe_left_additivity_claim")
-    require_string("bad bilinear alethe_left_additivity_claim", alethe_claim)
+    qf_uf = checks["qf-uf-bad-bilinear-left-additivity"]
+    if qf_uf["expected_result"] != "unsat":
+        fail("qf-uf-bad-bilinear-left-additivity must expect unsat")
+    if qf_uf["proof_status"] != "checked":
+        fail("qf-uf-bad-bilinear-left-additivity must be checked")
+    if qf_uf["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-bad-bilinear-left-additivity must use qf_uf_congruence_alethe validation")
+    qf_data = qf_uf.get("data", {})
+    if qf_data.get("field") != "F2":
+        fail("qf-uf-bad-bilinear-left-additivity field must be F2")
+    if qf_data.get("left_space") != "F2^2":
+        fail("qf-uf-bad-bilinear-left-additivity left_space must be F2^2")
+    if qf_data.get("right_space") != "F2":
+        fail("qf-uf-bad-bilinear-left-additivity right_space must be F2")
+    if qf_data.get("target_space") != "F2^2":
+        fail("qf-uf-bad-bilinear-left-additivity target_space must be F2^2")
+    table_values = qf_data.get("table_values")
+    if not isinstance(table_values, dict):
+        fail("qf-uf-bad-bilinear-left-additivity table_values must be an object")
+    expected_table_values = {
+        f"beta({left_a},{right})": mapping[(left_a, right)],
+        f"beta({left_b},{right})": mapping[(left_b, right)],
+        f"beta({left_sum},{right})": mapping[(left_sum, right)],
+    }
+    for key, value in expected_table_values.items():
+        require_string(f"qf-uf bad bilinear table_values[{key}]", table_values.get(key))
+        if table_values[key] != value:
+            fail("qf-uf-bad-bilinear-left-additivity table_values must match bad-bilinear-map-rejected")
+    qf_witness = qf_data.get("failing_left_additivity")
+    if not isinstance(qf_witness, dict):
+        fail("qf-uf-bad-bilinear-left-additivity failing_left_additivity must be an object")
+    if qf_witness.get("left_a") != left_a:
+        fail("qf-uf-bad-bilinear-left-additivity left_a must match bad-bilinear-map-rejected")
+    if qf_witness.get("left_b") != left_b:
+        fail("qf-uf-bad-bilinear-left-additivity left_b must match bad-bilinear-map-rejected")
+    if qf_witness.get("left_sum") != left_sum:
+        fail("qf-uf-bad-bilinear-left-additivity left_sum must match bad-bilinear-map-rejected")
+    if qf_witness.get("right") != right:
+        fail("qf-uf-bad-bilinear-left-additivity right must match bad-bilinear-map-rejected")
+    if qf_witness.get("claimed") != claimed:
+        fail("qf-uf-bad-bilinear-left-additivity claimed value must match bad-bilinear-map-rejected")
+    if qf_witness.get("actual_sum") != actual_sum:
+        fail("qf-uf-bad-bilinear-left-additivity actual_sum must match bad-bilinear-map-rejected")
+    alethe_claim = qf_data.get("alethe_left_additivity_claim")
+    require_string("qf-uf bad bilinear alethe_left_additivity_claim", alethe_claim)
     if alethe_claim != f"beta({left_a}+{left_b},{right}) = beta({left_a},{right})+beta({left_b},{right})":
-        fail("bad-bilinear-map-rejected must document the Alethe left-additivity claim")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad bilinear smt2_artifact", smt2_artifact)
-    check_source("bad bilinear smt2_artifact", smt2_artifact)
-    proof_regression = data.get("proof_regression")
-    require_string("bad bilinear proof_regression", proof_regression)
+        fail("qf-uf-bad-bilinear-left-additivity must document the Alethe left-additivity claim")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-uf bad bilinear smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-tensor-products-v0/smt2/"
+        "bad-bilinear-left-additivity-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-uf-bad-bilinear-left-additivity smt2_artifact must name the checked source artifact")
+    check_source("qf-uf bad bilinear smt2_artifact", smt2_artifact)
+    proof_regression = qf_data.get("proof_regression")
+    require_string("qf-uf bad bilinear proof_regression", proof_regression)
     if "finite_tensor_products_bad_bilinear_emits_checked_alethe" not in proof_regression:
-        fail("bad-bilinear-map-rejected must link the Alethe regression")
-    certificate = data.get("certificate")
-    require_string("bad bilinear certificate", certificate)
+        fail("qf-uf-bad-bilinear-left-additivity must link the Alethe regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-uf bad bilinear certificate", certificate)
     if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
-        fail("bad-bilinear-map-rejected certificate must document zero-trust Alethe evidence")
+        fail("qf-uf-bad-bilinear-left-additivity certificate must document zero-trust Alethe evidence")
 
     horizon = checks["general-tensor-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

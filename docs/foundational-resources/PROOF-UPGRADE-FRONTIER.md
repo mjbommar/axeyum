@@ -568,7 +568,9 @@ First targets:
   (resource-backed QF_UF/Alethe regressions landed for the bad ideal
   additive-closure conflict and quotient-ring representative congruence)
 - [finite-tensor-products-v0](../../artifacts/examples/math/finite-tensor-products-v0/)
-  (resource-backed QF_UF/Alethe regression landed for the bad bilinear left-additivity conflict)
+  (resource-backed QF_UF/Alethe regression landed as
+  `qf-uf-bad-bilinear-left-additivity` for the bad bilinear left-additivity
+  conflict)
 - [finite-group-actions-v0](../../artifacts/examples/math/finite-group-actions-v0/)
   (resource-backed QF_UF/Alethe regressions landed for the bad identity-action
   and action-compatibility conflicts)
