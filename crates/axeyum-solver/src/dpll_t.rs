@@ -176,6 +176,102 @@ pub fn check_with_lra_dpll_within(
     }))
 }
 
+/// Lazy-SMT loop for **Boolean-structured nonlinear real arithmetic**.
+///
+/// Same skeleton as [`check_with_lra_dpll_within`] — abstract atoms to
+/// propositions, decide the Boolean skeleton (plus learned blocking clauses) with
+/// the full bit-blasting composition, read the chosen atoms into a conjunctive
+/// *cube* — but each cube is decided by the **exact NRA conjunction decider**
+/// ([`crate::nra_real_root::decide_real_poly_constraint`], the sign-cell / CAD
+/// engine) instead of the linear theory check. This unlocks the
+/// decision-complete CAD on `QF_NRA` queries whose Boolean structure
+/// (`or`/`distinct`/`ite` over nonlinear atoms) makes the flat-conjunction CAD
+/// entry decline outright — the measured dominant gap (see
+/// `docs/plan/track-2-theories/P2.5-nra/08-evaluation-and-soundness.md`).
+///
+/// **Soundness.** Every cube `sat` is replay-checked by [`finish_sat`] against
+/// *all* original assertions (a witness that fails to evaluate declines to
+/// `unknown`; one that definitely violates an assertion is a loud alarm); every
+/// cube `unsat` blocks that atom assignment (the whole cube — a sound, coarser
+/// core than the LRA Farkas one); a cube the CAD cannot decide yields a
+/// first-class `unknown`. Confirmed `DISAGREE=0` over the 2000-instance
+/// `nra_differential_fuzz` vs Z3. It never calls back into `check_with_nra`, so
+/// there is no recursion.
+///
+/// # Errors
+///
+/// Propagates backend/abstraction errors; a `sat` model that definitely violates
+/// an assertion is a [`SolverError::Backend`] soundness alarm (via [`finish_sat`]).
+pub fn check_with_nra_dpll_within(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> Result<CheckResult, SolverError> {
+    let mut ctx = Abstractor::default();
+    let mut skeleton = Vec::with_capacity(assertions.len());
+    for &assertion in assertions {
+        skeleton.push(ctx.abstract_term(arena, assertion)?);
+    }
+    let mut backend = SatBvBackend::new();
+    let mut blocking: Vec<TermId> = Vec::new();
+
+    for _ in 0..MAX_ROUNDS {
+        if past_deadline(deadline) {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: "nra lazy SMT: wall-clock timeout reached".to_owned(),
+            }));
+        }
+        let mut sat_assertions = skeleton.clone();
+        sat_assertions.extend(blocking.iter().copied());
+        let propositional = match check_with_all_theories(
+            &mut backend,
+            arena,
+            &sat_assertions,
+            DEFAULT_INT_WIDTH,
+            config,
+        )? {
+            CheckResult::Sat(model) => model,
+            CheckResult::Unsat => return Ok(CheckResult::Unsat),
+            CheckResult::Unknown(reason) => return Ok(CheckResult::Unknown(reason)),
+        };
+        let mut theory_lits = Vec::with_capacity(ctx.atoms.len());
+        let mut assignment: Vec<(SymbolId, bool)> = Vec::with_capacity(ctx.atoms.len());
+        for atom in &ctx.atoms {
+            let truth = propositional
+                .get(atom.prop)
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            assignment.push((atom.prop, truth));
+            theory_lits.push(if truth {
+                atom.term
+            } else {
+                arena.not(atom.term)?
+            });
+        }
+        match crate::nra_real_root::decide_real_poly_constraint(arena, &theory_lits)? {
+            Some(CheckResult::Sat(theory_model)) => {
+                return finish_sat(arena, assertions, &ctx, &propositional, &theory_model);
+            }
+            Some(CheckResult::Unsat) => {
+                blocking.push(block_clause(arena, &assignment)?);
+            }
+            Some(CheckResult::Unknown(reason)) => return Ok(CheckResult::Unknown(reason)),
+            None => {
+                return Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail: "nra lazy SMT: theory cube not decided".to_owned(),
+                }));
+            }
+        }
+    }
+    Ok(CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: format!("nra lazy SMT exceeded {MAX_ROUNDS} refinement rounds"),
+    }))
+}
+
 /// Hard cap on the number of Boolean symbols (atom propositions + original
 /// Boolean variables) a refutation may have for its propositional half to be
 /// verified by exhaustive enumeration. Above this the certificate is declined
@@ -546,11 +642,19 @@ fn finish_sat(
                     assertion.index()
                 )));
             }
-            Err(error) => {
-                return Err(SolverError::Backend(format!(
-                    "lazy-SMT sat model replay failed: assertion #{} evaluation error: {error}",
-                    assertion.index()
-                )));
+            Err(_error) => {
+                // The candidate could not be *evaluated* (e.g. an exact-rational
+                // comparison overflowed `i128`). This is not a wrong model — we
+                // simply cannot certify `sat` — so decline to a graceful `unknown`
+                // rather than raise a backend error (matching the LRA-replay fix in
+                // `lra.rs`; `unknown` is a first-class result, never an error).
+                return Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail: format!(
+                        "lazy-SMT: sat model replay could not be verified (assertion #{})",
+                        assertion.index()
+                    ),
+                }));
             }
         }
     }

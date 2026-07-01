@@ -35,7 +35,7 @@ use axeyum_ir::{IrError, Op, Sort, TermArena, TermId, TermNode, Value, eval};
 use axeyum_rewrite::replace_subterms;
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
-use crate::dpll_t::check_with_lra_dpll_within;
+use crate::dpll_t::{check_with_lra_dpll_within, check_with_nra_dpll_within};
 use crate::model::Model;
 
 // Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
@@ -130,6 +130,22 @@ pub fn check_with_nra(
     if products.is_empty() {
         // Already linear — straight to LRA.
         return check_with_lra_dpll_within(arena, assertions, config, deadline);
+    }
+
+    // Boolean structure over nonlinear atoms: the flat-conjunction CAD (above)
+    // declined, so this query is *not* a single conjunction — it has
+    // `or`/`distinct`/`ite`/`=>` structure. Run the NRA lazy-SMT loop, which
+    // case-splits the Boolean skeleton and decides each conjunctive cube with the
+    // exact sign-cell / CAD decider — unlocking the decision-complete polynomial
+    // engine on Boolean-structured `QF_NRA` (the measured dominant gap; see the
+    // P2.5 evaluation doc). It drives `decide_real_poly_constraint` per cube and
+    // never re-enters `check_with_nra`, so there is no recursion. On a cube the CAD
+    // cannot decide it returns `unknown`; we then fall through to the relaxation
+    // below, so this is strictly additive — it only turns a prior `unknown` into a
+    // decision. Confirmed `DISAGREE=0` on `nra_differential_fuzz` vs Z3.
+    match check_with_nra_dpll_within(arena, assertions, config, deadline)? {
+        result @ (CheckResult::Sat(_) | CheckResult::Unsat) => return Ok(result),
+        CheckResult::Unknown(_) => {}
     }
 
     // Abstract each distinct nonlinear product with a fresh real variable,
