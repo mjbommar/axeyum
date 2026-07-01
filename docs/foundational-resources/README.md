@@ -94,6 +94,9 @@ schemas, examples, and validation workflows.
   copyable concept-plus-route queries for bounded real-analysis rows,
   numerical-method rows, residuals, dynamics/Euler rows, and complex real-pair
   rows.
+- [DYNAMICS-QUERIES.md](DYNAMICS-QUERIES.md) gives copyable
+  concept-plus-route queries for finite recurrences, transition/invariant
+  rows, Euler rows, stochastic kernels, Markov chains, and hitting times.
 - [FOUNDATIONS-DISCRETE-QUERIES.md](FOUNDATIONS-DISCRETE-QUERIES.md) gives
   copyable concept-plus-route queries for Boolean proof rows, finite proof
   patterns, bounded induction, finite quantifiers, cardinality, counting,

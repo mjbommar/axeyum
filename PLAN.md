@@ -210,6 +210,11 @@ The analysis/numerical consumer query guide is
 it records exact concept-plus-route queries for bounded real-analysis rows,
 numerical-method rows, residuals, dynamics/Euler rows, and complex real-pair
 resources.
+The dynamics consumer query guide is
+[`docs/foundational-resources/DYNAMICS-QUERIES.md`](docs/foundational-resources/DYNAMICS-QUERIES.md);
+it records exact concept-plus-route queries for finite recurrences,
+transition/invariant rows, Euler rows, stochastic kernels, Markov chains, and
+hitting-time resources.
 The foundations/discrete consumer query guide is
 [`docs/foundational-resources/FOUNDATIONS-DISCRETE-QUERIES.md`](docs/foundational-resources/FOUNDATIONS-DISCRETE-QUERIES.md);
 it records exact concept-plus-route queries for Boolean proof rows, finite
@@ -668,6 +673,15 @@ so downstream consumers can discover finite analysis resources without
 promoting completeness, IVT/MVT/FTC, convergence, numerical stability,
 floating-point error, holomorphicity, contour-integration,
 analytic-continuation, or algebraic-closure claims.
+The dynamics lane now has
+[`DYNAMICS-QUERIES.md`](docs/foundational-resources/DYNAMICS-QUERIES.md),
+and the foundational smoke checks finite recurrence, transition, invariant,
+Euler, stochastic-kernel, Markov-chain, hitting-time, and calculus-shadow rows
+through Farkas queries, so downstream consumers can discover finite dynamics
+resources without promoting continuous ODE/PDE theory, flow/stability/
+bifurcation theorems, chaos/ergodic theory, Euler convergence,
+stochastic-process limits, continuous-time Markov processes, numerical
+stability, or floating-point claims.
 The foundations/discrete lane now has
 [`FOUNDATIONS-DISCRETE-QUERIES.md`](docs/foundational-resources/FOUNDATIONS-DISCRETE-QUERIES.md),
 and the foundational smoke checks Boolean proof/CNF, refutation-as-query,

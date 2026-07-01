@@ -64,6 +64,9 @@ use the
 For real-analysis, numerical-analysis, and complex-analysis discovery by bridge
 concept and proof route, use the
 [Analysis And Numerical Resource Consumer Queries](ANALYSIS-NUMERICAL-QUERIES.md).
+For differential-equations/dynamical-systems discovery by bridge concept and
+proof route, use the
+[Dynamics Resource Consumer Queries](DYNAMICS-QUERIES.md).
 For logic/proof, set-foundations, and discrete-math discovery by bridge concept
 and proof route, use the
 [Foundations And Discrete Resource Consumer Queries](FOUNDATIONS-DISCRETE-QUERIES.md).
@@ -2329,6 +2332,15 @@ queries, making finite analysis resources discoverable while keeping
 completeness, IVT/MVT/FTC, convergence, numerical stability, floating-point
 error, holomorphicity, contour-integration, analytic-continuation, and
 algebraic-closure claims in the horizon lanes.
+The dynamics consumer layer now also has
+[`DYNAMICS-QUERIES.md`](DYNAMICS-QUERIES.md). The guide and resource smoke
+expose finite recurrence, transition, invariant, Euler, stochastic-kernel,
+Markov-chain, hitting-time, and calculus-shadow rows through concept-scoped
+and pack-scoped Farkas queries, making finite dynamics resources discoverable
+while keeping continuous ODE/PDE theory, flow/stability/bifurcation theorems,
+chaos/ergodic theory, Euler convergence, stochastic-process limits,
+continuous-time Markov processes, numerical stability, and floating-point
+claims in the horizon lanes.
 The foundations/discrete consumer layer now also has
 [`FOUNDATIONS-DISCRETE-QUERIES.md`](FOUNDATIONS-DISCRETE-QUERIES.md). The
 guide and resource smoke expose Boolean proof/CNF rows, refutation-as-query

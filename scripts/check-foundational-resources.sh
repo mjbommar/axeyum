@@ -72,6 +72,14 @@ python3 scripts/query-foundational-resources.py concepts --field differential_eq
 python3 scripts/query-foundational-resources.py concepts --field differential_equations_and_dynamical_systems --text stochastic --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_dynamics_euler_replay --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_stochastic_kernel --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack bounded-dynamics-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-euler-method-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-markov-chain-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-stochastic-kernels-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-hitting-times-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field topology --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field topology --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field topology --route qf-bv --require-any >/dev/null
