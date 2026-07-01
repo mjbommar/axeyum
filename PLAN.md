@@ -164,7 +164,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 591 expected checks, 271 checked
+111 concept rows, 108 non-template packs, 592 expected checks, 272 checked
 rows, 249 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -206,6 +206,10 @@ and exact-statistical-tests' bad multinomial row after finite enumeration
 computes `1/9` rather than `1/6`,
 alongside descriptive-statistics' bad variance row after exact finite-sample
 replay computes `Var(X) = 5/4` rather than `3/2`.
+The numerical-analysis QF_LRA/Farkas lane now also promotes
+numerical-linear-algebra's bad Jacobi first-step error-bound row after exact
+iteration replay computes `||x1 - x*||_inf = 7/44` rather than satisfying the
+claimed `1/8` bound.
 The foundational concept atlas now also includes 65 generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 refutation-as-query, finite proof-pattern replay, finite quantifier expansion,
@@ -581,7 +585,7 @@ for its bad invariant-bound conflict, and finite probability now promoted for
 bad conditional-probability and bad Bayes-posterior conflicts, with orientation/area geometry now promoted
 for its bad affine-area-scaling and bad fixed-orientation claims and numerical
 linear algebra now promoted for its bad
-residual-bound row, and random matrix finite now promoted for its bad
+residual-bound and Jacobi error-bound rows, and random matrix finite now promoted for its bad
 trace-square moment row, with affine geometry now promoted for its bad
 midpoint-coordinate and distance-preservation rows and inner-product spaces now
 promoted for its bad negative-norm and projection-orthogonality rows, and

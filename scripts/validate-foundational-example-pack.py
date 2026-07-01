@@ -10596,6 +10596,44 @@ def validate_numerical_linear_algebra(expected: dict[str, Any]) -> None:
     if "numerical_linear_algebra_bad_residual_bound_emits_checked_farkas" not in regression:
         fail("bad-residual-bound-rejected must link the Farkas regression")
 
+    bad_jacobi = checks["bad-jacobi-error-bound-rejected"]
+    if bad_jacobi["expected_result"] != "unsat":
+        fail("bad-jacobi-error-bound-rejected must expect unsat")
+    data = bad_jacobi.get("data", {})
+    matrix = require_fraction_matrix("bad Jacobi matrix", data.get("matrix"))
+    rhs = require_fraction_vector("bad Jacobi rhs", data.get("rhs"))
+    initial = require_fraction_vector("bad Jacobi initial", data.get("initial"))
+    first_step = require_fraction_vector("bad Jacobi first_step", data.get("first_step"))
+    exact_solution = require_fraction_vector("bad Jacobi exact_solution", data.get("exact_solution"))
+    actual_error1 = require_fraction(
+        "bad Jacobi actual_error1_inf_norm",
+        data.get("actual_error1_inf_norm"),
+    )
+    claimed_bound = require_fraction(
+        "bad Jacobi claimed_error1_bound",
+        data.get("claimed_error1_bound"),
+    )
+    if jacobi_step(matrix, rhs, initial) != first_step:
+        fail("bad-jacobi-error-bound-rejected first_step is not the Jacobi update")
+    if mat_vec(matrix, exact_solution) != rhs:
+        fail("bad-jacobi-error-bound-rejected exact_solution does not solve A*x = b")
+    if linf_norm(vector_sub(first_step, exact_solution)) != actual_error1:
+        fail("bad-jacobi-error-bound-rejected actual error norm is incorrect")
+    if actual_error1 <= claimed_bound:
+        fail("bad-jacobi-error-bound-rejected claimed error bound unexpectedly holds")
+    farkas_bound_claim = data.get("farkas_bound_claim")
+    require_string("bad Jacobi farkas_bound_claim", farkas_bound_claim)
+    if farkas_bound_claim != "jacobi_error1_inf_norm <= claimed_error1_bound":
+        fail("bad-jacobi-error-bound-rejected must document the Farkas bound claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad Jacobi smt2_artifact", smt2_artifact)
+    if not (ROOT / smt2_artifact).is_file():
+        fail("bad-jacobi-error-bound-rejected smt2_artifact is missing")
+    regression = data.get("farkas_regression")
+    require_string("bad Jacobi farkas_regression", regression)
+    if "numerical_linear_algebra_bad_jacobi_error_bound_artifact_emits_checked_farkas" not in regression:
+        fail("bad-jacobi-error-bound-rejected must link the Farkas regression")
+
 
 def require_fraction_vector_list(context: str, value: Any) -> list[list[Fraction]]:
     if not isinstance(value, list) or not value:

@@ -506,7 +506,8 @@ Kronecker-product replay, bad-bilinear-map rejection, and a tensor-theory
 Lean-horizon row.
 [`numerical-linear-algebra-v0`](../../artifacts/examples/math/numerical-linear-algebra-v0/)
 validates exact residual bounds, rational solution boxes, Jacobi one-step
-contraction replay, and checked rejection of a false residual bound.
+contraction replay, and checked rejection of false residual and Jacobi error
+bounds.
 [`spectral-linear-algebra-v0`](../../artifacts/examples/math/spectral-linear-algebra-v0/)
 validates exact finite eigenpair replay, orthogonal eigenbasis checks,
 Rayleigh quotients, spectral decomposition replay, and checked rejection of

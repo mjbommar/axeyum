@@ -178,6 +178,9 @@ const BOUNDED_DYNAMICS_BAD_TRANSITION_STEP: &str = include_str!(
 const FINITE_EULER_BAD_MAX_ERROR_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/finite-euler-method-v0/smt2/bad-max-error-bound-farkas-conflict.smt2"
 );
+const NUMERICAL_LINEAR_ALGEBRA_BAD_JACOBI_ERROR_BOUND: &str = include_str!(
+    "../../../artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-jacobi-error-bound-farkas-conflict.smt2"
+);
 const FINITE_PRODUCT_MEASURE_BAD_MARGINAL: &str = include_str!(
     "../../../artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-marginal-farkas-conflict.smt2"
 );
@@ -1245,6 +1248,14 @@ fn numerical_linear_algebra_bad_residual_bound_emits_checked_farkas() {
         "numerical-linear-algebra-v0 bad-residual-bound-rejected",
         &arena,
         &[norm_is_one, false_bound],
+    );
+}
+
+#[test]
+fn numerical_linear_algebra_bad_jacobi_error_bound_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "numerical-linear-algebra-v0 bad-jacobi-error-bound SMT-LIB artifact",
+        NUMERICAL_LINEAR_ALGEBRA_BAD_JACOBI_ERROR_BOUND,
     );
 }
 

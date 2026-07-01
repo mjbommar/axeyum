@@ -2706,7 +2706,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "Bad residual-bound row whose final contradiction is exact rational linear arithmetic."
+          "notes": "Bad residual-bound and Jacobi error-bound rows whose final contradictions are exact rational linear arithmetic."
         },
         {
           "id": "finite-chebyshev-systems-v0",
@@ -6131,7 +6131,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A residual-bound row checks exact rational residuals, norms, solution boxes, or normal-equation side conditions for a fixed matrix problem, and separates exact infeasibility from floating error analysis.",
+      "summary": "A residual-bound row checks exact rational residuals, norms, solution boxes, Jacobi-step error bounds, or normal-equation side conditions for a fixed matrix problem, and separates exact infeasibility from floating error analysis.",
       "prerequisites": [
         "bridge_lu_replay",
         "bridge_counterexample_proof",
@@ -6155,7 +6155,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "Residual-norm, solution-box, Jacobi contraction, and bad residual-bound rows."
+          "notes": "Residual-norm, solution-box, Jacobi contraction, and bad residual/Jacobi-bound rows."
         },
         {
           "id": "least-squares-regression-v0",
@@ -8998,7 +8998,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "False residual-bound claim rejected as a rational inequality conflict."
+          "notes": "False residual and Jacobi error-bound claims rejected as rational inequality conflicts."
         },
         {
           "id": "random-matrix-finite-v0",

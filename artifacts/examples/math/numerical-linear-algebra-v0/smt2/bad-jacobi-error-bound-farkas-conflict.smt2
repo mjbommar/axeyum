@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const jacobi_error1_inf_norm Real)
+(assert (= (* 44 jacobi_error1_inf_norm) 7))
+(assert (<= jacobi_error1_inf_norm (/ 1 8)))
+(check-sat)

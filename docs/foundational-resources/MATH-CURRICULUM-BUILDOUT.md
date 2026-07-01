@@ -905,7 +905,7 @@ replay, checked rejection of a false unit-square real-part claim, and a
 complex-analysis Lean-horizon row.
 `artifacts/examples/math/numerical-linear-algebra-v0/` now validates exact
 residual bounds, rational solution boxes, Jacobi one-step contraction replay,
-and checked QF_LRA/Farkas rejection of a false residual bound.
+and checked QF_LRA/Farkas rejection of false residual and Jacobi error bounds.
 `artifacts/examples/math/finite-root-finding-v0/` now validates exact
 bisection and Newton-step replay, fixed residual decrease, checked
 QF_LRA/Farkas rejection of a false Newton iterate, and a
@@ -1014,7 +1014,7 @@ Recommended order:
     bad product-coordinate/norm/unit-square rejections, and rational Mobius
     transforms as real-pair algebra.
 13. `numerical-linear-algebra-v0`: residual bounds, rational solution boxes,
-    and exact iterative-method error replay.
+    exact iterative-method error replay, and checked bad Jacobi error bounds.
 14. `random-matrix-finite-v0`: finite matrix-valued probability tables,
     exact moments, Gram expectations, rank distributions, and a checked
     QF_LRA/Farkas bad trace-square certificate.
@@ -1441,7 +1441,8 @@ packs, and `proof-methods-refutation-v0` has a checked finite CNF truth-table
 route for its pigeonhole refutation. Phase M7 now has
 generated pack-level proof-gap rows and a normal foundational-resource check
 hook. `numerical-linear-algebra-v0` now adds the first exact residual/error-bound
-numerical-analysis slice with a checked QF_LRA/Farkas bad-bound certificate,
+numerical-analysis slice with checked QF_LRA/Farkas bad residual and
+Jacobi-bound certificates,
 and `random-matrix-finite-v0` adds the first exact finite random-matrix bridge
 across linear algebra, probability, statistics, and
 numerical analysis, now with a checked QF_LRA/Farkas bad trace-square
@@ -1694,7 +1695,8 @@ matrices, rank probabilities, checked QF_LRA/Farkas bad trace-square
 rejection, and the asymptotic random-matrix/numerical horizon.
 `numerical-linear-algebra-v0` now has a learner-facing end-to-end lesson for
 exact residual infinity-norm replay, rational solution-box checking, one-step
-Jacobi contraction replay, checked QF_LRA/Farkas bad residual-bound rejection,
+Jacobi contraction replay, checked QF_LRA/Farkas bad residual-bound and
+Jacobi error-bound rejection,
 and the floating-point/stability/convergence horizon.
 `descriptive-statistics-v0` and `least-squares-regression-v0` now have a
 learner-facing end-to-end lesson for exact mean/variance replay, checked bad
@@ -2025,8 +2027,9 @@ line-intersection and line-value replay.
 `rigid-configuration-geometry-v0` now routes its bad translation-image and bad
 distance-table rows through the same checked Farkas evidence path after exact
 translation and squared-distance replay.
-`numerical-linear-algebra-v0` now routes its bad residual-bound row through the
-same checked Farkas evidence path after exact residual-norm replay.
+`numerical-linear-algebra-v0` now routes its bad residual-bound and Jacobi
+error-bound rows through the same checked Farkas evidence path after exact
+residual-norm and iteration replay.
 `random-matrix-finite-v0` now routes its bad trace-square row through the same
 checked Farkas evidence path after exact finite moment replay.
 `affine-geometry-v0` now routes its bad midpoint-coordinate and

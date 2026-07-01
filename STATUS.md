@@ -205,6 +205,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Numerical-linear-algebra Jacobi QF_LRA row landed.**
+  `numerical-linear-algebra-v0` now includes a checked bad Jacobi first-step
+  error-bound row: exact replay recomputes the fixed Jacobi update
+  `[1/4, 2/3]`, exact solution `[1/11, 7/11]`, and
+  `||x1 - x*||_inf = 7/44`, then rejects the malformed claim
+  `||x1 - x*||_inf <= 1/8` through a source SMT-LIB artifact on the shared
+  QF_LRA/Farkas route. The validator pins the matrix, right-hand side,
+  initial iterate, first step, exact solution, actual/claimed error bounds,
+  artifact path, and regression; the shared `math_resource_lra_routes`
+  regression parses the artifact and checks `UnsatFarkas` evidence. Generated
+  dashboards and the public query summary now report 111 concept rows,
+  108 non-template packs, 592 expected checks, 272 checked rows, 249
+  replay-only rows, and 71 Lean-horizon rows.
+
 - **Exact-statistical-tests multinomial QF_LRA row landed.**
   `exact-statistical-tests-v0` now includes a probability-ordered exact
   multinomial test for `n = 3`, uniform three-category probabilities, and

@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 591 expected checks.
-- 271 checked proof/evidence rows.
+- 592 expected checks.
+- 272 checked proof/evidence rows.
 - 249 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1022,6 +1022,14 @@ Pick one row per commit unless the change is purely navigational.
      p-value contradictions while keeping asymptotic tests, floating-point
      library behavior, and broad exact-test-family coverage outside the
      claim.
+123. Landed: extend `numerical-linear-algebra-v0` with a checked bad Jacobi
+     first-step error-bound row. Exact rational iteration replay recomputes
+     the fixed Jacobi step `[1/4, 2/3]`, exact solution `[1/11, 7/11]`, and
+     `||x1 - x*||_inf = 7/44`, while the malformed source SMT-LIB artifact
+     claims `||x1 - x*||_inf <= 1/8`; the shared QF_LRA/Farkas route now
+     checks both residual-bound and iteration-error contradictions without
+     claiming floating-point accuracy, conditioning, backward stability, or
+     general Jacobi convergence.
 
 ## Validation Checklist
 

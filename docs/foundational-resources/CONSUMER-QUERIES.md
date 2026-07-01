@@ -1134,6 +1134,18 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+For the finite iterative-method slice, the current source-linked Jacobi
+error-bound row can be queried directly:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack numerical-linear-algebra-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text Jacobi \
+  --require-any
+```
+
 For complex analysis, query the Farkas route to keep exact real-pair complex
 arithmetic, norm, unit-circle transform, and polynomial-discriminant rows
 grouped while leaving holomorphic, contour-integral, analytic-continuation,

@@ -1212,7 +1212,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "numerical-linear-algebra-v0",
-                "Bad residual-bound row whose final contradiction is exact rational linear arithmetic.",
+                "Bad residual-bound and Jacobi error-bound rows whose final contradictions are exact rational linear arithmetic.",
             ),
             (
                 "finite-chebyshev-systems-v0",
@@ -4421,9 +4421,9 @@ BRIDGE_CONCEPTS = [
         "resource_status": "validated",
         "summary": (
             "A residual-bound row checks exact rational residuals, norms, "
-            "solution boxes, or normal-equation side conditions for a fixed "
-            "matrix problem, and separates exact infeasibility from floating "
-            "error analysis."
+            "solution boxes, Jacobi-step error bounds, or normal-equation side "
+            "conditions for a fixed matrix problem, and separates exact "
+            "infeasibility from floating error analysis."
         ),
         "prerequisites": [
             "bridge_lu_replay",
@@ -4446,7 +4446,7 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "numerical-linear-algebra-v0",
-                "Residual-norm, solution-box, Jacobi contraction, and bad residual-bound rows.",
+                "Residual-norm, solution-box, Jacobi contraction, and bad residual/Jacobi-bound rows.",
             ),
             (
                 "least-squares-regression-v0",
@@ -7007,7 +7007,7 @@ EXAMPLE_FAMILIES = [
             ),
             (
                 "numerical-linear-algebra-v0",
-                "False residual-bound claim rejected as a rational inequality conflict.",
+                "False residual and Jacobi error-bound claims rejected as rational inequality conflicts.",
             ),
             (
                 "random-matrix-finite-v0",

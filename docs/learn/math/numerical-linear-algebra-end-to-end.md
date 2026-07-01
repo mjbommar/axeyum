@@ -2,7 +2,7 @@
 
 This lesson follows one exact numerical-linear-algebra resource from residual
 norm replay to a rational solution box, a one-step Jacobi contraction check,
-and a checked bad residual-bound rejection. It uses the
+and checked bad residual/Jacobi-bound rejections. It uses the
 [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
 pack.
 
@@ -23,6 +23,7 @@ Concept rows:
 | `solution-box-replay` | `sat` | replay-only |
 | `jacobi-contraction-witness` | `sat` | replay-only |
 | `bad-residual-bound-rejected` | `unsat` | checked |
+| `bad-jacobi-error-bound-rejected` | `unsat` | checked |
 
 The pack uses exact rational arithmetic only. It models the algebra under
 numerical linear algebra without making floating-point stability or broad
@@ -135,6 +136,33 @@ residual_inf_norm <= 1/2
 That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
 certificate check.
 
+## Reject A Bad Jacobi Error Bound
+
+The Jacobi row also has a checked false-bound variant. The trusted replay
+computes:
+
+```text
+||x_1 - x*||_infty = 7/44
+```
+
+The bad row claims:
+
+```text
+||x_1 - x*||_infty <= 1/8
+```
+
+Since `7/44` is greater than `1/8`, the row is checked `unsat`. The resource
+regression isolates the final contradiction as `QF_LRA`:
+
+```text
+44 * jacobi_error1_inf_norm = 7
+jacobi_error1_inf_norm <= 1/8
+```
+
+That keeps the trusted boundary small: the pack replays the Jacobi step exactly,
+then Axeyum checks only the final rational linear contradiction with Farkas
+evidence.
+
 ## Name The Horizon
 
 The pack does not claim broad numerical analysis:
@@ -178,5 +206,5 @@ remaining horizon -> floating-point, stability, conditioning, and convergence
 
 The graduation route is deterministic exact-rational checking plus emitted
 proof objects for bad bounds before floating-point or algorithmic convergence
-claims are promoted. The bad residual-bound row now exercises that
-QF_LRA/Farkas route.
+claims are promoted. The bad residual-bound and Jacobi error-bound rows now
+exercise that QF_LRA/Farkas route.

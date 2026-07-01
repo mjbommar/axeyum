@@ -70,5 +70,12 @@ and the validator checks:
 ||x1 - x*||_inf <= (1/3) * ||x0 - x*||_inf
 ```
 
+The checked bad-bound row reuses the exact first-step error:
+
+```text
+||x1 - x*||_inf = 7/44
+||x1 - x*||_inf <= 1/8
+```
+
 These fixed checks are finite exact replay targets. They do not yet prove
 general convergence or floating-point stability.

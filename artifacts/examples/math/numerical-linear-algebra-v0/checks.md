@@ -32,3 +32,14 @@ bound `1/2` is false.
 The resource-backed Axeyum regression checks the final residual-bound
 contradiction as `QF_LRA`: `residual_inf_norm = 1` and
 `residual_inf_norm <= 1/2`, requiring rechecked `UnsatFarkas` evidence.
+
+## `bad-jacobi-error-bound-rejected`
+
+Expected result: `unsat`.
+
+The Jacobi witness has exact first-step error infinity norm `7/44`, so the
+claimed bound `1/8` is false.
+
+The resource-backed Axeyum regression checks the final iteration-error
+contradiction as `QF_LRA`: `44 * jacobi_error1_inf_norm = 7` and
+`jacobi_error1_inf_norm <= 1/8`, requiring rechecked `UnsatFarkas` evidence.
