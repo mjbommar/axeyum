@@ -59,6 +59,27 @@ against the *original* assertions, declining to `unknown` on violation). Verifie
 extending the adversarial gate found a real latent bug. Follow-up #70 recovers the
 genuine division sats (replay against the true original *in-engine*).
 
+## Frontier bottom-line (root-caused 2026-07-01)
+
+Both frontier gaps bottom out at the **same** missing capability, not at surface
+features:
+
+- **QF_NRA** — the CAD only decides flat conjunctions; the Boolean case-split
+  ([`5ede57f4`](../..)) routes cubes to it, but most remaining cubes exceed the
+  CAD's degree/variable reach or the ≤2-cross-product relaxation cap.
+- **QF_NIA** — the 8 undecided cluster (integer div/mod by *variable* divisor,
+  `iand`, nonlinear-int) does **not** bottom out at div/mod elimination: even the
+  *manually* Euclidean-eliminated `div.03` is undecided, because it is unsat over ℤ
+  but **sat over ℝ** (so `int_real_relax` can't transfer), and the unsat needs
+  integer tightening (`q<1 ⟹ q≤0`) plus a sign lemma (`q≤0 ∧ n>0 ⟹ q·n≤0`).
+
+Both need **integer-aware incremental linearization** (a CEGAR loop: tighten
+integer bounds on abstracted product vars + sign/zero/monotonicity/tangent lemmas,
+solved over LIA keeping integrality) — [P2.5 Phase B](track-2-theories/P2.5-nra/04-phaseB-incremental-linearization.md)
+for reals, [Phase E](track-2-theories/P2.5-nra/07-phaseE-nia.md) for integers
+(task #71). This is the substantial next engine investment; there are **no
+remaining quick frontier wins** (measured, not assumed).
+
 ## How to reproduce
 
 ```sh
