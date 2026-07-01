@@ -34,10 +34,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite KKT bad stationarity QF_LRA/Farkas regression seed",
-    "pressure": "Exact KKT replay computes stationarity residual -1 for multiplier 1 at x = 1, so the malformed zero-stationarity row has error 1.",
+    "target": "finite KKT bad stationarity and complementarity QF_LRA/Farkas regressions",
+    "pressure": "Exact KKT replay computes stationarity residual -1 for multiplier 1 and complementary-slackness product 0 for multiplier 2 at x = 1, so malformed zero-stationarity and unit-complementarity rows have checked errors.",
     "evidence": [
-      "bad-kkt-stationarity-rejected"
+      "bad-kkt-stationarity-rejected",
+      "bad-kkt-complementarity-rejected"
     ],
     "next_step": "Promote additional KKT rows only when they add distinct stationarity, active-set, complementarity, duality, or SDP pressure; keep general KKT sufficiency, constraint qualifications, and algorithm convergence in horizon lanes."
   },
@@ -52,6 +53,7 @@
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "docs/learn/math/finite-kkt-end-to-end.md",
     "artifacts/examples/math/finite-kkt-v0/smt2/bad-stationarity-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-kkt-v0/smt2/bad-complementarity-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
@@ -59,12 +61,13 @@
     "kkt-stationarity-replay",
     "complementary-slackness-replay",
     "bad-kkt-stationarity-rejected",
+    "bad-kkt-complementarity-rejected",
     "general-kkt-sufficiency-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite KKT witnesses as deterministic exact-rational replay rows.",
     "Replay polynomial values, derivative values, stationarity residuals, primal/dual feasibility, and complementary slackness over exact rationals.",
-    "Route false KKT stationarity claims through checked QF_LRA/Farkas evidence after replay computes the offending residual.",
+    "Route false KKT stationarity and complementary-slackness claims through checked QF_LRA/Farkas evidence after replay computes the offending residual or product.",
     "Keep general KKT necessity/sufficiency, constraint qualifications, SDP duality, and convergence claims marked Lean-horizon until proof artifacts exist."
   ]
 }

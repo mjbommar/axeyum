@@ -69,6 +69,25 @@
       "notes": "Exact replay computes gradient + 1 * normal = -1, so the claimed zero stationarity residual has error 1; the source artifact checks that the same error cannot equal zero."
     },
     {
+      "id": "bad-kkt-complementarity-rejected",
+      "claim": "At x = 1, multiplier 2 has complementary-slackness product 1.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_kkt_complementarity_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "boundary-quadratic-kkt",
+        "computed_constraint_value": "0",
+        "computed_multiplier": "2",
+        "computed_complementarity": "0",
+        "claimed_complementarity": "1",
+        "computed_complementarity_error": "1",
+        "smt2_artifact": "artifacts/examples/math/finite-kkt-v0/smt2/bad-complementarity-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_complementarity_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes lambda * (x - bound) = 2 * 0 = 0, so the claimed complementary-slackness product 1 has error 1; the source artifact checks that the same error cannot equal zero."
+    },
+    {
       "id": "general-kkt-sufficiency-lean-horizon",
       "claim": "General KKT necessity/sufficiency and constraint-qualification theorems require future Lean reconstruction.",
       "expected_result": "not-run",

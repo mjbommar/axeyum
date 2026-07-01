@@ -257,9 +257,10 @@ First targets:
   point and bad separator rows after exact convex-hull replay computes point
   `(1/3,1/3)` and exact separator replay computes outside score `4`)
 - [finite-kkt-v0](../../artifacts/examples/math/finite-kkt-v0/)
-  (source-linked Farkas regression landed for the bad stationarity row after
-  exact constrained-quadratic KKT replay computes stationarity residual `-1`
-  and stationarity error `1`)
+  (source-linked Farkas regressions landed for the bad stationarity and bad
+  complementarity rows after exact constrained-quadratic KKT replay computes
+  stationarity residual `-1`, stationarity error `1`, complementarity product
+  `0`, and complementarity error `1`)
 - [finite-active-set-qp-v0](../../artifacts/examples/math/finite-active-set-qp-v0/)
   (source-linked Farkas regressions landed for the bad free-gradient row after
   exact active-face replay computes stationarity error `2`, and for the bad
@@ -481,6 +482,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_convex_combination_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_separator_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_complementarity_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes affine_geometry_bad_midpoint_image_y_artifact_emits_checked_farkas

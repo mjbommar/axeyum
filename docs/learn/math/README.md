@@ -179,8 +179,8 @@ Companion maps:
   rejections, and the general separation theorem Lean horizon.
 - [Finite KKT Checks](finite-kkt-end-to-end.md): follows constrained quadratic
   grid replay, stationarity and complementary-slackness replay, checked
-  QF_LRA/Farkas bad-stationarity rejection, and the general KKT sufficiency
-  Lean horizon.
+  QF_LRA/Farkas bad-stationarity and bad-complementarity rejection, and the
+  general KKT sufficiency Lean horizon.
 - [Finite Active-Set QP Checks](finite-active-set-qp-end-to-end.md): follows
   unconstrained minimizer replay, active-face candidate replay, inactive
   constraint slack, degenerate active-bound replay, checked QF_LRA/Farkas

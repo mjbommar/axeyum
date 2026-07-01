@@ -223,9 +223,11 @@ lambda = 2
 
 The `finite-kkt-v0` validator recomputes the feasible finite-grid objective
 values, derivative, stationarity residual, and complementary-slackness product.
-Its bad row changes the multiplier to `1`, computes stationarity residual
-`-1`, and checks the resulting stationarity-error contradiction through
-QF_LRA/Farkas evidence. For a focused trace, read
+Its bad rows change the multiplier to `1` for stationarity and claim
+complementarity product `1` for the active constraint; exact replay computes
+stationarity residual `-1` and complementarity product `0`, then checks both
+final error contradictions through QF_LRA/Farkas evidence. For a focused trace,
+read
 [End To End: Finite KKT Checks](finite-kkt-end-to-end.md).
 
 For a finite active-set QP check, encode a box-constrained quadratic:
@@ -503,7 +505,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-separation-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-active-set-qp-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_active_set_qp_bad_free_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0

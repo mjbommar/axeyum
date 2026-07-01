@@ -449,8 +449,8 @@ schemas, examples, and validation workflows.
   row.
 - [`artifacts/examples/math/finite-kkt-v0/`](../../artifacts/examples/math/finite-kkt-v0/)
   validates exact constrained-quadratic grid replay, KKT stationarity,
-  complementary slackness, checked bad-stationarity rejection, and a general
-  KKT sufficiency Lean-horizon row.
+  complementary slackness, checked bad-stationarity and bad-complementarity
+  rejections, and a general KKT sufficiency Lean-horizon row.
 - [`artifacts/examples/math/finite-active-set-qp-v0/`](../../artifacts/examples/math/finite-active-set-qp-v0/)
   validates exact active-face QP replay, active/inactive constraint checks,
   KKT stationarity, degenerate active-bound replay, checked bad-free-gradient

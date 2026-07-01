@@ -24,3 +24,7 @@ complementarity lambda * g(x) = 0
 
 The checked bad row changes the multiplier to `1`. Exact replay then computes
 `f'(1) + 1 * 1 = -1`, so the claimed stationarity residual `0` has error `1`.
+
+The second checked bad row keeps `x = 1` and `lambda = 2` but claims
+complementarity product `1`. Exact replay computes `2 * (1 - 1) = 0`, so the
+claimed product has error `1`.

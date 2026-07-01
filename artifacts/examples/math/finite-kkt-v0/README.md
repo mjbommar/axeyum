@@ -23,6 +23,9 @@ algorithmic convergence remain proof horizons.
 - `bad-kkt-stationarity-rejected`: rejects the malformed claim that multiplier
   `1` satisfies stationarity at the same point; exact replay computes residual
   `-1`, so the stationarity error from the claimed zero residual is `1`.
+- `bad-kkt-complementarity-rejected`: rejects the malformed claim that the same
+  active point and multiplier have complementary-slackness product `1`; exact
+  replay computes product `0`, so the error is `1`.
 - `general-kkt-sufficiency-lean-horizon`: names the future proof route for
   general KKT theorems and convex optimization sufficiency.
 
@@ -31,6 +34,7 @@ algorithmic convergence remain proof horizons.
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_complementarity_artifact_emits_checked_farkas
 ```
 
 ## Trust Boundary
@@ -38,4 +42,4 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stati
 Untrusted search may propose a feasible point, multiplier, or KKT certificate.
 The trusted work is small: exact polynomial evaluation, exact derivative replay,
 linear stationarity arithmetic, complementary-slackness multiplication, and
-checked `UnsatFarkas` evidence over the source SMT-LIB row.
+checked `UnsatFarkas` evidence over the source SMT-LIB rows.

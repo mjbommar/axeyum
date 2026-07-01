@@ -13,13 +13,14 @@ Which checked optimization packs match this finite method family and proof route
 ```
 
 The current optimization surface is finite and exact-rational: LP objective
-thresholds, convexity shadows, finite separation, KKT stationarity, active-set
-QP face and degenerate-bound replay, tiny SDP objective/slack/gap replay,
-gradient-descent steps, Armijo/Wolfe line-search rows, projected-gradient interval replay,
-proximal-gradient soft-threshold and box-plus-L1 replay, least-squares rows,
-residual bounds, and projection witnesses. General duality, KKT sufficiency, SDP strong
-duality, method convergence, stability, and floating-point performance claims
-remain in the proof-horizon or numerical-honesty lanes.
+thresholds, convexity shadows, finite separation, KKT stationarity and
+complementarity, active-set QP face and degenerate-bound replay, tiny SDP
+objective/slack/gap replay, gradient-descent steps, Armijo/Wolfe line-search
+rows, projected-gradient interval replay, proximal-gradient soft-threshold and
+box-plus-L1 replay, least-squares rows, residual bounds, and projection
+witnesses. General duality, KKT sufficiency, SDP strong duality, method
+convergence, stability, and floating-point performance claims remain in the
+proof-horizon or numerical-honesty lanes.
 
 ## Query Shape
 
@@ -60,7 +61,7 @@ needs concrete checked rows to display.
 | Inner-product projection and least-squares optimality rows | `bridge_inner_product_projection` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked` |
 | Residual bounds and regression/numerical optimization rows | `bridge_residual_bound` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked` |
 | Exact arithmetic and numerical-honesty rows | `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked` |
-| KKT stationarity display row | pack `finite-kkt-v0` | `Farkas` | `checks --pack finite-kkt-v0 --route Farkas --proof-status checked` |
+| KKT stationarity and complementarity display rows | pack `finite-kkt-v0` | `Farkas` | `checks --pack finite-kkt-v0 --route Farkas --proof-status checked` |
 | Active-set QP display row | pack `finite-active-set-qp-v0` | `Farkas` | `checks --pack finite-active-set-qp-v0 --route Farkas --proof-status checked` |
 | Degenerate active-set multiplier row | pack `finite-active-set-qp-v0`, text `degenerate` | `Farkas` | `checks --pack finite-active-set-qp-v0 --route Farkas --proof-status checked --text degenerate` |
 | SDP objective/slack/gap display row | pack `finite-sdp-v0` | `Farkas` | `checks --pack finite-sdp-v0 --route Farkas --proof-status checked` |

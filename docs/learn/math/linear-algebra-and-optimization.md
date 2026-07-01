@@ -338,10 +338,10 @@ lambda = 2
 
 The `finite-kkt-v0` validator recomputes objective values on a finite feasible
 grid, differentiates the quadratic, checks stationarity
-`f'(1) + lambda = 0`, and checks complementary slackness. Its bad row changes
-the multiplier to `1`, giving stationarity residual `-1` and stationarity error
-`1`; the final contradiction `error = 1` versus `error = 0` is checked through
-QF_LRA/Farkas evidence.
+`f'(1) + lambda = 0`, and checks complementary slackness. Its bad rows change
+the multiplier to `1` and claim complementarity product `1`, giving
+stationarity residual `-1`, stationarity error `1`, and complementarity error
+`1`; each final contradiction is checked through QF_LRA/Farkas evidence.
 
 For a finite active-set QP example, encode one two-variable quadratic and a
 working set:
@@ -586,7 +586,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-separation-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-active-set-qp-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_active_set_qp_bad_free_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0
@@ -688,7 +688,8 @@ moments, and satisfiable finite-dimensional operator rows start as
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md).
 Infeasible rational systems, LP thresholds, bad residual bounds, malformed
 eigenpairs, bad Rayleigh-quotient rows, bad characteristic-polynomial rows,
-bad operator-bound and bad Chebyshev-prefix rows, bad KKT stationarity rows,
+bad operator-bound and bad Chebyshev-prefix rows, bad KKT stationarity and
+complementarity rows,
 bad proximal residual rows, negative-norm rows, and projection-orthogonality
 examples graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).

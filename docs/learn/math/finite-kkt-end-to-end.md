@@ -32,6 +32,7 @@ The pack has five rows:
 | `kkt-stationarity-replay` | `sat` | replay-only |
 | `complementary-slackness-replay` | `sat` | replay-only |
 | `bad-kkt-stationarity-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-kkt-complementarity-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-kkt-sufficiency-lean-horizon` | `not-run` | Lean horizon |
 
 The replay rows use exact rational arithmetic. They do not sample floating
@@ -100,6 +101,31 @@ The source SMT-LIB artifact fixes the resulting stationarity error from zero as
 Axeyum parses that source row, emits `UnsatFarkas` evidence, and independently
 checks the certificate.
 
+## Bad Complementarity Row
+
+The second malformed row leaves the valid point and multiplier alone but claims
+the complementary-slackness product is `1`:
+
+```text
+g(1) = 1 - 1 = 0
+lambda * g(1) = 2 * 0 = 0
+```
+
+The source SMT-LIB artifact fixes the resulting complementarity error as `1`
+and also claims it is zero:
+
+```smt2
+(set-logic QF_LRA)
+(declare-const complementarity_error Real)
+(assert (= complementarity_error 1))
+(assert (= complementarity_error 0))
+(check-sat)
+```
+
+That keeps complementarity in the same trust story as stationarity: exact
+replay computes the small rational product, and the checked Farkas route rejects
+the final malformed equality.
+
 ## What This Does Not Prove
 
 The pack does not prove general KKT necessity or sufficiency. It does not prove
@@ -118,7 +144,9 @@ general KKT theorem: future Lean reconstruction
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_complementarity_artifact_emits_checked_farkas
 ```
 
 The validator proves the pack data is internally consistent. The cargo test
-proves the bad stationarity source artifact reaches checked Farkas evidence.
+proves the bad stationarity and bad complementarity source artifacts reach
+checked Farkas evidence.

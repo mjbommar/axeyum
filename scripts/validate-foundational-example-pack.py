@@ -11125,6 +11125,66 @@ def validate_finite_kkt(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-kkt-stationarity-rejected certificate must document checked Farkas evidence")
 
+    bad_complementarity = checks["bad-kkt-complementarity-rejected"]
+    if (
+        bad_complementarity["expected_result"] != "unsat"
+        or bad_complementarity.get("proof_status") != "checked"
+    ):
+        fail("bad-kkt-complementarity-rejected must be a checked unsat row")
+    data = bad_complementarity.get("data", {})
+    if data.get("source_witness") != "boundary-quadratic-kkt":
+        fail("bad-kkt-complementarity-rejected must cite the boundary-quadratic-kkt witness")
+    computed_constraint_value = require_fraction(
+        "bad KKT complementarity computed_constraint_value",
+        data.get("computed_constraint_value"),
+    )
+    computed_multiplier = require_fraction(
+        "bad KKT complementarity computed_multiplier",
+        data.get("computed_multiplier"),
+    )
+    computed_complementarity = require_fraction(
+        "bad KKT complementarity computed_complementarity",
+        data.get("computed_complementarity"),
+    )
+    claimed_complementarity = require_fraction(
+        "bad KKT complementarity claimed_complementarity",
+        data.get("claimed_complementarity"),
+    )
+    complementarity_error = require_fraction(
+        "bad KKT complementarity computed_complementarity_error",
+        data.get("computed_complementarity_error"),
+    )
+    if normal * candidate_x - bound != computed_constraint_value:
+        fail(
+            "bad-kkt-complementarity-rejected computed constraint value does not match replay",
+        )
+    if computed_multiplier != multiplier:
+        fail("bad-kkt-complementarity-rejected computed multiplier must match the KKT witness")
+    if computed_multiplier * computed_constraint_value != computed_complementarity:
+        fail("bad-kkt-complementarity-rejected computed complementarity does not match replay")
+    if computed_complementarity == claimed_complementarity:
+        fail("bad-kkt-complementarity-rejected malformed product must disagree with replay")
+    if claimed_complementarity - computed_complementarity != complementarity_error:
+        fail("bad-kkt-complementarity-rejected complementarity error is incorrect")
+    if complementarity_error <= 0:
+        fail("bad-kkt-complementarity-rejected complementarity error must be positive")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad KKT complementarity smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/finite-kkt-v0/smt2/bad-complementarity-farkas-conflict.smt2"
+    ):
+        fail("bad-kkt-complementarity-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad KKT complementarity smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad KKT complementarity farkas_regression", regression)
+    if "finite_kkt_bad_complementarity_artifact_emits_checked_farkas" not in regression:
+        fail("bad-kkt-complementarity-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad KKT complementarity certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-kkt-complementarity-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-kkt-sufficiency-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-kkt-sufficiency-lean-horizon must be not-run")
