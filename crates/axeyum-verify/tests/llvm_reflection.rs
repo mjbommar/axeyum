@@ -171,10 +171,21 @@ fn lower_rhs(
         };
         (arena.ite(cond, a, b).unwrap(), w)
     } else if toks[0] == "zext" || toks[0] == "sext" || toks[0] == "trunc" {
-        // zext/sext/trunc iSRC %v to iDST  (mixed-width: byte<->word field ops)
-        let src_w = width_of(toks[1]);
-        let src = resolve(arena, env, toks[2], src_w);
-        let dst_w = width_of(toks[4]);
+        // zext/sext/trunc [flags..] iSRC %v to iDST  (flags like `nneg`; the two
+        // `iN` tokens are the source and target widths, in order).
+        let tys: Vec<u32> = toks
+            .iter()
+            .filter(|t| {
+                t.len() > 1 && t.starts_with('i') && t[1..].chars().all(|c| c.is_ascii_digit())
+            })
+            .map(|t| width_of(t))
+            .collect();
+        let (src_w, dst_w) = (tys[0], tys[1]);
+        let operand = toks
+            .iter()
+            .find(|t| t.starts_with('%'))
+            .expect("cast operand");
+        let src = resolve(arena, env, operand, src_w);
         let t = match toks[0] {
             "zext" => arena.zero_ext(dst_w - src_w, src).unwrap(),
             "sext" => arena.sign_ext(dst_w - src_w, src).unwrap(),
@@ -963,4 +974,245 @@ fn llvm_loop_bounded_agrees_with_unbounded() {
         matches!(outcome, BmcOutcome::UnreachableWithinBound { .. }),
         "no acc>100 within bound (consistent with the unbounded proof), got {outcome:?}"
     );
+}
+
+// ---- O: memory — reflect constant-offset buffer reads (the parser primitive) ----
+//
+// A `readonly` pointer parameter to a size-N buffer is reflected by **partial
+// evaluation of memory**: N fresh BV8 symbols (the buffer bytes) plus a pointer
+// env mapping each ptr-typed register to a constant byte offset (the param -> 0,
+// `getelementptr i8 .. +K` -> offset+K, `load i8` -> the byte symbol at that
+// offset). Sound + complete for constant-offset read-only `i8` loads — which IS
+// the fixed-offset packet-header idiom. Symbolic indices (array theory), stores,
+// wide loads, and a bounds model are the deferred frontier (see the design doc).
+
+/// `unsigned short read_be16(const unsigned char *p){ return (p[0]<<8)|p[1]; }`
+/// — `clang -O1`. The canonical big-endian field read: two byte loads combined.
+const READ_BE16_LL: &str = r"
+define dso_local zeroext i16 @read_be16(ptr noundef readonly captures(none) %0) local_unnamed_addr {
+  %2 = load i8, ptr %0, align 1
+  %3 = zext i8 %2 to i16
+  %4 = shl nuw i16 %3, 8
+  %5 = getelementptr inbounds nuw i8, ptr %0, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i16
+  %8 = or disjoint i16 %4, %7
+  ret i16 %8
+}
+";
+
+/// `unsigned ipv4_ihl_bytes(const unsigned char *p){ return (p[0]&0x0f)*4; }` —
+/// clang strength-reduced the multiply into `(p[0] << 2) & 60`. Proving the
+/// compiled trick equal to the obvious spec is a mini translation-validation.
+const IPV4_IHL_LL: &str = r"
+define dso_local range(i32 0, 61) i32 @ipv4_ihl_bytes(ptr noundef readonly captures(none) %0) local_unnamed_addr {
+  %2 = load i8, ptr %0, align 1
+  %3 = shl i8 %2, 2
+  %4 = and i8 %3, 60
+  %5 = zext nneg i8 %4 to i32
+  ret i32 %5
+}
+";
+
+/// A buffer-reading function reflected over `buf_len` symbolic bytes.
+struct BufReflected {
+    arena: TermArena,
+    /// The buffer bytes `p[0..N)` as BV8 symbols.
+    bytes: Vec<SymbolId>,
+    result: TermId,
+}
+
+/// Reflect a single-`ptr`-parameter, single-block function by partially
+/// evaluating its constant-offset `i8` loads over `buf_len` byte symbols.
+fn reflect_buf_ll(ll: &str, buf_len: usize) -> BufReflected {
+    let mut arena = TermArena::new();
+
+    // The single pointer parameter's register name. Extract the `%`-register
+    // directly from the `define` line — naive paren-splitting breaks on attribute
+    // parens like `captures(none)`.
+    let define = ll
+        .lines()
+        .map(str::trim)
+        .find(|l| l.starts_with("define"))
+        .expect("a `define` line");
+    assert!(
+        define.contains("(ptr "),
+        "reflect_buf_ll expects a leading ptr parameter"
+    );
+    let base = define
+        .split_whitespace()
+        .find_map(|t| t.strip_prefix('%').map(|r| r.trim_end_matches(')')))
+        .expect("a %register parameter")
+        .to_string();
+
+    let bytes: Vec<SymbolId> = (0..buf_len)
+        .map(|k| arena.declare(&format!("byte{k}"), Sort::BitVec(8)).unwrap())
+        .collect();
+
+    let mut env: HashMap<String, (TermId, u32)> = HashMap::new();
+    let mut ptrs: HashMap<String, u64> = HashMap::new();
+    ptrs.insert(base, 0);
+
+    let mut result = None;
+    let mut in_body = false;
+    for raw in ll.lines() {
+        let line = raw.trim();
+        if line.starts_with("define") {
+            in_body = true;
+            continue;
+        }
+        if !in_body || line.is_empty() || line.ends_with(':') || line == "}" {
+            continue;
+        }
+        if let Some(rest) = line.strip_prefix("ret ") {
+            let toks: Vec<&str> = rest.split_whitespace().collect();
+            let w = width_of(toks[0]);
+            result = Some(resolve(&mut arena, &env, toks[1], w));
+            continue;
+        }
+        let (dst_tok, rhs) = line.split_once(" = ").expect("instruction `%d = ..`");
+        let dst = dst_tok.trim_start_matches('%').to_string();
+        let rhs_c = rhs.replace(',', "");
+        let toks: Vec<&str> = rhs_c.split_whitespace().collect();
+
+        if toks[0] == "getelementptr" {
+            // getelementptr [flags..] i8, ptr %q, i64 K — byte addressing only.
+            let ptr_idx = toks.iter().position(|t| *t == "ptr").expect("ptr token");
+            assert_eq!(toks[ptr_idx - 1], "i8", "only i8 (byte) gep is in scope");
+            let q = toks[ptr_idx + 1].trim_start_matches('%');
+            let k: u64 = toks.last().unwrap().parse().expect("constant gep offset");
+            ptrs.insert(dst, ptrs[q] + k);
+        } else if toks[0] == "load" {
+            // load i8, ptr %q [, align ..] — the byte symbol at the offset.
+            assert_eq!(toks[1], "i8", "only i8 loads are in scope");
+            let q = toks[3].trim_start_matches('%');
+            let off = usize::try_from(ptrs[q]).unwrap();
+            assert!(off < bytes.len(), "load at offset {off} exceeds buffer");
+            env.insert(dst, (arena.var(bytes[off]), 8));
+        } else {
+            let (t, w) = lower_rhs(&mut arena, &env, rhs);
+            env.insert(dst, (t, w));
+        }
+    }
+
+    BufReflected {
+        arena,
+        bytes,
+        result: result.expect("a `ret`"),
+    }
+}
+
+/// Cross-form equivalence over real compiled memory code: the buffer-reading
+/// `read_be16(p)` equals the value-passing `be16(hi, lo)` (from the M round) with
+/// `hi = p[0]`, `lo = p[1]` — two differently-shaped compiled functions, one of
+/// them reading memory, proved to compute the same field for all buffer contents.
+#[test]
+fn llvm_buffer_read_be16_equals_value_be16() {
+    let mut r = reflect_buf_ll(READ_BE16_LL, 2);
+    let b0 = r.arena.var(r.bytes[0]);
+    let b1 = r.arena.var(r.bytes[1]);
+    let mut env: HashMap<String, (TermId, u32)> = HashMap::new();
+    env.insert("hi".to_string(), (b0, 8));
+    env.insert("lo".to_string(), (b1, 8));
+    let (value_form, _w) = lower_body(&mut r.arena, &mut env, BE16_LL);
+    let goal = r.arena.eq(r.result, value_form).unwrap();
+    assert!(
+        matches!(
+            prove(&mut r.arena, &[], goal, &SolverConfig::default()).unwrap(),
+            ProofOutcome::Proved(_)
+        ),
+        "buffer read_be16(p) must equal value be16(p[0], p[1]) for all buffers"
+    );
+}
+
+/// Mini translation-validation: clang compiled `(p[0] & 0x0f) * 4` into
+/// `(p[0] << 2) & 60`; prove the compiled trick equals the obvious spec
+/// `zext(p[0] & 0x0f) * 4` for every byte.
+#[test]
+fn llvm_ihl_compiled_trick_equals_spec() {
+    let mut r = reflect_buf_ll(IPV4_IHL_LL, 1);
+    let b0 = r.arena.var(r.bytes[0]);
+    let mask = r.arena.bv_const(8, 0x0f).unwrap();
+    let nib = r.arena.bv_and(b0, mask).unwrap();
+    let wide = r.arena.zero_ext(24, nib).unwrap();
+    let four = r.arena.bv_const(32, 4).unwrap();
+    let spec = r.arena.bv_mul(wide, four).unwrap();
+    let goal = r.arena.eq(r.result, spec).unwrap();
+    assert!(
+        matches!(
+            prove(&mut r.arena, &[], goal, &SolverConfig::default()).unwrap(),
+            ProofOutcome::Proved(_)
+        ),
+        "the compiled (p0<<2)&60 must equal the spec zext(p0&0x0f)*4"
+    );
+}
+
+/// Range facts of the compiled IHL: the result is `<= 60` and a multiple of 4
+/// (low two bits zero) — exactly what LLVM's own `range(i32 0, 61)` attribute
+/// promises, now *proved* rather than trusted.
+#[test]
+fn llvm_ihl_range_properties() {
+    let mut r = reflect_buf_ll(IPV4_IHL_LL, 1);
+    let sixty = r.arena.bv_const(32, 60).unwrap();
+    let le = r.arena.bv_ule(r.result, sixty).unwrap();
+    let three = r.arena.bv_const(32, 3).unwrap();
+    let low2 = r.arena.bv_and(r.result, three).unwrap();
+    let zero = r.arena.bv_const(32, 0).unwrap();
+    let mult4 = r.arena.eq(low2, zero).unwrap();
+    let goal = r.arena.and(le, mult4).unwrap();
+    assert!(
+        matches!(
+            prove(&mut r.arena, &[], goal, &SolverConfig::default()).unwrap(),
+            ProofOutcome::Proved(_)
+        ),
+        "ihl must be <= 60 and a multiple of 4"
+    );
+}
+
+/// The buffer reflections compute the same functions as the C semantics, on a
+/// large deterministic sample — the fuzzing-oracle cross-check (DISAGREE = 0),
+/// independent of the symbolic proofs above.
+#[test]
+fn llvm_buffer_reflection_matches_c_under_fuzz() {
+    fn read_be16_oracle(b0: u8, b1: u8) -> u16 {
+        (u16::from(b0) << 8) | u16::from(b1)
+    }
+    fn ihl_oracle(b0: u8) -> u32 {
+        u32::from(b0 & 0x0f) * 4
+    }
+    fn eval_bytes(r: &BufReflected, vals: &[u8]) -> u128 {
+        let mut asg = Assignment::new();
+        for (sym, v) in r.bytes.iter().zip(vals) {
+            asg.set(
+                *sym,
+                Value::Bv {
+                    width: 8,
+                    value: u128::from(*v),
+                },
+            );
+        }
+        match eval(&r.arena, r.result, &asg).unwrap() {
+            Value::Bv { value, .. } => value,
+            other => panic!("expected a BV value, got {other:?}"),
+        }
+    }
+
+    let be16_r = reflect_buf_ll(READ_BE16_LL, 2);
+    let ihl_r = reflect_buf_ll(IPV4_IHL_LL, 1);
+    let mut rng = 0x0DDB_A115_u64;
+    for _ in 0..50_000 {
+        let bytes = lcg(&mut rng).to_le_bytes();
+        assert_eq!(
+            eval_bytes(&be16_r, &bytes[..2]),
+            u128::from(read_be16_oracle(bytes[0], bytes[1])),
+            "reflected read_be16 diverged at {:?}",
+            &bytes[..2]
+        );
+        assert_eq!(
+            eval_bytes(&ihl_r, &bytes[..1]),
+            u128::from(ihl_oracle(bytes[0])),
+            "reflected ihl diverged at {}",
+            bytes[0]
+        );
+    }
 }

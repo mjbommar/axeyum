@@ -240,6 +240,8 @@ properties symbolically. 6 tests green.
 | `classify` (nested `select` after `-O` if-conversion) | in `1..=3` **Proved** |
 | `day` (a `match`, `-O`-lowered to `icmp`+`add`+`select`) | `<= 9` **Proved** |
 | **`capsum` loop** (`phi`+back-edge) → `TransitionSystem` | `acc <= 100` **Proved for ALL iterations** (k-induction, 4 ms); false bound `Reachable` (BMC) |
+| **`read_be16(const u8*)`** — buffer loads (`load`/`gep`) | **≡ value-passing `be16`** Proved (cross-form equivalence over memory-reading code) |
+| **IPv4 IHL** — clang's `(p0<<2)&60` strength-reduction | **≡ spec `zext(p0&0x0f)*4`** Proved (mini translation-validation); `≤ 60 ∧ ≡0 mod 4` Proved |
 
 **Measured (`-O` if-conversion, 2026-06-30):** `-O` collapses branchy leaf
 functions to `select` — `classify`'s `if/else-if` → *nested selects*, a `match`
@@ -257,6 +259,19 @@ machinery** as the protocol FSMs. Modeled at `i8` (the `i32` loop bit-blasts to
 recurring width lesson; the reflected structure is width-agnostic). Real `-O`
 loop IR (unrolled / SCEV-closed / memory) needs a larger SCEV-aware parser — the
 deferred frontier.
+
+**Memory (O):** buffer reads — the packet-parser primitive — now reflect by
+**partial evaluation of memory**: a `readonly` pointer param to a size-N buffer
+becomes N `BV8` symbols plus a pointer env (`getelementptr i8 +K` → offset+K,
+`load i8` → the byte symbol at that offset). Proved over real compiled C: the
+buffer-reading `read_be16(p)` **equals the value-passing `be16(p[0],p[1])`**
+(cross-form equivalence over memory code), and clang's strength-reduced IPv4-IHL
+`(p0<<2)&60` **equals the obvious spec** `zext(p0&0x0f)*4` — a genuine mini
+translation-validation — plus its range facts (`≤60`, multiple of 4: what LLVM's
+own `range` attribute *asserts*, now *proved*). Fuzz cross-check vs C-semantics
+oracles, DISAGREE = 0. **Honest scope:** constant-offset read-only `i8` loads
+(which fixed-offset packet headers are); symbolic indices (array theory), stores,
+wide loads, and a bounds model are deferred.
 
 Headline: **one front end verifies code from two source languages**, and proves
 two structurally-different LLVM forms of the same function equivalent. Measured
