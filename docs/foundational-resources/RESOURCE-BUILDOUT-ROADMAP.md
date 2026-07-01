@@ -57,6 +57,8 @@ The current committed data boundary reports:
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
+- 108 focused learner-linked packs, with no path-only, index-only, or missing
+  learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
 next work is to make the resource system deep, navigable, and reusable:
@@ -182,8 +184,10 @@ Build plan:
 - Prefer route notes over duplicated pack metadata.
 - Never imply a finite bounded check proves a general theorem.
 
-Graduation signal: `./scripts/check-links.sh` passes and the learner/proof
-dashboard shows no missing learner link for the pack.
+Graduation signal: `./scripts/check-links.sh` passes, the learner/proof
+dashboard shows no missing learner link for the pack, and
+[Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) stays current after any pack
+count change.
 
 ### R4: Proof And Evidence
 

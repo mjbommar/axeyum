@@ -51,6 +51,8 @@ The committed resource query currently reports:
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
+- 108 focused learner-linked packs, with no path-only, index-only, or missing
+  learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
 allowed only when they fill a clear curriculum/field hole that cannot be served
@@ -133,6 +135,10 @@ Exit criteria:
   lesson.
 - Every lesson has a run/check command or a link to pack validation.
 - No lesson implies a finite bounded check proves an unbounded theorem.
+
+Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
+all 108 current non-template packs satisfy the focused-lesson side of this
+gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
 

@@ -31,7 +31,7 @@ one generated dashboard change.
 | R0 source anchor | curriculum node or field row | appears in `curriculum.toml` or `MATH-FIELDS.md` |
 | R1 concept row | atlas row with fields, prerequisites, fragments, gaps | `python3 scripts/validate-foundational-concepts.py` |
 | R2 example pack | `README.md`, `metadata.json`, `model.md`, `checks.md`, `expected.json` | `python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/<pack>` plus `python3 scripts/check-foundational-negative-fixtures.py` for committed invalid schema fixtures |
-| R3 learner path | focused lesson or named cluster page | `./scripts/check-links.sh` plus generated learner dashboard |
+| R3 learner path | focused lesson or named cluster page | `./scripts/check-links.sh` plus generated learner dashboard and [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) |
 | R4 checked evidence | replay, DRAT/LRAT, Farkas, Alethe, QF_BV DRAT, or Lean horizon | route-specific cargo test plus pack validator |
 | R5 solver reuse | regression, fuzz seed, benchmark slice, or explicit non-benchmark horizon | back-link from test/corpus metadata to resource pack |
 | R6 consumer boundary | schema/API/data consumer | `python3 scripts/consume-foundational-resources.py` |

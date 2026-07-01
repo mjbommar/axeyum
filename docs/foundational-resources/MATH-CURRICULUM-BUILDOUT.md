@@ -29,6 +29,8 @@ For the current execution ledger over the existing math packs, unclassified
 solver-reuse rows, learner-path work, proof-route depth, and field-by-field
 next steps, use the
 [Math Curriculum Detailed Build Plan](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md).
+For the current learner-spine audit over all non-template math packs, use the
+[Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 For the detailed operating plan that expands the curriculum into ontology rows,
 example packs, learner pages, proof routes, solver reuse, consumer boundaries,
 rules/law transfer, and future library splits, use the

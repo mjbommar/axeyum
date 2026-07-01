@@ -141,6 +141,10 @@ The current execution ledger for stabilizing the 108 current math packs,
 resolving unclassified solver-reuse rows, completing learner paths, and
 deepening proof routes field by field is
 [`docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md).
+The current learner-spine audit over all non-template math packs is
+[`docs/foundational-resources/LEARNER-COVERAGE-AUDIT.md`](docs/foundational-resources/LEARNER-COVERAGE-AUDIT.md);
+it records all 108 current non-template packs as focused-lesson linked, with no
+path-only, index-only, or missing learner buckets.
 The detailed operating roadmap for building the math-curriculum resource system
 across ontology rows, example packs, learner pages, proof routes, solver reuse,
 rules/law transfer, consumer boundaries, and eventual library splits is
@@ -242,7 +246,9 @@ witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
 119 concept rows, 108 non-template packs, 632 expected checks (334 `sat`,
 227 `unsat`, 71 `not-run`), 309 checked rows, 252 replay-only rows, and 71
-Lean-horizon rows. The first QF_UF/Alethe
+Lean-horizon rows. The learner coverage audit records all 108 non-template
+packs as focused-lesson linked, with no path-only, index-only, or missing
+learner buckets. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
 finite group actions, with topology/preimage, finite specialization-order,

@@ -35,6 +35,9 @@ schemas, examples, and validation workflows.
   is the current execution ledger for stabilizing the existing 108 math packs,
   resolving unclassified solver-reuse rows, completing learner paths, and
   deepening proof routes field by field.
+- [LEARNER-COVERAGE-AUDIT.md](LEARNER-COVERAGE-AUDIT.md) records the current
+  learner-spine audit: all 108 non-template math packs are focused-lesson
+  linked, with no path-only, index-only, or missing learner buckets.
 - [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md) is the detailed
   operating roadmap for building the curriculum-driven resource system across
   ontology rows, example packs, learner pages, proof routes, solver reuse,

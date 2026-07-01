@@ -205,6 +205,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Learner coverage audit landed.**
+  [`LEARNER-COVERAGE-AUDIT.md`](docs/foundational-resources/LEARNER-COVERAGE-AUDIT.md)
+  records the mechanical R3 learner-spine check for the current math inventory:
+  108 non-template packs, 108 focused-lesson links, and no path-only,
+  index-only, or missing learner buckets. The comprehensive resource queue now
+  treats learner coverage as audited and moves the next commit-sized work back
+  to proof-route depth.
+
 - **Rules/law trust-boundary learner page landed.**
   [`docs/learn/rules-law-trust-boundary.md`](docs/learn/rules-law-trust-boundary.md)
   now walks through the current eligibility, authorization, tax/benefit, and

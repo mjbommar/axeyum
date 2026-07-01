@@ -63,6 +63,9 @@ As of this plan, the math resource lane has:
   learner/proof-upgrade, and curriculum-pressure dashboards under
   [generated/](generated/).
 - learner paths under [docs/learn/math](../learn/math/README.md).
+- [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md), which records that all
+  108 current non-template math packs are focused-lesson linked with no
+  path-only, index-only, or missing learner buckets.
 - a stable in-repo data boundary through JSON schemas, validators, generated
   dashboards, and `scripts/consume-foundational-resources.py`.
 
@@ -187,6 +190,8 @@ Exit criteria:
 - Every non-template pack appears in either a focused lesson or an explicitly
   named combined lesson.
 - `docs/learn/math/README.md` remains the single learner index.
+- [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) is updated when new
+  packs or learner pages change the R3 coverage state.
 
 ### C. Proof And Certificate Upgrades
 

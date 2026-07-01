@@ -38,6 +38,8 @@ The committed public query boundary currently reports:
   rows.
 - 108 promoted solver-reuse packs.
 - 0 unclassified solver-reuse packs.
+- 108 focused learner-linked packs, with no path-only, index-only, or missing
+  learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The seed phase is complete. The build problem is now depth, navigation, proof
 quality, and reuse.
@@ -129,6 +131,8 @@ Exit:
 - Every pack appears in a focused learner page or a named combined page.
 - Every learner page has a runnable validation command.
 - Every page says whether the row is replay-only, checked, or theorem horizon.
+- [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) remains current whenever
+  the non-template pack count changes.
 
 ## Stage 3: Upgrade Proof Evidence
 
