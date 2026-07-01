@@ -9469,6 +9469,55 @@ def validate_finite_recurrence_prefix(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-fibonacci-value-rejected certificate must document checked Farkas evidence")
 
+    bad_affine = checks["bad-affine-step-rejected"]
+    if bad_affine["expected_result"] != "unsat" or bad_affine.get("proof_status") != "checked":
+        fail("bad-affine-step-rejected must be a checked unsat row")
+    data = bad_affine.get("data", {})
+    if data.get("source_witness") != "affine-plus-one-prefix":
+        fail("bad-affine-step-rejected must cite the affine-plus-one-prefix source witness")
+    step_index = require_nonnegative_int("bad affine step_index", data.get("step_index"))
+    previous_value = require_fraction("bad affine previous_value", data.get("previous_value"))
+    bad_multiplier = require_fraction("bad affine multiplier", data.get("multiplier"))
+    bad_increment = require_fraction("bad affine increment", data.get("increment"))
+    computed_next = require_fraction("bad affine computed_next", data.get("computed_next"))
+    claimed_next = require_fraction("bad affine claimed_next", data.get("claimed_next"))
+    transition_residual = require_fraction(
+        "bad affine transition_residual",
+        data.get("transition_residual"),
+    )
+    if bad_multiplier != multiplier:
+        fail("bad-affine-step-rejected multiplier must match the affine witness")
+    if bad_increment != increment:
+        fail("bad-affine-step-rejected increment must match the affine witness")
+    if step_index >= steps:
+        fail("bad-affine-step-rejected step_index is outside the affine prefix")
+    if affine_values[step_index] != previous_value:
+        fail("bad-affine-step-rejected previous_value does not match replay")
+    if affine_values[step_index + 1] != computed_next:
+        fail("bad-affine-step-rejected computed_next does not match replay")
+    if multiplier * previous_value + increment != computed_next:
+        fail("bad-affine-step-rejected computed_next does not match the affine transition")
+    if computed_next - claimed_next != transition_residual:
+        fail("bad-affine-step-rejected transition_residual is incorrect")
+    if transition_residual <= 0:
+        fail("bad-affine-step-rejected must document a positive transition residual")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad affine step smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-affine-step-farkas-conflict.smt2"
+    ):
+        fail("bad-affine-step-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad affine step smt2_artifact", smt2_artifact)
+    farkas_regression = data.get("farkas_regression")
+    require_string("bad affine step farkas_regression", farkas_regression)
+    if "finite_recurrence_prefix_bad_affine_step_artifact_emits_checked_farkas" not in farkas_regression:
+        fail("bad-affine-step-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad affine step certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-affine-step-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-recurrence-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-recurrence-theory-lean-horizon must be not-run")

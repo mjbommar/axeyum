@@ -22,6 +22,9 @@ horizons.
   fixed two-dimensional state vectors.
 - `bad-fibonacci-value-rejected`: rejects the malformed claim `F_6 = 9` after
   replay computes `F_6 = 8`, with checked QF_LRA/Farkas evidence.
+- `bad-affine-step-rejected`: rejects the malformed affine recurrence claim
+  `x_4 = 14` after replay computes `x_4 = 15`, with checked QF_LRA/Farkas
+  evidence.
 - `general-recurrence-theory-lean-horizon`: names the future Lean route for
   induction, closed forms, asymptotics, and stability/convergence theorems.
 
@@ -29,7 +32,7 @@ horizons.
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_
 ```
 
 ## Trust Boundary

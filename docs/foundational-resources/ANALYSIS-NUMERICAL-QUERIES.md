@@ -85,6 +85,18 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Display checked finite recurrence-prefix rows, including affine-step
+refutations:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-recurrence-prefix-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text affine \
+  --require-any
+```
+
 Display checked metric-ball rows:
 
 ```sh

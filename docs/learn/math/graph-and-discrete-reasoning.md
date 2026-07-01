@@ -115,8 +115,9 @@ x = [0, 1, 3, 7, 15]  where x_{n+1} = 2*x_n + 1
 ```
 
 The `finite-recurrence-prefix-v0` pack recomputes each prefix and the
-Fibonacci companion-matrix trace. Its bad row rejects `F_6 = 9` after replay
-computes `F_6 = 8`.
+Fibonacci companion-matrix trace. Its bad rows reject `F_6 = 9` after replay
+computes `F_6 = 8`, and reject `x_4 = 14` after affine recurrence replay
+computes `x_4 = 15`.
 
 For orbit counting,
 first encode finite permutations as bijections:

@@ -1,7 +1,7 @@
 # End To End: Finite Recurrence Prefixes
 
-This lesson follows one recurrence resource from exact prefix replay through a
-checked bad-value rejection. It uses the
+This lesson follows one recurrence resource from exact prefix replay through
+checked bad-value and bad affine-step rejections. It uses the
 [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 pack.
 
@@ -23,6 +23,7 @@ Concept rows:
 | `affine-recurrence-prefix-replay` | `sat` | replay-only |
 | `companion-matrix-prefix-replay` | `sat` | replay-only |
 | `bad-fibonacci-value-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-affine-step-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-recurrence-theory-lean-horizon` | `not-run` | Lean horizon |
 
 Every positive row is a finite list or finite matrix-step check. The pack does
@@ -93,7 +94,7 @@ The checked state trace is:
 This is the bridge into linear algebra: recurrence replay becomes repeated
 matrix-vector multiplication over exact rationals.
 
-## Check The Refutation
+## Check The Fibonacci Refutation
 
 The promoted bad row claims:
 
@@ -119,13 +120,41 @@ f6 = 9
 Axeyum may search for the contradiction, but the accepted evidence is checked
 `UnsatFarkas` arithmetic over the original source artifact.
 
+## Check The Affine Step Refutation
+
+The second promoted bad row claims:
+
+```text
+x_4 = 14
+```
+
+Exact affine recurrence replay computes:
+
+```text
+x_3 = 7
+x_4 = 2*x_3 + 1 = 15
+15 - 14 = 1
+```
+
+The committed SMT-LIB artifact
+[`bad-affine-step-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-affine-step-farkas-conflict.smt2)
+records the tiny contradiction:
+
+```text
+transition_residual = 1
+transition_residual <= 0
+```
+
+The solver search is still untrusted. The accepted evidence is independently
+checked `UnsatFarkas` arithmetic over the source artifact.
+
 ## Run It
 
 From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_
 ```
 
 Expected validator output:

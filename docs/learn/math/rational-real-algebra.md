@@ -174,7 +174,8 @@ F = [0, 1, 1, 2, 3, 5, 8]
 
 The `finite-recurrence-prefix-v0` validator recomputes every listed Fibonacci
 step, checks an affine recurrence prefix, and checks a companion-matrix state
-trace. Its bad row rejects `F_6 = 9` after replay computes `F_6 = 8`.
+trace. Its bad rows reject `F_6 = 9` after replay computes `F_6 = 8`, and
+reject `x_4 = 14` after affine replay computes `x_4 = 15`.
 
 For finite root finding, keep the claim as one exact rational algorithm step:
 

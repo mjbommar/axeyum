@@ -229,8 +229,8 @@ schemas, examples, and validation workflows.
   monotone convergence Lean-horizon row.
 - [`artifacts/examples/math/finite-recurrence-prefix-v0/`](../../artifacts/examples/math/finite-recurrence-prefix-v0/)
   validates Fibonacci prefix replay, affine recurrence replay,
-  companion-matrix state replay, checked rejection of a false finite
-  recurrence value, and a recurrence-theory Lean-horizon row.
+  companion-matrix state replay, checked rejection of false finite recurrence
+  value and affine-step claims, and a recurrence-theory Lean-horizon row.
 - [`artifacts/examples/math/finite-root-finding-v0/`](../../artifacts/examples/math/finite-root-finding-v0/)
   validates exact bisection and Newton-step replay, fixed residual-decrease
   checking, checked rejection of a false Newton iterate, and a

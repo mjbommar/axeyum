@@ -77,6 +77,27 @@
       "notes": "Exact replay computes F_6 = 8; the source artifact checks that the same value cannot also be 9."
     },
     {
+      "id": "bad-affine-step-rejected",
+      "claim": "The affine recurrence prefix has x_4 = 14.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_affine_step_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "affine-plus-one-prefix",
+        "step_index": 3,
+        "previous_value": "7",
+        "multiplier": "2",
+        "increment": "1",
+        "computed_next": "15",
+        "claimed_next": "14",
+        "transition_residual": "1",
+        "smt2_artifact": "artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-affine-step-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_affine_step_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact affine recurrence replay computes x_4 = 2*7 + 1 = 15, so the malformed claim x_4 = 14 leaves residual 1; the source artifact checks the impossible nonpositive-residual claim through QF_LRA/Farkas evidence."
+    },
+    {
       "id": "general-recurrence-theory-lean-horizon",
       "claim": "General recurrence theorems require future Lean resources.",
       "expected_result": "not-run",

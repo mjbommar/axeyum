@@ -167,8 +167,8 @@ Companion maps:
   rejections, and the monotone-convergence Lean horizon.
 - [Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md):
   follows Fibonacci prefix replay, affine recurrence replay, companion-matrix
-  state replay, a checked QF_LRA/Farkas bad-value rejection, and the general
-  recurrence-theory Lean horizon.
+  state replay, checked QF_LRA/Farkas bad-value and bad affine-step
+  rejections, and the general recurrence-theory Lean horizon.
 - [Finite Root Finding](finite-root-finding-end-to-end.md): follows one exact
   bisection bracket update, one Newton iterate, residual decrease replay,
   checked QF_LRA/Farkas bad-step rejection, and the convergence/stability Lean

@@ -1495,7 +1495,7 @@
           "id": "finite-recurrence-prefix-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
-          "notes": "Finite recurrence-prefix, affine recurrence, companion-matrix, and bad value checks."
+          "notes": "Finite recurrence-prefix, affine recurrence, companion-matrix, bad value, and bad affine-step checks."
         }
       ],
       "proof_routes": [
@@ -1580,7 +1580,7 @@
           "id": "finite-recurrence-prefix-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
-          "notes": "Finite recurrence prefixes and companion-matrix replay for enumerative sequences."
+          "notes": "Finite recurrence prefixes, companion-matrix replay, and checked affine-step refutations for enumerative sequences."
         }
       ],
       "proof_routes": [
@@ -1755,7 +1755,7 @@
           "id": "finite-recurrence-prefix-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
-          "notes": "Finite recurrence prefixes and companion-matrix state replay."
+          "notes": "Finite recurrence prefixes, companion-matrix state replay, and checked affine-step refutations."
         },
         {
           "id": "finite-root-finding-v0",
@@ -4491,7 +4491,7 @@
           "id": "finite-recurrence-prefix-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
-          "notes": "Finite recurrence prefixes and companion-matrix replay for recurrence-theory shadows."
+          "notes": "Finite recurrence prefixes, companion-matrix replay, and checked affine-step refutations for recurrence-theory shadows."
         },
         {
           "id": "finite-root-finding-v0",
@@ -6886,7 +6886,7 @@
           "id": "finite-recurrence-prefix-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
-          "notes": "Fibonacci prefix, affine recurrence, companion-matrix prefix, and checked bad finite-value rows."
+          "notes": "Fibonacci prefix, affine recurrence, companion-matrix prefix, and checked bad finite-value plus bad affine-step rows."
         },
         {
           "id": "bounded-dynamics-v0",

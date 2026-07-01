@@ -341,7 +341,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-recurrence-prefix-v0",
-                "Finite recurrence-prefix, affine recurrence, companion-matrix, and bad value checks.",
+                "Finite recurrence-prefix, affine recurrence, companion-matrix, bad value, and bad affine-step checks.",
             ),
         ],
     },
@@ -361,7 +361,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-recurrence-prefix-v0",
-                "Finite recurrence prefixes and companion-matrix replay for enumerative sequences.",
+                "Finite recurrence prefixes, companion-matrix replay, and checked affine-step refutations for enumerative sequences.",
             ),
         ],
     },
@@ -403,7 +403,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-recurrence-prefix-v0",
-                "Finite recurrence prefixes and companion-matrix state replay.",
+                "Finite recurrence prefixes, companion-matrix state replay, and checked affine-step refutations.",
             ),
             (
                 "finite-root-finding-v0",
@@ -2842,7 +2842,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-recurrence-prefix-v0",
-                "Finite recurrence prefixes and companion-matrix replay for recurrence-theory shadows.",
+                "Finite recurrence prefixes, companion-matrix replay, and checked affine-step refutations for recurrence-theory shadows.",
             ),
             (
                 "finite-root-finding-v0",
@@ -5114,7 +5114,7 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "finite-recurrence-prefix-v0",
-                "Fibonacci prefix, affine recurrence, companion-matrix prefix, and checked bad finite-value rows.",
+                "Fibonacci prefix, affine recurrence, companion-matrix prefix, and checked bad finite-value plus bad affine-step rows.",
             ),
             (
                 "bounded-dynamics-v0",

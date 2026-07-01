@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 613 expected checks.
-- 290 checked proof/evidence rows.
+- 614 expected checks.
+- 291 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -655,7 +655,8 @@ Build next:
 - Keep `sequence-limit-shadow-v0`'s promoted bounded Cauchy-tail row and
   `bounded-monotone-sequence-v0`'s bad upper-bound and bad tail-gap rows tied to source
   QF_LRA/Farkas artifacts; keep `finite-recurrence-prefix-v0`'s bad
-  finite-value row tied to its source QF_LRA/Farkas artifact; keep
+  finite-value and bad affine-step rows tied to their source QF_LRA/Farkas
+  artifacts; keep
   `finite-root-finding-v0`'s bad Newton-step row tied to its source
   QF_LRA/Farkas artifact; keep `finite-separation-v0`'s bad separator row tied
   to its source QF_LRA/Farkas artifact; keep `finite-kkt-v0`'s bad
@@ -1335,7 +1336,8 @@ Pick one item per commit unless the change is purely navigational.
     source-linked QF_LRA/Farkas regression for `bad-upper-bound-rejected`.
 34. Landed: add `finite-recurrence-prefix-v0` with Fibonacci prefix replay,
     affine recurrence replay, companion-matrix state replay, and a
-    source-linked QF_LRA/Farkas regression for `bad-fibonacci-value-rejected`.
+    source-linked QF_LRA/Farkas regression for `bad-fibonacci-value-rejected`;
+    later extended with `bad-affine-step-rejected`.
 35. Landed: promote `multivariable-calculus-rational-v0` through a
     source-linked QF_LRA/Farkas regression for `bad-gradient-rejected`. The
     artifact

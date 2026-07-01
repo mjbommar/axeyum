@@ -34,7 +34,19 @@ The committed witness checks:
 [1,0] -> [1,1] -> [2,1] -> [3,2] -> [5,3] -> [8,5]
 ```
 
-## Bad Row
+## Bad Fibonacci Row
 
 Exact replay computes `F_6 = 8`. The checked bad row asserts `F_6 = 9` over the
 same source artifact, producing a tiny QF_LRA/Farkas contradiction.
+
+## Bad Affine Step Row
+
+Exact affine recurrence replay computes:
+
+```text
+x_4 = 2*x_3 + 1 = 2*7 + 1 = 15
+```
+
+The checked bad row asserts the malformed claim `x_4 = 14`, leaving residual
+`1`. The source artifact checks that this positive residual cannot also be
+nonpositive.

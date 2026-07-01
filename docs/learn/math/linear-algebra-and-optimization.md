@@ -81,7 +81,7 @@ numerical-linear-algebra slice adds exact residual bounds, rational interval
 boxes for solutions, and a one-step Jacobi contraction check, with a checked
 QF_LRA/Farkas bad-bound certificate. The finite-recurrence-prefix slice adds
 Fibonacci and affine recurrence replay plus a companion-matrix state trace,
-with a checked QF_LRA/Farkas bad finite value certificate. The
+with checked QF_LRA/Farkas bad finite-value and bad affine-step certificates. The
 finite-root-finding slice adds exact bisection/Newton iteration replay,
 residual-decrease checking, and a checked QF_LRA/Farkas bad Newton-step
 certificate. The finite-separation slice adds exact convex-hull membership,

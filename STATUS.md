@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-recurrence affine-step QF_LRA row landed.**
+  `finite-recurrence-prefix-v0` now includes a checked rejection for a
+  malformed affine recurrence step: exact replay computes `x_4 = 2*7 + 1 =
+  15`, while the bad row claims `x_4 = 14`, leaving positive transition
+  residual `1`. The validator pins the affine source witness, step index,
+  recurrence arithmetic, residual, SMT-LIB artifact, regression, and
+  independently checked `UnsatFarkas` certificate. The shared
+  `math_resource_lra_routes` regression parses the artifact and checks the
+  Farkas evidence. Generated dashboards and the public query summary now
+  report 111 concept rows, 108 non-template packs, 614 expected checks, 291
+  checked rows, 252 replay-only rows, and 71 Lean-horizon rows.
+
 - **Bounded-monotone bad tail-gap QF_LRA row landed.**
   `bounded-monotone-sequence-v0` now includes a checked rejection for a
   malformed finite epsilon-tail row: exact replay computes `a_2 = 2/3`, so the
@@ -213,7 +225,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   regression, and independently checked `UnsatFarkas` certificate. The shared
   `math_resource_lra_routes` regression parses the artifact and checks the
   Farkas evidence. Generated dashboards and the public query summary now report
-  111 concept rows, 108 non-template packs, 613 expected checks, 290 checked
+  111 concept rows, 108 non-template packs, 614 expected checks, 291 checked
   rows, 252 replay-only rows, and 71 Lean-horizon rows.
 
 - **Convexity rational bad affine-threshold QF_LRA row landed.**
@@ -224,7 +236,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   artifact, regression, and independently checked `UnsatFarkas` certificate.
   The shared `math_resource_lra_routes` regression parses the artifact and
   checks the Farkas evidence. Generated dashboards and the public query summary
-  now report 111 concept rows, 108 non-template packs, 613 expected checks, 290
+  now report 111 concept rows, 108 non-template packs, 614 expected checks, 291
   checked rows, 252 replay-only rows, and 71 Lean-horizon rows.
 
 - **Finite-proximal-gradient box-plus-L1 QF_LRA row landed.**
@@ -238,7 +250,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   artifact, and regression; the shared `math_resource_lra_routes` regression
   parses the artifact and checks `UnsatFarkas` evidence. Generated dashboards
   and the public query summary now report 111 concept rows, 108 non-template
-  packs, 613 expected checks, 290 checked rows, 252 replay-only rows, and 71
+  packs, 614 expected checks, 291 checked rows, 252 replay-only rows, and 71
   Lean-horizon rows.
 
 - **Finite-active-set degenerate multiplier QF_LRA row landed.**

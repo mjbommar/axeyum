@@ -93,6 +93,17 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Display the focused finite affine-recurrence refutation:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-recurrence-prefix-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text affine \
+  --require-any
+```
+
 Display stochastic-kernel, Markov-chain, and hitting-time rows:
 
 ```sh

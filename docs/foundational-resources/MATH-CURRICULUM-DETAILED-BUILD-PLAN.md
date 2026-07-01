@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 613 expected checks.
-- 290 checked proof/evidence rows.
+- 614 expected checks.
+- 291 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -281,9 +281,9 @@ Pick one row per commit unless the change is purely navigational.
    finite supremum, finite tail-gap replay, a checked bad upper-bound
    QF_LRA/Farkas artifact, and a monotone-convergence Lean-horizon row.
 9. Landed: add `finite-recurrence-prefix-v0` with Fibonacci prefix replay,
-   affine recurrence replay, companion-matrix state replay, a checked bad
-   finite-value QF_LRA/Farkas artifact, and a recurrence-theory Lean-horizon
-   row.
+   affine recurrence replay, companion-matrix state replay, checked bad
+   finite-value and bad affine-step QF_LRA/Farkas artifacts, and a
+   recurrence-theory Lean-horizon row.
 10. Landed: promote `multivariable-calculus-rational-v0` through a source-linked
    bad-gradient QF_LRA/Farkas artifact and route regression.
 11. Landed: promote `calculus-algebraic-shadow-v0` through a source-linked
