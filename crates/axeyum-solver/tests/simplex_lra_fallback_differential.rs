@@ -3,7 +3,7 @@
 //!
 //! The plain `qf_lra_differential_fuzz` uses small (2–4 variable) systems that
 //! Fourier–Motzkin decides directly, so it never reaches the new fallback. This
-//! harness instead generates **large, dense, conjunctive** QF_LRA systems
+//! harness instead generates **large, dense, conjunctive** `QF_LRA` systems
 //! (10–14 variables, 20–34 atoms) whose Fourier–Motzkin elimination blows past its
 //! `MAX_FM_CONSTRAINTS` budget → `TimedOut` → the exact-rational **simplex** decides
 //! them. A wrong `sat`/`unsat` from that path — the worst possible bug — would be

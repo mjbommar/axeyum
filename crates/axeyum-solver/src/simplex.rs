@@ -508,11 +508,11 @@ impl Tableau {
     /// by which bound `b` violates). That gives `yᵀA = 0` by construction.
     ///
     /// The candidate is **self-checked** by [`check_farkas`] before it is returned:
-    /// the non-strict `≤/≥/=` case yields `Σ y·rhs < 0` directly; a strict-row
-    /// contradiction whose rational part is only `≤ 0` (the strictness living in the
-    /// δ-part) fails that check and returns **empty** — a sound "no rational
-    /// certificate" that never masquerades as a refutation. So a returned vector is
-    /// always a genuine, re-checkable Farkas certificate.
+    /// the non-strict case yields `Σ y·rhs < 0`; a strict-row contradiction whose
+    /// rational part cancels to `0` is accepted via the δ-aware `0 < 0` rule (a
+    /// strict row is used). A candidate that does not verify returns **empty** — a
+    /// sound "no certificate" that never masquerades as a refutation. So a returned
+    /// vector is always a genuine, re-checkable Farkas certificate.
     fn farkas(&self, r: usize, too_low: bool) -> R<Vec<Rational>> {
         let b = self.basic[r];
         if b < self.nvars {
@@ -556,10 +556,11 @@ impl Tableau {
 }
 
 /// Re-check a Farkas certificate `y` against the input `constraints`: every `y`
-/// respects its row's sign (`≥0` for `≤`, `≤0` for `≥`, free for `=`), the combined
-/// left-hand side vanishes (`Σ yᵢ·aᵢⱼ = 0` for every column `j`), and the combined
-/// right-hand side is negative (`Σ yᵢ·bᵢ < 0`). Used by the tests here and by any
-/// caller before trusting an `Infeasible` verdict.
+/// respects its row's sign (`≥0` for `≤`/`<`, `≤0` for `≥`/`>`, free for `=`), the
+/// combined left-hand side vanishes (`Σ yᵢ·aᵢⱼ = 0` for every column `j`), and the
+/// combined right-hand side refutes — `Σ yᵢ·bᵢ < 0`, or `= 0` when a strict (`<`/`>`)
+/// row is used (the δ-aware `0 < 0`). Used by the tests here and by any caller
+/// before trusting an `Infeasible` verdict.
 #[must_use]
 pub fn check_farkas(nvars: usize, constraints: &[Constraint], y: &[Rational]) -> bool {
     if y.len() != constraints.len() || y.iter().all(|v| v.is_zero()) {
@@ -593,8 +594,14 @@ pub fn check_farkas(nvars: usize, constraints: &[Constraint], y: &[Rational]) ->
             return false;
         }
     }
-    // Combined rhs must be strictly negative.
+    // Combined rhs, and whether a strict (`<`/`>`) row is actually used. The
+    // refutation is the derived relation `0 ⋈ Σy·rhs` in `ℚ(δ)`: with the combined
+    // LHS vanishing, it collapses to `Σy·rhs ≥ 0` (or `> 0` when a strict row
+    // contributes a `−δ`). It refutes iff that is false:
+    //   * `Σy·rhs < 0`               — false regardless of δ; or
+    //   * `Σy·rhs == 0` AND a strict row is used — the `0 < 0` case.
     let mut rhs = Rational::zero();
+    let mut strict_used = false;
     for (yi, c) in y.iter().zip(constraints) {
         let Some(t) = yi.checked_mul(c.rhs) else {
             return false;
@@ -603,11 +610,15 @@ pub fn check_farkas(nvars: usize, constraints: &[Constraint], y: &[Rational]) ->
             return false;
         };
         rhs = s;
+        if !yi.is_zero() && matches!(c.rel, Rel::Lt | Rel::Gt) {
+            strict_used = true;
+        }
     }
-    matches!(
-        rhs.checked_cmp(&Rational::zero()),
-        Some(core::cmp::Ordering::Less)
-    )
+    match rhs.checked_cmp(&Rational::zero()) {
+        Some(core::cmp::Ordering::Less) => true,
+        Some(core::cmp::Ordering::Equal) => strict_used,
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -752,11 +763,35 @@ mod tests {
     }
 
     #[test]
-    fn strict_contradiction_infeasible() {
+    fn strict_contradiction_infeasible_carries_farkas() {
         // x < 1 ∧ x > 1 → infeasible (the δ-relaxation makes the strict bounds
-        // exact: x ≤ 1−δ ∧ x ≥ 1+δ is empty).
+        // exact: x ≤ 1−δ ∧ x ≥ 1+δ is empty), with a δ-aware Farkas cert whose
+        // rational part sums to 0 and refutes via the strict `0 < 0`.
         let cs = [con(&[1], Rel::Lt, 1), con(&[1], Rel::Gt, 1)];
-        assert!(matches!(feasible(1, &cs), SimplexOutcome::Infeasible(_)));
+        match feasible(1, &cs) {
+            SimplexOutcome::Infeasible(y) => assert!(
+                check_farkas(1, &cs, &y),
+                "strict contradiction must carry a valid δ-aware Farkas cert, got {y:?}"
+            ),
+            o => panic!("expected infeasible, got {o:?}"),
+        }
+    }
+
+    #[test]
+    fn check_farkas_strict_zero_sum() {
+        // The δ-aware acceptance: rational parts cancel to 0 but a strict row is
+        // used ⇒ `0 < 0`. `x < 1 ∧ x > 1` with y = (1, −1): Σy·rhs = 1−1 = 0.
+        let cs = [con(&[1], Rel::Lt, 1), con(&[1], Rel::Gt, 1)];
+        assert!(
+            check_farkas(1, &cs, &[r(1), r(-1)]),
+            "strict 0<0 cert must pass"
+        );
+        // The same shape with NON-strict rows is 0 ≤ 0 — not a refutation.
+        let ns = [con(&[1], Rel::Le, 1), con(&[1], Rel::Ge, 1)];
+        assert!(
+            !check_farkas(1, &ns, &[r(1), r(-1)]),
+            "non-strict 0=0 is feasible (x=1), must be rejected"
+        );
     }
 
     #[test]
