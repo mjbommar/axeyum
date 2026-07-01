@@ -83,6 +83,35 @@ structured / mixed real-int instances bypass it entirely. The 25% is therefore a
    (the [Rational-overflow class](../../../research/)). Quick soundness-hygiene win.
 4. **Route mixed real+int nonlinear** into the NRA path instead of `milp: unsupported`.
 
+#### Re-measured 2026-07-01 (after the sign-refutation pass landed, `f9e06baf`)
+
+Re-run of `explain_corpus` on the same QF_NRA `cvc5-regress-clean` set:
+**decided 10 → 12** (5 sat, 7 unsat, 25 unknown). The new **sign/zero refutation
+before the cross-product cap** (add only the cheap linear sign/zero product
+lemmas — no `McCormick`, no SOS — and one bounded LRA-DPLL solve; `unsat`
+transfers) captured the *sign-refutable* subset of the 14 cap-declines:
+`simple-mono-unsat` and `subs0-unsat-confirm` now `unsat` (DISAGREE=0 on `nra`+
+`nia` fuzz). The residual cap/FM declines split as:
+
+- **Fully-free many-product cases** (`metitarski-*`, `poly-1025`, `nt-lemmas-bad`,
+  9–20 cross-products, several `{real,int}`): the sign-lemma LRA system (or the
+  full relaxation) exceeds the **Fourier–Motzkin `MAX_FM_CONSTRAINTS` budget**
+  (`lra_online.rs`/`lra.rs`, ADR-0015). *Both* `check_with_lra` and
+  `check_with_lra_within` are FM-based, so the sign pass's reach on these is
+  capped by FM, not by the sign reasoning. **The load-bearing next lever is
+  FM → an incremental simplex feasibility core** (a new LRA-backend ADR); it
+  unlocks both the fully-free cap cases *and* the ~8 standalone `Fourier–Motzkin
+  exceeded` declines, and lifts the sign pass's ceiling.
+- **`ones`-class** (bounded product `≥ 1` needs the *threshold-1 monotonicity*
+  lemmas, not sign alone): those lemmas are what the cap was created to avoid
+  (OOM inside one solve), so a monotonicity-augmented pre-check must be
+  product-count-gated; low marginal yield (~+1) vs the FM lever.
+- **Division-heavy** (`issue9164-2`, `1/(a/b) > a²/a`): tied to the free-division
+  `/0` witness gap (above).
+
+So the refreshed priority is: **FM → simplex (biggest, unblocks both cap and FM
+declines)** > CAD-gate widening > mixed-int routing > monotonicity pre-check.
+
 NIA at 71% is closer; its residual is the UNSAT side → [Phase E](07-phaseE-nia.md)
 incremental linearization over UFLIA.
 
