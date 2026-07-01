@@ -20,6 +20,14 @@ Expected result: `sat`.
 
 The validator recomputes `v^T A v`, `v^T v`, and their quotient exactly.
 
+## `bad-rayleigh-quotient-rejected`
+
+Expected result: `unsat`.
+
+The vector `[1,1]` has Rayleigh quotient `6/2 = 3`, not `4`. The final
+quotient equality conflict is checked by a linked `QF_LRA` artifact and a
+resource-backed `UnsatFarkas` regression.
+
 ## `spectral-decomposition-witness`
 
 Expected result: `sat`.

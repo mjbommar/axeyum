@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 568 expected checks.
-- 250 checked proof/evidence rows.
+- 569 expected checks.
+- 251 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1799,6 +1799,13 @@ Pick one item per commit unless the change is purely navigational.
      the residual inner product is `1`; the shared QF_LRA/Farkas route now
      checks both inner-product positivity and projection-orthogonality
      conflicts without promoting infinite-dimensional projection theorems.
+115. Landed: extend `spectral-linear-algebra-v0` with a checked bad
+     Rayleigh-quotient row. Finite replay computes numerator `6`, denominator
+     `2`, and quotient `3` for `[1,1]` under `[[2,1],[1,2]]`, while the
+     malformed source SMT-LIB artifact claims quotient `4`; the shared
+     QF_LRA/Farkas route now checks both Rayleigh-quotient and eigenpair
+     spectral conflicts without promoting spectral theorem or eigenvalue
+     algorithm claims.
 
 ## Validation Checklist
 

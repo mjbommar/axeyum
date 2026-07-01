@@ -45,7 +45,7 @@ when the consumer needs a concrete checked row to display.
 | Linear systems and LU | `bridge_lu_replay` | `Farkas` | `packs --concept bridge_lu_replay --route Farkas` |
 | Residual bounds and least squares | `bridge_residual_bound` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked` |
 | Rank, kernel, image, and dual rows | `bridge_rank_nullity` | `Alethe` | `packs --concept bridge_rank_nullity --route Alethe` |
-| Eigenpairs and matrix invariants | `bridge_eigenpair` | `Farkas` | `checks --concept bridge_eigenpair --route Farkas --proof-status checked` |
+| Rayleigh quotients, eigenpairs, and matrix invariants | `bridge_eigenpair` | `Farkas` | `checks --concept bridge_eigenpair --route Farkas --proof-status checked` |
 | Finite random-matrix moments | `bridge_random_matrix_finite_moment` | `Farkas` | `packs --concept bridge_random_matrix_finite_moment --route Farkas` |
 | Inner products and projections | `bridge_inner_product_projection` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked` |
 | Integer chain-complex torsion | `bridge_finite_torsion_homology_replay` | `Diophantine` | `checks --concept bridge_finite_torsion_homology_replay --route Diophantine --proof-status checked` |
@@ -83,7 +83,7 @@ python3 scripts/query-foundational-resources.py packs \
   --require-any
 ```
 
-Display checked eigenpair or matrix-invariant rows:
+Display checked Rayleigh, eigenpair, or matrix-invariant rows:
 
 ```sh
 python3 scripts/query-foundational-resources.py checks \

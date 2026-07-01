@@ -2,7 +2,8 @@
 
 This lesson follows one exact finite spectral-linear-algebra resource from
 eigenpair replay to an orthogonal eigenbasis, Rayleigh quotient,
-spectral-decomposition reconstruction, and a checked bad-eigenpair rejection.
+spectral-decomposition reconstruction, checked bad-Rayleigh-quotient
+rejection, and checked bad-eigenpair rejection.
 It uses the
 [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 pack.
@@ -24,6 +25,7 @@ Concept rows:
 | `symmetric-eigenpair-witness` | `sat` | replay-only |
 | `orthogonal-eigenbasis-witness` | `sat` | replay-only |
 | `rayleigh-quotient-witness` | `sat` | replay-only |
+| `bad-rayleigh-quotient-rejected` | `unsat` | checked |
 | `spectral-decomposition-witness` | `sat` | replay-only |
 | `bad-eigenpair-rejected` | `unsat` | checked |
 
@@ -90,6 +92,24 @@ v^T*v = 2
 
 This connects the eigenpair witness to a fixed Rayleigh quotient. It does not
 claim optimization of the quotient over all vectors.
+
+The bad Rayleigh row keeps the same replayed numerator and denominator but
+claims:
+
+```text
+(v^T*A*v) / (v^T*v) = 4
+```
+
+After exact replay computes `3`, the source `QF_LRA` artifact exposes the final
+quotient equality conflict:
+
+```text
+rayleigh_quotient = 3
+rayleigh_quotient = 4
+```
+
+That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
+certificate check.
 
 ## Replay Spectral Decomposition
 
@@ -165,6 +185,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes spectral_bad_rayleigh_quotient_artifact_emits_checked_farkas
 ```
 
 Expected output:
@@ -180,7 +201,7 @@ This lesson shows Axeyum's current spectral-linear-algebra resource pattern:
 ```text
 untrusted fast search -> eigenpair, basis, quotient, or decomposition candidate
 trusted small checking -> exact rational matrix-vector and matrix-matrix replay
-proof upgrade -> QF_LRA/Farkas certificate for the false eigenpair component
+proof upgrade -> QF_LRA/Farkas certificate for false quotient/eigenpair claims
 remaining horizon -> general spectral, compact-operator, and numerical proofs
 ```
 

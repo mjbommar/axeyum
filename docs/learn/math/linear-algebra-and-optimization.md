@@ -109,7 +109,7 @@ matrices, rank distributions, and a checked QF_LRA/Farkas bad trace-square
 certificate. The spectral slice checks exact finite
 eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotients, and
 `P*D*P^-1` reconstruction for a fixed rational matrix, plus a QF_LRA/Farkas
-bad-eigenpair certificate. The matrix-invariants
+bad-Rayleigh-quotient certificate and a bad-eigenpair certificate. The matrix-invariants
 slice checks trace, determinant, characteristic roots, Cayley-Hamilton replay,
 finite Gershgorin intervals, and a QF_LRA/Farkas bad-polynomial certificate
 for a fixed rational matrix. The
@@ -271,7 +271,8 @@ The convexity validator also rejects a false midpoint-convexity claim with
 using exact rational arithmetic. For random matrices, it checks finite atom
 probabilities and recomputes weighted matrix statistics exactly. For spectral
 linear algebra, it recomputes `A*v`, `lambda*v`, dot products, `v^T*A*v /
-v^T*v`, and `P*D*P^-1` exactly. For matrix invariants, it recomputes the
+v^T*v`, and `P*D*P^-1` exactly, and rejects a false Rayleigh quotient after
+replay computes `3`. For matrix invariants, it recomputes the
 characteristic polynomial, evaluates listed roots, checks `A^2 - trace(A)*A +
 det(A)*I = 0`, and validates finite eigenvalue intervals.
 
@@ -588,6 +589,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_projected_gra
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-proximal-gradient-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_proximal_gradient_bad_proximal_point_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes spectral_bad_rayleigh_quotient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
@@ -667,7 +669,7 @@ Exact rational matrix witnesses, projections, residuals, spectra, random-matrix
 moments, and satisfiable finite-dimensional operator rows start as
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md).
 Infeasible rational systems, LP thresholds, bad residual bounds, malformed
-eigenpairs, bad characteristic-polynomial rows, bad operator-bound rows,
+eigenpairs, bad Rayleigh-quotient rows, bad characteristic-polynomial rows, bad operator-bound rows,
 bad KKT stationarity rows, bad proximal residual rows, negative-norm rows, and
 projection-orthogonality examples graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).

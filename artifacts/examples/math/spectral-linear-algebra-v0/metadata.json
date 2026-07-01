@@ -35,10 +35,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "spectral linear algebra bad eigenpair QF_LRA/Farkas regression seed",
-    "pressure": "Exact matrix-vector replay computes eigen_image_0 = 3, but the malformed row claims the same component is 2.",
+    "target": "spectral linear algebra bad eigenpair and bad Rayleigh-quotient QF_LRA/Farkas regression seeds",
+    "pressure": "Exact matrix-vector replay computes eigen_image_0 = 3 while one malformed row claims the same component is 2, and exact Rayleigh replay computes quotient 3 while another malformed row claims 4.",
     "evidence": [
-      "bad-eigenpair-rejected"
+      "bad-eigenpair-rejected",
+      "bad-rayleigh-quotient-rejected"
     ],
     "next_step": "Promote additional fixed spectral rows only when they add distinct exact-linear solver pressure; keep general spectral theorems, compact-operator theory, and numerical eigenvalue algorithms in Lean-horizon or numerical-honesty lanes."
   },
@@ -51,19 +52,21 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "artifacts/examples/math/spectral-linear-algebra-v0/smt2/bad-eigenpair-farkas-conflict.smt2",
+    "artifacts/examples/math/spectral-linear-algebra-v0/smt2/bad-rayleigh-quotient-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "symmetric-eigenpair-witness",
     "orthogonal-eigenbasis-witness",
     "rayleigh-quotient-witness",
+    "bad-rayleigh-quotient-rejected",
     "spectral-decomposition-witness",
     "bad-eigenpair-rejected"
   ],
   "graduation_criteria": [
     "Encode fixed eigenpair, Rayleigh quotient, and spectral-decomposition claims as deterministic exact-rational obligations.",
     "Replay SAT witnesses through Axeyum model evaluation over finite matrices.",
-    "Route false finite eigenpair rows through checked QF_LRA/Farkas evidence once exact replay computes the conflicting component.",
+    "Route false finite eigenpair and Rayleigh-quotient rows through checked QF_LRA/Farkas evidence once exact replay computes the conflicting component or quotient.",
     "Add characteristic-polynomial and interval-eigenvalue checks before claiming broader spectral coverage.",
     "Keep general spectral theorems, compact-operator theory, and numerical eigenvalue algorithms marked Lean/numerical horizon."
   ]

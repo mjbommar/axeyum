@@ -326,7 +326,8 @@ First targets:
   (resource-backed Farkas regressions landed for the bad negative-norm and bad
   projection-orthogonality rows)
 - [spectral-linear-algebra-v0](../../artifacts/examples/math/spectral-linear-algebra-v0/)
-  (resource-backed Farkas regression landed for the bad eigenpair row)
+  (resource-backed Farkas regressions landed for the bad Rayleigh-quotient and
+  bad eigenpair rows)
 - [matrix-invariants-v0](../../artifacts/examples/math/matrix-invariants-v0/)
   (resource-backed Farkas regression landed for the bad characteristic
   polynomial row)

@@ -36,6 +36,21 @@ v^T v = 2
 (v^T A v) / (v^T v) = 3
 ```
 
+## Bad Rayleigh Quotient Certificate
+
+The bad Rayleigh row keeps the replayed numerator and denominator but claims:
+
+```text
+(v^T A v) / (v^T v) = 4
+```
+
+The linked proof artifact uses the final quotient equality:
+
+```text
+rayleigh_quotient = 3
+rayleigh_quotient = 4
+```
+
 ## Spectral Decomposition
 
 The decomposition is:

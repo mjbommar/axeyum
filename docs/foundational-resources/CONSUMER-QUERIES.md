@@ -769,7 +769,7 @@ python3 scripts/query-foundational-resources.py checks \
 ```
 
 For linear algebra, query the Farkas route to keep exact rational systems,
-residual bounds, least-squares normal equations, eigenpair checks,
+residual bounds, least-squares normal equations, Rayleigh/eigenpair checks,
 matrix-invariant rows, geometry dot-product rows, finite SDP/KKT/active-set
 rows, and finite dynamics/process matrix equations grouped while keeping
 spectral theorems, conditioning/stability, and general vector-space/module
@@ -1162,7 +1162,7 @@ python3 scripts/query-foundational-resources.py concepts \
 To display concrete checked optimization, convexity, finite SDP, finite
 active-set QP, finite gradient-descent, finite line-search, finite Wolfe
 line-search, finite projected-gradient, finite proximal-gradient, least-squares, gradient,
-residual, or eigenpair rows, drill
+residual, Rayleigh, or eigenpair rows, drill
 into checked Farkas examples:
 
 ```sh
@@ -1230,7 +1230,7 @@ python3 scripts/query-foundational-resources.py checks \
 For functional analysis and operator theory, query the same exact-rational
 route to group finite-dimensional operator bounds, inner-product positivity,
 projection-orthogonality, Chebyshev duplicate-node grids, spectral/eigenpair
-witnesses, and dual-space rows while keeping Banach, Hilbert,
+and Rayleigh witnesses, and dual-space rows while keeping Banach, Hilbert,
 compact-operator, minimax, and infinite-dimensional approximation claims in
 the proof-horizon lane:
 

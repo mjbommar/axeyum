@@ -935,8 +935,8 @@ composite objective decrease, checked QF_LRA/Farkas rejection of a false
 proximal point, and a proximal-gradient convergence Lean-horizon row.
 `artifacts/examples/math/spectral-linear-algebra-v0/` now validates exact
 finite eigenpair replay, orthogonal eigenbasis checks, Rayleigh quotients,
-spectral decomposition replay, and checked QF_LRA/Farkas rejection of a false
-eigenpair.
+spectral decomposition replay, and checked QF_LRA/Farkas rejection of false
+Rayleigh-quotient and eigenpair claims.
 `artifacts/examples/math/matrix-invariants-v0/` now validates exact
 trace/determinant characteristic-polynomial replay, characteristic roots,
 Cayley-Hamilton replay, finite Gershgorin intervals, and checked QF_LRA/Farkas
@@ -1013,7 +1013,7 @@ Recommended order:
     for finite statistical tests, plus a checked QF_LIA bad-count certificate.
 17. `spectral-linear-algebra-v0`: exact eigenpairs, orthogonal eigenbases,
     Rayleigh quotients, finite spectral decomposition, and QF_LRA/Farkas
-    bad-eigenpair rejection.
+    bad-Rayleigh-quotient and bad-eigenpair rejections.
 18. `matrix-invariants-v0`: trace/determinant characteristic polynomials,
     roots, Cayley-Hamilton replay, finite eigenvalue intervals, and
     QF_LRA/Farkas bad-characteristic-polynomial rejection.
@@ -1666,8 +1666,8 @@ alternation-magnitude rejection with QF_LRA/Farkas evidence, and the
 Chebyshev/Haar/minimax Lean horizon.
 `spectral-linear-algebra-v0` now has a learner-facing end-to-end lesson for
 exact eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotient
-checking, spectral decomposition reconstruction, checked bad-eigenpair
-rejection with QF_LRA/Farkas evidence, and the general spectral/numerical
+checking, spectral decomposition reconstruction, checked bad-Rayleigh-quotient
+and bad-eigenpair rejection with QF_LRA/Farkas evidence, and the general spectral/numerical
 horizon.
 `random-matrix-finite-v0` now has a learner-facing end-to-end lesson for exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
@@ -2016,8 +2016,9 @@ the malformed cyclic quadrilateral claims.
 `inner-product-spaces-rational-v0` now routes its bad inner-product and bad
 projection-orthogonality rows through the same checked Farkas evidence path
 after exact negative-norm and projection residual replay.
-`spectral-linear-algebra-v0` now routes its bad eigenpair row through the same
-checked Farkas evidence path after exact matrix-vector replay.
+`spectral-linear-algebra-v0` now routes its bad Rayleigh-quotient and bad
+eigenpair rows through the same checked Farkas evidence path after exact
+quotient and matrix-vector replay.
 `matrix-invariants-v0` now routes its bad characteristic-polynomial row through
 the same checked Farkas evidence path after exact witness-root replay.
 `calculus-algebraic-shadow-v0` now routes its false derivative-value row

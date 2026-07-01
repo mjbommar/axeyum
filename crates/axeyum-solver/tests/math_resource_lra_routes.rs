@@ -121,6 +121,9 @@ const FINITE_OPERATOR_BAD_OPERATOR_BOUND: &str = include_str!(
 const FINITE_OPERATOR_BAD_L1_SUM_NORM: &str = include_str!(
     "../../../artifacts/examples/math/finite-operator-v0/smt2/bad-l1-sum-norm-farkas-conflict.smt2"
 );
+const SPECTRAL_BAD_RAYLEIGH_QUOTIENT: &str = include_str!(
+    "../../../artifacts/examples/math/spectral-linear-algebra-v0/smt2/bad-rayleigh-quotient-farkas-conflict.smt2"
+);
 const FINITE_CHEBYSHEV_BAD_INTERPOLATION_SAMPLE: &str = include_str!(
     "../../../artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-interpolation-sample-farkas-conflict.smt2"
 );
@@ -1104,6 +1107,14 @@ fn inner_product_bad_norm_square_emits_checked_farkas() {
         "inner-product-spaces-rational-v0 bad-inner-product-rejected",
         &arena,
         &[norm_is_negative_one, positivity_for_nonzero_vector],
+    );
+}
+
+#[test]
+fn spectral_bad_rayleigh_quotient_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "spectral-linear-algebra-v0 bad-rayleigh-quotient SMT-LIB artifact",
+        SPECTRAL_BAD_RAYLEIGH_QUOTIENT,
     );
 }
 

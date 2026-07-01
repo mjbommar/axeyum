@@ -72,6 +72,28 @@
       "notes": "The validator recomputes v^T*A*v, v^T*v, and the quotient exactly."
     },
     {
+      "id": "bad-rayleigh-quotient-rejected",
+      "claim": "The Rayleigh quotient of [1,1] for the fixed symmetric matrix is 4.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_rayleigh_quotient_refutation",
+      "proof_status": "checked",
+      "data": {
+        "matrix": [
+          ["2", "1"],
+          ["1", "2"]
+        ],
+        "vector": ["1", "1"],
+        "numerator": "6",
+        "denominator": "2",
+        "computed_quotient": "3",
+        "claimed_quotient": "4",
+        "smt2_artifact": "artifacts/examples/math/spectral-linear-algebra-v0/smt2/bad-rayleigh-quotient-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes spectral_bad_rayleigh_quotient_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the Rayleigh quotient as 6/2 = 3, while the malformed row claims 4; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
       "id": "spectral-decomposition-witness",
       "claim": "The listed P*D*P^-1 decomposition reconstructs the fixed matrix.",
       "expected_result": "sat",

@@ -12534,6 +12534,58 @@ def validate_spectral_linear_algebra(expected: dict[str, Any]) -> None:
     if numerator / denominator != quotient:
         fail("rayleigh-quotient-witness quotient is incorrect")
 
+    bad_rayleigh = checks["bad-rayleigh-quotient-rejected"]
+    if bad_rayleigh["expected_result"] != "unsat" or bad_rayleigh.get("proof_status") != "checked":
+        fail("bad-rayleigh-quotient-rejected must be a checked unsat row")
+    if bad_rayleigh["validation"] != "exact_rational_bad_rayleigh_quotient_refutation":
+        fail("bad-rayleigh-quotient-rejected must use exact_rational_bad_rayleigh_quotient_refutation validation")
+    data = bad_rayleigh.get("data", {})
+    bad_matrix = require_fraction_matrix("bad Rayleigh matrix", data.get("matrix"))
+    bad_vector = require_fraction_vector("bad Rayleigh vector", data.get("vector"))
+    bad_numerator = require_fraction("bad Rayleigh numerator", data.get("numerator"))
+    bad_denominator = require_fraction("bad Rayleigh denominator", data.get("denominator"))
+    bad_computed_quotient = require_fraction(
+        "bad Rayleigh computed_quotient",
+        data.get("computed_quotient"),
+    )
+    bad_claimed_quotient = require_fraction(
+        "bad Rayleigh claimed_quotient",
+        data.get("claimed_quotient"),
+    )
+    if bad_matrix != matrix or bad_vector != vector:
+        fail("bad-rayleigh-quotient-rejected must reuse the Rayleigh matrix and vector")
+    require_mat_vec_shape("bad Rayleigh", bad_matrix, bad_vector)
+    bad_image = mat_vec(bad_matrix, bad_vector)
+    if dot_product(bad_vector, bad_image) != bad_numerator:
+        fail("bad-rayleigh-quotient-rejected numerator is incorrect")
+    if dot_product(bad_vector, bad_vector) != bad_denominator:
+        fail("bad-rayleigh-quotient-rejected denominator is incorrect")
+    if bad_denominator == 0:
+        fail("bad-rayleigh-quotient-rejected denominator must be nonzero")
+    if bad_numerator / bad_denominator != bad_computed_quotient:
+        fail("bad-rayleigh-quotient-rejected computed quotient is incorrect")
+    if bad_computed_quotient != quotient:
+        fail("bad-rayleigh-quotient-rejected must match the replayed Rayleigh quotient")
+    if bad_claimed_quotient == bad_computed_quotient:
+        fail("bad-rayleigh-quotient-rejected must document a false quotient claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad Rayleigh smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/spectral-linear-algebra-v0/smt2/"
+        "bad-rayleigh-quotient-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-rayleigh-quotient-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad Rayleigh smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad Rayleigh farkas_regression", regression)
+    if "spectral_bad_rayleigh_quotient_artifact_emits_checked_farkas" not in regression:
+        fail("bad-rayleigh-quotient-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad Rayleigh certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-rayleigh-quotient-rejected certificate must document checked Farkas evidence")
+
     decomposition = checks["spectral-decomposition-witness"]
     if decomposition["expected_result"] != "sat":
         fail("spectral-decomposition-witness must expect sat")

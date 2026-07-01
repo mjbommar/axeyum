@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Spectral bad Rayleigh-quotient QF_LRA row landed.**
+  `spectral-linear-algebra-v0` now has a second checked Farkas row: exact
+  replay computes `v^T*A*v = 6`, `v^T*v = 2`, and Rayleigh quotient `3` for
+  `[1,1]` under `[[2,1],[1,2]]`, then rejects the malformed claim that the
+  quotient is `4`. The new source SMT-LIB artifact isolates the final equality
+  conflict, the shared `math_resource_lra_routes` regression parses it and
+  checks `UnsatFarkas` evidence, and the validator pins the matrix, vector,
+  numerator, denominator, computed quotient, artifact path, regression, and
+  certificate note. Generated dashboards and the public query summary now
+  report 111 concept rows, 108 non-template packs, 569 expected checks, 251
+  checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+
 - **Inner-product bad projection-orthogonality QF_LRA row landed.**
   `inner-product-spaces-rational-v0` now has a second checked Farkas row:
   finite replay reuses the projection of `[2,3]` onto `span([1,1])`,

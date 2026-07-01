@@ -193,7 +193,7 @@ Build sequence:
    connectedness shadows, and continuity-by-preimage. Keep future bridge rows
    narrow and generated from `scripts/gen-foundational-concepts.py`.
 2. R1 bridge-concept rows landed for linear-algebra computation vocabulary:
-   LU replay, rank/nullity replay, residual bounds, eigenpair witnesses,
+   LU replay, rank/nullity replay, residual bounds, Rayleigh/eigenpair witnesses,
    characteristic-polynomial replay, and finite random-matrix moments.
 3. R1 bridge-concept rows landed for algebra-map vocabulary: homomorphism
    preservation, kernel/image replay, quotient maps, ideal closure, module
@@ -429,7 +429,7 @@ Build sequence:
     `artifacts/examples/math/finite-cyclic-geometry-v0/smt2/bad-ptolemy-farkas-conflict.smt2`,
     all checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
 41. [`matrix-computation-index.md`](../learn/math/matrix-computation-index.md)
-    now groups LU, rank/nullity, residual, projection, eigenpair,
+    now groups LU, rank/nullity, residual, projection, Rayleigh/eigenpair,
     characteristic-polynomial, finite random-matrix, chain-complex, operator,
     module, and tensor rows by replay, QF_LRA/Farkas, QF_UF/Alethe,
     QF_LIA/Diophantine, Lean-horizon, and numerical-honesty boundary.

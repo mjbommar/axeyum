@@ -507,8 +507,8 @@ validates exact residual bounds, rational solution boxes, Jacobi one-step
 contraction replay, and checked rejection of a false residual bound.
 [`spectral-linear-algebra-v0`](../../artifacts/examples/math/spectral-linear-algebra-v0/)
 validates exact finite eigenpair replay, orthogonal eigenbasis checks,
-Rayleigh quotients, spectral decomposition replay, and checked rejection of a
-false eigenpair.
+Rayleigh quotients, spectral decomposition replay, and checked rejection of
+false Rayleigh-quotient and eigenpair claims.
 [`matrix-invariants-v0`](../../artifacts/examples/math/matrix-invariants-v0/)
 validates exact trace/determinant characteristic-polynomial replay,
 characteristic roots, Cayley-Hamilton replay, finite Gershgorin intervals, and

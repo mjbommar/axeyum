@@ -162,7 +162,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 568 expected checks, 250 checked
+111 concept rows, 108 non-template packs, 569 expected checks, 251 checked
 rows, 247 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -570,8 +570,8 @@ residual-bound row, and random matrix finite now promoted for its bad
 trace-square moment row, with affine geometry now promoted for its bad
 distance-preservation row and inner-product spaces now promoted for its bad
 negative-norm and projection-orthogonality rows, and spectral linear algebra
-now promoted for its bad eigenpair row, with matrix invariants now promoted
-for its bad characteristic
+now promoted for its bad eigenpair and bad Rayleigh-quotient rows, with matrix
+invariants now promoted for its bad characteristic
 polynomial row, polynomial factorization now promoted for its fixed
 irreducible-quadratic discriminant conflict, and finite Chebyshev systems now
 promoted for the duplicate-node determinant and bad interpolation-sample
@@ -627,6 +627,7 @@ the latest finite-wolfe-line-search bad curvature QF_LRA/Farkas promotion,
 the latest finite-proximal-gradient bad proximal-point QF_LRA/Farkas promotion,
 the latest finite-projected-gradient bad projection QF_LRA/Farkas promotion,
 the latest inner-product bad projection-orthogonality QF_LRA/Farkas promotion,
+the latest spectral bad Rayleigh-quotient QF_LRA/Farkas promotion,
 the latest finite-line-search bad Armijo QF_LRA/Farkas promotion,
 the latest finite-gradient-descent bad decrease QF_LRA/Farkas promotion,
 the latest finite-SDP bad objective QF_LRA/Farkas promotion,

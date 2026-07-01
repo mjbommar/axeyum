@@ -250,8 +250,8 @@ Companion maps:
   rational matrix.
 - [Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md): follows
   exact eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotient
-  checking, spectral decomposition reconstruction, and a QF_LRA/Farkas
-  bad-eigenpair certificate.
+  checking, spectral decomposition reconstruction, and QF_LRA/Farkas bad
+  Rayleigh-quotient plus bad-eigenpair certificates.
 - [Finite Random Matrices](random-matrix-finite-end-to-end.md): follows exact
   matrix-valued probability tables, trace/determinant moments, expected Gram
   matrices, rank probabilities, and a QF_LRA/Farkas bad trace-square

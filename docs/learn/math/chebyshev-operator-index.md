@@ -44,7 +44,7 @@ These rows live in the
 | Is a finite interpolation grid unisolvent? | `finite-chebyshev-systems-v0` | exact Vandermonde matrix and determinant replay | Haar-space and Chebyshev-system theorems |
 | Do finite samples match listed coefficients? | `finite-chebyshev-systems-v0` | exact evaluation-matrix times coefficient-vector replay plus checked bad-sample Farkas row | general interpolation and approximation theory |
 | Does a residual alternate on a finite grid? | `finite-chebyshev-systems-v0` | exact residual values, signs, common absolute error, and checked bad-uniform-error Farkas row | minimax and alternation theorems |
-| Do spectral or characteristic-polynomial rows share the same route? | `spectral-linear-algebra-v0`, `matrix-invariants-v0` | exact matrix arithmetic plus checked Farkas rows for bad eigenpair or characteristic-polynomial claims | spectral theorem and general Cayley-Hamilton claims |
+| Do spectral or characteristic-polynomial rows share the same route? | `spectral-linear-algebra-v0`, `matrix-invariants-v0` | exact matrix arithmetic plus checked Farkas rows for bad Rayleigh-quotient, eigenpair, or characteristic-polynomial claims | spectral theorem and general Cayley-Hamilton claims |
 
 ## Checkable Shapes
 

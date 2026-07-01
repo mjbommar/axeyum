@@ -42,8 +42,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 568 expected checks.
-- 250 checked proof/evidence rows.
+- 569 expected checks.
+- 251 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -895,6 +895,13 @@ Pick one row per commit unless the change is purely navigational.
      route now checks both the bad negative-norm and bad
      projection-orthogonality conflicts without claiming general Hilbert-space
      projection theorem coverage.
+106. Landed: extend `spectral-linear-algebra-v0` with a checked bad Rayleigh
+     quotient row. Exact replay checks `v^T*A*v = 6`, `v^T*v = 2`, and
+     quotient `3` for `v=[1,1]` under `A=[[2,1],[1,2]]`, while the malformed
+     source SMT-LIB artifact claims quotient `4`; the shared QF_LRA/Farkas
+     route now checks both the bad Rayleigh-quotient and bad eigenpair
+     conflicts without claiming the spectral theorem or Rayleigh-Ritz
+     optimization coverage.
 
 ## Validation Checklist
 
