@@ -11,6 +11,43 @@
 > completeness. (Borralleras et al., *ACM TOCL* 2019: "no tool always outperforms
 > all the others" — the signature of an undecidable theory.)
 
+## First slice — grounded in the measured NIA declines (2026-07-01)
+
+The QF_NIA declines (20/28) were root-caused (see
+[the scoreboard](../../measured-scoreboard-2026-07-01.md)). The cluster —
+integer div/mod by *variable* divisor (`div.03/08`, `mod.02/03`), `iand`, and
+nonlinear-int — bottoms out at **one** missing capability, demonstrated by a clean
+experiment:
+
+> `div.03` = `n>0 ∧ x≥n ∧ (div x n)<1`. Its **manually Euclidean-eliminated** form
+> `n>0 ∧ x≥n ∧ q<1 ∧ x=q·n+r ∧ 0≤r<n` is **still undecided** by axeyum. It is
+> **unsat over ℤ but sat over ℝ** (`q=0.5` works), so `int_real_relax` cannot
+> transfer the unsat. The unsat needs **integer tightening** (`q<1 ⟹ q≤0`, valid
+> only over ℤ) followed by a **sign lemma** (`q≤0 ∧ n>0 ⟹ q·n≤0`, so
+> `x = q·n + r ≤ r < n` contradicts `x≥n`).
+
+So `eliminate_int_divmod` (extending it to variable divisors) is **not** the lever
+— the resulting NIA still declines. The lever is an **integer analog of
+`check_with_nra`**: abstract each product `a·b` to a fresh var, add the same
+sign/zero/monotonicity lemmas the real path already has (`nra.rs`), but solve the
+relaxation over the **integer** solver (`lia`/`dpll_lia`) so integrality is kept
+(`q<1 ⟹ q≤0`) and combines with the sign lemma to refute. Concretely:
+
+- **E.0a** `check_with_nia` (mirror `check_with_nra`): product abstraction + the
+  existing sign/zero/monotonicity lemma builders, relaxation solved by the integer
+  DPLL(T) (`check_with_lia_dpll`), replay against the **original** (per the
+  div-by-zero lesson: replay against the true original, never the eliminated form).
+- **E.0b** route the integer nonlinear tail (`dispatch_nonlinear_int_tail`) into it
+  before the width-ladder blast; strictly additive (`unknown → decision`).
+- **E.0c** then (and only then) extend `eliminate_int_divmod` to variable divisors
+  (Euclidean `x=q·n+r ∧ 0≤r<|n|` with sign/zero handling + division congruence, as
+  in the RealDiv fix), so `div.03`-style instances reach `check_with_nia`.
+- Gate: `nia_differential_fuzz` (18 min) DISAGREE=0; re-measure QF_NIA.
+
+This is the tractable, measured-grounded entry to Phase E — reusing the real
+path's lemma machinery, differing only in the linear solver (LIA vs LRA) and the
+integrality it preserves.
+
 ## The SAT/UNSAT split (the key empirical fact)
 
 The literature is consistent: **bounded/model-construction finds SAT models;
