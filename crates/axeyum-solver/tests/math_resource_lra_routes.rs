@@ -247,6 +247,9 @@ const BOUNDED_DYNAMICS_BAD_INVARIANT_BOUND: &str = include_str!(
 const BOUNDED_DYNAMICS_BAD_TRANSITION_STEP: &str = include_str!(
     "../../../artifacts/examples/math/bounded-dynamics-v0/smt2/bad-transition-step-farkas-conflict.smt2"
 );
+const BOUNDED_DYNAMICS_BAD_THRESHOLD_STEP: &str = include_str!(
+    "../../../artifacts/examples/math/bounded-dynamics-v0/smt2/bad-threshold-step-farkas-conflict.smt2"
+);
 const FINITE_EULER_BAD_MAX_ERROR_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/finite-euler-method-v0/smt2/bad-max-error-bound-farkas-conflict.smt2"
 );
@@ -1543,6 +1546,14 @@ fn bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "bounded-dynamics-v0 bad-transition-step SMT-LIB artifact",
         BOUNDED_DYNAMICS_BAD_TRANSITION_STEP,
+    );
+}
+
+#[test]
+fn bounded_dynamics_bad_threshold_step_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "bounded-dynamics-v0 bad-threshold-step SMT-LIB artifact",
+        BOUNDED_DYNAMICS_BAD_THRESHOLD_STEP,
     );
 }
 

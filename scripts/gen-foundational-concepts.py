@@ -527,7 +527,7 @@ FIELD_PACKS = {
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
     "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
-    "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."),
+    "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": [
         (
             "coordinate-geometry-v0",
@@ -5118,7 +5118,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "bounded-dynamics-v0",
-                "Bounded recurrence traces, finite invariants, threshold reachability, and checked bad transition-step and invariant-bound rows.",
+                "Bounded recurrence traces, finite invariants, threshold reachability, and checked bad transition-step, bad threshold-step, and invariant-bound rows.",
             ),
             (
                 "finite-euler-method-v0",

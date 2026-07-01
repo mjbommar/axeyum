@@ -640,7 +640,8 @@ conditional-expectation, total-expectation, and tower-property tables, and a
 general conditional-expectation Lean-horizon row.
 [`bounded-dynamics-v0`](../../artifacts/examples/math/bounded-dynamics-v0/)
 validates exact rational recurrence traces, bounded invariant witnesses, and
-threshold reachability replay.
+threshold reachability replay, with checked rejection of bad transition-step,
+bad threshold-step, and bad invariant-bound rows.
 [`finite-euler-method-v0`](../../artifacts/examples/math/finite-euler-method-v0/)
 validates exact finite Euler-method traces, polynomial-solution error replay,
 invariant checks, checked rejection of bad max-error, bad terminal-error, and

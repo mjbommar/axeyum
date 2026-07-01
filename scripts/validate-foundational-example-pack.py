@@ -23767,6 +23767,69 @@ def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
         if state >= threshold:
             fail(f"threshold reachability state {index} reaches before first_reaching_step")
 
+    bad_threshold = checks["bad-threshold-step-rejected"]
+    if (
+        bad_threshold["expected_result"] != "unsat"
+        or bad_threshold.get("proof_status") != "checked"
+    ):
+        fail("bad-threshold-step-rejected must be a checked unsat row")
+    if bad_threshold["validation"] != "exact_rational_bad_threshold_step_refutation":
+        fail("bad-threshold-step-rejected validation is incorrect")
+    data = bad_threshold.get("data", {})
+    if data.get("source_witness") != "plus-three-threshold":
+        fail("bad-threshold-step-rejected must cite the plus-three-threshold witness")
+    claimed_step = require_nonnegative_int(
+        "bad threshold step claimed_reaching_step",
+        data.get("claimed_reaching_step"),
+    )
+    computed_state = require_fraction(
+        "bad threshold step computed_state_at_claimed_step",
+        data.get("computed_state_at_claimed_step"),
+    )
+    bad_threshold_value = require_fraction(
+        "bad threshold step threshold",
+        data.get("threshold"),
+    )
+    threshold_shortfall = require_fraction(
+        "bad threshold step threshold_shortfall",
+        data.get("threshold_shortfall"),
+    )
+    source_values = witnesses["plus-three-threshold"]["values"]
+    source_trace = require_recurrence_trace("bad threshold source", source_values)
+    source_threshold = require_fraction(
+        "bad threshold source threshold",
+        source_values.get("threshold"),
+    )
+    source_first_step = require_nonnegative_int(
+        "bad threshold source first_reaching_step",
+        source_values.get("first_reaching_step"),
+    )
+    if claimed_step >= len(source_trace):
+        fail("bad-threshold-step-rejected claimed step must be inside the trace")
+    if claimed_step >= source_first_step:
+        fail("bad-threshold-step-rejected must claim an early reachability step")
+    if source_trace[claimed_step] != computed_state:
+        fail("bad-threshold-step-rejected computed state does not match replay")
+    if bad_threshold_value != source_threshold:
+        fail("bad-threshold-step-rejected threshold does not match source witness")
+    if bad_threshold_value - computed_state != threshold_shortfall:
+        fail("bad-threshold-step-rejected threshold shortfall is incorrect")
+    if threshold_shortfall <= 0:
+        fail("bad-threshold-step-rejected must claim a state below threshold")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad threshold step smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/bounded-dynamics-v0/smt2/bad-threshold-step-farkas-conflict.smt2":
+        fail("bad-threshold-step-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad threshold step smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad threshold step farkas_regression", regression)
+    if "bounded_dynamics_bad_threshold_step_artifact_emits_checked_farkas" not in regression:
+        fail("bad-threshold-step-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad threshold step certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-threshold-step-rejected certificate must document checked Farkas evidence")
+
     bad_bound = checks["bad-invariant-bound-rejected"]
     if bad_bound["expected_result"] != "unsat" or bad_bound.get("proof_status") != "checked":
         fail("bad-invariant-bound-rejected must be a checked unsat row")

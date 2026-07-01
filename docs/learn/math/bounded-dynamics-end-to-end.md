@@ -1,7 +1,8 @@
 # End To End: Bounded Recurrence Dynamics
 
 This lesson follows one bounded dynamics resource from exact recurrence replay
-to checked rejection of a false transition step and false invariant bound. It uses the
+to checked rejection of a false transition step, false threshold step, and
+false invariant bound. It uses the
 [bounded-dynamics-v0](../../../artifacts/examples/math/bounded-dynamics-v0/)
 pack.
 
@@ -23,6 +24,7 @@ Concept rows:
 | `bad-transition-step-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `bounded-invariant-witness` | `sat` | replay-only |
 | `unsafe-threshold-reachable` | `sat` | replay-only |
+| `bad-threshold-step-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `bad-invariant-bound-rejected` | `unsat` | checked QF_LRA/Farkas |
 
 Every row is a finite exact-rational transition-system slice. The pack checks
@@ -125,6 +127,33 @@ first true at step `3`:
 This is the bug-finding side of bounded dynamics: an untrusted trace becomes a
 trusted witness only after exact replay confirms it reaches the target.
 
+## Check The Bad Threshold Step
+
+The threshold negative row reuses the plus-three recurrence but claims:
+
+```text
+step 2 reaches threshold 7
+```
+
+Exact replay computes:
+
+```text
+x(2) = 6 < 7
+```
+
+The committed SMT-LIB artifact
+[`bad-threshold-step-farkas-conflict.smt2`](../../../artifacts/examples/math/bounded-dynamics-v0/smt2/bad-threshold-step-farkas-conflict.smt2)
+isolates the exact-linear contradiction:
+
+```text
+state_at_claimed_step = 6
+threshold = 7
+state_at_claimed_step >= threshold
+```
+
+The trusted result is not the solver's rejection by itself. The route accepts
+the row only after the emitted `UnsatFarkas` certificate checks independently.
+
 ## Check The Bad Invariant
 
 The negative row reuses the plus-two trace but claims:
@@ -159,6 +188,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_threshold_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas
 ```
 

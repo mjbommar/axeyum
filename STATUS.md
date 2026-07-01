@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Bounded-dynamics bad threshold-step QF_LRA row landed.**
+  `bounded-dynamics-v0` now includes a checked rejection for a malformed early
+  threshold-reachability row: exact replay of the plus-three trace computes
+  state `6` at step `2`, below threshold `7` by shortfall `1`, while the bad
+  row claims the threshold is already reached. The validator pins the source
+  witness, claimed step, replayed state, threshold, shortfall, source SMT-LIB
+  artifact, regression, and independently checked `UnsatFarkas` certificate.
+  The shared `math_resource_lra_routes` regression parses the artifact and
+  checks the Farkas evidence. Generated dashboards and the public query summary
+  now report 111 concept rows, 108 non-template packs, 627 expected checks, 304
+  checked rows, 252 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite-proximal-gradient bad composite-decrease QF_LRA row landed.**
   `finite-proximal-gradient-v0` now includes a checked rejection for a
   malformed composite-decrease row: exact replay computes composite values

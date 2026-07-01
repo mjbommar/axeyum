@@ -87,6 +87,24 @@
       "notes": "The validator replays the recurrence and checks the first threshold-reaching step."
     },
     {
+      "id": "bad-threshold-step-rejected",
+      "claim": "The plus-three recurrence reaches threshold 7 by step 2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_threshold_step_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "plus-three-threshold",
+        "claimed_reaching_step": 2,
+        "computed_state_at_claimed_step": "6",
+        "threshold": "7",
+        "threshold_shortfall": "1",
+        "smt2_artifact": "artifacts/examples/math/bounded-dynamics-v0/smt2/bad-threshold-step-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_threshold_step_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact recurrence replay computes state 6 at step 2, which is below threshold 7 by shortfall 1; the source QF_LRA artifact isolates the malformed early-reachability claim for Farkas checking."
+    },
+    {
       "id": "bad-invariant-bound-rejected",
       "claim": "The plus-two recurrence trace satisfies the upper invariant bound x(t) <= 6 through the four-step horizon.",
       "expected_result": "unsat",

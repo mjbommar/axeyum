@@ -287,7 +287,7 @@ losing the curriculum anchor.
 | `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, `least-squares-regression-v0`, contingency tables, exact small tests, least-squares normal equations, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, finite concentration checks, and finite random-matrix moment checks. |
 | `optimization_and_convexity` | rationals, reals, linear algebra | `linear-optimization-v0`, `convexity-rational-v0`, `multivariable-calculus-rational-v0`, `finite-separation-v0`, `finite-kkt-v0`, `finite-active-set-qp-v0`, `finite-sdp-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0`, `finite-projected-gradient-v0`, `finite-proximal-gradient-v0`, LP feasibility, dual/Farkas certificates, finite convexity, gradients, Hessian checks, threshold checks, KKT stationarity/complementarity witnesses, active-set QP witnesses including inactive-slack conflicts, SDP primal/dual slack/gap replay, finite descent-step checks, finite Armijo/Wolfe line-search replay, finite projected-gradient interval/decrease replay, and finite proximal-gradient replay. |
 | `numerical_analysis` | linear algebra, real algebra | `numerical-linear-algebra-v0`, `finite-euler-method-v0`, `multivariable-calculus-rational-v0`, LU replay, interval bounds, error recurrences, Jacobian/Hessian replay, and finite ODE step replay. |
-| `differential_equations_and_dynamical_systems` | calculus, linear algebra | `bounded-dynamics-v0`, `finite-euler-method-v0`, recurrence traces, Euler-method steps, finite error replay, and invariant checks before continuous theory. |
+| `differential_equations_and_dynamical_systems` | calculus, linear algebra | `bounded-dynamics-v0`, `finite-euler-method-v0`, recurrence traces, Euler-method steps, threshold reachability, finite error replay, and invariant checks before continuous theory. |
 | `geometry` | reals, polynomials, linear algebra | `coordinate-geometry-v0`, `incidence-geometry-v0`, `rigid-configuration-geometry-v0`, `affine-geometry-v0`, `orientation-area-geometry-v0`, `finite-circle-geometry-v0`, `finite-inversion-geometry-v0`, `finite-cyclic-geometry-v0`, distance, midpoint, collinearity, line equations, distance tables, affine maps, signed area, barycentric replay, finite incidence preservation, finite isometry shadows, circle points, tangent lines, chord-midpoint perpendicularity, circle-line intersections, inversion images, inverse-distance products, cyclic quadrilateral replay, diagonal intersections, opposite-angle dot products, and rational Ptolemy product sums. |
 | `functional_analysis_and_operator_theory` | linear algebra, real analysis | `finite-operator-v0`, `inner-product-spaces-rational-v0`, `finite-chebyshev-systems-v0`, norms, inner products, projections, matrices as operators, Chebyshev polynomial slices, finite interpolation/sign-pattern checks, and the Chebyshev/operator learner-query index. |
 
@@ -913,7 +913,7 @@ rejection of false tail and union bounds, and a concentration/limit-theorem
 Lean-horizon row.
 `artifacts/examples/math/bounded-dynamics-v0/` now validates exact rational
 recurrence traces, bounded invariant witnesses, threshold reachability replay,
-and checked QF_LRA/Farkas rejection of bad transition-step and invariant-bound
+and checked QF_LRA/Farkas rejection of bad transition-step, bad threshold-step, and invariant-bound
 rows.
 `artifacts/examples/math/finite-euler-method-v0/` now validates exact finite
 Euler-method traces, polynomial-solution error replay, invariant checks,
@@ -1802,13 +1802,13 @@ They now also have standalone finite-topology and finite-measure pages so
 learners can start from one pack before crossing the topology/measure boundary.
 `bounded-dynamics-v0` and `finite-euler-method-v0` now have a learner-facing
 end-to-end lesson for bounded recurrence traces, invariant replay, threshold
-reachability, checked bad transition-step and invariant-bound rejection with
+reachability, checked bad transition-step, bad threshold-step, and invariant-bound rejection with
 QF_LRA/Farkas evidence, explicit Euler replay, exact finite error tables, checked bad
 terminal-error and bad Euler-step rejections with QF_LRA/Farkas evidence, and the
 ODE/numerical-analysis Lean horizon.
 `bounded-dynamics-v0` now also has a standalone bounded recurrence dynamics
 lesson for exact trace replay, finite invariant checking, threshold
-reachability, checked QF_LRA/Farkas bad transition-step plus bad
+reachability, checked QF_LRA/Farkas bad transition-step, bad threshold-step, and bad
 invariant-bound rejection, and the continuous-dynamics/ODE Lean horizon.
 `finite-euler-method-v0` now also has a standalone finite Euler method lesson
 for exact explicit-Euler transition replay, finite polynomial-solution error
@@ -1997,10 +1997,12 @@ same CNF/DRAT/LRAT regression pattern on the contradiction row `p`, `p -> q`,
 `finite-sets-v0` now carries promoted solver-reuse metadata for the malformed
 distributive-law counterexample at element `c`, completing the first Boolean
 CNF/LRAT proof-upgrade target set.
-`bounded-dynamics-v0` now carries promoted solver-reuse metadata for the bad
-invariant-bound row: exact recurrence replay computes terminal/max state `8`,
-the malformed row claims upper bound `6`, and the source QF_LRA artifact is
-checked by `math_resource_lra_routes::bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas`.
+`bounded-dynamics-v0` now carries promoted solver-reuse metadata for bad
+transition-step, bad threshold-step, and bad invariant-bound rows: exact
+recurrence replay computes the local next state `4`, threshold-step state `6`
+below threshold `7`, and terminal/max state `8`, and the source QF_LRA
+artifacts are checked by the bounded-dynamics `math_resource_lra_routes`
+regressions.
 The QF_LRA/Farkas lane now has a source-linked solver-reuse promotion for
 `rationals-lra-v0`: fixed trichotomy impossible branches and the fixed
 order-transitivity violating branch carry SMT-LIB artifacts with Axeyum

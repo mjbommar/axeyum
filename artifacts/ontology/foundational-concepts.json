@@ -6892,7 +6892,7 @@
           "id": "bounded-dynamics-v0",
           "status": "validated",
           "path": "artifacts/examples/math/bounded-dynamics-v0",
-          "notes": "Bounded recurrence traces, finite invariants, threshold reachability, and checked bad transition-step and invariant-bound rows."
+          "notes": "Bounded recurrence traces, finite invariants, threshold reachability, and checked bad transition-step, bad threshold-step, and invariant-bound rows."
         },
         {
           "id": "finite-euler-method-v0",
@@ -9800,7 +9800,7 @@
           "id": "bounded-dynamics-v0",
           "status": "validated",
           "path": "artifacts/examples/math/bounded-dynamics-v0",
-          "notes": "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."
+          "notes": "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Markov transitions, and finite hitting times."
         },
         {
           "id": "calculus-algebraic-shadow-v0",

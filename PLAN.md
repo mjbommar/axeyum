@@ -225,8 +225,8 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 626 expected checks (334 `sat`,
-221 `unsat`, 71 `not-run`), 303 checked rows, 252 replay-only rows, and 71
+111 concept rows, 108 non-template packs, 627 expected checks (334 `sat`,
+222 `unsat`, 71 `not-run`), 304 checked rows, 252 replay-only rows, and 71
 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -498,7 +498,7 @@ independence replay, and checked bad-independence rejection, leaving the broader
 stochastic-process bridge.
 `bounded-dynamics-v0` now also has a standalone bounded recurrence dynamics
 page for exact trace replay, finite invariant checking, threshold reachability,
-and checked QF_LRA/Farkas bad transition-step plus bad invariant-bound
+and checked QF_LRA/Farkas bad transition-step, bad threshold-step, and bad invariant-bound
 evidence, leaving the combined finite-dynamics/Euler page as the numerical-step
 bridge.
 `finite-euler-method-v0` now also has a standalone finite Euler method page
@@ -847,7 +847,7 @@ the latest finite-separation bad convex-combination and bad separator
 QF_LRA/Farkas promotions,
 the latest finite-root-finding bad Newton-step and bad bisection-width
 QF_LRA/Farkas promotions,
-the latest bounded-dynamics bad transition-step and invariant-bound
+the latest bounded-dynamics bad transition-step, bad threshold-step, and invariant-bound
 QF_LRA/Farkas promotion,
 complex-algebraic bad product-coordinate and bad norm-squared QF_LRA/Farkas
 promotion,

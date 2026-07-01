@@ -61,5 +61,17 @@ For `initial = 0`, `delta = 3`, and `steps = 3`, the trace is:
 The threshold `x(t) >= 7` is false at steps `0`, `1`, and `2`, and true at
 step `3`.
 
+## Bad Threshold Step
+
+The same plus-three trace supplies a checked negative reachability row. Exact
+replay computes:
+
+```text
+x(2) = 6 < 7
+```
+
+so the malformed claim that threshold `7` is already reached at step `2` is
+rejected by the source-linked QF_LRA/Farkas artifact.
+
 These are bounded replay targets. They are not general statements about
 continuous dynamics, numerical convergence, or asymptotic behavior.

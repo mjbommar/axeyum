@@ -29,6 +29,7 @@ Concept rows:
 | `bounded-invariant-witness` | `sat` | replay-only |
 | `unsafe-threshold-reachable` | `sat` | replay-only |
 | `bad-transition-step-rejected` | `unsat` | checked |
+| `bad-threshold-step-rejected` | `unsat` | checked |
 | `bad-invariant-bound-rejected` | `unsat` | checked |
 | `linear-decay-euler-trace` | `sat` | replay-only |
 | `quadratic-forcing-error-replay` | `sat` | replay-only |
@@ -129,6 +130,11 @@ x(t) >= 7
 This is a bounded safety or bug-finding pattern: a candidate trace is
 untrusted, and the small checker confirms that the trace really reaches the
 target.
+
+The checked threshold negative row claims step `2` already reaches threshold
+`7`. Exact replay computes `x(2) = 6`, so the source QF_LRA artifact isolates
+the contradiction `state_at_claimed_step = 6`, `threshold = 7`, and
+`state_at_claimed_step >= threshold`.
 
 ## Encode Explicit Euler As A Transition System
 
@@ -269,6 +275,7 @@ From the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-euler-method-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_threshold_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_
 ```
@@ -292,6 +299,6 @@ remaining horizon -> continuous ODE theory, convergence, stability, and PDEs
 The next practical graduation step is to lower fixed recurrence and Euler-step
 rows into deterministic QF_LRA or BV transition obligations, then replay SAT
 witnesses and checked refutations through Axeyum instead of pack-local Python
-alone. The bad transition-step row, bad invariant-bound row, bad finite
+alone. The bad transition-step row, bad threshold-step row, bad invariant-bound row, bad finite
 error-bound row, and bad fixed Euler step now exercise that QF_LRA/Farkas
 route.
