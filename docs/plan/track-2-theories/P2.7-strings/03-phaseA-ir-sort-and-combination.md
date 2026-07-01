@@ -52,8 +52,25 @@ added. So A.1 must be sliced to keep each commit compiling:
    arena builders, a **`Value::Seq`** (sequences route through `FullValue`, since
    `needs_value_storage(Seq) == true`), and ground-evaluator support (so models
    replay) — behind the existing bounded encoder as the decision path for now.
+   **LANDED (`abb23ddb`):** `Op::{SeqLen, SeqEmpty(ArraySortKey), SeqUnit, SeqConcat}`
+   + `Value::Seq(Vec<Value>)` + sort-checked builders (`seq_len`/`seq_empty`/
+   `seq_unit`/`seq_concat`) + `sort_of` inference + ground-evaluator
+   (`str.len(a++b) = |a|+|b|`, `str.len(seq.empty) = 0`); the `Op`/`Value` breaks
+   swept decline-cleanly across 14 files (z3 backend rejects seq ops at the
+   translate gate before `apply`, so no panic). Workspace `--all-targets` + axeyum-ir
+   tests (incl. 3 seq tests) + clippy `--all-features -D` green. *Known deferral:*
+   `Value::sort()` on an **empty** `Value::Seq` can't recover its element sort from
+   the value alone (falls back to the `String` element with a `TODO` — not
+   load-bearing, the term's `SeqEmpty` key carries the true sort); a precise
+   empty-seq value-sort needs the element key in the variant (a later ADR).
 3. **Slice A.1c — SMT-LIB read/write** round-trip for the sort + core ops.
 4. **A.2** (`len`↔LIA Nelson–Oppen) and the ADR follow once the sort is load-bearing.
+
+> **Pre-existing lint (unrelated to this keystone, flagged 2026-07-01):** the A.1b
+> sweep surfaced a `clippy::needless_raw_string_hashes` warning at
+> `crates/axeyum-smtlib/tests/smtlib.rs:2781` under `clippy --all-targets` (not the
+> standard `--all-features -D` gate, which is clean). It is on `main` independent of
+> the strings work; fix it as clippy hygiene when convenient.
 
 Do **not** attempt A.1a–c in one commit: the value is a green workspace at each
 step. The `axeyum-strings` crate boundary is deferred to when the word-level solver
