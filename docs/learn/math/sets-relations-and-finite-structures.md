@@ -67,7 +67,8 @@ topology pack checks empty/universe membership, closure under finite unions and
 intersections, closure/interior computation, and finite metric balls. The
 finite-quotient-topology pack checks quotient-map fibers, same-fiber
 equivalence pairs, quotient topology by preimage-open enumeration,
-saturated-open image replay, and a checked QF_UF/Alethe bad quotient-open row.
+saturated-open image replay, and checked QF_UF/Alethe bad representative and
+bad quotient-open rows.
 The
 finite-specialization-order pack derives a preorder from open neighborhoods,
 checks singleton-closure characterization, confirms one finite `T0` slice, and
@@ -219,9 +220,10 @@ q(a)=p, q(b)=p, q(c)=r
 
 The `finite-quotient-topology-v0` validator recomputes fibers, the same-fiber
 equivalence relation, every quotient subset preimage, and the saturated-open
-image `{a,b} -> {p}`. It rejects the false claim that `{r}` is quotient-open,
-because its preimage `{c}` is not open in `X`, and links the fixed open-status
-conflict to checked QF_UF/Alethe evidence.
+image `{a,b} -> {p}`. It rejects the false claim that two representatives in
+the same fiber have distinct quotient images, and it rejects the false claim
+that `{r}` is quotient-open because its preimage `{c}` is not open in `X`.
+Both fixed conflicts link to checked QF_UF/Alethe evidence.
 For finite cardinality, encode the same function graph as a cardinality witness:
 
 ```text

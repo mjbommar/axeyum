@@ -21,6 +21,15 @@ Expected result: `sat`.
 The validator checks that `{a,b}` is a union of fibers, is open in `X`, maps to
 `{p}`, and is the full preimage of `{p}`.
 
+## `bad-fiber-representative-rejected`
+
+Expected result: `unsat`.
+
+The row claims that two source representatives in the same quotient fiber have
+distinct quotient images. Replay computes `q(a)=q(b)=p`. The source SMT-LIB
+artifact isolates the fixed quotient-representative conflict and Axeyum emits
+and checks an Alethe proof for it.
+
 ## `bad-quotient-open-rejected`
 
 Expected result: `unsat`.

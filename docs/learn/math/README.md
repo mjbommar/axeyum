@@ -479,8 +479,8 @@ Companion maps:
   horizon.
 - [Finite Quotient Topology](finite-quotient-topology-end-to-end.md): follows
   quotient-map fiber replay, quotient topology by preimage-open enumeration,
-  saturated-open image replay, checked QF_UF/Alethe bad quotient-open
-  rejection, and the quotient-space Lean horizon.
+  saturated-open image replay, checked QF_UF/Alethe bad representative and
+  bad quotient-open rejections, and the quotient-space Lean horizon.
 - [Finite Specialization Order](finite-specialization-order-end-to-end.md):
   follows finite specialization-preorder replay, singleton-closure
   characterization, `T0`/antisymmetry replay, checked QF_UF/Alethe bad-T0

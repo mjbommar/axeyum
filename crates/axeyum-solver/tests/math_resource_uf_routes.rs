@@ -71,6 +71,9 @@ const FINITE_GROUP_ACTIONS_BAD_COMPATIBILITY: &str = include_str!(
 const FINITE_CONTINUOUS_MAPS_BAD_PREIMAGE: &str = include_str!(
     "../../../artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2"
 );
+const FINITE_QUOTIENT_TOPOLOGY_BAD_FIBER_REPRESENTATIVE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-quotient-topology-v0/smt2/bad-fiber-representative-alethe-conflict.smt2"
+);
 const FINITE_QUOTIENT_TOPOLOGY_BAD_OPEN: &str = include_str!(
     "../../../artifacts/examples/math/finite-quotient-topology-v0/smt2/bad-quotient-open-alethe-conflict.smt2"
 );
@@ -237,6 +240,14 @@ fn finite_continuous_maps_bad_preimage_emits_checked_alethe() {
     assert_resource_euf_alethe(
         "finite-continuous-maps-v0 bad preimage membership",
         FINITE_CONTINUOUS_MAPS_BAD_PREIMAGE,
+    );
+}
+
+#[test]
+fn finite_quotient_topology_bad_fiber_representative_emits_checked_alethe() {
+    assert_resource_euf_alethe(
+        "finite-quotient-topology-v0 bad fiber representative",
+        FINITE_QUOTIENT_TOPOLOGY_BAD_FIBER_REPRESENTATIVE,
     );
 }
 

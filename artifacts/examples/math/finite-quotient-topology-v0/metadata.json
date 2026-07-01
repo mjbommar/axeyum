@@ -36,12 +36,13 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-quotient-topology-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite quotient-topology bad-open QF_UF/Alethe regression seed",
-    "pressure": "A fixed quotient map makes quotient-openness depend on the preimage-open condition; the negative row refutes a malformed claim that {r} is quotient-open even though its preimage {c} is not open in the source topology.",
+    "target": "finite quotient-topology bad representative and bad quotient-open QF_UF/Alethe regression seeds",
+    "pressure": "A fixed quotient map identifies a and b in the same fiber over p, refuting a malformed distinct-image claim, and makes quotient-openness depend on the preimage-open condition, refuting a malformed claim that {r} is quotient-open even though its preimage {c} is not open in the source topology.",
     "evidence": [
+      "bad-fiber-representative-rejected",
       "bad-quotient-open-rejected"
     ],
-    "next_step": "Promote additional quotient-topology rows only when they add distinct saturation, universal-property, invariance, or proof-reconstruction pressure; keep quotient-space theorems in the Lean-horizon lane."
+    "next_step": "Promote additional quotient-topology rows only when they add distinct saturation, universal-property, invariance, or proof-reconstruction pressure beyond representative consistency and open-status checks; keep quotient-space theorems in the Lean-horizon lane."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -54,6 +55,7 @@
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "docs/learn/math/finite-quotient-topology-end-to-end.md",
     "docs/learn/math/analysis-topology-proof-horizons.md",
+    "artifacts/examples/math/finite-quotient-topology-v0/smt2/bad-fiber-representative-alethe-conflict.smt2",
     "artifacts/examples/math/finite-quotient-topology-v0/smt2/bad-quotient-open-alethe-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
@@ -61,6 +63,7 @@
     "quotient-map-fiber-witness",
     "quotient-topology-witness",
     "saturated-open-image-witness",
+    "bad-fiber-representative-rejected",
     "bad-quotient-open-rejected",
     "general-quotient-topology-lean-horizon"
   ],
@@ -68,6 +71,7 @@
     "Encode a finite source topology, surjective quotient map, quotient fibers, quotient open sets, and the induced equivalence relation.",
     "Replay quotient openness by recomputing preimages of every quotient subset and comparing them against the source topology.",
     "Replay saturated-open image/preimage behavior from the quotient-map fibers.",
+    "Route the bad fiber-representative row through checked QF_UF/Alethe evidence after finite replay identifies the common quotient image.",
     "Route the bad quotient-open row through checked QF_UF/Alethe evidence after finite replay identifies the non-open preimage.",
     "Keep quotient-space universal properties, quotient-map theorem schemas, and invariance under quotient constructions under Lean horizon until formal routes exist."
   ]

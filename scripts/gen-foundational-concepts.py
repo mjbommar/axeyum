@@ -4268,7 +4268,7 @@ BRIDGE_CONCEPTS = [
             "family. The trusted object is exact finite replay of fibers, "
             "same-fiber equivalence pairs, preimage-open quotient topology, "
             "and saturated-open images, plus checked QF_UF/Alethe evidence for "
-            "a malformed quotient-open claim."
+            "malformed representative and quotient-open claims."
         ),
         "prerequisites": [
             "bridge_finite_topology_operator_homeomorphism",
@@ -4297,12 +4297,12 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "finite-quotient-topology-v0",
-                "Finite quotient-map fibers, quotient topology by preimage-open replay, saturated-open image replay, and checked bad quotient-open Alethe row.",
+                "Finite quotient-map fibers, quotient topology by preimage-open replay, saturated-open image replay, and checked bad representative/open Alethe rows.",
             ),
         ],
         "proof_routes": [
             {
-                "name": "finite quotient-topology replay plus QF_UF/Alethe bad-open certificate",
+                "name": "finite quotient-topology replay plus QF_UF/Alethe representative/open certificates",
                 "status": "checked",
                 "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
                 "lean_status": "partial",
@@ -4319,8 +4319,9 @@ BRIDGE_CONCEPTS = [
                     "surjectivity, fibers, same-fiber equivalence pairs, "
                     "quotient-open subsets by preimage enumeration, and "
                     "saturated-open image/preimage data. The malformed "
-                    "quotient-open row graduates only because the isolated "
-                    "open-status contradiction has checked Alethe evidence."
+                    "representative and quotient-open rows graduate only "
+                    "because the isolated equality and open-status "
+                    "contradictions have checked Alethe evidence."
                 ),
             }
         ],
@@ -4334,20 +4335,21 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/finite-topology-end-to-end.md",
             "docs/learn/math/finite-quotient-topology-end-to-end.md",
             "docs/learn/math/analysis-topology-proof-horizons.md",
+            "artifacts/examples/math/finite-quotient-topology-v0/smt2/bad-fiber-representative-alethe-conflict.smt2",
             "artifacts/examples/math/finite-quotient-topology-v0/smt2/bad-quotient-open-alethe-conflict.smt2",
             "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
         ],
         "open_gaps": [
             "Finite quotient-topology replay checks one fixed finite quotient map; it does not prove the quotient topology universal property or arbitrary quotient-map continuity theorems.",
-            "The bad quotient-open row isolates a fixed open-status contradiction, not arbitrary saturated-set, separation, compactness, connectedness, or invariance reasoning.",
-            "Additional quotient-topology rows should land only when they add distinct saturation, universal-property, invariance, or proof-reconstruction pressure.",
+            "The bad representative and quotient-open rows isolate fixed equality and open-status contradictions, not arbitrary saturated-set, separation, compactness, connectedness, or invariance reasoning.",
+            "Additional quotient-topology rows should land only when they add distinct saturation, universal-property, invariance, or proof-reconstruction pressure beyond representative consistency and open-status checks.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
                 "Rows state the finite source topology, quotient universe, quotient map, fibers, same-fiber relation, quotient-open family, and saturated subset data.",
                 "The validator recomputes fibers, surjectivity, equivalence pairs, every quotient subset preimage, quotient-open status, and saturated-open image/preimage behavior exactly.",
-                "Malformed fixed quotient-open rows link source artifacts and route regressions before claiming checked Alethe evidence.",
+                "Malformed fixed quotient-representative and quotient-open rows link source artifacts and route regressions before claiming checked Alethe evidence.",
                 "Quotient-space universal properties, quotient-map theorem schemas, preservation theorems, and arbitrary quotient constructions remain Lean-horizon until kernel-checked proof routes exist.",
             ],
         },
@@ -6735,7 +6737,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-quotient-topology-v0",
-                "Quotient-map fibers, saturated-open replay, and quotient-open preimage checks for a finite topological quotient.",
+                "Quotient-map fibers, representative consistency, saturated-open replay, and quotient-open preimage checks for a finite topological quotient.",
             ),
         ],
         "proof_routes": [
@@ -6756,8 +6758,9 @@ BRIDGE_CONCEPTS = [
                 "notes": (
                     "The validator recomputes classes, fibers, quotient "
                     "tables, induced maps, quotient-open preimages, and "
-                    "saturated subsets; the quotient-map congruence artifacts "
-                    "exercise the checked EUF route."
+                    "saturated subsets; the quotient-map congruence and "
+                    "representative-consistency artifacts exercise the "
+                    "checked EUF route."
                 ),
             }
         ],

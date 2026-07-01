@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 638 expected checks.
-- 313 checked proof/evidence rows.
+- 639 expected checks.
+- 314 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1866,7 +1866,7 @@ Pick one item per commit unless the change is purely navigational.
      `bridge_finite_quotient_topology_replay` plus topology quotient lookup
      and concept-scoped Alethe route smoke queries, making quotient-map
      fibers, same-fiber equivalence pairs, quotient topology by preimage-open
-     replay, saturated-open image replay, and checked bad quotient-open
+     replay, saturated-open image replay, and checked bad representative/open
      evidence discoverable without promoting quotient topology universal
      properties, quotient-map theorem schemas, or arbitrary preservation and
      invariance theorems.

@@ -570,7 +570,8 @@ First targets:
 - [finite-continuous-maps-v0](../../artifacts/examples/math/finite-continuous-maps-v0/)
   (resource-backed QF_UF/Alethe regression landed for the bad preimage-membership conflict)
 - [finite-quotient-topology-v0](../../artifacts/examples/math/finite-quotient-topology-v0/)
-  (resource-backed QF_UF/Alethe regression landed for the bad
+  (resource-backed QF_UF/Alethe regressions landed for the bad
+  fiber-representative conflict after same-fiber replay and the bad
   quotient-open conflict after finite quotient-preimage replay)
 - [finite-specialization-order-v0](../../artifacts/examples/math/finite-specialization-order-v0/)
   (resource-backed QF_UF/Alethe regression landed for the false `T0`

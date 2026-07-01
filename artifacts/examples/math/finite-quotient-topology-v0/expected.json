@@ -71,6 +71,44 @@
       "notes": "The validator recomputes image({a,b})={p}, preimage({p})={a,b}, saturation by fibers, and openness on both sides."
     },
     {
+      "id": "bad-fiber-representative-rejected",
+      "claim": "The two listed representatives in the same quotient fiber have distinct quotient images.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
+      "data": {
+        "domain_universe": ["a", "b", "c"],
+        "domain_open_sets": [
+          [],
+          ["a", "b"],
+          ["a", "b", "c"]
+        ],
+        "quotient_universe": ["p", "r"],
+        "quotient_map": {
+          "a": "p",
+          "b": "p",
+          "c": "r"
+        },
+        "fibers": [
+          {"point": "p", "members": ["a", "b"]},
+          {"point": "r", "members": ["c"]}
+        ],
+        "quotient_open_sets": [
+          [],
+          ["p"],
+          ["p", "r"]
+        ],
+        "equivalent_points": ["a", "b"],
+        "common_image": "p",
+        "claimed_relation": "distinct quotient images",
+        "alethe_representative_claim": "q(a) != q(b) while q(a) = q(b) = p",
+        "smt2_artifact": "artifacts/examples/math/finite-quotient-topology-v0/smt2/bad-fiber-representative-alethe-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_quotient_topology_bad_fiber_representative_emits_checked_alethe",
+        "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof; Evidence::check independently rechecks the proof against the source assertions."
+      },
+      "notes": "Finite replay computes q(a)=q(b)=p for the same quotient fiber; the source QF_UF artifact isolates the malformed distinct-image claim for checked Alethe evidence."
+    },
+    {
       "id": "bad-quotient-open-rejected",
       "claim": "The singleton {r} is open in the quotient topology.",
       "expected_result": "unsat",

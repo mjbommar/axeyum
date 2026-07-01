@@ -317,10 +317,12 @@ q(a)=p, q(b)=p, q(c)=r
 The `finite-quotient-topology-v0` validator recomputes quotient fibers,
 same-fiber equivalence pairs, and every quotient-subset preimage. The quotient
 open sets are exactly `{}`, `{p}`, and `{p,r}` because `{r}` has preimage
-`{c}`, which is not open in `X`. The bad row rejects the false claim that
-`{r}` is quotient-open with checked QF_UF/Alethe evidence for the isolated
-open-status conflict. This is finite quotient replay, not a proof of quotient
-topology universal properties or arbitrary quotient-map theorems.
+`{c}`, which is not open in `X`. The bad representative row rejects the false
+claim that `q(a) != q(b)` even though both representatives map to `p`; the bad
+open row rejects the false claim that `{r}` is quotient-open. Both are checked
+with QF_UF/Alethe evidence for isolated finite conflicts. This is finite
+quotient replay, not a proof of quotient topology universal properties or
+arbitrary quotient-map theorems.
 
 For a finite algebraic-topology shadow, encode a simplicial complex as vertices
 and non-empty simplices:

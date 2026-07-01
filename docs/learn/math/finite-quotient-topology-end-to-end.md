@@ -1,8 +1,8 @@
 # End To End: Finite Quotient Topology
 
 This lesson follows one finite quotient-topology resource from quotient-map
-fibers to preimage-open replay, saturated-open image replay, and checked
-rejection of a malformed quotient-open row. It uses the
+fibers to representative consistency, preimage-open replay, saturated-open
+image replay, and checked rejection of malformed quotient rows. It uses the
 [finite-quotient-topology-v0](../../../artifacts/examples/math/finite-quotient-topology-v0/)
 pack.
 
@@ -24,6 +24,7 @@ Concept rows:
 | `quotient-map-fiber-witness` | `sat` | replay-only |
 | `quotient-topology-witness` | `sat` | replay-only |
 | `saturated-open-image-witness` | `sat` | replay-only |
+| `bad-fiber-representative-rejected` | `unsat` | checked QF_UF/Alethe |
 | `bad-quotient-open-rejected` | `unsat` | checked QF_UF/Alethe |
 | `general-quotient-topology-lean-horizon` | `not-run` | Lean horizon |
 
@@ -92,9 +93,29 @@ The saturated-open row checks the same idea from the source side. The subset
 `{a,b}` is a union of complete fibers, so it is saturated. It is also open in
 `X`, its image is `{p}`, and `q^{-1}({p}) = {a,b}`.
 
-## Check The Refutation
+## Check The Refutations
 
-The promoted bad row claims `{r}` is quotient-open. Replay computes:
+The first promoted bad row claims that two source representatives in the same
+fiber have distinct quotient images. Replay computes:
+
+```text
+q(a) = p
+q(b) = p
+```
+
+The source SMT-LIB artifact isolates the fixed representative conflict:
+
+```text
+q(a) = p
+q(b) = p
+q(a) != q(b)
+```
+
+The accepted evidence is an `UnsatAletheProof` checked by `Evidence::check`
+over the committed artifact
+[`bad-fiber-representative-alethe-conflict.smt2`](../../../artifacts/examples/math/finite-quotient-topology-v0/smt2/bad-fiber-representative-alethe-conflict.smt2).
+
+The second promoted bad row claims `{r}` is quotient-open. Replay computes:
 
 ```text
 q^{-1}({r}) = {c}
@@ -119,6 +140,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-quotient-topology-v0
+cargo test -p axeyum-solver --test math_resource_uf_routes finite_quotient_topology_bad_fiber_representative_emits_checked_alethe
 cargo test -p axeyum-solver --test math_resource_uf_routes finite_quotient_topology_bad_open_emits_checked_alethe
 ```
 
@@ -131,9 +153,10 @@ validated 1 foundational example pack(s)
 ## Trust Boundary
 
 ```text
-untrusted fast search -> candidate quotient map, open-status claim, or proof
-trusted small checking -> finite topology replay, quotient preimage replay,
-                          saturation replay, checked Alethe evidence
+untrusted fast search -> candidate quotient map, representative/open claim, or proof
+trusted small checking -> finite topology replay, quotient representative replay,
+                          quotient preimage replay, saturation replay,
+                          checked Alethe evidence
 remaining horizon -> quotient topology universal properties and theorem schemas
 ```
 

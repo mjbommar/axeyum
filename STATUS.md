@@ -1053,6 +1053,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   evidence, and the validator pins the map, determinant, source/image triples,
   artifact path, regression, and certificate note.
 
+- **Finite quotient-topology representative QF_UF/Alethe row landed.**
+  `finite-quotient-topology-v0` now has a second checked Alethe row: exact
+  quotient-map replay computes `q(a)=q(b)=p` for representatives `a` and `b`
+  in the same fiber, then rejects the malformed claim that their quotient
+  images are distinct. The source SMT-LIB artifact isolates that equality
+  conflict, the shared `math_resource_uf_routes` regression checks
+  `UnsatAletheProof` evidence through `Evidence::check`, and the validator
+  pins the source topology, quotient map, common fiber, artifact path,
+  regression, and certificate note.
+
 - **Complex-algebraic bad product-coordinate QF_LRA row landed.**
   `complex-algebraic-v0` now has a second checked Farkas row: exact real-pair
   replay computes `(1 + 2i) * (3 - i) = 5 + 5i`, then rejects the malformed
@@ -1496,7 +1506,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `finite-quotient-topology-v0` and
   `bridge_finite_quotient_topology_replay` now make quotient-map fibers,
   same-fiber equivalence pairs, quotient topology by preimage-open
-  enumeration, saturated-open image replay, and checked bad quotient-open
+  enumeration, saturated-open image replay, and checked bad representative/open
   QF_UF/Alethe evidence queryable through the public JSON boundary. The bridge
   keeps quotient topology universal properties, quotient-map theorem schemas,
   preservation/invariance theorems, and arbitrary quotient-space reasoning in

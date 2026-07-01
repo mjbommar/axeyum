@@ -556,8 +556,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-quotient-topology-v0/`](../../artifacts/examples/math/finite-quotient-topology-v0/)
   validates quotient-map fiber replay, same-fiber equivalence pairs, quotient
   topology by preimage-open enumeration, saturated-open image replay, checked
-  QF_UF/Alethe rejection of a bad quotient-open claim, and a quotient-space
-  Lean-horizon row.
+  QF_UF/Alethe rejection of bad representative and bad quotient-open claims,
+  and a quotient-space Lean-horizon row.
 - [`artifacts/examples/math/finite-specialization-order-v0/`](../../artifacts/examples/math/finite-specialization-order-v0/)
   validates finite specialization-preorder replay from open neighborhoods,
   singleton-closure characterization, finite `T0`/antisymmetry replay, checked

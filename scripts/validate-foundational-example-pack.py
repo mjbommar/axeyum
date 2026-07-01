@@ -19083,6 +19083,61 @@ def validate_finite_quotient_topology(expected: dict[str, Any]) -> None:
     if values.get("is_open") is not True:
         fail("saturated-open-image-witness must state is_open=true")
 
+    bad_representative = checks["bad-fiber-representative-rejected"]
+    if bad_representative["expected_result"] != "unsat" or bad_representative.get("proof_status") != "checked":
+        fail("bad-fiber-representative-rejected must be a checked unsat row")
+    if bad_representative["validation"] != "qf_uf_congruence_alethe":
+        fail("bad-fiber-representative-rejected must use qf_uf_congruence_alethe validation")
+    data = bad_representative.get("data", {})
+    domain, _, quotient, _, mapping, fibers = require_quotient_topology_data(
+        "bad quotient representative",
+        data,
+    )
+    equivalent_points = require_string_list(
+        "bad quotient representative equivalent_points",
+        data.get("equivalent_points"),
+    )
+    if len(equivalent_points) != 2:
+        fail("bad-fiber-representative-rejected must name exactly two representatives")
+    left, right = equivalent_points
+    if left not in domain or right not in domain:
+        fail("bad-fiber-representative-rejected representatives must be in the domain")
+    if left == right:
+        fail("bad-fiber-representative-rejected should use two distinct representatives")
+    common_image = data.get("common_image")
+    require_string("bad quotient representative common_image", common_image)
+    if common_image not in quotient:
+        fail("bad-fiber-representative-rejected common_image must be in the quotient universe")
+    if mapping[left] != common_image or mapping[right] != common_image:
+        fail("bad-fiber-representative-rejected representatives must map to the common quotient point")
+    if right not in fibers[common_image] or left not in fibers[common_image]:
+        fail("bad-fiber-representative-rejected representatives must be in the common fiber")
+    claimed_relation = data.get("claimed_relation")
+    require_string("bad quotient representative claimed_relation", claimed_relation)
+    if claimed_relation != "distinct quotient images":
+        fail("bad-fiber-representative-rejected must document the distinct-image claim")
+    alethe_claim = data.get("alethe_representative_claim")
+    require_string("bad quotient representative alethe_representative_claim", alethe_claim)
+    if alethe_claim != "q(a) != q(b) while q(a) = q(b) = p":
+        fail("bad-fiber-representative-rejected must document the Alethe representative claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad quotient representative smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-quotient-topology-v0/smt2/"
+        "bad-fiber-representative-alethe-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-fiber-representative-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad quotient representative smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("bad quotient representative proof_regression", proof_regression)
+    if "finite_quotient_topology_bad_fiber_representative_emits_checked_alethe" not in proof_regression:
+        fail("bad-fiber-representative-rejected must link the Alethe regression")
+    certificate = data.get("certificate")
+    require_string("bad quotient representative certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "Evidence::check" not in certificate:
+        fail("bad-fiber-representative-rejected certificate must document checked Alethe evidence")
+
     bad_open = checks["bad-quotient-open-rejected"]
     if bad_open["expected_result"] != "unsat" or bad_open.get("proof_status") != "checked":
         fail("bad-quotient-open-rejected must be a checked unsat row")

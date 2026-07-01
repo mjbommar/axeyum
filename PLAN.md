@@ -253,8 +253,8 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-120 concept rows, 108 non-template packs, 638 expected checks (336 `sat`,
-231 `unsat`, 71 `not-run`), 313 checked rows, 254 replay-only rows, and 71
+120 concept rows, 108 non-template packs, 639 expected checks (336 `sat`,
+232 `unsat`, 71 `not-run`), 314 checked rows, 254 replay-only rows, and 71
 Lean-horizon rows. The learner coverage audit records all 108 non-template
 packs as focused-lesson linked, with no path-only, index-only, or missing
 learner buckets. The first QF_UF/Alethe
