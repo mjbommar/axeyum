@@ -4932,6 +4932,31 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **Session 2026-07-01 (cont.) — FM→simplex keystone (P1.9) BUILT + INTEGRATED + validated.**
+  The measured bottleneck behind the NRA/LRA frontier is Fourier–Motzkin's
+  doubly-exponential blowup (both `check_with_lra` entry points are FM, ADR-0015).
+  Built the fix end-to-end:
+  - **`simplex.rs`** — an exact-rational **general simplex** (Dutertre–de Moura;
+    Bland's rule → terminating; `checked_*` → `unknown` on overflow) covering **all
+    comparators** `≤ ≥ = < >` via the **δ-relaxation**, with concrete **witness
+    materialization** and **self-checking Farkas extraction** (`59fa3b0b`,
+    `f4cdd7ea`, `30c39ab3`). 13 tests incl. a **400-system differential vs the
+    trusted FM `check_with_lra`**.
+  - **T1.9.2 integration** (`abc52d66`) — `simplex_fallback` wired into
+    `check_with_lra`'s `Decision::TimedOut` branch (the exact "FM blew up"
+    condition): FM-blowup LRA systems are now decided by simplex (`Sat`
+    replay-checked; `Unsat` via a re-verified `FarkasCertificate`). Small systems
+    never time out, so the FM path is untouched.
+  - **Validated** by the new z3-gated `simplex_lra_fallback_differential`:
+    **1199/1200** large FM-blowup systems decided, **DISAGREE=0** (they were
+    `unknown` before). lib 626/626, clippy `-D` clean.
+  - **Honest caveat:** the curated micro-corpora (11–38 files) show no decide-rate
+    delta — too small/clean to contain FM-blowup systems; payoff is on large
+    instances (the 1199-system differential is the evidence). A monotonicity re-add
+    to the sign pass was re-tested and **re-reverted** (its bottleneck is DPLL cube
+    enumeration, not per-cube FM, so simplex doesn't rescue it). Remaining P1.9:
+    strict-δ Farkas certs; T1.9.4 (make simplex the default / upfront size gate).
+
 - **Session 2026-07-01 — NRA: un-broke HEAD + sign-refutation past the cross-product cap (QF_NRA +2).**
   1. **HEAD was red** (`cargo test -p axeyum-solver --test nra`): the div-by-zero
      replay guard (`b38c0439`/`a06dc46a`) correctly declines div-by-zero-forced
