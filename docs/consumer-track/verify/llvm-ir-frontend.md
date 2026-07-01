@@ -155,3 +155,52 @@ committed `.ll` (no clang at test time → CI-robust).
 **N plan:** N2 reflect `capsum`'s canonical loop → `TransitionSystem`, prove
 `acc ≤ 100` via PDR (all iterations); N3 cross-check bounded BMC vs unbounded PDR
 + scoreboard; N4 gates.
+
+## O — memory: reflect buffer reads (the packet-parser primitive)
+
+Packet parsing *is* `load` + `getelementptr` over a byte buffer. Measured
+(2026-07-01), a real parser compiles to exactly the tractable shape:
+
+```llvm
+; unsigned short read_be16(const unsigned char *p){ return (p[0]<<8)|p[1]; }
+define zeroext i16 @read_be16(ptr noundef readonly captures(none) %0) {
+  %2 = load i8, ptr %0, align 1
+  %3 = zext i8 %2 to i16
+  %4 = shl nuw i16 %3, 8
+  %5 = getelementptr inbounds nuw i8, ptr %0, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i16
+  %8 = or disjoint i16 %4, %7
+  ret i16 %8
+}
+```
+
+**Bonus measured finding:** clang strength-reduces `(p[0] & 0x0f) * 4` (the IPv4
+IHL-in-bytes computation) to `(p[0] << 2) & 60` — so proving the *compiled* form
+equivalent to the *obvious spec* form is a genuine mini translation-validation
+over real memory-reading code.
+
+**The reflection scheme (partial evaluation of memory):** a `readonly` pointer
+parameter to a buffer of known size N becomes **N fresh `BV8` symbols** (the
+buffer bytes) plus a *pointer environment* mapping each pointer-typed SSA register
+to a constant byte offset from the base:
+
+- the parameter itself → offset 0;
+- `getelementptr … i8, ptr %q, i64 K` → `offset(%q) + K` (element type `i8` only —
+  byte addressing; other element sizes are out of scope);
+- `load i8, ptr %q` → *the byte symbol at `offset(%q)`* (an ordinary value-env
+  entry; everything downstream reuses `lower_rhs`).
+
+This is sound and complete for **constant-offset, read-only, `i8` loads** — and
+packet headers are fixed-offset by nature, so that scope *is* the header-parsing
+idiom. **Honest boundary:** symbolic indices (`p[i]`) need the array theory
+(`select` over `Array (BV64) (BV8)`, `eliminate_arrays`) — deferred; stores /
+aliasing / wide loads (`load i16`, endianness) — deferred; no bounds model (the
+buffer length is the verifier-supplied N).
+
+**O plan:** O2 implement the pointer env + `load`/`gep` handling; prove the
+buffer-reading `read_be16` **equivalent to the value-passing `be16`** from M (two
+different compiled functions, one reading memory — same function), and the
+compiled IHL trick `(p0<<2)&60` **equivalent to the spec** `zext(p0&0x0f)*4`, plus
+range properties; fuzz cross-check vs concrete C-semantics oracles. O3 scoreboard;
+O4 gates.
