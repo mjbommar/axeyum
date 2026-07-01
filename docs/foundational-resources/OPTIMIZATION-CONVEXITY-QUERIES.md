@@ -17,7 +17,7 @@ thresholds, convexity shadows, finite separation, KKT stationarity and
 complementarity, active-set QP face/slack and degenerate-bound replay, tiny SDP
 objective/slack/gap replay, gradient-descent steps, Armijo/Wolfe line-search
 rows, projected-gradient interval/decrease replay, proximal-gradient soft-threshold and
-box-plus-L1 replay, least-squares rows, residual bounds, and projection
+composite-decrease plus box-plus-L1 replay, least-squares rows, residual bounds, and projection
 witnesses. General duality, KKT sufficiency, SDP strong duality, method
 convergence, stability, and floating-point performance claims remain in the
 proof-horizon or numerical-honesty lanes.
@@ -67,7 +67,7 @@ needs concrete checked rows to display.
 | Degenerate active-set multiplier row | pack `finite-active-set-qp-v0`, text `degenerate` | `Farkas` | `checks --pack finite-active-set-qp-v0 --route Farkas --proof-status checked --text degenerate` |
 | SDP objective/slack/gap display row | pack `finite-sdp-v0` | `Farkas` | `checks --pack finite-sdp-v0 --route Farkas --proof-status checked`; `checks --pack finite-sdp-v0 --route Farkas --proof-status checked --text slack` |
 | Gradient descent and line-search display rows | packs `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0` | `Farkas` | `checks --pack finite-gradient-descent-v0 --route Farkas --proof-status checked`; `checks --pack finite-line-search-v0 --route Farkas --proof-status checked`; `checks --pack finite-line-search-v0 --route Farkas --proof-status checked --text direction`; `checks --pack finite-wolfe-line-search-v0 --route Farkas --proof-status checked` |
-| Projected and proximal gradient display rows | packs `finite-projected-gradient-v0`, `finite-proximal-gradient-v0` | `Farkas` | `checks --pack finite-projected-gradient-v0 --route Farkas --proof-status checked`; `checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked`; `checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked --text box` |
+| Projected and proximal gradient display rows | packs `finite-projected-gradient-v0`, `finite-proximal-gradient-v0` | `Farkas` | `checks --pack finite-projected-gradient-v0 --route Farkas --proof-status checked`; `checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked`; `checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked --text decrease`; `checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked --text box` |
 
 ## Copyable Examples
 
@@ -228,6 +228,13 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-proximal-gradient-v0 \
   --route Farkas \
   --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-proximal-gradient-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text decrease \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \

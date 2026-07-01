@@ -831,7 +831,7 @@
           "id": "finite-proximal-gradient-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-proximal-gradient-v0",
-          "notes": "Finite exact L1 proximal-gradient soft-threshold replay with checked bad-proximal-point rejection."
+          "notes": "Finite exact L1 proximal-gradient soft-threshold/composite-decrease replay with checked bad-proximal-point, bad composite-decrease, and bad-box rejection."
         },
         {
           "id": "multivariable-calculus-rational-v0",
@@ -1815,7 +1815,7 @@
           "id": "finite-proximal-gradient-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-proximal-gradient-v0",
-          "notes": "Exact L1 soft-threshold proximal-gradient replay and bad-proximal-point rejection."
+          "notes": "Exact L1 soft-threshold/composite-decrease proximal-gradient replay and bad proximal-gradient rows."
         }
       ],
       "proof_routes": [
@@ -3084,7 +3084,7 @@
           "id": "finite-proximal-gradient-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-proximal-gradient-v0",
-          "notes": "Finite exact L1 soft-threshold proximal-gradient and bad-proximal-point rows over exact rationals."
+          "notes": "Finite exact L1 soft-threshold/composite-decrease proximal-gradient and bad proximal-gradient rows over exact rationals."
         },
         {
           "id": "finite-sdp-v0",
@@ -11296,7 +11296,7 @@
           "id": "finite-proximal-gradient-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-proximal-gradient-v0",
-          "notes": "Finite proximal-gradient L1 soft-threshold replay with checked bad-proximal-point rejection."
+          "notes": "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."
         },
         {
           "id": "finite-root-finding-v0",

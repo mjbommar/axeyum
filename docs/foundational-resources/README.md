@@ -272,8 +272,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-proximal-gradient-v0/`](../../artifacts/examples/math/finite-proximal-gradient-v0/)
   validates exact L1 proximal-gradient replay, soft-threshold arithmetic,
   box-plus-L1 constrained replay, composite objective decrease, checked
-  rejection of false proximal and false box-proximal points, and a
-  proximal-gradient convergence Lean-horizon row.
+  rejection of false proximal-point, false composite-decrease, and false
+  box-proximal claims, and a proximal-gradient convergence Lean-horizon row.
 - [`artifacts/examples/math/metric-continuity-v0/`](../../artifacts/examples/math/metric-continuity-v0/)
   validates finite Lipschitz, epsilon-delta, and open-ball preimage checks
   with exact rational metrics, plus checked QF_LRA/Farkas rejection of an
@@ -485,8 +485,9 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-proximal-gradient-v0/`](../../artifacts/examples/math/finite-proximal-gradient-v0/)
   validates exact one-variable proximal-gradient replay for an L1 penalty,
   soft-threshold optimality, box-plus-L1 constrained replay, composite
-  decrease, checked bad-proximal-point and bad box-proximal-point rejection,
-  and a general proximal-gradient convergence Lean-horizon row.
+  decrease, checked bad-proximal-point, bad composite-decrease, and bad
+  box-proximal-point rejection, and a general proximal-gradient convergence
+  Lean-horizon row.
 - [`artifacts/examples/math/coordinate-geometry-v0/`](../../artifacts/examples/math/coordinate-geometry-v0/)
   validates exact midpoint, collinearity, and squared-distance coordinate
   checks, plus checked rejection of bad midpoint-coordinate and squared-distance

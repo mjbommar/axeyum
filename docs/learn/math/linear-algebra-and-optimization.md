@@ -105,8 +105,9 @@ bad-curvature certificates. The finite projected-gradient slice adds exact
 interval projection after a trial step, projected objective decrease, and
 checked QF_LRA/Farkas bad-projection plus bad-decrease certificates. The finite proximal-gradient slice adds exact L1 soft-threshold
 replay after a trial step, exact box-plus-L1 constrained replay with an active
-upper multiplier, and checked QF_LRA/Farkas bad-proximal-point plus bad
-box-proximal-point certificates. The finite random-matrix slice adds exact
+upper multiplier, composite-decrease replay, and checked QF_LRA/Farkas
+bad-proximal-point, bad composite-decrease, and bad box-proximal-point
+certificates. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, rank distributions, and checked QF_LRA/Farkas bad trace-square and
 bad expected-rank certificates. The spectral slice checks exact finite
@@ -532,10 +533,11 @@ lambda = 1
 
 The `finite-proximal-gradient-v0` validator recomputes the derivative,
 ordinary trial point `3/2`, L1 soft-threshold value `1`, zero positive-branch
-optimality residual, composite objective decrease from `9/2` to `3`, and the
-bad-row residual for a claimed prox point `1/4`. The final nonzero-residual
-contradiction is checked through QF_LRA/Farkas evidence. For a focused trace,
-read
+optimality residual, composite objective decrease from `9/2` to `3`, the
+bad-row residual for a claimed prox point `1/4`, the false decrease claim `2`
+versus replayed `3/2`, and the boxed upper-bound violation for the
+unconstrained point. The contradictions are checked through QF_LRA/Farkas
+evidence. For a focused trace, read
 [End To End: Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md).
 
 For a Jacobian/Hessian bridge into optimization, encode:

@@ -84,6 +84,25 @@
       "notes": "The validator evaluates the smooth quadratic and the L1 penalty at the start and proximal point."
     },
     {
+      "id": "bad-composite-decrease-rejected",
+      "claim": "The proximal point decreases f(x)+|x| by 2.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_proximal_composite_decrease_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "l1-quadratic-proximal-step",
+        "computed_composite_value_start": "9/2",
+        "computed_composite_value_prox": "3",
+        "computed_composite_decrease": "3/2",
+        "claimed_composite_decrease": "2",
+        "composite_decrease_error": "1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-proximal-gradient-v0/smt2/bad-composite-decrease-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_proximal_gradient_bad_composite_decrease_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes composite decrease 3/2, so the malformed decrease claim 2 has error 1/2 and is rejected through checked QF_LRA/Farkas evidence."
+    },
+    {
       "id": "box-plus-l1-prox-replay",
       "claim": "The box-plus-L1 proximal subproblem over [0,3/4] clips the unconstrained soft-threshold point 1 to 3/4 with active upper multiplier 1/2.",
       "expected_result": "sat",

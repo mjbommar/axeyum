@@ -225,8 +225,8 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 625 expected checks (334 `sat`,
-220 `unsat`, 71 `not-run`), 302 checked rows, 252 replay-only rows, and 71
+111 concept rows, 108 non-template packs, 626 expected checks (334 `sat`,
+221 `unsat`, 71 `not-run`), 303 checked rows, 252 replay-only rows, and 71
 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -409,7 +409,7 @@ bad degenerate active-set multiplier, bad objective, bad duality-gap, bad slack-
 bad step-coordinate, bad descent-bound, bad Armijo, bad descent-direction, bad accepted-candidate, bad Wolfe-minimizer,
 bad Wolfe-sufficient-decrease, bad Wolfe-curvature, bad
 projection, bad projected-decrease, bad proximal-point, and bad
-box-proximal-point rows, while
+composite-decrease, and bad box-proximal-point rows, while
 monotone convergence, closed-form recurrence solving, asymptotics, and
 separation/KKT/active-set/SDP/descent/Wolfe/line-search/projected-gradient/proximal-gradient/stability/convergence theorems remain Lean-horizon.
 The optimization/convexity bridge rows now make exact LP feasibility,
@@ -420,8 +420,8 @@ separation plus finite KKT stationarity/complementarity, finite active-set QP
 face/slack replay, and finite SDP objective/slack/gap replay plus finite
 gradient-descent step/decrease replay and finite line-search
 rejection/acceptance replay plus finite Wolfe line-search replay plus finite
-projected-gradient interval/decrease replay plus finite proximal-gradient soft-threshold
-and box-plus-L1 replay queryable while keeping duality, KKT
+projected-gradient interval/decrease replay plus finite proximal-gradient
+soft-threshold, composite-decrease, and box-plus-L1 replay queryable while keeping duality, KKT
 sufficiency, active-set method theory, SDP strong duality, general separation, and
 algorithm-convergence claims in the Lean-horizon lane.
 The public foundational-resource consumer query layer now also exercises the
@@ -657,7 +657,7 @@ The optimization/convexity lane now has
 and the foundational smoke checks LP objective/Farkas rows, rational convexity
 shadows, projection/residual rows, exact-vs-floating boundary rows, and
 pack-specific KKT, active-set QP, SDP, gradient-descent, Armijo/Wolfe
-line-search, projected-gradient, and soft-threshold/box-plus-L1
+line-search, projected-gradient, and soft-threshold/composite-decrease/box-plus-L1
 proximal-gradient rows, so downstream
 consumers can discover finite optimization resources without promoting
 duality, KKT sufficiency, SDP strong duality, method convergence, stability, or
@@ -829,6 +829,7 @@ the latest finite-active-set-QP bad free-gradient QF_LRA/Farkas promotion,
 the latest finite-wolfe-line-search bad minimizer QF_LRA/Farkas promotion,
 the latest finite-wolfe-line-search bad sufficient-decrease QF_LRA/Farkas promotion,
 the latest finite-wolfe-line-search bad curvature QF_LRA/Farkas promotion,
+the latest finite-proximal-gradient bad composite-decrease QF_LRA/Farkas promotion,
 the latest finite-proximal-gradient bad box-proximal-point QF_LRA/Farkas promotion,
 the latest finite-proximal-gradient bad proximal-point QF_LRA/Farkas promotion,
 the latest finite-projected-gradient bad projection and bad decrease QF_LRA/Farkas promotions,

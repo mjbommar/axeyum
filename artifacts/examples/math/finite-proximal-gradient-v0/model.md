@@ -54,6 +54,10 @@ F(1) = 2 + 1 = 3
 decrease = 3/2
 ```
 
+The checked bad composite-decrease row keeps those start/prox values fixed and
+claims decrease `2`. Exact replay computes `9/2 - 3 = 3/2`, leaving error
+`1/2`.
+
 The constrained box-plus-L1 witness uses the same smooth objective, step size,
 and L1 penalty, but constrains the proximal subproblem to:
 
@@ -90,6 +94,10 @@ floating-point behavior.
 The checked bad row claims that `1/4` satisfies the same positive-branch
 optimality equation. Exact replay computes residual `-3/2`, so the required
 zero-residual claim is false.
+
+The checked bad composite-decrease row claims decrease `2` from the same exact
+composite values. Exact replay computes decrease `3/2`, so the required exact
+decrease claim is false by `1/2`.
 
 The checked boxed bad row claims that the unconstrained soft-threshold point
 `1` is feasible for the upper bound `3/4`. Exact replay computes a box

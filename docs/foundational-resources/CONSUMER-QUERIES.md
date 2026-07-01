@@ -1467,7 +1467,7 @@ bounds, gradient/Hessian replay, finite KKT stationarity, finite active-set QP
 free-gradient/inactive-slack/degenerate-multiplier conflicts, finite SDP
 objective/slack/gap replay, finite gradient-descent replay, finite
 line-search replay, finite Wolfe line-search replay, finite projected-gradient
-interval/decrease replay, finite proximal-gradient replay, and
+interval/decrease replay, finite proximal-gradient composite-decrease replay, and
 checked gradient step-coordinate and descent-bound rows together while
 leaving duality, KKT sufficiency, SDP strong duality, line-search convergence,
 Wolfe line-search convergence, active-set convergence, projected-gradient convergence,
@@ -1572,6 +1572,17 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --text sufficient-decrease \
+  --require-any
+```
+
+For the proximal-gradient composite-decrease certificate:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-proximal-gradient-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text decrease \
   --require-any
 ```
 

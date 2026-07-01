@@ -3,8 +3,9 @@
 This lesson follows
 [finite-proximal-gradient-v0](../../../artifacts/examples/math/finite-proximal-gradient-v0/)
 from exact nonsmooth optimization steps through soft-threshold replay,
-box-plus-L1 constrained replay, and checked Farkas evidence. It is a finite
-proximal-gradient certificate, not a general convergence theorem.
+box-plus-L1 constrained replay, composite-decrease replay, and checked Farkas
+evidence. It is a finite proximal-gradient certificate, not a general
+convergence theorem.
 
 ## Concept
 
@@ -34,7 +35,7 @@ alpha = 1/2
 
 ## What Gets Checked
 
-The pack has eight rows:
+The pack has nine rows:
 
 | Row | Result | Evidence |
 |---|---|---|
@@ -42,6 +43,7 @@ The pack has eight rows:
 | `proximal-trial-step-replay` | `sat` | replay-only |
 | `soft-threshold-prox-replay` | `sat` | replay-only |
 | `composite-decrease-replay` | `sat` | replay-only |
+| `bad-composite-decrease-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `box-plus-l1-prox-replay` | `sat` | replay-only |
 | `bad-proximal-point-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `bad-box-proximal-point-rejected` | `unsat` | checked QF_LRA/Farkas |
@@ -108,6 +110,31 @@ decrease = 3/2
 
 This checks one exact proximal-gradient step. It does not prove a rate theorem
 or general convergence.
+
+## Bad Composite-Decrease Row
+
+The malformed row claims that the same proximal point decreases the composite
+objective by `2`:
+
+```text
+claimed decrease = 2
+replayed decrease = 9/2 - 3 = 3/2
+error = 1/2
+```
+
+The source SMT-LIB artifact fixes the replayed decrease as `3/2` and also
+asserts that it equals `2`:
+
+```smt2
+(set-logic QF_LRA)
+(declare-const composite_decrease Real)
+(assert (= composite_decrease (/ 3.0 2.0)))
+(assert (= composite_decrease 2.0))
+(check-sat)
+```
+
+Axeyum parses that source row, emits `UnsatFarkas` evidence, and independently
+checks the certificate.
 
 ## Box-Plus-L1 Proximal Step
 

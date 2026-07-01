@@ -294,8 +294,9 @@ First targets:
 - [finite-proximal-gradient-v0](../../artifacts/examples/math/finite-proximal-gradient-v0/)
   (source-linked Farkas regressions landed for the bad proximal point row after
   exact L1 soft-threshold replay computes residual `-3/2` for the malformed
-  point and for the bad box-proximal point row after exact constrained replay
-  computes upper-bound violation `1/4`)
+  point, for the bad composite-decrease row after exact replay computes
+  decrease `3/2` rather than `2`, and for the bad box-proximal point row after
+  exact constrained replay computes upper-bound violation `1/4`)
 - [finite-product-measure-v0](../../artifacts/examples/math/finite-product-measure-v0/)
   (resource-backed Farkas regressions landed for the bad product-probability
   and bad marginal rows after exact finite product replay computes the product

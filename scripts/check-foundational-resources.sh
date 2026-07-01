@@ -252,6 +252,7 @@ python3 scripts/query-foundational-resources.py checks --pack finite-wolfe-line-
 python3 scripts/query-foundational-resources.py checks --pack finite-wolfe-line-search-v0 --route Farkas --proof-status checked --text sufficient-decrease --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-projected-gradient-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked --text decrease --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked --text box --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field geometry --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field geometry --text coordinate --require-any >/dev/null

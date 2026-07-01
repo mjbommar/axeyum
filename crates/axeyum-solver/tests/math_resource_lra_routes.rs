@@ -154,6 +154,9 @@ const INNER_PRODUCT_BAD_PROJECTION_ORTHOGONALITY: &str = include_str!(
 const FINITE_PROXIMAL_GRADIENT_BAD_PROXIMAL_POINT: &str = include_str!(
     "../../../artifacts/examples/math/finite-proximal-gradient-v0/smt2/bad-proximal-point-farkas-conflict.smt2"
 );
+const FINITE_PROXIMAL_GRADIENT_BAD_COMPOSITE_DECREASE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-proximal-gradient-v0/smt2/bad-composite-decrease-farkas-conflict.smt2"
+);
 const FINITE_PROXIMAL_GRADIENT_BAD_BOX_PROXIMAL_POINT: &str = include_str!(
     "../../../artifacts/examples/math/finite-proximal-gradient-v0/smt2/bad-box-proximal-point-farkas-conflict.smt2"
 );
@@ -920,6 +923,14 @@ fn finite_proximal_gradient_bad_proximal_point_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-proximal-gradient-v0 bad-proximal-point SMT-LIB artifact",
         FINITE_PROXIMAL_GRADIENT_BAD_PROXIMAL_POINT,
+    );
+}
+
+#[test]
+fn finite_proximal_gradient_bad_composite_decrease_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-proximal-gradient-v0 bad-composite-decrease SMT-LIB artifact",
+        FINITE_PROXIMAL_GRADIENT_BAD_COMPOSITE_DECREASE,
     );
 }
 

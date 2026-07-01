@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-proximal-gradient bad composite-decrease QF_LRA row landed.**
+  `finite-proximal-gradient-v0` now includes a checked rejection for a
+  malformed composite-decrease row: exact replay computes composite values
+  `F(0)=9/2`, `F(1)=3`, and decrease `3/2`, while the bad row claims decrease
+  `2`. The validator pins the source witness, replayed start/prox values,
+  computed decrease, claimed decrease, source SMT-LIB artifact, regression, and
+  independently checked `UnsatFarkas` certificate. The shared
+  `math_resource_lra_routes` regression parses the artifact and checks the
+  Farkas evidence. Generated dashboards and the public query summary now
+  report 111 concept rows, 108 non-template packs, 626 expected checks, 303
+  checked rows, 252 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite-line-search bad descent-direction QF_LRA row landed.**
   `finite-line-search-v0` now includes a checked rejection for a malformed
   descent-direction row: exact replay computes directional derivative

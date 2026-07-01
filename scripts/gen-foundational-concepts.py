@@ -193,7 +193,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-proximal-gradient-v0",
-                "Finite exact L1 proximal-gradient soft-threshold replay with checked bad-proximal-point rejection.",
+                "Finite exact L1 proximal-gradient soft-threshold/composite-decrease replay with checked bad-proximal-point, bad composite-decrease, and bad-box rejection.",
             ),
             (
                 "multivariable-calculus-rational-v0",
@@ -443,7 +443,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-proximal-gradient-v0",
-                "Exact L1 soft-threshold proximal-gradient replay and bad-proximal-point rejection.",
+                "Exact L1 soft-threshold/composite-decrease proximal-gradient replay and bad proximal-gradient rows.",
             ),
         ],
     },
@@ -524,7 +524,7 @@ FIELD_PACKS = {
         ("finite-line-search-v0", "Finite Armijo line-search replay with checked bad-acceptance, bad descent-direction, and bad accepted-candidate rejections."),
         ("finite-wolfe-line-search-v0", "Finite Wolfe line-search replay with checked bad-minimizer and bad-curvature rejections."),
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
-        ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold replay with checked bad-proximal-point rejection."),
+        ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
     "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, invariant checks, Markov transitions, and finite hitting times."),
@@ -1555,7 +1555,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-proximal-gradient-v0",
-                "Finite exact L1 soft-threshold proximal-gradient and bad-proximal-point rows over exact rationals.",
+                "Finite exact L1 soft-threshold/composite-decrease proximal-gradient and bad proximal-gradient rows over exact rationals.",
             ),
             (
                 "finite-sdp-v0",

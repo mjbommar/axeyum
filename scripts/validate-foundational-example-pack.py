@@ -12990,6 +12990,78 @@ def validate_finite_proximal_gradient(expected: dict[str, Any]) -> None:
     if composite_decrease <= 0:
         fail("composite-decrease-replay expected a positive finite decrease")
 
+    bad_decrease = checks["bad-composite-decrease-rejected"]
+    if (
+        bad_decrease["expected_result"] != "unsat"
+        or bad_decrease.get("proof_status") != "checked"
+    ):
+        fail("bad-composite-decrease-rejected must be a checked unsat row")
+    if (
+        bad_decrease["validation"]
+        != "finite_bad_proximal_composite_decrease_refutation"
+    ):
+        fail("bad-composite-decrease-rejected validation is incorrect")
+    data = bad_decrease.get("data", {})
+    if data.get("source_witness") != "l1-quadratic-proximal-step":
+        fail(
+            "bad-composite-decrease-rejected must cite the "
+            "l1-quadratic-proximal-step witness"
+        )
+    bad_composite_value_start = require_fraction(
+        "bad composite decrease computed_composite_value_start",
+        data.get("computed_composite_value_start"),
+    )
+    bad_composite_value_prox = require_fraction(
+        "bad composite decrease computed_composite_value_prox",
+        data.get("computed_composite_value_prox"),
+    )
+    bad_composite_decrease = require_fraction(
+        "bad composite decrease computed_composite_decrease",
+        data.get("computed_composite_decrease"),
+    )
+    claimed_composite_decrease = require_fraction(
+        "bad composite decrease claimed_composite_decrease",
+        data.get("claimed_composite_decrease"),
+    )
+    composite_decrease_error = require_fraction(
+        "bad composite decrease composite_decrease_error",
+        data.get("composite_decrease_error"),
+    )
+    if bad_composite_value_start != composite_value_start:
+        fail("bad-composite-decrease-rejected start value does not match replay")
+    if bad_composite_value_prox != composite_value_prox:
+        fail("bad-composite-decrease-rejected prox value does not match replay")
+    if bad_composite_decrease != composite_decrease:
+        fail("bad-composite-decrease-rejected decrease does not match replay")
+    if bad_composite_value_start - bad_composite_value_prox != bad_composite_decrease:
+        fail("bad-composite-decrease-rejected replayed decrease is inconsistent")
+    if claimed_composite_decrease - bad_composite_decrease != composite_decrease_error:
+        fail("bad-composite-decrease-rejected decrease error is incorrect")
+    if composite_decrease_error <= 0:
+        fail("bad-composite-decrease-rejected must claim a strictly larger decrease")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad composite decrease smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-proximal-gradient-v0/smt2/bad-composite-decrease-farkas-conflict.smt2":
+        fail(
+            "bad-composite-decrease-rejected smt2_artifact must name the "
+            "checked QF_LRA artifact"
+        )
+    check_source("bad composite decrease smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad composite decrease farkas_regression", regression)
+    if (
+        "finite_proximal_gradient_bad_composite_decrease_artifact_emits_checked_farkas"
+        not in regression
+    ):
+        fail("bad-composite-decrease-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad composite decrease certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail(
+            "bad-composite-decrease-rejected certificate must document checked "
+            "Farkas evidence"
+        )
+
     bad = checks["bad-proximal-point-rejected"]
     if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
         fail("bad-proximal-point-rejected must be a checked unsat row")

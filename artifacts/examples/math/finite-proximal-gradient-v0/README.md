@@ -4,8 +4,9 @@ This pack turns exact rational proximal-gradient steps for an L1-regularized
 quadratic into resource rows. It checks the listed smooth gradient, trial
 step, soft-threshold proximal operator, box-plus-L1 constrained proximal
 operator, composite objective decrease, false proximal-optimality obstruction,
-and false box-feasibility obstruction; general proximal-gradient convergence
-and composite-optimization theorems remain proof horizons.
+false composite-decrease obstruction, and false box-feasibility obstruction;
+general proximal-gradient convergence and composite-optimization theorems remain
+proof horizons.
 
 ## Audience
 
@@ -24,6 +25,8 @@ and composite-optimization theorems remain proof horizons.
   positive-branch optimality residual.
 - `composite-decrease-replay`: checks the smooth-plus-L1 composite objective
   value before and after the step.
+- `bad-composite-decrease-rejected`: rejects a malformed composite-decrease
+  claim with checked QF_LRA/Farkas evidence.
 - `box-plus-l1-prox-replay`: checks that the constrained proximal point over
   `[0,3/4]` clips the unconstrained point `1` to `3/4` with active upper
   multiplier `1/2`.
@@ -47,4 +50,5 @@ Untrusted search may propose a step size, trial point, proximal point, or
 optimality certificate. The trusted work is small: exact derivative replay,
 exact gradient-step arithmetic, exact soft-threshold replay, exact composite
 objective evaluation, exact box projection with active multiplier replay, and
-checked `UnsatFarkas` evidence over the source SMT-LIB rows.
+checked `UnsatFarkas` evidence over false optimality, decrease, and feasibility
+SMT-LIB rows.
