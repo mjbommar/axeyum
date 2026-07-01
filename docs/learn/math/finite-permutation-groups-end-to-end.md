@@ -22,7 +22,8 @@ Concept rows:
 | `permutation-composition-table-replay` | `sat` | checked |
 | `cycle-type-and-sign-replay` | `sat` | checked |
 | `natural-action-orbit-stabilizer` | `sat` | checked |
-| `bad-nonbijection-rejected` | `unsat` | checked QF_UF/Alethe |
+| `bad-nonbijection-rejected` | `unsat` | replay-only |
+| `qf-uf-bad-nonbijection-injectivity` | `unsat` | checked QF_UF/Alethe |
 | `general-permutation-group-theory-lean-horizon` | `not-run` | lean-horizon |
 
 The checked rows are finite function-table replay. The pack does not claim
@@ -191,7 +192,7 @@ This lesson shows Axeyum's resource pattern for finite symmetry:
 ```text
 untrusted fast search -> candidate permutation maps, table, cycles, signs
 trusted small checking -> bijection, composition, group laws, sign, action replay
-checked proof object -> QF_UF/Alethe certificate for the bad nonbijection row
+checked proof object -> QF_UF/Alethe certificate for the bad injectivity row
 ```
 
 General permutation-group theory, Cayley's theorem, conjugacy classes, normal

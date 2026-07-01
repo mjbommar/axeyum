@@ -553,7 +553,9 @@ First targets:
   separate bad top-element set-family conflict is promoted through the Boolean
   CNF/LRAT route above)
 - [finite-permutation-groups-v0](../../artifacts/examples/math/finite-permutation-groups-v0/)
-  (resource-backed QF_UF/Alethe regression landed for the bad nonbijection conflict)
+  (resource-backed QF_UF/Alethe regression landed as
+  `qf-uf-bad-nonbijection-injectivity` for the bad nonbijection injectivity
+  conflict)
 - [finite-vector-spaces-v0](../../artifacts/examples/math/finite-vector-spaces-v0/)
   (resource-backed QF_UF/Alethe regression landed as
   `qf-uf-bad-subspace-addition-closure` for the bad additive-closure membership

@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 648 expected checks.
+- 649 expected checks.
 - 322 checked proof/evidence rows.
-- 255 replay-only rows.
+- 256 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -2210,6 +2210,13 @@ Pick one item per commit unless the change is purely navigational.
      `qf-uf-bad-partial-order-antisymmetry` row isolates the antisymmetry
      equality contradiction for checked Alethe evidence and gives consumers a
      direct pack/route/text query.
+149. Landed: split the `finite-permutation-groups-v0` bad-nonbijection
+     proof-object check into an explicit QF_UF/Alethe row. The finite replay
+     row still rejects the malformed self-map by computing `bad(1)=1`,
+     `bad(2)=1`, and the missing image `2`; the new
+     `qf-uf-bad-nonbijection-injectivity` row isolates the duplicate-preimage
+     injectivity contradiction for checked Alethe evidence and gives consumers
+     a direct pack/route/text query.
 
 ## Validation Checklist
 

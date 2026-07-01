@@ -205,6 +205,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite permutation injectivity Alethe row split landed.**
+  `finite-permutation-groups-v0` now keeps the malformed self-map rejection as
+  exact finite replay and exposes the QF_UF/Alethe proof-object check as the
+  explicit `qf-uf-bad-nonbijection-injectivity` row. The replay row computes
+  `bad(1)=1`, `bad(2)=1`, and a missing image `2`; the source SMT-LIB
+  artifact separately checks the fixed malformed injectivity claim
+  `bad(1) != bad(2)`. Focused validation passes; the public summary now
+  reports 120 concept rows, 108 packs, 649 expected checks, 322 checked rows,
+  256 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite ideal additive-closure Alethe row split landed.**
   `finite-ideals-v0` now keeps the malformed `{0,2}` ideal rejection as exact
   finite replay and exposes the QF_UF/Alethe proof-object check as the

@@ -374,7 +374,7 @@ Companion maps:
 - [Finite Permutation Groups](finite-permutation-groups-end-to-end.md):
   follows `S3` point maps through bijection checks, composition-table replay,
   cycle/sign replay, natural action orbit-stabilizer counting, and checked
-  QF_UF/Alethe bad-nonbijection rejection.
+  QF_UF/Alethe bad-nonbijection injectivity evidence.
 - [Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md):
   follows action-law replay, orbit/stabilizer recomputation, Burnside fixed-point
   counting, and checked bad identity-action plus compatibility rejection.

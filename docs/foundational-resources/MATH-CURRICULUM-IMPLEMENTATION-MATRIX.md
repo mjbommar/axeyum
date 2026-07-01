@@ -367,6 +367,10 @@ Build sequence:
     `qf-uf-quotient-ring-representative-alethe` to
     `artifacts/examples/math/finite-ideals-v0/smt2/quotient-ring-representative-congruence-conflict.smt2`,
     checked by the `math_resource_uf_routes` QF_UF/Alethe regression.
+    `finite-permutation-groups-v0` now links
+    `qf-uf-bad-nonbijection-injectivity` to
+    `artifacts/examples/math/finite-permutation-groups-v0/smt2/bad-nonbijection-injectivity-conflict.smt2`,
+    checked by the `math_resource_uf_routes` QF_UF/Alethe regression.
 19. `finite-group-actions-v0` now links `bad-action-rejected` and
     `bad-compatibility-rejected` to
     `artifacts/examples/math/finite-group-actions-v0/smt2/bad-identity-action-alethe-conflict.smt2`,

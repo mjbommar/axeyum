@@ -38,8 +38,8 @@ The pack stores:
 
 ## Axeyum Route
 
-The finite rows are checked by finite-function replay or small EUF
-certificates. For the bad nonbijection row, exact replay finds:
+The finite rows are checked by finite-function replay. For the bad
+nonbijection row, exact replay finds:
 
 ```text
 bad(1) = 1
@@ -53,7 +53,8 @@ The fixed permutation/injectivity claim would require:
 bad(1) != bad(2)
 ```
 
-The linked `QF_UF` artifact is therefore unsatisfiable by equality reasoning.
-The resource regression checks that Axeyum emits independently rechecked
-`UnsatAletheProof` evidence with no trusted reduction step. The broader
-group-theory route remains a Lean horizon.
+The separate `qf-uf-bad-nonbijection-injectivity` row links the `QF_UF`
+artifact, which is unsatisfiable by equality reasoning. The resource regression
+checks that Axeyum emits independently rechecked `UnsatAletheProof` evidence
+with no trusted reduction step. The broader group-theory route remains a Lean
+horizon.

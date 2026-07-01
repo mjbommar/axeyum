@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 648 expected checks.
+- 649 expected checks.
 - 322 checked proof/evidence rows.
-- 255 replay-only rows.
+- 256 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1512,6 +1512,16 @@ Pick one row per commit unless the change is purely navigational.
      regression. The public query surface now reports 648 checks, 322 checked
      rows, 255 replay-only rows, and row-scoped Alethe lookup for the pack
      returns the additive-closure row.
+177. Landed: split the `finite-permutation-groups-v0` bad-nonbijection
+     proof-object check into the explicit
+     `qf-uf-bad-nonbijection-injectivity` row. Exact finite replay still owns
+     `bad-nonbijection-rejected` by computing `bad(1)=1`, `bad(2)=1`, and the
+     missing image `2`; the source SMT-LIB artifact separately rejects the
+     malformed fixed injectivity claim through the existing
+     `finite_permutation_groups_bad_nonbijection_emits_checked_alethe`
+     regression. The public query surface now reports 649 checks, 322 checked
+     rows, 256 replay-only rows, and row-scoped Alethe lookup for the pack
+     returns the injectivity row.
 
 ## Validation Checklist
 

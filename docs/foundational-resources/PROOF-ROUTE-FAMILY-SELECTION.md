@@ -32,9 +32,9 @@ python3 scripts/query-foundational-resources.py summary
 ```
 
 - 108 non-template math packs.
-- 648 expected checks.
+- 649 expected checks.
 - 322 checked proof/evidence rows.
-- 255 replay-only rows.
+- 256 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 
@@ -46,8 +46,8 @@ Route summaries from `scripts/query-foundational-resources.py routes`:
 | QF_BV bit-blast | 7 | 45 | 34 | 10 | 1 |
 | QF_LIA/Diophantine | 14 | 89 | 58 | 24 | 7 |
 | QF_LRA/Farkas | 58 | 368 | 147 | 179 | 42 |
-| QF_UF/Alethe | 19 | 118 | 58 | 44 | 16 |
-| Lean horizon | 78 | 490 | 217 | 202 | 71 |
+| QF_UF/Alethe | 19 | 119 | 58 | 45 | 16 |
+| Lean horizon | 78 | 491 | 217 | 203 | 71 |
 
 The counts overlap because packs and rows can carry multiple routes. That is
 intentional: a finite topology pack can have finite replay, Boolean evidence,
@@ -61,7 +61,7 @@ and Lean-horizon theorem boundaries without conflating them.
 | QF_BV bit-blast | fixed-width finite algebra and residue search | `finite-fields-v0`, `finite-rings-v0`, `modular-arithmetic-v0`, and graph-coloring fixed-width rows | Width is part of the mathematical object: residues, finite fields/rings, and fixed color encodings should lower through bit-blast evidence. | Add another row only when the bit width is mathematically meaningful and not a disguised finite replay table. |
 | QF_LIA/Diophantine | integer obstruction and finite coefficient arithmetic | `gcd-bezout-v0`, `modular-arithmetic-v0`, torsion homology, finite simplicial boundary coefficient and boundary-square cancellation rows, finite graph traversal counters, exact statistical tail/count rows | Integer infeasibility has a compact certificate story: divisibility, gcd obstruction, rank/torsion membership, coefficient cancellation/convolution, or bounded integer counters. | Prefer a new compact obstruction that generalizes across packs, such as another Smith-normal-form/torsion row or a count/margin contradiction that cannot be taught by the existing exact-test rows. |
 | QF_LRA/Farkas | exact rational finite-table and optimization conflicts | probability/measure table conflicts including finite total variation and conditional-variance decomposition, LP threshold, LU/nullspace, KKT/SDP/descent/line-search/projected/proximal rows | Farkas is the main exact-rational certificate route and already covers the largest route surface. The best rows start with source replay and then check the linear contradiction. | Add only distinct finite-table or algorithm-step conflicts, not another duplicate product-measure, probability-distance, conditional-moment identity, or generic bound row. |
-| QF_UF/Alethe | equality-heavy finite structures and quotient maps | equivalence classes, function composition, finite homomorphisms, finite monoids/groups/actions including identity and compatibility conflicts, finite order-lattice antisymmetry, finite module scalar-closure membership, finite vector-space additive-closure membership, finite dual-space covector additivity, finite tensor-product left-additivity, continuous-map preimage membership, quotient topology representative/open conflicts, and cohomology shadows | Alethe adds value when table replay says what happened and congruence proof explains why an equality claim is impossible. | Prefer equality conflicts where table replay and congruence proof teach different things, such as algebra/topology map preservation beyond the current preimage, order/lattice relation consistency beyond the current antisymmetry row, module/vector-space/dual-space/tensor closure or additivity, and quotient representative consistency rows. |
+| QF_UF/Alethe | equality-heavy finite structures and quotient maps | equivalence classes, function composition, finite homomorphisms, finite monoids/groups/actions including permutation injectivity, identity, and compatibility conflicts, finite order-lattice antisymmetry, finite module scalar-closure membership, finite vector-space additive-closure membership, finite dual-space covector additivity, finite tensor-product left-additivity, continuous-map preimage membership, quotient topology representative/open conflicts, and cohomology shadows | Alethe adds value when table replay says what happened and congruence proof explains why an equality claim is impossible. | Prefer equality conflicts where table replay and congruence proof teach different things, such as algebra/topology map preservation beyond the current preimage, order/lattice relation consistency beyond the current antisymmetry row, module/vector-space/dual-space/tensor closure or additivity, and quotient representative consistency rows. |
 | Lean horizon | theorem boundary families | induction schemas, completeness, compactness, convergence, measure limits, general algebra, Banach/Hilbert/Chebyshev facts | These rows keep finite shadows honest. They should state theorem shape and missing proof dependencies, not masquerade as SMT evidence. | Add or split horizon rows when a learner page risks overclaiming from a bounded example or when a future Lean reconstruction target needs prerequisites named. |
 
 ## Promotion Discipline

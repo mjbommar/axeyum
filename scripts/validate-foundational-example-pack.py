@@ -5794,8 +5794,8 @@ def validate_finite_permutation_groups(expected: dict[str, Any]) -> None:
         fail("natural-action-orbit-stabilizer orbit-stabilizer product is incorrect")
 
     bad = checks["bad-nonbijection-rejected"]
-    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
-        fail("bad-nonbijection-rejected must be a checked unsat row")
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "replay-only":
+        fail("bad-nonbijection-rejected must be a replay-only unsat row")
     data = bad.get("data", {})
     if not isinstance(data, dict):
         fail("bad-nonbijection-rejected data must be an object")
@@ -5826,21 +5826,41 @@ def validate_finite_permutation_groups(expected: dict[str, Any]) -> None:
         fail("bad-nonbijection-rejected duplicate_preimages must be points")
     if mapping[left] != duplicate_image or mapping[right] != duplicate_image:
         fail("bad-nonbijection-rejected duplicate_preimages must map to duplicate_image")
+
+    bad_alethe = checks["qf-uf-bad-nonbijection-injectivity"]
+    if bad_alethe["expected_result"] != "unsat" or bad_alethe.get("proof_status") != "checked":
+        fail("qf-uf-bad-nonbijection-injectivity must be a checked unsat row")
+    if bad_alethe["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-bad-nonbijection-injectivity must use qf_uf_congruence_alethe validation")
+    data = bad_alethe.get("data", {})
+    qf_points = require_string_list("qf-uf bad nonbijection points", data.get("points"))
+    if qf_points != points:
+        fail("qf-uf-bad-nonbijection-injectivity points must match bad-nonbijection-rejected")
+    qf_duplicate_preimages = data.get("duplicate_preimages")
+    if not isinstance(qf_duplicate_preimages, list) or len(qf_duplicate_preimages) != 2:
+        fail("qf-uf-bad-nonbijection-injectivity duplicate_preimages must be a two-element list")
+    qf_left, qf_right = qf_duplicate_preimages
+    require_string("qf-uf bad nonbijection duplicate_preimages[0]", qf_left)
+    require_string("qf-uf bad nonbijection duplicate_preimages[1]", qf_right)
+    if [qf_left, qf_right] != [left, right]:
+        fail("qf-uf-bad-nonbijection-injectivity duplicate_preimages must match bad-nonbijection-rejected")
+    if data.get("duplicate_image") != duplicate_image:
+        fail("qf-uf-bad-nonbijection-injectivity duplicate_image must match bad-nonbijection-rejected")
     alethe_claim = data.get("alethe_injectivity_claim")
-    require_string("bad nonbijection alethe_injectivity_claim", alethe_claim)
+    require_string("qf-uf bad nonbijection alethe_injectivity_claim", alethe_claim)
     if alethe_claim != f"bad({left}) != bad({right})":
-        fail("bad-nonbijection-rejected must document the Alethe distinct-image claim")
+        fail("qf-uf-bad-nonbijection-injectivity must document the Alethe distinct-image claim")
     smt2_artifact = data.get("smt2_artifact")
-    require_string("bad nonbijection smt2_artifact", smt2_artifact)
-    check_source("bad nonbijection smt2_artifact", smt2_artifact)
+    require_string("qf-uf bad nonbijection smt2_artifact", smt2_artifact)
+    check_source("qf-uf bad nonbijection smt2_artifact", smt2_artifact)
     proof_regression = data.get("proof_regression")
-    require_string("bad nonbijection proof_regression", proof_regression)
+    require_string("qf-uf bad nonbijection proof_regression", proof_regression)
     if "finite_permutation_groups_bad_nonbijection_emits_checked_alethe" not in proof_regression:
-        fail("bad-nonbijection-rejected must link the Alethe regression")
+        fail("qf-uf-bad-nonbijection-injectivity must link the Alethe regression")
     certificate = data.get("certificate")
-    require_string("bad nonbijection certificate", certificate)
+    require_string("qf-uf bad nonbijection certificate", certificate)
     if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
-        fail("bad-nonbijection-rejected certificate must document zero-trust Alethe evidence")
+        fail("qf-uf-bad-nonbijection-injectivity certificate must document zero-trust Alethe evidence")
 
     horizon = checks["general-permutation-group-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

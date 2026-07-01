@@ -156,7 +156,7 @@
       "claim": "The listed total self-map is a permutation of {1,2,3}.",
       "expected_result": "unsat",
       "validation": "finite_permutation_bijection_refutation",
-      "proof_status": "checked",
+      "proof_status": "replay-only",
       "data": {
         "points": ["1", "2", "3"],
         "map": {
@@ -166,13 +166,26 @@
         },
         "duplicate_preimages": ["1", "2"],
         "duplicate_image": "1",
-        "missing_image": "2",
+        "missing_image": "2"
+      },
+      "notes": "The validator checks the duplicated and missing images, proving the fixed map is not bijective; the separate QF_UF row owns the proof-object refutation for the duplicate-preimage injectivity claim."
+    },
+    {
+      "id": "qf-uf-bad-nonbijection-injectivity",
+      "claim": "The fixed malformed injectivity claim for the bad self-map is impossible.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
+      "data": {
+        "points": ["1", "2", "3"],
+        "duplicate_preimages": ["1", "2"],
+        "duplicate_image": "1",
         "alethe_injectivity_claim": "bad(1) != bad(2)",
         "smt2_artifact": "artifacts/examples/math/finite-permutation-groups-v0/smt2/bad-nonbijection-injectivity-conflict.smt2",
         "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_permutation_groups_bad_nonbijection_emits_checked_alethe",
         "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
       },
-      "notes": "The validator checks the duplicated and missing images, proving the fixed map is not bijective; the linked QF_UF artifact emits a zero-trust Alethe refutation for the fixed distinct-image claim on the duplicate preimages."
+      "notes": "Exact replay identifies the duplicate preimages and missing image; the source QF_UF artifact isolates the malformed distinct-image claim and checks it with zero-trust Alethe evidence."
     },
     {
       "id": "general-permutation-group-theory-lean-horizon",

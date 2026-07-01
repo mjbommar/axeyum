@@ -37,9 +37,17 @@ stabilizer of point `1`.
 Expected result: `unsat`.
 
 The fixed false claim is that a total map with duplicated image `1` and missing
-image `2` is a permutation. The validator confirms the map is not bijective,
-and the linked `QF_UF` artifact turns the duplicate-image conflict into a
-checked Alethe refutation.
+image `2` is a permutation. The validator confirms the map is not bijective.
+This row is exact finite replay; it does not own the proof object.
+
+## `qf-uf-bad-nonbijection-injectivity`
+
+Expected result: `unsat`.
+
+The SMT-LIB artifact records the fixed injectivity conflict behind the replayed
+bad self-map: `bad(1) = 1`, `bad(2) = 1`, and the malformed row claims
+`bad(1) != bad(2)`. The row links that fixed EUF contradiction to checked
+QF_UF/Alethe evidence.
 
 ## `general-permutation-group-theory-lean-horizon`
 

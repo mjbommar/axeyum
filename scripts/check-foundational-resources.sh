@@ -61,6 +61,7 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_finite_q
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_bijection_cardinality --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_boolean_algebra --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-order-lattices-v0 --route Alethe --proof-status checked --text antisymmetry --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-permutation-groups-v0 --route Alethe --proof-status checked --text injectivity --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_partition_relation_roundtrip --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_image_preimage_inverse --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field discrete_math --route Diophantine --require-any >/dev/null
