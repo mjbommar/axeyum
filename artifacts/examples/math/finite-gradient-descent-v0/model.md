@@ -44,3 +44,10 @@ under floating-point arithmetic.
 
 The checked bad row changes the claimed decrease to `2`. Exact replay computes
 `11/4`, so the claimed decrease has error `3/4`.
+
+The checked bad step-coordinate row changes the claimed x-coordinate of the
+next point to `3/4`. Exact replay computes:
+
+```text
+next_x = 1 - (1/4) * 2 = 1/2
+```

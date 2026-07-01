@@ -11496,6 +11496,51 @@ def validate_finite_gradient_descent(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-descent-value-rejected certificate must document checked Farkas evidence")
 
+    bad_step = checks["bad-step-coordinate-rejected"]
+    if bad_step["expected_result"] != "unsat" or bad_step.get("proof_status") != "checked":
+        fail("bad-step-coordinate-rejected must be a checked unsat row")
+    if bad_step["validation"] != "finite_bad_gradient_step_coordinate_refutation":
+        fail("bad-step-coordinate-rejected must use finite_bad_gradient_step_coordinate_refutation validation")
+    data = bad_step.get("data", {})
+    if data.get("source_witness") != "diagonal-quadratic-descent-step":
+        fail("bad-step-coordinate-rejected must cite the diagonal-quadratic-descent-step witness")
+    bad_start = require_fraction_vector("bad gradient step start_point", data.get("start_point"))
+    bad_step_size = require_fraction("bad gradient step step_size", data.get("step_size"))
+    bad_gradient = require_fraction_vector("bad gradient step gradient", data.get("gradient"))
+    bad_next = require_fraction_vector(
+        "bad gradient step computed_next_point",
+        data.get("computed_next_point"),
+    )
+    claimed_next_x = require_fraction("bad gradient step claimed_next_x", data.get("claimed_next_x"))
+    if bad_start != start_point or bad_gradient != gradient or bad_step_size != step_size:
+        fail("bad-step-coordinate-rejected must reuse the replayed start, gradient, and step size")
+    if bad_next != computed_next or bad_next != next_point:
+        fail("bad-step-coordinate-rejected computed next point must match replay")
+    if claimed_next_x == bad_next[0]:
+        fail("bad-step-coordinate-rejected claimed x-coordinate unexpectedly matches replay")
+    equation = data.get("coordinate_equation")
+    require_string("bad gradient step coordinate_equation", equation)
+    if equation != "next_x = start_x - step_size * gradient_x":
+        fail("bad-step-coordinate-rejected must document the gradient-step coordinate equation")
+    if bad_start[0] - bad_step_size * bad_gradient[0] != bad_next[0]:
+        fail("bad-step-coordinate-rejected x-coordinate equation is incorrect")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad gradient step smt2_artifact", smt2_artifact)
+    if smt2_artifact != (
+        "artifacts/examples/math/finite-gradient-descent-v0/smt2/"
+        "bad-step-coordinate-farkas-conflict.smt2"
+    ):
+        fail("bad-step-coordinate-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad gradient step smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad gradient step farkas_regression", regression)
+    if "finite_gradient_descent_bad_step_coordinate_artifact_emits_checked_farkas" not in regression:
+        fail("bad-step-coordinate-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad gradient step certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-step-coordinate-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-gradient-descent-convergence-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-gradient-descent-convergence-lean-horizon must be not-run")

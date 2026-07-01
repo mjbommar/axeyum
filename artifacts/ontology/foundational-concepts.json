@@ -807,7 +807,7 @@
           "id": "finite-gradient-descent-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-gradient-descent-v0",
-          "notes": "Finite exact gradient-descent step replay with checked bad-decrease rejection."
+          "notes": "Finite exact gradient-descent step replay with checked bad-decrease and bad step-coordinate rejections."
         },
         {
           "id": "finite-line-search-v0",
@@ -1791,7 +1791,7 @@
           "id": "finite-gradient-descent-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-gradient-descent-v0",
-          "notes": "Exact quadratic gradient, step update, objective decrease, and descent-bound replay."
+          "notes": "Exact quadratic gradient, step update, objective decrease, descent-bound replay, and checked bad step-coordinate/decrease rows."
         },
         {
           "id": "finite-line-search-v0",
@@ -1918,7 +1918,7 @@
           "id": "finite-gradient-descent-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-gradient-descent-v0",
-          "notes": "Finite exact gradient-descent step replay and convergence-theorem horizon rows."
+          "notes": "Finite exact gradient-descent step replay with checked bad step-coordinate/decrease rows and convergence-theorem horizon rows."
         },
         {
           "id": "finite-line-search-v0",
@@ -3060,7 +3060,7 @@
           "id": "finite-gradient-descent-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-gradient-descent-v0",
-          "notes": "Finite exact quadratic gradient step, descent-bound, and bad-decrease rows over exact rationals."
+          "notes": "Finite exact quadratic gradient step, descent-bound, bad-decrease, and bad step-coordinate rows over exact rationals."
         },
         {
           "id": "finite-line-search-v0",
@@ -11272,7 +11272,7 @@
           "id": "finite-gradient-descent-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-gradient-descent-v0",
-          "notes": "Finite gradient-descent step replay with checked bad-decrease rejection."
+          "notes": "Finite gradient-descent step replay with checked bad-decrease and bad step-coordinate rejections."
         },
         {
           "id": "finite-line-search-v0",

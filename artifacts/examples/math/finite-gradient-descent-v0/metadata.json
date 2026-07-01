@@ -37,10 +37,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite gradient-descent bad decrease QF_LRA/Farkas regression seed",
-    "pressure": "Exact descent-step replay computes objective decrease 11/4 for a quadratic gradient step, so the malformed decrease 2 row has error 3/4.",
+    "target": "finite gradient-descent bad decrease and bad step-coordinate QF_LRA/Farkas regression seeds",
+    "pressure": "Exact descent-step replay computes objective decrease 11/4 for a quadratic gradient step, so the malformed decrease 2 row has error 3/4; the same replay computes next_x = 1/2, so the malformed step-coordinate row claiming next_x = 3/4 is contradictory.",
     "evidence": [
-      "bad-descent-value-rejected"
+      "bad-descent-value-rejected",
+      "bad-step-coordinate-rejected"
     ],
     "next_step": "Promote additional descent-step rows only when they add distinct step-size, line-search, projected-gradient, stochastic, or convergence pressure; keep general gradient-descent convergence and rates in horizon lanes."
   },
@@ -55,6 +56,7 @@
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "docs/learn/math/finite-gradient-descent-end-to-end.md",
     "artifacts/examples/math/finite-gradient-descent-v0/smt2/bad-decrease-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-gradient-descent-v0/smt2/bad-step-coordinate-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
@@ -62,12 +64,13 @@
     "gradient-descent-step-replay",
     "descent-bound-replay",
     "bad-descent-value-rejected",
+    "bad-step-coordinate-rejected",
     "general-gradient-descent-convergence-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite gradient-descent witnesses as deterministic exact-rational replay rows.",
     "Replay quadratic gradients, Hessians, step updates, objective values, norm squares, descent lower bounds, and slack over exact rationals.",
-    "Route false finite descent claims through checked QF_LRA/Farkas evidence after replay computes the offending decrease error.",
+    "Route false finite descent and step-coordinate claims through checked QF_LRA/Farkas evidence after replay computes the offending exact-rational conflict.",
     "Keep general convergence, rates, line-search theory, stochastic variants, and numerical stability claims marked Lean-horizon until proof artifacts exist."
   ]
 }

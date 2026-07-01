@@ -263,8 +263,9 @@ First targets:
   (source-linked Farkas regression landed for the bad objective row after exact
   two-by-two SDP replay computes objective value `1` and objective error `1`)
 - [finite-gradient-descent-v0](../../artifacts/examples/math/finite-gradient-descent-v0/)
-  (source-linked Farkas regression landed for the bad decrease row after exact
-  quadratic descent replay computes decrease `11/4` and decrease error `3/4`)
+  (source-linked Farkas regressions landed for the bad decrease and bad
+  step-coordinate rows after exact quadratic descent replay computes decrease
+  `11/4`, decrease error `3/4`, and next x-coordinate `1/2`)
 - [finite-line-search-v0](../../artifacts/examples/math/finite-line-search-v0/)
   (source-linked Farkas regression landed for the bad Armijo row after exact
   line-search replay computes rejected-step violation `1`)
@@ -445,7 +446,7 @@ Secondary targets:
   Finite gradient descent now contributes the algorithm-step version of that
   boundary: exact replay computes the gradient, step update, objective
   decrease, and descent-bound slack, then Farkas checks the final bad-decrease
-  error conflict.
+  error and bad step-coordinate conflicts.
 
 Expected artifact:
 

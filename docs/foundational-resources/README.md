@@ -413,8 +413,8 @@ schemas, examples, and validation workflows.
   SDP-duality Lean-horizon row.
 - [`artifacts/examples/math/finite-gradient-descent-v0/`](../../artifacts/examples/math/finite-gradient-descent-v0/)
   validates exact two-variable quadratic gradient replay, descent-step replay,
-  objective-decrease checking, checked bad-decrease rejection, and a general
-  gradient-descent convergence Lean-horizon row.
+  objective-decrease checking, checked bad-decrease and bad step-coordinate
+  rejections, and a general gradient-descent convergence Lean-horizon row.
 - [`artifacts/examples/math/finite-line-search-v0/`](../../artifacts/examples/math/finite-line-search-v0/)
   validates exact one-variable Armijo line-search replay, trial rejection,
   accepted backtracking, checked bad-acceptance rejection, and a general

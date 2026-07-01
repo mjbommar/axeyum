@@ -88,6 +88,9 @@ const FINITE_SDP_BAD_OBJECTIVE: &str = include_str!(
 const FINITE_GRADIENT_DESCENT_BAD_DECREASE: &str = include_str!(
     "../../../artifacts/examples/math/finite-gradient-descent-v0/smt2/bad-decrease-farkas-conflict.smt2"
 );
+const FINITE_GRADIENT_DESCENT_BAD_STEP_COORDINATE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-gradient-descent-v0/smt2/bad-step-coordinate-farkas-conflict.smt2"
+);
 const FINITE_LINE_SEARCH_BAD_ARMIJO: &str = include_str!(
     "../../../artifacts/examples/math/finite-line-search-v0/smt2/bad-armijo-farkas-conflict.smt2"
 );
@@ -695,6 +698,14 @@ fn finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-gradient-descent-v0 bad-decrease SMT-LIB artifact",
         FINITE_GRADIENT_DESCENT_BAD_DECREASE,
+    );
+}
+
+#[test]
+fn finite_gradient_descent_bad_step_coordinate_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-gradient-descent-v0 bad-step-coordinate SMT-LIB artifact",
+        FINITE_GRADIENT_DESCENT_BAD_STEP_COORDINATE,
     );
 }
 

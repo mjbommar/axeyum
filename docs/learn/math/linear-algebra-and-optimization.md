@@ -450,9 +450,10 @@ next = (1/2,0)
 
 The `finite-gradient-descent-v0` validator recomputes the gradient, Hessian,
 next point, objective values `3` and `1/4`, decrease `11/4`, and finite
-descent-bound slack `1/4`. Its bad row changes the decrease to `2`, giving
-decrease error `3/4`; the final contradiction `error = 3/4` versus `error = 0`
-is checked through QF_LRA/Farkas evidence. For a focused trace, read
+descent-bound slack `1/4`. Its bad rows change the decrease to `2` and the next
+x-coordinate to `3/4`; exact replay computes decrease error `3/4` and
+`next_x = 1/2`, then checks the resulting exact-linear contradictions through
+QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Gradient Descent Checks](finite-gradient-descent-end-to-end.md).
 
 For a finite line-search example, encode a one-dimensional quadratic and one
@@ -586,6 +587,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_objective_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_step_coordinate_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-line-search-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_armijo_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-wolfe-line-search-v0

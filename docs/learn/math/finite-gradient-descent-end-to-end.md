@@ -2,9 +2,9 @@
 
 This lesson follows
 [finite-gradient-descent-v0](../../../artifacts/examples/math/finite-gradient-descent-v0/)
-from one exact quadratic gradient step through descent replay and checked
-Farkas evidence. It is a finite optimization-step certificate, not a general
-convergence theorem.
+from one exact quadratic gradient step through descent replay, step-coordinate
+replay, and checked Farkas evidence. It is a finite optimization-step
+certificate, not a general convergence theorem.
 
 ## Concept
 
@@ -27,7 +27,7 @@ and one step from `(1, 1)` with step size `1/4`.
 
 ## What Gets Checked
 
-The pack has five rows:
+The pack has six rows:
 
 | Row | Result | Evidence |
 |---|---|---|
@@ -35,6 +35,7 @@ The pack has five rows:
 | `gradient-descent-step-replay` | `sat` | replay-only |
 | `descent-bound-replay` | `sat` | replay-only |
 | `bad-descent-value-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-step-coordinate-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-gradient-descent-convergence-lean-horizon` | `not-run` | Lean horizon |
 
 The replay rows use exact rational arithmetic. They do not use floating-point
@@ -114,6 +115,29 @@ it is zero:
 Axeyum parses that source row, emits `UnsatFarkas` evidence, and independently
 checks the certificate.
 
+## Bad Step Coordinate Row
+
+The malformed row changes only the claimed x-coordinate of the next point:
+
+```text
+claimed next_x = 3/4
+replayed next_x = 1 - (1/4) * 2 = 1/2
+```
+
+The source SMT-LIB artifact fixes `next_x` as `1/2` and also claims it is
+`3/4`:
+
+```smt2
+(set-logic QF_LRA)
+(declare-const next_x Real)
+(assert (= next_x (/ 1 2)))
+(assert (= next_x (/ 3 4)))
+(check-sat)
+```
+
+This checks the step-update arithmetic as a separate exact-linear conflict from
+the descent-value row.
+
 ## What This Does Not Prove
 
 The pack does not prove gradient descent convergence for arbitrary smooth
@@ -133,4 +157,5 @@ general convergence theorem: future Lean reconstruction
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_step_coordinate_artifact_emits_checked_farkas
 ```

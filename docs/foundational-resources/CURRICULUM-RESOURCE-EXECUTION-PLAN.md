@@ -169,8 +169,8 @@ High-priority focused lessons still worth auditing or adding:
   complementary-slackness replay bridge.
 - finite SDP now has a standalone two-by-two PSD, objective, slack, and
   dual-gap replay bridge.
-- finite gradient descent now has a standalone exact quadratic step, objective
-  decrease, and descent-bound replay bridge.
+- finite gradient descent now has a standalone exact quadratic step,
+  step-coordinate, objective decrease, and descent-bound replay bridge.
 - finite line search now has a standalone exact Armijo trial rejection and
   accepted-backtrack replay bridge.
 - finite projected gradient now has a standalone exact interval-projection and

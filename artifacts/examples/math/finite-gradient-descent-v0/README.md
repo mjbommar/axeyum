@@ -21,6 +21,8 @@ rates and optimization-algorithm theorems remain proof horizons.
   gradient-norm square, finite descent lower bound, and positive slack.
 - `bad-descent-value-rejected`: rejects the malformed claim that the same step
   decreases the objective by only `2`; exact replay computes decrease `11/4`.
+- `bad-step-coordinate-rejected`: rejects the malformed claim that the same
+  step has next x-coordinate `3/4`; exact replay computes `1/2`.
 - `general-gradient-descent-convergence-lean-horizon`: names the future proof
   route for convergence rates, smooth convex descent lemmas, and stopping
   criteria.
@@ -30,6 +32,7 @@ rates and optimization-algorithm theorems remain proof horizons.
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_step_coordinate_artifact_emits_checked_farkas
 ```
 
 ## Trust Boundary
@@ -37,4 +40,4 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_desc
 Untrusted search may propose a step size, gradient, next point, or descent
 certificate. The trusted work is small: exact matrix-vector multiplication,
 exact rational objective replay, exact step arithmetic, descent-bound replay,
-and checked `UnsatFarkas` evidence over the source SMT-LIB row.
+and checked `UnsatFarkas` evidence over the source SMT-LIB rows.

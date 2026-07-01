@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 604 expected checks.
-- 283 checked proof/evidence rows.
+- 605 expected checks.
+- 284 checked proof/evidence rows.
 - 250 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -197,7 +197,7 @@ Route plan:
 | Boolean CNF DRAT/LRAT | finite Boolean refutations, graph/search/set-family conflicts | Promote small topology and graph rows that are source-level obvious. |
 | QF_BV DRAT | fixed-width residue, bit-vector, and finite algebra conflicts | Promote only when width is part of the educational claim. |
 | QF_LIA/Diophantine | integer equations, counts, modular obstructions, rank coefficients, torsion membership | Group recurring gcd/divisibility and quotient-boundary obstructions as cookbook examples. |
-| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad separator, bad stationarity, bad free-gradient, bad objective, bad decrease, bad Armijo, bad Wolfe curvature, bad projection, and bad proximal-point rows with independent Farkas checks. |
+| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad separator, bad stationarity, bad free-gradient, bad objective, bad decrease, bad step-coordinate, bad Armijo, bad Wolfe curvature, bad projection, and bad proximal-point rows with independent Farkas checks. |
 | QF_UF/Alethe | equality-heavy finite functions, quotients, homomorphisms | Use table replay for objects, Alethe for congruence conflicts. |
 | Lean horizon | induction schemas, completeness, topology, measure, asymptotics | Record theorem shape and dependencies; do not benchmark as finite checks. |
 
@@ -662,8 +662,8 @@ Build next:
   stationarity row tied to its source QF_LRA/Farkas artifact; keep
   `finite-active-set-qp-v0`'s bad free-gradient row tied to its source
   QF_LRA/Farkas artifact; keep `finite-sdp-v0`'s bad objective row tied to its
-  source QF_LRA/Farkas artifact; keep `finite-gradient-descent-v0`'s bad decrease row tied to its
-  source QF_LRA/Farkas artifact; keep `finite-line-search-v0`'s bad Armijo row
+  source QF_LRA/Farkas artifact; keep `finite-gradient-descent-v0`'s bad decrease and bad
+  step-coordinate rows tied to their source QF_LRA/Farkas artifacts; keep `finite-line-search-v0`'s bad Armijo row
   tied to its source QF_LRA/Farkas artifact; keep
   `finite-wolfe-line-search-v0`'s bad curvature row tied to its source
   QF_LRA/Farkas artifact; keep

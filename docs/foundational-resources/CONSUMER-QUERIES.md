@@ -1271,7 +1271,8 @@ thresholds, finite convexity shadows, regression normal equations, residual
 bounds, gradient/Hessian replay, finite KKT stationarity, finite SDP
 objective/slack replay, finite gradient-descent replay, and finite
 line-search replay, finite Wolfe line-search replay, finite active-set QP
-replay, finite projected-gradient replay, and finite proximal-gradient replay together while
+replay, finite projected-gradient replay, finite proximal-gradient replay, and
+checked gradient step-coordinate rows together while
 leaving duality, KKT sufficiency, SDP strong duality, line-search convergence,
 Wolfe line-search convergence, active-set convergence, projected-gradient convergence,
 proximal-gradient convergence, and convergence
@@ -1300,15 +1301,26 @@ python3 scripts/query-foundational-resources.py concepts \
 
 To display concrete checked optimization, convexity, finite SDP, finite
 active-set QP, finite gradient-descent, finite line-search, finite Wolfe
-line-search, finite projected-gradient, finite proximal-gradient, least-squares RSS, gradient,
-residual, Rayleigh, or eigenpair rows, drill
-into checked Farkas examples:
+line-search, finite projected-gradient, finite proximal-gradient,
+least-squares RSS, gradient, residual, Rayleigh, or eigenpair rows, drill into
+checked Farkas examples:
 
 ```sh
 python3 scripts/query-foundational-resources.py checks \
   --field optimization_and_convexity \
   --route Farkas \
   --proof-status checked \
+  --require-any
+```
+
+For the exact gradient-descent step-coordinate certificate:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-gradient-descent-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text coordinate \
   --require-any
 ```
 
@@ -1638,6 +1650,7 @@ python3 scripts/query-foundational-resources.py fields --field optimization_and_
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text objective --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text convexity --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field optimization_and_convexity --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-gradient-descent-v0 --route Farkas --proof-status checked --text coordinate --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field geometry --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field geometry --text coordinate --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field geometry --text circle --require-any >/dev/null

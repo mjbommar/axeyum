@@ -68,6 +68,26 @@
       "notes": "Exact replay computes decrease = 11/4, so the claimed decrease 2 has error 3/4; the source artifact checks that the same error cannot equal zero."
     },
     {
+      "id": "bad-step-coordinate-rejected",
+      "claim": "With step size 1/4, exact gradient descent moves from (1,1) to a point whose x-coordinate is 3/4.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_gradient_step_coordinate_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "diagonal-quadratic-descent-step",
+        "start_point": ["1", "1"],
+        "step_size": "1/4",
+        "gradient": ["2", "4"],
+        "computed_next_point": ["1/2", "0"],
+        "claimed_next_x": "3/4",
+        "coordinate_equation": "next_x = start_x - step_size * gradient_x",
+        "smt2_artifact": "artifacts/examples/math/finite-gradient-descent-v0/smt2/bad-step-coordinate-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_step_coordinate_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes next_x = 1 - (1/4)*2 = 1/2, so the malformed step-coordinate claim 3/4 is rejected through the checked QF_LRA/Farkas route."
+    },
+    {
       "id": "general-gradient-descent-convergence-lean-horizon",
       "claim": "General gradient-descent convergence, smooth convex descent lemmas, stopping criteria, and rates require future Lean reconstruction.",
       "expected_result": "not-run",

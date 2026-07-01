@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 604 expected checks.
-- 283 checked proof/evidence rows.
+- 605 expected checks.
+- 284 checked proof/evidence rows.
 - 250 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -242,7 +242,7 @@ Exit criteria:
 | `naturals` | maintain | keep bounded prefix and LIA/BV width limits explicit |
 | `integers` | maintain | group common Diophantine obstructions |
 | `rationals` | maintain | exact rational order and Farkas conflicts are already the model |
-| `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding has a source-linked bad-iterate row, separation has a source-linked bad-separator row, KKT has a source-linked bad-stationarity row, active-set QP has a source-linked bad-free-gradient row, SDP has a source-linked bad-objective row, gradient descent has a source-linked bad-decrease row, finite circle geometry has source-linked bad-radius and bad line-intersection rows, finite inversion geometry has source-linked bad inverse-coordinate and inverse-distance-product rows, and finite cyclic geometry has source-linked bad diagonal-intersection, bad opposite-angle, and bad Ptolemy rows; keep completeness, convergence, separation, KKT sufficiency, active-set method theory, SDP duality, descent-rate, general circle/inversion/cyclic geometry, and broad CAD/SOS/RCF claims horizon |
+| `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding has a source-linked bad-iterate row, separation has a source-linked bad-separator row, KKT has a source-linked bad-stationarity row, active-set QP has a source-linked bad-free-gradient row, SDP has a source-linked bad-objective row, gradient descent has source-linked bad-decrease and bad step-coordinate rows, finite circle geometry has source-linked bad-radius and bad line-intersection rows, finite inversion geometry has source-linked bad inverse-coordinate and inverse-distance-product rows, and finite cyclic geometry has source-linked bad diagonal-intersection, bad opposite-angle, and bad Ptolemy rows; keep completeness, convergence, separation, KKT sufficiency, active-set method theory, SDP duality, descent-rate, general circle/inversion/cyclic geometry, and broad CAD/SOS/RCF claims horizon |
 | `complex` | deepen | complex-plane bad unit-square real-part row now has a source-linked QF_LRA/Farkas regression; keep analytic theorems Lean-horizon |
 | `divisibility-and-euclid` | maintain | use gcd/Bezout rows as arithmetic-certificate examples |
 | `modular-arithmetic` | maintain | keep LIA nonunit/CRT and BV fixed-width nonunit-inverse/Fermat-unit residue routes distinct |
@@ -254,7 +254,7 @@ Exit criteria:
 | `counting` | maintain | finite-counting replay bridge now groups pigeonhole CNF/LRAT, coefficient-count, double-counting, finite orbit-count, and exact tail-count rows |
 | `number-theory` | maintain | bounded residue and Diophantine families |
 | `linear-algebra` | deepen | matrix corpus notes, dot-product/separator/KKT/active-set-QP/SDP/gradient-step/line-search/Wolfe/projected-gradient/proximal-gradient/circle-tangent/inversion rows, and route-specific regression back-links |
-| `calculus` | deepen | one-variable false derivative, Riemann-sum false integral, multivariable bad-gradient, finite root-finding bad-step, finite KKT bad-stationarity, finite active-set QP bad-free-gradient, finite gradient-descent bad-decrease, finite line-search bad-Armijo, finite Wolfe bad-curvature, finite projected-gradient bad-projection, and finite proximal-gradient bad-proximal-point rows now have QF_LRA/Farkas regressions |
+| `calculus` | deepen | one-variable false derivative, Riemann-sum false integral, multivariable bad-gradient, finite root-finding bad-step, finite KKT bad-stationarity, finite active-set QP bad-free-gradient, finite gradient-descent bad-decrease and bad step-coordinate, finite line-search bad-Armijo, finite Wolfe bad-curvature, finite projected-gradient bad-projection, and finite proximal-gradient bad-proximal-point rows now have QF_LRA/Farkas regressions |
 
 ## Commit-Sized Queue
 
@@ -1112,6 +1112,13 @@ Pick one row per commit unless the change is purely navigational.
      route now checks both normal-equation coefficient and RSS-improvement
      contradictions without claiming Gauss-Markov, inference, asymptotic, or
      floating-point regression coverage.
+135. Landed: extend `finite-gradient-descent-v0` with a checked bad
+     step-coordinate row. Exact quadratic step replay computes
+     `next_x = 1 - (1/4)*2 = 1/2`, while the malformed source SMT-LIB artifact
+     claims `next_x = 3/4`; the shared QF_LRA/Farkas route now checks both
+     descent-value and step-coordinate contradictions without claiming
+     convergence rates, stochastic variants, line-search theory, or
+     floating-point optimization coverage.
 
 ## Validation Checklist
 

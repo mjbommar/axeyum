@@ -190,8 +190,8 @@ Companion maps:
   rejection, and the general SDP duality Lean horizon.
 - [Finite Gradient Descent Checks](finite-gradient-descent-end-to-end.md):
   follows exact quadratic gradient replay, one descent step, a finite descent
-  bound, checked QF_LRA/Farkas bad-decrease rejection, and the general
-  convergence Lean horizon.
+  bound, checked QF_LRA/Farkas bad-decrease and bad step-coordinate
+  rejections, and the general convergence Lean horizon.
 - [Finite Line Search Checks](finite-line-search-end-to-end.md): follows exact
   descent-direction replay, Armijo trial rejection, one accepted backtracked
   step, checked QF_LRA/Farkas bad-acceptance rejection, and the general

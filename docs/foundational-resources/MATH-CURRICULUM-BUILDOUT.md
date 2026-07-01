@@ -1099,8 +1099,8 @@ Recommended order:
     convergence theorems remain horizon claims.
 38. `finite-gradient-descent-v0`: exact quadratic gradient replay, descent-step
     arithmetic, objective-decrease and descent-bound replay, and checked
-    QF_LRA/Farkas bad-decrease rejection, while rate, stochastic, and
-    convergence theorems remain horizon claims.
+    QF_LRA/Farkas bad-decrease and bad step-coordinate rejections, while rate,
+    stochastic, and convergence theorems remain horizon claims.
 39. `finite-line-search-v0`: exact Armijo descent-direction replay, trial-step
     rejection, accepted-backtrack replay, and checked QF_LRA/Farkas bad-Armijo
     rejection, while strong Wolfe variants, projected/stochastic line search, and
@@ -1672,8 +1672,9 @@ bad-objective rejection with QF_LRA/Farkas evidence, and the general SDP-duality
 Lean horizon.
 `finite-gradient-descent-v0` now has a learner-facing end-to-end lesson for
 exact quadratic gradient replay, finite descent-step arithmetic,
-objective-decrease and descent-bound replay, checked bad-decrease rejection
-with QF_LRA/Farkas evidence, and the general convergence Lean horizon.
+objective-decrease and descent-bound replay, checked bad-decrease and bad
+step-coordinate rejections with QF_LRA/Farkas evidence, and the general
+convergence Lean horizon.
 `finite-line-search-v0` now has a learner-facing end-to-end lesson for exact
 descent-direction replay, Armijo trial rejection, accepted-backtrack replay,
 checked bad-Armijo rejection with QF_LRA/Farkas evidence, and the general
@@ -2012,9 +2013,10 @@ free-coordinate stationarity error `2`.
 `finite-sdp-v0` now routes its bad objective row through the same checked
 Farkas evidence path after exact SDP replay computes objective value `1` and
 objective error `1`.
-`finite-gradient-descent-v0` now routes its bad decrease row through the same
-checked Farkas evidence path after exact descent-step replay computes decrease
-`11/4` and decrease error `3/4`.
+`finite-gradient-descent-v0` now routes its bad decrease and bad
+step-coordinate rows through the same checked Farkas evidence path after exact
+descent-step replay computes decrease `11/4`, decrease error `3/4`, and
+`next_x = 1/2`.
 `finite-line-search-v0` now routes its bad Armijo row through the same checked
 Farkas evidence path after exact line-search replay computes rejected-step
 violation `1`.
