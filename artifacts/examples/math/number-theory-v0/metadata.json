@@ -29,10 +29,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "bounded quadratic nonresidue QF_BV/DRAT regression seed",
-    "pressure": "Modulo-7 nonresidue equation x^2 = 3 with checked bit-blast/DRAT rechecking.",
+    "target": "bounded quadratic-residue QF_BV/DRAT regression seeds",
+    "pressure": "Modulo-7 nonresidue search and false square-root witness with checked bit-blast/DRAT rechecking.",
     "evidence": [
-      "quadratic-nonresidue-qf-bv-drat"
+      "quadratic-nonresidue-qf-bv-drat",
+      "bad-square-witness-qf-bv-drat"
     ],
     "next_step": "Promote CRT, two-squares, or Diophantine rows only when they add distinct BV/LIA regression pressure; keep deep number-theory theorems out of benchmark scoring."
   },
@@ -46,6 +47,7 @@
     "docs/proof-cookbook/recipes/qf-bv-bitblast.md",
     "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
     "artifacts/examples/math/number-theory-v0/smt2/quadratic-nonresidue-mod7-bitblast-conflict.smt2",
+    "artifacts/examples/math/number-theory-v0/smt2/bad-square-witness-mod7-bitblast-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_bv_routes.rs"
   ],
   "expected_results": [
@@ -53,12 +55,14 @@
     "quadratic-residue-witness",
     "quadratic-nonresidue-rejected",
     "quadratic-nonresidue-qf-bv-drat",
+    "bad-square-witness-rejected",
+    "bad-square-witness-qf-bv-drat",
     "sum-two-squares-witness",
     "sum-two-squares-mod4-rejected",
     "bounded-diophantine-witness"
   ],
   "graduation_criteria": [
-    "Encode fixed residue searches as deterministic BV/enumeration obligations; the first modulo-7 nonresidue row now has checked QF_BV/DRAT evidence.",
+    "Encode fixed residue searches and bad residue witnesses as deterministic BV/enumeration obligations; the modulo-7 nonresidue and false square-root rows now have checked QF_BV/DRAT evidence.",
     "Replay SAT witnesses through Axeyum model evaluation.",
     "Emit checked BV/CNF or LIA evidence for bounded UNSAT rows.",
     "Keep quadratic reciprocity, the full two-squares theorem, unique factorization, and infinitude of primes marked Lean-horizon."

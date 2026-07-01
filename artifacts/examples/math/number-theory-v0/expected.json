@@ -90,6 +90,39 @@
       "notes": "The artifact quantifies a 3-bit residue x with x < 7, computes x*x exactly after zero-extension, and refutes x^2 mod 7 = 3 through a checked DIMACS/DRAT pair."
     },
     {
+      "id": "bad-square-witness-rejected",
+      "claim": "The residue 2 is a square root of 2 modulo 7.",
+      "expected_result": "unsat",
+      "validation": "bad_quadratic_residue_witness_replay",
+      "proof_status": "checked",
+      "data": {
+        "modulus": 7,
+        "residue": 2,
+        "candidate": 2,
+        "square": 4
+      },
+      "notes": "The validator recomputes 2^2 mod 7 = 4 and rejects the malformed square-root witness for target residue 2."
+    },
+    {
+      "id": "bad-square-witness-qf-bv-drat",
+      "claim": "The false modulo-7 square-root witness lowers to a fixed-width QF_BV contradiction with checked DRAT evidence.",
+      "expected_result": "unsat",
+      "validation": "qf_bv_bitblast_drat",
+      "proof_status": "checked",
+      "data": {
+        "modulus": 7,
+        "residue": 2,
+        "candidate": 2,
+        "square": 4,
+        "residue_width": 3,
+        "product_width": 6,
+        "smt2_artifact": "artifacts/examples/math/number-theory-v0/smt2/bad-square-witness-mod7-bitblast-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_bv_routes number_theory_bad_square_witness_emits_checked_bv_drat",
+        "certificate": "export_qf_bv_unsat_proof emits a DRAT certificate for the bit-blasted CNF; UnsatProof::recheck validates the CNF refutation while modular lowering and bit-blast/Tseitin remain explicit trust steps until Lean reconstruction covers the original formula."
+      },
+      "notes": "The artifact computes 2*2 at 6-bit width, reduces modulo 7, and refutes the false target by requiring the same residue to equal both 4 and 2."
+    },
+    {
       "id": "sum-two-squares-witness",
       "claim": "The integer 65 is a sum of two squares.",
       "expected_result": "sat",

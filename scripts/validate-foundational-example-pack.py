@@ -6752,6 +6752,63 @@ def validate_number_theory(expected: dict[str, Any]) -> None:
     if "DRAT" not in certificate or "bit-blast/Tseitin" not in certificate:
         fail("quadratic-nonresidue-qf-bv-drat certificate must document DRAT and lowering trust")
 
+    bad_square = checks["bad-square-witness-rejected"]
+    if bad_square["expected_result"] != "unsat":
+        fail("bad-square-witness-rejected must expect unsat")
+    if bad_square["proof_status"] != "checked":
+        fail("bad-square-witness-rejected must be checked")
+    if bad_square["validation"] != "bad_quadratic_residue_witness_replay":
+        fail("bad-square-witness-rejected must use bad_quadratic_residue_witness_replay validation")
+    data = bad_square.get("data", {})
+    modulus = require_modulus("bad square witness modulus", data.get("modulus"))
+    if not is_prime(modulus):
+        fail("bad-square-witness-rejected must use a prime modulus")
+    target = require_residue("bad square witness target", data.get("residue"), modulus)
+    candidate = require_residue("bad square witness candidate", data.get("candidate"), modulus)
+    square = require_residue("bad square witness square", data.get("square"), modulus)
+    computed_square = (candidate * candidate) % modulus
+    if computed_square != square:
+        fail("bad-square-witness-rejected records the wrong candidate square")
+    if square == target:
+        fail("bad-square-witness-rejected must record a genuinely false square-root witness")
+
+    bad_square_qf_bv = checks["bad-square-witness-qf-bv-drat"]
+    if bad_square_qf_bv["expected_result"] != "unsat":
+        fail("bad-square-witness-qf-bv-drat must expect unsat")
+    if bad_square_qf_bv["proof_status"] != "checked":
+        fail("bad-square-witness-qf-bv-drat must be checked")
+    if bad_square_qf_bv["validation"] != "qf_bv_bitblast_drat":
+        fail("bad-square-witness-qf-bv-drat must use qf_bv_bitblast_drat validation")
+    data = bad_square_qf_bv.get("data", {})
+    modulus = require_modulus("bad square witness QF_BV modulus", data.get("modulus"))
+    if not is_prime(modulus):
+        fail("bad-square-witness-qf-bv-drat must use a prime modulus")
+    target = require_residue("bad square witness QF_BV target", data.get("residue"), modulus)
+    candidate = require_residue("bad square witness QF_BV candidate", data.get("candidate"), modulus)
+    square = require_residue("bad square witness QF_BV square", data.get("square"), modulus)
+    computed_square = (candidate * candidate) % modulus
+    if computed_square != square:
+        fail("bad-square-witness-qf-bv-drat records the wrong candidate square")
+    if square == target:
+        fail("bad-square-witness-qf-bv-drat must record a genuinely false square-root witness")
+    residue_width = require_int("bad square witness QF_BV residue_width", data.get("residue_width"))
+    product_width = require_int("bad square witness QF_BV product_width", data.get("product_width"))
+    if 2**residue_width <= modulus:
+        fail("bad square witness QF_BV residue_width must encode every residue and the modulus")
+    if 2**product_width <= (modulus - 1) * (modulus - 1):
+        fail("bad square witness QF_BV product_width must encode the maximum square exactly")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad-square-witness-qf-bv-drat smt2_artifact", smt2_artifact)
+    check_source("bad-square-witness-qf-bv-drat smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("bad-square-witness-qf-bv-drat proof_regression", proof_regression)
+    if "number_theory_bad_square_witness_emits_checked_bv_drat" not in proof_regression:
+        fail("bad-square-witness-qf-bv-drat proof_regression must name the BV route test")
+    certificate = data.get("certificate")
+    require_string("bad-square-witness-qf-bv-drat certificate", certificate)
+    if "DRAT" not in certificate or "bit-blast/Tseitin" not in certificate:
+        fail("bad-square-witness-qf-bv-drat certificate must document DRAT and lowering trust")
+
     sum_squares = checks["sum-two-squares-witness"]
     if sum_squares["expected_result"] != "sat":
         fail("sum-two-squares-witness must expect sat")

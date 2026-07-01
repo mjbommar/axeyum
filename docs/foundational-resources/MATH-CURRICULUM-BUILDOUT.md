@@ -1870,7 +1870,7 @@ related LIA arithmetic-DPLL solver-reuse lane also has
 overlap-additivity count contradiction after finite replay computes the true
 union count.
 The QF_BV/DRAT solver-reuse lane now also has `number-theory-v0` promoted for
-its modulo-7 quadratic nonresidue row.
+its modulo-7 quadratic nonresidue row and a bad square-root witness row.
 The Boolean proof-upgrade lane has its first concrete resource-backed proof
 regression: `graph-coloring-v0` now carries a DIMACS CNF artifact for triangle
 non-2-colorability, and the CNF crate test emits DRAT, elaborates LRAT, and
@@ -2021,8 +2021,8 @@ polynomial, and homology packs backed by the shared `math_resource_lia_routes`
 regression.
 Recurring fixed-width finite algebra, residue, and one-bit graph encodings now
 also have `family_fixed_width_bv_drat`, spanning finite fields, finite rings,
-graph coloring, and bounded number-theory residue packs backed by the shared
-`math_resource_bv_routes` regression.
+graph coloring, and bounded number-theory residue search/bad-witness packs
+backed by the shared `math_resource_bv_routes` regression.
 The rules/law transfer lane now has three concrete packs beyond the crosswalk:
 `authorization-policy-v0` reuses finite predicates, tenant/resource relations,
 explicit deny precedence, bounded version-delta witnesses, and checked

@@ -645,17 +645,17 @@ First targets:
   two-coloring obstruction)
 - [number-theory-v0](../../artifacts/examples/math/number-theory-v0/)
   (resource-backed QF_BV/DRAT regression landed for the modulo-7 quadratic
-  nonresidue row)
+  nonresidue row and the bad square-root witness row)
 - [finite-simplicial-cup-products-v0](../../artifacts/examples/math/finite-simplicial-cup-products-v0/)
   (resource-backed QF_BV/DRAT regression landed for the one-bit F2
   cup-product value conflict)
 
 Secondary targets:
 
-- first QF_BV bit-blast target set plus the bounded number-theory residue
-  promotion are covered; pick the next fixed-width pack only when the BV
-  encoding teaches a distinct finite-domain claim rather than duplicating a
-  cleaner CNF/LRA/LIA route.
+- first QF_BV bit-blast target set plus bounded number-theory residue
+  search/bad-witness promotions are covered; pick the next fixed-width pack
+  only when the BV encoding teaches a distinct finite-domain claim rather than
+  duplicating a cleaner CNF/LRA/LIA route.
 
 Expected artifact:
 

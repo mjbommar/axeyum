@@ -11,6 +11,9 @@ The examples are exact finite arithmetic artifacts:
 - reject `x^2 = 3 mod 7` by finite enumeration;
 - refute the same modulo-7 nonresidue row as a QF_BV bit-blast conflict with
   checked DRAT evidence;
+- reject the malformed square-root witness `2^2 = 2 mod 7`;
+- refute that bad witness as a QF_BV bit-blast conflict with checked DRAT
+  evidence;
 - replay `65 = 1^2 + 8^2`;
 - reject `7 = a^2 + b^2` by the mod-4 square obstruction;
 - replay `14*(-1) + 21*1 = 7`.
@@ -41,9 +44,15 @@ certificate that `UnsatProof::recheck` validates. The modular lowering and
 bit-blast/Tseitin steps remain explicit trust steps until Lean reconstruction
 covers the original formula.
 
+The bad square-root witness has the same proof-route shape in
+[`smt2/bad-square-witness-mod7-bitblast-conflict.smt2`](smt2/bad-square-witness-mod7-bitblast-conflict.smt2):
+the artifact computes `2*2 mod 7 = 4` at fixed width and refutes the malformed
+target `2`.
+
 Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
 cargo test -p axeyum-solver --test math_resource_bv_routes number_theory_quadratic_nonresidue_emits_checked_bv_drat
+cargo test -p axeyum-solver --test math_resource_bv_routes number_theory_bad_square_witness_emits_checked_bv_drat
 ```

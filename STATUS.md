@@ -205,6 +205,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Bounded number-theory bad square-witness QF_BV row landed.**
+  `number-theory-v0` now has a second fixed-width residue contradiction:
+  exact replay computes `2^2 mod 7 = 4` while the malformed square-root claim
+  requires `2`. The new SMT-LIB artifact is checked by
+  `math_resource_bv_routes` through DIMACS/DRAT evidence, the pack validator
+  enforces both the replay row and proof-route row, generated dashboards now
+  show `number-theory-v0` at 9 checked rows, and the public query summary is
+  111 concept rows, 108 non-template packs, 556 expected checks, 240 checked
+  rows, 245 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite-rings bad multiplicative-identity QF_BV row landed.**
   `finite-rings-v0` now has a second fixed-width ring-table contradiction:
   XOR addition, zero multiplication, and a claimed identity `1`. Finite replay
@@ -2040,7 +2050,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   now includes `family_fixed_width_bv_drat`, a generated `example-family` row
   for fixed-width finite algebra, residue, and one-bit graph contradictions
   across finite fields, finite rings, graph coloring, and bounded
-  number-theory residue packs. The row is tied to
+  number-theory residue search/bad-witness packs. The row is tied to
   [`math_resource_bv_routes`](crates/axeyum-solver/tests/math_resource_bv_routes.rs),
   which parses committed SMT-LIB artifacts, exports DIMACS/DRAT witnesses,
   rechecks the proof route, and rejects truncated DRAT certificates.

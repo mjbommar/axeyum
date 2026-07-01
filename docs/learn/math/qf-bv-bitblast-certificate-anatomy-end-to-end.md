@@ -139,7 +139,7 @@ Reusable pattern:
 - fixed-width finite rings and fields;
 - small residue arithmetic where the width is part of the lesson;
 - bounded graph-coloring encodings;
-- bounded number-theory residue searches.
+- bounded number-theory residue searches and bad residue witnesses.
 
 Remaining horizon:
 

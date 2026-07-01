@@ -232,8 +232,8 @@ Build sequence:
    obstructions now have the `family_fixed_width_bv_drat` example-family row,
    backed by the shared `math_resource_bv_routes` regression across finite
    fields, finite rings, graph coloring, and bounded number-theory residue
-   packs. Continue QF_BV promotions only when fixed width is part of the
-   educational claim.
+   search/bad-witness packs. Continue QF_BV promotions only when fixed width is
+   part of the educational claim.
 8. First route-specific proof-upgrade note pass landed on the highest-use
    learner pages: logic/proof, graph/discrete, linear algebra/optimization,
    probability/statistics, and algebra/number theory.
@@ -326,8 +326,10 @@ Build sequence:
     `artifacts/examples/math/natural-arithmetic-v0/smt2/bounded-natural-negative-lia-conflict.smt2`,
     checked by the `math_resource_lia_routes` arithmetic-DPLL regression.
     `number-theory-v0` now links `quadratic-nonresidue-qf-bv-drat` to
-    `artifacts/examples/math/number-theory-v0/smt2/quadratic-nonresidue-mod7-bitblast-conflict.smt2`,
-    checked by the `math_resource_bv_routes` QF_BV/DRAT regression.
+    `artifacts/examples/math/number-theory-v0/smt2/quadratic-nonresidue-mod7-bitblast-conflict.smt2`
+    and `bad-square-witness-qf-bv-drat` to
+    `artifacts/examples/math/number-theory-v0/smt2/bad-square-witness-mod7-bitblast-conflict.smt2`,
+    both checked by the `math_resource_bv_routes` QF_BV/DRAT regression.
     `finite-chebyshev-systems-v0` now links
     `bad-duplicate-node-grid-rejected` to
     `artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-duplicate-node-grid-farkas-conflict.smt2`,

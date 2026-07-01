@@ -147,8 +147,10 @@ The rules/law transfer crosswalk that maps finite predicates, arithmetic
 thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
-Current resource-buildout status (2026-06-30): the first QF_UF/Alethe proof
-upgrade wave now includes equivalence classes, relations/functions, finite
+Current resource-buildout status (2026-06-30): the public JSON layer reports
+111 concept rows, 108 non-template packs, 556 expected checks, 240 checked
+rows, 245 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
+proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
 finite group actions, with topology/preimage, finite specialization-order,
 finite quotient-topology, finite cohomology, finite universal-coefficient shadow, and finite cup-product
@@ -252,7 +254,8 @@ core algebra/number/graph lanes: abstract-algebra Alethe readiness,
 homomorphism/ideal bridge lookups, concept-scoped homomorphism-preservation
 Alethe checked-row queries, checked Alethe and fixed-width QF_BV rows;
 number-theory Diophantine readiness, finite-family lookups, and checked
-integer-arithmetic rows; and graph-theory Boolean plus LIA readiness,
+integer-arithmetic plus fixed-width residue rows; and graph-theory Boolean plus
+LIA readiness,
 graph-family/runtime lookups, checked finite
 coloring/reachability/matching/cut/d-separation rows, and checked finite
 BFS/DFS cost-counter rows. These are smoke-checked through the committed JSON contract without
@@ -415,7 +418,7 @@ polynomial, and homology packs.
 The fifth example-family row now groups fixed-width QF_BV/DRAT obligations
 under `family_fixed_width_bv_drat`, backed by `math_resource_bv_routes` across
 finite fields, finite rings, graph coloring, and bounded number-theory residue
-packs.
+search/bad-witness packs.
 The generated coverage, field, proof-gap, learner/proof-upgrade, and
 curriculum-pressure dashboards now expose conservative R0-R6 gate/next-gate
 columns and overlapping fragment-pressure buckets, making R4-to-R5 solver-reuse
@@ -448,8 +451,9 @@ regression and `diophantine-gcd-obstruction` now has a source-linked QF_LIA
 artifact checked by the `math_resource_lia_routes` Diophantine regression, and
 `bounded-natural-negative-rejected` now has a source-linked QF_LIA artifact
 checked by the `math_resource_lia_routes` arithmetic-DPLL regression, while
-`quadratic-nonresidue-qf-bv-drat` now has a source-linked QF_BV artifact checked
-by the `math_resource_bv_routes` DRAT regression.
+`quadratic-nonresidue-qf-bv-drat` and `bad-square-witness-qf-bv-drat` now have
+source-linked QF_BV artifacts checked by the `math_resource_bv_routes` DRAT
+regression.
 The first consumer-facing query layer over the committed foundational-resource
 JSON contract has landed in `scripts/query-foundational-resources.py` and
 `docs/foundational-resources/CONSUMER-QUERIES.md`, covering summary counts,
@@ -574,7 +578,8 @@ QF_BV bit-blast/DRAT resource promotion now covers the
 finite-rings bad distributivity and bad multiplicative-identity rows, the
 finite-fields composite no-inverse and bad inverse-candidate rows, and the
 graph-coloring one-bit triangle two-coloring obstruction, with bounded number
-theory now promoted for the modulo-7 quadratic nonresidue row; finite
+theory now promoted for the modulo-7 quadratic nonresidue row and the bad
+square-root witness row; finite
 compactness now contributes checked DRAT/LRAT evidence for a bad open-cover row,
 finite connectedness now contributes checked DRAT/LRAT evidence for a bad
 connectedness row, finite topology now contributes checked DRAT/LRAT evidence
@@ -586,7 +591,7 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **103 promoted solver-reuse
+the foundational resource dashboards now report **108 promoted solver-reuse
 packs**, **0 non-benchmark-horizon packs**, and **0 unclassified packs** after
 the latest finite-specialization-order bad `T0` QF_UF/Alethe promotion,
 the latest finite-cyclic-geometry bad diagonal-intersection QF_LRA/Farkas promotion,
@@ -627,7 +632,9 @@ finite-predicate Bool/CNF quantifier-expansion promotion,
 polynomial-identities false-root QF_LIA/Diophantine promotion,
 finite generating-functions QF_LIA/Diophantine coefficient-convolution
 promotion, PHP(3,2) counting/refutation Bool/CNF promotions, and the replay-only
-classification pass for bounded dynamics, plus the earlier
+classification pass for bounded dynamics, plus finite-rings bad
+multiplicative-identity, finite-fields bad inverse-candidate, and
+number-theory bad square-root QF_BV promotions, plus the earlier
 rational-order, gcd/Bezout, Bool/CNF finite-set/proof-method, QF_LRA
 linear-algebra/optimization/convexity, finite-probability, QF_UF, QF_LIA, and
 QF_BV source-metadata promotion batches;

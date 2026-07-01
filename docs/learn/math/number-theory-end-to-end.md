@@ -20,6 +20,8 @@ Concept rows:
 | `quadratic-residue-witness` | `sat` | checked |
 | `quadratic-nonresidue-rejected` | `unsat` | checked |
 | `quadratic-nonresidue-qf-bv-drat` | `unsat` | checked |
+| `bad-square-witness-rejected` | `unsat` | checked |
+| `bad-square-witness-qf-bv-drat` | `unsat` | checked |
 | `sum-two-squares-witness` | `sat` | checked |
 | `sum-two-squares-mod4-rejected` | `unsat` | checked |
 | `bounded-diophantine-witness` | `sat` | checked |
@@ -76,6 +78,16 @@ x < 7
 route test exports the bit-blasted CNF, checks a DRAT refutation, and leaves
 modular lowering plus bit-blast/Tseitin as explicit trust steps for future Lean
 reconstruction.
+
+The pack also rejects a malformed proposed witness:
+
+```text
+2^2 == 2 mod 7
+```
+
+The validator recomputes `2^2 mod 7 = 4`. The QF_BV row computes the same
+fixed-width product and refutes the false target by requiring the reduced
+product to equal both `4` and `2`.
 
 ## Replay And Reject Two-Squares Claims
 
@@ -141,6 +153,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
 cargo test -p axeyum-solver --test math_resource_bv_routes number_theory_quadratic_nonresidue_emits_checked_bv_drat
+cargo test -p axeyum-solver --test math_resource_bv_routes number_theory_bad_square_witness_emits_checked_bv_drat
 ```
 
 Expected output:
@@ -158,7 +171,8 @@ untrusted fast search -> residue, square-sum, or Diophantine candidate
 trusted small checking -> exact integer replay, finite enumeration, mod obstruction, checked DRAT
 ```
 
-The first graduation step is now landed for a residue search: the modulo-7
-nonresidue row is tied to deterministic QF_BV/DRAT evidence. Remaining
-graduation work is QF_LIA evidence for Diophantine rows and carefully scoped
-BV/LIA artifacts for CRT or two-squares examples that add new solver pressure.
+The first graduation steps are now landed for residue checks: the modulo-7
+nonresidue search and the bad square-root witness are tied to deterministic
+QF_BV/DRAT evidence. Remaining graduation work is QF_LIA evidence for
+Diophantine rows and carefully scoped BV/LIA artifacts for CRT or two-squares
+examples that add new solver pressure.
