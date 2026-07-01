@@ -60,6 +60,27 @@ p(1) = 5
 The promoted QF_LRA route takes the replayed sample value and checks the final
 exact-rational conflict with `UnsatFarkas` evidence.
 
+## `bad-alternating-residual-rejected`
+
+Expected result: `unsat`.
+
+The validator recomputes the alternating residual table:
+
+```text
+r(x) = x^2 - 1/2
+r(-1), r(0), r(1) = 1/2, -1/2, 1/2
+uniform_error = 1/2
+```
+
+The malformed row claims:
+
+```text
+uniform_error = 2/3
+```
+
+The promoted QF_LRA route takes the replayed common magnitude and checks the
+final exact-rational conflict with `UnsatFarkas` evidence.
+
 ## `general-chebyshev-system-lean-horizon`
 
 Expected result: `not-run`.

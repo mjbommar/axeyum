@@ -1657,8 +1657,9 @@ QF_LRA/Farkas evidence, and the general proximal-gradient convergence Lean
 horizon.
 `finite-chebyshev-systems-v0` now has a learner-facing end-to-end lesson for
 exact Vandermonde unisolvence, interpolation, alternating residual signs,
-checked duplicate-node-grid and bad interpolation-sample rejection with
-QF_LRA/Farkas evidence, and the Chebyshev/Haar/minimax Lean horizon.
+checked duplicate-node-grid, bad interpolation-sample, and bad
+alternation-magnitude rejection with QF_LRA/Farkas evidence, and the
+Chebyshev/Haar/minimax Lean horizon.
 `spectral-linear-algebra-v0` now has a learner-facing end-to-end lesson for
 exact eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotient
 checking, spectral decomposition reconstruction, checked bad-eigenpair
@@ -2167,7 +2168,8 @@ checked finite-operator, inner-product, Chebyshev, spectral, and
 characteristic-polynomial Farkas rows. The foundational-resource smoke check
 runs those same queries so finite-dimensional operator bounds, inner-product
 positivity, Chebyshev duplicate-node grids, interpolation/residual rows,
-spectral/eigenpair witnesses, characteristic-polynomial arithmetic, and
+alternation-magnitude refutations, spectral/eigenpair witnesses,
+characteristic-polynomial arithmetic, and
 dual-space rows remain visible through the public JSON boundary without
 promoting Banach, Hilbert, compact-operator, Haar-space, minimax, alternation,
 or infinite-dimensional approximation theorem claims.

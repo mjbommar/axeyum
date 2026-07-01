@@ -117,6 +117,25 @@
       "notes": "The validator recomputes p(1)=4 for p(x)=2 - x + 3*x^2. The SMT-LIB artifact isolates the final false sample-value claim as a QF_LRA contradiction, and Axeyum emits checked Farkas evidence."
     },
     {
+      "id": "bad-alternating-residual-rejected",
+      "claim": "The listed alternating residual table has uniform error 2/3.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_chebyshev_alternation_refutation",
+      "proof_status": "checked",
+      "data": {
+        "points": ["-1", "0", "1"],
+        "residual_polynomial": ["-1/2", "0", "1"],
+        "residual_values": ["1/2", "-1/2", "1/2"],
+        "signs": [1, -1, 1],
+        "actual_uniform_error": "1/2",
+        "claimed_uniform_error": "2/3",
+        "smt2_artifact": "artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-alternating-residual-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_bad_alternating_residual_artifact_emits_checked_farkas",
+        "certificate": "produce_lra_evidence emits Evidence::UnsatFarkas checked by Evidence::check for the replayed alternation conflict uniform_error = 1/2 and uniform_error = 2/3"
+      },
+      "notes": "The validator recomputes residual values 1/2,-1/2,1/2 and common magnitude 1/2. The SMT-LIB artifact isolates the final false uniform-error claim as a QF_LRA contradiction, and Axeyum emits checked Farkas evidence."
+    },
+    {
       "id": "general-chebyshev-system-lean-horizon",
       "claim": "General Chebyshev-system and minimax-approximation theorems require future Lean resources.",
       "expected_result": "not-run",

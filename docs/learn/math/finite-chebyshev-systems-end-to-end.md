@@ -2,8 +2,8 @@
 
 This lesson follows one exact finite Chebyshev-system resource from
 Vandermonde unisolvence replay to interpolation, alternating residual signs,
-checked duplicate-node rejection, and checked bad interpolation-sample
-rejection. It uses the
+checked duplicate-node rejection, checked bad interpolation-sample rejection,
+and checked bad alternation-magnitude rejection. It uses the
 [finite-chebyshev-systems-v0](../../../artifacts/examples/math/finite-chebyshev-systems-v0/)
 pack.
 
@@ -26,12 +26,13 @@ Concept rows:
 | `alternating-residual-witness` | `sat` | replay-only |
 | `bad-duplicate-node-grid-rejected` | `unsat` | checked |
 | `bad-interpolation-sample-rejected` | `unsat` | checked |
+| `bad-alternating-residual-rejected` | `unsat` | checked |
 | `general-chebyshev-system-lean-horizon` | `not-run` | lean-horizon |
 
 The positive rows replay finite exact-rational matrix and polynomial
 calculations. The negative rows are checked refutations of a false unisolvence
-claim and a false interpolation sample, with promoted QF_LRA/Farkas routes for
-the final exact-linear conflicts.
+claim, a false interpolation sample, and a false alternation uniform-error
+claim, with promoted QF_LRA/Farkas routes for the final exact-linear conflicts.
 General Chebyshev-system and minimax theorems remain Lean-horizon.
 
 ## Replay Vandermonde Unisolvence
@@ -114,6 +115,22 @@ The signs alternate `+, -, +`, and every absolute value is `1/2`. This is a
 finite alternation-style witness, not a proof of the full minimax alternation
 theorem.
 
+The checked bad alternation row keeps the same residual table but claims:
+
+```text
+uniform_error = 2/3
+```
+
+Exact replay recomputes the common absolute value as `1/2`, and the promoted
+solver-facing slice checks the final rational contradiction:
+
+```text
+uniform_error = 1/2
+uniform_error = 2/3
+```
+
+The route test emits checked `UnsatFarkas` evidence for this small conflict.
+
 ## Reject A Duplicate-Node Grid
 
 The bad row claims that the duplicate-node grid is unisolvent:
@@ -184,6 +201,7 @@ From the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_duplicate_node_grid_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_bad_interpolation_sample_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_bad_alternating_residual_artifact_emits_checked_farkas
 ```
 
 Expected output:
@@ -197,7 +215,7 @@ validated 1 foundational example pack(s)
 This lesson shows Axeyum's current Chebyshev-system resource pattern:
 
 ```text
-untrusted fast search -> grid, coefficients, residual, bad-grid, or bad-sample candidate
+untrusted fast search -> grid, coefficients, residual, bad-grid, bad-sample, or bad-error candidate
 trusted small checking -> exact rational replay plus checked Farkas conflict
 remaining horizon -> general Chebyshev, Haar, minimax, and compactness proofs
 ```

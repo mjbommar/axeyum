@@ -10246,6 +10246,63 @@ def validate_finite_chebyshev_systems(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "Evidence::check" not in certificate:
         fail("bad-interpolation-sample-rejected certificate must document checked Farkas evidence")
 
+    bad_alternation = checks["bad-alternating-residual-rejected"]
+    if bad_alternation["expected_result"] != "unsat":
+        fail("bad-alternating-residual-rejected must expect unsat")
+    if bad_alternation["proof_status"] != "checked":
+        fail("bad-alternating-residual-rejected must be checked")
+    if bad_alternation["validation"] != "finite_bad_chebyshev_alternation_refutation":
+        fail("bad-alternating-residual-rejected must use finite_bad_chebyshev_alternation_refutation validation")
+    data = bad_alternation.get("data", {})
+    points = require_fraction_vector("bad alternation points", data.get("points"))
+    residual_polynomial = require_polynomial(
+        "bad alternation residual_polynomial",
+        data.get("residual_polynomial"),
+    )
+    residual_values = require_fraction_vector("bad alternation residual_values", data.get("residual_values"))
+    signs = require_sign_list("bad alternation signs", data.get("signs"))
+    actual_uniform_error = require_fraction(
+        "bad alternation actual_uniform_error",
+        data.get("actual_uniform_error"),
+    )
+    claimed_uniform_error = require_fraction(
+        "bad alternation claimed_uniform_error",
+        data.get("claimed_uniform_error"),
+    )
+    if len(points) != len(residual_values) or len(points) != len(signs):
+        fail("bad-alternating-residual-rejected points, values, and signs must have equal length")
+    if [polynomial_eval(residual_polynomial, point) for point in points] != residual_values:
+        fail("bad-alternating-residual-rejected residual_values are incorrect")
+    if [fraction_sign(value) for value in residual_values] != signs:
+        fail("bad-alternating-residual-rejected signs are incorrect")
+    if actual_uniform_error <= 0:
+        fail("bad-alternating-residual-rejected actual_uniform_error must be positive")
+    if any(abs(value) != actual_uniform_error for value in residual_values):
+        fail("bad-alternating-residual-rejected residuals must share actual_uniform_error")
+    for left, right in zip(signs, signs[1:]):
+        if left == 0 or right == 0 or left == right:
+            fail("bad-alternating-residual-rejected adjacent signs must be nonzero and alternating")
+    if claimed_uniform_error == actual_uniform_error:
+        fail("bad-alternating-residual-rejected must document a false uniform error claim")
+    if actual_uniform_error != Fraction(1, 2) or claimed_uniform_error != Fraction(2, 3):
+        fail("bad-alternating-residual-rejected is fixed to uniform_error=1/2 versus claimed 2/3")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad alternation Chebyshev smt2_artifact", smt2_artifact)
+    check_source("bad alternation Chebyshev smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-alternating-residual-farkas-conflict.smt2"
+    ):
+        fail("bad-alternating-residual-rejected smt2_artifact must name the checked QF_LRA artifact")
+    regression = data.get("farkas_regression")
+    require_string("bad alternation Chebyshev farkas_regression", regression)
+    if "finite_chebyshev_bad_alternating_residual_artifact_emits_checked_farkas" not in regression:
+        fail("bad-alternating-residual-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad alternation Chebyshev certificate", certificate)
+    if "UnsatFarkas" not in certificate or "Evidence::check" not in certificate:
+        fail("bad-alternating-residual-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-chebyshev-system-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-chebyshev-system-lean-horizon must be not-run")

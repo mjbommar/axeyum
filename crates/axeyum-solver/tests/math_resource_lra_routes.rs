@@ -109,6 +109,9 @@ const FINITE_OPERATOR_BAD_OPERATOR_BOUND: &str = include_str!(
 const FINITE_CHEBYSHEV_BAD_INTERPOLATION_SAMPLE: &str = include_str!(
     "../../../artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-interpolation-sample-farkas-conflict.smt2"
 );
+const FINITE_CHEBYSHEV_BAD_ALTERNATING_RESIDUAL: &str = include_str!(
+    "../../../artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-alternating-residual-farkas-conflict.smt2"
+);
 const BOUNDED_DYNAMICS_BAD_INVARIANT_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/bounded-dynamics-v0/smt2/bad-invariant-bound-farkas-conflict.smt2"
 );
@@ -666,6 +669,14 @@ fn finite_chebyshev_bad_interpolation_sample_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-chebyshev-systems-v0 bad-interpolation-sample SMT-LIB artifact",
         FINITE_CHEBYSHEV_BAD_INTERPOLATION_SAMPLE,
+    );
+}
+
+#[test]
+fn finite_chebyshev_bad_alternating_residual_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-chebyshev-systems-v0 bad-alternating-residual SMT-LIB artifact",
+        FINITE_CHEBYSHEV_BAD_ALTERNATING_RESIDUAL,
     );
 }
 

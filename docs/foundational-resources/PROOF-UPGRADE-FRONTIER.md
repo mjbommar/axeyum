@@ -328,7 +328,7 @@ First targets:
   polynomial row)
 - [finite-chebyshev-systems-v0](../../artifacts/examples/math/finite-chebyshev-systems-v0/)
   (resource-backed Farkas regressions landed for the duplicate-node determinant
-  conflict and the bad interpolation-sample row)
+  conflict, bad interpolation-sample row, and bad alternation-magnitude row)
 - [polynomial-factorization-rational-v0](../../artifacts/examples/math/polynomial-factorization-rational-v0/)
   (resource-backed Farkas regression landed for the fixed irreducible-quadratic
   discriminant conflict after exact replay computes `D = -4`)
@@ -340,8 +340,9 @@ First targets:
 Secondary targets:
 
 - first secondary QF_LRA/Farkas target set covered; finite Chebyshev-system
-  determinant and interpolation replay now contribute functional-analysis /
-  numerical-analysis exact-linear regressions, metric-continuity now
+  determinant, interpolation, and alternation-magnitude replay now contribute
+  functional-analysis / numerical-analysis exact-linear regressions,
+  metric-continuity now
   contributes a topology / epsilon-delta exact-linear regression, and finite
   stochastic kernels now
   contribute a probability/statistics transition-row normalization regression.

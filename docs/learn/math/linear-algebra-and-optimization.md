@@ -127,10 +127,10 @@ affine threshold monotonicity, and bad midpoint-convexity rejection over exact
 rational data. The finite
 Chebyshev-system slice checks Vandermonde unisolvence, interpolation replay,
 alternating residual signs, duplicate-node rejection, and a checked bad
-interpolation sample over exact rational sample grids. The incidence-geometry
-slice checks line equations and non-parallel line intersections as tiny exact
-linear systems, then rejects a bad point-on-line row through QF_LRA/Farkas
-evidence. The
+interpolation sample plus a checked bad alternation-magnitude claim over exact
+rational sample grids. The incidence-geometry slice checks line equations and
+non-parallel line intersections as tiny exact linear systems, then rejects a
+bad point-on-line row through QF_LRA/Farkas evidence. The
 rigid-configuration slice treats pairwise squared-distance tables as finite
 matrix-like data, checks translation and congruent-triangle witnesses, and
 rejects a bad distance-table row through QF_LRA/Farkas evidence.
@@ -537,8 +537,10 @@ Vandermonde matrix on sample points `-1, 0, 1`:
 It recomputes determinant `2`, checks interpolation values for
 `2 - x + 3*x^2`, rejects a duplicate-node grid whose determinant is `0`, and
 rejects the false interpolation sample claim `p(1)=5` after replay computes
-`p(1)=4`. The bad-grid and bad-sample rows route their final exact-linear
-conflicts through checked QF_LRA/Farkas evidence.
+`p(1)=4`. It also checks the residual table `1/2, -1/2, 1/2` and rejects a
+malformed uniform-error claim `2/3` after replay computes `1/2`. The bad-grid,
+bad-sample, and bad-alternation rows route their final exact-linear conflicts
+through checked QF_LRA/Farkas evidence.
 
 Run the checks from the repository root:
 

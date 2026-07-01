@@ -43,7 +43,7 @@ These rows live in the
 | Does a Chebyshev recurrence prefix replay? | `finite-operator-v0` | fixed rational recurrence values such as `T0`, `T1`, `T2`, `T3` at `x = 1/2` | general Chebyshev polynomial theory |
 | Is a finite interpolation grid unisolvent? | `finite-chebyshev-systems-v0` | exact Vandermonde matrix and determinant replay | Haar-space and Chebyshev-system theorems |
 | Do finite samples match listed coefficients? | `finite-chebyshev-systems-v0` | exact evaluation-matrix times coefficient-vector replay plus checked bad-sample Farkas row | general interpolation and approximation theory |
-| Does a residual alternate on a finite grid? | `finite-chebyshev-systems-v0` | exact residual values, signs, and common absolute error | minimax and alternation theorems |
+| Does a residual alternate on a finite grid? | `finite-chebyshev-systems-v0` | exact residual values, signs, common absolute error, and checked bad-uniform-error Farkas row | minimax and alternation theorems |
 | Do spectral or characteristic-polynomial rows share the same route? | `spectral-linear-algebra-v0`, `matrix-invariants-v0` | exact matrix arithmetic plus checked Farkas rows for bad eigenpair or characteristic-polynomial claims | spectral theorem and general Cayley-Hamilton claims |
 
 ## Checkable Shapes
@@ -103,6 +103,17 @@ r(-1), r(0), r(1) = 1/2, -1/2, 1/2
 This is an alternation-style witness on three listed points, not a proof of the
 minimax alternation theorem.
 
+The bad alternation row keeps the same replayed residual table and rejects the
+false common-error claim:
+
+```text
+uniform_error = 1/2
+false claim: uniform_error = 2/3
+```
+
+After finite replay computes `1/2`, the final uniform-error conflict is checked
+as a QF_LRA/Farkas row.
+
 ## Use The Lessons
 
 Start with [Finite-Dimensional Operators](finite-operator-end-to-end.md) for
@@ -111,7 +122,8 @@ checked bad operator-bound row.
 
 Then read [Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md)
 for Vandermonde unisolvence, interpolation values, alternating residuals, and
-checked duplicate-node and bad interpolation-sample rejection.
+checked duplicate-node, bad interpolation-sample, and bad alternation-magnitude
+rejection.
 
 Use [Matrix Computation Index](matrix-computation-index.md) when you want the
 surrounding matrix-resource cluster: residuals, projections, eigenpairs,

@@ -136,7 +136,8 @@ It also rejects a duplicate-node grid by recomputing determinant `0` and a
 nonzero null vector, then checks the final false determinant-`1` claim through
 QF_LRA/Farkas evidence. The same pack rejects a false interpolation sample by
 replaying `p(1)=4` and checking the malformed `p(1)=5` claim through the same
-Farkas route.
+Farkas route, and rejects a false alternation uniform-error claim by replaying
+common residual magnitude `1/2` before checking the malformed `2/3` claim.
 
 For the Markov-chain row, it checks exact stochastic evolution:
 

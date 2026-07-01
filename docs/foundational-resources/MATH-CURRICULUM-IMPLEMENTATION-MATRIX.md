@@ -339,7 +339,8 @@ Build sequence:
     also checked by the shared QF_BV/DRAT route regression.
     `finite-chebyshev-systems-v0` now links
     `bad-duplicate-node-grid-rejected` and
-    `bad-interpolation-sample-rejected` to source-level QF_LRA/Farkas
+    `bad-interpolation-sample-rejected` plus
+    `bad-alternating-residual-rejected` to source-level QF_LRA/Farkas
     artifacts, checked by the `math_resource_lra_routes` regression.
     `finite-stochastic-kernels-v0` now links `bad-kernel-row-rejected` to
     `artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-kernel-row-farkas-conflict.smt2`,

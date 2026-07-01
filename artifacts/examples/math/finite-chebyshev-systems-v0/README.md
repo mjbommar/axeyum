@@ -11,8 +11,9 @@ The examples are:
 - an alternating residual sign-pattern witness on three sample points;
 - checked rejection of a degenerate duplicate-node interpolation grid;
 - checked rejection of a false interpolation sample value;
+- checked rejection of a false alternating-residual uniform error;
 - a QF_LRA/Farkas proof-route artifact for the duplicate-node determinant
-  and bad interpolation-sample conflicts;
+  bad interpolation-sample, and bad alternation-magnitude conflicts;
 - a general Chebyshev-space Lean-horizon row.
 
 ## Concepts
@@ -45,6 +46,12 @@ The bad interpolation-sample row has the same route:
 It follows exact coefficient replay for `p(1)=4` and rejects the final
 malformed claim `p(1)=5` with checked Farkas evidence.
 
+The bad alternating-residual row follows the finite residual replay
+`1/2, -1/2, 1/2`, then checks the malformed uniform-error claim:
+[`smt2/bad-alternating-residual-farkas-conflict.smt2`](smt2/bad-alternating-residual-farkas-conflict.smt2).
+It isolates the final exact-linear conflict `uniform_error = 1/2` and
+`uniform_error = 2/3`, and Axeyum emits checked `UnsatFarkas` evidence.
+
 This pack is finite checked evidence. It is not a proof of general Chebyshev
 systems, Haar spaces, minimax approximation, alternation theorems, compactness
 arguments, or infinite-dimensional functional analysis.
@@ -55,4 +62,5 @@ Validation:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_duplicate_node_grid_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_bad_interpolation_sample_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_bad_alternating_residual_artifact_emits_checked_farkas
 ```

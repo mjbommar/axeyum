@@ -205,6 +205,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-Chebyshev alternation QF_LRA row landed.**
+  `finite-chebyshev-systems-v0` now has a third checked Farkas row:
+  finite replay recomputes the alternating residual table
+  `1/2, -1/2, 1/2` for `r(x)=x^2-1/2`, while the malformed row claims common
+  uniform error `2/3`. The new SMT-LIB artifact isolates the final exact
+  conflict `uniform_error = 1/2` and `uniform_error = 2/3`; the shared
+  `math_resource_lra_routes` regression parses it and checks `UnsatFarkas`
+  evidence; and the validator pins the residual polynomial, values, signs,
+  actual/claimed uniform errors, artifact path, regression, and certificate
+  note. The Chebyshev pack docs, learner pages, operator index, proof frontier,
+  field matrix, and buildout ledgers now reference the row. Generated
+  dashboards and the public query summary now report 111 concept rows, 108
+  non-template packs, 561 expected checks, 245 checked rows, 245 replay-only
+  rows, and 71 Lean-horizon rows.
+
 - **Modular Fermat-unit QF_BV/DRAT row landed.**
   `modular-arithmetic-v0` now has a checked fixed-width residue proof route
   for the Fermat-style modulo-5 search. The finite replay row still enumerates

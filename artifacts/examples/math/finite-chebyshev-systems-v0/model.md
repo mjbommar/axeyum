@@ -57,6 +57,15 @@ at `-1, 0, 1`, giving residual values:
 
 The checker verifies nonzero alternating signs and common magnitude `1/2`.
 
+The bad alternating-residual row keeps this same table but claims uniform error
+`2/3`. The validator recomputes the residual values, signs, and common
+magnitude, then the solver-facing QF_LRA artifact rejects:
+
+```text
+uniform_error = 1/2
+uniform_error = 2/3
+```
+
 ## Bad Grid
 
 The bad-grid row uses duplicate sample points `0, 0, 1`. The checker recomputes
@@ -65,13 +74,16 @@ all listed sample points.
 
 ## Axeyum Route
 
-The finite replay computes the degenerate determinant and null vector. The
-solver-facing artifact then checks the final exact-rational conflict:
+The finite replay computes the degenerate determinant, null vector,
+interpolation value, and alternation magnitude. The solver-facing artifacts
+then check small exact-rational conflicts such as:
 
 ```text
 determinant = 0
 determinant = 1
+uniform_error = 1/2
+uniform_error = 2/3
 ```
 
-This is a QF_LRA/Farkas row. It does not prove general Chebyshev-system or
+These are QF_LRA/Farkas rows. They do not prove general Chebyshev-system or
 minimax theorems; those remain Lean-horizon claims.

@@ -148,7 +148,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-06-30): the public JSON layer reports
-111 concept rows, 108 non-template packs, 560 expected checks, 244 checked
+111 concept rows, 108 non-template packs, 561 expected checks, 245 checked
 rows, 245 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -322,11 +322,11 @@ functional-analysis/operator lane: field readiness over
 `functional_analysis_and_operator_theory`, the shared operator/Chebyshev
 bridge lookup, concept-scoped `bridge_finite_operator_chebyshev` Farkas pack
 and checked-row queries, and checked Farkas rows for finite operators, inner
-products, Chebyshev grids, interpolation/residual rows, spectral examples, and
-characteristic-polynomial arithmetic are smoke-checked through the committed
-JSON contract, while Banach/Hilbert/compact-operator/Haar-space/minimax/
-alternation-theorem and infinite-dimensional claims stay in the theorem-horizon
-lane.
+products, Chebyshev grids, interpolation/residual rows,
+alternation-magnitude refutations, spectral examples, and
+characteristic-polynomial arithmetic are smoke-checked through the committed JSON contract,
+while Banach/Hilbert/compact-operator/Haar-space/minimax/alternation-theorem
+and infinite-dimensional claims stay in the theorem-horizon lane.
 The first route-note pass has also landed on the high-use learner cluster
 pages for logic/proof, graph/discrete reasoning, linear algebra/optimization,
 probability/statistics, and algebra/number theory.
@@ -603,6 +603,7 @@ emitted resource certificate and require the independent checker to reject it;
 the foundational resource dashboards now report **108 promoted solver-reuse
 packs**, **0 non-benchmark-horizon packs**, and **0 unclassified packs** after
 the latest finite-specialization-order bad `T0` QF_UF/Alethe promotion,
+the latest finite-Chebyshev bad alternation-magnitude QF_LRA/Farkas promotion,
 the latest finite-cyclic-geometry bad diagonal-intersection QF_LRA/Farkas promotion,
 the latest finite-inversion-geometry bad inverse-coordinate QF_LRA/Farkas promotion,
 the latest finite-circle-geometry bad radius QF_LRA/Farkas promotion,
