@@ -232,7 +232,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `divisibility-and-euclid` | `number_theory` | `gcd-bezout-v0` | GCD, Bezout witness replay, divisibility checks. |
 | `modular-arithmetic` | `number_theory`, `abstract_algebra` | `modular-arithmetic-v0`, `finite-ideals-v0` | Congruences, inverses, CRT, fixed-modulus enumeration, QF_LIA nonunit Diophantine obstruction, modular ring ideals, and quotient rings. |
 | `groups` | `abstract_algebra` | `finite-groups-v0`, `finite-algebra-homomorphisms-v0`, `finite-monoids-v0`, `finite-permutation-groups-v0`, `finite-group-actions-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-modules-v0`, `finite-tensor-products-v0` | Cayley-table closure, identity, inverse, associativity, homomorphism, kernel/image, quotient, finite monoids, units/idempotents, finite permutation groups, cycle/sign replay, finite group actions, orbit/stabilizer replay, Burnside counting, vector-addition groups, dual-space additive groups, module-addition groups, finite tensor-product additive groups, and induced-map checks. |
-| `rings` | `abstract_algebra` | `finite-rings-v0`, `finite-algebra-homomorphisms-v0`, `finite-modules-v0`, `finite-ideals-v0` | Two-operation table checks, distributivity, zero divisors, ring-homomorphism preservation, ideals, quotient rings, and finite module actions over rings. |
+| `rings` | `abstract_algebra` | `finite-rings-v0`, `finite-algebra-homomorphisms-v0`, `finite-modules-v0`, `finite-ideals-v0` | Two-operation table checks, distributivity, multiplicative identity, zero divisors, ring-homomorphism preservation, ideals, quotient rings, and finite module actions over rings. |
 | `fields` | `abstract_algebra`, `number_theory` | `finite-fields-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-tensor-products-v0`, `polynomial-factorization-rational-v0` | Field axioms over small prime fields, composite modulus counterexamples, finite vector spaces over `F2`, covectors and dual bases, bilinear maps, tensor-product replay, and rational polynomial arithmetic over `Q[x]`. |
 | `polynomials` | `abstract_algebra`, `real_analysis`, `complex_analysis` | `polynomial-identities-v0`, `polynomial-factorization-rational-v0`, `generating-functions-v0`, `finite-root-finding-v0`, `finite-circle-geometry-v0`, `finite-inversion-geometry-v0`, `finite-cyclic-geometry-v0` | Fixed-degree identities, factor theorem, root witness replay, rational factor products, polynomial division, Euclidean GCD, square-free decomposition, irreducible-quadratic rejection with QF_LRA/Farkas evidence, coefficient extraction, finite convolution, exact polynomial evaluation inside bisection/Newton steps, finite circle equations/tangent/chord dot products, finite inversion image/distance-product replay, and finite cyclic-configuration replay. |
 | `sequences-and-limits` | `real_analysis`, `topology` | `sequence-limit-shadow-v0`, `bounded-monotone-sequence-v0`, `finite-recurrence-prefix-v0`, `real-analysis-rational-v0`, `generating-functions-v0` | Bounded epsilon/N and epsilon-delta templates, algebraic sequence checks, finite monotone-prefix/supremum/tail-gap replay, finite recurrence-prefix and companion-matrix replay, and finite generating-function prefixes; general limits marked Lean-horizon. |
@@ -446,12 +446,14 @@ action orbit/stabilizer replay, checked QF_UF/Alethe bad-nonbijection
 rejection, and a general permutation-group Lean-horizon row. `finite-group-actions-v0` now
 validates finite action laws, orbit/stabilizer replay, orbit-stabilizer
 cardinality, Burnside fixed-point counting, checked QF_UF/Alethe bad
-identity-action rejection, and a general group-action Lean-horizon row. `finite-monoids-v0` now validates finite monoid
-identity/associativity, transformation-composition table replay from finite
-functions, units/idempotents, a checked QF_UF/Alethe non-associative table
-rejection, and a general monoid Lean-horizon row. `finite-rings-v0` now validates finite ring tables,
-zero-divisor replay, a checked non-distributive table, and a resource-backed
-QF_BV/DRAT proof-route row for the bad distributivity conflict.
+identity-action rejection, and a general group-action Lean-horizon row.
+`finite-monoids-v0` now validates finite monoid identity/associativity,
+transformation-composition table replay from finite functions,
+units/idempotents, a checked QF_UF/Alethe non-associative table rejection, and
+a general monoid Lean-horizon row. `finite-rings-v0` now validates finite ring
+tables, zero-divisor replay, checked non-distributive and bad
+multiplicative-identity tables, and resource-backed QF_BV/DRAT proof-route
+rows for both conflicts.
 `finite-algebra-homomorphisms-v0` now extends the algebra core with finite
 group-homomorphism replay, kernel/image recomputation, quotient and induced-map
 checks, ring-homomorphism replay, a QF_UF/Alethe homomorphism-preservation row,

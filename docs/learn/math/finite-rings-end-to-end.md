@@ -19,12 +19,14 @@ Concept rows:
 | `z4-zero-divisor-witness` | `sat` | replay-only |
 | `non-distributive-table-rejected` | `unsat` | checked |
 | `non-distributive-table-qf-bv-drat` | `unsat` | checked DRAT |
+| `bad-multiplicative-identity-rejected` | `unsat` | checked |
+| `bad-multiplicative-identity-qf-bv-drat` | `unsat` | checked DRAT |
 
 The checked rows start from finite table replay. The QF_BV row additionally
-records the bad distributivity counterexample as a fixed-width bit-vector
-contradiction whose generated CNF carries a rechecked DRAT certificate. The pack
-does not claim ideal theory, Noetherian/PID/UFD structure, integral-domain
-theory in general, or quantified ring theory.
+records the bad distributivity and bad multiplicative-identity counterexamples
+as fixed-width bit-vector contradictions whose generated CNFs carry rechecked
+DRAT certificates. The pack does not claim ideal theory, Noetherian/PID/UFD
+structure, integral-domain theory in general, or quantified ring theory.
 
 ## Encode
 
@@ -90,7 +92,7 @@ So `Z/4Z` is a finite ring with a zero divisor. This fixed witness is enough to
 reject an integral-domain claim for this ring, but it is not a theorem about
 all rings.
 
-## Check The Refutation
+## Check The Distributivity Refutation
 
 The bad row uses the carrier `{0,1}` with XOR-like addition:
 
@@ -117,20 +119,44 @@ a*b + a*c = 1*0 + 1*0 = 1 + 1 = 0
 Because `1 != 0`, the fixed claim that this table satisfies distributivity is
 rejected.
 
+## Check The Identity Refutation
+
+The second bad row uses the same carrier `{0,1}` with XOR-like addition, but its
+multiplication table is constantly zero:
+
+```text
+x*y = 0
+```
+
+The row claims `1` is a multiplicative identity. The validator isolates that
+specific failure:
+
+```text
+one = 1
+element = 1
+one * element = 0
+required      = 1
+```
+
+Addition still forms a finite abelian group, multiplication is associative, and
+distributivity holds for this zero multiplication table. The rejected part is
+only the claimed identity law.
+
 ## Check The Bit-Blast Certificate
 
-The pack also records the same failing table row as a QF_BV artifact:
+The pack also records both failing table rows as QF_BV artifacts:
 
 ```text
 artifacts/examples/math/finite-rings-v0/smt2/non-distributive-table-bitblast-conflict.smt2
+artifacts/examples/math/finite-rings-v0/smt2/bad-multiplicative-identity-bitblast-conflict.smt2
 ```
 
-The formula asserts that the same one-bit table cell is both `#b1` and `#b0`.
-The resource regression parses that SMT-LIB file, proves it `unsat`, exports the
-bit-blasted DIMACS plus DRAT refutation, and runs `UnsatProof::recheck` on the
-saved text. This checks the clausal refutation; the finite table-to-term
+Each formula asserts that the same one-bit table cell is both `#b1` and `#b0`.
+The resource regression parses the SMT-LIB files, proves them `unsat`, exports
+the bit-blasted DIMACS plus DRAT refutation, and runs `UnsatProof::recheck` on
+the saved text. This checks the clausal refutations; the finite table-to-term
 lowering and bit-blast/Tseitin lowering remain named trust steps until a Lean
-reconstruction covers the original formula directly.
+reconstruction covers the original formulas directly.
 
 ## Run It
 
@@ -139,6 +165,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-rings-v0
 cargo test -p axeyum-solver --test math_resource_bv_routes finite_rings_bad_distributivity_emits_checked_drat
+cargo test -p axeyum-solver --test math_resource_bv_routes finite_rings_bad_multiplicative_identity_emits_checked_drat
 ```
 
 Expected output:
@@ -153,7 +180,7 @@ This lesson shows Axeyum's resource pattern for finite algebraic structures:
 
 ```text
 untrusted fast search -> candidate addition table, multiplication table, witness
-trusted small checking -> ring axioms, zero-divisor replay, counterexample row
+trusted small checking -> ring axioms, zero-divisor replay, bad-table rows
 trusted small checking -> DIMACS/DRAT recheck for the bit-blasted contradiction
 ```
 

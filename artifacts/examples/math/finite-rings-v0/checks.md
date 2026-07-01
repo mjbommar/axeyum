@@ -41,3 +41,31 @@ a*(b+c)       = 1
 The QF_BV artifact records the resulting fixed-width contradiction. The solver
 regression parses that artifact, proves it `unsat`, exports the bit-blasted
 CNF with a DRAT refutation, and rechecks the certificate independently.
+
+## `bad-multiplicative-identity-rejected`
+
+Expected result: `unsat`.
+
+The checked query is the fixed false claim that the listed two-operation table
+has `1` as a multiplicative identity. The table has XOR-like addition and zero
+multiplication, so the additive group and multiplication associativity replay,
+but the identity law fails:
+
+```text
+1 * 1 = 0
+```
+
+## `bad-multiplicative-identity-qf-bv-drat`
+
+Expected result: `unsat`.
+
+For the claimed identity `one=1` and element `1`, the finite table computes:
+
+```text
+one * element = 0
+required      = 1
+```
+
+The QF_BV artifact records the resulting fixed-width contradiction. The solver
+regression parses that artifact, proves it `unsat`, exports the bit-blasted
+CNF with a DRAT refutation, and rechecks the certificate independently.

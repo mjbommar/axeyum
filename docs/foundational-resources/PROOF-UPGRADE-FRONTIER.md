@@ -633,7 +633,8 @@ Graduation:
 First targets:
 
 - [finite-rings-v0](../../artifacts/examples/math/finite-rings-v0/)
-  (resource-backed QF_BV/DRAT regression landed for the bad distributivity row)
+  (resource-backed QF_BV/DRAT regressions landed for the bad distributivity and
+  bad multiplicative-identity rows)
 - [finite-fields-v0](../../artifacts/examples/math/finite-fields-v0/)
   (resource-backed QF_BV/DRAT regression landed for the composite-modulus
   no-inverse row; the route-anatomy lesson now follows this same source

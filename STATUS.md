@@ -205,6 +205,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-rings bad multiplicative-identity QF_BV row landed.**
+  `finite-rings-v0` now has a second fixed-width ring-table contradiction:
+  XOR addition, zero multiplication, and a claimed identity `1`. Finite replay
+  isolates `1*1=0` while the identity law requires `1`; the new SMT-LIB
+  artifact is checked by `math_resource_bv_routes` through DIMACS/DRAT
+  evidence, and the pack validator, learner page, generated dashboards,
+  buildout ledgers, `PLAN.md`, and public query counts now reflect
+  552 expected checks and 236 checked rows.
+
 - **Bad finite group-homomorphism Alethe row landed.**
   `finite-algebra-homomorphisms-v0` now has a second source-linked
   QF_UF/Alethe row: after finite table replay finds the malformed map's
@@ -290,7 +299,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   the practical plan for turning the math curriculum into educational content,
   ontology/bridge rows, example packs, proof artifacts, solver-feedback rows,
   rules/law transfer examples, and eventual library boundaries. The document
-  records the current 111-concept / 108-pack / 550-check / 108-promoted-pack
+  records the current 111-concept / 108-pack / 552-check / 108-promoted-pack
   baseline, R0-R6 gates, staged learner/proof/solver work, field-specific next
   work for delta-epsilon balls, graph runtime pathologies, random matrices,
   LU/matrix computation, topology quotients, Chebyshev/operator rows, and

@@ -65,7 +65,7 @@ The Phase M8 threshold is met for size and repeated structure:
 
 The current pack-level evidence mix is still intentionally conservative:
 
-- `checked`: 234 expected-result rows
+- `checked`: 236 expected-result rows
 - `replay-only`: 245 expected-result rows
 - `lean-horizon`: 71 expected-result rows
 - `not-run`: 71 expected-result rows

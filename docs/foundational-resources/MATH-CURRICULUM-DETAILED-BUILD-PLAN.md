@@ -42,8 +42,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 550 expected checks.
-- 234 checked proof/evidence rows.
+- 552 expected checks.
+- 236 checked proof/evidence rows.
 - 245 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -847,6 +847,12 @@ Pick one row per commit unless the change is purely navigational.
     queries. Complete-lattice fixed-point theorems, Boolean representation
     theorems, domain theory, Galois connections, and infinite order theory
     remain Lean-horizon.
+99. Landed: extend `finite-rings-v0` with a second fixed-width
+    QF_BV/DRAT route for a bad multiplicative identity row. Finite table
+    replay checks the XOR additive group and associative zero multiplication,
+    then isolates `1*1=0` while the claimed identity law requires `1`; the
+    source SMT-LIB artifact and `math_resource_bv_routes` regression check the
+    resulting one-bit contradiction without promoting general ring theory.
 
 ## Validation Checklist
 

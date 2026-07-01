@@ -38,9 +38,11 @@ The current algebra path is finite and exact. It checks finite group Cayley
 tables, finite ring operation tables, gcd/Bezout witnesses, CRT witnesses,
 modular inverses, composite non-units with no inverse, and a Fermat-style finite
 unit enumeration. The finite-groups pack now also carries a QF_UF/Alethe
-binary-operation congruence row. The finite-rings pack adds distributivity checks and a `Z/4Z`
-zero-divisor witness. The finite-monoids pack checks a finite transformation
-monoid under function composition, recomputes its units and idempotents, and
+binary-operation congruence row. The finite-rings pack adds distributivity
+checks and a `Z/4Z` zero-divisor witness, then promotes both a bad
+distributivity row and a bad multiplicative-identity row through QF_BV/DRAT
+evidence. The finite-monoids pack checks a finite transformation monoid under
+function composition, recomputes its units and idempotents, and
 rejects a non-associative table with checked QF_UF/Alethe evidence. The
 finite-permutation-groups pack checks `S3` as bijective function tables under
 composition, recomputes cycle lengths and signs, checks the sign homomorphism,

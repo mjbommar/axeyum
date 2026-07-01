@@ -571,9 +571,10 @@ conflict through a checked QF_UF/Alethe regression, while finite continuous maps
 now promote a bad preimage-membership conflict through the same checked route.
 The first
 QF_BV bit-blast/DRAT resource promotion now covers the
-finite-rings bad distributivity row, the finite-fields composite no-inverse row,
-and the graph-coloring one-bit triangle two-coloring obstruction, with bounded
-number theory now promoted for the modulo-7 quadratic nonresidue row; finite
+finite-rings bad distributivity and bad multiplicative-identity rows, the
+finite-fields composite no-inverse row, and the graph-coloring one-bit
+triangle two-coloring obstruction, with bounded number theory now promoted for
+the modulo-7 quadratic nonresidue row; finite
 compactness now contributes checked DRAT/LRAT evidence for a bad open-cover row,
 finite connectedness now contributes checked DRAT/LRAT evidence for a bad
 connectedness row, finite topology now contributes checked DRAT/LRAT evidence

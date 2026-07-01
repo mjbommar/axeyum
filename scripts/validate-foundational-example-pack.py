@@ -5910,6 +5910,80 @@ def validate_finite_rings(expected: dict[str, Any]) -> None:
     if "DRAT" not in certificate or "bit-blast/Tseitin" not in certificate:
         fail("non-distributive-table-qf-bv-drat certificate must document DRAT and lowering trust")
 
+    bad_identity = checks["bad-multiplicative-identity-rejected"]
+    if bad_identity["expected_result"] != "unsat":
+        fail("bad-multiplicative-identity-rejected must expect unsat")
+    values = single_witness_values(bad_identity, witnesses)
+    carrier, zero, one, add_op, mul_op = require_ring_tables("bad identity table", values)
+    if one is None:
+        fail("bad-multiplicative-identity-rejected must include a claimed one")
+    failures = ring_axiom_failures(carrier, zero, one, add_op, mul_op)
+    if not failures:
+        fail("bad-multiplicative-identity-rejected unexpectedly satisfies the ring axioms")
+    if "multiplicative identity fails" not in failures[0]:
+        fail("bad-multiplicative-identity-rejected must fail multiplicative identity specifically")
+    if group_axiom_failures(carrier, zero, add_op):
+        fail("bad-multiplicative-identity-rejected addition should still be a group")
+    if not is_commutative(carrier, add_op):
+        fail("bad-multiplicative-identity-rejected addition should remain commutative")
+    if not is_associative(carrier, mul_op):
+        fail("bad-multiplicative-identity-rejected multiplication should remain associative")
+    if distributivity_failures(carrier, add_op, mul_op):
+        fail("bad-multiplicative-identity-rejected should isolate identity, not distributivity")
+    if table_op(mul_op, one, one) == one:
+        fail("bad-multiplicative-identity-rejected claimed one unexpectedly acts as identity")
+
+    identity_qf_bv = checks["bad-multiplicative-identity-qf-bv-drat"]
+    if identity_qf_bv["expected_result"] != "unsat":
+        fail("bad-multiplicative-identity-qf-bv-drat must expect unsat")
+    if identity_qf_bv["proof_status"] != "checked":
+        fail("bad-multiplicative-identity-qf-bv-drat must be checked")
+    if identity_qf_bv["validation"] != "qf_bv_bitblast_drat":
+        fail("bad-multiplicative-identity-qf-bv-drat must use qf_bv_bitblast_drat validation")
+    values = single_witness_values(identity_qf_bv, witnesses)
+    carrier, zero, one, add_op, mul_op = require_ring_tables(
+        "bad multiplicative identity QF_BV table", values
+    )
+    if one is None:
+        fail("bad-multiplicative-identity-qf-bv-drat must include a claimed one")
+    data = identity_qf_bv.get("data", {})
+    counterexample = data.get("counterexample")
+    if not isinstance(counterexample, dict):
+        fail("bad-multiplicative-identity-qf-bv-drat counterexample must be an object")
+    identity_value = counterexample.get("one")
+    element = counterexample.get("element")
+    product_value = counterexample.get("product")
+    required_value = counterexample.get("required")
+    for label, value in (
+        ("one", identity_value),
+        ("element", element),
+        ("product", product_value),
+        ("required", required_value),
+    ):
+        require_string(f"bad-multiplicative-identity-qf-bv-drat counterexample {label}", value)
+        if value not in set(carrier):
+            fail(f"bad-multiplicative-identity-qf-bv-drat counterexample {label} not in carrier")
+    if identity_value != one:
+        fail("bad-multiplicative-identity-qf-bv-drat counterexample one does not match table one")
+    if required_value != element:
+        fail("bad-multiplicative-identity-qf-bv-drat required value should be the element")
+    computed_product = table_op(mul_op, identity_value, element)
+    if computed_product != product_value:
+        fail("bad-multiplicative-identity-qf-bv-drat product does not match table")
+    if product_value == required_value:
+        fail("bad-multiplicative-identity-qf-bv-drat counterexample must be a real conflict")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad-multiplicative-identity-qf-bv-drat smt2_artifact", smt2_artifact)
+    check_source("bad-multiplicative-identity-qf-bv-drat smt2_artifact", smt2_artifact)
+    proof_regression = data.get("proof_regression")
+    require_string("bad-multiplicative-identity-qf-bv-drat proof_regression", proof_regression)
+    if "finite_rings_bad_multiplicative_identity_emits_checked_drat" not in proof_regression:
+        fail("bad-multiplicative-identity-qf-bv-drat proof_regression must name the BV route test")
+    certificate = data.get("certificate")
+    require_string("bad-multiplicative-identity-qf-bv-drat certificate", certificate)
+    if "DRAT" not in certificate or "bit-blast/Tseitin" not in certificate:
+        fail("bad-multiplicative-identity-qf-bv-drat certificate must document DRAT and lowering trust")
+
 
 def require_counting_int(context: str, value: Any) -> int:
     item = require_int(context, value)

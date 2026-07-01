@@ -42,6 +42,23 @@
           ["1", "1"]
         ]
       }
+    },
+    {
+      "id": "bad-identity-table",
+      "description": "A two-element table with XOR-like addition, zero multiplication, and a claimed multiplicative identity 1.",
+      "values": {
+        "carrier": ["0", "1"],
+        "zero": "0",
+        "one": "1",
+        "add": [
+          ["0", "1"],
+          ["1", "0"]
+        ],
+        "mul": [
+          ["0", "0"],
+          ["0", "0"]
+        ]
+      }
     }
   ],
   "checks": [
@@ -92,6 +109,35 @@
         "certificate": "export_qf_bv_unsat_proof emits a DRAT certificate for the bit-blasted CNF; UnsatProof::recheck validates the CNF refutation while finite table lowering and bit-blast/Tseitin remain explicit trust steps until Lean reconstruction covers the original formula."
       },
       "notes": "For a=1,b=0,c=0 the source table computes a*(b+c)=1 and (a*b)+(a*c)=0. The SMT-LIB artifact records that conflict as a one-bit BV contradiction whose DIMACS/DRAT pair is rechecked by the regression."
+    },
+    {
+      "id": "bad-multiplicative-identity-rejected",
+      "claim": "The listed two-operation table with claimed one satisfies the finite ring axioms.",
+      "expected_result": "unsat",
+      "validation": "finite_ring_table_replay",
+      "proof_status": "checked",
+      "witnesses": ["bad-identity-table"],
+      "notes": "The validator confirms the additive group and associative multiplication but rejects the claimed identity because 1*1=0 while the identity law requires 1."
+    },
+    {
+      "id": "bad-multiplicative-identity-qf-bv-drat",
+      "claim": "The bad multiplicative-identity row lowers to a fixed-width QF_BV contradiction with checked DRAT evidence.",
+      "expected_result": "unsat",
+      "validation": "qf_bv_bitblast_drat",
+      "proof_status": "checked",
+      "witnesses": ["bad-identity-table"],
+      "data": {
+        "counterexample": {
+          "one": "1",
+          "element": "1",
+          "product": "0",
+          "required": "1"
+        },
+        "smt2_artifact": "artifacts/examples/math/finite-rings-v0/smt2/bad-multiplicative-identity-bitblast-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_bv_routes finite_rings_bad_multiplicative_identity_emits_checked_drat",
+        "certificate": "export_qf_bv_unsat_proof emits a DRAT certificate for the bit-blasted CNF; UnsatProof::recheck validates the CNF refutation while finite table lowering and bit-blast/Tseitin remain explicit trust steps until Lean reconstruction covers the original formula."
+      },
+      "notes": "For the claimed identity one=1 and element=1, the source table computes 1*1=0 even though the identity law requires the result to be 1. The SMT-LIB artifact records that conflict as a one-bit BV contradiction whose DIMACS/DRAT pair is rechecked by the regression."
     }
   ]
 }

@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 550 expected checks.
-- 234 checked proof/evidence rows.
+- 552 expected checks.
+- 236 checked proof/evidence rows.
 - 245 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1753,6 +1753,13 @@ Pick one item per commit unless the change is purely navigational.
      emits and checks DRAT/LRAT evidence, and the consumer smoke now exercises
      `bridge_finite_boolean_algebra` checked-row drilldowns without promoting
      complete-lattice or infinite order-theory claims.
+110. Landed: extend the fixed-width finite-ring QF_BV/DRAT lane with the
+     `bad-multiplicative-identity-qf-bv-drat` row in `finite-rings-v0`.
+     Finite table replay isolates `1*1=0` under zero multiplication while the
+     claimed identity law requires `1`; the new SMT-LIB artifact is checked by
+     `math_resource_bv_routes`, and the learner page now distinguishes the
+     distributivity and identity failures without promoting general ring
+     theory.
 
 ## Validation Checklist
 
