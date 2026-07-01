@@ -5,7 +5,7 @@
 //!
 //! # What this decides
 //!
-//! Given constraints `Σ_j aᵢⱼ·xⱼ  ⋈  bᵢ` (`⋈ ∈ {≤, ≥, =}`) over rational
+//! Given constraints `Σ_j aᵢⱼ·xⱼ  ⋈  bᵢ` (`⋈ ∈ {≤, ≥, =, <, >}`) over rational
 //! variables, [`feasible`] returns:
 //!
 //! - [`SimplexOutcome::Feasible`] with a satisfying rational point `x` (directly
@@ -19,11 +19,14 @@
 //!   (never a wrong verdict — the same `checked_*` discipline as the rest of the
 //!   solver).
 //!
-//! # Scope of this slice (P1.9 · T1.9.1)
+//! # Scope
 //!
-//! Non-strict rows (`≤`, `≥`, `=`) only. Strict inequalities (`<`, `>`) via the
-//! δ-relaxation and the routing into [`crate::lra`] are the next slices
-//! (T1.9.2+). The engine itself is the reusable core.
+//! All of `≤`, `≥`, `=`, `<`, `>` — strict rows are exact via the **δ-relaxation**
+//! (values in the ordered field `ℚ(δ)`; see [`Delta`]), and a `Feasible` verdict
+//! materializes a concrete rational witness by choosing `δ` small enough. Still to
+//! come (P1.9 · T1.9.2+): routing into [`crate::lra`] behind a size threshold, and
+//! Farkas-certificate *extraction* from the tableau (T1.9.3; the verifier
+//! [`check_farkas`] is already here).
 //!
 //! # Soundness
 //!
@@ -46,6 +49,10 @@ pub enum Rel {
     Ge,
     /// `Σ aⱼ·xⱼ = b`.
     Eq,
+    /// `Σ aⱼ·xⱼ < b` (strict; handled exactly via the δ-relaxation).
+    Lt,
+    /// `Σ aⱼ·xⱼ > b` (strict).
+    Gt,
 }
 
 /// One linear constraint `Σ coeffs[j]·x[j] ⋈ rhs` over the shared variable set
@@ -92,6 +99,56 @@ fn cmp(a: Rational, b: Rational) -> R<core::cmp::Ordering> {
     a.checked_cmp(&b).ok_or(Overflow)
 }
 
+/// A value `c + k·δ` in the ordered field `ℚ(δ)` with `δ` a positive infinitesimal
+/// (Dutertre–de Moura §3): the δ-relaxation that makes *strict* inequalities exact.
+/// A strict upper bound `x < b` becomes the ordinary bound `x ≤ b − δ` (i.e.
+/// `(b, −1)`); a strict lower bound `x > b` becomes `x ≥ b + δ` (`(b, +1)`). All
+/// tableau values and bounds live in `ℚ(δ)`; coefficients stay rational.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Delta {
+    c: Rational,
+    k: Rational,
+}
+
+impl Delta {
+    fn num(c: Rational) -> Delta {
+        Delta {
+            c,
+            k: Rational::zero(),
+        }
+    }
+    fn zero() -> Delta {
+        Delta::num(Rational::zero())
+    }
+    fn add(self, o: Delta) -> R<Delta> {
+        Ok(Delta {
+            c: add(self.c, o.c)?,
+            k: add(self.k, o.k)?,
+        })
+    }
+    fn sub(self, o: Delta) -> R<Delta> {
+        Ok(Delta {
+            c: sub(self.c, o.c)?,
+            k: sub(self.k, o.k)?,
+        })
+    }
+    /// Scale by a rational (coefficients are rational, so this stays in `ℚ(δ)`).
+    fn scale(self, s: Rational) -> R<Delta> {
+        Ok(Delta {
+            c: mul(self.c, s)?,
+            k: mul(self.k, s)?,
+        })
+    }
+    /// Lexicographic order on `(c, k)` — the total order of `ℚ(δ)` for infinitesimal
+    /// `δ > 0`.
+    fn cmp(self, o: Delta) -> R<core::cmp::Ordering> {
+        Ok(match cmp(self.c, o.c)? {
+            core::cmp::Ordering::Equal => cmp(self.k, o.k)?,
+            ord => ord,
+        })
+    }
+}
+
 /// Decide feasibility of the conjunction of `constraints` over `nvars` variables.
 ///
 /// See the module docs for the outcome contract. `nvars` must equal every
@@ -130,13 +187,15 @@ struct Tableau {
     /// `row[i][v]` = coefficient of nonbasic variable `v` in the expression for the
     /// basic variable of row `i`. (Columns for currently-basic variables are 0.)
     row: Vec<Vec<Rational>>,
-    /// Current value of every variable.
-    value: Vec<Rational>,
+    /// Current value of every variable, in `ℚ(δ)`.
+    value: Vec<Delta>,
     /// Lower / upper bound of every variable (`None` = unbounded on that side).
-    lower: Vec<Option<Rational>>,
-    upper: Vec<Option<Rational>>,
+    lower: Vec<Option<Delta>>,
+    upper: Vec<Option<Delta>>,
     /// Whether each variable is currently basic.
     is_basic: Vec<bool>,
+    /// The original input constraints, retained for concrete-witness materialization.
+    constraints: Vec<Constraint>,
 }
 
 impl Tableau {
@@ -157,19 +216,31 @@ impl Tableau {
             for (j, &a) in c.coeffs.iter().enumerate() {
                 row[i][j] = a;
             }
-            // Bounds from the comparator: slackᵢ ⋈ bᵢ.
+            // Bounds from the comparator: slackᵢ ⋈ bᵢ, in ℚ(δ). Strict `<`/`>`
+            // shrink the bound by one infinitesimal: `x < b` ⇔ `x ≤ b − δ`.
+            let b = Delta::num(c.rhs);
+            let b_minus_d = Delta {
+                c: c.rhs,
+                k: Rational::integer(-1),
+            };
+            let b_plus_d = Delta {
+                c: c.rhs,
+                k: Rational::integer(1),
+            };
             match c.rel {
-                Rel::Le => upper[slack] = Some(c.rhs),
-                Rel::Ge => lower[slack] = Some(c.rhs),
+                Rel::Le => upper[slack] = Some(b),
+                Rel::Ge => lower[slack] = Some(b),
                 Rel::Eq => {
-                    lower[slack] = Some(c.rhs);
-                    upper[slack] = Some(c.rhs);
+                    lower[slack] = Some(b);
+                    upper[slack] = Some(b);
                 }
+                Rel::Lt => upper[slack] = Some(b_minus_d),
+                Rel::Gt => lower[slack] = Some(b_plus_d),
             }
         }
 
         // Initial assignment: nonbasic problem vars = 0; each slack = Σ aᵢⱼ·0 = 0.
-        let value = vec![Rational::zero(); n];
+        let value = vec![Delta::zero(); n];
         Tableau {
             n,
             nvars,
@@ -180,20 +251,21 @@ impl Tableau {
             lower,
             upper,
             is_basic,
+            constraints: constraints.to_vec(),
         }
     }
 
     /// Whether `v`'s value is below its lower bound.
     fn below_lower(&self, v: usize) -> R<bool> {
         Ok(match self.lower[v] {
-            Some(lo) => cmp(self.value[v], lo)? == core::cmp::Ordering::Less,
+            Some(lo) => self.value[v].cmp(lo)? == core::cmp::Ordering::Less,
             None => false,
         })
     }
     /// Whether `v`'s value is above its upper bound.
     fn above_upper(&self, v: usize) -> R<bool> {
         Ok(match self.upper[v] {
-            Some(hi) => cmp(self.value[v], hi)? == core::cmp::Ordering::Greater,
+            Some(hi) => self.value[v].cmp(hi)? == core::cmp::Ordering::Greater,
             None => false,
         })
     }
@@ -201,14 +273,14 @@ impl Tableau {
     /// Can nonbasic `v` increase (strictly below its upper bound, or unbounded)?
     fn can_increase(&self, v: usize) -> R<bool> {
         Ok(match self.upper[v] {
-            Some(hi) => cmp(self.value[v], hi)? == core::cmp::Ordering::Less,
+            Some(hi) => self.value[v].cmp(hi)? == core::cmp::Ordering::Less,
             None => true,
         })
     }
     /// Can nonbasic `v` decrease (strictly above its lower bound, or unbounded)?
     fn can_decrease(&self, v: usize) -> R<bool> {
         Ok(match self.lower[v] {
-            Some(lo) => cmp(self.value[v], lo)? == core::cmp::Ordering::Greater,
+            Some(lo) => self.value[v].cmp(lo)? == core::cmp::Ordering::Greater,
             None => true,
         })
     }
@@ -231,8 +303,9 @@ impl Tableau {
                 }
             }
             let Some((r, too_low)) = viol else {
-                // All bounds satisfied → feasible. Return the problem-var values.
-                return Ok(SimplexOutcome::Feasible(self.value[..self.nvars].to_vec()));
+                // All bounds satisfied → feasible. Materialize a concrete rational
+                // point from the δ-assignment (choose δ small enough).
+                return Ok(SimplexOutcome::Feasible(self.materialize()?));
             };
 
             let b = self.basic[r];
@@ -285,7 +358,7 @@ impl Tableau {
     // The pivot rewrites parallel dense rows by column index `v`, indexing several
     // arrays at once — a plain range loop is the clearest form here.
     #[allow(clippy::needless_range_loop)]
-    fn pivot_and_update(&mut self, r: usize, enter: usize, target: Rational) -> R<()> {
+    fn pivot_and_update(&mut self, r: usize, enter: usize, target: Delta) -> R<()> {
         let leave = self.basic[r];
         let a_re = self.row[r][enter];
         // Solve row r for `enter`:  leave = Σ a_rv·v  ⇒
@@ -312,8 +385,9 @@ impl Tableau {
         // Determine how far `enter` must move so that `leave` reaches `target`.
         //   leave_old = value[leave]; enter changes by θ; leave changes by a_re·θ.
         //   want leave_new = target ⇒ θ = (target - value[leave]) / a_re.
-        let theta = div(sub(target, self.value[leave])?, a_re)?;
-        let enter_new = add(self.value[enter], theta)?;
+        let recip = div(Rational::integer(1), a_re)?;
+        let theta = target.sub(self.value[leave])?.scale(recip)?;
+        let enter_new = self.value[enter].add(theta)?;
 
         // Substitute `enter`'s new expression into every OTHER row and update values.
         for i in 0..self.m {
@@ -339,7 +413,7 @@ impl Tableau {
         self.value[enter] = enter_new;
         for i in 0..self.m {
             let bi = self.basic[i];
-            let mut acc = Rational::zero();
+            let mut acc = Delta::zero();
             for v in 0..self.n {
                 if self.is_basic[v] {
                     continue;
@@ -347,11 +421,73 @@ impl Tableau {
                 if self.row[i][v].is_zero() {
                     continue;
                 }
-                acc = add(acc, mul(self.row[i][v], self.value[v])?)?;
+                acc = acc.add(self.value[v].scale(self.row[i][v])?)?;
             }
             self.value[bi] = acc;
         }
         Ok(())
+    }
+
+    /// Materialize a concrete rational point from the current (feasible) δ-assignment
+    /// by choosing an infinitesimal `δ = ε > 0` small enough that every original
+    /// constraint still holds at the concrete point `xⱼ = cⱼ + kⱼ·ε`.
+    ///
+    /// For each row the δ-value `(C, K) = Σ aⱼ·(cⱼ, kⱼ)` already satisfies the bound
+    /// in `ℚ(δ)`. Shrinking `ε` cannot break a row whose `C`-part is *strictly*
+    /// inside its bound only if `ε` stays below that margin divided by `|K|`; a row
+    /// binding in the `C`-part is safe for *any* `ε > 0` (the `K`-part has the right
+    /// sign). We therefore take `ε` = half the smallest such margin (or `1` if none
+    /// binds).
+    fn materialize(&self) -> R<Vec<Rational>> {
+        let mut eps = Rational::integer(1);
+        for c in &self.constraints {
+            // Row δ-value (C, K) over the problem variables.
+            let mut cc = Rational::zero();
+            let mut kk = Rational::zero();
+            for (j, &a) in c.coeffs.iter().enumerate() {
+                if a.is_zero() {
+                    continue;
+                }
+                cc = add(cc, mul(a, self.value[j].c)?)?;
+                kk = add(kk, mul(a, self.value[j].k)?)?;
+            }
+            // `margin = |b − C|`; the row binds ε only when C is strictly inside the
+            // bound (margin > 0) and K pushes toward it. Then ε < margin / |K|.
+            let margin = sub(c.rhs, cc)?; // b − C
+            if margin.is_zero() || kk.is_zero() {
+                continue;
+            }
+            // Toward-violation test: for an upper bound (Le/Lt) K>0 pushes up toward
+            // b; for a lower bound (Ge/Gt) K<0 pushes down toward b. When margin and
+            // the push have the shape that could cross, cap ε.
+            let k_pos = cmp(kk, Rational::zero())? == core::cmp::Ordering::Greater;
+            let toward = match c.rel {
+                Rel::Le | Rel::Lt => k_pos,  // rising toward an upper bound
+                Rel::Ge | Rel::Gt => !k_pos, // falling toward a lower bound
+                Rel::Eq => true,             // any drift off an equality must be capped
+            };
+            if !toward {
+                continue;
+            }
+            // Cap: ε ≤ |margin / K| / 2.  margin has the same sign as the room; take
+            // the magnitude.
+            let ratio = div(margin, kk)?;
+            let mag = if cmp(ratio, Rational::zero())? == core::cmp::Ordering::Less {
+                sub(Rational::zero(), ratio)?
+            } else {
+                ratio
+            };
+            let half = mul(mag, Rational::checked_new(1, 2).ok_or(Overflow)?)?;
+            if cmp(half, eps)? == core::cmp::Ordering::Less {
+                eps = half;
+            }
+        }
+        // xⱼ = cⱼ + kⱼ·ε.
+        let mut out = Vec::with_capacity(self.nvars);
+        for j in 0..self.nvars {
+            out.push(add(self.value[j].c, mul(self.value[j].k, eps)?)?);
+        }
+        Ok(out)
     }
 
     /// Farkas-certificate extraction from the infeasible row `r`.
@@ -385,8 +521,9 @@ pub fn check_farkas(nvars: usize, constraints: &[Constraint], y: &[Rational]) ->
             return false;
         };
         match c.rel {
-            Rel::Le if s == core::cmp::Ordering::Less => return false,
-            Rel::Ge if s == core::cmp::Ordering::Greater => return false,
+            // `≤`/`<` rows take a ≥0 multiplier; `≥`/`>` rows a ≤0 one; `=` is free.
+            Rel::Le | Rel::Lt if s == core::cmp::Ordering::Less => return false,
+            Rel::Ge | Rel::Gt if s == core::cmp::Ordering::Greater => return false,
             _ => {}
         }
     }
@@ -450,6 +587,8 @@ mod tests {
                 Rel::Le => o != core::cmp::Ordering::Greater,
                 Rel::Ge => o != core::cmp::Ordering::Less,
                 Rel::Eq => o == core::cmp::Ordering::Equal,
+                Rel::Lt => o == core::cmp::Ordering::Less,
+                Rel::Gt => o == core::cmp::Ordering::Greater,
             }
         })
     }
@@ -556,6 +695,51 @@ mod tests {
         assert!(matches!(feasible(2, &[]), SimplexOutcome::Feasible(_)));
     }
 
+    #[test]
+    fn strict_contradiction_infeasible() {
+        // x < 1 ∧ x > 1 → infeasible (the δ-relaxation makes the strict bounds
+        // exact: x ≤ 1−δ ∧ x ≥ 1+δ is empty).
+        let cs = [con(&[1], Rel::Lt, 1), con(&[1], Rel::Gt, 1)];
+        assert!(matches!(feasible(1, &cs), SimplexOutcome::Infeasible(_)));
+    }
+
+    #[test]
+    fn strict_interval_feasible_point_replays() {
+        // 0 < x < 2 → feasible; the MATERIALIZED concrete point must satisfy both
+        // strict bounds (a wrong ε would put it on a boundary and fail replay).
+        let cs = [con(&[1], Rel::Gt, 0), con(&[1], Rel::Lt, 2)];
+        match feasible(1, &cs) {
+            SimplexOutcome::Feasible(x) => assert!(satisfies(&cs, &x)),
+            o => panic!("expected feasible, got {o:?}"),
+        }
+    }
+
+    #[test]
+    fn strict_vs_nonstrict_boundary() {
+        // x ≤ 1 ∧ x ≥ 1 → feasible (x=1); x < 1 ∧ x ≥ 1 → infeasible.
+        let feas = [con(&[1], Rel::Le, 1), con(&[1], Rel::Ge, 1)];
+        assert!(matches!(feasible(1, &feas), SimplexOutcome::Feasible(_)));
+        let infeas = [con(&[1], Rel::Lt, 1), con(&[1], Rel::Ge, 1)];
+        assert!(matches!(
+            feasible(1, &infeas),
+            SimplexOutcome::Infeasible(_)
+        ));
+    }
+
+    #[test]
+    fn two_var_strict_feasible_replays() {
+        // x + y < 4 ∧ x > 1 ∧ y > 1 → feasible; the point must strictly satisfy all.
+        let cs = [
+            con(&[1, 1], Rel::Lt, 4),
+            con(&[1, 0], Rel::Gt, 1),
+            con(&[0, 1], Rel::Gt, 1),
+        ];
+        match feasible(2, &cs) {
+            SimplexOutcome::Feasible(x) => assert!(satisfies(&cs, &x)),
+            o => panic!("expected feasible, got {o:?}"),
+        }
+    }
+
     /// A deterministic LCG (no clock / OS entropy) so the sweep is reproducible.
     struct Lcg(u64);
     impl Lcg {
@@ -593,10 +777,12 @@ mod tests {
             let mut cs: Vec<Constraint> = Vec::with_capacity(ncon);
             for _ in 0..ncon {
                 let coeffs: Vec<Rational> = (0..nvars).map(|_| r(rng.in_range(-3, 3))).collect();
-                let rel = match rng.in_range(0, 2) {
+                let rel = match rng.in_range(0, 4) {
                     0 => Rel::Le,
                     1 => Rel::Ge,
-                    _ => Rel::Eq,
+                    2 => Rel::Eq,
+                    3 => Rel::Lt,
+                    _ => Rel::Gt,
                 };
                 let rhs = r(rng.in_range(-5, 5));
                 cs.push(Constraint { coeffs, rel, rhs });
@@ -635,6 +821,8 @@ mod tests {
                     Rel::Le => arena.real_le(lhs, rhs).unwrap(),
                     Rel::Ge => arena.real_ge(lhs, rhs).unwrap(),
                     Rel::Eq => arena.eq(lhs, rhs).unwrap(),
+                    Rel::Lt => arena.real_lt(lhs, rhs).unwrap(),
+                    Rel::Gt => arena.real_gt(lhs, rhs).unwrap(),
                 };
                 assertions.push(atom);
             }
