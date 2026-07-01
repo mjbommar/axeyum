@@ -4098,8 +4098,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **Session 2026-06-30/07-01 — Nonlinear (P2.5) in execution: baseline corrected, measured vs Z3, Boolean case-split LANDED (9→10).**
-  Four things superseded the plan-writing entry below:
+- **Session 2026-06-30/07-01 — Nonlinear (P2.5): QF_NRA 9→11, and a pre-existing div-by-zero WRONG-SAT found + fixed.**
+  Five things superseded the plan-writing entry below:
   1. **Baseline corrected.** Reading the code + ADRs (0044/0045/0046) showed the
      NRA engine is *far more built* than the program's first draft assumed — the
      bignum algebraic core (polynomials, Sturm, resultants, real algebraic numbers,
@@ -4121,18 +4121,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
      was `finish_sat` propagating an i128 eval-overflow as an error instead of a
      graceful `unknown` (same class as `1f615670`). Fixed `finish_sat`, then landed
      with **`nra`+`nia` fuzz DISAGREE=0**, lib 613/613, clippy clean.
-  4. **Guardrail found (#69).** A follow-up equality-recombination experiment
-     (recombine split `≤∧≥` cubes back into `=`) produced a **wrong sat vs z3 on
-     division instances** — reverted. Root: `decide_real_poly_constraint`'s
-     equality-substitution path has a latent wrong-sat on free-multiplier equalities
-     (`x = r·y` from `eliminate_real_div`); currently **unreachable** by the shipped
-     solver (normal path declines division; the case-split always feeds split-form
-     cubes, which safely decline). Do not add eq-recombination until #69 is fixed +
-     division fuzz coverage added.
-  Broader scoreboard (curated, DISAGREE=0): axeyum is at/above z3 on most divisions
-  (QF_UF 42v41, QF_SEQ 16v14 ahead; FP/DT/AX/ALIA/UFLIA parity; LRA/LIA −1). The
-  real frontier stays **NRA (10/36) + NIA (20/28)**. Strings (P2.7) at planning;
-  first increment = Phase A (`Seq`/`String` IR sort + String+LIA over `len`).
+  4. **Division congruence (`0761bf8e`): QF_NRA 10→11.** `eliminate_real_div` used a
+     fresh `r` per division occurrence, losing `x=y ⟹ (/x 0)=(/y 0)`; added the
+     Ackermann div-congruence axioms (sound; only restrict the model space). A
+     div-by-zero instance now decides.
+  5. **A pre-existing div-by-zero WRONG-SAT found + fixed (`b38c0439`, #69).** Adding
+     **division coverage to `nra_differential_fuzz`** (it generated none) caught it:
+     the internal engine replays candidates against the div-*eliminated* form, so a
+     `y=0`/free-`r` model satisfies it while the original `x/0` refutes it (e.g.
+     `1/w<0` → sat with `w=0`). Fixed with a final **replay guard** in `check_with_nra`
+     (re-check every sat against the *original*, decline on violation), plus threaded
+     the true original as the in-engine replay target (#70). Verified: enhanced
+     division fuzz DISAGREE=0 + **no wrong-sat**, `nia` fuzz DISAGREE=0, lib 613/613.
+     A real soundness win from the frontier fuzz-hardening.
+  Broader scoreboard (curated, DISAGREE=0, [`docs/plan/measured-scoreboard-2026-07-01.md`](docs/plan/measured-scoreboard-2026-07-01.md)):
+  axeyum is at/above z3 on most divisions (QF_UF 42v41, QF_SEQ 16v14 ahead;
+  FP/DT/AX/ALIA/UFLIA parity; LRA/LIA/S/SLIA/ABV −1/−2). The real frontier stays
+  **NRA (11/36) + NIA (20/28)**. Strings (P2.7) at planning; first increment =
+  Phase A (`Seq`/`String` IR sort + String+LIA over `len`).
   See [`docs/plan/track-2-theories/P2.5-nra/08-evaluation-and-soundness.md`](docs/plan/track-2-theories/P2.5-nra/08-evaluation-and-soundness.md).
 
 - **Session 2026-06-30 — Next focus set: the two theory frontiers (strings + nonlinear).**
