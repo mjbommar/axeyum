@@ -115,8 +115,9 @@ Concrete work:
   Optimization/Farkas covers exact LP thresholds, finite convexity shadows,
   finite KKT stationarity replay, active-set QP free-gradient conflicts, finite
   SDP objective/slack replay, finite gradient-descent step replay, finite
-  line-search rejected-step and accepted-candidate replay, finite Wolfe line-search replay, finite
-  projected-gradient replay, finite proximal-gradient replay, least-squares
+  line-search rejected-step and accepted-candidate replay, finite Wolfe
+  line-search exact-minimizer replay, finite projected-gradient replay, finite
+  proximal-gradient replay, least-squares
   normal equations, residual bounds, gradient/Hessian replay, and
   related matrix checks without promoting duality, KKT sufficiency, SDP strong
   duality, or convergence theorem claims.
@@ -574,9 +575,9 @@ Next buildout:
    bridge lookups, and checked optimization Farkas rows, tying LP thresholds,
    convexity shadows, finite KKT stationarity, finite SDP objective/slack
    replay, finite gradient-descent replay, finite line-search rejected-step
-   and accepted-candidate replay, finite
-   Wolfe line-search replay, finite projected-gradient replay, finite
-   proximal-gradient replay, least-squares, gradients, residual bounds, and
+   and accepted-candidate replay, finite Wolfe line-search exact-minimizer
+   replay, finite projected-gradient replay, finite proximal-gradient replay,
+   least-squares, gradients, residual bounds, and
    matrix witnesses to the same boundary.
    It now also supports exact atlas concept filters on `packs` and `checks`;
    [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md) uses that

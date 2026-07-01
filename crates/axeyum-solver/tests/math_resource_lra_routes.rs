@@ -100,6 +100,9 @@ const FINITE_LINE_SEARCH_BAD_ACCEPTED_CANDIDATE: &str = include_str!(
 const FINITE_WOLFE_LINE_SEARCH_BAD_CURVATURE: &str = include_str!(
     "../../../artifacts/examples/math/finite-wolfe-line-search-v0/smt2/bad-wolfe-curvature-farkas-conflict.smt2"
 );
+const FINITE_WOLFE_LINE_SEARCH_BAD_MINIMIZER: &str = include_str!(
+    "../../../artifacts/examples/math/finite-wolfe-line-search-v0/smt2/bad-line-minimizer-farkas-conflict.smt2"
+);
 const FINITE_PROJECTED_GRADIENT_BAD_PROJECTION: &str = include_str!(
     "../../../artifacts/examples/math/finite-projected-gradient-v0/smt2/bad-projection-farkas-conflict.smt2"
 );
@@ -725,6 +728,14 @@ fn finite_line_search_bad_accepted_candidate_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-line-search-v0 bad-accepted-candidate SMT-LIB artifact",
         FINITE_LINE_SEARCH_BAD_ACCEPTED_CANDIDATE,
+    );
+}
+
+#[test]
+fn finite_wolfe_line_search_bad_minimizer_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-wolfe-line-search-v0 bad-line-minimizer SMT-LIB artifact",
+        FINITE_WOLFE_LINE_SEARCH_BAD_MINIMIZER,
     );
 }
 

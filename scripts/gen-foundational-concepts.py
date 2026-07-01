@@ -185,7 +185,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-wolfe-line-search-v0",
-                "Finite exact Wolfe line-search replay with checked bad-curvature rejection.",
+                "Finite exact Wolfe line-search replay with checked bad-minimizer and bad-curvature rejections.",
             ),
             (
                 "finite-projected-gradient-v0",
@@ -435,7 +435,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-wolfe-line-search-v0",
-                "Exact Wolfe sufficient-decrease and curvature replay with bad-curvature rejection.",
+                "Exact Wolfe line-minimizer, sufficient-decrease, and curvature replay with bad-minimizer and bad-curvature rejections.",
             ),
             (
                 "finite-projected-gradient-v0",
@@ -483,7 +483,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-wolfe-line-search-v0",
-                "Finite exact Wolfe sufficient-decrease/curvature replay and convergence-theorem horizon rows.",
+                "Finite exact Wolfe minimizer, sufficient-decrease/curvature replay, bad-minimizer, and convergence-theorem horizon rows.",
             ),
             (
                 "finite-projected-gradient-v0",
@@ -522,7 +522,7 @@ FIELD_PACKS = {
         ("finite-sdp-v0", "Finite SDP primal/dual slack replay with checked bad-objective rejection."),
         ("finite-gradient-descent-v0", "Finite gradient-descent step replay with checked bad-decrease and bad step-coordinate rejections."),
         ("finite-line-search-v0", "Finite Armijo line-search replay with checked bad-acceptance and bad accepted-candidate rejections."),
-        ("finite-wolfe-line-search-v0", "Finite Wolfe line-search replay with checked bad-curvature rejection."),
+        ("finite-wolfe-line-search-v0", "Finite Wolfe line-search replay with checked bad-minimizer and bad-curvature rejections."),
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold replay with checked bad-proximal-point rejection."),
     ],
@@ -1547,7 +1547,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-wolfe-line-search-v0",
-                "Finite exact Wolfe sufficient-decrease, curvature, and bad-curvature rows over exact rationals.",
+                "Finite exact Wolfe minimizer, sufficient-decrease, curvature, bad-minimizer, and bad-curvature rows over exact rationals.",
             ),
             (
                 "finite-projected-gradient-v0",

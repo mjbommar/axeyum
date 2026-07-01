@@ -3,8 +3,9 @@
 This lesson follows
 [finite-wolfe-line-search-v0](../../../artifacts/examples/math/finite-wolfe-line-search-v0/)
 from one exact line-search witness through Wolfe sufficient-decrease and
-curvature replay, then through checked Farkas evidence. It is a finite Wolfe
-certificate, not a general line-search convergence theorem.
+curvature replay, then through checked Farkas evidence for a bad minimizer and
+bad curvature row. It is a finite Wolfe certificate, not a general line-search
+convergence theorem.
 
 ## Concept
 
@@ -34,12 +35,13 @@ c2 = 1/2
 
 ## What Gets Checked
 
-The pack has six rows:
+The pack has seven rows:
 
 | Row | Result | Evidence |
 |---|---|---|
 | `wolfe-descent-direction-replay` | `sat` | replay-only |
 | `exact-line-minimizer-replay` | `sat` | replay-only |
+| `bad-line-minimizer-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `wolfe-sufficient-decrease-replay` | `sat` | replay-only |
 | `wolfe-curvature-replay` | `sat` | replay-only |
 | `bad-wolfe-curvature-rejected` | `unsat` | checked QF_LRA/Farkas |
@@ -76,6 +78,29 @@ x + alpha*d = 0
 f(0) = 0
 phi'(1/2) = 0
 ```
+
+The malformed minimizer row claims the full step is the minimizer:
+
+```text
+claimed alpha = 1
+claimed x = -1
+replayed alpha = 1/2
+replayed x = 0
+```
+
+The source SMT-LIB artifact fixes the minimizer step as `1/2` and also asserts
+the malformed full step:
+
+```smt2
+(set-logic QF_LRA)
+(declare-const minimizer_alpha Real)
+(assert (= minimizer_alpha (/ 1 2)))
+(assert (= minimizer_alpha 1))
+(check-sat)
+```
+
+Axeyum parses that source row, emits `UnsatFarkas` evidence, and independently
+checks the certificate.
 
 ## Wolfe Replay
 
@@ -139,5 +164,6 @@ general Wolfe line-search theorem: future Lean reconstruction
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-wolfe-line-search-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_minimizer_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_curvature_artifact_emits_checked_farkas
 ```

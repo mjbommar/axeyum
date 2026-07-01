@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-Wolfe-line-search bad minimizer QF_LRA row landed.**
+  `finite-wolfe-line-search-v0` now includes a second checked Farkas row:
+  exact line-minimizer replay computes `alpha = 1/2` and `x = 0`, while the
+  malformed source SMT-LIB artifact claims `alpha = 1` and `x = -1`. The
+  validator pins the source witness, computed and claimed minimizer steps,
+  computed and claimed candidate points, minimizer condition, artifact path,
+  and regression; the shared `math_resource_lra_routes` regression parses the
+  artifact and checks `UnsatFarkas` evidence. Generated dashboards and the
+  public query summary now report 111 concept rows, 108 non-template packs,
+  607 expected checks, 286 checked rows, 250 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Finite-line-search bad accepted-candidate QF_LRA row landed.**
   `finite-line-search-v0` now includes a second checked Farkas row: exact
   Armijo backtracking replay computes `accepted_x = 1 + (1/2)*(-2) = 0`,
@@ -212,10 +224,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   The validator pins the source witness, start point, accepted step, descent
   direction, computed and claimed accepted points, candidate equation, artifact
   path, and regression; the shared `math_resource_lra_routes` regression parses
-  the artifact and checks `UnsatFarkas` evidence. Generated dashboards and the
-  public query summary now report 111 concept rows, 108 non-template packs,
-  606 expected checks, 285 checked rows, 250 replay-only rows, and 71
-  Lean-horizon rows.
+  the artifact and checks `UnsatFarkas` evidence. At that point, generated
+  dashboards and the public query summary reported 111 concept rows, 108
+  non-template packs, 606 expected checks, 285 checked rows, 250 replay-only
+  rows, and 71 Lean-horizon rows.
 
 - **Finite-gradient-descent bad step-coordinate QF_LRA row landed.**
   `finite-gradient-descent-v0` now includes a second checked Farkas row:

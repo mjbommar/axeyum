@@ -819,7 +819,7 @@
           "id": "finite-wolfe-line-search-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-wolfe-line-search-v0",
-          "notes": "Finite exact Wolfe line-search replay with checked bad-curvature rejection."
+          "notes": "Finite exact Wolfe line-search replay with checked bad-minimizer and bad-curvature rejections."
         },
         {
           "id": "finite-projected-gradient-v0",
@@ -1803,7 +1803,7 @@
           "id": "finite-wolfe-line-search-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-wolfe-line-search-v0",
-          "notes": "Exact Wolfe sufficient-decrease and curvature replay with bad-curvature rejection."
+          "notes": "Exact Wolfe line-minimizer, sufficient-decrease, and curvature replay with bad-minimizer and bad-curvature rejections."
         },
         {
           "id": "finite-projected-gradient-v0",
@@ -1930,7 +1930,7 @@
           "id": "finite-wolfe-line-search-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-wolfe-line-search-v0",
-          "notes": "Finite exact Wolfe sufficient-decrease/curvature replay and convergence-theorem horizon rows."
+          "notes": "Finite exact Wolfe minimizer, sufficient-decrease/curvature replay, bad-minimizer, and convergence-theorem horizon rows."
         },
         {
           "id": "finite-projected-gradient-v0",
@@ -3072,7 +3072,7 @@
           "id": "finite-wolfe-line-search-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-wolfe-line-search-v0",
-          "notes": "Finite exact Wolfe sufficient-decrease, curvature, and bad-curvature rows over exact rationals."
+          "notes": "Finite exact Wolfe minimizer, sufficient-decrease, curvature, bad-minimizer, and bad-curvature rows over exact rationals."
         },
         {
           "id": "finite-projected-gradient-v0",
@@ -11284,7 +11284,7 @@
           "id": "finite-wolfe-line-search-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-wolfe-line-search-v0",
-          "notes": "Finite Wolfe line-search replay with checked bad-curvature rejection."
+          "notes": "Finite Wolfe line-search replay with checked bad-minimizer and bad-curvature rejections."
         },
         {
           "id": "finite-projected-gradient-v0",

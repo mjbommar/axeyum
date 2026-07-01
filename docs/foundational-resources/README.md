@@ -216,8 +216,9 @@ schemas, examples, and validation workflows.
   Lean-horizon row.
 - [`artifacts/examples/math/finite-wolfe-line-search-v0/`](../../artifacts/examples/math/finite-wolfe-line-search-v0/)
   validates exact Wolfe descent-direction replay, exact line minimization,
-  sufficient-decrease and curvature checks, checked rejection of a false
-  curvature claim, and a Wolfe line-search Lean-horizon row.
+  sufficient-decrease and curvature checks, checked rejection of false
+  line-minimizer and curvature claims, and a Wolfe line-search Lean-horizon
+  row.
 - [`artifacts/examples/math/finite-projected-gradient-v0/`](../../artifacts/examples/math/finite-projected-gradient-v0/)
   validates exact projected-gradient interval replay, unconstrained-step
   arithmetic, projection onto `[0,1]`, checked rejection of a false projected
@@ -422,8 +423,8 @@ schemas, examples, and validation workflows.
   rejection, and a general line-search convergence Lean-horizon row.
 - [`artifacts/examples/math/finite-wolfe-line-search-v0/`](../../artifacts/examples/math/finite-wolfe-line-search-v0/)
   validates exact one-variable Wolfe line-search replay, sufficient decrease,
-  curvature, checked bad-curvature rejection, and a general Wolfe
-  line-search convergence Lean-horizon row.
+  curvature, checked bad-minimizer and bad-curvature rejections, and a general
+  Wolfe line-search convergence Lean-horizon row.
 - [`artifacts/examples/math/finite-projected-gradient-v0/`](../../artifacts/examples/math/finite-projected-gradient-v0/)
   validates exact one-variable projected-gradient replay over `[0,1]`,
   unconstrained-step arithmetic, interval projection, checked bad-projection

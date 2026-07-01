@@ -1335,6 +1335,17 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+For the exact Wolfe line-minimizer certificate:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-wolfe-line-search-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text minimizer \
+  --require-any
+```
+
 For geometry, use the Farkas route to keep finite coordinate, incidence,
 rigid-configuration, affine, oriented-area, circle-geometry, inversion, and
 cyclic-configuration replay together while leaving synthetic, projective,

@@ -26,6 +26,14 @@ f(x(alpha)) = 0
 directional derivative at alpha = 0
 ```
 
+The checked bad minimizer row changes the exact line minimizer to the full
+step `alpha = 1`. Exact replay computes:
+
+```text
+alpha_* = 1/2
+x(alpha_*) = 1 + (1/2) * (-2) = 0
+```
+
 The Wolfe sufficient-decrease right-hand side is:
 
 ```text
@@ -47,7 +55,7 @@ The Wolfe curvature bound is:
 0 <= (1/2) * 4
 ```
 
-The checked bad row tests the full step `alpha = 1`. Exact replay gives:
+The checked bad curvature row tests the full step `alpha = 1`. Exact replay gives:
 
 ```text
 x(1) = -1

@@ -199,7 +199,8 @@ Companion maps:
 - [Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md):
   follows exact descent-direction replay, exact line-minimizer replay, Wolfe
   sufficient-decrease and curvature checks, checked QF_LRA/Farkas
-  bad-curvature rejection, and the general Wolfe line-search Lean horizon.
+  bad-minimizer and bad-curvature rejections, and the general Wolfe
+  line-search Lean horizon.
 - [Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md):
   follows exact gradient replay, one unconstrained trial step, interval
   projection, projected descent, checked QF_LRA/Farkas bad-projection

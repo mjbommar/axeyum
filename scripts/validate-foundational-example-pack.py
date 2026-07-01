@@ -11846,6 +11846,58 @@ def validate_finite_wolfe_line_search(expected: dict[str, Any]) -> None:
     if accepted_directional_derivative != 0:
         fail("exact-line-minimizer-replay expected zero directional derivative")
 
+    bad_minimizer = checks["bad-line-minimizer-rejected"]
+    if bad_minimizer["expected_result"] != "unsat" or bad_minimizer.get("proof_status") != "checked":
+        fail("bad-line-minimizer-rejected must be a checked unsat row")
+    if bad_minimizer["validation"] != "finite_bad_wolfe_minimizer_refutation":
+        fail("bad-line-minimizer-rejected must use finite_bad_wolfe_minimizer_refutation validation")
+    data = bad_minimizer.get("data", {})
+    if data.get("source_witness") != "quadratic-wolfe-step":
+        fail("bad-line-minimizer-rejected must cite the quadratic-wolfe-step witness")
+    computed_step = require_fraction(
+        "bad Wolfe minimizer computed_minimizer_step",
+        data.get("computed_minimizer_step"),
+    )
+    claimed_step = require_fraction(
+        "bad Wolfe minimizer claimed_minimizer_step",
+        data.get("claimed_minimizer_step"),
+    )
+    computed_x = require_fraction(
+        "bad Wolfe minimizer computed_minimizer_x",
+        data.get("computed_minimizer_x"),
+    )
+    claimed_x = require_fraction(
+        "bad Wolfe minimizer claimed_minimizer_x",
+        data.get("claimed_minimizer_x"),
+    )
+    if computed_step != accepted_step:
+        fail("bad-line-minimizer-rejected computed step must match exact minimizer")
+    if claimed_step == accepted_step:
+        fail("bad-line-minimizer-rejected claimed step unexpectedly matches exact minimizer")
+    if computed_x != accepted_candidate_x:
+        fail("bad-line-minimizer-rejected computed candidate must match exact minimizer")
+    if start_x + claimed_step * descent_direction != claimed_x:
+        fail("bad-line-minimizer-rejected claimed candidate is inconsistent with the claimed step")
+    if claimed_x == accepted_candidate_x:
+        fail("bad-line-minimizer-rejected claimed candidate unexpectedly matches exact minimizer")
+    condition = data.get("minimizer_condition")
+    require_string("bad Wolfe minimizer minimizer_condition", condition)
+    if condition != "accepted_directional_derivative = 0":
+        fail("bad-line-minimizer-rejected must document the exact minimizer condition")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad Wolfe minimizer smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-wolfe-line-search-v0/smt2/bad-line-minimizer-farkas-conflict.smt2":
+        fail("bad-line-minimizer-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad Wolfe minimizer smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad Wolfe minimizer farkas_regression", regression)
+    if "finite_wolfe_line_search_bad_minimizer_artifact_emits_checked_farkas" not in regression:
+        fail("bad-line-minimizer-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad Wolfe minimizer certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-line-minimizer-rejected certificate must document checked Farkas evidence")
+
     sufficient_decrease = checks["wolfe-sufficient-decrease-replay"]
     if sufficient_decrease["expected_result"] != "sat":
         fail("wolfe-sufficient-decrease-replay must expect sat")

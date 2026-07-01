@@ -312,10 +312,10 @@ accepted alpha = 1/2
 
 The `finite-wolfe-line-search-v0` validator recomputes the derivative,
 directional derivative, exact minimizer candidate, Wolfe sufficient-decrease
-slack, and Wolfe curvature slack. Its bad row claims the full step `alpha = 1`
-satisfies curvature even though exact replay computes curvature violation `2`;
-the final nonpositive-violation contradiction is checked through
-QF_LRA/Farkas evidence. For a focused trace, read
+slack, and Wolfe curvature slack. Its bad rows claim the full step `alpha = 1`
+is the line minimizer and satisfies curvature even though exact replay computes
+minimizer `alpha = 1/2` and curvature violation `2`; the final contradictions
+are checked through QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md).
 
 For a finite projected-gradient check, encode one interval-constrained step:
@@ -507,6 +507,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_armijo_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_accepted_candidate_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-wolfe-line-search-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_minimizer_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_curvature_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-projected-gradient-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_projected_gradient_bad_projection_artifact_emits_checked_farkas

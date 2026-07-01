@@ -3,8 +3,9 @@
 This pack turns one exact rational Wolfe line-search check into resource rows.
 It checks only the listed quadratic, descent direction, exact one-dimensional
 minimizer, Wolfe sufficient-decrease and curvature inequalities, and a false
-curvature obstruction; general Wolfe line-search convergence and smooth
-optimization theorems remain proof horizons.
+line-minimizer obstruction plus a false curvature obstruction; general Wolfe
+line-search convergence and smooth optimization theorems remain proof
+horizons.
 
 ## Audience
 
@@ -19,6 +20,8 @@ optimization theorems remain proof horizons.
   listed direction has negative directional derivative.
 - `exact-line-minimizer-replay`: checks the exact one-dimensional minimizer and
   zero directional derivative at the accepted step.
+- `bad-line-minimizer-rejected`: rejects the malformed claim that the exact
+  line minimizer is the full step `alpha=1`.
 - `wolfe-sufficient-decrease-replay`: checks the Armijo/Wolfe sufficient
   decrease inequality at the accepted step.
 - `wolfe-curvature-replay`: checks the Wolfe curvature inequality at the
@@ -32,6 +35,7 @@ optimization theorems remain proof horizons.
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-wolfe-line-search-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_minimizer_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_curvature_artifact_emits_checked_farkas
 ```
 
@@ -40,4 +44,4 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_se
 Untrusted search may propose a step size or Wolfe certificate. The trusted work
 is small: exact derivative replay, exact candidate arithmetic, exact objective
 evaluation, exact Wolfe inequality replay, and checked `UnsatFarkas` evidence
-over the source SMT-LIB row.
+over the source SMT-LIB rows.

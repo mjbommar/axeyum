@@ -577,8 +577,8 @@ rejection of false Armijo acceptance and accepted-candidate claims, and a
 general line-search convergence Lean-horizon row.
 `finite-wolfe-line-search-v0` now validates exact descent-direction replay,
 exact line-minimizer replay, Wolfe sufficient-decrease and curvature replay,
-checked QF_LRA/Farkas rejection of a false curvature claim, and a general
-Wolfe line-search Lean-horizon row.
+checked QF_LRA/Farkas rejection of false line-minimizer and curvature claims,
+and a general Wolfe line-search Lean-horizon row.
 `finite-projected-gradient-v0` now validates exact derivative replay,
 unconstrained-step replay, interval projection, projected-descent replay,
 checked QF_LRA/Farkas rejection of a false projected point, and a general
@@ -937,7 +937,8 @@ convergence Lean-horizon row.
 `artifacts/examples/math/finite-wolfe-line-search-v0/` now validates exact
 descent-direction replay, exact one-dimensional line minimization,
 Wolfe sufficient-decrease and curvature checks, checked QF_LRA/Farkas
-rejection of a false curvature claim, and a Wolfe line-search Lean-horizon row.
+rejection of false line-minimizer and curvature claims, and a Wolfe
+line-search Lean-horizon row.
 `artifacts/examples/math/finite-projected-gradient-v0/` now validates exact
 projected-gradient interval replay, unconstrained-step arithmetic, projection
 onto `[0,1]`, checked QF_LRA/Farkas rejection of a false projected point, and a
@@ -1108,8 +1109,9 @@ Recommended order:
     projected/stochastic line search, and convergence theorems remain horizon claims.
 40. `finite-wolfe-line-search-v0`: exact descent-direction replay, exact
     line-minimizer replay, Wolfe sufficient-decrease/curvature replay, and
-    checked QF_LRA/Farkas bad-curvature rejection, while strong Wolfe variants,
-    stochastic line search, and convergence theorems remain horizon claims.
+    checked QF_LRA/Farkas bad-minimizer and bad-curvature rejections, while
+    strong Wolfe variants, stochastic line search, and convergence theorems
+    remain horizon claims.
 41. `finite-projected-gradient-v0`: exact gradient replay, unconstrained-step
     arithmetic, interval projection, projected descent, and checked QF_LRA/Farkas
     bad-projection rejection, while active-set, proximal, stochastic, and
@@ -1682,8 +1684,9 @@ checked bad-Armijo and bad accepted-candidate rejection with QF_LRA/Farkas
 evidence, and the general line-search convergence Lean horizon.
 `finite-wolfe-line-search-v0` now has a learner-facing end-to-end lesson for
 exact descent-direction replay, exact line-minimizer replay, Wolfe
-sufficient-decrease and curvature replay, checked bad-curvature rejection with
-QF_LRA/Farkas evidence, and the general Wolfe line-search Lean horizon.
+sufficient-decrease and curvature replay, checked bad-minimizer and
+bad-curvature rejections with QF_LRA/Farkas evidence, and the general Wolfe
+line-search Lean horizon.
 `finite-projected-gradient-v0` now has a learner-facing end-to-end lesson for
 exact gradient replay, unconstrained-step replay, interval projection,
 projected descent, checked bad-projection rejection with QF_LRA/Farkas evidence,
@@ -2021,9 +2024,9 @@ descent-step replay computes decrease `11/4`, decrease error `3/4`, and
 `finite-line-search-v0` now routes its bad Armijo and bad accepted-candidate
 rows through the same checked Farkas evidence path after exact line-search
 replay computes rejected-step violation `1` and accepted point `0`.
-`finite-wolfe-line-search-v0` now routes its bad curvature row through the
-same checked Farkas evidence path after exact Wolfe replay computes curvature
-violation `2`.
+`finite-wolfe-line-search-v0` now routes its bad minimizer and bad curvature
+rows through the same checked Farkas evidence path after exact Wolfe replay
+computes minimizer `alpha=1/2` and curvature violation `2`.
 `finite-projected-gradient-v0` now routes its bad projection row through the
 same checked Farkas evidence path after exact interval-projection replay
 rejects `3/2` for the interval `[0,1]`.

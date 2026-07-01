@@ -53,6 +53,25 @@
       "notes": "The validator recomputes x+alpha*d, f(candidate), the gradient, and the zero directional derivative at the minimizer."
     },
     {
+      "id": "bad-line-minimizer-rejected",
+      "claim": "The exact line minimizer along direction -2 is alpha=1 and reaches x=-1.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_wolfe_minimizer_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "quadratic-wolfe-step",
+        "computed_minimizer_step": "1/2",
+        "claimed_minimizer_step": "1",
+        "computed_minimizer_x": "0",
+        "claimed_minimizer_x": "-1",
+        "minimizer_condition": "accepted_directional_derivative = 0",
+        "smt2_artifact": "artifacts/examples/math/finite-wolfe-line-search-v0/smt2/bad-line-minimizer-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_minimizer_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the one-dimensional minimizer alpha = 1/2 and x = 0, so the malformed alpha=1, x=-1 minimizer claim is rejected through the checked QF_LRA/Farkas route."
+    },
+    {
       "id": "wolfe-sufficient-decrease-replay",
       "claim": "The accepted step alpha=1/2 satisfies Wolfe sufficient decrease with slack 1/2.",
       "expected_result": "sat",

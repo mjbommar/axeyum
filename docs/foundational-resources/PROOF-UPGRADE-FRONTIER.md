@@ -271,8 +271,9 @@ First targets:
   accepted-candidate rows after exact line-search replay computes
   rejected-step violation `1` and accepted point `0`)
 - [finite-wolfe-line-search-v0](../../artifacts/examples/math/finite-wolfe-line-search-v0/)
-  (source-linked Farkas regression landed for the bad curvature row after exact
-  Wolfe replay computes curvature violation `2`)
+  (source-linked Farkas regressions landed for the bad minimizer and bad
+  curvature rows after exact Wolfe replay computes minimizer `alpha=1/2` and
+  curvature violation `2`)
 - [finite-projected-gradient-v0](../../artifacts/examples/math/finite-projected-gradient-v0/)
   (source-linked Farkas regression landed for the bad projection row after
   exact projected-gradient replay rejects `3/2` for the interval `[0,1]`)
