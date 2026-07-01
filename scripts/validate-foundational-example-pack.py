@@ -650,21 +650,58 @@ def validate_finite_order_lattices(expected: dict[str, Any]) -> None:
         fail("bad-partial-order-rejected failing_pair must contain distinct elements")
     if (left, right) not in pairs or (right, left) not in pairs:
         fail("bad-partial-order-rejected failing_pair must witness antisymmetry failure")
-    alethe_claim = data.get("alethe_antisymmetry_claim")
-    require_string("bad partial order alethe_antisymmetry_claim", alethe_claim)
+    qf_uf = checks["qf-uf-bad-partial-order-antisymmetry"]
+    if qf_uf["expected_result"] != "unsat":
+        fail("qf-uf-bad-partial-order-antisymmetry must expect unsat")
+    if qf_uf["proof_status"] != "checked":
+        fail("qf-uf-bad-partial-order-antisymmetry must be checked")
+    if qf_uf["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-bad-partial-order-antisymmetry must use qf_uf_congruence_alethe validation")
+    qf_data = qf_uf.get("data", {})
+    qf_elements = require_string_list("qf-uf bad partial order elements", qf_data.get("elements"), nonempty=True)
+    if set(qf_elements) != set(elements):
+        fail("qf-uf-bad-partial-order-antisymmetry elements must match bad-partial-order-rejected")
+    qf_pairs = qf_data.get("relation_pairs")
+    if not isinstance(qf_pairs, list):
+        fail("qf-uf-bad-partial-order-antisymmetry relation_pairs must be a list")
+    parsed_qf_pairs: set[tuple[str, str]] = set()
+    for i, pair in enumerate(qf_pairs):
+        if not isinstance(pair, list) or len(pair) != 2:
+            fail(f"qf-uf-bad-partial-order-antisymmetry relation_pairs[{i}] must be a pair")
+        qf_left, qf_right = pair
+        require_string(f"qf-uf bad partial order relation_pairs[{i}][0]", qf_left)
+        require_string(f"qf-uf bad partial order relation_pairs[{i}][1]", qf_right)
+        parsed_qf_pairs.add((qf_left, qf_right))
+    if parsed_qf_pairs != {(left, right), (right, left)}:
+        fail("qf-uf-bad-partial-order-antisymmetry relation_pairs must match the replayed antisymmetry failure")
+    qf_failing_pair = qf_data.get("failing_pair")
+    if qf_failing_pair != [left, right]:
+        fail("qf-uf-bad-partial-order-antisymmetry failing_pair must match bad-partial-order-rejected")
+    distinctness_claim = qf_data.get("distinctness_claim")
+    require_string("qf-uf bad partial order distinctness_claim", distinctness_claim)
+    if distinctness_claim != f"{left} != {right}":
+        fail("qf-uf-bad-partial-order-antisymmetry must document the distinctness claim")
+    alethe_claim = qf_data.get("alethe_antisymmetry_claim")
+    require_string("qf-uf bad partial order alethe_antisymmetry_claim", alethe_claim)
     if alethe_claim != f"{left} = {right}":
-        fail("bad-partial-order-rejected must document the Alethe antisymmetry equality claim")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad partial order smt2_artifact", smt2_artifact)
-    check_source("bad partial order smt2_artifact", smt2_artifact)
-    proof_regression = data.get("proof_regression")
-    require_string("bad partial order proof_regression", proof_regression)
+        fail("qf-uf-bad-partial-order-antisymmetry must document the Alethe antisymmetry equality claim")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-uf bad partial order smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-order-lattices-v0/smt2/"
+        "bad-partial-order-antisymmetry-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-uf-bad-partial-order-antisymmetry smt2_artifact must name the checked source artifact")
+    check_source("qf-uf bad partial order smt2_artifact", smt2_artifact)
+    proof_regression = qf_data.get("proof_regression")
+    require_string("qf-uf bad partial order proof_regression", proof_regression)
     if "finite_order_lattices_bad_partial_order_emits_checked_alethe" not in proof_regression:
-        fail("bad-partial-order-rejected must link the Alethe regression")
-    certificate = data.get("certificate")
-    require_string("bad partial order certificate", certificate)
+        fail("qf-uf-bad-partial-order-antisymmetry must link the Alethe regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-uf bad partial order certificate", certificate)
     if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
-        fail("bad-partial-order-rejected certificate must document zero-trust Alethe evidence")
+        fail("qf-uf-bad-partial-order-antisymmetry certificate must document zero-trust Alethe evidence")
 
     bad_top = checks["bad-top-element-rejected"]
     if bad_top["expected_result"] != "unsat" or bad_top.get("proof_status") != "checked":

@@ -548,9 +548,10 @@ First targets:
 - [finite-monoids-v0](../../artifacts/examples/math/finite-monoids-v0/)
   (resource-backed QF_UF/Alethe regression landed for the bad associativity conflict)
 - [finite-order-lattices-v0](../../artifacts/examples/math/finite-order-lattices-v0/)
-  (resource-backed QF_UF/Alethe regression landed for the bad antisymmetry
-  conflict; the separate bad top-element set-family conflict is promoted
-  through the Boolean CNF/LRAT route above)
+  (resource-backed QF_UF/Alethe regression landed as
+  `qf-uf-bad-partial-order-antisymmetry` for the bad antisymmetry conflict; the
+  separate bad top-element set-family conflict is promoted through the Boolean
+  CNF/LRAT route above)
 - [finite-permutation-groups-v0](../../artifacts/examples/math/finite-permutation-groups-v0/)
   (resource-backed QF_UF/Alethe regression landed for the bad nonbijection conflict)
 - [finite-vector-spaces-v0](../../artifacts/examples/math/finite-vector-spaces-v0/)

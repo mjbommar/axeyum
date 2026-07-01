@@ -22,7 +22,8 @@ Concept rows:
 | `meet-join-table-replay` | `sat` | replay-only |
 | `distributive-lattice-replay` | `sat` | replay-only |
 | `monotone-map-fixed-points` | `sat` | replay-only |
-| `bad-partial-order-rejected` | `unsat` | checked QF_UF/Alethe |
+| `bad-partial-order-rejected` | `unsat` | checked finite replay |
+| `qf-uf-bad-partial-order-antisymmetry` | `unsat` | checked QF_UF/Alethe |
 | `bad-top-element-rejected` | `unsat` | checked Bool/CNF/LRAT |
 | `general-order-lattice-theory-lean-horizon` | `not-run` | lean-horizon |
 
@@ -177,8 +178,9 @@ This relation is reflexive and transitive, but it is not antisymmetric:
 x <= y and y <= x, but x != y
 ```
 
-So the fixed claim that this relation is a partial order is checked `unsat`.
-The linked `QF_UF` artifact records the two relation-table facts, fixes the
+So the fixed claim that this relation is a partial order is checked `unsat` by
+finite replay. The separate `qf-uf-bad-partial-order-antisymmetry` row links the
+`QF_UF` artifact that records the two relation-table facts, fixes the
 antisymmetry consequence `x = y`, and refutes it against `x != y`; Axeyum emits
 and independently rechecks an `UnsatAletheProof` for that equality conflict.
 
@@ -231,7 +233,7 @@ This lesson shows Axeyum's resource pattern for finite order theory:
 ```text
 untrusted fast search -> candidate relation, meet/join tables, monotone map
 trusted small checking -> order laws, bounds, distributivity, fixed points, counterexample row
-checked proof object -> QF_UF/Alethe certificate for bad antisymmetry,
+checked proof object -> QF_UF/Alethe certificate for the explicit antisymmetry row,
                         CNF/DRAT/LRAT certificate for the bad top row
 ```
 

@@ -380,8 +380,8 @@ Companion maps:
   counting, and checked bad identity-action plus compatibility rejection.
 - [Finite Order Lattices](finite-order-lattices-end-to-end.md): follows finite
   partial-order replay, meet/join recomputation, distributivity checks,
-  monotone fixed-point replay, checked QF_UF/Alethe bad-order rejection, and a
-  checked Bool/CNF/LRAT bad top-element refutation.
+  monotone fixed-point replay, checked bad-order replay, explicit QF_UF/Alethe
+  antisymmetry evidence, and a checked Bool/CNF/LRAT bad top-element refutation.
 - [Finite Cardinality](finite-cardinality-end-to-end.md): follows finite
   bijection and proper-subset injection witnesses, finite no-injection and
   no-surjection enumeration refutations, and the Cantor Lean horizon.

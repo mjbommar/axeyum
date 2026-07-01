@@ -466,8 +466,9 @@ composition-application proof row, and a general function-law Lean-horizon row.
 `finite-order-lattices-v0` now deepens the
 finite relation path with Boolean-lattice partial-order replay, meet/join
 table replay, distributivity checks, monotone-map fixed-point replay, checked
-QF_UF/Alethe bad-order rejection, checked Bool/CNF bad top-element rejection,
-and a general order/lattice Lean-horizon row.
+bad-order replay, explicit QF_UF/Alethe antisymmetry evidence, checked
+Bool/CNF bad top-element rejection, and a general order/lattice Lean-horizon
+row.
 `finite-fields-v0` now
 validates prime-field inverse replay, exhaustive distributivity over a fixed
 prime field, a checked composite-modulus non-field contrast, a checked bad
@@ -1735,9 +1736,9 @@ rejection, checked quotient representative congruence, and an ideal-theory
 Lean-horizon row.
 `finite-order-lattices-v0` now adds the exact finite order-theory bridge:
 Boolean-lattice partial-order replay, meet/join table checks, distributivity,
-monotone-map fixed-point replay, checked QF_UF/Alethe bad-order rejection,
-checked Bool/CNF bad top-element rejection, and an order/lattice Lean-horizon
-row.
+monotone-map fixed-point replay, checked bad-order replay, explicit
+QF_UF/Alethe antisymmetry evidence, checked Bool/CNF bad top-element
+rejection, and an order/lattice Lean-horizon row.
 `multivariable-calculus-rational-v0` now adds the exact finite multivariable
 calculus bridge: bivariate-polynomial gradient/value replay, directional
 derivatives as gradient dot products, Jacobian chain-rule replay, Hessian
@@ -2674,6 +2675,11 @@ computes `10 + 01 = 11`, `beta(11,1)=00`, and
 `beta(10,1)+beta(01,1)=11`, while
 `qf-uf-bad-bilinear-left-additivity` owns the checked QF_UF/Alethe
 left-additivity artifact and direct pack/route/text query.
+The finite order-lattice pack now also splits its bad partial-order
+antisymmetry evidence: `bad-partial-order-rejected` remains the exact finite
+replay row that computes `x <= y`, `y <= x`, and `x != y`, while
+`qf-uf-bad-partial-order-antisymmetry` owns the checked QF_UF/Alethe
+antisymmetry artifact and direct pack/route/text query.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

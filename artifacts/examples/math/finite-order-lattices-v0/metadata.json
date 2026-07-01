@@ -38,7 +38,7 @@
     "target": "finite order antisymmetry QF_UF/Alethe and bad-top Bool/CNF regression seeds",
     "pressure": "Antisymmetry conflict where x <= y and y <= x force x = y, plus a Boolean-lattice top-element conflict where B <= A is false but a bad top claim for A requires it.",
     "evidence": [
-      "bad-partial-order-rejected",
+      "qf-uf-bad-partial-order-antisymmetry",
       "bad-top-element-rejected"
     ],
     "next_step": "Promote additional finite order or lattice rows only when they add distinct equality, Boolean set-family, monotonicity, or table solver pressure; keep complete lattices and fixed-point theorems in the Lean-horizon lane."
@@ -64,6 +64,7 @@
     "distributive-lattice-replay",
     "monotone-map-fixed-points",
     "bad-partial-order-rejected",
+    "qf-uf-bad-partial-order-antisymmetry",
     "bad-top-element-rejected",
     "general-order-lattice-theory-lean-horizon"
   ],

@@ -205,6 +205,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite order-lattice antisymmetry Alethe row split landed.**
+  `finite-order-lattices-v0` now keeps the malformed partial-order rejection
+  as exact finite replay and exposes the QF_UF/Alethe proof-object check as the
+  explicit `qf-uf-bad-partial-order-antisymmetry` row. The replay row computes
+  `x <= y`, `y <= x`, and `x != y`; the source SMT-LIB artifact separately
+  checks the fixed antisymmetry equality contradiction `x = y` against
+  `x != y`. Focused validation passes; the public summary now reports 120
+  concept rows, 108 packs, 647 expected checks, 322 checked rows, 254
+  replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite tensor-product left-additivity Alethe row split landed.**
   `finite-tensor-products-v0` now keeps the malformed bilinear-map rejection as
   exact finite replay and exposes the QF_UF/Alethe proof-object check as the

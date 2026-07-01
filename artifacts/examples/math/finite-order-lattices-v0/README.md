@@ -12,7 +12,8 @@ The pack covers:
 - meet and join table replay as greatest lower and least upper bounds;
 - distributive lattice identity replay;
 - monotone finite map and fixed-point replay;
-- checked QF_UF/Alethe rejection of a non-partial-order relation;
+- checked rejection of a non-partial-order relation by finite replay;
+- a separate checked QF_UF/Alethe proof row for the bad antisymmetry equality;
 - checked Bool/CNF DRAT/LRAT rejection of a false top-element claim;
 - a Lean-horizon row for general order and lattice theory.
 
@@ -34,9 +35,10 @@ triples, checks monotonicity over all comparable pairs, and recomputes fixed
 points.
 
 For the bad partial-order row, exact relation replay identifies `x <= y` and
-`y <= x` for distinct elements. The linked `QF_UF` artifact fixes the
-antisymmetry consequence `x = y`, refutes it against `x != y`, and checks the
-resulting `UnsatAletheProof` independently.
+`y <= x` for distinct elements. The separate
+`qf-uf-bad-partial-order-antisymmetry` row links the `QF_UF` artifact that fixes
+the antisymmetry consequence `x = y`, refutes it against `x != y`, and checks
+the resulting `UnsatAletheProof` independently.
 
 For the bad top-element row, exact relation replay identifies that `B <= A` is
 false in the Boolean lattice, while the false claim that `A` is top requires

@@ -221,7 +221,8 @@ schemas, examples, and validation workflows.
   [`artifacts/examples/math/finite-cardinality-v0/`](../../artifacts/examples/math/finite-cardinality-v0/),
   and [`artifacts/examples/math/cardinality-principles-v0/`](../../artifacts/examples/math/cardinality-principles-v0/)
   validate the finite foundations path: finite set identities, relation and
-  function tables, finite partial orders and lattice tables, function
+  function tables, finite partial orders and lattice tables with explicit
+  QF_UF/Alethe antisymmetry evidence, function
   composition, image/preimage and inverse replay, equivalence classes,
   quotient-map fibers, finite bijections, finite cardinal inequalities,
   bounded injection/surjection refutations, inclusion-exclusion,

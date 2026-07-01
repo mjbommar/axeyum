@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 646 expected checks.
-- 321 checked proof/evidence rows.
+- 647 expected checks.
+- 322 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -2170,6 +2170,13 @@ Pick one item per commit unless the change is purely navigational.
      `qf-uf-bad-bilinear-left-additivity` row isolates the additivity equality
      contradiction for checked Alethe evidence and gives consumers a direct
      pack/route/text query.
+148. Landed: split the `finite-order-lattices-v0` bad-partial-order
+     proof-object check into an explicit QF_UF/Alethe row. The finite replay
+     row still rejects the malformed relation by computing `x <= y`,
+     `y <= x`, and `x != y`; the new
+     `qf-uf-bad-partial-order-antisymmetry` row isolates the antisymmetry
+     equality contradiction for checked Alethe evidence and gives consumers a
+     direct pack/route/text query.
 
 ## Validation Checklist
 

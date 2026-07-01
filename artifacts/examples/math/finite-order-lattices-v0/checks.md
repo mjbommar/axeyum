@@ -32,8 +32,14 @@ least fixed point.
 Expected result: `unsat`.
 
 The validator rejects the relation with `x <= y` and `y <= x` for distinct
-`x` and `y`, because antisymmetry fails. The linked `QF_UF` artifact turns the
-fixed antisymmetry equality claim into a checked Alethe refutation.
+`x` and `y`, because antisymmetry fails.
+
+## `qf-uf-bad-partial-order-antisymmetry`
+
+Expected result: `unsat`.
+
+The linked `QF_UF` artifact turns the fixed antisymmetry equality claim into a
+checked Alethe refutation.
 
 ## `bad-top-element-rejected`
 

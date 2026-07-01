@@ -47,8 +47,8 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 646 expected checks.
-- 321 checked proof/evidence rows.
+- 647 expected checks.
+- 322 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1493,6 +1493,16 @@ Pick one row per commit unless the change is purely navigational.
      `finite_tensor_products_bad_bilinear_emits_checked_alethe` regression.
      The public query surface now reports 646 checks, 321 checked rows, and
      row-scoped Alethe lookup for the pack returns the left-additivity row.
+175. Landed: split the `finite-order-lattices-v0` bad-partial-order
+     proof-object check into the explicit
+     `qf-uf-bad-partial-order-antisymmetry` row. Exact finite replay still
+     owns `bad-partial-order-rejected` by computing `x <= y`, `y <= x`, and
+     `x != y`; the source SMT-LIB artifact separately rejects the malformed
+     fixed antisymmetry equality through the existing
+     `finite_order_lattices_bad_partial_order_emits_checked_alethe`
+     regression. The public query surface now reports 647 checks, 322 checked
+     rows, and row-scoped Alethe lookup for the pack returns the antisymmetry
+     row.
 
 ## Validation Checklist
 
