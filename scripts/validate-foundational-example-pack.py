@@ -4830,21 +4830,47 @@ def validate_finite_modules(expected: dict[str, Any]) -> None:
         fail("bad-submodule-rejected actual_scalar_product is incorrect")
     if actual_scalar_product in subset:
         fail("bad-submodule-rejected actual_scalar_product unexpectedly belongs to the subset")
-    alethe_claim = data.get("alethe_scalar_closure_claim")
-    require_string("bad submodule alethe_scalar_closure_claim", alethe_claim)
-    if alethe_claim != f"in_subset(smul({failing_scalar},{failing_vector})) = present":
-        fail("bad-submodule-rejected must document the Alethe scalar-closure claim")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad submodule smt2_artifact", smt2_artifact)
-    check_source("bad submodule smt2_artifact", smt2_artifact)
-    proof_regression = data.get("proof_regression")
-    require_string("bad submodule proof_regression", proof_regression)
+
+    qf_uf = checks["qf-uf-bad-submodule-scalar-closure"]
+    if qf_uf["expected_result"] != "unsat":
+        fail("qf-uf-bad-submodule-scalar-closure must expect unsat")
+    if qf_uf["proof_status"] != "checked":
+        fail("qf-uf-bad-submodule-scalar-closure must be checked")
+    if qf_uf["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-bad-submodule-scalar-closure must use qf_uf_congruence_alethe validation")
+    qf_data = qf_uf.get("data", {})
+    qf_subset = require_module_subset("qf-uf bad submodule subset", qf_data.get("subset"), module_elements, nonempty=True)
+    if qf_subset != subset:
+        fail("qf-uf-bad-submodule-scalar-closure subset must match bad-submodule-rejected")
+    if qf_data.get("failing_scalar") != failing_scalar:
+        fail("qf-uf-bad-submodule-scalar-closure failing_scalar must match bad-submodule-rejected")
+    if qf_data.get("failing_vector") != failing_vector:
+        fail("qf-uf-bad-submodule-scalar-closure failing_vector must match bad-submodule-rejected")
+    if qf_data.get("actual_scalar_product") != actual_scalar_product:
+        fail("qf-uf-bad-submodule-scalar-closure actual_scalar_product must match bad-submodule-rejected")
+    if qf_data.get("actual_membership") != "absent":
+        fail("qf-uf-bad-submodule-scalar-closure actual_membership must be absent")
+    if qf_data.get("claimed_membership") != "present":
+        fail("qf-uf-bad-submodule-scalar-closure claimed_membership must be present")
+    qf_alethe_claim = qf_data.get("alethe_scalar_closure_claim")
+    require_string("qf-uf bad submodule alethe_scalar_closure_claim", qf_alethe_claim)
+    expected_alethe_claim = f"in_subset(smul({failing_scalar},{failing_vector})) = present"
+    if qf_alethe_claim != expected_alethe_claim:
+        fail("qf-uf-bad-submodule-scalar-closure must document the Alethe scalar-closure claim")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-uf bad submodule smt2_artifact", smt2_artifact)
+    expected_smt2 = "artifacts/examples/math/finite-modules-v0/smt2/bad-submodule-scalar-closure-conflict.smt2"
+    if smt2_artifact != expected_smt2:
+        fail("qf-uf-bad-submodule-scalar-closure smt2_artifact must name the checked source artifact")
+    check_source("qf-uf bad submodule smt2_artifact", smt2_artifact)
+    proof_regression = qf_data.get("proof_regression")
+    require_string("qf-uf bad submodule proof_regression", proof_regression)
     if "finite_modules_bad_submodule_emits_checked_alethe" not in proof_regression:
-        fail("bad-submodule-rejected must link the Alethe regression")
-    certificate = data.get("certificate")
-    require_string("bad submodule certificate", certificate)
+        fail("qf-uf-bad-submodule-scalar-closure must link the Alethe regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-uf bad submodule certificate", certificate)
     if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
-        fail("bad-submodule-rejected certificate must document zero-trust Alethe evidence")
+        fail("qf-uf-bad-submodule-scalar-closure certificate must document zero-trust Alethe evidence")
 
     horizon = checks["general-module-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

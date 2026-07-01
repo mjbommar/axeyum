@@ -20,7 +20,8 @@ Concept rows:
 | `submodule-span-replay` | `sat` | replay-only |
 | `module-hom-kernel-image` | `sat` | replay-only |
 | `quotient-module-replay` | `sat` | replay-only |
-| `bad-submodule-rejected` | `unsat` | checked QF_UF/Alethe |
+| `bad-submodule-rejected` | `unsat` | checked finite replay |
+| `qf-uf-bad-submodule-scalar-closure` | `unsat` | checked QF_UF/Alethe |
 | `general-module-theory-lean-horizon` | `not-run` | lean-horizon |
 
 The replay rows are exact finite table checks over `Z/4Z`. The pack does not
@@ -178,10 +179,19 @@ Scalar closure fails:
 ```
 
 Because `2` is not in `{0, 1}`, the subset is not closed under scalar
-multiplication and cannot be a submodule. The linked `QF_UF` artifact records
-`1` present in the claimed subset, `2` absent, `2 * 1 = 2`, and the fixed
-scalar-closure membership claim `in_subset(smul(2,1)) = present`; Axeyum emits
-and independently rechecks an `UnsatAletheProof` for that equality conflict.
+multiplication and cannot be a submodule. That is the finite replay rejection.
+
+The separate `QF_UF` row records:
+
+```text
+in_subset(1) = present
+smul(2,1) = 2
+in_subset(2) = absent
+in_subset(smul(2,1)) = present
+```
+
+Those facts are inconsistent by equality reasoning. Axeyum emits and
+independently rechecks an `UnsatAletheProof` for that scalar-closure conflict.
 
 ## Run It
 
@@ -205,7 +215,7 @@ ring:
 ```text
 untrusted fast search -> module table, submodule, homomorphism, quotient table
 trusted small checking -> action laws, span replay, kernel/image, quotient replay
-checked proof object -> QF_UF/Alethe certificate for the bad submodule row
+checked proof object -> QF_UF/Alethe certificate for scalar-closure membership
 ```
 
 General module theory, quotient-module theorems, exact sequences, tensor

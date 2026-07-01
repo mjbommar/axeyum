@@ -65,7 +65,7 @@ route explicitly instead.
 | `finite-ideals-v0` | Ideal closure, generated ideal, ring-homomorphism kernel/image, quotient-ring tables. | Bad additive closure and quotient representative congruence become distinct equality artifacts. | general ideal, quotient-ring, and correspondence theorems |
 | `finite-vector-spaces-v0` | Finite subspaces, spans, linear maps, kernel/image, rank-nullity replay. | Bad subspace closure is promoted only after replay finds the failing sum. | arbitrary vector-space theorem schemas |
 | `finite-dual-spaces-v0` | Finite covector tables, dual basis, annihilator, transpose replay. | Bad covector additivity is checked as a finite function equality conflict. | general dual-space and functorial theorem statements |
-| `finite-modules-v0` | Module action, generated submodule, module homomorphism, quotient-module replay. | Bad scalar closure is isolated as a membership/equality conflict. | exact sequences, projective/injective modules, homological algebra |
+| `finite-modules-v0` | Module action, generated submodule, module homomorphism, quotient-module replay. | Bad scalar closure now has separate replay and QF_UF/Alethe membership-conflict rows. | exact sequences, projective/injective modules, homological algebra |
 | `finite-tensor-products-v0` | Tensor basis/dimension, bilinear map, factorization, Kronecker replay. | Bad left-additivity is checked as a finite map equality conflict. | tensor-product universal property and multilinear algebra in general |
 
 ## Query It

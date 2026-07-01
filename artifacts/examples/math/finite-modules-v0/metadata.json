@@ -34,10 +34,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite module bad submodule QF_UF/Alethe regression seed",
-    "pressure": "Submodule scalar-closure conflict where 1 is present, 2*1 = 2, and 2 is absent while the malformed row demands scalar closure.",
+    "target": "finite module bad submodule replay plus QF_UF/Alethe regression seed",
+    "pressure": "Submodule scalar-closure conflict where finite replay computes 1 present, 2*1 = 2, and 2 absent while the malformed row demands scalar closure; the QF_UF row isolates the membership contradiction.",
     "evidence": [
-      "bad-submodule-rejected"
+      "bad-submodule-rejected",
+      "qf-uf-bad-submodule-scalar-closure"
     ],
     "next_step": "Promote additional finite module rows only when they add distinct scalar-closure, quotient, or homomorphism solver pressure; keep exact sequences, projective/injective modules, and homological algebra in the Lean-horizon lane."
   },
@@ -59,12 +60,13 @@
     "module-hom-kernel-image",
     "quotient-module-replay",
     "bad-submodule-rejected",
+    "qf-uf-bad-submodule-scalar-closure",
     "general-module-theory-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode fixed finite module tables as deterministic finite-function and equality obligations.",
     "Replay submodule, generated-submodule, module-homomorphism, kernel, image, and quotient-module witnesses through Axeyum model evaluation.",
-    "Route bad finite submodule scalar-closure conflicts through checked QF_UF/Alethe evidence once exact evaluation replay identifies the failing scalar product.",
+    "Route bad finite submodule scalar-closure conflicts through checked QF_UF/Alethe evidence once exact evaluation replay identifies the failing scalar product, and keep the replay row distinct from the proof-object row.",
     "Keep general module theory, exact sequences, tensor products, projective/injective modules, and homological algebra under Lean horizon until formal routes exist."
   ]
 }

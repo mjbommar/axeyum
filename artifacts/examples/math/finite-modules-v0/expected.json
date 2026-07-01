@@ -414,13 +414,31 @@
         "subset": ["0", "1"],
         "failing_scalar": "2",
         "failing_vector": "1",
+        "actual_scalar_product": "2"
+      },
+      "notes": "The validator recomputes 2*1 = 2 and checks that 2 is missing from the claimed subset; the separate QF_UF row owns the proof-object refutation for the fixed scalar-closure membership claim."
+    },
+    {
+      "id": "qf-uf-bad-submodule-scalar-closure",
+      "claim": "The malformed subset can contain 1, omit 2, and still be closed under scalar multiplication by 2.",
+      "expected_result": "unsat",
+      "validation": "qf_uf_congruence_alethe",
+      "proof_status": "checked",
+      "data": {
+        "ring": "Z/4Z",
+        "module": "regular Z/4Z-module",
+        "subset": ["0", "1"],
+        "failing_scalar": "2",
+        "failing_vector": "1",
         "actual_scalar_product": "2",
+        "actual_membership": "absent",
+        "claimed_membership": "present",
         "alethe_scalar_closure_claim": "in_subset(smul(2,1)) = present",
         "smt2_artifact": "artifacts/examples/math/finite-modules-v0/smt2/bad-submodule-scalar-closure-conflict.smt2",
         "proof_regression": "cargo test -p axeyum-solver --test math_resource_uf_routes finite_modules_bad_submodule_emits_checked_alethe",
         "certificate": "prove_qf_uf_unsat_alethe emits Evidence::UnsatAletheProof checked by Evidence::check with no trusted reduction step"
       },
-      "notes": "The validator recomputes 2*1 = 2 and checks that 2 is missing from the claimed subset; the linked QF_UF artifact emits a zero-trust Alethe refutation for the fixed scalar-closure membership claim."
+      "notes": "The SMT-LIB artifact isolates the scalar-closure membership contradiction after exact replay computes smul(2,1)=2."
     },
     {
       "id": "general-module-theory-lean-horizon",

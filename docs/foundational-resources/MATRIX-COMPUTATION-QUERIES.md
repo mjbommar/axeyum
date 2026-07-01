@@ -50,7 +50,7 @@ when the consumer needs a concrete checked row to display.
 | Inner products and projections | `bridge_inner_product_projection` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked` |
 | Integer chain-complex torsion | `bridge_finite_torsion_homology_replay` | `Diophantine` | `checks --concept bridge_finite_torsion_homology_replay --route Diophantine --proof-status checked` |
 | Universal-coefficient shadow | `bridge_finite_universal_coefficient_shadow` | `Alethe` | `checks --concept bridge_finite_universal_coefficient_shadow --route Alethe --proof-status checked` |
-| Modules and tensor bilinearity | `bridge_tensor_bilinearity` | `Alethe` | `packs --concept bridge_tensor_bilinearity --route Alethe` |
+| Modules and tensor bilinearity | `bridge_tensor_bilinearity`; pack `finite-modules-v0` | `Alethe` | `packs --concept bridge_tensor_bilinearity --route Alethe`; `checks --pack finite-modules-v0 --route Alethe --proof-status checked --text scalar-closure` |
 | Operators and Chebyshev systems | `bridge_finite_operator_chebyshev` | `Farkas` | `checks --pack finite-operator-v0 --route Farkas --proof-status checked --text Chebyshev` |
 
 ## Copyable Examples

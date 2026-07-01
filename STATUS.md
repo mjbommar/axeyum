@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite module scalar-closure Alethe row split landed.**
+  `finite-modules-v0` now keeps the malformed `{0,1}` submodule rejection as
+  exact finite replay and exposes the QF_UF/Alethe proof-object check as the
+  explicit `qf-uf-bad-submodule-scalar-closure` row. The replay row computes
+  `2*1 = 2` in the regular `Z/4Z` module and rejects the subset because `2` is
+  absent; the source SMT-LIB artifact separately checks the membership
+  contradiction `in_subset(smul(2,1)) = present` against `in_subset(2) =
+  absent`. Focused validation and the existing
+  `finite_modules_bad_submodule_emits_checked_alethe` regression pass; the
+  public summary now reports 120 concept rows, 108 packs, 643 expected checks,
+  318 checked rows, 254 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite continuous-map preimage Alethe row split landed.**
   `finite-continuous-maps-v0` now exposes the hidden preimage-membership
   artifact as a first-class checked row,

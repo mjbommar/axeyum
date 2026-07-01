@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 642 expected checks.
-- 317 checked proof/evidence rows.
+- 643 expected checks.
+- 318 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -2145,6 +2145,12 @@ Pick one item per commit unless the change is purely navigational.
      after exact replay computes the two edge contributions `-1` and `+1`;
      the linked QF_LIA/Diophantine regression checks the source SMT-LIB
      contradiction `coeff_b = 0` and `coeff_b = 1`.
+144. Landed: split the `finite-modules-v0` scalar-closure proof-object check
+     into an explicit QF_UF/Alethe row. The finite replay row still rejects
+     `{0,1}` as a non-submodule by computing `2*1 = 2`; the new
+     `qf-uf-bad-submodule-scalar-closure` row isolates the membership
+     contradiction for checked Alethe evidence and gives consumers a direct
+     pack/route/text query.
 
 ## Validation Checklist
 

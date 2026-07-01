@@ -134,6 +134,17 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Display the finite module scalar-closure certificate row:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-modules-v0 \
+  --route Alethe \
+  --proof-status checked \
+  --text scalar-closure \
+  --require-any
+```
+
 List finite ideal and quotient representative packs:
 
 ```sh

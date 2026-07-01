@@ -558,7 +558,9 @@ First targets:
 - [finite-dual-spaces-v0](../../artifacts/examples/math/finite-dual-spaces-v0/)
   (resource-backed QF_UF/Alethe regression landed for the bad covector-additivity conflict)
 - [finite-modules-v0](../../artifacts/examples/math/finite-modules-v0/)
-  (resource-backed QF_UF/Alethe regression landed for the bad submodule scalar-closure conflict)
+  (resource-backed QF_UF/Alethe regression landed as
+  `qf-uf-bad-submodule-scalar-closure` for the bad scalar-closure membership
+  conflict)
 - [finite-ideals-v0](../../artifacts/examples/math/finite-ideals-v0/)
   (resource-backed QF_UF/Alethe regressions landed for the bad ideal
   additive-closure conflict and quotient-ring representative congruence)

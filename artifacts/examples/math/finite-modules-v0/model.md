@@ -84,7 +84,7 @@ O = {1, 3}
 The validator checks the listed quotient addition and scalar-action tables by
 applying operations to representatives and then locating the resulting coset.
 
-## Bad Submodule Certificate
+## Bad Submodule Replay And Certificate
 
 For the rejected subset, exact replay computes:
 
@@ -100,6 +100,8 @@ Scalar closure of a submodule would require:
 in_subset(2 * 1) = present
 ```
 
-The linked `QF_UF` artifact is therefore unsatisfiable by equality reasoning.
-The resource regression checks that Axeyum emits independently rechecked
-`UnsatAletheProof` evidence with no trusted reduction step.
+The finite replay row rejects the malformed submodule directly. The separate
+`QF_UF` row then isolates the scalar-closure membership contradiction as an
+equality proof obligation. The resource regression checks that Axeyum emits
+independently rechecked `UnsatAletheProof` evidence with no trusted reduction
+step.

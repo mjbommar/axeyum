@@ -1124,6 +1124,13 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --pack finite-modules-v0 \
+  --route Alethe \
+  --proof-status checked \
+  --text scalar-closure \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --concept bridge_ideal_closure \
   --route Alethe \
   --proof-status checked \

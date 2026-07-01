@@ -380,7 +380,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-modules-v0/`](../../artifacts/examples/math/finite-modules-v0/)
   validates finite module laws over `Z/4Z`, submodule and span replay,
   module-homomorphism kernel/image replay, quotient-module table replay,
-  checked rejection of a non-submodule, and a module-theory Lean-horizon row.
+  checked rejection of a non-submodule, explicit QF_UF/Alethe scalar-closure
+  evidence, and a module-theory Lean-horizon row.
 - [`artifacts/examples/math/finite-tensor-products-v0/`](../../artifacts/examples/math/finite-tensor-products-v0/)
   validates finite tensor-product basis/dimension replay over `F2`,
   bilinear-map table replay, universal-factorization shadow through a linear

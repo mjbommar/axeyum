@@ -517,8 +517,8 @@ replay, checked QF_UF/Alethe non-subspace rejection, and a general
 vector-space/module Lean-horizon row. `finite-modules-v0` now adds the finite ring-to-linear-algebra
 bridge with `Z/4Z` module table replay, submodule/span replay,
 module-homomorphism kernel/image replay, quotient-module table replay,
-checked QF_UF/Alethe non-submodule rejection, and a general module-theory
-Lean-horizon row.
+checked exact non-submodule replay, an explicit QF_UF/Alethe scalar-closure
+membership row, and a general module-theory Lean-horizon row.
 `finite-dual-spaces-v0` now adds the finite dual-space bridge with `F2^2`
 covector linearity replay, pointwise dual operations, dual-basis pairing,
 annihilator recomputation, transpose-map replay, checked QF_UF/Alethe
@@ -1717,8 +1717,9 @@ checked QF_LRA/Farkas bad-inner-product and bad projection-orthogonality
 rejections, and an inner-product/Hilbert-space Lean-horizon row.
 `finite-modules-v0` now adds the exact finite algebra/linear-algebra bridge
 over `Z/4Z`: module laws, submodule/span replay, module-homomorphism
-kernel/image replay, quotient-module tables, checked QF_UF/Alethe
-non-submodule rejection, and a module-theory Lean-horizon row.
+kernel/image replay, quotient-module tables, checked exact non-submodule
+replay, an explicit QF_UF/Alethe scalar-closure membership row, and a
+module-theory Lean-horizon row.
 `finite-tensor-products-v0` now adds the exact finite multilinear-algebra
 bridge over `F2`: tensor-product basis/dimension replay, bilinear-map table
 replay, universal-factorization shadow through a linear map, Kronecker-product

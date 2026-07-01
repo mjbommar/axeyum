@@ -47,8 +47,8 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 642 expected checks.
-- 317 checked proof/evidence rows.
+- 643 expected checks.
+- 318 checked proof/evidence rows.
 - 254 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1457,6 +1457,15 @@ Pick one row per commit unless the change is purely navigational.
      `finite_simplicial_bad_boundary_square_coefficient_emits_checked_diophantine_evidence`.
      The public query surface now reports 642 checks, 317 checked rows, and
      58 checked QF_LIA/Diophantine rows.
+171. Landed: split the `finite-modules-v0` scalar-closure proof-object check
+     into the explicit `qf-uf-bad-submodule-scalar-closure` row. Exact finite
+     replay still owns `bad-submodule-rejected` by computing `2*1 = 2` in the
+     regular `Z/4Z` module and checking that `2` is absent from `{0,1}`; the
+     source SMT-LIB artifact separately rejects the malformed membership claim
+     through the existing
+     `finite_modules_bad_submodule_emits_checked_alethe` regression. The
+     public query surface now reports 643 checks, 318 checked rows, and
+     row-scoped Alethe lookup for the pack returns the scalar-closure row.
 
 ## Validation Checklist
 

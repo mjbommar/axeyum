@@ -33,8 +33,16 @@ then verifies quotient addition and scalar multiplication from representatives.
 Expected result: `unsat`.
 
 The validator rejects `{0, 1}` because scalar closure fails: `2*1 = 2`, and
-`2` is not in the subset. The row links that scalar-closure conflict to checked
-QF_UF/Alethe evidence.
+`2` is not in the subset.
+
+## `qf-uf-bad-submodule-scalar-closure`
+
+Expected result: `unsat`.
+
+The SMT-LIB artifact isolates the same scalar-closure failure as an equality
+conflict: `in_subset(1) = present`, `smul(2,1) = 2`, `in_subset(2) = absent`,
+and scalar closure would require `in_subset(smul(2,1)) = present`. Axeyum emits
+and checks zero-trust QF_UF/Alethe evidence for that contradiction.
 
 ## `general-module-theory-lean-horizon`
 
