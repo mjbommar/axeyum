@@ -490,18 +490,62 @@ impl Tableau {
         Ok(out)
     }
 
-    /// Farkas-certificate extraction from the infeasible row `r`.
+    /// Farkas-certificate extraction from the infeasible row `r` (P1.9 · T1.9.3).
     ///
-    /// **Deferred to P1.9 · T1.9.3.** Extracting the exact nonnegative combination
-    /// over the input rows from the final tableau (with the correct `≤`/`≥`/`=`
-    /// sign discipline and the δ-relaxation once strict rows land) is its own
-    /// slice. Until then this returns an **empty** vector — a self-checkable
-    /// "no certificate yet" that a caller must handle by falling back to the
-    /// reference Fourier–Motzkin certificate. The infeasibility *decision* itself is
-    /// exact and complete; only the machine-checkable witness is pending.
-    #[allow(clippy::unused_self, clippy::unnecessary_wraps)]
-    fn farkas(&self, _r: usize, _too_low: bool) -> R<Vec<Rational>> {
-        Ok(Vec::new())
+    /// At infeasibility the basic variable `b` of row `r` is a **slack** pinned
+    /// outside its bound, and every nonbasic variable with a nonzero coefficient in
+    /// the row is also a slack pinned at a blocking bound (a nonbasic *problem*
+    /// variable is unbounded, so it would have been selected as an entering variable
+    /// — its presence would contradict infeasibility). The tableau row is a valid
+    /// affine identity `slack_b − Σⱼ aⱼ·slackⱼ ≡ 0` in the problem variables, so the
+    /// multipliers over the *input rows* are `y_b = ±1` and `yⱼ = ∓aⱼ` (the sign set
+    /// by which bound `b` violates). That gives `yᵀA = 0` by construction.
+    ///
+    /// The candidate is **self-checked** by [`check_farkas`] before it is returned:
+    /// the non-strict `≤/≥/=` case yields `Σ y·rhs < 0` directly; a strict-row
+    /// contradiction whose rational part is only `≤ 0` (the strictness living in the
+    /// δ-part) fails that check and returns **empty** — a sound "no rational
+    /// certificate" that never masquerades as a refutation. So a returned vector is
+    /// always a genuine, re-checkable Farkas certificate.
+    fn farkas(&self, r: usize, too_low: bool) -> R<Vec<Rational>> {
+        let b = self.basic[r];
+        if b < self.nvars {
+            // The infeasible basic variable must be a slack (problem vars are
+            // unbounded and cannot violate a bound) — otherwise no closed form here.
+            return Ok(Vec::new());
+        }
+        // `sign`: a violated LOWER bound (`too_low`) means `b`'s row is a `≥`/`>`
+        // input row, which takes a ≤0 multiplier ⇒ `y_b = −1`; a violated UPPER
+        // bound is a `≤`/`<` row ⇒ `y_b = +1`.
+        let sign = if too_low {
+            Rational::integer(-1)
+        } else {
+            Rational::integer(1)
+        };
+        let mut y = vec![Rational::zero(); self.m];
+        y[b - self.nvars] = sign;
+        for v in 0..self.n {
+            if self.is_basic[v] {
+                continue;
+            }
+            let a = self.row[r][v];
+            if a.is_zero() {
+                continue;
+            }
+            if v < self.nvars {
+                // A nonbasic problem variable in the row ⇒ not the pure-slack shape
+                // infeasibility guarantees; decline the closed-form cert.
+                return Ok(Vec::new());
+            }
+            // yⱼ = −sign·aⱼ over the input row of slack `v`.
+            y[v - self.nvars] = mul(sub(Rational::zero(), sign)?, a)?;
+        }
+        // Self-check: return the certificate only if it genuinely refutes the input.
+        if check_farkas(self.nvars, &self.constraints, &y) {
+            Ok(y)
+        } else {
+            Ok(Vec::new())
+        }
     }
 }
 
@@ -604,13 +648,15 @@ mod tests {
     }
 
     #[test]
-    fn single_var_infeasible() {
-        // x ≥ 3 ∧ x ≤ 1 → infeasible (the decision; the machine-checkable Farkas
-        // witness is T1.9.3, so the cert vector is empty for now).
+    fn single_var_infeasible_carries_farkas() {
+        // x ≥ 3 ∧ x ≤ 1 → infeasible with an extracted, self-checked Farkas cert.
         let cs = [con(&[1], Rel::Ge, 3), con(&[1], Rel::Le, 1)];
         match feasible(1, &cs) {
             SimplexOutcome::Infeasible(y) => {
-                assert!(y.is_empty() || check_farkas(1, &cs, &y));
+                assert!(
+                    check_farkas(1, &cs, &y),
+                    "non-strict infeasible must carry a valid Farkas cert, got {y:?}"
+                );
             }
             o => panic!("expected infeasible, got {o:?}"),
         }
@@ -663,9 +709,10 @@ mod tests {
         ];
         match feasible(2, &cs) {
             SimplexOutcome::Infeasible(y) => {
-                // If a closed-form cert was produced, it must re-check; an empty
-                // cert (conservative bail) is allowed by this slice.
-                assert!(y.is_empty() || check_farkas(2, &cs, &y));
+                assert!(
+                    check_farkas(2, &cs, &y),
+                    "non-strict infeasible must carry a valid Farkas cert, got {y:?}"
+                );
             }
             o => panic!("expected infeasible, got {o:?}"),
         }
@@ -685,9 +732,12 @@ mod tests {
 
     #[test]
     fn equality_system_infeasible() {
-        // x + y = 3 ∧ x + y = 5 → infeasible.
+        // x + y = 3 ∧ x + y = 5 → infeasible with a self-checked Farkas cert.
         let cs = [con(&[1, 1], Rel::Eq, 3), con(&[1, 1], Rel::Eq, 5)];
-        assert!(matches!(feasible(2, &cs), SimplexOutcome::Infeasible(_)));
+        match feasible(2, &cs) {
+            SimplexOutcome::Infeasible(y) => assert!(check_farkas(2, &cs, &y)),
+            o => panic!("expected infeasible, got {o:?}"),
+        }
     }
 
     #[test]
@@ -838,7 +888,15 @@ mod tests {
                     );
                     Some(true)
                 }
-                SimplexOutcome::Infeasible(_) => Some(false),
+                SimplexOutcome::Infeasible(y) => {
+                    // Any extracted certificate must self-check; an empty vector is
+                    // the sound "strict-δ cert deferred" case and is allowed.
+                    assert!(
+                        y.is_empty() || check_farkas(nvars, &cs, y),
+                        "seed {seed}: extracted Farkas cert fails self-check: {cs:?} @ {y:?}"
+                    );
+                    Some(false)
+                }
                 SimplexOutcome::Unknown => None,
             };
             let fm_sat = match fm {
