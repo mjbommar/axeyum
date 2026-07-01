@@ -1168,6 +1168,14 @@ Pick one row per commit unless the change is purely navigational.
      fixed-width residue, quotient/ideal, and semantic-boundary rows without
      claiming analytic number theory, algebraic number theory, unbounded
      induction, or floating-point guarantees.
+142. Landed: add
+     [`PROBABILITY-STATISTICS-QUERIES.md`](PROBABILITY-STATISTICS-QUERIES.md)
+     as the probability/statistics consumer query guide. The guide and resource
+     smoke now exercise concept-scoped Farkas checks for probability-mass,
+     finite-measure, product/integration, pushforward, conditional-expectation,
+     stochastic-kernel, tail-count, and random-matrix moment rows without
+     claiming continuous probability, asymptotic statistics, stochastic-process
+     limits, simulation quality, or floating-point inference guarantees.
 
 ## Validation Checklist
 

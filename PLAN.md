@@ -159,6 +159,12 @@ The matrix computation consumer query guide is
 it records exact concept-plus-route queries for LU, residual, rank/nullity,
 eigenpair, random-matrix, chain/cochain/UCT, tensor/module, operator, and
 Chebyshev resources.
+The probability/statistics consumer query guide is
+[`docs/foundational-resources/PROBABILITY-STATISTICS-QUERIES.md`](docs/foundational-resources/PROBABILITY-STATISTICS-QUERIES.md);
+it records exact concept-plus-route queries for finite probability tables,
+finite measure, product/integration, pushforwards, conditional expectation,
+stochastic kernels, tail counts, exact tests, and finite random-matrix
+moments.
 The algebra structure consumer query guide is
 [`docs/foundational-resources/ALGEBRA-STRUCTURE-QUERIES.md`](docs/foundational-resources/ALGEBRA-STRUCTURE-QUERIES.md);
 it records exact concept-plus-route queries for finite groups/actions,
@@ -552,6 +558,14 @@ The matrix computation lane now has
 and the query helper accepts exact `--concept` filters on `packs` and `checks`,
 so consumers can discover matrix rows by bridge concept plus proof route without
 parsing generated Markdown or adding a typed API.
+The probability/statistics lane now has
+[`PROBABILITY-STATISTICS-QUERIES.md`](docs/foundational-resources/PROBABILITY-STATISTICS-QUERIES.md),
+and the foundational smoke checks concept-scoped Farkas rows for probability
+mass tables, finite measure, product/integration, pushforwards, conditional
+expectation, stochastic kernels, tail counts, and random-matrix moments, so
+downstream consumers can discover exact finite-table resources without
+promoting continuous probability, asymptotic statistics, stochastic-process
+limit, simulation-quality, or floating-point inference claims.
 The algebra structure lane now has
 [`ALGEBRA-STRUCTURE-QUERIES.md`](docs/foundational-resources/ALGEBRA-STRUCTURE-QUERIES.md),
 and the foundational smoke checks concept-scoped Alethe/QF_BV rows for

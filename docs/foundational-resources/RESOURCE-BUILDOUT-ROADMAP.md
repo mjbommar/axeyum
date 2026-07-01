@@ -1918,6 +1918,15 @@ Pick one item per commit unless the change is purely navigational.
      arithmetic rows while keeping analytic number theory, algebraic number
      theory, unbounded induction, and floating-point guarantees in the horizon
      or numerical-honesty lanes.
+125. Landed: add
+     [PROBABILITY-STATISTICS-QUERIES.md](PROBABILITY-STATISTICS-QUERIES.md),
+     making the probability/statistics lane queryable by bridge concept plus
+     proof route. The guide and foundational smoke cover concept-scoped Farkas
+     queries for finite probability tables, measure additivity,
+     product/integration, pushforwards, conditional expectation, stochastic
+     kernels, tail counts, and random-matrix moments while keeping continuous
+     probability, asymptotic statistics, stochastic-process limits, simulation
+     quality, and floating-point inference claims in horizon lanes.
 
 ## Validation Checklist
 

@@ -21,6 +21,8 @@ For proof-route summaries and route-specific boundaries, see
 [PROOF-ROUTE-QUERY-MATRIX.md](PROOF-ROUTE-QUERY-MATRIX.md).
 For concept-plus-route matrix discovery, see
 [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md).
+For concept-plus-route probability/statistics discovery, see
+[PROBABILITY-STATISTICS-QUERIES.md](PROBABILITY-STATISTICS-QUERIES.md).
 For concept-plus-route finite algebra discovery, see
 [ALGEBRA-STRUCTURE-QUERIES.md](ALGEBRA-STRUCTURE-QUERIES.md).
 For concept-plus-route number and arithmetic discovery, see
@@ -805,6 +807,48 @@ python3 scripts/query-foundational-resources.py concepts \
   --require-any
 ```
 
+Concept-plus-route queries expose the reusable finite measure, probability,
+product/integration, pushforward, conditional-expectation, and stochastic-kernel
+families without hard-coding pack ids:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_probability_mass_table \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_measure_additivity \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_product_integration \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_pushforward_distribution \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_conditional_expectation \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_stochastic_kernel \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+```
+
 To display concrete checked finite-measure or finite-integration examples, drill
 into checked Farkas rows:
 
@@ -841,6 +885,11 @@ python3 scripts/query-foundational-resources.py concepts \
 python3 scripts/query-foundational-resources.py concepts \
   --field statistics \
   --text finite \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field statistics \
+  --text random \
   --require-any
 ```
 
@@ -899,6 +948,18 @@ python3 scripts/query-foundational-resources.py checks \
 python3 scripts/query-foundational-resources.py checks \
   --field statistics \
   --route Diophantine \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_tail_count_obstruction \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_random_matrix_finite_moment \
+  --route Farkas \
   --proof-status checked \
   --require-any
 ```
@@ -1669,6 +1730,13 @@ python3 scripts/query-foundational-resources.py fields --field probability_theor
 python3 scripts/query-foundational-resources.py concepts --field probability_theory --text probability --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field probability_theory --text random --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field probability_theory --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_probability_mass_table --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_measure_additivity --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_product_integration --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_pushforward_distribution --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_conditional_expectation --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_stochastic_kernel --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_tail_count_obstruction --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_random_matrix_finite_moment --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_random_matrix_finite_moment --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field logic_and_proof --route boolean --require-any >/dev/null

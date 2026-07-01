@@ -451,6 +451,14 @@ Use one row per commit unless the change is purely navigational.
    Diophantine, QF_BV, Alethe, and Farkas routes without adding a typed API or
    claiming analytic/algebraic number theory, unbounded induction, or
    floating-point guarantees.
+21e. Landed: add
+   [PROBABILITY-STATISTICS-QUERIES.md](PROBABILITY-STATISTICS-QUERIES.md),
+   making finite probability, finite measure, product/integration,
+   pushforward, conditional-expectation, stochastic-kernel, tail-count,
+   exact-test, and random-matrix moment rows queryable by bridge concept plus
+   Farkas routes without adding a typed API or claiming continuous
+   probability, asymptotic statistics, stochastic-process limits, simulation
+   quality, or floating-point inference guarantees.
 22. Landed: add number-system semantic-boundary bridge rows for
    exact-vs-floating arithmetic and totality conventions, plus consumer smoke
    queries for number-theory totality and numerical-analysis floating-boundary

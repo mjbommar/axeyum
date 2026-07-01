@@ -42,6 +42,8 @@ For proof-route coverage queries, use the
 [Proof Route Query Matrix](PROOF-ROUTE-QUERY-MATRIX.md).
 For matrix computation discovery by bridge concept and proof route, use the
 [Matrix Computation Consumer Queries](MATRIX-COMPUTATION-QUERIES.md).
+For probability/statistics discovery by bridge concept and proof route, use the
+[Probability And Statistics Resource Consumer Queries](PROBABILITY-STATISTICS-QUERIES.md).
 For finite algebra discovery by bridge concept and proof route, use the
 [Algebra Structure Consumer Queries](ALGEBRA-STRUCTURE-QUERIES.md).
 For number/arithmetic discovery by bridge concept and proof route, use the
@@ -2229,6 +2231,15 @@ The matrix-resource consumer layer now also has
 `packs` and `checks`. This makes LU, residual, rank/nullity, eigenpair,
 random-matrix, tensor/module, operator, and Chebyshev rows discoverable by
 bridge concept plus proof route while preserving the JSON-first R6 boundary.
+The probability/statistics consumer layer now also has
+[`PROBABILITY-STATISTICS-QUERIES.md`](PROBABILITY-STATISTICS-QUERIES.md). The
+guide and resource smoke expose probability-mass, finite-measure,
+product/integration, pushforward, conditional-expectation, stochastic-kernel,
+tail-count, and random-matrix moment bridge concepts through concept-scoped
+Farkas queries, making exact finite-table rows discoverable while keeping
+continuous probability, asymptotic statistics, stochastic-process limits,
+simulation quality, and floating-point inference claims in proof-horizon or
+numerical-honesty lanes.
 The finite-algebra consumer layer now also has
 [`ALGEBRA-STRUCTURE-QUERIES.md`](ALGEBRA-STRUCTURE-QUERIES.md). The guide and
 resource smoke expose homomorphism, group-action, module-action, ideal, and

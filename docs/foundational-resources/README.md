@@ -65,6 +65,10 @@ schemas, examples, and validation workflows.
   copyable concept-plus-route queries for checked LU rows, residuals,
   rank/nullity, eigenpairs, random matrices, tensor/module rows, operators,
   and Chebyshev systems.
+- [PROBABILITY-STATISTICS-QUERIES.md](PROBABILITY-STATISTICS-QUERIES.md) gives
+  copyable concept-plus-route queries for finite probability tables, measure
+  additivity, product/integration, pushforwards, stochastic kernels, tail
+  counts, exact tests, and finite random-matrix moments.
 - [ALGEBRA-STRUCTURE-QUERIES.md](ALGEBRA-STRUCTURE-QUERIES.md) gives copyable
   concept-plus-route queries for finite groups/actions, homomorphisms, ideals,
   quotients, modules, tensor rows, and fixed-width residue/field rows.

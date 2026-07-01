@@ -860,6 +860,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   compact-operator, Haar-space, minimax, alternation-theorem, and
   infinite-dimensional approximation claims remain Lean-horizon.
 
+- **Probability/statistics query guide landed.**
+  `PROBABILITY-STATISTICS-QUERIES.md` now gives downstream consumers copyable
+  concept-plus-route queries for exact finite probability/statistics resources.
+  It groups finite probability tables, measure additivity, product/integration,
+  pushforwards, conditional expectation, stochastic kernels, tail counts,
+  exact tests, and random-matrix moments through Farkas route checks, and
+  `check-foundational-resources.sh` now smoke-checks representative
+  concept-scoped probability/statistics queries. This is count-neutral and
+  keeps continuous probability, asymptotic statistics, stochastic-process
+  limits, simulation quality, random-matrix limit laws, and floating-point
+  inference guarantees in the proof-horizon or numerical-honesty lanes.
+
 - **Algebra structure query guide landed.**
   `ALGEBRA-STRUCTURE-QUERIES.md` now gives downstream consumers copyable
   concept-plus-route queries for finite algebra resources. It groups
