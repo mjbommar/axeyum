@@ -35,9 +35,10 @@
   "solver_reuse": {
     "status": "promoted",
     "target": "exact finite-test bad Fisher p-value and binomial tail-count regression seeds",
-    "pressure": "Exact finite-test contradictions: the fixed-margin Fisher left tail forces p = 17/70 but the malformed row claims 1/4, and C(4,3)+C(4,4) forces tail_count = 5 but the malformed binomial row claims tail_count = 4.",
+    "pressure": "Exact finite-test contradictions: the fixed-margin Fisher left tail forces p = 17/70 but the malformed row claims 1/4, the probability-ordered two-sided Fisher sum forces p = 17/35 but the malformed row claims 1/2, and C(4,3)+C(4,4) forces tail_count = 5 but the malformed binomial row claims tail_count = 4.",
     "evidence": [
       "bad-fisher-left-tail-rejected",
+      "bad-fisher-two-sided-rejected",
       "qf-lia-bad-binomial-tail-count"
     ],
     "next_step": "Promote additional exact-test rows only when they add distinct finite-tail, fixed-margin, integer-count, or exact-rational solver pressure; keep asymptotic tests, approximations, and floating-point statistical procedures in numerical-honesty metadata."
@@ -52,6 +53,7 @@
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
     "artifacts/examples/math/exact-statistical-tests-v0/smt2/bad-fisher-left-tail-farkas-conflict.smt2",
+    "artifacts/examples/math/exact-statistical-tests-v0/smt2/bad-fisher-two-sided-farkas-conflict.smt2",
     "artifacts/examples/math/exact-statistical-tests-v0/smt2/bad-binomial-tail-count-diophantine-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
@@ -60,7 +62,9 @@
     "binomial-tail-pvalue",
     "hypergeometric-point-probability",
     "fisher-left-tail-pvalue",
+    "fisher-two-sided-pvalue",
     "bad-fisher-left-tail-rejected",
+    "bad-fisher-two-sided-rejected",
     "bad-binomial-pvalue-rejected",
     "qf-lia-bad-binomial-tail-count"
   ],
@@ -69,7 +73,7 @@
     "Replay binomial and hypergeometric witnesses through exact combinatorics.",
     "Keep promoted bad exact-rational p-value rows tied to checked QF_LRA/Farkas evidence.",
     "Keep promoted bad finite-count rows tied to checked QF_LIA/Diophantine evidence.",
-    "Add two-sided Fisher and exact multinomial tests before claiming broader exact-test coverage.",
+    "Add exact multinomial tests before claiming broader exact-test coverage.",
     "Keep asymptotic tests, normal approximations, floating-point libraries, and model-selection claims under numerical-honesty metadata."
   ]
 }

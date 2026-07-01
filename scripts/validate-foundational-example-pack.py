@@ -21213,6 +21213,34 @@ def fisher_left_tail_probability(row1: int, row2: int, col1: int, observed_top_l
     )
 
 
+def fisher_two_sided_counts(row1: int, row2: int, col1: int, observed_top_left: int) -> list[int]:
+    lower = max(0, col1 - row2)
+    upper = min(row1, col1)
+    observed = hypergeometric_probability(row1, row2, col1, observed_top_left)
+    return [
+        value
+        for value in range(lower, upper + 1)
+        if hypergeometric_probability(row1, row2, col1, value) <= observed
+    ]
+
+
+def fisher_two_sided_probability(row1: int, row2: int, col1: int, observed_top_left: int) -> Fraction:
+    return sum(
+        (
+            hypergeometric_probability(row1, row2, col1, value)
+            for value in fisher_two_sided_counts(row1, row2, col1, observed_top_left)
+        ),
+        Fraction(0),
+    )
+
+
+def require_fisher_two_sided_convention(context: str, value: Any) -> str:
+    require_string(context, value)
+    if value != "probability_less_equal_observed_point":
+        fail(f"{context} must be probability_less_equal_observed_point")
+    return value
+
+
 def validate_exact_statistical_tests(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -21264,6 +21292,40 @@ def validate_exact_statistical_tests(expected: dict[str, Any]) -> None:
     if fisher_left_tail != p_value:
         fail("fisher-left-tail-pvalue p_value is incorrect")
 
+    two_sided = checks["fisher-two-sided-pvalue"]
+    if two_sided["expected_result"] != "sat":
+        fail("fisher-two-sided-pvalue must expect sat")
+    if two_sided["validation"] != "exact_fisher_two_sided_replay":
+        fail("fisher-two-sided-pvalue must use exact_fisher_two_sided_replay validation")
+    values = single_witness_values(two_sided, witnesses)
+    two_sided_table = require_2x2_count_table("fisher two-sided table", values.get("table"))
+    two_sided_observed_top_left = require_nonnegative_int(
+        "fisher two-sided observed_top_left",
+        values.get("observed_top_left"),
+    )
+    two_sided_p_value = require_probability("fisher two-sided p_value", values.get("two_sided_p_value"))
+    require_fisher_two_sided_convention(
+        "fisher two-sided convention",
+        values.get("two_sided_convention"),
+    )
+    two_sided_row_sums = require_nonnegative_int_list("fisher two-sided row_sums", values.get("row_sums"))
+    two_sided_column_sums = require_nonnegative_int_list(
+        "fisher two-sided column_sums",
+        values.get("column_sums"),
+    )
+    if two_sided_table != table:
+        fail("fisher-two-sided-pvalue table must match Fisher replay witness")
+    if two_sided_observed_top_left != observed_top_left:
+        fail("fisher-two-sided-pvalue observed_top_left must match Fisher replay witness")
+    if two_sided_row_sums != row_sums:
+        fail("fisher-two-sided-pvalue row_sums must match Fisher replay witness")
+    if two_sided_column_sums != column_sums_value:
+        fail("fisher-two-sided-pvalue column_sums must match Fisher replay witness")
+    two_sided_probability = fisher_two_sided_probability(row1, row2, col1, observed_top_left)
+    two_sided_counts = fisher_two_sided_counts(row1, row2, col1, observed_top_left)
+    if two_sided_probability != two_sided_p_value:
+        fail("fisher-two-sided-pvalue p_value is incorrect")
+
     bad_fisher = checks["bad-fisher-left-tail-rejected"]
     if bad_fisher["expected_result"] != "unsat":
         fail("bad-fisher-left-tail-rejected must expect unsat")
@@ -21310,6 +21372,69 @@ def validate_exact_statistical_tests(expected: dict[str, Any]) -> None:
     require_string("bad Fisher farkas_regression", regression)
     if "exact_stats_bad_fisher_left_tail_artifact_emits_checked_farkas" not in regression:
         fail("bad-fisher-left-tail-rejected must name the checked Farkas regression")
+
+    bad_two_sided = checks["bad-fisher-two-sided-rejected"]
+    if bad_two_sided["expected_result"] != "unsat":
+        fail("bad-fisher-two-sided-rejected must expect unsat")
+    if bad_two_sided["proof_status"] != "checked":
+        fail("bad-fisher-two-sided-rejected must be checked")
+    if bad_two_sided["validation"] != "qf_lra_bad_fisher_two_sided_refutation":
+        fail("bad-fisher-two-sided-rejected must use qf_lra_bad_fisher_two_sided_refutation validation")
+    data = bad_two_sided.get("data", {})
+    bad_two_sided_table = require_2x2_count_table("bad two-sided Fisher table", data.get("table"))
+    bad_two_sided_row_sums = require_nonnegative_int_list(
+        "bad two-sided Fisher row_sums",
+        data.get("row_sums"),
+    )
+    bad_two_sided_column_sums = require_nonnegative_int_list(
+        "bad two-sided Fisher column_sums",
+        data.get("column_sums"),
+    )
+    bad_two_sided_observed_top_left = require_nonnegative_int(
+        "bad two-sided Fisher observed_top_left",
+        data.get("observed_top_left"),
+    )
+    require_fisher_two_sided_convention(
+        "bad two-sided Fisher convention",
+        data.get("two_sided_convention"),
+    )
+    if bad_two_sided_table != table:
+        fail("bad-fisher-two-sided-rejected table must match Fisher replay witness")
+    if bad_two_sided_row_sums != row_sums:
+        fail("bad-fisher-two-sided-rejected row_sums must match Fisher replay witness")
+    if bad_two_sided_column_sums != column_sums_value:
+        fail("bad-fisher-two-sided-rejected column_sums must match Fisher replay witness")
+    if bad_two_sided_observed_top_left != observed_top_left:
+        fail("bad-fisher-two-sided-rejected observed_top_left must match Fisher replay witness")
+    included_counts = require_nonnegative_int_list(
+        "bad two-sided Fisher included_top_left_counts",
+        data.get("included_top_left_counts"),
+    )
+    if included_counts != two_sided_counts:
+        fail("bad-fisher-two-sided-rejected included_top_left_counts are incorrect")
+    tail_numerator = require_positive_int("bad two-sided Fisher tail_numerator", data.get("tail_numerator"))
+    tail_denominator = require_positive_int("bad two-sided Fisher tail_denominator", data.get("tail_denominator"))
+    actual = require_probability("bad two-sided Fisher actual_two_sided_p_value", data.get("actual_two_sided_p_value"))
+    claimed = require_probability("bad two-sided Fisher claimed_two_sided_p_value", data.get("claimed_two_sided_p_value"))
+    if actual != two_sided_probability:
+        fail("bad-fisher-two-sided-rejected actual_two_sided_p_value is incorrect")
+    if tail_numerator != two_sided_probability.numerator:
+        fail("bad-fisher-two-sided-rejected tail_numerator is incorrect")
+    if tail_denominator != two_sided_probability.denominator:
+        fail("bad-fisher-two-sided-rejected tail_denominator is incorrect")
+    if claimed == actual:
+        fail("bad-fisher-two-sided-rejected claimed p-value unexpectedly matches")
+    equation = data.get("farkas_tail_equation")
+    require_string("bad two-sided Fisher farkas_tail_equation", equation)
+    if equation != "tail_denominator * fisher_two_sided_p_value = tail_numerator":
+        fail("bad-fisher-two-sided-rejected must document the Farkas tail equation")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad two-sided Fisher smt2_artifact", smt2_artifact)
+    check_source("bad two-sided Fisher smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad two-sided Fisher farkas_regression", regression)
+    if "exact_stats_bad_fisher_two_sided_artifact_emits_checked_farkas" not in regression:
+        fail("bad-fisher-two-sided-rejected must name the checked Farkas regression")
 
     bad = checks["bad-binomial-pvalue-rejected"]
     if bad["expected_result"] != "unsat":

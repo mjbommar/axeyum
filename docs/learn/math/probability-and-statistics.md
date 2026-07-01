@@ -68,10 +68,10 @@ For a focused finite Markov-chain trace, read
 [End To End: Finite Markov Chains](finite-markov-chain-end-to-end.md).
 
 The exact-test pack checks finite binomial tails, hypergeometric point
-probabilities, one-sided Fisher p-values as rational finite sums, a checked
-QF_LRA/Farkas certificate for a rejected Fisher left-tail p-value claim, and a
-checked QF_LIA/Diophantine certificate for a rejected binomial tail-count
-claim.
+probabilities, one-sided and probability-ordered two-sided Fisher p-values as
+rational finite sums, checked QF_LRA/Farkas certificates for rejected Fisher
+p-value claims, and a checked QF_LIA/Diophantine certificate for a rejected
+binomial tail-count claim.
 
 The trusted checker works over rational arithmetic and finite tables.
 

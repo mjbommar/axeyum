@@ -21,6 +21,15 @@ Expected result: `sat`.
 The validator sums the exact fixed-margin hypergeometric probabilities for all
 top-left counts at or below the observed top-left count.
 
+## `fisher-two-sided-pvalue`
+
+Expected result: `sat`.
+
+The validator uses the explicit probability-ordered two-sided convention: it
+sums every fixed-margin table whose hypergeometric point probability is no
+larger than the observed table probability. For this table, those are top-left
+counts `0`, `1`, `3`, and `4`.
+
 ## `bad-fisher-left-tail-rejected`
 
 Expected result: `unsat`.
@@ -36,6 +45,22 @@ fisher_left_tail_p_value = 1/4
 
 Proof route: checked QF_LRA/Farkas evidence. The finite hypergeometric count
 sum remains replayed by the pack validator.
+
+## `bad-fisher-two-sided-rejected`
+
+Expected result: `unsat`.
+
+The validator recomputes the probability-ordered two-sided Fisher p-value as
+`(1 + 16 + 16 + 1) / 70 = 17/35`. The source artifact asks QF_LRA to reject the
+final linear conflict:
+
+```text
+35 * fisher_two_sided_p_value = 17
+fisher_two_sided_p_value = 1/2
+```
+
+Proof route: checked QF_LRA/Farkas evidence. The finite hypergeometric count
+sum and the two-sided convention remain replayed by the pack validator.
 
 ## `bad-binomial-pvalue-rejected`
 

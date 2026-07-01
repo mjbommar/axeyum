@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 587 expected checks.
-- 269 checked proof/evidence rows.
-- 247 replay-only rows.
+- 589 expected checks.
+- 270 checked proof/evidence rows.
+- 248 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.

@@ -18,7 +18,9 @@ Concept rows:
 | `binomial-tail-pvalue` | `sat` | replay-only |
 | `hypergeometric-point-probability` | `sat` | replay-only |
 | `fisher-left-tail-pvalue` | `sat` | replay-only |
+| `fisher-two-sided-pvalue` | `sat` | replay-only |
 | `bad-fisher-left-tail-rejected` | `unsat` | checked |
+| `bad-fisher-two-sided-rejected` | `unsat` | checked |
 | `bad-binomial-pvalue-rejected` | `unsat` | checked |
 | `qf-lia-bad-binomial-tail-count` | `unsat` | checked |
 
@@ -94,25 +96,47 @@ P(X <= 1) = 17/70
 This is a finite Fisher exact-test replay for one fixed table. It does not
 claim a full statistical testing library.
 
-## Check The Fisher P-Value Certificate
+## Replay A Probability-Ordered Two-Sided Fisher Tail
 
-The checked Fisher row keeps the finite counting step outside the solver:
+The pack also fixes one explicit two-sided convention: sum every fixed-margin
+table whose point probability is no larger than the observed point probability.
+For this table, the observed top-left count `1` has probability `16/70`, so
+the included top-left counts are `0`, `1`, `3`, and `4`:
+
+```text
+P(X = 0) = 1/70
+P(X = 1) = 16/70
+P(X = 3) = 16/70
+P(X = 4) = 1/70
+two-sided p-value = 34/70 = 17/35
+```
+
+This row is intentionally convention-specific. Other two-sided definitions are
+not silently treated as equivalent.
+
+## Check The Fisher P-Value Certificates
+
+The checked Fisher rows keep the finite counting step outside the solver:
 
 ```text
 actual left-tail p-value = 17/70
+actual probability-ordered two-sided p-value = 17/35
 ```
 
-Then it asks QF_LRA to reject only the final exact-rational contradiction:
+Then they ask QF_LRA to reject only the final exact-rational contradictions:
 
 ```text
 70 * fisher_left_tail_p_value = 17
 fisher_left_tail_p_value = 1/4
+
+35 * fisher_two_sided_p_value = 17
+fisher_two_sided_p_value = 1/2
 ```
 
-Axeyum derives a Farkas certificate for that inconsistent linear real system
+Axeyum derives Farkas certificates for those inconsistent linear real systems
 and checks the certificate independently. This is the trusted-small-checking
-pattern for exact rational p-values: finite replay computes the rational, and
-the solver proof route checks the malformed equality.
+pattern for exact rational p-values: finite replay computes the rationals, and
+the solver proof route checks the malformed equalities.
 
 ## Reject A Bad Binomial P-Value
 
@@ -178,6 +202,7 @@ The pack intentionally covers exact finite tests only:
 binomial finite tails
 hypergeometric point probabilities
 one-sided Fisher tails
+probability-ordered two-sided Fisher tails
 bad p-value refutations
 QF_LRA Fisher p-value contradictions
 QF_LIA tail-count contradictions
@@ -186,7 +211,7 @@ QF_LIA tail-count contradictions
 The following remain outside this proof claim:
 
 ```text
-two-sided Fisher conventions
+other two-sided Fisher conventions
 exact multinomial tests
 asymptotic chi-square and z tests
 normal approximations
@@ -205,6 +230,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes exact_stats_bad_fisher_left_tail_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes exact_stats_bad_fisher_two_sided_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lia_routes exact_stats_bad_binomial_tail_count_emits_checked_diophantine_evidence
 ```
 
@@ -226,5 +252,4 @@ remaining horizon -> asymptotics, policy choices, and floating-point statistics
 
 The graduation target is to encode these claims as deterministic finite-count
 and rational-arithmetic obligations, replay witnesses through Axeyum, and add
-two-sided Fisher and exact multinomial tests before claiming broader exact-test
-coverage.
+exact multinomial tests before claiming broader exact-test coverage.

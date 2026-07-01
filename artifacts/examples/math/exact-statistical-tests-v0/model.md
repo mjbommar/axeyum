@@ -45,5 +45,26 @@ QF_LRA/Farkas reject only the final rational contradiction:
 fisher_left_tail_p_value = 1/4
 ```
 
+## Fisher Two-Sided Probability-Ordered Tail
+
+The two-sided row uses an explicit finite convention: sum every fixed-margin
+table whose point probability is no larger than the observed table's point
+probability. The observed top-left count `1` has point probability `16/70`, so
+counts `0`, `1`, `3`, and `4` are included:
+
+```text
+(C(4,0)*C(4,4) + C(4,1)*C(4,3) + C(4,3)*C(4,1) + C(4,4)*C(4,0)) / C(8,4)
+  = (1 + 16 + 16 + 1) / 70
+  = 17/35
+```
+
+The checked bad two-sided row again preserves finite replay outside the solver,
+then lets QF_LRA/Farkas reject only the final rational contradiction:
+
+```text
+35 * fisher_two_sided_p_value = 17
+fisher_two_sided_p_value = 1/2
+```
+
 These fixed checks are finite exact replay targets. They do not claim
 asymptotic test calibration or floating-point statistical-library equivalence.

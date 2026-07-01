@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const fisher_two_sided_p_value Real)
+(assert (= (* 35 fisher_two_sided_p_value) 17))
+(assert (= fisher_two_sided_p_value (/ 1 2)))
+(check-sat)

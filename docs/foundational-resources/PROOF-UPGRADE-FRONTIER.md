@@ -202,8 +202,9 @@ First targets:
   (resource-backed Farkas regression landed for the bad variance row after
   exact finite-sample replay computes `Var(X) = 5/4`)
 - [exact-statistical-tests-v0](../../artifacts/examples/math/exact-statistical-tests-v0/)
-  (resource-backed Farkas regression landed for the bad Fisher left-tail row
-  after exact fixed-margin replay computes `17/70`)
+  (resource-backed Farkas regressions landed for the bad Fisher left-tail row
+  after exact fixed-margin replay computes `17/70` and the bad
+  probability-ordered two-sided row after replay computes `17/35`)
 - [finite-probability-v0](../../artifacts/examples/math/finite-probability-v0/)
   (resource-backed Farkas regressions landed for the bad normalization,
   conditional-probability, and Bayes-posterior rows)
@@ -581,7 +582,7 @@ First targets:
   `UnsatDiophantine` checking and contradiction-row tamper rejection)
 - [exact-statistical-tests-v0](../../artifacts/examples/math/exact-statistical-tests-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the bad binomial
-  tail-count row; the exact-rational bad Fisher left-tail row is covered by
+  tail-count row; the exact-rational bad Fisher p-value rows are covered by
   the QF_LRA/Farkas lane above)
 - [finite-simplicial-homology-v0](../../artifacts/examples/math/finite-simplicial-homology-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the bad boundary

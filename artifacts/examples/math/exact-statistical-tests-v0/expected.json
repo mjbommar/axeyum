@@ -15,7 +15,7 @@
     },
     {
       "id": "hypergeometric-two-by-two",
-      "description": "A fixed 2x2 table with exact hypergeometric point and left-tail probabilities.",
+      "description": "A fixed 2x2 table with exact hypergeometric point, left-tail, and probability-ordered two-sided probabilities.",
       "values": {
         "table": [
           [1, 3],
@@ -25,7 +25,9 @@
         "column_sums": [4, 4],
         "observed_top_left": 1,
         "point_probability": "8/35",
-        "left_tail_p_value": "17/70"
+        "left_tail_p_value": "17/70",
+        "two_sided_convention": "probability_less_equal_observed_point",
+        "two_sided_p_value": "17/35"
       }
     }
   ],
@@ -58,6 +60,15 @@
       "notes": "The validator sums the fixed-margin hypergeometric probabilities for top-left counts 0 and 1."
     },
     {
+      "id": "fisher-two-sided-pvalue",
+      "claim": "Under the probability-ordered two-sided convention, the Fisher exact-test p-value for the listed table is 17/35.",
+      "expected_result": "sat",
+      "validation": "exact_fisher_two_sided_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["hypergeometric-two-by-two"],
+      "notes": "The validator sums fixed-margin table probabilities no larger than the observed table probability: top-left counts 0, 1, 3, and 4."
+    },
+    {
       "id": "bad-fisher-left-tail-rejected",
       "claim": "The same one-sided Fisher left-tail p-value can be 1/4.",
       "expected_result": "unsat",
@@ -80,6 +91,32 @@
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes exact_stats_bad_fisher_left_tail_artifact_emits_checked_farkas"
       },
       "notes": "The validator recomputes the finite fixed-margin left tail as (1 + 16) / 70 = 17/70; the Axeyum regression checks the final exact-linear contradiction against the malformed claim 1/4 using rechecked Farkas evidence."
+    },
+    {
+      "id": "bad-fisher-two-sided-rejected",
+      "claim": "The probability-ordered two-sided Fisher exact-test p-value for the listed table can be 1/2.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_bad_fisher_two_sided_refutation",
+      "proof_status": "checked",
+      "data": {
+        "table": [
+          [1, 3],
+          [3, 1]
+        ],
+        "row_sums": [4, 4],
+        "column_sums": [4, 4],
+        "observed_top_left": 1,
+        "two_sided_convention": "probability_less_equal_observed_point",
+        "included_top_left_counts": [0, 1, 3, 4],
+        "tail_numerator": 17,
+        "tail_denominator": 35,
+        "actual_two_sided_p_value": "17/35",
+        "claimed_two_sided_p_value": "1/2",
+        "farkas_tail_equation": "tail_denominator * fisher_two_sided_p_value = tail_numerator",
+        "smt2_artifact": "artifacts/examples/math/exact-statistical-tests-v0/smt2/bad-fisher-two-sided-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes exact_stats_bad_fisher_two_sided_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator recomputes the probability-ordered two-sided Fisher sum as (1 + 16 + 16 + 1) / 70 = 17/35; the Axeyum regression checks the final exact-linear contradiction against the malformed claim 1/2 using rechecked Farkas evidence."
     },
     {
       "id": "bad-binomial-pvalue-rejected",

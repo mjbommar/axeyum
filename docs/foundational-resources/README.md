@@ -326,9 +326,9 @@ schemas, examples, and validation workflows.
   stationary distributions, and checked rejection of a malformed transition row.
 - [`artifacts/examples/math/exact-statistical-tests-v0/`](../../artifacts/examples/math/exact-statistical-tests-v0/)
   validates exact binomial tails, hypergeometric point probabilities,
-  one-sided Fisher p-values, checked QF_LRA/Farkas rejection of a false Fisher
-  left-tail p-value, and checked QF_LIA/Diophantine rejection of a bad binomial
-  tail count.
+  one-sided and probability-ordered two-sided Fisher p-values, checked
+  QF_LRA/Farkas rejection of false Fisher p-values, and checked
+  QF_LIA/Diophantine rejection of a bad binomial tail count.
 - [`artifacts/examples/math/finite-groups-v0/`](../../artifacts/examples/math/finite-groups-v0/),
   [`artifacts/examples/math/finite-monoids-v0/`](../../artifacts/examples/math/finite-monoids-v0/),
   [`artifacts/examples/math/finite-permutation-groups-v0/`](../../artifacts/examples/math/finite-permutation-groups-v0/),

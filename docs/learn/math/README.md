@@ -268,9 +268,9 @@ Companion maps:
   a QF_LRA/Farkas bad-coefficients certificate.
 - [Exact Statistical Tests](exact-statistical-tests-end-to-end.md): follows a
   one-sided exact binomial tail, hypergeometric point probability, one-sided
-  Fisher tail, QF_LRA/Farkas bad Fisher p-value rejection, a
-  QF_LIA/Diophantine bad tail-count certificate, and the statistical
-  numerical-honesty horizon.
+  Fisher tail, probability-ordered two-sided Fisher tail, QF_LRA/Farkas bad
+  Fisher p-value rejection, a QF_LIA/Diophantine bad tail-count certificate,
+  and the statistical numerical-honesty horizon.
 - [Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md):
   follows exact midpoint, collinearity, distance, affine-map, area-scaling,
   barycentric, QF_LRA/Farkas bad midpoint-coordinate, QF_LRA/Farkas bad

@@ -44,9 +44,9 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 587 expected checks.
-- 269 checked proof/evidence rows.
-- 247 replay-only rows.
+- 589 expected checks.
+- 270 checked proof/evidence rows.
+- 248 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1004,6 +1004,15 @@ Pick one row per commit unless the change is purely navigational.
      QF_LIA/Diophantine binomial tail-count row without claiming asymptotic
      tests, floating-point statistical libraries, or full test-family
      coverage.
+121. Landed: extend `exact-statistical-tests-v0` with a probability-ordered
+     two-sided Fisher replay row and checked bad two-sided p-value row. Exact
+     fixed-margin replay includes top-left counts `0`, `1`, `3`, and `4`,
+     computing `(1 + 16 + 16 + 1) / 70 = 17/35`, while the malformed source
+     SMT-LIB artifact claims `1/2`; the shared QF_LRA/Farkas route now checks
+     both one-sided and probability-ordered two-sided Fisher p-value
+     contradictions while keeping other two-sided conventions, exact
+     multinomial tests, asymptotics, and floating-point library behavior
+     outside the claim.
 
 ## Validation Checklist
 
