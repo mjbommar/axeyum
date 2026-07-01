@@ -19,7 +19,7 @@ Generated from the current math resource queue:
 - math example packs: 108
 - learner-linked packs: 108 focused links
 - packs with non-checked proof rows: 97
-- non-checked proof rows: 316
+- non-checked proof rows: 318
 
 Candidate route totals:
 
@@ -186,8 +186,8 @@ First targets:
   (source-linked solver-reuse promotion landed for fixed trichotomy and
   order-transitivity refutations)
 - [linear-algebra-rational-v0](../../artifacts/examples/math/linear-algebra-rational-v0/)
-  (source-linked solver-reuse promotion landed for the singular inconsistent
-  system)
+  (source-linked solver-reuse promotions landed for the singular inconsistent
+  system and the bad LU product-entry row)
 - [linear-optimization-v0](../../artifacts/examples/math/linear-optimization-v0/)
   (source-linked solver-reuse promotion landed for the objective-threshold
   conflict)

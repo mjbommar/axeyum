@@ -9,6 +9,7 @@ LRA route and Farkas evidence:
 
 - matrix-vector solution replay for `Ax = b`;
 - LU factorization replay for a fixed rational matrix;
+- checked rejection of a malformed LU product entry;
 - inconsistency of a singular linear system by exact row-scaling replay and
   checked Farkas evidence.
 
@@ -25,16 +26,17 @@ LRA route and Farkas evidence:
 
 The validator parses fraction strings exactly with Python rational arithmetic
 and checks matrix products, matrix-vector products, and the row-scaling
-inconsistency certificate. The singular-system row also has an Axeyum
-regression that builds the `QF_LRA` equations, emits `UnsatFarkas` evidence,
-and rechecks that evidence independently. The same row now also carries a
-source-level SMT-LIB artifact that the route regression parses before checking
-Farkas evidence. The SAT witness rows remain exact replay-only until they route
-through model evidence.
+inconsistency certificate. The bad LU row recomputes `L*U` exactly, isolates
+the bottom-right product entry `3`, and rejects the malformed claim that the
+same entry is `4`. The singular-system and bad LU rows also have Axeyum
+regressions that parse source-level SMT-LIB artifacts, emit `UnsatFarkas`
+evidence, and recheck that evidence independently. The SAT witness rows remain
+exact replay-only until they route through model evidence.
 
 Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_singular_system
+cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_bad_lu_product_entry_artifact_emits_checked_farkas
 ```

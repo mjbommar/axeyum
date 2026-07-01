@@ -162,7 +162,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 569 expected checks, 251 checked
+111 concept rows, 108 non-template packs, 570 expected checks, 252 checked
 rows, 247 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -212,7 +212,7 @@ finite specialization-order replay, finite boundary-operator replay, finite
 chain-complex/homology replay, finite torsion-homology replay, finite
 cohomology replay, finite universal-coefficient shadow replay, finite
 cup-product replay, LU factorization
-replay, rank-nullity replay,
+replay with checked bad product-entry evidence, rank-nullity replay,
 residual bounds, eigenpair witnesses, characteristic polynomial replay, finite
 random-matrix moments, finite measure additivity, finite probability mass
 tables, finite pushforward distributions, finite stochastic kernels, finite

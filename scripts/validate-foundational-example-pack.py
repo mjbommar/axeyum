@@ -9839,6 +9839,44 @@ def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
     if mat_mul(l_matrix, u_matrix) != matrix:
         fail("LU witness does not satisfy L*U = A")
 
+    bad_lu = checks["bad-lu-product-entry-rejected"]
+    if bad_lu["expected_result"] != "unsat" or bad_lu.get("proof_status") != "checked":
+        fail("bad-lu-product-entry-rejected must be a checked unsat row")
+    data = bad_lu.get("data", {})
+    matrix = require_fraction_matrix("bad LU matrix", data.get("matrix"))
+    l_matrix = require_fraction_matrix("bad LU L matrix", data.get("l"))
+    u_matrix = require_fraction_matrix("bad LU U matrix", data.get("u"))
+    require_square_matrix("bad LU target matrix", matrix)
+    validate_lu_shape(l_matrix, u_matrix)
+    require_mat_mul_shape("bad LU factorization", l_matrix, u_matrix)
+    product = mat_mul(l_matrix, u_matrix)
+    if product != matrix:
+        fail("bad-lu-product-entry-rejected source factors must still satisfy L*U = A")
+    entry = data.get("entry")
+    if not isinstance(entry, list) or len(entry) != 2:
+        fail("bad-lu-product-entry-rejected entry must be a two-item index list")
+    row_index = require_int("bad LU entry row", entry[0])
+    col_index = require_int("bad LU entry column", entry[1])
+    if row_index < 0 or row_index >= len(product) or col_index < 0 or col_index >= len(product[row_index]):
+        fail("bad-lu-product-entry-rejected entry index is out of bounds")
+    computed_entry = require_fraction("bad LU computed_entry", data.get("computed_entry"))
+    claimed_entry = require_fraction("bad LU claimed_entry", data.get("claimed_entry"))
+    if computed_entry != product[row_index][col_index]:
+        fail("bad-lu-product-entry-rejected computed_entry does not match L*U")
+    if claimed_entry == computed_entry:
+        fail("bad-lu-product-entry-rejected claim unexpectedly matches the LU product entry")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad LU smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-lu-product-entry-farkas-conflict.smt2":
+        fail("bad-lu-product-entry-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad LU smt2_artifact", smt2_artifact)
+    farkas_regression = data.get("farkas_regression")
+    require_string("bad LU farkas_regression", farkas_regression)
+    if "linear_algebra_bad_lu_product_entry_artifact_emits_checked_farkas" not in farkas_regression:
+        fail("bad-lu-product-entry-rejected must link the Farkas regression")
+    if "UnsatFarkas" not in bad_lu.get("notes", ""):
+        fail("bad-lu-product-entry-rejected notes must name UnsatFarkas evidence")
+
     inconsistent = checks["singular-system-inconsistent"]
     if inconsistent["expected_result"] != "unsat":
         fail("singular-system-inconsistent must expect unsat")

@@ -4244,8 +4244,10 @@ BRIDGE_CONCEPTS = [
         "resource_status": "validated",
         "summary": (
             "A claimed LU factorization is checked by exact matrix multiplication "
-            "over a fixed rational matrix, with pivoting, singularity, and "
-            "stability claims kept separate from the replayed equality."
+            "over a fixed rational matrix; a malformed product-entry row now "
+            "routes through checked QF_LRA/Farkas evidence, while pivoting, "
+            "singularity, and stability claims stay separate from the replayed "
+            "equality."
         ),
         "prerequisites": [
             "bridge_finite_model_replay",
@@ -4295,8 +4297,8 @@ BRIDGE_CONCEPTS = [
                 ],
                 "notes": (
                     "The pack validator recomputes L*U and A*x exactly over "
-                    "rationals; bad infeasible linear-system rows use the "
-                    "separate QF_LRA/Farkas route."
+                    "rationals; bad LU product-entry and bad infeasible "
+                    "linear-system rows use the separate QF_LRA/Farkas route."
                 ),
             }
         ],
@@ -4307,6 +4309,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/linear-system-end-to-end.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+            "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-lu-product-entry-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
@@ -4317,7 +4320,7 @@ BRIDGE_CONCEPTS = [
             "status": "validated",
             "criteria": [
                 "Rows state the exact matrix entries, lower/upper factors, and rational arithmetic domain.",
-                "The validator recomputes L*U and rejects corrupted factor entries.",
+                "The validator recomputes L*U and rejects the corrupted product-entry row through checked QF_LRA/Farkas evidence.",
                 "Singularity, pivoting, and stability claims remain separate proof-horizon or numerical-analysis rows.",
             ],
         },

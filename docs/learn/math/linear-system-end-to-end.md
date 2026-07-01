@@ -18,12 +18,14 @@ Concept rows:
 | Check | Expected | Evidence Status |
 |---|---|---|
 | `matrix-vector-solution` | `sat` | replay-only |
+| `lu-factorization-witness` | `sat` | replay-only |
+| `bad-lu-product-entry-rejected` | `unsat` | checked |
 | `singular-system-inconsistent` | `unsat` | checked |
 | `objective-threshold-farkas-infeasible` | `unsat` | checked |
 
-The matrix-vector row is exact arithmetic replay. The inconsistent system and
-LP threshold rows carry checked Farkas evidence for fixed linear rational
-systems.
+The matrix-vector and positive LU rows are exact arithmetic replay. The bad LU
+product entry, inconsistent system, and LP threshold rows carry checked Farkas
+evidence for fixed linear rational systems.
 
 ## Encode
 
@@ -60,6 +62,21 @@ The row-scaling replay observes that the second left-hand side is twice the
 first while `3 != 2*1`. The solver regression builds the same equations as
 `QF_LRA` and requires rechecked `UnsatFarkas` evidence.
 
+The LU row uses:
+
+```text
+A = [[2, 1],
+     [4, 3]]
+L = [[1, 0],
+     [2, 1]]
+U = [[2, 1],
+     [0, 1]]
+```
+
+The positive row recomputes `L*U = A`. The checked negative row isolates the
+bottom-right product entry: exact replay gives `(L*U)[1,1] = 3`, while the
+malformed claim says that same entry is `4`.
+
 ## Replay
 
 For the matrix row, the checker recomputes:
@@ -67,6 +84,16 @@ For the matrix row, the checker recomputes:
 ```text
 [2*1 + 1*2, 1*1 + (-1)*2] = [4, -1]
 ```
+
+For the bad LU row, the checker recomputes:
+
+```text
+(L*U)[1,1] = 2*1 + 1*1 = 3
+```
+
+The source SMT-LIB artifact then forces the same product entry to equal both
+`3` and `4`, and the route regression requires independently rechecked
+`UnsatFarkas` evidence.
 
 For the Farkas row, the checker combines the two inequalities:
 
@@ -85,6 +112,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_bad_lu_product_entry_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_singular_system_inconsistent_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_emits_checked_farkas
 ```

@@ -14,6 +14,17 @@ Expected result: `sat`.
 The witness matrices `L` and `U` multiply back to `A`, with `L` lower
 triangular and unit diagonal and `U` upper triangular.
 
+## `bad-lu-product-entry-rejected`
+
+Expected result: `unsat`.
+
+The checked query rejects a malformed LU product row. Exact replay computes
+`(L*U)[1,1] = 3` for the listed factors, while the malformed row asserts that
+the same product entry is `4`.
+
+The resource-backed Axeyum regression parses the source SMT-LIB artifact for
+that exact equality conflict and requires rechecked `UnsatFarkas` evidence.
+
 ## `singular-system-inconsistent`
 
 Expected result: `unsat`.

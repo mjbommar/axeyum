@@ -58,9 +58,9 @@ schemas, examples, and validation workflows.
   route-facing query map for finite replay, Boolean CNF/LRAT, QF_BV,
   QF_LIA/Diophantine, QF_LRA/Farkas, QF_UF/Alethe, and Lean-horizon rows.
 - [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md) gives
-  copyable concept-plus-route queries for LU, residuals, rank/nullity,
-  eigenpairs, random matrices, tensor/module rows, operators, and Chebyshev
-  systems.
+  copyable concept-plus-route queries for checked LU rows, residuals,
+  rank/nullity, eigenpairs, random matrices, tensor/module rows, operators,
+  and Chebyshev systems.
 - [RULES-LAW-CROSSWALK.md](RULES-LAW-CROSSWALK.md) maps the math-resource
   patterns into rules/law checks for finite predicates, thresholds, graph
   reachability, precedence, proof routes, and current rules-as-code packs,
@@ -273,7 +273,8 @@ schemas, examples, and validation workflows.
   and a multivariable-calculus Lean-horizon row.
 - [`artifacts/examples/math/linear-algebra-rational-v0/`](../../artifacts/examples/math/linear-algebra-rational-v0/)
   validates exact rational matrix-vector solution replay, LU factorization
-  replay, and a row-scaling inconsistency certificate for a singular system.
+  replay, a checked bad LU product-entry certificate, and a row-scaling
+  inconsistency certificate for a singular system.
 - [`artifacts/examples/math/finite-vector-spaces-v0/`](../../artifacts/examples/math/finite-vector-spaces-v0/)
   validates finite vector-space laws over `F2`, subspace and span replay,
   linear-map kernel/image replay, rank-nullity replay, checked rejection of a

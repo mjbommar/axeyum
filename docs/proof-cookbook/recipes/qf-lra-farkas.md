@@ -82,7 +82,8 @@ not a nonlinear theorem prover.
 Canonical examples:
 
 - [Linear Algebra Rational](../../../artifacts/examples/math/linear-algebra-rational-v0/)
-  uses a singular inconsistent linear-system row.
+  uses a singular inconsistent linear-system row and a bad LU product-entry
+  row.
 - [Linear Optimization](../../../artifacts/examples/math/linear-optimization-v0/)
   uses an objective-threshold conflict where `x + y <= 4` and `x + y >= 5`
   combine to `0 <= -1`.

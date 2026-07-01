@@ -47,6 +47,20 @@ U = [[2, 1],
 the pack checks `L*U = A` exactly, with `L` lower triangular and unit diagonal
 and `U` upper triangular.
 
+### Bad LU Product Entry
+
+The same `L` and `U` factors also support a checked negative row. Exact replay
+computes
+
+```text
+(L*U)[1,1] = 2*1 + 1*1 = 3
+```
+
+so the malformed claim that the bottom-right product entry is `4` is
+inconsistent. The source SMT-LIB artifact isolates the final equality conflict,
+and the Axeyum route regression checks `UnsatFarkas` evidence for that fixed
+formula.
+
 ### Singular Inconsistent System
 
 The system

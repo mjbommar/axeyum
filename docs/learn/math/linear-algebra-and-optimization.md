@@ -56,10 +56,11 @@ Companion index:
 ## What Axeyum Checks
 
 The linear path uses exact rational matrices. It replays `A*x = b`, checks
-`L*U = A`, validates a row-scaling inconsistency certificate, checks LP
-feasibility witnesses, checks a tiny Farkas infeasibility certificate, and
-replays finite convexity/threshold and finite-dimensional norm/operator
-examples. The least-squares regression slice checks normal equations,
+`L*U = A`, rejects a malformed LU product entry through checked
+QF_LRA/Farkas evidence, validates a row-scaling inconsistency certificate,
+checks LP feasibility witnesses, checks a tiny Farkas infeasibility
+certificate, and replays finite convexity/threshold and finite-dimensional
+norm/operator examples. The least-squares regression slice checks normal equations,
 residual orthogonality, RSS comparison, and a checked `UnsatFarkas`
 bad-coefficients certificate. The finite-vector-space slice adds `F2^2`,
 subspace/span replay,

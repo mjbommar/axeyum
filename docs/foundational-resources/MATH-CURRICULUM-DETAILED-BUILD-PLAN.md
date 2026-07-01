@@ -42,8 +42,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 569 expected checks.
-- 251 checked proof/evidence rows.
+- 570 expected checks.
+- 252 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -902,6 +902,13 @@ Pick one row per commit unless the change is purely navigational.
      route now checks both the bad Rayleigh-quotient and bad eigenpair
      conflicts without claiming the spectral theorem or Rayleigh-Ritz
      optimization coverage.
+107. Landed: extend `linear-algebra-rational-v0` with a checked bad LU
+     product-entry row. Exact replay computes `(L*U)[1,1] = 3` for the listed
+     rational factors, while the malformed source SMT-LIB artifact claims the
+     same product entry is `4`; the shared QF_LRA/Farkas route now checks this
+     decomposition arithmetic conflict alongside the existing singular-system
+     conflict without claiming pivoting, existence, or numerical-stability
+     coverage.
 
 ## Validation Checklist
 

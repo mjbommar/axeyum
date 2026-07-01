@@ -13,6 +13,9 @@ use axeyum_solver::{
 const LINEAR_ALGEBRA_SINGULAR_SYSTEM: &str = include_str!(
     "../../../artifacts/examples/math/linear-algebra-rational-v0/smt2/singular-system-inconsistent-farkas-conflict.smt2"
 );
+const LINEAR_ALGEBRA_BAD_LU_PRODUCT_ENTRY: &str = include_str!(
+    "../../../artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-lu-product-entry-farkas-conflict.smt2"
+);
 const LINEAR_OPTIMIZATION_OBJECTIVE_THRESHOLD: &str = include_str!(
     "../../../artifacts/examples/math/linear-optimization-v0/smt2/objective-threshold-farkas-conflict.smt2"
 );
@@ -364,6 +367,14 @@ fn linear_algebra_singular_system_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "linear-algebra-rational-v0 singular-system-inconsistent SMT-LIB artifact",
         LINEAR_ALGEBRA_SINGULAR_SYSTEM,
+    );
+}
+
+#[test]
+fn linear_algebra_bad_lu_product_entry_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "linear-algebra-rational-v0 bad-lu-product-entry SMT-LIB artifact",
+        LINEAR_ALGEBRA_BAD_LU_PRODUCT_ENTRY,
     );
 }
 

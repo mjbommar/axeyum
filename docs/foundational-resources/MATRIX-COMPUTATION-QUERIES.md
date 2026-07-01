@@ -42,7 +42,7 @@ when the consumer needs a concrete checked row to display.
 
 | Computation Family | Concept Filter | Route Filter | Start Query |
 |---|---|---|---|
-| Linear systems and LU | `bridge_lu_replay` | `Farkas` | `packs --concept bridge_lu_replay --route Farkas` |
+| Linear systems and LU | `bridge_lu_replay` | `Farkas` | `checks --concept bridge_lu_replay --route Farkas --proof-status checked` |
 | Residual bounds and least squares | `bridge_residual_bound` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked` |
 | Rank, kernel, image, and dual rows | `bridge_rank_nullity` | `Alethe` | `packs --concept bridge_rank_nullity --route Alethe` |
 | Rayleigh quotients, eigenpairs, and matrix invariants | `bridge_eigenpair` | `Farkas` | `checks --concept bridge_eigenpair --route Farkas --proof-status checked` |
@@ -55,12 +55,13 @@ when the consumer needs a concrete checked row to display.
 
 ## Copyable Examples
 
-List the finite LU/linear-system packs that have Farkas-route pressure:
+Display checked finite LU/linear-system rows:
 
 ```sh
-python3 scripts/query-foundational-resources.py packs \
+python3 scripts/query-foundational-resources.py checks \
   --concept bridge_lu_replay \
   --route Farkas \
+  --proof-status checked \
   --require-any
 ```
 

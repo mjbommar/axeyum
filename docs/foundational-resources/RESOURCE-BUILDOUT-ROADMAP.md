@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 569 expected checks.
-- 251 checked proof/evidence rows.
+- 570 expected checks.
+- 252 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -363,7 +363,7 @@ Nodes: number theory, linear algebra, calculus.
 Current resource surface:
 
 - Bounded number-theory checks.
-- Exact rational linear algebra.
+- Exact rational linear algebra with checked bad LU product-entry evidence.
 - Finite vector/dual/module/tensor resources.
 - Inner-product, spectral, matrix-invariant, numerical-linear-algebra, and
   random-matrix finite packs.
@@ -377,8 +377,9 @@ Build next:
   residue, CRT, quadratic residue, sum-of-squares, and modular obstruction
   families.
 - Treat linear algebra as the bridge from education to solver-friendly matrix
-  corpora: LU, rank/nullity, residual bounds, eigenpair checks, characteristic
-  polynomial, tensor maps, and finite-field linear algebra.
+  corpora: LU replay plus checked bad product-entry evidence, rank/nullity,
+  residual bounds, eigenpair checks, characteristic polynomial, tensor maps,
+  and finite-field linear algebra.
 - Treat calculus as exact algebraic shadow plus explicit proof horizon:
   derivative identities, Jacobian/Hessian replay, finite sums, bounded
   epsilon-delta samples, and theorem targets for FTC, convergence, and
@@ -548,9 +549,10 @@ Current packs:
 
 Build next:
 
-- The first generated bridge rows now cover LU replay, rank/nullity replay,
-  residual bounds, eigenpair witnesses, characteristic-polynomial replay, and
-  finite random-matrix moments.
+- The first generated bridge rows now cover LU replay with checked bad
+  product-entry evidence, rank/nullity replay, residual bounds, eigenpair
+  witnesses, characteristic-polynomial replay, and finite random-matrix
+  moments.
 - Add narrower concept rows for matrix multiplication, kernel/image, dual basis,
   transpose, tensor bilinear map, Gram matrix, projection, and finite-field
   linear algebra when one row can serve multiple packs.
