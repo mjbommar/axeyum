@@ -555,4 +555,120 @@ mod tests {
     fn empty_constraints_feasible() {
         assert!(matches!(feasible(2, &[]), SimplexOutcome::Feasible(_)));
     }
+
+    /// A deterministic LCG (no clock / OS entropy) so the sweep is reproducible.
+    struct Lcg(u64);
+    impl Lcg {
+        fn next(&mut self) -> u64 {
+            self.0 = self
+                .0
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            self.0
+        }
+        fn in_range(&mut self, lo: i128, hi: i128) -> i128 {
+            let span = u64::try_from(hi - lo + 1).unwrap();
+            lo + i128::from(self.next() % span)
+        }
+    }
+
+    /// Adversarial differential: `simplex::feasible` must agree on sat/unsat with the
+    /// trusted Fourier–Motzkin [`crate::lra::check_with_lra`] on random non-strict
+    /// rational systems, and every `Feasible` point must replay. This is the P1.9
+    /// T1.9.1 exit criterion (a wrong sat/unsat here would be the worst bug).
+    #[test]
+    fn simplex_agrees_with_fourier_motzkin() {
+        use crate::backend::CheckResult;
+        use axeyum_ir::{Sort, TermArena};
+
+        let mut agreements = 0u32;
+        for seed in 0..400u64 {
+            let mut rng = Lcg(seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407));
+            let nvars = usize::try_from(rng.in_range(2, 3)).unwrap();
+            let ncon = usize::try_from(rng.in_range(2, 5)).unwrap();
+
+            // Build the constraint data once; materialize into both engines.
+            let mut cs: Vec<Constraint> = Vec::with_capacity(ncon);
+            for _ in 0..ncon {
+                let coeffs: Vec<Rational> = (0..nvars).map(|_| r(rng.in_range(-3, 3))).collect();
+                let rel = match rng.in_range(0, 2) {
+                    0 => Rel::Le,
+                    1 => Rel::Ge,
+                    _ => Rel::Eq,
+                };
+                let rhs = r(rng.in_range(-5, 5));
+                cs.push(Constraint { coeffs, rel, rhs });
+            }
+
+            // --- simplex ---
+            let simplex = feasible(nvars, &cs);
+
+            // --- equivalent IR system for Fourier–Motzkin ---
+            let mut arena = TermArena::new();
+            let names = ["x", "y", "z"];
+            let vars: Vec<_> = (0..nvars)
+                .map(|j| {
+                    let s = arena.declare(names[j], Sort::Real).unwrap();
+                    arena.var(s)
+                })
+                .collect();
+            let zero = arena.real_const(Rational::zero());
+            let mut assertions = Vec::with_capacity(ncon);
+            for c in &cs {
+                let mut lhs: Option<axeyum_ir::TermId> = None;
+                for (j, &coeff) in c.coeffs.iter().enumerate() {
+                    if coeff.is_zero() {
+                        continue;
+                    }
+                    let cst = arena.real_const(coeff);
+                    let term = arena.real_mul(cst, vars[j]).unwrap();
+                    lhs = Some(match lhs {
+                        None => term,
+                        Some(acc) => arena.real_add(acc, term).unwrap(),
+                    });
+                }
+                let lhs = lhs.unwrap_or(zero);
+                let rhs = arena.real_const(c.rhs);
+                let atom = match c.rel {
+                    Rel::Le => arena.real_le(lhs, rhs).unwrap(),
+                    Rel::Ge => arena.real_ge(lhs, rhs).unwrap(),
+                    Rel::Eq => arena.eq(lhs, rhs).unwrap(),
+                };
+                assertions.push(atom);
+            }
+            let fm = crate::lra::check_with_lra(&arena, &assertions).unwrap();
+
+            // Adjudicate. Either engine may be `Unknown` (sound); only a definite
+            // sat-vs-unsat disagreement is a bug.
+            let simplex_sat = match &simplex {
+                SimplexOutcome::Feasible(x) => {
+                    assert!(
+                        satisfies(&cs, x),
+                        "seed {seed}: simplex Feasible point does not replay: {cs:?} @ {x:?}"
+                    );
+                    Some(true)
+                }
+                SimplexOutcome::Infeasible(_) => Some(false),
+                SimplexOutcome::Unknown => None,
+            };
+            let fm_sat = match fm {
+                CheckResult::Sat(_) => Some(true),
+                CheckResult::Unsat => Some(false),
+                CheckResult::Unknown(_) => None,
+            };
+            if let (Some(a), Some(b)) = (simplex_sat, fm_sat) {
+                assert_eq!(
+                    a, b,
+                    "seed {seed}: DISAGREE simplex_sat={a} fm_sat={b} on {cs:?}"
+                );
+                agreements += 1;
+            }
+        }
+        assert!(
+            agreements > 200,
+            "too few jointly-decided systems ({agreements}); differential not exercised"
+        );
+    }
 }
