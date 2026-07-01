@@ -14187,6 +14187,69 @@ def validate_complex_plane_transforms(expected: dict[str, Any]) -> None:
     if conjugate_product_value != product_of_conjugates:
         fail("conjugation-product-replay conjugation/product equality fails")
 
+    bad_conjugation = checks["bad-conjugation-product-imaginary-rejected"]
+    if (
+        bad_conjugation["expected_result"] != "unsat"
+        or bad_conjugation.get("proof_status") != "checked"
+    ):
+        fail("bad-conjugation-product-imaginary-rejected must be a checked unsat row")
+    if (
+        bad_conjugation["validation"]
+        != "exact_complex_bad_conjugation_product_imaginary_refutation"
+    ):
+        fail("bad-conjugation-product-imaginary-rejected validation is incorrect")
+    data = bad_conjugation.get("data", {})
+    if data.get("source_witness") != "conjugation-product":
+        fail("bad-conjugation-product-imaginary-rejected must cite the conjugation witness")
+    computed_conjugate_product = require_complex_pair(
+        "bad conjugation computed_conjugate_product",
+        data.get("computed_conjugate_product"),
+    )
+    computed_product_of_conjugates = require_complex_pair(
+        "bad conjugation computed_product_of_conjugates",
+        data.get("computed_product_of_conjugates"),
+    )
+    computed_imaginary = require_fraction(
+        "bad conjugation computed_imaginary_part",
+        data.get("computed_imaginary_part"),
+    )
+    claimed_imaginary = require_fraction(
+        "bad conjugation claimed_imaginary_part",
+        data.get("claimed_imaginary_part"),
+    )
+    imaginary_gap = require_fraction(
+        "bad conjugation imaginary_part_gap",
+        data.get("imaginary_part_gap"),
+    )
+    if computed_conjugate_product != conjugate_product_value:
+        fail("bad-conjugation-product-imaginary-rejected conjugate product does not match replay")
+    if computed_product_of_conjugates != product_of_conjugates:
+        fail("bad-conjugation-product-imaginary-rejected product of conjugates does not match replay")
+    if computed_conjugate_product != computed_product_of_conjugates:
+        fail("bad-conjugation-product-imaginary-rejected source equality must hold")
+    if computed_imaginary != computed_product_of_conjugates[1]:
+        fail("bad-conjugation-product-imaginary-rejected imaginary part is incorrect")
+    if claimed_imaginary == computed_imaginary:
+        fail("bad-conjugation-product-imaginary-rejected must document a false imaginary claim")
+    if claimed_imaginary - computed_imaginary != imaginary_gap:
+        fail("bad-conjugation-product-imaginary-rejected imaginary gap is incorrect")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad conjugation smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-conjugation-product-imaginary-farkas-conflict.smt2"
+    ):
+        fail("bad-conjugation-product-imaginary-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad conjugation smt2_artifact", smt2_artifact)
+    farkas_regression = data.get("farkas_regression")
+    require_string("bad conjugation farkas_regression", farkas_regression)
+    if "complex_plane_bad_conjugation_product_imaginary_artifact_emits_checked_farkas" not in farkas_regression:
+        fail("bad-conjugation-product-imaginary-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad conjugation certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-conjugation-product-imaginary-rejected certificate must document checked Farkas evidence")
+
     mobius = checks["mobius-transform-witness"]
     if mobius["expected_result"] != "sat":
         fail("mobius-transform-witness must expect sat")

@@ -598,8 +598,9 @@ schemas, examples, and validation workflows.
   a fixed polynomial-root witness using real-pair algebra.
 - [`artifacts/examples/math/complex-plane-transforms-v0/`](../../artifacts/examples/math/complex-plane-transforms-v0/)
   validates exact unit-root cycles, conjugation/product replay, rational
-  Mobius-transform replay, checked rejection of a false unit-square real-part
-  claim, and a complex-analysis Lean-horizon row.
+  Mobius-transform replay, checked rejection of false conjugation-product
+  imaginary-part and unit-square real-part claims, and a complex-analysis
+  Lean-horizon row.
 
 Validation commands:
 

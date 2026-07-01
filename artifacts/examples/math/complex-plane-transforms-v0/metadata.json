@@ -34,9 +34,10 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-plane-transforms-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "real-pair unit-square QF_LRA/Farkas regression seed",
-    "pressure": "Exact real-pair replay computes i^2 = -1 + 0*i, while the malformed row claims the real part of every unit square is positive.",
+    "target": "real-pair conjugation-product and unit-square QF_LRA/Farkas regression seeds",
+    "pressure": "Exact real-pair replay computes conjugate(z*w) = conjugate(z)*conjugate(w) = 5 - 5*i while a row claims imaginary part 5, and computes i^2 = -1 + 0*i while another malformed row claims the real part of every unit square is positive.",
     "evidence": [
+      "bad-conjugation-product-imaginary-rejected",
       "bad-unit-square-real-part-rejected"
     ],
     "next_step": "Promote additional complex-plane rows only when real-pair replay exposes a distinct exact-linear, polynomial, or rational-transform solver pressure; keep holomorphicity, residues, analytic continuation, and algebraic-closure theorems in the Lean-horizon lane."
@@ -49,6 +50,7 @@
     "docs/curriculum/02-structures/polynomials.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-conjugation-product-imaginary-farkas-conflict.smt2",
     "artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-unit-square-real-part-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
@@ -56,6 +58,7 @@
   "expected_results": [
     "unit-root-cycle-replay",
     "conjugation-product-replay",
+    "bad-conjugation-product-imaginary-rejected",
     "mobius-transform-witness",
     "bad-unit-square-real-part-rejected",
     "general-complex-analysis-lean-horizon"
@@ -63,7 +66,7 @@
   "graduation_criteria": [
     "Encode fixed complex-plane transform checks as deterministic real-pair NRA obligations.",
     "Replay SAT witnesses through Axeyum model evaluation rather than pack-local Python only.",
-    "Keep the false unit-square real-part row tied to source-linked QF_LRA/Farkas evidence for the final exact real-part contradiction after real-pair replay.",
+    "Keep false conjugation-product and unit-square real-part rows tied to source-linked QF_LRA/Farkas evidence for final exact real-pair contradictions after replay.",
     "Keep holomorphic, contour-integral, residue, analytic-continuation, and fundamental-theorem claims under Lean horizon until formal proof routes exist."
   ]
 }

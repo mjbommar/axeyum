@@ -61,6 +61,9 @@ const COMPLEX_ALGEBRAIC_BAD_PRODUCT_REAL_PART: &str = include_str!(
 const COMPLEX_PLANE_BAD_UNIT_SQUARE_REAL_PART: &str = include_str!(
     "../../../artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-unit-square-real-part-farkas-conflict.smt2"
 );
+const COMPLEX_PLANE_BAD_CONJUGATION_PRODUCT_IMAGINARY: &str = include_str!(
+    "../../../artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-conjugation-product-imaginary-farkas-conflict.smt2"
+);
 const SEQUENCE_LIMIT_BOUNDED_CAUCHY: &str = include_str!(
     "../../../artifacts/examples/math/sequence-limit-shadow-v0/smt2/bounded-cauchy-tail-farkas-conflict.smt2"
 );
@@ -678,6 +681,14 @@ fn complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "complex-plane-transforms-v0 bad-unit-square-real-part SMT-LIB artifact",
         COMPLEX_PLANE_BAD_UNIT_SQUARE_REAL_PART,
+    );
+}
+
+#[test]
+fn complex_plane_bad_conjugation_product_imaginary_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "complex-plane-transforms-v0 bad-conjugation-product-imaginary SMT-LIB artifact",
+        COMPLEX_PLANE_BAD_CONJUGATION_PRODUCT_IMAGINARY,
     );
 }
 

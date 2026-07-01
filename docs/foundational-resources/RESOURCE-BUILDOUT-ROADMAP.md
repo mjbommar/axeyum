@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 627 expected checks.
-- 304 checked proof/evidence rows.
+- 628 expected checks.
+- 305 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -709,9 +709,10 @@ Build next:
 - Keep `complex-algebraic-v0`'s promoted bad product-coordinate and bad
   norm-squared rows tied to exact real-pair replay plus the source
   QF_LRA/Farkas artifacts.
-- Keep `complex-plane-transforms-v0`'s promoted bad unit-square real-part row
-  tied to the source QF_LRA/Farkas artifact after real-pair replay computes
-  `i^2 = -1`.
+- Keep `complex-plane-transforms-v0`'s promoted bad conjugation-product
+  imaginary-part and bad unit-square real-part rows tied to source
+  QF_LRA/Farkas artifacts after real-pair replay computes
+  `conjugate(z*w) = conjugate(z)*conjugate(w) = 5 - 5i` and `i^2 = -1`.
 - Keep holomorphicity, contour integration, residues, analytic continuation,
   and algebraic closure as Lean-horizon.
 
@@ -1356,12 +1357,14 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/calculus-algebraic-shadow-v0/smt2/false-derivative-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes calculus_algebraic_false_derivative_artifact_emits_checked_farkas`.
-37. Landed: promote `complex-plane-transforms-v0` through a source-linked
-    QF_LRA/Farkas regression for `bad-unit-square-real-part-rejected`. The
-    artifact
+37. Landed: promote `complex-plane-transforms-v0` through source-linked
+    QF_LRA/Farkas regressions for `bad-unit-square-real-part-rejected` and
+    `bad-conjugation-product-imaginary-rejected`. The artifacts
     `artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-unit-square-real-part-farkas-conflict.smt2`
-    is checked by
-    `cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas`.
+    and
+    `artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-conjugation-product-imaginary-farkas-conflict.smt2`
+    are checked by the corresponding `complex_plane_bad_*` regressions in
+    `math_resource_lra_routes`.
 38. Landed: promote `induction-obligations-v0` through a source-linked
     QF_LIA arithmetic-DPLL regression for `sum-formula-step-bounded`. The
     artifact
@@ -2010,6 +2013,13 @@ Pick one item per commit unless the change is purely navigational.
      threshold is already reached; the new source SMT-LIB artifact reaches
      independently checked QF_LRA/Farkas evidence through
      `bounded_dynamics_bad_threshold_step_artifact_emits_checked_farkas`.
+137. Landed: extend `complex-plane-transforms-v0` with a source-linked checked
+     conjugation-product imaginary-part refutation. Exact real-pair replay
+     computes both `conjugate(z*w)` and `conjugate(z)*conjugate(w)` as
+     `5 - 5i`, while the malformed row claims imaginary part `5`; the new
+     shifted source SMT-LIB artifact reaches independently checked
+     QF_LRA/Farkas evidence through
+     `complex_plane_bad_conjugation_product_imaginary_artifact_emits_checked_farkas`.
 
 ## Validation Checklist
 

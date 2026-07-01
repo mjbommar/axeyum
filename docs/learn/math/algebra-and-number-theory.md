@@ -89,8 +89,8 @@ coefficient polynomials, checking coefficient extraction, Cauchy products,
 bounded recurrence-prefix identities, and a bad convolution coefficient. The
 complex pack adds algebraic real-pair arithmetic and a fixed polynomial-root
 witness. The complex-plane pack adds unit-root cycles, conjugation over
-products, rational Mobius-transform replay, and a checked false unit-square
-claim.
+products, rational Mobius-transform replay, and checked false
+conjugation-product and unit-square claims.
 
 These examples teach algebra as data that can be replayed: a candidate inverse
 either multiplies to `1` modulo `n`, or it does not.
@@ -381,13 +381,15 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_product_real_part_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-plane-transforms-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_conjugation_product_imaginary_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas
 ```
 
 For fuller traces from gcd/Bezout, modular congruence, bounded number theory,
 complex real-pair arithmetic including checked bad norm-squared and
-bad unit-square QF_LRA/Farkas rows, polynomial coefficient replay plus the
-checked false-root Diophantine row, and factorization replay,
+bad conjugation-product and unit-square QF_LRA/Farkas rows, polynomial
+coefficient replay plus the checked false-root Diophantine row, and
+factorization replay,
 transformation-monoid, permutation, action-table, finite-group, finite-ring,
 homomorphism, quotient-ring, finite-vector-space, finite-dual-space, and module
 data through replay, read

@@ -40,7 +40,8 @@ rational density witnesses, Farkas-checked
 fixed trichotomy and order-transitivity refutations, and algebraic complex
 arithmetic as real-pair data. The complex-plane pack adds
 unit-root cycles, conjugation/product replay, exact rational Mobius transforms,
-and a checked counterexample to a false unit-complex-square claim.
+and checked counterexamples to false conjugation-product and
+unit-complex-square claims.
 
 These examples are useful because every witness can be evaluated directly with
 integer or rational arithmetic.
@@ -148,11 +149,10 @@ T(z) = (z - 1) / (z + 1) = 2/5 + (1/5)i
 ```
 
 The `complex-plane-transforms-v0` validator recomputes the numerator,
-denominator, denominator norm, division result, and a checked counterexample
-using `i^2 = -1`. The upgraded bad unit-square row sends an equivalent
-exact-linear conflict, `negated_real_part = 1` versus
-`negated_real_part < 0`, through checked
-`UnsatFarkas` evidence.
+denominator, denominator norm, division result, conjugation-product replay, and
+checked counterexamples using `conjugate(z*w) = conjugate(z)*conjugate(w) =
+5 - 5i` and `i^2 = -1`. The upgraded bad rows send exact-linear conflicts
+through checked `UnsatFarkas` evidence.
 
 Run the checks from the repository root:
 

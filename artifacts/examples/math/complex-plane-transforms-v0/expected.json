@@ -60,6 +60,25 @@
       "notes": "The validator recomputes the product, conjugates, and product of conjugates exactly."
     },
     {
+      "id": "bad-conjugation-product-imaginary-rejected",
+      "claim": "For z = 1 + 2i and w = 3 - i, conjugate(z) * conjugate(w) has imaginary part 5.",
+      "expected_result": "unsat",
+      "validation": "exact_complex_bad_conjugation_product_imaginary_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "conjugation-product",
+        "computed_conjugate_product": ["5", "-5"],
+        "computed_product_of_conjugates": ["5", "-5"],
+        "computed_imaginary_part": "-5",
+        "claimed_imaginary_part": "5",
+        "imaginary_part_gap": "10",
+        "smt2_artifact": "artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-conjugation-product-imaginary-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_conjugation_product_imaginary_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact real-pair replay computes both conjugate(z*w) and conjugate(z)*conjugate(w) as 5 - 5i; the source QF_LRA artifact isolates the malformed imaginary-part claim for Farkas checking."
+    },
+    {
       "id": "mobius-transform-witness",
       "claim": "The listed rational Mobius-transform image is correct for z = 2 + i.",
       "expected_result": "sat",

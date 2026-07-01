@@ -227,8 +227,10 @@ First targets:
   (source-linked Farkas regression landed for the bad derivative-value row
   after exact polynomial derivative replay computes the derivative at a point)
 - [complex-plane-transforms-v0](../../artifacts/examples/math/complex-plane-transforms-v0/)
-  (source-linked Farkas regression landed for the bad unit-square real-part
-  row after exact real-pair replay computes `i^2 = -1`)
+  (source-linked Farkas regressions landed for the bad conjugation-product
+  imaginary-part row after exact real-pair replay computes
+  `conjugate(z*w) = conjugate(z)*conjugate(w) = 5 - 5i` and for the bad
+  unit-square real-part row after replay computes `i^2 = -1`)
 - [complex-algebraic-v0](../../artifacts/examples/math/complex-algebraic-v0/)
   (source-linked Farkas regressions landed for the bad product-coordinate and
   bad norm-squared rows after exact real-pair replay computes

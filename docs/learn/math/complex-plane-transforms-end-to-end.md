@@ -18,6 +18,7 @@ Concept rows:
 |---|---|---|
 | `unit-root-cycle-replay` | `sat` | replay-only |
 | `conjugation-product-replay` | `sat` | replay-only |
+| `bad-conjugation-product-imaginary-rejected` | `unsat` | checked |
 | `mobius-transform-witness` | `sat` | replay-only |
 | `bad-unit-square-real-part-rejected` | `unsat` | checked |
 | `general-complex-analysis-lean-horizon` | `not-run` | lean-horizon |
@@ -69,6 +70,33 @@ conjugate(z)*conjugate(w) = [5, -5]
 The checker recomputes the product, each conjugate, and the product of
 conjugates. This is a concrete finite witness for a familiar algebraic identity,
 not a proof of the universally quantified theorem.
+
+## Reject A False Conjugation-Product Claim
+
+The negative row reuses the same fixed pair but claims:
+
+```text
+imaginary_part(conjugate(z)*conjugate(w)) = 5
+```
+
+Exact real-pair replay computes:
+
+```text
+conjugate(z)*conjugate(w) = [5, -5]
+```
+
+so the imaginary part is `-5`, not `5`. The promoted source artifact shifts both
+sides by `+5` and records the exact-linear contradiction:
+
+```text
+computed_imaginary_part_plus_five = 0
+claimed_imaginary_part_plus_five = 10
+computed_imaginary_part_plus_five = claimed_imaginary_part_plus_five
+```
+
+The `math_resource_lra_routes` regression parses
+`artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-conjugation-product-imaginary-farkas-conflict.smt2`,
+emits `UnsatFarkas` evidence, and checks the certificate independently.
 
 ## Replay A Rational Mobius Transform
 
@@ -154,6 +182,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-plane-transforms-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_conjugation_product_imaginary_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas
 ```
 
@@ -174,6 +203,6 @@ remaining horizon -> holomorphic, contour-integral, and global algebraic theorem
 ```
 
 The graduation target is deterministic real-pair NRA obligations plus Axeyum
-model replay for witnesses. The current false unit-square row is promoted only
-for the final exact-rational real-part contradiction after replay, not for a
-general complex-analysis theorem.
+model replay for witnesses. The current false conjugation-product and
+unit-square rows are promoted only for final exact-rational contradictions
+after replay, not for general complex-analysis theorems.

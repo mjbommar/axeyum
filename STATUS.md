@@ -205,6 +205,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Complex-plane bad conjugation-product imaginary QF_LRA row landed.**
+  `complex-plane-transforms-v0` now includes a checked rejection for a
+  malformed conjugation-product row: exact real-pair replay computes both
+  `conjugate(z*w)` and `conjugate(z)*conjugate(w)` as `5 - 5i` for
+  `z = 1 + 2i` and `w = 3 - i`, while the bad row claims imaginary part `5`.
+  The validator pins the source witness, replayed conjugate products,
+  computed imaginary part, claimed imaginary part, gap, source SMT-LIB
+  artifact, regression, and independently checked `UnsatFarkas` certificate.
+  The shared `math_resource_lra_routes` regression parses the shifted
+  QF_LRA artifact and checks the Farkas evidence. Generated dashboards and the
+  public query summary now report 111 concept rows, 108 non-template packs,
+  628 expected checks, 305 checked rows, 252 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Bounded-dynamics bad threshold-step QF_LRA row landed.**
   `bounded-dynamics-v0` now includes a checked rejection for a malformed early
   threshold-reachability row: exact replay of the plus-three trace computes

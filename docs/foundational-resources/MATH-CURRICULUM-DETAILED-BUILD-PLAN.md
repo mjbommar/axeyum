@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 627 expected checks.
-- 304 checked proof/evidence rows.
+- 628 expected checks.
+- 305 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -243,7 +243,7 @@ Exit criteria:
 | `integers` | maintain | group common Diophantine obstructions |
 | `rationals` | maintain | exact rational order and Farkas conflicts are already the model |
 | `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding has source-linked bad-iterate and bad bisection-width rows, separation has source-linked bad convex-combination and bad-separator rows, KKT has source-linked bad-stationarity and bad-complementarity rows, active-set QP has source-linked bad-free-gradient, bad inactive-slack, and bad degenerate-multiplier rows, SDP has source-linked bad-objective and bad duality-gap rows, gradient descent has source-linked bad-decrease, bad step-coordinate, and bad descent-bound rows, finite line search has source-linked bad Armijo, bad descent-direction, and bad accepted-candidate rows, finite Wolfe line search has source-linked bad minimizer, bad sufficient-decrease, and bad curvature rows, finite projected-gradient has source-linked bad-projection and bad projected-decrease rows, finite proximal-gradient has source-linked bad-proximal-point, bad composite-decrease, and bad box-proximal-point rows, finite circle geometry has source-linked bad-radius and bad line-intersection rows, finite inversion geometry has source-linked bad inverse-coordinate and inverse-distance-product rows, and finite cyclic geometry has source-linked bad diagonal-intersection, bad opposite-angle, and bad Ptolemy rows; keep completeness, convergence, separation, KKT sufficiency, active-set method theory, SDP duality, descent-rate, general circle/inversion/cyclic geometry, and broad CAD/SOS/RCF claims horizon |
-| `complex` | deepen | complex-plane bad unit-square real-part row now has a source-linked QF_LRA/Farkas regression; keep analytic theorems Lean-horizon |
+| `complex` | deepen | complex-plane bad conjugation-product imaginary-part and bad unit-square real-part rows now have source-linked QF_LRA/Farkas regressions; keep analytic theorems Lean-horizon |
 | `divisibility-and-euclid` | maintain | use gcd/Bezout rows as arithmetic-certificate examples |
 | `modular-arithmetic` | maintain | keep LIA nonunit/CRT and BV fixed-width nonunit-inverse/Fermat-unit residue routes distinct |
 | `groups` | maintain | table replay plus Alethe equality conflicts |
@@ -288,8 +288,9 @@ Pick one row per commit unless the change is purely navigational.
    bad-gradient QF_LRA/Farkas artifact and route regression.
 11. Landed: promote `calculus-algebraic-shadow-v0` through a source-linked
    false-derivative QF_LRA/Farkas artifact and route regression.
-12. Landed: promote `complex-plane-transforms-v0` through a source-linked
-   bad unit-square real-part QF_LRA/Farkas artifact and route regression.
+12. Landed: promote `complex-plane-transforms-v0` through source-linked
+   bad unit-square real-part and bad conjugation-product imaginary-part
+   QF_LRA/Farkas artifacts and route regressions.
 13. Landed: promote `induction-obligations-v0` through a source-linked bounded
    bad-step count QF_LIA arithmetic-DPLL artifact and route regression.
 14. Landed: promote `cardinality-principles-v0` through a source-linked
@@ -1259,6 +1260,14 @@ Pick one row per commit unless the change is purely navigational.
      threshold-step reachability, and invariant-bound conflicts without
      claiming continuous-time dynamics, ODE existence/uniqueness, stability,
      chaos, or PDE coverage.
+154. Landed: extend `complex-plane-transforms-v0` with a source-linked checked
+     bad conjugation-product imaginary-part row. Exact real-pair replay
+     computes both `conjugate(z*w)` and `conjugate(z)*conjugate(w)` as
+     `5 - 5i` for `z = 1 + 2i` and `w = 3 - i`, while the malformed source
+     SMT-LIB artifact claims imaginary part `5`; the shared QF_LRA/Farkas
+     route now checks both conjugation-product imaginary-part and unit-square
+     real-part conflicts without claiming holomorphicity, contour integration,
+     residues, analytic continuation, or algebraic-closure theorems.
 
 ## Validation Checklist
 

@@ -8377,7 +8377,7 @@
           "id": "complex-plane-transforms-v0",
           "status": "validated",
           "path": "artifacts/examples/math/complex-plane-transforms-v0",
-          "notes": "Unit-root cycle, conjugation product, Mobius-transform witness, and bad unit-square real-part rows."
+          "notes": "Unit-root cycle, conjugation product, Mobius-transform witness, bad conjugation-product imaginary-part, and bad unit-square real-part rows."
         },
         {
           "id": "polynomial-factorization-rational-v0",

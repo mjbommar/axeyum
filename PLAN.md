@@ -225,8 +225,8 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 627 expected checks (334 `sat`,
-222 `unsat`, 71 `not-run`), 304 checked rows, 252 replay-only rows, and 71
+111 concept rows, 108 non-template packs, 628 expected checks (334 `sat`,
+223 `unsat`, 71 `not-run`), 305 checked rows, 252 replay-only rows, and 71
 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -788,8 +788,8 @@ source-linked promoted bad tail-bound and bad union-bound conflicts, while seque
 now promote a bounded Cauchy-tail max-distance threshold conflict, and
 multivariable calculus now promotes a bad exact gradient-component conflict,
 with calculus algebraic shadows now promoting a bad exact derivative-value
-conflict, and complex-plane transforms now promoting a bad unit-square
-real-part conflict.
+conflict, and complex-plane transforms now promoting bad conjugation-product
+imaginary-part and bad unit-square real-part conflicts.
 The first
 secondary QF_LRA/Farkas
 target set is now covered, the initial equality-heavy QF_UF/Alethe
@@ -872,7 +872,8 @@ promotion, polynomial-factorization discriminant QF_LRA/Farkas promotion,
 cardinality-principles overlap-additivity count QF_LIA/Diophantine
 promotion,
 induction-obligations bounded bad-step count QF_LIA arithmetic-DPLL promotion,
-complex-plane bad unit-square real-part QF_LRA/Farkas promotion,
+complex-plane bad conjugation-product imaginary-part and bad unit-square
+real-part QF_LRA/Farkas promotions,
 calculus-algebraic false-derivative QF_LRA/Farkas promotion,
 multivariable-calculus bad-gradient QF_LRA/Farkas promotion,
 sequence-limit bounded Cauchy-tail QF_LRA/Farkas promotion,

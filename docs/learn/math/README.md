@@ -149,8 +149,8 @@ Companion maps:
   of bad product-coordinate and norm-squared rows.
 - [Complex Plane Transforms](complex-plane-transforms-end-to-end.md): follows
   unit-root cycle replay, conjugation over products, a rational Mobius
-  transform, QF_LRA/Farkas bad unit-square real-part rejection, and the
-  complex-analysis Lean horizon.
+  transform, QF_LRA/Farkas bad conjugation-product imaginary-part and
+  unit-square real-part rejections, and the complex-analysis Lean horizon.
 - [Rational Midpoint](rational-midpoint-end-to-end.md): follows an exact
   density witness through fraction arithmetic and replay-only evidence status.
 - [Bounded Rational Real Analysis](real-analysis-rational-end-to-end.md):

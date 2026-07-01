@@ -38,6 +38,10 @@ conjugate(z*w) = 5 - 5i
 conjugate(z) * conjugate(w) = 5 - 5i
 ```
 
+A malformed row claims the product of conjugates has imaginary part `5`. Exact
+real-pair replay computes imaginary part `-5`, and the source-linked QF_LRA
+artifact checks the final contradiction.
+
 ## Mobius Transform Witness
 
 For the fixed transform

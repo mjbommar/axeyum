@@ -260,7 +260,7 @@ row and a pack target, even if the initial pack is only proof-horizon metadata.
 | `integers` | `number_theory` | `integer-lia-v0` | Linear integer equations/inequalities and witnesses. |
 | `rationals` | `real_analysis`, `linear_algebra` | `rationals-lra-v0`, `polynomial-factorization-rational-v0` | Exact rational order/field facts, density, trichotomy, Farkas links, rational polynomial division, GCD, factorization replay, and a QF_LRA discriminant conflict. |
 | `reals` | `real_analysis`, `optimization_and_convexity` | `real-analysis-rational-v0`, `reals-rcf-shadow-v0`, `multivariable-calculus-rational-v0`, `finite-root-finding-v0`, `finite-separation-v0`, `finite-kkt-v0`, `finite-active-set-qp-v0`, `finite-sdp-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0`, `finite-projected-gradient-v0`, `finite-proximal-gradient-v0`, `finite-circle-geometry-v0`, `finite-inversion-geometry-v0`, `finite-cyclic-geometry-v0` | Bounded rational neighborhoods, algebraic real constraints through LRA/NRA, checked QF_LRA negative-discriminant shadow, exact rational gradients, Hessian checks, finite root-finding iteration replay, finite separating-hyperplane replay, finite KKT stationarity/complementarity replay, finite active-set QP face/slack replay with checked inactive-slack evidence, finite SDP objective/slack/gap replay, finite gradient-descent step replay, finite Armijo line-search replay, finite Wolfe sufficient-decrease/curvature replay, finite projected-gradient interval/decrease replay, finite proximal-gradient soft-threshold/composite-decrease and box-plus-L1 replay, finite circle point/tangent/chord/line replay, finite inversion replay, finite cyclic quadrilateral replay, and rational Ptolemy replay; completeness, separation theorems, KKT sufficiency, active-set method theory, SDP duality, descent-rate, Wolfe/line-search/projected/proximal-gradient convergence, circle/inversion/cyclic-geometry theorems, and convergence marked horizon. |
-| `complex` | `complex_analysis`, `linear_algebra` | `complex-algebraic-v0`, `complex-plane-transforms-v0` | Complex arithmetic, unit-root cycles, conjugation, and rational transforms as real-pair algebraic constraints. |
+| `complex` | `complex_analysis`, `linear_algebra` | `complex-algebraic-v0`, `complex-plane-transforms-v0` | Complex arithmetic, unit-root cycles, conjugation, rational transforms, and checked false real-pair claims as algebraic constraints. |
 | `divisibility-and-euclid` | `number_theory` | `gcd-bezout-v0` | GCD, Bezout witness replay, divisibility checks. |
 | `modular-arithmetic` | `number_theory`, `abstract_algebra` | `modular-arithmetic-v0`, `finite-ideals-v0` | Congruences, inverses, CRT, fixed-modulus enumeration, checked QF_LIA nonunit and incompatible-CRT Diophantine obstructions, checked fixed-width QF_BV/DRAT nonunit-inverse and modulo-5 Fermat-unit searches, modular ring ideals, and quotient rings. |
 | `groups` | `abstract_algebra` | `finite-groups-v0`, `finite-algebra-homomorphisms-v0`, `finite-monoids-v0`, `finite-permutation-groups-v0`, `finite-group-actions-v0`, `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-modules-v0`, `finite-tensor-products-v0` | Cayley-table closure, identity, inverse, associativity, homomorphism, kernel/image, quotient, finite monoids, units/idempotents, finite permutation groups, cycle/sign replay, finite group actions, orbit/stabilizer replay, Burnside counting, vector-addition groups, dual-space additive groups, module-addition groups, finite tensor-product additive groups, and induced-map checks. |
@@ -940,8 +940,8 @@ product-coordinate and norm-squared rows, and a fixed polynomial-root witness
 using real-pair algebra.
 `artifacts/examples/math/complex-plane-transforms-v0/` now validates exact
 unit-root cycles, conjugation/product replay, rational Mobius-transform
-replay, checked rejection of a false unit-square real-part claim, and a
-complex-analysis Lean-horizon row.
+replay, checked rejection of false conjugation-product imaginary-part and
+unit-square real-part claims, and a complex-analysis Lean-horizon row.
 `artifacts/examples/math/numerical-linear-algebra-v0/` now validates exact
 residual bounds, rational solution boxes, Jacobi one-step contraction replay,
 and checked QF_LRA/Farkas rejection of false residual and Jacobi error bounds.
@@ -1059,8 +1059,8 @@ Recommended order:
    bad projection-orthogonality rejections, and Chebyshev polynomial examples.
 12. `complex-algebraic-v0` and `complex-plane-transforms-v0`: complex
     arithmetic, unit-root cycles, conjugation/product replay, QF_LRA/Farkas
-    bad product-coordinate/norm/unit-square rejections, and rational Mobius
-    transforms as real-pair algebra.
+    bad product-coordinate/norm/conjugation-product/unit-square rejections,
+    and rational Mobius transforms as real-pair algebra.
 13. `numerical-linear-algebra-v0`: residual bounds, rational solution boxes,
     exact iterative-method error replay, and checked bad Jacobi error bounds.
 14. `random-matrix-finite-v0`: finite matrix-valued probability tables,
@@ -1633,8 +1633,9 @@ diagonal-intersection coordinates, false opposite-angle dot products, and
 false Ptolemy values, and a cyclic-geometry Lean-horizon row.
 `complex-plane-transforms-v0` now adds the next exact finite complex-analysis
 bridge: unit-root cycles, conjugation/product replay, rational
-Mobius-transform replay, checked rejection of a false unit-square real-part
-claim, and a complex-analysis Lean-horizon row.
+Mobius-transform replay, checked rejection of false conjugation-product
+imaginary-part and unit-square real-part claims, and a complex-analysis
+Lean-horizon row.
 `least-squares-regression-v0` now adds the next exact finite statistics bridge:
 least-squares normal equations, residual orthogonality, mean-baseline RSS
 comparison, checked QF_LRA/Farkas rejection of bad RSS-improvement and bad
@@ -1851,8 +1852,8 @@ QF_BV bit-blast evidence, so packs can point at shared route vocabulary instead
 of repeating the trust-boundary prose locally.
 `complex-plane-transforms-v0` now has a learner-facing end-to-end lesson for
 unit-root cycle replay, conjugation over products, rational Mobius-transform
-replay, checked bad unit-square rejection, and the complex-analysis Lean
-horizon.
+replay, checked bad conjugation-product imaginary-part and unit-square
+rejections, and the complex-analysis Lean horizon.
 `exact-statistical-tests-v0` now has a learner-facing end-to-end lesson for
 one-sided exact binomial tails, hypergeometric point probability, one-sided
 Fisher tail replay, probability-ordered two-sided Fisher replay, checked
@@ -2162,9 +2163,10 @@ after exact trace and witness-root replay.
 `calculus-algebraic-shadow-v0` now routes its false derivative-value row
 through the same checked Farkas evidence path after exact polynomial derivative
 replay computes the derivative at the fixed point.
-`complex-plane-transforms-v0` now routes its bad unit-square real-part row
-through the same checked Farkas evidence path after exact real-pair replay
-computes `i^2 = -1`.
+`complex-plane-transforms-v0` now routes its bad conjugation-product
+imaginary-part and bad unit-square real-part rows through the same checked
+Farkas evidence path after exact real-pair replay computes
+`conjugate(z*w) = conjugate(z)*conjugate(w) = 5 - 5i` and `i^2 = -1`.
 The structured atlas now records these recurring exact-rational contradictions
 as `family_exact_rational_farkas`, scoped to the optimization/Farkas
 proof-route lane and backed by the shared

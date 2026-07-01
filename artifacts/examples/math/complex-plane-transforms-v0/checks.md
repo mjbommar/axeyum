@@ -15,6 +15,17 @@ Expected result: `sat`.
 The validator recomputes `z*w`, `conjugate(z*w)`, and
 `conjugate(z)*conjugate(w)` for a fixed pair of complex numbers.
 
+## `bad-conjugation-product-imaginary-rejected`
+
+Expected result: `unsat`.
+
+The validator replays the same fixed pair and computes
+`conjugate(z*w) = conjugate(z)*conjugate(w) = 5 - 5i`. The malformed row claims
+that the imaginary part is `5`; the source QF_LRA artifact shifts both sides by
+`+5` and isolates `computed_imaginary_part_plus_five = 0`,
+`claimed_imaginary_part_plus_five = 10`, and equality between them for Farkas
+checking.
+
 ## `mobius-transform-witness`
 
 Expected result: `sat`.

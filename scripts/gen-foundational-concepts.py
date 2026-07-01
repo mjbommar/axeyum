@@ -6465,7 +6465,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "complex-plane-transforms-v0",
-                "Unit-root cycle, conjugation product, Mobius-transform witness, and bad unit-square real-part rows.",
+                "Unit-root cycle, conjugation product, Mobius-transform witness, bad conjugation-product imaginary-part, and bad unit-square real-part rows.",
             ),
             (
                 "polynomial-factorization-rational-v0",
