@@ -2778,7 +2778,7 @@ fn records_info_options_and_get_info_queries() {
 
 #[test]
 fn records_model_symbols_and_functions() {
-    let text = r#"
+    let text = r"
         (set-logic QF_UFBV)
         (declare-const x (_ BitVec 8))
         (declare-fun y () Bool)
@@ -2786,7 +2786,7 @@ fn records_model_symbols_and_functions() {
         (assert (= (f x) x))
         (check-sat)
         (get-model)
-    "#;
+    ";
     let script = parse_script(text).expect("model script parses");
     assert!(script.get_model);
     let symbols: Vec<_> = script
@@ -4905,5 +4905,80 @@ fn const_array_pass_is_noop_without_as_const() {
     assert_eq!(
         eval(&script.arena, script.assertions[0], &asg).unwrap(),
         Value::Bool(true)
+    );
+}
+
+/// A.1c writer check: the first-class sequence ops built via the `axeyum-ir`
+/// arena builders (`Op::SeqLen`/`SeqUnit`/`SeqConcat`) render with the general
+/// `seq.*` SMT-LIB names — not the `str.*` aliases the A.1b sweep left behind.
+///
+/// These `Op::Seq*` nodes are produced only by the arena builders; the bounded
+/// SMT-LIB string/sequence encoder (ADR-0029) lowers `str.*`/`seq.*` to BV ops
+/// and never constructs them, so this writer-name choice touches only the
+/// first-class path and cannot alter any bounded output.
+#[test]
+fn writer_renders_first_class_seq_ops_with_seq_names() {
+    use axeyum_ir::TermArena;
+
+    let mut a = TermArena::new();
+    let x = a.bv_var("x", 8).unwrap();
+    let y = a.bv_var("y", 8).unwrap();
+    // (seq.++ (seq.unit x) (seq.unit y)) : (Seq (_ BitVec 8))
+    let ux = a.seq_unit(x).unwrap();
+    let uy = a.seq_unit(y).unwrap();
+    let cat = a.seq_concat(ux, uy).unwrap();
+    assert_eq!(a.sort_of(cat), Sort::Seq(ArraySortKey::BitVec(8)));
+    // (= (seq.len (seq.++ (seq.unit x) (seq.unit y))) 2) : a Bool assertion.
+    let len = a.seq_len(cat).unwrap();
+    assert_eq!(a.sort_of(len), Sort::Int);
+    let two = a.int_const(2);
+    let f = a.eq(len, two).unwrap();
+
+    let rendered = write_script(&a, &[f]);
+    assert!(
+        rendered.contains("seq.len"),
+        "Op::SeqLen must render as seq.len; got:\n{rendered}"
+    );
+    assert!(
+        rendered.contains("seq.++"),
+        "Op::SeqConcat must render as seq.++; got:\n{rendered}"
+    );
+    assert!(
+        rendered.contains("seq.unit"),
+        "Op::SeqUnit must render as seq.unit; got:\n{rendered}"
+    );
+    // The `str.*` aliases must be gone (they collide with the bounded encoder's
+    // owned names on re-parse).
+    assert!(
+        !rendered.contains("str.len") && !rendered.contains("str.++"),
+        "first-class seq ops must not render with str.* aliases; got:\n{rendered}"
+    );
+}
+
+/// No-regression guard for A.1c: the mature bounded encoders still own the
+/// `String`/`(Seq E)` sorts and the `str.*`/`seq.*` names, resolving them to the
+/// packed bit-vector representation (ADR-0029). A.1c must not re-route these to
+/// the first-class `Sort::Seq` path (that is A.2's job, once `len`↔LIA can decide
+/// it); this test fails loudly if that boundary is crossed.
+#[test]
+fn bounded_string_and_seq_sorts_stay_packed_bv() {
+    // `String` remains the bounded packed bit-vector, not `Sort::Seq`.
+    let s = parse_script("(declare-fun w () String)\n(assert (= (str.len w) 0))\n(check-sat)\n")
+        .expect("bounded String/str.len still parses");
+    let w = s.arena.find_symbol("w").expect("declared string symbol");
+    let (_, sort) = s.arena.symbol(w);
+    assert!(
+        matches!(sort, Sort::BitVec(_)),
+        "String must stay a bounded BitVec, got {sort:?}"
+    );
+
+    // `(Seq Int)` remains the bounded packed bit-vector encoder, not `Sort::Seq`.
+    let s = parse_script("(declare-fun q () (Seq Int))\n(assert (= (seq.len q) 0))\n(check-sat)\n")
+        .expect("bounded (Seq Int)/seq.len still parses");
+    let q = s.arena.find_symbol("q").expect("declared seq symbol");
+    let (_, sort) = s.arena.symbol(q);
+    assert!(
+        matches!(sort, Sort::BitVec(_)),
+        "(Seq Int) must stay the bounded BitVec encoder, got {sort:?}"
     );
 }
