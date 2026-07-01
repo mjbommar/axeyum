@@ -475,8 +475,15 @@ Prefer one row, page, route upgrade, or query surface per commit.
    The Boolean route emits DRAT, elaborates to LRAT, and independently checks
    both proof objects, giving the graph lane a distinct collider-specific proof
    shape alongside the existing conditioned-chain blocker.
-7. Deepen linear algebra through source-linked matrix-corpus rows only after
-   the pack/learner/regression triangle is explicit.
+7. Landed: deepen linear algebra through source-linked matrix-corpus rows only
+   after the pack/learner/regression triangle is explicit.
+   The matrix-corpus regression pass now makes least-squares bad coefficients,
+   numerical residual bounds, finite random-matrix trace-square moments,
+   spectral bad eigenpairs, and matrix-invariant bad characteristic
+   polynomials prove their committed SMT-LIB artifacts directly through the
+   shared QF_LRA/Farkas route tests. The strict-inequality inner-product
+   negative-norm row remains checked by its existing inline Farkas regression
+   until the SMT-LIB parser/evidence path accepts that artifact shape.
 8. Deepen real analysis through theorem-boundary pages before adding more
    bounded examples.
 9. Deepen algebra by adding equality/certificate rows only when table replay

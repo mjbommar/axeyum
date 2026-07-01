@@ -119,7 +119,7 @@
         "claimed_scaled": ["2", "2"],
         "farkas_component_claim": "eigen_image_0 = 2",
         "smt2_artifact": "artifacts/examples/math/spectral-linear-algebra-v0/smt2/bad-eigenpair-farkas-conflict.smt2",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes spectral_bad_eigenpair_emits_checked_farkas"
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes spectral_bad_eigenpair_artifact_emits_checked_farkas"
       },
       "notes": "The validator recomputes A*v = [3,3] and rejects the claimed scaled vector [2,2]; the first-component conflict is checked through QF_LRA/Farkas evidence."
     }

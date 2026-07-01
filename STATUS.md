@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Matrix-corpus source-artifact regression pass landed.**
+  Five existing exact-rational matrix/statistics Farkas rows now prove the
+  committed SMT-LIB artifacts directly instead of duplicating constraints inline:
+  least-squares bad coefficients, numerical residual bound, finite random-matrix
+  trace-square moment, spectral bad eigenpair, and matrix-invariants bad
+  characteristic polynomial. The pack validators now pin the exact artifact
+  paths plus artifact-backed regression names. The inner-product negative-norm
+  row remains on the existing inline Farkas route because the current SMT-LIB
+  parser/evidence path rejects that strict-inequality artifact; the pack still
+  validates and the limitation is explicit in the route choice.
+
 - **Graph d-separation collider CNF route landed.**
   `graph-d-separation-v0` now promotes `collider-unconditioned-blocks` through a
   source-linked DIMACS artifact for the finite DAG `a -> b <- c` with empty

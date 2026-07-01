@@ -843,7 +843,13 @@ promoted for its bad negative-norm and projection-orthogonality rows, and
 spectral linear algebra now promoted for its bad eigenpair and bad
 Rayleigh-quotient rows, with matrix
 invariants now promoted for its bad characteristic
-polynomial row, polynomial factorization now promoted for its fixed
+polynomial row. The matrix-corpus regression pass now source-links the
+least-squares bad-coefficients, numerical residual-bound, finite random-matrix
+trace-square, spectral bad-eigenpair, and matrix-invariant bad-characteristic
+SMT-LIB artifacts to the shared QF_LRA/Farkas route tests, while leaving the
+strict-inequality inner-product negative-norm row on its existing inline
+Farkas route until the SMT-LIB parser/evidence path accepts that artifact
+shape. Polynomial factorization now promoted for its fixed
 irreducible-quadratic discriminant conflict, and finite Chebyshev systems now
 promoted for the duplicate-node determinant and bad interpolation-sample
 conflicts, with metric continuity now promoted for the finite

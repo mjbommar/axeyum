@@ -34,6 +34,9 @@ const DESCRIPTIVE_STATS_BAD_VARIANCE: &str = include_str!(
 const LEAST_SQUARES_BAD_RSS_IMPROVEMENT: &str = include_str!(
     "../../../artifacts/examples/math/least-squares-regression-v0/smt2/bad-rss-improvement-farkas-conflict.smt2"
 );
+const LEAST_SQUARES_BAD_COEFFICIENTS: &str = include_str!(
+    "../../../artifacts/examples/math/least-squares-regression-v0/smt2/bad-coefficients-farkas-conflict.smt2"
+);
 const EXACT_STATS_BAD_FISHER_LEFT_TAIL: &str = include_str!(
     "../../../artifacts/examples/math/exact-statistical-tests-v0/smt2/bad-fisher-left-tail-farkas-conflict.smt2"
 );
@@ -78,6 +81,9 @@ const SEQUENCE_LIMIT_BAD_RECIPROCAL_TAIL_BOUND: &str = include_str!(
 );
 const RANDOM_MATRIX_BAD_EXPECTED_RANK: &str = include_str!(
     "../../../artifacts/examples/math/random-matrix-finite-v0/smt2/bad-expected-rank-farkas-conflict.smt2"
+);
+const RANDOM_MATRIX_BAD_TRACE_MOMENT: &str = include_str!(
+    "../../../artifacts/examples/math/random-matrix-finite-v0/smt2/bad-trace-moment-farkas-conflict.smt2"
 );
 const BOUNDED_MONOTONE_SEQUENCE_BAD_UPPER_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-upper-bound-farkas-conflict.smt2"
@@ -241,8 +247,14 @@ const FINITE_OPERATOR_BAD_CHEBYSHEV_T3: &str = include_str!(
 const MATRIX_INVARIANTS_BAD_TRACE: &str = include_str!(
     "../../../artifacts/examples/math/matrix-invariants-v0/smt2/bad-trace-invariant-farkas-conflict.smt2"
 );
+const MATRIX_INVARIANTS_BAD_CHARACTERISTIC_POLYNOMIAL: &str = include_str!(
+    "../../../artifacts/examples/math/matrix-invariants-v0/smt2/bad-characteristic-polynomial-farkas-conflict.smt2"
+);
 const SPECTRAL_BAD_RAYLEIGH_QUOTIENT: &str = include_str!(
     "../../../artifacts/examples/math/spectral-linear-algebra-v0/smt2/bad-rayleigh-quotient-farkas-conflict.smt2"
+);
+const SPECTRAL_BAD_EIGENPAIR: &str = include_str!(
+    "../../../artifacts/examples/math/spectral-linear-algebra-v0/smt2/bad-eigenpair-farkas-conflict.smt2"
 );
 const FINITE_CHEBYSHEV_BAD_INTERPOLATION_SAMPLE: &str = include_str!(
     "../../../artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-interpolation-sample-farkas-conflict.smt2"
@@ -270,6 +282,9 @@ const FINITE_EULER_BAD_TERMINAL_ERROR: &str = include_str!(
 );
 const NUMERICAL_LINEAR_ALGEBRA_BAD_JACOBI_ERROR_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-jacobi-error-bound-farkas-conflict.smt2"
+);
+const NUMERICAL_LINEAR_ALGEBRA_BAD_RESIDUAL_BOUND: &str = include_str!(
+    "../../../artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-residual-bound-farkas-conflict.smt2"
 );
 const NUMERICAL_LINEAR_ALGEBRA_BAD_SOLUTION_BOX_UPPER_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-solution-box-upper-bound-farkas-conflict.smt2"
@@ -1413,25 +1428,10 @@ fn finite_hitting_times_bad_expected_time_emits_checked_farkas() {
 }
 
 #[test]
-fn least_squares_bad_coefficients_emit_checked_farkas() {
-    let mut arena = TermArena::new();
-    let beta0 = real(&mut arena, "beta0");
-    let beta1 = real(&mut arena, "beta1");
-    let beta0_is_one = eq_ratio(&mut arena, beta0, 1, 1);
-    let beta1_is_one = eq_ratio(&mut arena, beta1, 1, 1);
-
-    // First normal equation for X = [[1,0],[1,1],[1,2]] and y = [1,2,4]:
-    // 3*beta0 + 3*beta1 = 7. The bad coefficients (1,1) force 6 = 7.
-    let three = arena.real_ratio(3, 1);
-    let three_beta0 = arena.real_mul(three, beta0).unwrap();
-    let three_beta1 = arena.real_mul(three, beta1).unwrap();
-    let lhs = arena.real_add(three_beta0, three_beta1).unwrap();
-    let first_normal_equation = eq_ratio(&mut arena, lhs, 7, 1);
-
-    assert_farkas_checked(
-        "least-squares-regression-v0 bad-regression-coefficients-rejected",
-        &arena,
-        &[beta0_is_one, beta1_is_one, first_normal_equation],
+fn least_squares_bad_coefficients_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "least-squares-regression-v0 bad-regression-coefficients SMT-LIB artifact",
+        LEAST_SQUARES_BAD_COEFFICIENTS,
     );
 }
 
@@ -1639,17 +1639,10 @@ fn orientation_area_bad_affine_area_scaling_artifact_emits_checked_farkas() {
 }
 
 #[test]
-fn numerical_linear_algebra_bad_residual_bound_emits_checked_farkas() {
-    let mut arena = TermArena::new();
-    let residual_inf_norm = real(&mut arena, "residual_inf_norm");
-    let norm_is_one = eq_ratio(&mut arena, residual_inf_norm, 1, 1);
-    let claimed_bound = arena.real_ratio(1, 2);
-    let false_bound = arena.real_le(residual_inf_norm, claimed_bound).unwrap();
-
-    assert_farkas_checked(
-        "numerical-linear-algebra-v0 bad-residual-bound-rejected",
-        &arena,
-        &[norm_is_one, false_bound],
+fn numerical_linear_algebra_bad_residual_bound_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "numerical-linear-algebra-v0 bad-residual-bound SMT-LIB artifact",
+        NUMERICAL_LINEAR_ALGEBRA_BAD_RESIDUAL_BOUND,
     );
 }
 
@@ -1670,16 +1663,10 @@ fn numerical_linear_algebra_bad_solution_box_upper_bound_artifact_emits_checked_
 }
 
 #[test]
-fn random_matrix_bad_trace_moment_emits_checked_farkas() {
-    let mut arena = TermArena::new();
-    let expected_trace_square = real(&mut arena, "expected_trace_square");
-    let actual_moment = eq_ratio(&mut arena, expected_trace_square, 2, 1);
-    let false_moment = eq_ratio(&mut arena, expected_trace_square, 1, 1);
-
-    assert_farkas_checked(
-        "random-matrix-finite-v0 bad-trace-moment-rejected",
-        &arena,
-        &[actual_moment, false_moment],
+fn random_matrix_bad_trace_moment_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "random-matrix-finite-v0 bad-trace-moment SMT-LIB artifact",
+        RANDOM_MATRIX_BAD_TRACE_MOMENT,
     );
 }
 
@@ -1749,30 +1736,18 @@ fn spectral_bad_rayleigh_quotient_artifact_emits_checked_farkas() {
 }
 
 #[test]
-fn spectral_bad_eigenpair_emits_checked_farkas() {
-    let mut arena = TermArena::new();
-    let eigen_image_0 = real(&mut arena, "eigen_image_0");
-    let actual_component = eq_ratio(&mut arena, eigen_image_0, 3, 1);
-    let false_claimed_component = eq_ratio(&mut arena, eigen_image_0, 2, 1);
-
-    assert_farkas_checked(
-        "spectral-linear-algebra-v0 bad-eigenpair-rejected",
-        &arena,
-        &[actual_component, false_claimed_component],
+fn spectral_bad_eigenpair_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "spectral-linear-algebra-v0 bad-eigenpair SMT-LIB artifact",
+        SPECTRAL_BAD_EIGENPAIR,
     );
 }
 
 #[test]
-fn matrix_invariants_bad_characteristic_polynomial_emits_checked_farkas() {
-    let mut arena = TermArena::new();
-    let characteristic_value_at_witness = real(&mut arena, "characteristic_value_at_witness");
-    let actual_value = eq_ratio(&mut arena, characteristic_value_at_witness, 0, 1);
-    let false_claimed_value = eq_ratio(&mut arena, characteristic_value_at_witness, 2, 1);
-
-    assert_farkas_checked(
-        "matrix-invariants-v0 bad-characteristic-polynomial-rejected",
-        &arena,
-        &[actual_value, false_claimed_value],
+fn matrix_invariants_bad_characteristic_polynomial_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "matrix-invariants-v0 bad-characteristic-polynomial SMT-LIB artifact",
+        MATRIX_INVARIANTS_BAD_CHARACTERISTIC_POLYNOMIAL,
     );
 }
 

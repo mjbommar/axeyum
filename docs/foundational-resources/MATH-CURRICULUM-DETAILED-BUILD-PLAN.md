@@ -231,7 +231,7 @@ Exit criteria:
 | `discrete_math` | counting, generating functions, graph resources, finite actions | maintain landed finite-counting replay and bounded-family/asymptotic-boundary bridges; add new rows only for distinct counting, recurrence, or family-boundary pressure | Bool/CNF, QF_LIA, QF_LRA/Farkas, finite replay |
 | `graph_theory` | coloring, reachability, search runtime, matching, cuts, d-separation | maintain landed finite graph replay/obstruction and bounded-family/asymptotic-boundary bridges; add theorem/asymptotic horizons only as proof targets | Bool/CNF, QF_BV, QF_LIA, finite replay |
 | `number_theory` | gcd, modular arithmetic, residues, bounded Diophantine checks | group recurring divisibility and residue obstructions; modular Fermat-unit search now has a fixed-width QF_BV/DRAT row | QF_LIA/Diophantine, QF_BV |
-| `linear_algebra` | exact matrices, vector spaces, duals, modules, tensors, spectral rows, active-set QP rows, SDP rows, descent-step rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | make matrix rows queryable by computation type and solver route | QF_LRA/Farkas, finite replay, QF_UF/Alethe |
+| `linear_algebra` | exact matrices, vector spaces, duals, modules, tensors, spectral rows, active-set QP rows, SDP rows, descent-step rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | maintain matrix rows queryable by computation type and solver route; five matrix/statistics bad rows now prove committed SMT-LIB artifacts directly through QF_LRA/Farkas regressions | QF_LRA/Farkas, finite replay, QF_UF/Alethe |
 | `abstract_algebra` | finite groups/rings/fields, homomorphisms, ideals, modules, tensors | add narrower rows only when multiple packs reuse them | QF_UF/Alethe, QF_BV, finite replay |
 | `real_analysis` | bounded rational intervals, metric continuity, RCF shadows, calculus shadows, root-finding shadows, separation/KKT/active-set/SDP/gradient-descent/line-search/Wolfe/projected-gradient/proximal-gradient shadows | keep bounded shadows distinct from completeness/convergence/separation/KKT/active-set/SDP/descent/line-search/Wolfe/projected/proximal-gradient theorems; metric continuity now has source-linked bad-delta and bad open-ball preimage rows, finite KKT now has source-linked bad stationarity and bad complementarity rows, finite SDP now has source-linked bad objective, bad duality-gap, and bad slack-entry rows, finite gradient descent now has source-linked bad decrease, bad step-coordinate, and bad descent-bound rows, finite line search has source-linked bad Armijo, bad descent-direction, and bad accepted-candidate rows, finite Wolfe line search has source-linked bad minimizer, bad sufficient-decrease, and bad curvature rows, and finite proximal gradient has source-linked bad proximal-point, bad composite-decrease, and bad box-proximal-point rows | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon |
 | `complex_analysis` | real-pair algebra and transformations | complex algebra now has checked bad product-coordinate and bad norm-squared rows; add only distinct real-pair arithmetic, polynomial-root, or algebraic-identity pressure | real-pair LRA/NRA, finite replay, Lean horizon |
@@ -1370,6 +1370,16 @@ Pick one row per commit unless the change is purely navigational.
      This lands the graph-depth queue item with a learner-readable graph shape
      without claiming causal identification, do-calculus, or probabilistic
      graphical-model semantics.
+162. Landed: source-link the matrix-corpus QF_LRA/Farkas regressions that were
+     still duplicating source constraints inline. The least-squares bad
+     coefficients, numerical residual-bound, finite random-matrix trace-square,
+     spectral bad-eigenpair, and matrix-invariant bad-characteristic rows now
+     parse and prove the committed SMT-LIB artifacts directly, and their pack
+     validators pin both the exact artifact paths and artifact-backed cargo
+     regression names. The inner-product negative-norm row stays on the
+     existing inline Farkas route because the current SMT-LIB route rejects its
+     strict-inequality artifact shape; the pack still validates, and that row
+     remains checked without overstating source-artifact coverage.
 
 ## Validation Checklist
 

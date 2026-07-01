@@ -108,7 +108,7 @@
         "actual_value_at_witness": "0",
         "farkas_value_claim": "characteristic_value_at_witness = 2",
         "smt2_artifact": "artifacts/examples/math/matrix-invariants-v0/smt2/bad-characteristic-polynomial-farkas-conflict.smt2",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes matrix_invariants_bad_characteristic_polynomial_emits_checked_farkas"
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes matrix_invariants_bad_characteristic_polynomial_artifact_emits_checked_farkas"
       },
       "notes": "The validator recomputes the actual characteristic polynomial and rejects the claimed one; the witness-root value conflict is checked through QF_LRA/Farkas evidence."
     }

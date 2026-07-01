@@ -2190,6 +2190,12 @@ quotient and matrix-vector replay.
 `matrix-invariants-v0` now routes its bad trace and bad
 characteristic-polynomial rows through the same checked Farkas evidence path
 after exact trace and witness-root replay.
+The matrix-corpus regression pass now proves the committed SMT-LIB artifacts
+directly for least-squares bad coefficients, numerical residual bounds, finite
+random-matrix trace-square moments, spectral bad eigenpairs, and matrix
+bad-characteristic rows; the inner-product negative-norm row remains on its
+existing inline Farkas route until the strict-inequality artifact shape is
+accepted by the SMT-LIB parser/evidence path.
 `calculus-algebraic-shadow-v0` now routes its false derivative-value row
 through the same checked Farkas evidence path after exact polynomial derivative
 replay computes the derivative at the fixed point.

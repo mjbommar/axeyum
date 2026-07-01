@@ -111,7 +111,7 @@
         "normal_equation_residual": ["1", "2"],
         "farkas_normal_equation": "3*beta0 + 3*beta1 = 7",
         "smt2_artifact": "artifacts/examples/math/least-squares-regression-v0/smt2/bad-coefficients-farkas-conflict.smt2",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes least_squares_bad_coefficients_emit_checked_farkas"
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes least_squares_bad_coefficients_artifact_emits_checked_farkas"
       },
       "notes": "The validator rejects the claim because X^T y - X^T X beta is nonzero; the Axeyum regression refutes beta0 = 1, beta1 = 1, and the first normal equation 3*beta0 + 3*beta1 = 7 with rechecked Farkas evidence."
     },

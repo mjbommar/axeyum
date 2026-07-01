@@ -10921,11 +10921,16 @@ def validate_numerical_linear_algebra(expected: dict[str, Any]) -> None:
         fail("bad-residual-bound-rejected must document the Farkas bound claim")
     smt2_artifact = data.get("smt2_artifact")
     require_string("bad residual smt2_artifact", smt2_artifact)
-    if not (ROOT / smt2_artifact).is_file():
-        fail("bad-residual-bound-rejected smt2_artifact is missing")
+    expected_smt2 = (
+        "artifacts/examples/math/numerical-linear-algebra-v0/smt2/"
+        "bad-residual-bound-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-residual-bound-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad residual smt2_artifact", smt2_artifact)
     regression = data.get("farkas_regression")
     require_string("bad residual farkas_regression", regression)
-    if "numerical_linear_algebra_bad_residual_bound_emits_checked_farkas" not in regression:
+    if "numerical_linear_algebra_bad_residual_bound_artifact_emits_checked_farkas" not in regression:
         fail("bad-residual-bound-rejected must link the Farkas regression")
 
     bad_solution_box = checks["bad-solution-box-upper-bound-rejected"]
@@ -13763,6 +13768,12 @@ def validate_inner_product_spaces_rational(expected: dict[str, Any]) -> None:
         fail("bad-inner-product-rejected must document the Farkas positivity claim")
     smt2_artifact = data.get("smt2_artifact")
     require_string("bad inner-product smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/inner-product-spaces-rational-v0/smt2/"
+        "bad-inner-product-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-inner-product-rejected smt2_artifact must name the checked source artifact")
     check_source("bad inner-product smt2_artifact", smt2_artifact)
     regression = data.get("farkas_regression")
     require_string("bad inner-product farkas_regression", regression)
@@ -13972,10 +13983,16 @@ def validate_matrix_invariants(expected: dict[str, Any]) -> None:
         fail("bad-characteristic-polynomial-rejected must document the Farkas value claim")
     smt2_artifact = data.get("smt2_artifact")
     require_string("bad characteristic smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/matrix-invariants-v0/smt2/"
+        "bad-characteristic-polynomial-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-characteristic-polynomial-rejected smt2_artifact must name the checked source artifact")
     check_source("bad characteristic smt2_artifact", smt2_artifact)
     regression = data.get("farkas_regression")
     require_string("bad characteristic farkas_regression", regression)
-    if "matrix_invariants_bad_characteristic_polynomial_emits_checked_farkas" not in regression:
+    if "matrix_invariants_bad_characteristic_polynomial_artifact_emits_checked_farkas" not in regression:
         fail("bad-characteristic-polynomial-rejected must link the Farkas regression")
 
 
@@ -14140,10 +14157,16 @@ def validate_spectral_linear_algebra(expected: dict[str, Any]) -> None:
         fail("bad-eigenpair-rejected must document the Farkas component claim")
     smt2_artifact = data.get("smt2_artifact")
     require_string("bad eigenpair smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/spectral-linear-algebra-v0/smt2/"
+        "bad-eigenpair-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-eigenpair-rejected smt2_artifact must name the checked source artifact")
     check_source("bad eigenpair smt2_artifact", smt2_artifact)
     regression = data.get("farkas_regression")
     require_string("bad eigenpair farkas_regression", regression)
-    if "spectral_bad_eigenpair_emits_checked_farkas" not in regression:
+    if "spectral_bad_eigenpair_artifact_emits_checked_farkas" not in regression:
         fail("bad-eigenpair-rejected must link the Farkas regression")
 
 
@@ -22097,10 +22120,16 @@ def validate_random_matrix_finite(expected: dict[str, Any]) -> None:
         fail("bad-trace-moment-rejected must document the Farkas trace-square claim")
     smt2_artifact = data.get("smt2_artifact")
     require_string("bad trace smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/random-matrix-finite-v0/smt2/"
+        "bad-trace-moment-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-trace-moment-rejected smt2_artifact must name the checked source artifact")
     check_source("bad trace smt2_artifact", smt2_artifact)
     regression = data.get("farkas_regression")
     require_string("bad trace farkas_regression", regression)
-    if "random_matrix_bad_trace_moment_emits_checked_farkas" not in regression:
+    if "random_matrix_bad_trace_moment_artifact_emits_checked_farkas" not in regression:
         fail("bad-trace-moment-rejected must link the Farkas regression")
 
 
@@ -23329,11 +23358,16 @@ def validate_least_squares_regression(expected: dict[str, Any]) -> None:
         fail("bad-regression-coefficients-rejected must document the Farkas normal equation")
     smt2_artifact = data.get("smt2_artifact")
     require_string("bad regression smt2_artifact", smt2_artifact)
-    if not (ROOT / smt2_artifact).is_file():
-        fail("bad-regression-coefficients-rejected smt2_artifact is missing")
+    expected_smt2 = (
+        "artifacts/examples/math/least-squares-regression-v0/smt2/"
+        "bad-coefficients-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-regression-coefficients-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad regression smt2_artifact", smt2_artifact)
     regression = data.get("farkas_regression")
     require_string("bad regression farkas_regression", regression)
-    if "least_squares_bad_coefficients_emit_checked_farkas" not in regression:
+    if "least_squares_bad_coefficients_artifact_emits_checked_farkas" not in regression:
         fail("bad-regression-coefficients-rejected must link the Farkas regression")
 
     horizon = checks["general-regression-statistics-lean-horizon"]
