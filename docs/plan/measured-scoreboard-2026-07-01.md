@@ -80,6 +80,26 @@ for reals, [Phase E](track-2-theories/P2.5-nra/07-phaseE-nia.md) for integers
 (task #71). This is the substantial next engine investment; there are **no
 remaining quick frontier wins** (measured, not assumed).
 
+**Phase E foundation landed (`815ce074`):** `refute_nia_by_sign_lemmas` — an
+integer nonlinear UNSAT refuter (abstract products + valid sign lemmas, solved
+over the integer DPLL(T), unsat-only, sound-by-construction). It decides the
+*eliminated* `div.03` (unsat) that was previously undecided — validating the
+approach. It is +0 on the curated corpus itself because the div/mod declines need
+**E.0c** (variable-divisor Euclidean axioms, task #71) to *reach* it; that is the
+next corpus-impacting step (refutation-sound; prerequisite = extend the NIA fuzz's
+already-present div/mod coverage from constant to *variable* divisors).
+
+### Session outcome (2026-06-30 → 07-01)
+
+- **QF_NRA 9 → 11** — Boolean case-split into the CAD (`5ede57f4`) + division
+  congruence (`0761bf8e`).
+- **A pre-existing div-by-zero WRONG-SAT found & fixed** (`b38c0439` + `a06dc46a`)
+  — by extending `nra_differential_fuzz` with division coverage, then guarding /
+  threading sat-replay against the true original. Real soundness win.
+- Robustness: LRA-replay + `finish_sat` i128 overflow → graceful `unknown`.
+- **Phase E foundation** (`815ce074`) + this measured frontier map. Every change
+  gated `DISAGREE=0`.
+
 ## How to reproduce
 
 ```sh
