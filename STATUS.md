@@ -5024,12 +5024,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
     --all-features --all-targets`, `axeyum-ir` tests, `axeyum-solver` lib 627/627,
     workspace `clippy -D warnings`; a hardening test confirms `String` declares /
     round-trips / displays as `(Seq (_ BitVec 18))`.
-  - **Next:** slice **A.1b** — the first sequence *capability*: `Op` variants
-    (`seq.empty`/`seq.unit`/`str.++`/`str.len`) + arena builders + a `Value::Seq`
-    (routes via `FullValue`) + ground-evaluator support; then A.1c SMT-LIB
-    round-trip, then A.2 (`len`↔LIA Nelson–Oppen, closing the `str.len`-unsat gap).
-    NB the `Op` enum has NO dedicated string ops today, so A.1b needs an `Op`-enum
-    sweep like A.1a's `Sort` sweep.
+  - **Slice A.1b landed** (`abb23ddb`): the first sequence *capability* —
+    `Op::{SeqLen, SeqEmpty(ArraySortKey), SeqUnit, SeqConcat}` + `Value::Seq` +
+    sort-checked arena builders + `sort_of` inference + ground evaluator
+    (`str.len(a++b) = |a|+|b|`, `str.len(seq.empty) = 0`). The `Op`/`Value` breaks
+    swept decline-cleanly across 14 files (z3 backend rejects seq ops at the
+    translate gate *before* `apply`, so no panic). Reviewed for soundness; verified
+    green (workspace `--all-targets`, axeyum-ir tests incl. 3 seq tests, clippy
+    `--all-features -D`).
+  - **Next:** slice **A.1c** — SMT-LIB read/write round-trip for the `(Seq E)`/
+    `String` sort + the core ops (confined to `axeyum-smtlib` — no workspace sweep,
+    so smaller than A.1a/A.1b); then **A.2** (`len`↔LIA Nelson–Oppen, closing the
+    `str.len`-unsat gap — the Phase-A exit criterion). *(Pre-existing unrelated
+    clippy `needless_raw_string_hashes` at `smtlib.rs:2781` under `--all-targets`,
+    flagged for hygiene.)*
 
 - **Session 2026-07-01 (cont.) — FM→simplex keystone (P1.9) BUILT + INTEGRATED + validated.**
   The measured bottleneck behind the NRA/LRA frontier is Fourier–Motzkin's
