@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Comprehensive math-curriculum resource plan landed.**
+  Added
+  [`MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md)
+  as the owner-facing plan for building all curriculum-based resource families:
+  educational content, ontology/taxonomy rows, example packs, proof artifacts,
+  solver feedback, rules/law transfer, consumer boundaries, and future library
+  splits. The plan is grounded in the current 2026-07-01 resource baseline
+  (111 concept rows, 108 non-template packs, 581 expected checks, 263 checked
+  rows, 247 replay-only rows, 71 Lean-horizon rows, and 108 promoted
+  solver-reuse packs) and is linked from the foundational-resource index,
+  mdBook summary, buildout plan, master plan, build sequence, detailed build
+  ledger, roadmap, and `PLAN.md`.
+
 - **Finite-product-measure bad marginal QF_LRA row landed.**
   `finite-product-measure-v0` now has a second checked Farkas row: exact
   finite product-table replay sums the `heads` row as

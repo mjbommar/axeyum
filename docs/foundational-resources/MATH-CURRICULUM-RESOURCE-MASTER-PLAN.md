@@ -3,7 +3,10 @@
 ## Purpose
 
 This is the top-down plan for building the full Axeyum foundational-resource
-system from the formal math curriculum. It sits above the current execution
+system from the formal math curriculum. For the owner-facing plan across all
+resource families, use
+[`MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md`](MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md).
+This file sits above the current execution
 ledger and answers the operational question:
 
 ```text

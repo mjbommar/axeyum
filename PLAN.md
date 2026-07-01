@@ -124,6 +124,8 @@ university-style math field spine in
 [`docs/foundational-resources/MATH-FIELDS.md`](docs/foundational-resources/MATH-FIELDS.md)
 and the top-down curriculum-wide resource master plan in
 [`docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md)
+with the owner-facing all-resource plan in
+[`docs/foundational-resources/MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md)
 and the curriculum-to-resource buildout plan in
 [`docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md`](docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md);
 the practical staged build sequence for educational content, ontology rows,

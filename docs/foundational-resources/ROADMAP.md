@@ -183,6 +183,8 @@ Current base: [formal mathematics curriculum](../curriculum/README.md).
 Field spine: [University Math Field Taxonomy](MATH-FIELDS.md).
 Top-down curriculum-wide plan:
 [Math Curriculum Resource Master Plan](MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md).
+Comprehensive owner-facing plan across all resource families:
+[Math Curriculum Comprehensive Resource Plan](MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md).
 Detailed execution plan:
 [Math Curriculum Resource Buildout Plan](MATH-CURRICULUM-BUILDOUT.md).
 Forward execution plan:

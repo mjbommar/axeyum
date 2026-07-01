@@ -7,6 +7,10 @@ ecosystem from the math curriculum spine. It complements:
 
 - [Math Curriculum Resource Buildout](MATH-CURRICULUM-BUILDOUT.md), the phase
   contract and landed-history log.
+- [Math Curriculum Comprehensive Resource Plan](MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md),
+  the owner-facing plan across education pages, ontology rows, example packs,
+  proof artifacts, solver feedback, rules/law transfer, consumer boundaries,
+  and future library splits.
 - [Math Curriculum Resource Master Plan](MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md),
   the top-down curriculum-wide sequencing plan across layers, fields, routes,
   solver reuse, and consumer boundaries.

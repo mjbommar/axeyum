@@ -14,6 +14,10 @@ schemas, examples, and validation workflows.
   used to ground the plan.
 - [MATH-FIELDS.md](MATH-FIELDS.md) defines the university-style mathematics
   field taxonomy that seeds the Foundational Concept Atlas.
+- [MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md](MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md)
+  is the owner-facing plan for building all curriculum-based resource families:
+  education pages, ontology rows, example packs, proof artifacts, solver
+  feedback, rules/law transfer, consumer boundaries, and future library splits.
 - [MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md](MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md)
   is the top-down curriculum-wide plan for building the full resource system by
   layer, field, proof route, solver reuse, and consumer boundary.

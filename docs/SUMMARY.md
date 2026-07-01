@@ -6,6 +6,7 @@
 - [Foundational Resource Expansion](foundational-resources/README.md)
   - [Source Research Ledger](foundational-resources/SOURCES.md)
   - [University Math Field Taxonomy](foundational-resources/MATH-FIELDS.md)
+  - [Math Curriculum Comprehensive Resource Plan](foundational-resources/MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md)
   - [Math Curriculum Resource Buildout](foundational-resources/MATH-CURRICULUM-BUILDOUT.md)
   - [Math Curriculum Implementation Matrix](foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md)
   - [Math Curriculum Detailed Build Plan](foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)

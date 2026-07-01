@@ -13,6 +13,8 @@ curriculum node -> concept row -> example pack -> learner page
 
 Use this file when choosing the next commit-sized work item. Use
 [MATH-CURRICULUM-BUILDOUT.md](MATH-CURRICULUM-BUILDOUT.md) for phase history,
+[MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md](MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md)
+for the owner-facing plan across all curriculum-based resource families,
 [MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md](MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md)
 for the top-down curriculum-wide buildout plan,
 [MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md](MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md)

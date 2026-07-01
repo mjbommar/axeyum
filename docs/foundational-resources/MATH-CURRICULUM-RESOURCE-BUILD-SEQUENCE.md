@@ -4,7 +4,8 @@
 
 This is the practical build plan for turning the formal math curriculum into a
 complete resource ecosystem. It is intentionally more operational than the
-master plan:
+master plan. For the single owner-facing resource-family plan, use
+[`MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md`](MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md):
 
 ```text
 curriculum node -> field extension -> concept row -> example pack

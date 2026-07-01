@@ -11,6 +11,10 @@ the [University Math Field Taxonomy](MATH-FIELDS.md).
 
 For the current forward work plan, use the
 [Curriculum Resource Execution Plan](CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
+For the owner-facing plan across every curriculum-based resource family
+(education pages, ontology rows, example packs, proof artifacts, solver
+feedback, rules/law transfer, consumer boundaries, and future libraries), use
+the [Math Curriculum Comprehensive Resource Plan](MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md).
 For the top-down curriculum-wide plan across layers, fields, proof routes,
 solver reuse, and consumer boundaries, use the
 [Math Curriculum Resource Master Plan](MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md).
