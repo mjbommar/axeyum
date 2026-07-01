@@ -6073,7 +6073,7 @@
           "id": "random-matrix-finite-v0",
           "status": "validated",
           "path": "artifacts/examples/math/random-matrix-finite-v0",
-          "notes": "Rank-mixture probabilities over a finite random-matrix distribution."
+          "notes": "Rank-mixture probabilities and a checked bad expected-rank row over a finite random-matrix distribution."
         }
       ],
       "proof_routes": [
@@ -6456,7 +6456,7 @@
           "id": "random-matrix-finite-v0",
           "status": "validated",
           "path": "artifacts/examples/math/random-matrix-finite-v0",
-          "notes": "Finite sign-matrix moments, expected Gram matrix, rank mixture, and bad trace-moment rows."
+          "notes": "Finite sign-matrix moments, expected Gram matrix, rank mixture, and bad trace-moment/expected-rank rows."
         },
         {
           "id": "finite-probability-v0",
@@ -6479,7 +6479,7 @@
       ],
       "proof_routes": [
         {
-          "name": "finite expectation replay plus QF_LRA/Farkas bad-moment certificate",
+          "name": "finite expectation/rank replay plus QF_LRA/Farkas bad-moment and bad-rank certificates",
           "status": "checked",
           "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
           "lean_status": "partial",
@@ -6494,7 +6494,7 @@
             "docs/learn/math/probability-and-statistics.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "The finite checker normalizes the distribution and recomputes exact moments by enumeration; false moment claims graduate only when the exact rational conflict has checked Farkas evidence."
+          "notes": "The finite checker normalizes the distribution and recomputes exact moments and ranks by enumeration; false moment or rank claims graduate only when the exact rational conflict has checked Farkas evidence."
         }
       ],
       "source_refs": [
@@ -9004,7 +9004,7 @@
           "id": "random-matrix-finite-v0",
           "status": "validated",
           "path": "artifacts/examples/math/random-matrix-finite-v0",
-          "notes": "Bad trace-square moment rejected after finite exact-moment replay."
+          "notes": "Bad trace-square moment and expected-rank claims rejected after finite exact replay."
         },
         {
           "id": "affine-geometry-v0",

@@ -40,7 +40,8 @@ Companion maps:
   functional-analysis theorem horizons.
 - [Random Matrix Moment Index](random-matrix-moment-index.md):
   connects finite matrix-valued atom tables, exact moments, expected Gram
-  matrices, rank-mixture probabilities, checked Farkas evidence, and
+  matrices, rank-mixture probabilities, checked bad trace-square and
+  expected-rank Farkas evidence, and
   random-matrix asymptotic horizons.
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md):
   maps finite analysis, calculus, optimization, measure, dynamics, and operator
@@ -254,8 +255,8 @@ Companion maps:
   Rayleigh-quotient plus bad-eigenpair certificates.
 - [Finite Random Matrices](random-matrix-finite-end-to-end.md): follows exact
   matrix-valued probability tables, trace/determinant moments, expected Gram
-  matrices, rank probabilities, and a QF_LRA/Farkas bad trace-square
-  certificate.
+  matrices, rank probabilities, and QF_LRA/Farkas bad trace-square plus
+  expected-rank certificates.
 - [Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md): follows
   exact residual infinity norms, rational solution boxes, one-step Jacobi
   contraction replay, QF_LRA/Farkas bad residual-bound rejection, and the

@@ -2,7 +2,7 @@
 
 This index keeps random-matrix resources finite and exact. It connects
 matrix-valued atom tables, exact rational moments, expected Gram matrices,
-rank-mixture probabilities, and checked bad-moment refutations without turning
+rank-mixture probabilities, and checked bad moment/rank refutations without turning
 finite enumeration into asymptotic random matrix theory.
 
 The trust pattern is:
@@ -10,7 +10,7 @@ The trust pattern is:
 ```text
 untrusted fast search -> atom table, moment claim, Gram claim, rank claim, or bad-row candidate
 trusted small checking -> exact probability normalization and finite matrix replay
-proof upgrade -> checked QF_LRA/Farkas evidence for false finite moment claims
+proof upgrade -> checked QF_LRA/Farkas evidence for false finite moment/rank claims
 remaining horizon -> asymptotic spectra, universality, concentration theorems, and simulations
 ```
 
@@ -42,8 +42,8 @@ These rows live in the
 | Is a matrix-valued distribution normalized? | `random-matrix-finite-v0`, `finite-probability-v0` | exact rational atom-sum replay | continuous distributions and measure-theoretic probability |
 | What are the listed matrix moments? | `random-matrix-finite-v0` | finite enumeration of trace, trace-square, determinant, and weighted expectations | asymptotic spectral laws |
 | What is the expected Gram matrix? | `random-matrix-finite-v0` | exact `A^T*A` replay for every atom and weighted matrix addition | covariance/operator limit theorems |
-| What is the rank distribution? | `random-matrix-finite-v0` | exact finite rank computation by rational row reduction and expectation replay | rank laws for matrix ensembles |
-| Is a moment claim false? | `random-matrix-finite-v0` | exact replay computes the moment, then checked QF_LRA/Farkas rejects the conflicting value | concentration or universality theorems |
+| What is the rank distribution? | `random-matrix-finite-v0` | exact finite rank computation by rational row reduction, expectation replay, and checked rejection of a bad expected rank | rank laws for matrix ensembles |
+| Is a moment or rank claim false? | `random-matrix-finite-v0` | exact replay computes the value, then checked QF_LRA/Farkas rejects the conflicting value | concentration or universality theorems |
 | Which adjacent packs reuse the same finite-table pattern? | `descriptive-statistics-v0`, `finite-concentration-v0`, `finite-random-variables-v0` | exact finite statistic, tail, or pushforward replay | asymptotic inference and stochastic-process limits |
 
 ## Checkable Shapes
@@ -82,6 +82,29 @@ A^T * A = I
 E[A^T * A] = I
 ```
 
+The rank-mixture row is finite row reduction:
+
+```text
+rank([[0, 0], [0, 0]]) = 0
+rank([[1, 1], [1, 1]]) = 1
+rank([[1, 0], [0, 1]]) = 2
+P(rank = 0) = P(rank = 1) = P(rank = 2) = 1/3
+E[rank(A)] = 1
+```
+
+The bad expected-rank row claims:
+
+```text
+E[rank(A)] = 2
+```
+
+After replay computes `E[rank(A)] = 1`, the proof route checks:
+
+```text
+expected_rank = 1
+expected_rank = 2
+```
+
 The bad row claims:
 
 ```text
@@ -103,7 +126,7 @@ random-matrix limit law.
 
 Start with [Finite Random Matrices](random-matrix-finite-end-to-end.md) for the
 single-pack trace through atom tables, moments, expected Gram matrices, rank
-probabilities, and bad trace-square rejection.
+probabilities, bad expected-rank rejection, and bad trace-square rejection.
 
 Use [Probability And Statistics](probability-and-statistics.md) for the
 surrounding finite-probability cluster: finite mass tables, random variables,
@@ -123,6 +146,7 @@ From the repository root:
 python3 scripts/query-foundational-resources.py concepts --field probability_theory --text random --require-any
 python3 scripts/query-foundational-resources.py packs --concept bridge_random_matrix_finite_moment --route Farkas --require-any
 python3 scripts/query-foundational-resources.py checks --concept bridge_random_matrix_finite_moment --route Farkas --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py checks --pack random-matrix-finite-v0 --route Farkas --proof-status checked --text rank --require-any
 python3 scripts/query-foundational-resources.py checks --field probability_theory --route Farkas --proof-status checked --require-any
 ```
 
@@ -142,7 +166,8 @@ validated 1 foundational example pack(s)
 
 The checked rows prove only the listed finite rational rows: atom
 normalization, trace and determinant moments, expected Gram matrices,
-rank-mixture probabilities, and the bad trace-square contradiction. They do
+rank-mixture probabilities, and the bad expected-rank and trace-square
+contradictions. They do
 not prove semicircle laws, Marchenko-Pastur laws, universality, concentration
 theorems for matrix ensembles, high-dimensional limits, floating-point
 simulation correctness, or numerical eigensolver behavior. Those remain

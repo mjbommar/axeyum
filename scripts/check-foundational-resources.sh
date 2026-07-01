@@ -35,6 +35,7 @@ python3 scripts/query-foundational-resources.py checks --pack finite-concentrati
 python3 scripts/query-foundational-resources.py checks --pack finite-hitting-times-v0 --route Farkas --proof-status checked --text survival --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_random_matrix_finite_moment --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_random_matrix_finite_moment --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack random-matrix-finite-v0 --route Farkas --proof-status checked --text rank --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field logic_and_proof --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field logic_and_proof --text proof --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field logic_and_proof --route boolean --proof-status checked --require-any >/dev/null

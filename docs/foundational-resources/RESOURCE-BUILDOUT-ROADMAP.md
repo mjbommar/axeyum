@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 601 expected checks.
-- 280 checked proof/evidence rows.
+- 602 expected checks.
+- 281 checked proof/evidence rows.
 - 250 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1794,8 +1794,8 @@ Pick one item per commit unless the change is purely navigational.
 107. Landed: add `random-matrix-moment-index.md`, wiring finite
      matrix-valued probability tables, exact trace/determinant moments,
      expected Gram matrices, rank-mixture probabilities, and checked
-     QF_LRA/Farkas bad trace-square evidence into one probability/matrix
-     learner path. The probability/statistics field readiness and smoke
+     QF_LRA/Farkas bad trace-square and expected-rank evidence into one
+     probability/matrix learner path. The probability/statistics field readiness and smoke
      queries now expose concept-scoped `bridge_random_matrix_finite_moment`
      Farkas route lookups while keeping asymptotic spectra, universality,
      concentration theorems, simulation quality, and high-dimensional
@@ -1865,6 +1865,13 @@ Pick one item per commit unless the change is purely navigational.
      shared QF_LRA/Farkas route now checks both product atom and marginal
      conflicts without promoting general product-measure or Fubini/Tonelli
      theorems.
+118. Landed: extend `random-matrix-finite-v0` with a checked bad
+     expected-rank row. Exact rational row-reduction replay computes the
+     rank-mixture distribution and `E[rank]=1`, while the malformed source
+     SMT-LIB artifact claims `2`; the shared QF_LRA/Farkas route now checks
+     both trace-square moment and expected-rank conflicts without promoting
+     asymptotic spectral laws, concentration, universality, simulation
+     quality, or numerical eigensolver behavior.
 
 ## Validation Checklist
 

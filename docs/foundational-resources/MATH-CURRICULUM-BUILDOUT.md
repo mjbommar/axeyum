@@ -954,7 +954,8 @@ Cayley-Hamilton replay, finite Gershgorin intervals, and checked QF_LRA/Farkas
 rejection of false trace and characteristic-polynomial claims.
 `artifacts/examples/math/random-matrix-finite-v0/` now validates exact finite
 random-matrix moment replay, expected Gram matrices, rank probabilities, and
-checked QF_LRA/Farkas rejection of a false trace-square moment.
+checked QF_LRA/Farkas rejection of false trace-square and expected-rank
+claims.
 `artifacts/examples/math/finite-markov-chain-v0/` now validates exact
 row-stochastic matrix replay, finite-horizon distribution evolution,
 stationary-distribution replay, and checked QF_LRA/Farkas rejection of a
@@ -1020,8 +1021,8 @@ Recommended order:
 13. `numerical-linear-algebra-v0`: residual bounds, rational solution boxes,
     exact iterative-method error replay, and checked bad Jacobi error bounds.
 14. `random-matrix-finite-v0`: finite matrix-valued probability tables,
-    exact moments, Gram expectations, rank distributions, and a checked
-    QF_LRA/Farkas bad trace-square certificate.
+    exact moments, Gram expectations, rank distributions, and checked
+    QF_LRA/Farkas bad trace-square and expected-rank certificates.
 15. `finite-markov-chain-v0`: stochastic matrices, finite-horizon
     distribution replay, stationary distributions, bad transition rows, and
     checked bad stationary claims.
@@ -1451,8 +1452,8 @@ numerical-analysis slice with checked QF_LRA/Farkas bad residual and
 Jacobi-bound certificates,
 and `random-matrix-finite-v0` adds the first exact finite random-matrix bridge
 across linear algebra, probability, statistics, and
-numerical analysis, now with a checked QF_LRA/Farkas bad trace-square
-regression. `finite-markov-chain-v0` now adds the first exact finite
+numerical analysis, now with checked QF_LRA/Farkas bad trace-square and
+expected-rank regressions. `finite-markov-chain-v0` now adds the first exact finite
 stochastic-process bridge across probability, linear algebra, statistics, and
 dynamics, with checked QF_LRA/Farkas bad stochastic-row and bad stationary
 distribution regressions.
@@ -1700,8 +1701,8 @@ and bad-eigenpair rejection with QF_LRA/Farkas evidence, and the general spectra
 horizon.
 `random-matrix-finite-v0` now has a learner-facing end-to-end lesson for exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
-matrices, rank probabilities, checked QF_LRA/Farkas bad trace-square
-rejection, and the asymptotic random-matrix/numerical horizon.
+matrices, rank probabilities, checked QF_LRA/Farkas bad trace-square and
+expected-rank rejection, and the asymptotic random-matrix/numerical horizon.
 `numerical-linear-algebra-v0` now has a learner-facing end-to-end lesson for
 exact residual infinity-norm replay, rational solution-box checking, one-step
 Jacobi contraction replay, checked QF_LRA/Farkas bad residual-bound and
@@ -2051,8 +2052,9 @@ translation and squared-distance replay.
 `numerical-linear-algebra-v0` now routes its bad residual-bound and Jacobi
 error-bound rows through the same checked Farkas evidence path after exact
 residual-norm and iteration replay.
-`random-matrix-finite-v0` now routes its bad trace-square row through the same
-checked Farkas evidence path after exact finite moment replay.
+`random-matrix-finite-v0` now routes its bad trace-square and expected-rank
+rows through the same checked Farkas evidence path after exact finite moment
+and rank replay.
 `affine-geometry-v0` now routes its bad midpoint-coordinate and
 distance-preservation rows through the same checked Farkas evidence path after
 exact affine-midpoint and squared-distance replay.
@@ -2258,8 +2260,8 @@ The learner layer now also has
 [`random-matrix-moment-index.md`](../learn/math/random-matrix-moment-index.md),
 which groups finite matrix-valued atom tables, exact trace/determinant
 moments, expected Gram matrices, rank-mixture probabilities, checked
-QF_LRA/Farkas bad trace-square evidence, and random-matrix asymptotic or
-simulation horizons.
+QF_LRA/Farkas bad trace-square and expected-rank evidence, and random-matrix
+asymptotic or simulation horizons.
 The learner/planning layer now also has
 [`matrix-corpus-benchmark-boundary.md`](../learn/math/matrix-corpus-benchmark-boundary.md),
 which separates educational matrix resources, solver regressions,

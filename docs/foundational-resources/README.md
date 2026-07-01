@@ -321,7 +321,8 @@ schemas, examples, and validation workflows.
   and checked rejection of false trace and characteristic-polynomial claims.
 - [`artifacts/examples/math/random-matrix-finite-v0/`](../../artifacts/examples/math/random-matrix-finite-v0/)
   validates exact finite random-matrix moments, expected Gram matrices, rank
-  probabilities, and checked rejection of a false trace-square moment.
+  probabilities, and checked rejection of false trace-square and expected-rank
+  claims.
 - [`artifacts/examples/math/finite-markov-chain-v0/`](../../artifacts/examples/math/finite-markov-chain-v0/)
   validates exact stochastic matrices, finite-horizon distribution evolution,
   stationary distributions, and checked rejection of a malformed transition row

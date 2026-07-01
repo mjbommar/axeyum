@@ -33,8 +33,8 @@ The committed public query boundary currently reports:
 - 111 concept rows: 23 curriculum nodes, 18 field rows, 65 bridge concepts, and
   5 example-family rows.
 - 108 non-template math example packs.
-- 601 expected checks: 332 `sat`, 198 `unsat`, and 71 `not-run`.
-- 280 checked proof/evidence rows, 250 replay-only rows, and 71 Lean-horizon
+- 602 expected checks: 332 `sat`, 199 `unsat`, and 71 `not-run`.
+- 281 checked proof/evidence rows, 250 replay-only rows, and 71 Lean-horizon
   rows.
 - 108 promoted solver-reuse packs.
 - 0 unclassified solver-reuse packs.
@@ -379,8 +379,8 @@ Pick one item per commit unless the change is purely navigational.
    invariants.
 7. Landed: add random-matrix learner and query coverage only as exact finite
    matrix-valued atom tables, moment replay, expected Gram replay,
-   rank-mixture replay, and checked QF_LRA/Farkas bad-moment rows before any
-   asymptotic statement.
+   rank-mixture replay, and checked QF_LRA/Farkas bad-moment/rank rows before
+   any asymptotic statement.
 8. Landed: promote the concrete bad finite group-homomorphism row in
    `finite-algebra-homomorphisms-v0` through QF_UF/Alethe after table replay
    identifies `phi(1+1)=1` versus `phi(1)+phi(1)=0`.

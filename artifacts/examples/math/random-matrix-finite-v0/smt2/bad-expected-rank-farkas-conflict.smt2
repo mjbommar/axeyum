@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const expected_rank Real)
+(assert (= expected_rank 1))
+(assert (= expected_rank 2))
+(check-sat)

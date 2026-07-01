@@ -106,8 +106,8 @@ certificate. The finite proximal-gradient slice adds exact L1 soft-threshold
 replay after a trial step and a checked QF_LRA/Farkas bad-proximal-point
 certificate. The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
-matrices, rank distributions, and a checked QF_LRA/Farkas bad trace-square
-certificate. The spectral slice checks exact finite
+matrices, rank distributions, and checked QF_LRA/Farkas bad trace-square and
+bad expected-rank certificates. The spectral slice checks exact finite
 eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotients, and
 `P*D*P^-1` reconstruction for a fixed rational matrix, plus a QF_LRA/Farkas
 bad-Rayleigh-quotient certificate and a bad-eigenpair certificate. The matrix-invariants

@@ -60,6 +60,20 @@ E[rank] = 1
 These are finite exact replay targets, not claims about asymptotic spectra or
 floating-point simulation quality.
 
+## Bad Expected-Rank Certificate
+
+The rejected expected-rank row is a one-variable exact-rational contradiction:
+
+```text
+expected_rank = 1
+expected_rank = 2
+```
+
+The pack links this to a `QF_LRA` SMT-LIB artifact and a resource-backed
+`UnsatFarkas` regression. The trusted path first recomputes the rank
+distribution by rational row reduction, then lets the Farkas checker reject the
+incompatible expected-rank claim.
+
 ## Bad Moment Certificate
 
 The rejected trace-square row is a one-variable exact-rational contradiction:

@@ -100,6 +100,17 @@ level even if no individual check label contains the substring.
 Hyphen and underscore spellings are normalized for substring search, so
 `qf-bv` and `QF_BV` match the same route text.
 
+For a concrete finite random-matrix rank row with checked Farkas evidence:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack random-matrix-finite-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text rank \
+  --require-any
+```
+
 ## Proof-Route Summary Discovery
 
 ```sh

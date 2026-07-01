@@ -4368,7 +4368,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "random-matrix-finite-v0",
-                "Rank-mixture probabilities over a finite random-matrix distribution.",
+                "Rank-mixture probabilities and a checked bad expected-rank row over a finite random-matrix distribution.",
             ),
         ],
         "proof_routes": [
@@ -4718,7 +4718,7 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "random-matrix-finite-v0",
-                "Finite sign-matrix moments, expected Gram matrix, rank mixture, and bad trace-moment rows.",
+                "Finite sign-matrix moments, expected Gram matrix, rank mixture, and bad trace-moment/expected-rank rows.",
             ),
             (
                 "finite-probability-v0",
@@ -4735,7 +4735,7 @@ BRIDGE_CONCEPTS = [
         ],
         "proof_routes": [
             {
-                "name": "finite expectation replay plus QF_LRA/Farkas bad-moment certificate",
+                "name": "finite expectation/rank replay plus QF_LRA/Farkas bad-moment and bad-rank certificates",
                 "status": "checked",
                 "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
                 "lean_status": "partial",
@@ -4752,8 +4752,8 @@ BRIDGE_CONCEPTS = [
                 ],
                 "notes": (
                     "The finite checker normalizes the distribution and "
-                    "recomputes exact moments by enumeration; false moment "
-                    "claims graduate only when the exact rational conflict "
+                    "recomputes exact moments and ranks by enumeration; false "
+                    "moment or rank claims graduate only when the exact rational conflict "
                     "has checked Farkas evidence."
                 ),
             }
@@ -7012,7 +7012,7 @@ EXAMPLE_FAMILIES = [
             ),
             (
                 "random-matrix-finite-v0",
-                "Bad trace-square moment rejected after finite exact-moment replay.",
+                "Bad trace-square moment and expected-rank claims rejected after finite exact replay.",
             ),
             (
                 "affine-geometry-v0",

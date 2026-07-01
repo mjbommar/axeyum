@@ -62,7 +62,8 @@ The d-separation pack adds a finite DAG bridge:
 it checks whether conditioning blocks or opens paths in small
 causal-graph-shaped examples. The random-matrix pack checks
 finite matrix-valued probability tables, exact moments, expected Gram matrices,
-and rank probabilities. The Markov-chain pack checks exact stochastic matrices,
+rank probabilities, and checked QF_LRA/Farkas rejections of bad trace-square
+and expected-rank claims. The Markov-chain pack checks exact stochastic matrices,
 finite-horizon distribution evolution, stationary distributions, and a checked
 `UnsatFarkas` certificate for a malformed transition row plus a false
 stationary-distribution row.
@@ -304,8 +305,8 @@ moments first use
 the validator recomputes exact atom-table sums and finite path conditions.
 Malformed probability normalization, Bayes-posterior rows, measure-complement
 rows, conditional expectation tables, stochastic rows, expected hitting-time
-equations, tail bounds, regression coefficients, and random-matrix moment rows
-graduate through
+equations, tail bounds, regression coefficients, and random-matrix moment/rank
+rows graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
 Discrete count contradictions such as contingency totals and exact tail counts
 use

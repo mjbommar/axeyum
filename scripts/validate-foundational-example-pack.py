@@ -20402,6 +20402,55 @@ def validate_random_matrix_finite(expected: dict[str, Any]) -> None:
     )
     if actual_expected_rank != expected_rank:
         fail("rank-mixture-probabilities expected_rank is incorrect")
+    rank_source_atoms = atoms
+    rank_source_probabilities = actual_rank_probabilities
+    rank_source_expected_rank = actual_expected_rank
+
+    bad_rank = checks["bad-expected-rank-rejected"]
+    if bad_rank["expected_result"] != "unsat":
+        fail("bad-expected-rank-rejected must expect unsat")
+    if bad_rank["proof_status"] != "checked":
+        fail("bad-expected-rank-rejected must be checked")
+    if bad_rank["validation"] != "exact_finite_random_matrix_rank_refutation":
+        fail("bad-expected-rank-rejected must use exact_finite_random_matrix_rank_refutation validation")
+    data = bad_rank.get("data", {})
+    if data.get("source_witness") != "rank-mixture-distribution":
+        fail("bad-expected-rank-rejected must cite the rank-mixture-distribution witness")
+    atoms = require_matrix_distribution("bad expected rank atoms", data.get("atoms"))
+    if atoms != rank_source_atoms:
+        fail("bad-expected-rank-rejected atoms must match the rank-mixture-distribution witness")
+    expected_rank_distribution = require_rank_probability_map(
+        "bad expected rank rank_probabilities",
+        data.get("rank_probabilities"),
+    )
+    actual_rank_distribution = rank_probabilities(atoms)
+    if actual_rank_distribution != expected_rank_distribution:
+        fail("bad-expected-rank-rejected rank distribution is incorrect")
+    actual = require_fraction("bad expected rank actual_expected_rank", data.get("actual_expected_rank"))
+    claimed = require_fraction("bad expected rank claimed_expected_rank", data.get("claimed_expected_rank"))
+    computed = sum(
+        (Fraction(rank) * probability for rank, probability in actual_rank_distribution.items()),
+        Fraction(0),
+    )
+    if actual_rank_distribution != rank_source_probabilities:
+        fail("bad-expected-rank-rejected rank distribution must match the rank-mixture witness")
+    if computed != actual:
+        fail("bad-expected-rank-rejected actual expected rank is incorrect")
+    if actual != rank_source_expected_rank:
+        fail("bad-expected-rank-rejected expected rank must match the rank-mixture witness")
+    if claimed == actual:
+        fail("bad-expected-rank-rejected claimed expected rank unexpectedly matches")
+    farkas_claim = data.get("farkas_rank_claim")
+    require_string("bad expected rank farkas_rank_claim", farkas_claim)
+    if farkas_claim != "expected_rank = 2":
+        fail("bad-expected-rank-rejected must document the Farkas rank claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad expected rank smt2_artifact", smt2_artifact)
+    check_source("bad expected rank smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad expected rank farkas_regression", regression)
+    if "random_matrix_bad_expected_rank_artifact_emits_checked_farkas" not in regression:
+        fail("bad-expected-rank-rejected must link the Farkas regression")
 
     bad_moment = checks["bad-trace-moment-rejected"]
     if bad_moment["expected_result"] != "unsat":

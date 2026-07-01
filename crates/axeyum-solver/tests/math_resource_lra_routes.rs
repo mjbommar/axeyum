@@ -58,6 +58,9 @@ const COMPLEX_PLANE_BAD_UNIT_SQUARE_REAL_PART: &str = include_str!(
 const SEQUENCE_LIMIT_BOUNDED_CAUCHY: &str = include_str!(
     "../../../artifacts/examples/math/sequence-limit-shadow-v0/smt2/bounded-cauchy-tail-farkas-conflict.smt2"
 );
+const RANDOM_MATRIX_BAD_EXPECTED_RANK: &str = include_str!(
+    "../../../artifacts/examples/math/random-matrix-finite-v0/smt2/bad-expected-rank-farkas-conflict.smt2"
+);
 const BOUNDED_MONOTONE_SEQUENCE_BAD_UPPER_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-upper-bound-farkas-conflict.smt2"
 );
@@ -1358,6 +1361,14 @@ fn random_matrix_bad_trace_moment_emits_checked_farkas() {
         "random-matrix-finite-v0 bad-trace-moment-rejected",
         &arena,
         &[actual_moment, false_moment],
+    );
+}
+
+#[test]
+fn random_matrix_bad_expected_rank_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "random-matrix-finite-v0 bad-expected-rank SMT-LIB artifact",
+        RANDOM_MATRIX_BAD_EXPECTED_RANK,
     );
 }
 

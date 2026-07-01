@@ -34,9 +34,10 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite random-matrix bad trace-square moment QF_LRA/Farkas regression seed",
-    "pressure": "Finite matrix-distribution replay computes E[tr(A)^2] = 2, but the malformed row claims the same moment is 1.",
+    "target": "finite random-matrix bad trace-square moment and expected-rank QF_LRA/Farkas regression seeds",
+    "pressure": "Finite matrix-distribution replay computes E[tr(A)^2] = 2 while the malformed row claims 1, and finite rank-mixture replay computes E[rank] = 1 while the malformed row claims 2.",
     "evidence": [
+      "bad-expected-rank-rejected",
       "bad-trace-moment-rejected"
     ],
     "next_step": "Promote additional finite matrix-distribution rows only when they add distinct exact-linear or finite-rank solver pressure; keep asymptotic spectra, concentration, and continuous random-matrix theory in Lean-horizon or numerical-honesty lanes."
@@ -50,18 +51,20 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "artifacts/examples/math/random-matrix-finite-v0/smt2/bad-trace-moment-farkas-conflict.smt2",
+    "artifacts/examples/math/random-matrix-finite-v0/smt2/bad-expected-rank-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "sign-diagonal-moments",
     "expected-gram-matrix",
     "rank-mixture-probabilities",
+    "bad-expected-rank-rejected",
     "bad-trace-moment-rejected"
   ],
   "graduation_criteria": [
     "Encode finite matrix-valued probability distributions as deterministic QF_LRA table checks.",
     "Replay moment, Gram, determinant, and rank claims through exact rational matrix evaluation.",
-    "Route false finite moment constraints through checked QF_LRA/Farkas certificates once exact replay has computed the finite expectation.",
+    "Route false finite moment and expected-rank constraints through checked QF_LRA/Farkas certificates once exact replay has computed the finite expectation.",
     "Add covariance and concentration-style finite counterexample packs before claiming random-matrix-theory coverage.",
     "Keep asymptotic spectral laws, floating-point simulations, and high-dimensional limit claims under proof/numerical horizon metadata."
   ]

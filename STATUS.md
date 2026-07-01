@@ -205,6 +205,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite random-matrix bad expected-rank QF_LRA row landed.**
+  `random-matrix-finite-v0` now includes a second checked Farkas row: exact
+  rank replay computes ranks `0`, `1`, and `2` with probability `1/3` each,
+  so `E[rank]=1`, while the malformed source SMT-LIB artifact claims
+  `E[rank]=2`. The validator pins the rank-mixture source witness, atom
+  matrices, rank-probability table, actual and claimed expected ranks,
+  artifact path, and regression; the shared `math_resource_lra_routes`
+  regression parses the artifact and checks `UnsatFarkas` evidence. Generated
+  dashboards and the public query summary now report 111 concept rows, 108
+  non-template packs, 602 expected checks, 281 checked rows, 250 replay-only
+  rows, and 71 Lean-horizon rows. Validated with the full
+  `math_resource_lra_routes` regression, foundational pack/concept/negative
+  fixture/consumer checks, and link/diff hygiene.
+
 - **Finite-conditional-expectation bad total-expectation QF_LRA row landed.**
   `finite-conditional-expectation-v0` now includes a third checked Farkas row:
   exact finite partition replay computes `E[X]=7/2` and

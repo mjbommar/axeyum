@@ -320,8 +320,8 @@ First targets:
   (resource-backed Farkas regressions landed for the bad residual-bound and
   bad Jacobi error-bound rows)
 - [random-matrix-finite-v0](../../artifacts/examples/math/random-matrix-finite-v0/)
-  (resource-backed Farkas regression landed for the bad trace-square moment
-  row)
+  (resource-backed Farkas regressions landed for the bad trace-square moment
+  and bad expected-rank rows)
 - [affine-geometry-v0](../../artifacts/examples/math/affine-geometry-v0/)
   (resource-backed Farkas regressions landed for the bad midpoint-coordinate
   and bad distance-preservation rows)

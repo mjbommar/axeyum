@@ -2,7 +2,7 @@
 
 This lesson follows one exact finite random-matrix resource from
 matrix-valued atom tables to moments, expected Gram matrices, rank
-probabilities, and a checked bad trace-square moment. It uses the
+probabilities, and checked bad trace-square and expected-rank claims. It uses the
 [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
 pack.
 
@@ -22,6 +22,7 @@ Concept rows:
 | `sign-diagonal-moments` | `sat` | replay-only |
 | `expected-gram-matrix` | `sat` | replay-only |
 | `rank-mixture-probabilities` | `sat` | replay-only |
+| `bad-expected-rank-rejected` | `unsat` | checked |
 | `bad-trace-moment-rejected` | `unsat` | checked |
 
 Every row is a finite probability table over exact rational matrices. The pack
@@ -98,6 +99,31 @@ E[rank] = (0 + 1 + 2) / 3 = 1
 
 This is the resource pattern for finite rank-distribution claims.
 
+## Reject A Bad Expected Rank
+
+The bad rank row uses the rank-mixture distribution but claims:
+
+```text
+E[rank(A)] = 2
+```
+
+The trusted checker recomputes the exact value:
+
+```text
+E[rank(A)] = (0 + 1 + 2) / 3 = 1
+```
+
+The pack exposes that mismatch as another small `QF_LRA` contradiction:
+
+```text
+expected_rank = 1
+expected_rank = 2
+```
+
+The route regression requires independently rechecked `UnsatFarkas` evidence,
+so the false expected-rank value is rejected after exact finite row-reduction
+replay.
+
 ## Reject A Bad Trace-Square Moment
 
 The bad row uses the same diagonal sign distribution but claims:
@@ -146,12 +172,14 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes random_matrix_bad_expected_rank_artifact_emits_checked_farkas
 ```
 
 Expected output:
 
 ```text
 validated 1 foundational example pack(s)
+test random_matrix_bad_expected_rank_artifact_emits_checked_farkas ... ok
 ```
 
 ## Trust Boundary
@@ -161,7 +189,7 @@ This lesson shows Axeyum's current random-matrix resource pattern:
 ```text
 untrusted fast search -> atom table, moment, Gram, rank, or counterexample row
 trusted small checking -> exact probability sums and finite matrix replay
-proof upgrade -> QF_LRA/Farkas certificate for the false trace-square moment
+proof upgrade -> QF_LRA/Farkas certificate for false trace-square and expected-rank claims
 remaining horizon -> asymptotic random matrix theory and numerical experiments
 ```
 

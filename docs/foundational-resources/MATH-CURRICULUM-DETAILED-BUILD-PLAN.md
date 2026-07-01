@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 601 expected checks.
-- 280 checked proof/evidence rows.
+- 602 expected checks.
+- 281 checked proof/evidence rows.
 - 250 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -829,9 +829,9 @@ Pick one row per commit unless the change is purely navigational.
 96. Landed: add `random-matrix-moment-index.md` as the cross-pack learner path
     for finite matrix-valued probability tables, exact trace/determinant
     moments, expected Gram matrices, rank-mixture probabilities, checked
-    QF_LRA/Farkas bad trace-square evidence, and adjacent finite
-    probability/statistics table patterns. The probability/statistics consumer
-    smoke now exposes `bridge_random_matrix_finite_moment` through
+    QF_LRA/Farkas bad trace-square and expected-rank evidence, and adjacent
+    finite probability/statistics table patterns. The probability/statistics
+    consumer smoke now exposes `bridge_random_matrix_finite_moment` through
     concept-scoped Farkas route queries while keeping asymptotic spectral laws,
     universality, concentration theorems, simulation quality, and
     high-dimensional random-matrix claims in the theorem/numerical-honesty
@@ -1091,6 +1091,14 @@ Pick one row per commit unless the change is purely navigational.
      total-expectation, and tower-property contradictions without claiming
      Radon-Nikodym construction, regular conditional probabilities, optional
      stopping, or general measure-theoretic conditional expectation.
+132. Landed: extend `random-matrix-finite-v0` with a checked bad
+     expected-rank row. Exact rational row-reduction replay computes rank
+     probabilities `P(rank=0)=P(rank=1)=P(rank=2)=1/3` and `E[rank]=1`,
+     while the malformed source SMT-LIB artifact claims `E[rank]=2`; the
+     shared QF_LRA/Farkas route now checks both bad trace-square and bad
+     expected-rank contradictions without claiming asymptotic spectral laws,
+     universality, concentration theorems, simulation quality, or numerical
+     eigensolver behavior.
 
 ## Validation Checklist
 

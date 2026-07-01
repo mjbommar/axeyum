@@ -22,6 +22,14 @@ The validator computes exact matrix rank by rational row reduction, groups atom
 probabilities by rank, and checks the listed rank probabilities and expected
 rank.
 
+## `bad-expected-rank-rejected`
+
+Expected result: `unsat`.
+
+The rank-mixture distribution has exact `E[rank] = 1`, so the claimed value
+`2` is false. The row links an SMT-LIB `QF_LRA` contradiction and a solver
+regression that emits independently rechecked `UnsatFarkas` evidence.
+
 ## `bad-trace-moment-rejected`
 
 Expected result: `unsat`.

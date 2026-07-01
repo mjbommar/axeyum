@@ -46,7 +46,7 @@ when the consumer needs a concrete checked row to display.
 | Residual bounds and least squares | `bridge_residual_bound` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked` |
 | Rank, kernel, image, and dual rows | `bridge_rank_nullity` | `Alethe` | `packs --concept bridge_rank_nullity --route Alethe` |
 | Rayleigh quotients, eigenpairs, and matrix invariants | `bridge_eigenpair` | `Farkas` | `checks --concept bridge_eigenpair --route Farkas --proof-status checked` |
-| Finite random-matrix moments | `bridge_random_matrix_finite_moment` | `Farkas` | `packs --concept bridge_random_matrix_finite_moment --route Farkas` |
+| Finite random-matrix moments and ranks | `bridge_random_matrix_finite_moment` | `Farkas` | `checks --pack random-matrix-finite-v0 --route Farkas --proof-status checked --text rank` |
 | Inner products and projections | `bridge_inner_product_projection` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked` |
 | Integer chain-complex torsion | `bridge_finite_torsion_homology_replay` | `Diophantine` | `checks --concept bridge_finite_torsion_homology_replay --route Diophantine --proof-status checked` |
 | Universal-coefficient shadow | `bridge_finite_universal_coefficient_shadow` | `Alethe` | `checks --concept bridge_finite_universal_coefficient_shadow --route Alethe --proof-status checked` |
@@ -106,6 +106,13 @@ python3 scripts/query-foundational-resources.py checks \
   --concept bridge_random_matrix_finite_moment \
   --route Farkas \
   --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack random-matrix-finite-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text rank \
   --require-any
 ```
 
