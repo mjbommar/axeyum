@@ -4747,6 +4747,597 @@
       }
     },
     {
+      "id": "bridge_rational_interval_replay",
+      "kind": "bridge-concept",
+      "title": "Rational Interval Replay",
+      "domain": "mathematics",
+      "field_ids": [
+        "real_analysis",
+        "topology",
+        "numerical_analysis"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "A rational interval row checks exact membership, containment, endpoint order, midpoint, and radius facts over named rational bounds, keeping completeness and arbitrary-neighborhood theorems out of the finite replay claim.",
+      "prerequisites": [
+        "curriculum_rationals",
+        "curriculum_reals",
+        "bridge_metric_ball"
+      ],
+      "unlocks": [
+        "bridge_bounded_epsilon_delta_shadow",
+        "bridge_squeeze_shadow",
+        "bridge_derivative_identity_shadow",
+        "field_real_analysis"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "exact rational arithmetic",
+        "interval containment",
+        "LRA (exact rationals)",
+        "finite replay",
+        "Lean horizon"
+      ],
+      "example_packs": [
+        {
+          "id": "real-analysis-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/real-analysis-rational-v0",
+          "notes": "Exact rational interval, ball, and bounded epsilon-delta rows."
+        },
+        {
+          "id": "rationals-lra-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/rationals-lra-v0",
+          "notes": "Rational density, trichotomy, and order/transitivity replay."
+        },
+        {
+          "id": "reals-rcf-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/reals-rcf-shadow-v0",
+          "notes": "Ordered-field midpoint replay and small real-algebra shadows."
+        },
+        {
+          "id": "finite-root-finding-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-root-finding-v0",
+          "notes": "Bisection interval and width rows checked over exact rational endpoints."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "exact rational interval replay plus QF_LRA/Farkas bad-bound certificates",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+          "lean_status": "required",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/real-analysis-rational-end-to-end.md",
+            "docs/learn/math/finite-root-finding-end-to-end.md",
+            "docs/learn/math/metric-ball-epsilon-delta-index.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+          ],
+          "notes": "The finite checker recomputes rational endpoint and membership facts exactly. Bad interval or width claims graduate only when their final linear conflict has checked Farkas evidence."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+        "docs/proof-cookbook/recipes/lean-horizon-template.md",
+        "docs/learn/math/real-analysis-rational-end-to-end.md",
+        "docs/learn/math/finite-root-finding-end-to-end.md",
+        "docs/learn/math/metric-ball-epsilon-delta-index.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+      ],
+      "open_gaps": [
+        "Rational interval replay does not prove real completeness, nested-interval theorems, or compactness.",
+        "Floating-point interval arithmetic and rounding guarantees require separate numerical-honesty resources."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state exact rational endpoints, included values, and any claimed midpoint, radius, or width.",
+          "The validator recomputes interval membership or endpoint arithmetic from source values.",
+          "General real-interval theorems stay linked as Lean horizons."
+        ]
+      }
+    },
+    {
+      "id": "bridge_sequence_tail_shadow",
+      "kind": "bridge-concept",
+      "title": "Sequence Tail Shadow",
+      "domain": "mathematics",
+      "field_ids": [
+        "real_analysis",
+        "topology",
+        "discrete_math"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "A sequence-tail shadow fixes a finite prefix or tail, exact rational values, a proposed limit or recurrence rule, and one bounded inequality to replay without claiming full convergence.",
+      "prerequisites": [
+        "curriculum_sequences_and_limits",
+        "bridge_rational_interval_replay",
+        "bridge_bounded_epsilon_delta_shadow"
+      ],
+      "unlocks": [
+        "bridge_cauchy_tail_shadow",
+        "bridge_squeeze_shadow",
+        "bridge_lean_horizon",
+        "field_real_analysis"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "finite sequence replay",
+        "bounded epsilon-N templates",
+        "LRA (exact rationals)",
+        "finite recurrence prefixes",
+        "Lean horizon"
+      ],
+      "example_packs": [
+        {
+          "id": "sequence-limit-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/sequence-limit-shadow-v0",
+          "notes": "Finite epsilon-tail, limit-counterexample, Cauchy-tail, and bad reciprocal-tail rows."
+        },
+        {
+          "id": "bounded-monotone-sequence-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
+          "notes": "Finite monotone-prefix, supremum, tail-gap, and bad-bound rows."
+        },
+        {
+          "id": "finite-recurrence-prefix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
+          "notes": "Finite recurrence prefixes, companion-matrix replay, and bad finite-value rows."
+        },
+        {
+          "id": "generating-functions-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/generating-functions-v0",
+          "notes": "Finite coefficient and recurrence/generating-function prefix rows."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "finite sequence-prefix replay plus QF_LRA/Farkas bad-tail certificates",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+          "lean_status": "required",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/sequence-limit-shadow-end-to-end.md",
+            "docs/learn/math/bounded-monotone-sequence-end-to-end.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+          ],
+          "notes": "The finite checker recomputes the listed sequence values and tail inequalities. General epsilon-N, monotone, or recurrence convergence is a Lean horizon."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+        "docs/proof-cookbook/recipes/lean-horizon-template.md",
+        "docs/learn/math/sequence-limit-shadow-end-to-end.md",
+        "docs/learn/math/bounded-monotone-sequence-end-to-end.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+      ],
+      "open_gaps": [
+        "Finite sequence-tail replay is not convergence, Cauchy completeness, monotone convergence, or asymptotic analysis.",
+        "Closed forms and recurrence theorem proofs require induction or Lean reconstruction beyond finite prefix data."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the finite index range, exact sequence formula or table, proposed bound, and claimed tail property.",
+          "The validator recomputes listed values and exact inequalities.",
+          "Theorem-level convergence claims remain Lean-horizon rows."
+        ]
+      }
+    },
+    {
+      "id": "bridge_cauchy_tail_shadow",
+      "kind": "bridge-concept",
+      "title": "Cauchy Tail Shadow",
+      "domain": "mathematics",
+      "field_ids": [
+        "real_analysis",
+        "topology"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "A Cauchy-tail shadow enumerates one finite tail, computes all pairwise exact rational distances, and rejects only bounded bad threshold claims unless a general completeness proof exists.",
+      "prerequisites": [
+        "bridge_sequence_tail_shadow",
+        "bridge_bounded_epsilon_delta_shadow",
+        "curriculum_reals"
+      ],
+      "unlocks": [
+        "bridge_lean_horizon",
+        "field_topology"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "finite pairwise distance enumeration",
+        "LRA (exact rationals)",
+        "QF_LRA",
+        "Farkas certificate",
+        "Lean horizon"
+      ],
+      "example_packs": [
+        {
+          "id": "sequence-limit-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/sequence-limit-shadow-v0",
+          "notes": "Bounded Cauchy-tail no-counterexample row and bad reciprocal-tail strict-bound rejection."
+        },
+        {
+          "id": "bounded-monotone-sequence-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
+          "notes": "Finite tail-gap replay and checked bad tail-gap row."
+        },
+        {
+          "id": "real-analysis-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/real-analysis-rational-v0",
+          "notes": "Bounded rational-ball and epsilon-delta rows that share exact distance comparisons."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "finite pairwise-tail replay plus QF_LRA/Farkas threshold certificate",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+          "lean_status": "required",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/sequence-limit-shadow-end-to-end.md",
+            "docs/learn/math/analysis-topology-proof-horizons.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+          ],
+          "notes": "The finite checker computes the maximum pairwise tail distance exactly; malformed threshold claims use checked Farkas evidence, while Cauchy completeness stays in Lean."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+        "docs/proof-cookbook/recipes/lean-horizon-template.md",
+        "docs/learn/math/sequence-limit-shadow-end-to-end.md",
+        "docs/learn/math/analysis-topology-proof-horizons.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+      ],
+      "open_gaps": [
+        "A finite no-counterexample tail is not a proof that a sequence is Cauchy.",
+        "Equivalence between Cauchy and convergent sequences over complete spaces remains a Lean horizon."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the finite tail values, epsilon, farthest pair, and exact maximum distance.",
+          "The validator enumerates every pair and recomputes the max distance.",
+          "General Cauchy/completeness theorems remain linked as proof-horizon resources."
+        ]
+      }
+    },
+    {
+      "id": "bridge_squeeze_shadow",
+      "kind": "bridge-concept",
+      "title": "Squeeze Shadow",
+      "domain": "mathematics",
+      "field_ids": [
+        "real_analysis",
+        "logic_and_proof"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "A squeeze-shadow row checks one bounded side-condition diagram: lower and upper rational expressions bound a middle expression at fixed sample points, while the full squeeze theorem remains Lean-only.",
+      "prerequisites": [
+        "bridge_rational_interval_replay",
+        "bridge_sequence_tail_shadow",
+        "curriculum_reals"
+      ],
+      "unlocks": [
+        "bridge_derivative_identity_shadow",
+        "bridge_integration_horizon",
+        "bridge_lean_horizon"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "exact rational inequalities",
+        "bounded polynomial side conditions",
+        "LRA (exact rationals)",
+        "NRA / polynomial constraints",
+        "Lean horizon"
+      ],
+      "example_packs": [
+        {
+          "id": "real-analysis-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/real-analysis-rational-v0",
+          "notes": "Finite squeeze-style polynomial side conditions and checked bad-delta row."
+        },
+        {
+          "id": "sequence-limit-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/sequence-limit-shadow-v0",
+          "notes": "Finite tail rows that use exact rational bounds without proving general convergence."
+        },
+        {
+          "id": "bounded-monotone-sequence-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
+          "notes": "Finite tail-gap rows that demonstrate bounded sequence inequalities."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "bounded inequality replay with Lean theorem horizon",
+          "status": "replay-only",
+          "checker": "scripts/validate-foundational-example-pack.py",
+          "lean_status": "required",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/real-analysis-rational-end-to-end.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md"
+          ],
+          "notes": "The current rows replay bounded side conditions exactly. The general squeeze theorem needs a Lean proof route before it can be advertised as theorem evidence."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/lean-horizon-template.md",
+        "docs/learn/math/real-analysis-rational-end-to-end.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md"
+      ],
+      "open_gaps": [
+        "Finite squeeze side conditions do not prove the quantified squeeze theorem.",
+        "Nonlinear symbolic side conditions need RCF/NRA or Lean support before broader promotion."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the lower, middle, and upper expressions or exact table values.",
+          "The validator checks the finite inequality chain exactly at the listed samples.",
+          "The general squeeze theorem stays a Lean-horizon dependency."
+        ]
+      }
+    },
+    {
+      "id": "bridge_derivative_identity_shadow",
+      "kind": "bridge-concept",
+      "title": "Derivative Identity Shadow",
+      "domain": "mathematics",
+      "field_ids": [
+        "real_analysis",
+        "numerical_analysis"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "A derivative-identity shadow differentiates a fixed polynomial or rational expression symbolically, evaluates exact rational sample points, and isolates bad derivative or gradient claims as small linear contradictions when possible.",
+      "prerequisites": [
+        "bridge_rational_interval_replay",
+        "bridge_squeeze_shadow",
+        "curriculum_polynomials"
+      ],
+      "unlocks": [
+        "bridge_integration_horizon",
+        "bridge_rational_convexity_shadow",
+        "field_numerical_analysis"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "symbolic polynomial differentiation",
+        "exact rational evaluation",
+        "QF_LRA",
+        "Farkas certificate",
+        "Lean horizon"
+      ],
+      "example_packs": [
+        {
+          "id": "calculus-algebraic-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/calculus-algebraic-shadow-v0",
+          "notes": "One-variable polynomial derivative replay and checked false-derivative row."
+        },
+        {
+          "id": "multivariable-calculus-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
+          "notes": "Bivariate gradient and Hessian replay plus checked bad-gradient row."
+        },
+        {
+          "id": "finite-gradient-descent-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-gradient-descent-v0",
+          "notes": "Exact quadratic gradient rows used by finite descent-step checks."
+        },
+        {
+          "id": "finite-root-finding-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-root-finding-v0",
+          "notes": "Newton-step rows that reuse exact derivative evaluation."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "symbolic derivative replay plus QF_LRA/Farkas bad-value certificates",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+          "lean_status": "required",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/calculus-shadows-end-to-end.md",
+            "docs/learn/math/multivariable-calculus-end-to-end.md",
+            "docs/learn/math/finite-root-finding-end-to-end.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+          ],
+          "notes": "The validator recomputes the derivative formula and exact sample values. Bad finite derivative or gradient claims use checked Farkas evidence; differentiability theorems remain Lean horizons."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+        "docs/proof-cookbook/recipes/lean-horizon-template.md",
+        "docs/learn/math/calculus-shadows-end-to-end.md",
+        "docs/learn/math/multivariable-calculus-end-to-end.md",
+        "docs/learn/math/finite-root-finding-end-to-end.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+      ],
+      "open_gaps": [
+        "Finite derivative replay does not prove differentiability from limits, product/chain rules in general, MVT, or FTC.",
+        "Non-polynomial derivative rules and analytic theorem reconstruction remain Lean horizons."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the source expression, derivative expression, sample point, and exact value.",
+          "The validator recomputes symbolic derivative samples exactly.",
+          "General calculus theorems stay linked as Lean-horizon rows."
+        ]
+      }
+    },
+    {
+      "id": "bridge_integration_horizon",
+      "kind": "bridge-concept",
+      "title": "Integration Horizon",
+      "domain": "mathematics",
+      "field_ids": [
+        "real_analysis",
+        "measure_theory",
+        "probability_theory",
+        "numerical_analysis"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "An integration-horizon row separates exact finite sums, simple function integrals, and Riemann-sum shadows from theorem-level integrability, convergence, and fundamental-theorem claims.",
+      "prerequisites": [
+        "bridge_finite_product_integration",
+        "bridge_derivative_identity_shadow",
+        "curriculum_calculus"
+      ],
+      "unlocks": [
+        "bridge_conditional_expectation",
+        "bridge_lean_horizon",
+        "field_measure_theory"
+      ],
+      "decidability": "proof-horizon",
+      "axeyum_fragments": [
+        "finite weighted sums",
+        "Riemann-sum shadows",
+        "simple-function integrals",
+        "QF_LRA",
+        "Lean horizon"
+      ],
+      "example_packs": [
+        {
+          "id": "calculus-riemann-sum-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/calculus-riemann-sum-v0",
+          "notes": "Fixed partition Riemann-sum replay and checked false-integral row."
+        },
+        {
+          "id": "finite-integration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-integration-v0",
+          "notes": "Finite simple-function integral, indicator integral, expectation, and bad expectation rows."
+        },
+        {
+          "id": "finite-product-measure-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-product-measure-v0",
+          "notes": "Finite product table, marginal, and finite Fubini-shadow rows."
+        },
+        {
+          "id": "real-analysis-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/real-analysis-rational-v0",
+          "notes": "Exact rational side conditions used as bounded analysis prerequisites."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "finite integral replay plus Lean-horizon theorem boundary",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+          "lean_status": "required",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/calculus-shadows-end-to-end.md",
+            "docs/learn/math/finite-integration-end-to-end.md",
+            "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+          ],
+          "notes": "Finite sums and simple-function integrals are replayed exactly and bad finite values can carry Farkas evidence. General integrability, convergence theorems, and FTC remain Lean-horizon dependencies."
+        }
+      ],
+      "source_refs": [
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+        "docs/proof-cookbook/recipes/lean-horizon-template.md",
+        "docs/learn/math/calculus-shadows-end-to-end.md",
+        "docs/learn/math/finite-integration-end-to-end.md",
+        "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+      ],
+      "open_gaps": [
+        "Finite Riemann sums and simple-function integrals do not prove Riemann/Lebesgue integrability or convergence theorems.",
+        "FTC, dominated convergence, Fubini/Tonelli, and almost-everywhere integration remain Lean horizons."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the finite partition, atom table, function values, and exact sum domain.",
+          "The validator recomputes each finite integral or Riemann-sum value exactly.",
+          "The theorem-level integration claim is explicitly marked Lean-horizon."
+        ]
+      }
+    },
+    {
       "id": "bridge_compactness_shadow",
       "kind": "bridge-concept",
       "title": "Compactness Shadow",

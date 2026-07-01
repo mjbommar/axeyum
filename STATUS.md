@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Analysis bridge-concept rows landed.**
+  The generated concept atlas now includes six reusable analysis bridge rows:
+  `bridge_rational_interval_replay`, `bridge_sequence_tail_shadow`,
+  `bridge_cauchy_tail_shadow`, `bridge_squeeze_shadow`,
+  `bridge_derivative_identity_shadow`, and `bridge_integration_horizon`.
+  These rows make rational intervals, finite tails, Cauchy-tail enumeration,
+  squeeze-style side conditions, symbolic derivative samples, finite integrals,
+  and theorem-horizon boundaries queryable across existing packs without
+  creating new solver artifacts. The public summary now reports 117 concept
+  rows: 23 curriculum nodes, 18 field rows, 71 bridge concepts, and 5
+  example-family rows; pack and check counts remain 108 packs, 632 expected
+  checks, 309 checked rows, 252 replay-only rows, and 71 Lean-horizon rows.
+
 - **Sequence-limit bad reciprocal-tail QF_LRA row landed.**
   `sequence-limit-shadow-v0` now includes a checked rejection for a malformed
   reciprocal-tail bound: exact replay reuses the reciprocal sequence witness,
@@ -214,7 +227,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   excess, source SMT-LIB artifact, and route regression. The shared
   `math_resource_lra_routes` regression parses the new QF_LRA artifact and
   checks the `UnsatFarkas` evidence. Generated dashboards and the public query
-  summary now report 111 concept rows, 108 non-template packs, 632 expected
+  summary now report 117 concept rows, 108 non-template packs, 632 expected
   checks, 309 checked rows, 252 replay-only rows, and 71 Lean-horizon rows.
 
 - **Metric-continuity bad open-ball-preimage QF_LRA row landed.**

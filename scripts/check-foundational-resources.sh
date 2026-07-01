@@ -208,6 +208,12 @@ python3 scripts/query-foundational-resources.py fields --field real_analysis --r
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text epsilon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text metric --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text gradient --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field real_analysis --text "Rational Interval" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field real_analysis --text "Sequence Tail" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field real_analysis --text "Cauchy Tail" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field real_analysis --text "Squeeze Shadow" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field real_analysis --text "Derivative Identity" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field real_analysis --text "Integration Horizon" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field real_analysis --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_metric_ball --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_metric_ball --route Farkas --proof-status checked --require-any >/dev/null

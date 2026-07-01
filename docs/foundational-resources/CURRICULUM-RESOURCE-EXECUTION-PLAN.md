@@ -240,6 +240,8 @@ Add bridge-concept or example-family rows for repeated subtopics:
   replay, quotient maps, ideal closure, module actions, tensor bilinearity,
   and finite group actions;
 - analysis: landed bridge rows for metric balls, bounded epsilon-delta shadows,
+  rational interval replay, sequence-tail shadows, Cauchy-tail shadows,
+  squeeze shadows, derivative-identity shadows, integration horizons,
   compactness shadows, connectedness shadows, and continuity-by-preimage, plus
   metric continuity with checked QF_LRA/Farkas bad-delta evidence, finite
   compactness with checked Bool/CNF bad-cover evidence, finite connectedness,

@@ -47,7 +47,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 65 bridge-concept rows.
+- 71 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
 - 632 expected checks.
@@ -648,11 +648,12 @@ Landed:
 
 - Bridge rows for metric ball, bounded epsilon-delta shadow, compactness
   shadow, connectedness shadow, and continuity-by-preimage.
+- Bridge rows for rational interval replay, sequence-tail shadows,
+  Cauchy-tail shadows, squeeze shadows, derivative-identity shadows, and
+  integration horizons.
 
 Build next:
 
-- Add concept rows for rational interval, sequence tail, Cauchy shadow,
-  squeeze shadow, derivative identity, and integration horizon.
 - Promote exact rational bad-bound rows through QF_LRA/Farkas.
 - Keep `sequence-limit-shadow-v0`'s promoted bounded Cauchy-tail and bad
   reciprocal-tail rows plus `bounded-monotone-sequence-v0`'s bad upper-bound

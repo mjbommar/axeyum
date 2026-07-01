@@ -41,7 +41,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 65 bridge-concept rows.
+- 71 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
 - 632 expected checks.
@@ -104,7 +104,7 @@ Last row closed:
 
 | Pack | Upgrade Trigger |
 |---|---|
-| `finite-circle-geometry-v0` | extended with a circle-line intersection witness and bad line-intersection row, so both circle radius and horizontal-diameter intersection conflicts now have source-linked QF_LRA/Farkas artifacts and route regressions |
+| analysis bridge concepts | generated `bridge_rational_interval_replay`, `bridge_sequence_tail_shadow`, `bridge_cauchy_tail_shadow`, `bridge_squeeze_shadow`, `bridge_derivative_identity_shadow`, and `bridge_integration_horizon`, making reusable finite-analysis vocabulary queryable across existing packs |
 
 Exit criteria:
 
@@ -1291,6 +1291,13 @@ Pick one row per commit unless the change is purely navigational.
      bad-delta and bad-preimage strict-bound conflicts without claiming
      quantified continuity, arbitrary metric-space topology, compactness, or
      general topological preservation theorems.
+158. Landed: add generated analysis bridge-concept rows for rational interval
+     replay, sequence-tail shadows, Cauchy-tail shadows, squeeze shadows,
+     derivative-identity shadows, and integration horizons. These rows make
+     existing real-analysis, topology, numerical-analysis, measure-theory, and
+     probability packs discoverable by reusable concept rather than by pack id,
+     while keeping convergence, completeness, differentiability, integration,
+     FTC, and measure-theoretic limit theorems in the Lean-horizon lane.
 
 ## Validation Checklist
 

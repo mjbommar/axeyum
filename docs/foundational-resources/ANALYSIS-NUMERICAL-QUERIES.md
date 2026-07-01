@@ -64,6 +64,9 @@ needs concrete checked rows to display.
 
 | Family | Concept Or Pack Filter | Route Filter | Start Query |
 |---|---|---|---|
+| Rational intervals and exact real-analysis bounds | `bridge_rational_interval_replay` | `Farkas` | `concepts --field real_analysis --text "Rational Interval"` |
+| Sequence tails, Cauchy shadows, and squeeze side conditions | `bridge_sequence_tail_shadow`; `bridge_cauchy_tail_shadow`; `bridge_squeeze_shadow` | `Farkas`; finite replay | `concepts --field real_analysis --text "Sequence Tail"`; `concepts --field real_analysis --text "Cauchy Tail"`; `concepts --field real_analysis --text "Squeeze Shadow"` |
+| Derivative identities and integration horizons | `bridge_derivative_identity_shadow`; `bridge_integration_horizon` | `Farkas`; Lean horizon | `concepts --field real_analysis --text "Derivative Identity"`; `concepts --field real_analysis --text "Integration Horizon"` |
 | Metric balls and bounded epsilon-delta rows | `bridge_metric_ball`; `bridge_bounded_epsilon_delta_shadow` | `Farkas` | `checks --concept bridge_bounded_epsilon_delta_shadow --route Farkas --proof-status checked` |
 | Algebraic derivative and Riemann-sum shadows | packs `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0` | `Farkas` | `checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked`; `checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked` |
 | Root-finding and Newton-step rows | pack `finite-root-finding-v0`; concept `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --pack finite-root-finding-v0 --route Farkas --proof-status checked` |
@@ -78,6 +81,36 @@ needs concrete checked rows to display.
 Display checked bounded epsilon-delta and finite sequence-tail rows:
 
 ```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field real_analysis \
+  --text "Rational Interval" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field real_analysis \
+  --text "Sequence Tail" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field real_analysis \
+  --text "Cauchy Tail" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field real_analysis \
+  --text "Squeeze Shadow" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field real_analysis \
+  --text "Derivative Identity" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field real_analysis \
+  --text "Integration Horizon" \
+  --require-any
+
 python3 scripts/query-foundational-resources.py checks \
   --concept bridge_bounded_epsilon_delta_shadow \
   --route Farkas \
