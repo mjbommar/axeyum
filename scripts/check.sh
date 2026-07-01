@@ -29,7 +29,9 @@ step test   cargo test --workspace --all-features
 export RUSTDOCFLAGS="-D warnings" # match CI's deny-warnings rustdoc
 step doc    cargo doc --workspace --all-features --no-deps
 step foundational-resources ./scripts/check-foundational-resources.sh
-step rules-as-code python3 scripts/validate-rules-as-code.py
+step rules-as-code-generate python3 scripts/gen-rules-as-code-dashboard.py
+step rules-as-code-validate python3 scripts/validate-rules-as-code.py
+step rules-as-code-generated-clean git diff --exit-code docs/rules-as-code/generated
 step links         ./scripts/check-links.sh
 
 if [ "$fail" -ne 0 ]; then

@@ -129,25 +129,32 @@ exists.
 
 1. Keep `benefit-eligibility-v0` as the first reference pack. Landed: source-linked
    Bool/QF_LIA fixtures for consistency, coverage, fixed no-exception
-   monotonicity, and active-threshold implementation equivalence. Next: broaden
-   those one-off fixtures into generated multi-row queries.
+   monotonicity, and active-threshold implementation equivalence. The generated
+   query-row JSON now broadens the bounded applicant domain into replayed
+   coverage and adjacent-income monotonicity rows.
 2. Landed: add the authorization-policy pack from the
    [rules-as-code roadmap](../rules-as-code/ROADMAP.md), reusing
    tenant/resource relations, precedence, bounded version deltas, and
    Bool/QF_LIA proof fixtures for tenant isolation, explicit deny precedence,
-   admin tenant guarding, and implementation equivalence. Next: broaden those
-   one-off fixtures into generated bounded role/action/version queries.
+   admin tenant guarding, and implementation equivalence. The generated
+   query-row JSON now broadens that source model into bounded
+   role/action/version requests and adjacent-version delta rows.
 3. Landed: add
    [`tax-benefit-arithmetic-v0`](../rules-as-code/examples/tax-benefit-arithmetic-v0/),
    reusing QF_LIA threshold, phase-out, cap, effective-date, and monotonicity
-   patterns. Next: broaden the one-off active-slice fixtures into generated
-   bounded income/date/household queries.
+   patterns. The generated query-row JSON now broadens the bounded
+   income/date/household domain into benefit replay and adjacent-income
+   phase-out monotonicity rows.
 4. Landed: add the generated
    [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md),
    which reads committed rule-pack JSON and counts the bounded query families
    available for generated coverage, equivalence, threshold, cap, version-delta,
    and monotonicity checks.
-5. Promote only those rows that have deterministic replay plus a source-linked
+5. Landed: add deterministic generated query-row JSON under
+   [`../rules-as-code/generated/queries/`](../rules-as-code/generated/queries/)
+   for all three current rule packs; `validate-rules-as-code.py` replays those
+   1,374 rows from the committed source models.
+6. Promote only those rows that have deterministic replay plus a source-linked
    regression or proof route.
 
 ## Non-Goals

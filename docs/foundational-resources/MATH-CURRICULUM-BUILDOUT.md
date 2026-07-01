@@ -2033,9 +2033,11 @@ implementation equivalence, while the rules validator replays the full
 piecewise finite sample.
 The rules/law lane now also has a generated
 [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
-that reads the committed rule-pack JSON and exposes 738 bounded sample rows plus
-per-pack query families for coverage, equivalence, thresholds, caps,
-version-deltas, and monotonicity.
+that reads the committed rule-pack JSON and exposes 738 bounded sample rows,
+links deterministic generated query-row JSON under
+[`generated/queries/`](../rules-as-code/generated/queries/), and replays 1,374
+coverage, equivalence, threshold, cap, version-delta, and monotonicity rows
+through the rules validator.
 The consumer query layer now also exposes topology readiness:
 `CONSUMER-QUERIES.md` shows the Boolean/Diophantine field summaries,
 metric/compactness/preimage/closure/homeomorphism/specialization/boundary/homology

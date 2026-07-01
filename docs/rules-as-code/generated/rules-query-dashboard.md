@@ -11,22 +11,25 @@ generated coverage, equivalence, threshold, cap, or monotonicity checks.
 
 - Rule packs: 3
 - Bounded sample rows: 738
+- Generated query rows: 1374
 - Check results: sat:5, unsat:12
 - Proof statuses: checked:12, replayed:5
 
 ## Pack Query Surface
 
-| Pack | Bounded Rows | Generated Query Families | Current Evidence | Next Generated Step |
-|---|---:|---|---|---|
-| [Example Authorization Policy With Tenant Isolation](../examples/authorization-policy-v0/README.md) | 96 | bounded role/action/version rows: 96<br>adjacent version-delta comparisons: 48<br>version-delta replay witnesses: 2<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:1 | Generate tenant/action/version coverage and equivalence queries across the bounded request domain. |
-| [Example Benefit Eligibility With Exceptions](../examples/benefit-eligibility-v0/README.md) | 576 | complete eligibility coverage rows: 576<br>income monotonicity adjacent scans: 528<br>threshold/temporal replay witnesses: 4<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:2 | Generate coverage and equivalence fixtures across the full bounded applicant domain. |
-| [Example Tax Benefit Arithmetic With Phase-Out](../examples/tax-benefit-arithmetic-v0/README.md) | 66 | bounded benefit replay rows: 66<br>income phase-out adjacent scans: 60<br>threshold/temporal replay witnesses: 4<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:2 | Generate threshold, cap, and phase-out fixtures across the bounded income/date/household domain. |
+| Pack | Bounded Rows | Generated Query Rows | Query Artifact | Generated Query Families | Current Evidence | Next Generated Step |
+|---|---:|---:|---|---|---|---|
+| [Example Authorization Policy With Tenant Isolation](../examples/authorization-policy-v0/README.md) | 96 | 144 | [queries/authorization-policy-v0.json](queries/authorization-policy-v0.json) | bounded role/action/version rows: 96<br>adjacent version-delta comparisons: 48<br>version-delta replay witnesses: 2<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:1 | Generate tenant/action/version coverage and equivalence queries across the bounded request domain. |
+| [Example Benefit Eligibility With Exceptions](../examples/benefit-eligibility-v0/README.md) | 576 | 1104 | [queries/benefit-eligibility-v0.json](queries/benefit-eligibility-v0.json) | complete eligibility coverage rows: 576<br>income monotonicity adjacent scans: 528<br>threshold/temporal replay witnesses: 4<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:2 | Generate coverage and equivalence fixtures across the full bounded applicant domain. |
+| [Example Tax Benefit Arithmetic With Phase-Out](../examples/tax-benefit-arithmetic-v0/README.md) | 66 | 126 | [queries/tax-benefit-arithmetic-v0.json](queries/tax-benefit-arithmetic-v0.json) | bounded benefit replay rows: 66<br>income phase-out adjacent scans: 60<br>threshold/temporal replay witnesses: 4<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:2 | Generate threshold, cap, and phase-out fixtures across the bounded income/date/household domain. |
 
 ## Trust Boundary
 
 - The source rule text and formal model remain human-authored inputs.
 - Generated rows are useful only when each row cites the source pack and
   replays against the original rule model.
+- The JSON files under `generated/queries/` are deterministic derived
+  artifacts; the validator replays them from the committed pack models.
 - Checked `unsat` rows must keep source-linked SMT-LIB fixtures and the
   `rules_as_code_examples` certified-evidence regression.
 - These bounded domains do not prove compliance with real law and should

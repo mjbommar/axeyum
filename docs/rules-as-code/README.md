@@ -23,6 +23,10 @@ docs/rules-as-code/
   README.md
   ROADMAP.md
   generated/
+    queries/
+      authorization-policy-v0.json
+      benefit-eligibility-v0.json
+      tax-benefit-arithmetic-v0.json
     rules-query-dashboard.md
   examples/
     benefit-eligibility-v0/
@@ -51,8 +55,10 @@ precedence, and proof routes to concrete policy/rule checks.
 
 The generated bounded-query surface lives in
 [Rules Query Dashboard](generated/rules-query-dashboard.md). It reads the
-committed rule-pack JSON and counts the sample rows and generated-query families
-that can become coverage, equivalence, threshold, cap, and monotonicity checks.
+committed rule-pack JSON, links deterministic generated query-row JSON under
+[`generated/queries/`](generated/queries/), and counts the sample rows and
+generated-query families that can become coverage, equivalence, threshold, cap,
+and monotonicity checks.
 
 ## First Example Theme
 
@@ -82,7 +88,7 @@ arithmetic shape.
 Validate the current packs with:
 
 ```sh
-python3 scripts/validate-rules-as-code.py
 python3 scripts/gen-rules-as-code-dashboard.py
+python3 scripts/validate-rules-as-code.py
 cargo test -p axeyum-solver --test rules_as_code_examples
 ```

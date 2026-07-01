@@ -290,7 +290,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   the practical plan for turning the math curriculum into educational content,
   ontology/bridge rows, example packs, proof artifacts, solver-feedback rows,
   rules/law transfer examples, and eventual library boundaries. The document
-  records the current 111-concept / 108-pack / 548-check / 108-promoted-pack
+  records the current 111-concept / 108-pack / 550-check / 108-promoted-pack
   baseline, R0-R6 gates, staged learner/proof/solver work, field-specific next
   work for delta-epsilon balls, graph runtime pathologies, random matrices,
   LU/matrix computation, topology quotients, Chebyshev/operator rows, and
@@ -585,8 +585,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   is generated from the three committed rules-as-code packs and reports 738
   bounded sample rows, 12 checked rows, 5 replayed rows, and per-pack query
   families for coverage, equivalence, threshold, cap, version-delta, and
-  monotonicity checks. `just rules-as-code` now regenerates the dashboard and
-  fails on generated drift.
+  monotonicity checks. The generator now also writes deterministic query-row
+  JSON under [`docs/rules-as-code/generated/queries/`](docs/rules-as-code/generated/queries/),
+  materializing 1,374 replayed rows from the current packs. `just rules-as-code`
+  now regenerates the dashboard and query artifacts, validates them, and fails
+  on generated drift.
 
 - **Tax/benefit arithmetic rules/law pack landed.**
   [`tax-benefit-arithmetic-v0`](docs/rules-as-code/examples/tax-benefit-arithmetic-v0/README.md)
@@ -1831,8 +1834,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   regression parses all four obligations, requires `Unsat`, and accepts only
   certified evidence that independently rechecks with `Evidence::check`. The
   rules validator now enforces the artifact paths, citation labels, regression
-  names, and checked-evidence contract. Next work is generated multi-row
-  coverage/equivalence queries or the next rules/law pack.
+  names, checked-evidence contract, and generated multi-row query replay.
+  Next work is another rule-pack family or promoting selected generated query
+  rows into executable fixture corpora when a downstream consumer needs them.
 
 - **Authorization-policy rules/law pack landed.**
   [`authorization-policy-v0`](docs/rules-as-code/examples/authorization-policy-v0/README.md)

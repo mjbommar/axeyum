@@ -42,8 +42,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 548 expected checks.
-- 232 checked proof/evidence rows.
+- 550 expected checks.
+- 234 checked proof/evidence rows.
 - 245 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -574,10 +574,12 @@ Pick one row per commit unless the change is purely navigational.
     rules validator replays the full piecewise finite sample.
 66. Landed: add the generated
     [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
+    plus deterministic generated query-row JSON under
+    [`../rules-as-code/generated/queries/`](../rules-as-code/generated/queries/)
     as the first rules/law generated-query surface. The dashboard reads the
-    committed rule-pack JSON and reports bounded sample rows plus generated
-    coverage, equivalence, threshold, cap, version-delta, and monotonicity
-    query-family counts.
+    committed rule-pack JSON and reports bounded sample rows, generated row
+    counts, and coverage, equivalence, threshold, cap, version-delta, and
+    monotonicity query-family counts.
 67. Landed: add functional-analysis/operator field-readiness consumer query
     coverage. `CONSUMER-QUERIES.md` and
     `check-foundational-resources.sh` now exercise the

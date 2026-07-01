@@ -50,7 +50,8 @@ The first metadata schema lives at
 The local validator
 [validate-rules-as-code.py](../../scripts/validate-rules-as-code.py) discovers
 each pack and checks metadata shape, citation file references, expected check
-records, concrete witness replay, and pack-specific finite-sample invariants.
+records, concrete witness replay, pack-specific finite-sample invariants, and
+the generated query-row JSON under [`generated/queries/`](generated/queries/).
 Solver proof integration has started: benefit consistency, coverage,
 monotonicity, and bounded implementation equivalence now have source-linked
 Bool/QF_LIA fixtures; authorization tenant isolation, explicit deny precedence,
@@ -62,8 +63,9 @@ and temporal-transition rows, authorization version-delta rows, and tax/benefit
 threshold-cliff and temporal-transition rows remain replayed witnesses.
 The generated
 [Rules Query Dashboard](generated/rules-query-dashboard.md) now reads the three
-pack JSON files and exposes 738 bounded sample rows plus per-pack coverage,
-equivalence, threshold, cap, version-delta, and monotonicity query families.
+pack JSON files and exposes 738 bounded sample rows plus 1,374 deterministic
+generated query rows for coverage, income monotonicity, version deltas,
+threshold/cap checks, and phase-out monotonicity.
 
 The cross-resource reuse map is
 [Rules/Law Crosswalk For Foundational Resources](../foundational-resources/RULES-LAW-CROSSWALK.md).
@@ -232,8 +234,8 @@ Near-term documentation checks:
 ```sh
 just rules-as-code
 ./scripts/check-links.sh
-python3 scripts/validate-rules-as-code.py
 python3 scripts/gen-rules-as-code-dashboard.py
+python3 scripts/validate-rules-as-code.py
 ```
 
 Rule-pack solver checks:

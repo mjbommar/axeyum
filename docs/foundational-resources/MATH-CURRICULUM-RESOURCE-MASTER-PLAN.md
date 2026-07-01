@@ -52,8 +52,8 @@ As of 2026-06-30, the committed resource query reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 548 expected checks.
-- 232 checked proof/evidence rows.
+- 550 expected checks.
+- 234 checked proof/evidence rows.
 - 245 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -355,8 +355,10 @@ Use one row per commit unless the change is purely navigational.
    effective-date, finite replay, and Bool/QF_LIA proof-route patterns.
 10. Landed: add the generated
    [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
-   so the three rule packs expose bounded sample rows and generated-query
-   families before new law-specific schema fields are created.
+   plus deterministic query-row JSON under
+   [`../rules-as-code/generated/queries/`](../rules-as-code/generated/queries/)
+   so the three rule packs expose replayed bounded sample rows and
+   generated-query families before new law-specific schema fields are created.
 11. Landed: add functional-analysis/operator consumer-query coverage through
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
    `scripts/check-foundational-resources.sh`, making finite operator bounds,

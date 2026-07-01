@@ -14,6 +14,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = ROOT / "artifacts" / "ontology" / "rules-core.schema.json"
 EXAMPLES_ROOT = ROOT / "docs" / "rules-as-code" / "examples"
+GENERATED_QUERIES_ROOT = ROOT / "docs" / "rules-as-code" / "generated" / "queries"
 
 
 class ValidationError(Exception):
@@ -609,6 +610,371 @@ def validate_tax_benefit_finite_sample(
         fail("tax benefit finite sample was empty")
 
 
+def validate_generated_queries(
+    pack_dir: Path, metadata: dict[str, Any], expected: dict[str, Any]
+) -> None:
+    query_path = GENERATED_QUERIES_ROOT / f"{pack_dir.name}.json"
+    payload = load_json(query_path)
+    if not isinstance(payload, dict):
+        fail(f"{query_path.relative_to(ROOT)} must be a JSON object")
+    require_keys(
+        "generated query payload",
+        payload,
+        {
+            "schema_version",
+            "generated_by",
+            "pack_id",
+            "pack_title",
+            "source_pack",
+            "query_families",
+        },
+    )
+    if payload["schema_version"] != 1:
+        fail("generated query schema_version must be 1")
+    if payload["generated_by"] != "python3 scripts/gen-rules-as-code-dashboard.py":
+        fail("generated query generated_by must name the generator")
+    if payload["pack_id"] != metadata["id"]:
+        fail("generated query pack_id must match metadata.id")
+    if payload["pack_title"] != metadata["title"]:
+        fail("generated query pack_title must match metadata.title")
+    source_pack = f"docs/rules-as-code/examples/{pack_dir.name}"
+    if payload["source_pack"] != source_pack:
+        fail("generated query source_pack must point at the rule pack")
+
+    families = require_query_family_map(payload)
+    pack_id = metadata["id"]
+    if pack_id == "benefit_eligibility_v0":
+        validate_benefit_generated_queries(expected, families)
+    elif pack_id == "authorization_policy_v0":
+        validate_authorization_generated_queries(expected, families)
+    elif pack_id == "tax_benefit_arithmetic_v0":
+        validate_tax_benefit_generated_queries(expected, families)
+    else:
+        fail(f"unsupported generated query pack id {pack_id}")
+
+
+def require_query_family_map(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    query_families = payload["query_families"]
+    if not isinstance(query_families, list) or not query_families:
+        fail("generated query_families must be a non-empty list")
+    families: dict[str, dict[str, Any]] = {}
+    for index, family in enumerate(query_families):
+        if not isinstance(family, dict):
+            fail(f"generated query_families[{index}] must be an object")
+        require_keys(
+            f"generated query_families[{index}]",
+            family,
+            {"id", "description", "row_count", "rows"},
+        )
+        family_id = require_string(f"generated query_families[{index}].id", family["id"])
+        if family_id in families:
+            fail(f"duplicate generated query family {family_id}")
+        description = require_string(
+            f"generated query_families[{index}].description", family["description"]
+        )
+        if not description.endswith("."):
+            fail(f"generated query family {family_id} description must be a sentence")
+        rows = family["rows"]
+        if not isinstance(rows, list):
+            fail(f"generated query family {family_id} rows must be a list")
+        row_count = require_int(f"generated query family {family_id}.row_count", family["row_count"])
+        if row_count != len(rows):
+            fail(f"generated query family {family_id}.row_count must match rows")
+        seen_row_ids: set[str] = set()
+        for row_index, row in enumerate(rows):
+            if not isinstance(row, dict):
+                fail(f"generated query family {family_id} row {row_index} must be an object")
+            row_id = require_string(
+                f"generated query family {family_id} row {row_index}.id",
+                row.get("id"),
+            )
+            if row_id in seen_row_ids:
+                fail(f"duplicate generated row id {family_id}.{row_id}")
+            seen_row_ids.add(row_id)
+        families[family_id] = family
+    return families
+
+
+def require_exact_families(
+    context: str, families: dict[str, dict[str, Any]], expected_ids: set[str]
+) -> None:
+    actual_ids = set(families)
+    if actual_ids != expected_ids:
+        fail(
+            f"{context} generated families mismatch: expected {sorted(expected_ids)}, got {sorted(actual_ids)}"
+        )
+
+
+def validate_benefit_generated_queries(
+    expected: dict[str, Any], families: dict[str, dict[str, Any]]
+) -> None:
+    require_exact_families(
+        "benefit",
+        families,
+        {"coverage", "income_monotonicity_adjacent"},
+    )
+    params = expected["parameters"]
+    sample = expected["sample_domain"]
+    coverage_rows = families["coverage"]["rows"]
+    expected_coverage = (
+        len(sample["ages"])
+        * len(sample["incomes"])
+        * len(sample["dates"])
+        * len(sample["booleans"])
+        * len(sample["booleans"])
+        * len(sample["booleans"])
+    )
+    if len(coverage_rows) != expected_coverage:
+        fail("benefit coverage generated row count mismatch")
+    for index, row in enumerate(coverage_rows):
+        if row["id"] != f"coverage-{index:04d}":
+            fail("benefit coverage generated row ids must be sequential")
+        facts = benefit_facts_from_json(f"generated benefit coverage {index}.facts", row.get("facts"))
+        expected_eligible = require_bool(
+            f"generated benefit coverage {index}.expected_eligible",
+            row.get("expected_eligible"),
+        )
+        if benefit_eligible(facts, params) != expected_eligible:
+            fail(f"generated benefit coverage row {index} replay mismatch")
+
+    monotonicity_rows = families["income_monotonicity_adjacent"]["rows"]
+    expected_monotonicity = (
+        len(sample["ages"])
+        * len(sample["dates"])
+        * len(sample["booleans"])
+        * len(sample["booleans"])
+        * len(sample["booleans"])
+        * max(len(sample["incomes"]) - 1, 0)
+    )
+    if len(monotonicity_rows) != expected_monotonicity:
+        fail("benefit monotonicity generated row count mismatch")
+    adjacent = set(zip(sample["incomes"], sample["incomes"][1:]))
+    for index, row in enumerate(monotonicity_rows):
+        if row["id"] != f"income-monotonicity-{index:04d}":
+            fail("benefit monotonicity generated row ids must be sequential")
+        lower = benefit_facts_from_json(
+            f"generated benefit monotonicity {index}.lower_facts",
+            row.get("lower_facts"),
+        )
+        higher = benefit_facts_from_json(
+            f"generated benefit monotonicity {index}.higher_facts",
+            row.get("higher_facts"),
+        )
+        if (lower.income, higher.income) not in adjacent:
+            fail(f"generated benefit monotonicity row {index} must use adjacent incomes")
+        lower_key = (lower.age, lower.resident, lower.veteran, lower.sanctioned, lower.application_date)
+        higher_key = (
+            higher.age,
+            higher.resident,
+            higher.veteran,
+            higher.sanctioned,
+            higher.application_date,
+        )
+        if lower_key != higher_key:
+            fail(f"generated benefit monotonicity row {index} changed non-income facts")
+        lower_eligible = require_bool(
+            f"generated benefit monotonicity {index}.lower_eligible",
+            row.get("lower_eligible"),
+        )
+        higher_eligible = require_bool(
+            f"generated benefit monotonicity {index}.higher_eligible",
+            row.get("higher_eligible"),
+        )
+        if benefit_eligible(lower, params) != lower_eligible:
+            fail(f"generated benefit monotonicity row {index} lower replay mismatch")
+        if benefit_eligible(higher, params) != higher_eligible:
+            fail(f"generated benefit monotonicity row {index} higher replay mismatch")
+        holds = require_bool(
+            f"generated benefit monotonicity {index}.nonincreasing_holds",
+            row.get("nonincreasing_holds"),
+        )
+        if holds != (not (not lower_eligible and higher_eligible)):
+            fail(f"generated benefit monotonicity row {index} has wrong holds flag")
+        if not holds:
+            fail(f"generated benefit monotonicity row {index} violates monotonicity")
+
+
+def validate_authorization_generated_queries(
+    expected: dict[str, Any], families: dict[str, dict[str, Any]]
+) -> None:
+    require_exact_families(
+        "authorization",
+        families,
+        {"bounded_requests", "version_delta_adjacent"},
+    )
+    sample = expected["sample_domain"]
+    request_rows = families["bounded_requests"]["rows"]
+    expected_requests = (
+        len(sample["user_tenants"])
+        * len(sample["resource_tenants"])
+        * len(sample["roles"])
+        * len(sample["actions"])
+        * len(sample["policy_versions"])
+        * len(sample["booleans"])
+    )
+    if len(request_rows) != expected_requests:
+        fail("authorization request generated row count mismatch")
+    for index, row in enumerate(request_rows):
+        if row["id"] != f"request-{index:04d}":
+            fail("authorization request generated row ids must be sequential")
+        facts = authorization_facts_from_json(
+            f"generated authorization request {index}.facts",
+            row.get("facts"),
+        )
+        expected_allow = require_bool(
+            f"generated authorization request {index}.expected_allow",
+            row.get("expected_allow"),
+        )
+        if authorization_allows(facts) != expected_allow:
+            fail(f"generated authorization request row {index} replay mismatch")
+
+    version_rows = families["version_delta_adjacent"]["rows"]
+    expected_versions = (
+        len(sample["user_tenants"])
+        * len(sample["resource_tenants"])
+        * len(sample["roles"])
+        * len(sample["actions"])
+        * len(sample["booleans"])
+        * max(len(sample["policy_versions"]) - 1, 0)
+    )
+    if len(version_rows) != expected_versions:
+        fail("authorization version-delta generated row count mismatch")
+    adjacent = set(zip(sample["policy_versions"], sample["policy_versions"][1:]))
+    for index, row in enumerate(version_rows):
+        if row["id"] != f"version-delta-{index:04d}":
+            fail("authorization version-delta generated row ids must be sequential")
+        before = authorization_facts_from_json(
+            f"generated authorization version {index}.before_facts",
+            row.get("before_facts"),
+        )
+        after = authorization_facts_from_json(
+            f"generated authorization version {index}.after_facts",
+            row.get("after_facts"),
+        )
+        if (before.policy_version, after.policy_version) not in adjacent:
+            fail(f"generated authorization version row {index} must use adjacent versions")
+        before_key = (
+            before.user_tenant,
+            before.resource_tenant,
+            before.role,
+            before.action,
+            before.explicit_deny,
+        )
+        after_key = (
+            after.user_tenant,
+            after.resource_tenant,
+            after.role,
+            after.action,
+            after.explicit_deny,
+        )
+        if before_key != after_key:
+            fail(f"generated authorization version row {index} changed non-version facts")
+        before_allow = require_bool(
+            f"generated authorization version {index}.before_allow",
+            row.get("before_allow"),
+        )
+        after_allow = require_bool(
+            f"generated authorization version {index}.after_allow",
+            row.get("after_allow"),
+        )
+        if authorization_allows(before) != before_allow:
+            fail(f"generated authorization version row {index} before replay mismatch")
+        if authorization_allows(after) != after_allow:
+            fail(f"generated authorization version row {index} after replay mismatch")
+        intended_delta = require_bool(
+            f"generated authorization version {index}.intended_delta",
+            row.get("intended_delta"),
+        )
+        computed_intended = (
+            before.user_tenant == before.resource_tenant
+            and before.role == "analyst"
+            and before.action == "export"
+            and not before.explicit_deny
+        )
+        if intended_delta != computed_intended:
+            fail(f"generated authorization version row {index} has wrong intended flag")
+        if before_allow != after_allow and not intended_delta:
+            fail(f"generated authorization version row {index} has unintended delta")
+
+
+def validate_tax_benefit_generated_queries(
+    expected: dict[str, Any], families: dict[str, dict[str, Any]]
+) -> None:
+    require_exact_families(
+        "tax benefit",
+        families,
+        {"bounded_benefits", "income_phaseout_adjacent"},
+    )
+    params = expected["parameters"]
+    sample = expected["sample_domain"]
+    benefit_rows = families["bounded_benefits"]["rows"]
+    expected_benefits = (
+        len(sample["incomes"]) * len(sample["household_sizes"]) * len(sample["dates"])
+    )
+    if len(benefit_rows) != expected_benefits:
+        fail("tax benefit generated row count mismatch")
+    for index, row in enumerate(benefit_rows):
+        if row["id"] != f"benefit-{index:04d}":
+            fail("tax benefit generated row ids must be sequential")
+        facts = tax_benefit_facts_from_json(
+            f"generated tax benefit {index}.facts",
+            row.get("facts"),
+        )
+        expected_benefit = require_int(
+            f"generated tax benefit {index}.expected_benefit",
+            row.get("expected_benefit"),
+        )
+        if tax_benefit(facts, params) != expected_benefit:
+            fail(f"generated tax benefit row {index} replay mismatch")
+
+    monotonicity_rows = families["income_phaseout_adjacent"]["rows"]
+    expected_monotonicity = (
+        len(sample["household_sizes"])
+        * len(sample["dates"])
+        * max(len(sample["incomes"]) - 1, 0)
+    )
+    if len(monotonicity_rows) != expected_monotonicity:
+        fail("tax benefit phaseout generated row count mismatch")
+    adjacent = set(zip(sample["incomes"], sample["incomes"][1:]))
+    for index, row in enumerate(monotonicity_rows):
+        if row["id"] != f"phaseout-monotonicity-{index:04d}":
+            fail("tax benefit phaseout generated row ids must be sequential")
+        lower = tax_benefit_facts_from_json(
+            f"generated tax phaseout {index}.lower_facts",
+            row.get("lower_facts"),
+        )
+        higher = tax_benefit_facts_from_json(
+            f"generated tax phaseout {index}.higher_facts",
+            row.get("higher_facts"),
+        )
+        if (lower.income, higher.income) not in adjacent:
+            fail(f"generated tax phaseout row {index} must use adjacent incomes")
+        lower_key = (lower.household_size, lower.application_date)
+        higher_key = (higher.household_size, higher.application_date)
+        if lower_key != higher_key:
+            fail(f"generated tax phaseout row {index} changed non-income facts")
+        lower_benefit = require_int(
+            f"generated tax phaseout {index}.lower_benefit",
+            row.get("lower_benefit"),
+        )
+        higher_benefit = require_int(
+            f"generated tax phaseout {index}.higher_benefit",
+            row.get("higher_benefit"),
+        )
+        if tax_benefit(lower, params) != lower_benefit:
+            fail(f"generated tax phaseout row {index} lower replay mismatch")
+        if tax_benefit(higher, params) != higher_benefit:
+            fail(f"generated tax phaseout row {index} higher replay mismatch")
+        holds = require_bool(
+            f"generated tax phaseout {index}.nonincreasing_holds",
+            row.get("nonincreasing_holds"),
+        )
+        if holds != (higher_benefit <= lower_benefit):
+            fail(f"generated tax phaseout row {index} has wrong holds flag")
+        if not holds:
+            fail(f"generated tax phaseout row {index} violates phaseout monotonicity")
+
+
 def validate_pack(pack_dir: Path) -> str:
     metadata_path = pack_dir / "metadata.json"
     expected_path = pack_dir / "expected.json"
@@ -618,6 +984,7 @@ def validate_pack(pack_dir: Path) -> str:
         fail("metadata and expected artifacts must be JSON objects")
     validate_metadata(pack_dir, metadata)
     validate_expected(pack_dir, metadata, expected)
+    validate_generated_queries(pack_dir, metadata, expected)
     return metadata["id"]
 
 

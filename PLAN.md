@@ -421,7 +421,7 @@ curriculum-pressure dashboards now expose conservative R0-R6 gate/next-gate
 columns and overlapping fragment-pressure buckets, making R4-to-R5 solver-reuse
 candidates and Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
 Lean-horizon demand visible without hand-maintained scans.
-The generated solver-reuse disposition audit now reports all 85 math packs as
+The generated solver-reuse disposition audit now reports all 108 math packs as
 promoted, with 0 non-benchmark-horizon and 0 unclassified rows, so future
 unclassified packs surface in a freshness-checked queue.
 The generated curriculum-status audit now separates source `curriculum_status`
@@ -504,9 +504,10 @@ effective-date witnesses, and checked Bool/QF_LIA fixtures for non-negative
 benefit, cap, active phase-out monotonicity, and bounded implementation
 equivalence, with the validator replaying the full piecewise finite sample.
 The rules/law lane now also has a generated query dashboard that reads the
-three committed rule-pack JSON files and exposes 738 bounded sample rows plus
-coverage, equivalence, threshold, cap, version-delta, and monotonicity
-query-family counts without promoting the packs to legal or solver benchmarks.
+three committed rule-pack JSON files, exposes 738 bounded sample rows, and
+links deterministic generated query-row JSON for 1,374 coverage, equivalence,
+threshold, cap, version-delta, and monotonicity rows without promoting the
+packs to legal or solver benchmarks.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, finite tensor products, and finite
 group actions now add secondary equality-heavy promotions for bad antisymmetry,

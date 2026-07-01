@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 548 expected checks.
-- 232 checked proof/evidence rows.
+- 550 expected checks.
+- 234 checked proof/evidence rows.
 - 245 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1080,9 +1080,13 @@ Next work:
 - Use the completed `benefit-eligibility-v0`, `authorization-policy-v0`, and
   `tax-benefit-arithmetic-v0` Bool/QF_LIA proof harnesses as reference patterns
   for generated multi-row coverage/equivalence and threshold/cap queries.
-  Status: the generated
+  Status: the deterministic generated query-row JSON under
+  [`../rules-as-code/generated/queries/`](../rules-as-code/generated/queries/)
+  now materializes 1,374 replayed rows from the three current rule packs, and
+  the generated
   [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
-  now exposes the bounded row counts and query-family inventory.
+  exposes the bounded row counts, generated row counts, query artifacts, and
+  query-family inventory.
 - Reuse pack schema ideas before creating law-specific schema fields.
 - Keep citations and source provenance mandatory for legal/policy examples.
 
@@ -1136,7 +1140,14 @@ Pick one item per commit unless the change is purely navigational.
    [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
    for bounded coverage, equivalence, threshold, cap, version-delta, and
    monotonicity query-family counts across the current rule packs.
-11. Landed: add a consumer-query recipe for "find all packs for a field and
+11. Landed: add deterministic generated query-row JSON under
+   [`../rules-as-code/generated/queries/`](../rules-as-code/generated/queries/)
+   for the current rules/law packs: complete applicant coverage and
+   income-monotonicity rows, bounded role/action/version requests and adjacent
+   version-delta rows, and tax/benefit amount plus phase-out rows. The
+   rules-as-code validator replays all 1,374 rows from committed source pack
+   models, and the standard rules check now fails on generated drift.
+12. Landed: add a consumer-query recipe for "find all packs for a field and
    route" through the `--route` filter in
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md).
@@ -1539,6 +1550,10 @@ Pick one item per commit unless the change is purely navigational.
 77. Landed: add
     [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
     as the generated bounded-query surface for the current rules/law packs.
+77a. Landed: add deterministic rules/law query-row JSON under
+    [`../rules-as-code/generated/queries/`](../rules-as-code/generated/queries/),
+    materializing 1,374 replayed coverage, monotonicity, version-delta,
+    threshold, cap, and phase-out rows from the three current rule packs.
 78. Landed: add functional-analysis/operator field-readiness consumer queries
     through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational
     smoke check, covering Farkas field readiness, the operator bridge lookup,
