@@ -3,8 +3,8 @@
 This lesson follows
 [finite-line-search-v0](../../../artifacts/examples/math/finite-line-search-v0/)
 from one exact Armijo backtracking step through rejected-step replay,
-accepted-step replay, and checked Farkas evidence. It is a finite line-search
-certificate, not a general convergence theorem.
+accepted-step replay, accepted-candidate replay, and checked Farkas evidence.
+It is a finite line-search certificate, not a general convergence theorem.
 
 ## Concept
 
@@ -26,7 +26,7 @@ c = 1/4
 
 ## What Gets Checked
 
-The pack has five rows:
+The pack has six rows:
 
 | Row | Result | Evidence |
 |---|---|---|
@@ -34,6 +34,7 @@ The pack has five rows:
 | `armijo-rejection-replay` | `sat` | replay-only |
 | `armijo-acceptance-replay` | `sat` | replay-only |
 | `bad-armijo-acceptance-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-accepted-candidate-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-line-search-convergence-lean-horizon` | `not-run` | Lean horizon |
 
 The replay rows use exact rational arithmetic. They do not use floating-point
@@ -110,6 +111,29 @@ nonpositive:
 Axeyum parses that source row, emits `UnsatFarkas` evidence, and independently
 checks the certificate.
 
+## Bad Accepted Candidate Row
+
+The second malformed row claims the accepted backtracked step lands at the
+wrong point:
+
+```text
+accepted_x = 1 + (1/2)*(-2) = 0
+claimed accepted_x = 1/4
+```
+
+The source SMT-LIB artifact fixes the replayed accepted candidate as `0` and
+also asserts the malformed candidate:
+
+```smt2
+(set-logic QF_LRA)
+(declare-const accepted_x Real)
+(assert (= accepted_x 0))
+(assert (= accepted_x (/ 1 4)))
+(check-sat)
+```
+
+The same QF_LRA/Farkas route rejects the conflicting exact rational equations.
+
 ## What This Does Not Prove
 
 The pack does not prove line-search termination for arbitrary smooth functions.
@@ -128,4 +152,5 @@ general line-search theorem: future Lean reconstruction
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-line-search-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_armijo_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_accepted_candidate_artifact_emits_checked_farkas
 ```

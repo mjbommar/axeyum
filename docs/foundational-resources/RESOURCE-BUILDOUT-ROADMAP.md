@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 605 expected checks.
-- 284 checked proof/evidence rows.
+- 606 expected checks.
+- 285 checked proof/evidence rows.
 - 250 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -197,7 +197,7 @@ Route plan:
 | Boolean CNF DRAT/LRAT | finite Boolean refutations, graph/search/set-family conflicts | Promote small topology and graph rows that are source-level obvious. |
 | QF_BV DRAT | fixed-width residue, bit-vector, and finite algebra conflicts | Promote only when width is part of the educational claim. |
 | QF_LIA/Diophantine | integer equations, counts, modular obstructions, rank coefficients, torsion membership | Group recurring gcd/divisibility and quotient-boundary obstructions as cookbook examples. |
-| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad separator, bad stationarity, bad free-gradient, bad objective, bad decrease, bad step-coordinate, bad Armijo, bad Wolfe curvature, bad projection, and bad proximal-point rows with independent Farkas checks. |
+| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad separator, bad stationarity, bad free-gradient, bad objective, bad decrease, bad step-coordinate, bad Armijo, bad accepted-candidate, bad Wolfe curvature, bad projection, and bad proximal-point rows with independent Farkas checks. |
 | QF_UF/Alethe | equality-heavy finite functions, quotients, homomorphisms | Use table replay for objects, Alethe for congruence conflicts. |
 | Lean horizon | induction schemas, completeness, topology, measure, asymptotics | Record theorem shape and dependencies; do not benchmark as finite checks. |
 
@@ -663,8 +663,8 @@ Build next:
   `finite-active-set-qp-v0`'s bad free-gradient row tied to its source
   QF_LRA/Farkas artifact; keep `finite-sdp-v0`'s bad objective row tied to its
   source QF_LRA/Farkas artifact; keep `finite-gradient-descent-v0`'s bad decrease and bad
-  step-coordinate rows tied to their source QF_LRA/Farkas artifacts; keep `finite-line-search-v0`'s bad Armijo row
-  tied to its source QF_LRA/Farkas artifact; keep
+  step-coordinate rows tied to their source QF_LRA/Farkas artifacts; keep `finite-line-search-v0`'s bad Armijo and
+  bad accepted-candidate rows tied to their source QF_LRA/Farkas artifacts; keep
   `finite-wolfe-line-search-v0`'s bad curvature row tied to its source
   QF_LRA/Farkas artifact; keep
   `finite-projected-gradient-v0`'s bad projection row tied to its source
@@ -1528,9 +1528,9 @@ Pick one item per commit unless the change is purely navigational.
 65. Landed: add `finite-line-search-v0`.
     The new optimization/convexity and numerical-analysis pack validates exact
     descent-direction replay, Armijo trial rejection, one accepted backtracked
-    step, checked QF_LRA/Farkas rejection of a false Armijo acceptance claim,
-    and a line-search convergence Lean horizon. The learner path now includes a
-    focused finite line-search end-to-end page.
+    step, checked QF_LRA/Farkas rejection of false Armijo acceptance and
+    accepted-candidate claims, and a line-search convergence Lean horizon. The
+    learner path now includes a focused finite line-search end-to-end page.
 66. Landed: add `finite-projected-gradient-v0`.
     The new optimization/convexity and numerical-analysis pack validates exact
     gradient replay, one unconstrained trial step, interval projection,

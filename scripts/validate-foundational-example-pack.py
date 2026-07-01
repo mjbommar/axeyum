@@ -11692,6 +11692,54 @@ def validate_finite_line_search(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-armijo-acceptance-rejected certificate must document checked Farkas evidence")
 
+    bad_candidate = checks["bad-accepted-candidate-rejected"]
+    if bad_candidate["expected_result"] != "unsat" or bad_candidate.get("proof_status") != "checked":
+        fail("bad-accepted-candidate-rejected must be a checked unsat row")
+    if bad_candidate["validation"] != "finite_bad_line_search_candidate_refutation":
+        fail("bad-accepted-candidate-rejected must use finite_bad_line_search_candidate_refutation validation")
+    data = bad_candidate.get("data", {})
+    if data.get("source_witness") != "quadratic-armijo-backtrack":
+        fail("bad-accepted-candidate-rejected must cite the quadratic-armijo-backtrack witness")
+    bad_start = require_fraction("bad line-search start_x", data.get("start_x"))
+    bad_step = require_fraction("bad line-search accepted_step", data.get("accepted_step"))
+    bad_direction = require_fraction("bad line-search descent_direction", data.get("descent_direction"))
+    computed_accepted_x = require_fraction(
+        "bad line-search computed_accepted_x",
+        data.get("computed_accepted_x"),
+    )
+    claimed_accepted_x = require_fraction(
+        "bad line-search claimed_accepted_x",
+        data.get("claimed_accepted_x"),
+    )
+    if bad_start != start_x or bad_step != accepted_step or bad_direction != descent_direction:
+        fail("bad-accepted-candidate-rejected must reuse the replayed start, step, and direction")
+    if computed_accepted_x != computed_accepted_candidate or computed_accepted_x != accepted_candidate_x:
+        fail("bad-accepted-candidate-rejected computed candidate must match replay")
+    if claimed_accepted_x == computed_accepted_x:
+        fail("bad-accepted-candidate-rejected claimed candidate unexpectedly matches replay")
+    equation = data.get("candidate_equation")
+    require_string("bad line-search candidate_equation", equation)
+    if equation != "accepted_x = start_x + accepted_step * descent_direction":
+        fail("bad-accepted-candidate-rejected must document the candidate equation")
+    if bad_start + bad_step * bad_direction != computed_accepted_x:
+        fail("bad-accepted-candidate-rejected candidate equation is incorrect")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad line-search smt2_artifact", smt2_artifact)
+    if smt2_artifact != (
+        "artifacts/examples/math/finite-line-search-v0/smt2/"
+        "bad-accepted-candidate-farkas-conflict.smt2"
+    ):
+        fail("bad-accepted-candidate-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad line-search smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad line-search farkas_regression", regression)
+    if "finite_line_search_bad_accepted_candidate_artifact_emits_checked_farkas" not in regression:
+        fail("bad-accepted-candidate-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad line-search certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-accepted-candidate-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-line-search-convergence-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-line-search-convergence-lean-horizon must be not-run")

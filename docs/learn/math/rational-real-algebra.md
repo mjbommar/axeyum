@@ -291,10 +291,11 @@ accepted alpha = 1/2
 
 The `finite-line-search-v0` validator recomputes the derivative, directional
 derivative, trial candidate, Armijo right-hand side, rejected-step violation,
-accepted-step candidate, and accepted-step slack. Its bad row claims the
-rejected trial step satisfies Armijo even though exact replay computes
-violation `1`; the final contradiction is checked through QF_LRA/Farkas
-evidence. For a focused trace, read
+accepted-step candidate, and accepted-step slack. Its bad rows claim the
+rejected trial step satisfies Armijo and claim the accepted candidate is
+`1/4`; exact replay computes violation `1` and accepted candidate `0`, and
+the final contradictions are checked through QF_LRA/Farkas evidence. For a
+focused trace, read
 [End To End: Finite Line Search Checks](finite-line-search-end-to-end.md).
 
 For a finite Wolfe line-search check, encode one exact quadratic line-search
@@ -504,6 +505,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_desc
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_step_coordinate_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-line-search-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_armijo_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_accepted_candidate_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-wolfe-line-search-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_curvature_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-projected-gradient-v0

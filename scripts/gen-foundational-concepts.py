@@ -181,7 +181,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-line-search-v0",
-                "Finite exact Armijo line-search replay with checked bad-acceptance rejection.",
+                "Finite exact Armijo line-search replay with checked bad-acceptance and bad accepted-candidate rejections.",
             ),
             (
                 "finite-wolfe-line-search-v0",
@@ -431,7 +431,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-line-search-v0",
-                "Exact Armijo trial rejection, backtracked-step acceptance, and bad-acceptance rejection.",
+                "Exact Armijo trial rejection, backtracked-step acceptance, and bad-acceptance plus bad accepted-candidate rejection.",
             ),
             (
                 "finite-wolfe-line-search-v0",
@@ -479,7 +479,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-line-search-v0",
-                "Finite exact Armijo rejection/acceptance replay and convergence-theorem horizon rows.",
+                "Finite exact Armijo rejection/acceptance replay, accepted-candidate replay, and convergence-theorem horizon rows.",
             ),
             (
                 "finite-wolfe-line-search-v0",
@@ -521,7 +521,7 @@ FIELD_PACKS = {
         ("finite-active-set-qp-v0", "Finite active-set QP replay with checked bad-free-gradient rejection."),
         ("finite-sdp-v0", "Finite SDP primal/dual slack replay with checked bad-objective rejection."),
         ("finite-gradient-descent-v0", "Finite gradient-descent step replay with checked bad-decrease and bad step-coordinate rejections."),
-        ("finite-line-search-v0", "Finite Armijo line-search replay with checked bad-acceptance rejection."),
+        ("finite-line-search-v0", "Finite Armijo line-search replay with checked bad-acceptance and bad accepted-candidate rejections."),
         ("finite-wolfe-line-search-v0", "Finite Wolfe line-search replay with checked bad-curvature rejection."),
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold replay with checked bad-proximal-point rejection."),
@@ -1543,7 +1543,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-line-search-v0",
-                "Finite exact Armijo rejection/acceptance and bad-acceptance rows over exact rationals.",
+                "Finite exact Armijo rejection/acceptance, bad-acceptance, and bad accepted-candidate rows over exact rationals.",
             ),
             (
                 "finite-wolfe-line-search-v0",

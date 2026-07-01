@@ -267,8 +267,9 @@ First targets:
   step-coordinate rows after exact quadratic descent replay computes decrease
   `11/4`, decrease error `3/4`, and next x-coordinate `1/2`)
 - [finite-line-search-v0](../../artifacts/examples/math/finite-line-search-v0/)
-  (source-linked Farkas regression landed for the bad Armijo row after exact
-  line-search replay computes rejected-step violation `1`)
+  (source-linked Farkas regressions landed for the bad Armijo and bad
+  accepted-candidate rows after exact line-search replay computes
+  rejected-step violation `1` and accepted point `0`)
 - [finite-wolfe-line-search-v0](../../artifacts/examples/math/finite-wolfe-line-search-v0/)
   (source-linked Farkas regression landed for the bad curvature row after exact
   Wolfe replay computes curvature violation `2`)

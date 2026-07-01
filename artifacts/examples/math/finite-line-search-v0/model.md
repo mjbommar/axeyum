@@ -41,3 +41,10 @@ Wolfe conditions, convergence rates, or floating-point behavior.
 
 The checked bad row claims the rejected trial step satisfies Armijo. Exact
 replay computes violation `1`, so the nonpositive-violation claim is false.
+
+The checked bad accepted-candidate row changes the accepted point to `1/4`.
+Exact replay computes:
+
+```text
+x_accept = 1 + (1/2) * (-2) = 0
+```

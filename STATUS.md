@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-line-search bad accepted-candidate QF_LRA row landed.**
+  `finite-line-search-v0` now includes a second checked Farkas row: exact
+  Armijo backtracking replay computes `accepted_x = 1 + (1/2)*(-2) = 0`,
+  while the malformed source SMT-LIB artifact claims `accepted_x = 1/4`.
+  The validator pins the source witness, start point, accepted step, descent
+  direction, computed and claimed accepted points, candidate equation, artifact
+  path, and regression; the shared `math_resource_lra_routes` regression parses
+  the artifact and checks `UnsatFarkas` evidence. Generated dashboards and the
+  public query summary now report 111 concept rows, 108 non-template packs,
+  606 expected checks, 285 checked rows, 250 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Finite-gradient-descent bad step-coordinate QF_LRA row landed.**
   `finite-gradient-descent-v0` now includes a second checked Farkas row:
   exact gradient-step replay computes `next_x = 1 - (1/4)*2 = 1/2`, while the
@@ -212,9 +224,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   the source witness, start point, step size, gradient, computed next point,
   coordinate equation, artifact path, and regression; the shared
   `math_resource_lra_routes` regression parses the artifact and checks
-  `UnsatFarkas` evidence. Generated dashboards and the public query summary now
-  report 111 concept rows, 108 non-template packs, 605 expected checks, 284
-  checked rows, 250 replay-only rows, and 71 Lean-horizon rows.
+  `UnsatFarkas` evidence. At that point, generated dashboards and the public
+  query summary reported 111 concept rows, 108 non-template packs, 605 expected
+  checks, 284 checked rows, 250 replay-only rows, and 71 Lean-horizon rows.
 
 - **Least-squares bad RSS-improvement QF_LRA row landed.**
   `least-squares-regression-v0` now includes a second checked Farkas row:

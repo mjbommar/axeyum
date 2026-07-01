@@ -166,6 +166,7 @@ python3 scripts/query-foundational-resources.py concepts --field optimization_an
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text convexity --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field optimization_and_convexity --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-gradient-descent-v0 --route Farkas --proof-status checked --text coordinate --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-line-search-v0 --route Farkas --proof-status checked --text candidate --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field geometry --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field geometry --text coordinate --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field geometry --text circle --require-any >/dev/null

@@ -1324,6 +1324,17 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+For the exact line-search accepted-candidate certificate:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-line-search-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text candidate \
+  --require-any
+```
+
 For geometry, use the Farkas route to keep finite coordinate, incidence,
 rigid-configuration, affine, oriented-area, circle-geometry, inversion, and
 cyclic-configuration replay together while leaving synthetic, projective,

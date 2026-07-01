@@ -72,6 +72,26 @@
       "notes": "Exact replay computes Armijo violation 1 for alpha=1, so the malformed nonpositive-violation claim is rejected by checked Farkas evidence."
     },
     {
+      "id": "bad-accepted-candidate-rejected",
+      "claim": "After one backtrack to alpha=1/2, the accepted candidate point is x=1/4.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_line_search_candidate_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "quadratic-armijo-backtrack",
+        "start_x": "1",
+        "accepted_step": "1/2",
+        "descent_direction": "-2",
+        "computed_accepted_x": "0",
+        "claimed_accepted_x": "1/4",
+        "candidate_equation": "accepted_x = start_x + accepted_step * descent_direction",
+        "smt2_artifact": "artifacts/examples/math/finite-line-search-v0/smt2/bad-accepted-candidate-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_accepted_candidate_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes accepted_x = 1 + (1/2)*(-2) = 0, so the malformed accepted-candidate claim 1/4 is rejected through the checked QF_LRA/Farkas route."
+    },
+    {
       "id": "general-line-search-convergence-lean-horizon",
       "claim": "General line-search termination, sufficient-decrease lemmas, Wolfe conditions, and convergence rates require future Lean reconstruction.",
       "expected_result": "not-run",

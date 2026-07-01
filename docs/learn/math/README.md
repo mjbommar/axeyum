@@ -194,8 +194,8 @@ Companion maps:
   rejections, and the general convergence Lean horizon.
 - [Finite Line Search Checks](finite-line-search-end-to-end.md): follows exact
   descent-direction replay, Armijo trial rejection, one accepted backtracked
-  step, checked QF_LRA/Farkas bad-acceptance rejection, and the general
-  line-search convergence Lean horizon.
+  step, checked QF_LRA/Farkas bad-acceptance and bad accepted-candidate
+  rejections, and the general line-search convergence Lean horizon.
 - [Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md):
   follows exact descent-direction replay, exact line-minimizer replay, Wolfe
   sufficient-decrease and curvature checks, checked QF_LRA/Farkas
