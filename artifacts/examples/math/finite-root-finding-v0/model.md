@@ -37,8 +37,20 @@ The residual decreases in this fixed row:
 1/144 < 1/4
 ```
 
-## Bad Row
+## Bad Newton Row
 
 The checked bad row keeps the exact replay result `17/12` fixed and claims the
 same Newton iterate is `4/3`. The SMT-LIB artifact records that as a tiny
 linear contradiction.
+
+## Bad Bisection Width Row
+
+The selected interval from the bisection replay is:
+
+```text
+[1, 3/2]
+```
+
+Its exact width is `1/2`. The checked bad row claims width `1/3`, leaving
+positive width excess `1/6`; the SMT-LIB artifact checks that this positive
+excess cannot also be nonpositive.

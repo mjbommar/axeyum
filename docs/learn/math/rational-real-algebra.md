@@ -187,8 +187,9 @@ x_0 = 3/2 -> x_1 = 17/12 by one Newton step
 
 The `finite-root-finding-v0` validator recomputes polynomial values, the
 sign-changing bisection half, the derivative, the Newton iterate, and the
-fixed residual decrease. Its bad row rejects the false claim `x_1 = 4/3`
-after exact replay computes `x_1 = 17/12`, then checks the final contradiction
+fixed residual decrease. Its bad rows reject the false claim `x_1 = 4/3`
+after exact replay computes `x_1 = 17/12`, and reject the false selected-width
+claim `1/3` after replay computes `1/2`, then check the final contradictions
 with QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Root Finding](finite-root-finding-end-to-end.md).
 

@@ -83,8 +83,8 @@ QF_LRA/Farkas bad-bound certificate. The finite-recurrence-prefix slice adds
 Fibonacci and affine recurrence replay plus a companion-matrix state trace,
 with checked QF_LRA/Farkas bad finite-value and bad affine-step certificates. The
 finite-root-finding slice adds exact bisection/Newton iteration replay,
-residual-decrease checking, and a checked QF_LRA/Farkas bad Newton-step
-certificate. The finite-separation slice adds exact convex-hull membership,
+residual-decrease checking, and checked QF_LRA/Farkas bad Newton-step plus
+bad bisection-width certificates. The finite-separation slice adds exact convex-hull membership,
 separating-hyperplane score replay, supporting-face checking, and a checked
 QF_LRA/Farkas bad-separator certificate. The finite-KKT slice adds exact
 constrained-quadratic grid replay, stationarity replay, complementary-slackness

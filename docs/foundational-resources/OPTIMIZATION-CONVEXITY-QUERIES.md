@@ -106,6 +106,13 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-root-finding-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text width \
+  --require-any
 ```
 
 Display the checked convexity threshold conflict row:

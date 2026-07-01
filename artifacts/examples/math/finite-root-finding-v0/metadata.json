@@ -34,12 +34,13 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite root-finding bad Newton-step QF_LRA/Farkas regression seed",
-    "pressure": "Exact Newton-step replay computes next = 17/12 from x = 3/2 for x^2 - 2, while the malformed row claims next = 4/3.",
+    "target": "finite root-finding bad Newton-step and bad bisection-width QF_LRA/Farkas regression seeds",
+    "pressure": "Exact Newton-step replay computes next = 17/12 from x = 3/2 for x^2 - 2 while one malformed row claims next = 4/3; exact bisection replay computes selected width 1/2 while another malformed row claims width 1/3.",
     "evidence": [
-      "bad-newton-step-rejected"
+      "bad-newton-step-rejected",
+      "bad-bisection-width-rejected"
     ],
-    "next_step": "Promote additional root-finding rows only when they add distinct bracket, derivative, iteration, residual, or numerical-honesty pressure; keep convergence rates, existence/uniqueness, and floating-point stability in horizon lanes."
+    "next_step": "Promote additional root-finding rows only when they add distinct derivative, iteration, residual, or numerical-honesty pressure beyond the current Newton-step and bisection-width rows; keep convergence rates, existence/uniqueness, and floating-point stability in horizon lanes."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -52,6 +53,7 @@
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "docs/learn/math/finite-root-finding-end-to-end.md",
     "artifacts/examples/math/finite-root-finding-v0/smt2/bad-newton-step-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-root-finding-v0/smt2/bad-bisection-width-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
@@ -59,12 +61,13 @@
     "newton-step-replay",
     "residual-decrease-witness",
     "bad-newton-step-rejected",
+    "bad-bisection-width-rejected",
     "general-root-finding-convergence-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite root-finding traces as deterministic exact-rational replay rows.",
     "Replay bisection and Newton witnesses through exact polynomial evaluation.",
-    "Route false finite iterate claims through checked QF_LRA/Farkas evidence after replay computes the offending value.",
+    "Route false finite iterate and bisection-width claims through checked QF_LRA/Farkas evidence after replay computes the offending value.",
     "Keep root existence, uniqueness, convergence rates, and floating-point stability marked Lean-horizon or numerical-honesty until formal routes exist."
   ]
 }

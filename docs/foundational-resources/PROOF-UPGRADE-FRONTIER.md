@@ -249,8 +249,9 @@ First targets:
   and bad affine-step rows after exact prefix replay computes `F_6 = 8` and
   affine replay computes `x_4 = 15`)
 - [finite-root-finding-v0](../../artifacts/examples/math/finite-root-finding-v0/)
-  (source-linked Farkas regression landed for the bad Newton-step row after
-  exact root-finding replay computes the next iterate `17/12`)
+  (source-linked Farkas regressions landed for the bad Newton-step and bad
+  bisection-width rows after exact root-finding replay computes the next
+  iterate `17/12` and selected interval width `1/2`)
 - [finite-separation-v0](../../artifacts/examples/math/finite-separation-v0/)
   (source-linked Farkas regression landed for the bad separator row after
   exact convex-hull/separator replay computes the outside score `4`)

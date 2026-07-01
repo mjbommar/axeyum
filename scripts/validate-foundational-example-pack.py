@@ -9644,6 +9644,41 @@ def validate_finite_root_finding(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-newton-step-rejected certificate must document checked Farkas evidence")
 
+    bad_width = checks["bad-bisection-width-rejected"]
+    if bad_width["expected_result"] != "unsat" or bad_width.get("proof_status") != "checked":
+        fail("bad-bisection-width-rejected must be a checked unsat row")
+    data = bad_width.get("data", {})
+    if data.get("source_witness") != "sqrt-two-bisection-step":
+        fail("bad-bisection-width-rejected must cite the sqrt-two-bisection-step source witness")
+    bad_selected_interval = require_fraction_vector(
+        "bad bisection selected_interval",
+        data.get("selected_interval"),
+    )
+    computed_width = require_fraction("bad bisection computed_width", data.get("computed_width"))
+    claimed_width = require_fraction("bad bisection claimed_width", data.get("claimed_width"))
+    width_excess = require_fraction("bad bisection width_excess", data.get("width_excess"))
+    if bad_selected_interval != selected_interval:
+        fail("bad-bisection-width-rejected selected_interval must match replay")
+    if computed_width != selected_width:
+        fail("bad-bisection-width-rejected computed_width must match replay")
+    if computed_width - claimed_width != width_excess:
+        fail("bad-bisection-width-rejected width_excess is incorrect")
+    if width_excess <= 0:
+        fail("bad-bisection-width-rejected must document a positive width excess")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad bisection width smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-root-finding-v0/smt2/bad-bisection-width-farkas-conflict.smt2":
+        fail("bad-bisection-width-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad bisection width smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad bisection width farkas_regression", regression)
+    if "finite_root_finding_bad_bisection_width_artifact_emits_checked_farkas" not in regression:
+        fail("bad-bisection-width-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad bisection width certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-bisection-width-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-root-finding-convergence-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-root-finding-convergence-lean-horizon must be not-run")

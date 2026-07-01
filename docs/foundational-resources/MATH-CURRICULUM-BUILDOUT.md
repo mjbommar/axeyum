@@ -578,8 +578,8 @@ finite recurrence-value and affine-step claims, and a recurrence-theory
 Lean-horizon row.
 `finite-root-finding-v0` now validates one exact bisection step, one exact
 Newton step, fixed residual-decrease replay, checked QF_LRA/Farkas rejection
-of a false Newton iterate, and a root-finding convergence/stability
-Lean-horizon row.
+of false Newton-iterate and bisection-width claims, and a root-finding
+convergence/stability Lean-horizon row.
 `finite-separation-v0` now validates exact convex-combination replay, finite
 separating-hyperplane dot-product replay, supporting-face replay, checked
 QF_LRA/Farkas rejection of a false separator, and a general
@@ -732,8 +732,9 @@ Recommended order:
     and bad affine-step QF_LRA/Farkas rejections, and recurrence-theory
     Lean-horizon metadata.
 21. `finite-root-finding-v0` (landed): exact bisection and Newton-step
-    replay, fixed residual decrease, checked bad Newton-step QF_LRA/Farkas
-    rejection, and convergence/stability Lean-horizon metadata.
+    replay, fixed residual decrease, checked bad Newton-step and bad
+    bisection-width QF_LRA/Farkas rejections, and convergence/stability
+    Lean-horizon metadata.
 22. `calculus-algebraic-shadow-v0` (landed),
     `calculus-riemann-sum-v0` (landed), and
     `multivariable-calculus-rational-v0` (landed): polynomial derivative
@@ -943,8 +944,8 @@ residual bounds, rational solution boxes, Jacobi one-step contraction replay,
 and checked QF_LRA/Farkas rejection of false residual and Jacobi error bounds.
 `artifacts/examples/math/finite-root-finding-v0/` now validates exact
 bisection and Newton-step replay, fixed residual decrease, checked
-QF_LRA/Farkas rejection of a false Newton iterate, and a
-root-finding-convergence/stability Lean-horizon row.
+QF_LRA/Farkas rejection of false Newton-iterate and bisection-width claims,
+and a root-finding-convergence/stability Lean-horizon row.
 `artifacts/examples/math/finite-separation-v0/` now validates exact
 convex-combination replay, separating-hyperplane score replay, supporting-face
 checks, checked QF_LRA/Farkas rejection of a false separator, and a
@@ -1113,8 +1114,9 @@ Recommended order:
     interpolation replay, alternating residual signs, duplicate-node rejection,
     and checked bad interpolation-sample rejection.
 33. `finite-root-finding-v0`: exact bisection/Newton iteration replay,
-    residual-decrease checking, and checked QF_LRA/Farkas bad-step rejection,
-    while convergence and floating-point stability remain horizon claims.
+    residual-decrease checking, and checked QF_LRA/Farkas bad-step plus
+    bad-width rejection, while convergence and floating-point stability remain
+    horizon claims.
 34. `finite-separation-v0`: exact convex-hull membership, separating
     hyperplane score replay, supporting-face checks, and checked QF_LRA/Farkas
     bad-separator rejection, while general separation and duality theorems
@@ -2043,9 +2045,9 @@ computes `a_2 = 2/3` and gap excess `1/12`.
 affine-step rows through the same checked Farkas evidence path after exact
 recurrence replay computes `F_6 = 8` and `x_4 = 15` instead of the malformed
 affine claim `14`.
-`finite-root-finding-v0` now routes its bad Newton-step row through the same
-checked Farkas evidence path after exact replay computes the next iterate
-`17/12`.
+`finite-root-finding-v0` now routes its bad Newton-step and bad
+bisection-width rows through the same checked Farkas evidence path after exact
+replay computes the next iterate `17/12` and the selected width `1/2`.
 `finite-separation-v0` now routes its bad separator row through the same checked
 Farkas evidence path after exact convex-hull/separator replay computes the
 outside score `4`.

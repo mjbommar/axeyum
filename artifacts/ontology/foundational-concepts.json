@@ -777,7 +777,7 @@
           "id": "finite-root-finding-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
-          "notes": "Finite bisection/Newton root-finding replay and checked bad-step rejection."
+          "notes": "Finite bisection/Newton root-finding replay and checked bad-step plus bad-width rejections."
         },
         {
           "id": "finite-separation-v0",
@@ -1417,7 +1417,7 @@
           "id": "finite-root-finding-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
-          "notes": "Finite polynomial evaluation, bisection brackets, Newton steps, and bad-step rejection."
+          "notes": "Finite polynomial evaluation, bisection brackets, Newton steps, and bad-step plus bad-width rejections."
         }
       ],
       "proof_routes": [
@@ -1761,7 +1761,7 @@
           "id": "finite-root-finding-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
-          "notes": "Exact rational root-finding iterations and bad Newton-step rejection."
+          "notes": "Exact rational root-finding iterations with bad Newton-step and bisection-width rejections."
         },
         {
           "id": "finite-separation-v0",
@@ -1900,7 +1900,7 @@
           "id": "finite-root-finding-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
-          "notes": "Finite bisection/Newton root-finding replay and convergence-theorem horizon rows."
+          "notes": "Finite bisection/Newton root-finding replay, bad-width checks, and convergence-theorem horizon rows."
         },
         {
           "id": "finite-kkt-v0",
@@ -4497,7 +4497,7 @@
           "id": "finite-root-finding-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
-          "notes": "Finite bisection/Newton replay for root-finding theorem shadows."
+          "notes": "Finite bisection/Newton replay and bad bisection-width checks for root-finding theorem shadows."
         },
         {
           "id": "real-analysis-rational-v0",

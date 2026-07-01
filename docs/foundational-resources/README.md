@@ -233,7 +233,8 @@ schemas, examples, and validation workflows.
   value and affine-step claims, and a recurrence-theory Lean-horizon row.
 - [`artifacts/examples/math/finite-root-finding-v0/`](../../artifacts/examples/math/finite-root-finding-v0/)
   validates exact bisection and Newton-step replay, fixed residual-decrease
-  checking, checked rejection of a false Newton iterate, and a
+  checking, checked rejection of false Newton-iterate and bisection-width
+  claims, and a
   root-finding-convergence Lean-horizon row.
 - [`artifacts/examples/math/finite-separation-v0/`](../../artifacts/examples/math/finite-separation-v0/)
   validates exact convex-combination replay, separating-hyperplane dot-product

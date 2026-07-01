@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 614 expected checks.
-- 291 checked proof/evidence rows.
+- 615 expected checks.
+- 292 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -197,7 +197,7 @@ Route plan:
 | Boolean CNF DRAT/LRAT | finite Boolean refutations, graph/search/set-family conflicts | Promote small topology and graph rows that are source-level obvious. |
 | QF_BV DRAT | fixed-width residue, bit-vector, and finite algebra conflicts | Promote only when width is part of the educational claim. |
 | QF_LIA/Diophantine | integer equations, counts, modular obstructions, rank coefficients, torsion membership | Group recurring gcd/divisibility and quotient-boundary obstructions as cookbook examples. |
-| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad separator, bad stationarity, bad free-gradient, bad degenerate multiplier, bad objective, bad decrease, bad step-coordinate, bad Armijo, bad accepted-candidate, bad Wolfe minimizer, bad Wolfe curvature, bad projection, bad proximal-point, and bad box-proximal-point rows with independent Farkas checks. |
+| QF_LRA/Farkas | exact rational infeasibility, LP, residuals, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows, probability tables | Continue promoting bad table, bad bound, bad iterate, bad width, bad separator, bad stationarity, bad free-gradient, bad degenerate multiplier, bad objective, bad decrease, bad step-coordinate, bad Armijo, bad accepted-candidate, bad Wolfe minimizer, bad Wolfe curvature, bad projection, bad proximal-point, and bad box-proximal-point rows with independent Farkas checks. |
 | QF_UF/Alethe | equality-heavy finite functions, quotients, homomorphisms | Use table replay for objects, Alethe for congruence conflicts. |
 | Lean horizon | induction schemas, completeness, topology, measure, asymptotics | Record theorem shape and dependencies; do not benchmark as finite checks. |
 
@@ -657,8 +657,8 @@ Build next:
   QF_LRA/Farkas artifacts; keep `finite-recurrence-prefix-v0`'s bad
   finite-value and bad affine-step rows tied to their source QF_LRA/Farkas
   artifacts; keep
-  `finite-root-finding-v0`'s bad Newton-step row tied to its source
-  QF_LRA/Farkas artifact; keep `finite-separation-v0`'s bad separator row tied
+  `finite-root-finding-v0`'s bad Newton-step and bad bisection-width rows tied
+  to their source QF_LRA/Farkas artifacts; keep `finite-separation-v0`'s bad separator row tied
   to its source QF_LRA/Farkas artifact; keep `finite-kkt-v0`'s bad
   stationarity row tied to its source QF_LRA/Farkas artifact; keep
   `finite-active-set-qp-v0`'s bad free-gradient and bad degenerate-multiplier
@@ -1503,9 +1503,9 @@ Pick one item per commit unless the change is purely navigational.
 60. Landed: add `finite-root-finding-v0`.
     The new numerical-analysis pack validates exact bisection and Newton-step
     replay, fixed residual-decrease checking, checked QF_LRA/Farkas rejection
-    of a false Newton iterate, and a root-finding convergence/stability Lean
-    horizon. The learner path now includes a focused finite root-finding
-    end-to-end page.
+    of false Newton-iterate and bisection-width claims, and a root-finding
+    convergence/stability Lean horizon. The learner path now includes a
+    focused finite root-finding end-to-end page.
 61. Landed: add `finite-separation-v0`.
     The new optimization/convexity pack validates exact convex-combination
     replay, separating-hyperplane score replay, supporting-face checking,

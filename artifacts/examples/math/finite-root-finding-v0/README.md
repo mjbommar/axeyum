@@ -21,6 +21,8 @@ remain proof or numerical-honesty horizons.
   the absolute residual.
 - `bad-newton-step-rejected`: rejects the malformed claim that the next Newton
   iterate is `4/3` when exact replay computes `17/12`.
+- `bad-bisection-width-rejected`: rejects the malformed claim that the selected
+  bisection interval has width `1/3` when exact replay computes `1/2`.
 - `general-root-finding-convergence-lean-horizon`: names the future proof
   route for convergence and existence theorems.
 
@@ -28,11 +30,11 @@ remain proof or numerical-honesty horizons.
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_
 ```
 
 ## Trust Boundary
 
 Untrusted search may propose an interval, iterate, or certificate. The trusted
 work is small: exact polynomial evaluation, exact Newton/bisection arithmetic,
-and checked `UnsatFarkas` evidence over the source SMT-LIB row.
+and checked `UnsatFarkas` evidence over the source SMT-LIB rows.

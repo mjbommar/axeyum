@@ -82,6 +82,9 @@ const FINITE_RECURRENCE_PREFIX_BAD_AFFINE_STEP: &str = include_str!(
 const FINITE_ROOT_FINDING_BAD_NEWTON_STEP: &str = include_str!(
     "../../../artifacts/examples/math/finite-root-finding-v0/smt2/bad-newton-step-farkas-conflict.smt2"
 );
+const FINITE_ROOT_FINDING_BAD_BISECTION_WIDTH: &str = include_str!(
+    "../../../artifacts/examples/math/finite-root-finding-v0/smt2/bad-bisection-width-farkas-conflict.smt2"
+);
 const FINITE_SEPARATION_BAD_SEPARATOR: &str = include_str!(
     "../../../artifacts/examples/math/finite-separation-v0/smt2/bad-separator-farkas-conflict.smt2"
 );
@@ -703,6 +706,14 @@ fn finite_root_finding_bad_newton_step_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-root-finding-v0 bad-Newton-step SMT-LIB artifact",
         FINITE_ROOT_FINDING_BAD_NEWTON_STEP,
+    );
+}
+
+#[test]
+fn finite_root_finding_bad_bisection_width_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-root-finding-v0 bad-bisection-width SMT-LIB artifact",
+        FINITE_ROOT_FINDING_BAD_BISECTION_WIDTH,
     );
 }
 
