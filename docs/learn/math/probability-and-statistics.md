@@ -178,7 +178,8 @@ E[X] / 2 = 1/2
 
 The `finite-concentration-v0` validator checks Markov's inequality,
 Chebyshev's inequality, the union bound, and rejects a false claim such as
-`P(X >= 2) <= 1/8` for this table.
+`P(X >= 2) <= 1/8` for this table or `P(A union B) <= 1/2` when exact replay
+computes `P(A union B) = 3/4`.
 
 For a focused finite concentration trace, read
 [End To End: Finite Concentration](finite-concentration-end-to-end.md).

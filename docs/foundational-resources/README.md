@@ -513,7 +513,7 @@ schemas, examples, and validation workflows.
   Lean-horizon row.
 - [`artifacts/examples/math/finite-concentration-v0/`](../../artifacts/examples/math/finite-concentration-v0/)
   validates exact finite Markov, Chebyshev, and union-bound replays over
-  rational atom tables, checked rejection of a false tail bound, and a
+  rational atom tables, checked rejection of false tail and union bounds, and a
   concentration/limit-theorem Lean-horizon row.
 - [`artifacts/examples/math/bounded-dynamics-v0/`](../../artifacts/examples/math/bounded-dynamics-v0/)
   validates exact rational recurrence traces, bounded invariant witnesses, and

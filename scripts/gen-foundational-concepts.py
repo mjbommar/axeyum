@@ -4730,7 +4730,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-concentration-v0",
-                "Finite tail-bound rows that separate exact enumeration from concentration theorem horizons.",
+                "Finite tail-bound and union-bound rows that separate exact enumeration from concentration theorem horizons.",
             ),
         ],
         "proof_routes": [
@@ -4832,7 +4832,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-concentration-v0",
-                "Finite event-mass rows used by tail-bound and concentration-shadow examples.",
+                "Finite event-mass rows used by tail-bound, union-bound, and concentration-shadow examples.",
             ),
         ],
         "proof_routes": [
@@ -4935,7 +4935,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-concentration-v0",
-                "Finite event masses and tail probabilities used by concentration-shadow rows.",
+                "Finite event masses, union probabilities, and tail probabilities used by concentration-shadow rows.",
             ),
         ],
         "proof_routes": [
@@ -5508,7 +5508,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-concentration-v0",
-                "Finite tail-probability and bad concentration-bound rows.",
+                "Finite tail-probability, union-bound, and bad concentration-bound rows.",
             ),
             (
                 "counting-v0",

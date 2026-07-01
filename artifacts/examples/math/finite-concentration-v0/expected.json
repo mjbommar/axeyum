@@ -100,6 +100,29 @@
       "notes": "The validator rejects the claimed bound because the recomputed tail probability is 1/4; the Axeyum regression refutes the final linear claim tail_probability <= 1/8 with rechecked Farkas evidence."
     },
     {
+      "id": "bad-union-bound-rejected",
+      "claim": "The listed finite events have P(A union B) <= 1/2.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_union_bound_refutation",
+      "proof_status": "checked",
+      "data": {
+        "atoms": [
+          {"id": "a", "probability": "1/4", "events": ["A"]},
+          {"id": "b", "probability": "1/4", "events": ["A", "B"]},
+          {"id": "c", "probability": "1/4", "events": ["B"]},
+          {"id": "d", "probability": "1/4", "events": []}
+        ],
+        "events": ["A", "B"],
+        "event_probabilities": {"A": "1/2", "B": "1/2"},
+        "actual_union_probability": "3/4",
+        "claimed_union_bound": "1/2",
+        "valid_union_bound": "1",
+        "smt2_artifact": "artifacts/examples/math/finite-concentration-v0/smt2/bad-union-bound-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_union_bound_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator rejects the claimed bound because exact finite event replay gives P(A union B)=3/4; the Axeyum regression refutes the final linear claim union_probability <= 1/2 with rechecked Farkas evidence."
+    },
+    {
       "id": "general-concentration-lean-horizon",
       "claim": "General concentration and limit theorems require future Lean resources.",
       "expected_result": "not-run",

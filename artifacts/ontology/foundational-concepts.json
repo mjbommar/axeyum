@@ -6474,7 +6474,7 @@
           "id": "finite-concentration-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-concentration-v0",
-          "notes": "Finite tail-bound rows that separate exact enumeration from concentration theorem horizons."
+          "notes": "Finite tail-bound and union-bound rows that separate exact enumeration from concentration theorem horizons."
         }
       ],
       "proof_routes": [
@@ -6587,7 +6587,7 @@
           "id": "finite-concentration-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-concentration-v0",
-          "notes": "Finite event-mass rows used by tail-bound and concentration-shadow examples."
+          "notes": "Finite event-mass rows used by tail-bound, union-bound, and concentration-shadow examples."
         }
       ],
       "proof_routes": [
@@ -6701,7 +6701,7 @@
           "id": "finite-concentration-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-concentration-v0",
-          "notes": "Finite event masses and tail probabilities used by concentration-shadow rows."
+          "notes": "Finite event masses, union probabilities, and tail probabilities used by concentration-shadow rows."
         }
       ],
       "proof_routes": [
@@ -7321,7 +7321,7 @@
           "id": "finite-concentration-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-concentration-v0",
-          "notes": "Finite tail-probability and bad concentration-bound rows."
+          "notes": "Finite tail-probability, union-bound, and bad concentration-bound rows."
         },
         {
           "id": "counting-v0",

@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const union_probability Real)
+(assert (= (* 4 union_probability) 3))
+(assert (<= union_probability (/ 1 2)))
+(check-sat)

@@ -19598,6 +19598,44 @@ def validate_finite_concentration(expected: dict[str, Any]) -> None:
     if actual_tail_probability <= claimed_bound:
         fail("bad-concentration-bound-rejected must document a false upper bound")
 
+    bad_union = checks["bad-union-bound-rejected"]
+    if bad_union["expected_result"] != "unsat":
+        fail("bad-union-bound-rejected must expect unsat")
+    data = bad_union.get("data", {})
+    atoms = require_probability_atoms("bad union atoms", data.get("atoms"), require_events=False)
+    require_normalized_atoms("bad-union-bound-rejected", atoms)
+    events = require_string_list("bad union events", data.get("events"))
+    event_probabilities = require_probability_value_map(
+        "bad union event_probabilities",
+        data.get("event_probabilities"),
+        events,
+    )
+    for event in events:
+        if event_probability(atoms, event) != event_probabilities[event]:
+            fail(f"bad-union-bound-rejected event probability is incorrect for {event!r}")
+    actual_union_probability = require_probability(
+        "bad union actual_union_probability",
+        data.get("actual_union_probability"),
+    )
+    claimed_union_bound = require_probability(
+        "bad union claimed_union_bound",
+        data.get("claimed_union_bound"),
+    )
+    valid_union_bound = require_fraction("bad union valid_union_bound", data.get("valid_union_bound"))
+    if finite_union_probability(atoms, set(events)) != actual_union_probability:
+        fail("bad-union-bound-rejected actual union probability is incorrect")
+    if sum(event_probabilities.values(), Fraction(0)) != valid_union_bound:
+        fail("bad-union-bound-rejected valid union bound is incorrect")
+    if actual_union_probability > valid_union_bound:
+        fail("bad-union-bound-rejected valid union bound must still hold")
+    if actual_union_probability <= claimed_union_bound:
+        fail("bad-union-bound-rejected must document a false union upper bound")
+    require_string("bad union smt2_artifact", data.get("smt2_artifact"))
+    check_source("bad union smt2_artifact", data["smt2_artifact"])
+    require_string("bad union farkas_regression", data.get("farkas_regression"))
+    if "finite_concentration_bad_union_bound_artifact_emits_checked_farkas" not in data["farkas_regression"]:
+        fail("bad-union-bound-rejected must link the Farkas regression")
+
     horizon = checks["general-concentration-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-concentration-lean-horizon must be not-run")

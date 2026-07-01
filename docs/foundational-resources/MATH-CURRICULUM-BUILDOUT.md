@@ -871,7 +871,7 @@ rejection of a false expected-time table, and a recurrence/transience
 Lean-horizon row.
 `artifacts/examples/math/finite-concentration-v0/` now validates exact finite
 Markov, Chebyshev, and union-bound replays over rational atom tables, checked
-rejection of a false tail bound, and a concentration/limit-theorem
+rejection of false tail and union bounds, and a concentration/limit-theorem
 Lean-horizon row.
 `artifacts/examples/math/bounded-dynamics-v0/` now validates exact rational
 recurrence traces, bounded invariant witnesses, threshold reachability replay,
@@ -1944,9 +1944,10 @@ pack-local multiplier replay.
 `convexity-rational-v0` now routes its bad midpoint-convexity row through the
 same source-linked checked Farkas evidence path after reducing the midpoint
 inequality to division-free linear form.
-`finite-concentration-v0` now routes its bad finite tail-bound row through a
-source-linked checked Farkas evidence path after finite replay computes the tail
-probability, and its metadata promotes that row for solver reuse.
+`finite-concentration-v0` now routes its bad finite tail-bound and bad
+union-bound rows through source-linked checked Farkas evidence paths after
+finite replay computes the tail probability and the exact event-union
+probability, and its metadata promotes those rows for solver reuse.
 `finite-probability-v0` now routes its bad normalization row through the same
 checked Farkas evidence path after exact replay computes the atom total.
 It also routes bad conditional-probability and diagnostic-test Bayes posterior

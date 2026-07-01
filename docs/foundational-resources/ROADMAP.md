@@ -544,7 +544,7 @@ absorption-probability equations, expected hitting-time equations, and checked
 rejection of a malformed expected-time table.
 [`finite-concentration-v0`](../../artifacts/examples/math/finite-concentration-v0/)
 validates exact finite Markov, Chebyshev, and union-bound replays, plus checked
-rejection of a false tail bound.
+rejection of false tail and union bounds.
 [`exact-statistical-tests-v0`](../../artifacts/examples/math/exact-statistical-tests-v0/)
 validates exact binomial tails, hypergeometric point probabilities, one-sided
 and probability-ordered two-sided Fisher p-values, probability-ordered exact
@@ -701,7 +701,8 @@ Exit criteria:
 - The first finite random-matrix bridge validates exact matrix-valued
   probability tables without asymptotic or floating-point claims.
 - Finite concentration rows validate Markov, Chebyshev, and union-bound tail
-  checks without claiming general limit theorems.
+  checks, including checked bad tail-bound and union-bound rejections, without
+  claiming general limit theorems.
 - Numerical/probabilistic-programming material has an explicit "not proof"
   status and reproducibility metadata.
 

@@ -169,6 +169,9 @@ const FINITE_CHEBYSHEV_BAD_INTERPOLATION_SAMPLE: &str = include_str!(
 const FINITE_CHEBYSHEV_BAD_ALTERNATING_RESIDUAL: &str = include_str!(
     "../../../artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-alternating-residual-farkas-conflict.smt2"
 );
+const FINITE_CONCENTRATION_BAD_UNION_BOUND: &str = include_str!(
+    "../../../artifacts/examples/math/finite-concentration-v0/smt2/bad-union-bound-farkas-conflict.smt2"
+);
 const BOUNDED_DYNAMICS_BAD_INVARIANT_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/bounded-dynamics-v0/smt2/bad-invariant-bound-farkas-conflict.smt2"
 );
@@ -840,6 +843,14 @@ fn finite_concentration_bad_tail_bound_emits_checked_farkas() {
         "finite-concentration-v0 bad-concentration-bound-rejected",
         &arena,
         &[tail_is_quarter, false_tail_bound],
+    );
+}
+
+#[test]
+fn finite_concentration_bad_union_bound_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-concentration-v0 bad-union-bound SMT-LIB artifact",
+        FINITE_CONCENTRATION_BAD_UNION_BOUND,
     );
 }
 

@@ -196,8 +196,8 @@ First targets:
   (source-linked solver-reuse promotion landed for the bad midpoint-convexity
   row)
 - [finite-concentration-v0](../../artifacts/examples/math/finite-concentration-v0/)
-  (source-linked solver-reuse promotion landed for the bad finite tail-bound
-  row)
+  (source-linked solver-reuse promotions landed for the bad finite tail-bound
+  and bad union-bound rows)
 - [descriptive-statistics-v0](../../artifacts/examples/math/descriptive-statistics-v0/)
   (resource-backed Farkas regression landed for the bad variance row after
   exact finite-sample replay computes `Var(X) = 5/4`)

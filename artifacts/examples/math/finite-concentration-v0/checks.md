@@ -32,6 +32,17 @@ The resource-backed Axeyum regression checks the final bound obligation as
 `QF_LRA`: `tail_probability = 1/4` and `tail_probability <= 1/8`, requiring
 rechecked `UnsatFarkas` evidence.
 
+## `bad-union-bound-rejected`
+
+Expected result: `unsat`.
+
+The finite event table has `P(A union B) = 3/4`, so the claimed bound `1/2` is
+false even though the valid union-bound sum `P(A) + P(B) = 1` still holds.
+
+The resource-backed Axeyum regression checks the final union-bound
+contradiction as `QF_LRA`: `4 * union_probability = 3` and
+`union_probability <= 1/2`, requiring rechecked `UnsatFarkas` evidence.
+
 ## `general-concentration-lean-horizon`
 
 Expected result: `not-run`.

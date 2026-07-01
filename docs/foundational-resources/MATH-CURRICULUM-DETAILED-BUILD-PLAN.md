@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 593 expected checks.
-- 273 checked proof/evidence rows.
+- 594 expected checks.
+- 274 checked proof/evidence rows.
 - 249 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1038,6 +1038,12 @@ Pick one row per commit unless the change is purely navigational.
      stochastic-row and false stationary-distribution contradictions without
      claiming countably infinite chains, mixing times, convergence theorems,
      recurrence/transience, or stochastic-process limit laws.
+125. Landed: extend `finite-concentration-v0` with a checked bad union-bound
+     row. Exact finite event replay computes `P(A union B)=3/4` while the
+     malformed source SMT-LIB artifact claims `P(A union B) <= 1/2`; the
+     shared QF_LRA/Farkas route now checks both tail and union finite
+     concentration contradictions without claiming Chernoff/Hoeffding/LLN/CLT,
+     martingale concentration, asymptotics, or general limit theorems.
 
 ## Validation Checklist
 

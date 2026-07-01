@@ -216,7 +216,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-concentration-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_tail_bound_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_union_bound_artifact_emits_checked_farkas
 ```
 
 Expected output:
@@ -238,4 +238,4 @@ remaining horizon -> general concentration and limit theorems
 The graduation target is to encode finite tail events, expectations,
 variances, and event unions as exact rational tables, replay Markov,
 Chebyshev, and union-bound inequalities by exact rational arithmetic, and emit
-checked counterexample evidence for false concentration bounds.
+checked counterexample evidence for false tail and union bounds.

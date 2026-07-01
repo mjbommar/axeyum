@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite concentration bad union-bound QF_LRA row landed.**
+  `finite-concentration-v0` now includes a checked bad union-bound row: exact
+  atom-table replay computes `P(A union B) = 3/4` for events with
+  `P(A)=P(B)=1/2`, then rejects the malformed claim `P(A union B) <= 1/2`
+  through a source SMT-LIB artifact on the shared QF_LRA/Farkas route. The
+  validator pins the atom table, event probabilities, actual union
+  probability, valid union bound, artifact path, and regression; the shared
+  `math_resource_lra_routes` regression parses the artifact and checks
+  `UnsatFarkas` evidence. Generated dashboards and the public query summary
+  now report 111 concept rows, 108 non-template packs, 594 expected checks,
+  274 checked rows, 249 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite Markov-chain stationary QF_LRA row landed.**
   `finite-markov-chain-v0` now includes a checked bad stationary-distribution
   row: exact replay computes `[1/2,1/2] * P = [3/8,5/8]` for the fixed

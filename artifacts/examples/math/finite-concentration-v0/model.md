@@ -76,3 +76,22 @@ tail_probability <= 1/8
 
 That query emits `UnsatFarkas` evidence, and the certificate arithmetic is
 rechecked independently.
+
+## Bad Union Bound
+
+The union-bound negative row reuses the two-event table:
+
+```text
+P(A) = 1/2
+P(B) = 1/2
+P(A union B) = 3/4
+```
+
+The valid union-bound sum is `1`, but the malformed row claims:
+
+```text
+P(A union B) <= 1/2
+```
+
+Exact replay computes the union probability as `3/4`, so the final bound claim
+is false and is checked through QF_LRA/Farkas evidence.
