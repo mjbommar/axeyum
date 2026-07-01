@@ -566,8 +566,9 @@ QF_LRA/Farkas rejection of a false delta, and a general real-analysis
 Lean-horizon row.
 `sequence-limit-shadow-v0` now validates finite epsilon-tail replay, finite
 limit-counterexample replay, monotone bounded prefix replay, a fixed geometric
-partial-sum identity, a bounded Cauchy-tail no-counterexample row, and a
-general convergence Lean-horizon row. `bounded-monotone-sequence-v0` now
+partial-sum identity, a bounded Cauchy-tail no-counterexample row, checked
+bad reciprocal-tail bound rejection, and a general convergence Lean-horizon
+row. `bounded-monotone-sequence-v0` now
 validates finite monotone-prefix replay, finite prefix supremum replay, finite
 tail-gap replay, checked QF_LRA/Farkas rejection of false upper-bound and
 tail-gap rows, and a monotone-convergence Lean-horizon row.
@@ -725,7 +726,8 @@ Recommended order:
     and real-completeness Lean-horizon metadata.
 18. `sequence-limit-shadow-v0` (landed): bounded epsilon-tail replay, finite
     counterexamples, monotone bounded prefixes, fixed geometric partial sums,
-    and general convergence Lean-horizon metadata.
+    checked bounded Cauchy-tail and bad reciprocal-tail Farkas rows, and
+    general convergence Lean-horizon metadata.
 19. `bounded-monotone-sequence-v0` (landed): finite monotone-prefix,
     finite supremum, finite tail-gap replay, checked bad upper-bound and
     bad tail-gap QF_LRA/Farkas rejections, and monotone-convergence
@@ -1954,7 +1956,8 @@ enumeration, and the Boolean CNF/LRAT proof-upgrade route.
 `sequence-limit-shadow-v0` now has a learner-facing end-to-end lesson for
 finite epsilon-tail replay, proposed-limit counterexample replay, monotone
 bounded prefix checks, geometric partial sums, finite Cauchy-tail
-enumeration, and the general limit Lean horizon.
+enumeration, bad reciprocal-tail bound rejection, and the general limit Lean
+horizon.
 `bounded-monotone-sequence-v0` now has a learner-facing end-to-end lesson for
 finite monotone-prefix replay, finite prefix supremum, finite tail-gap replay,
 checked QF_LRA/Farkas bad upper-bound and bad tail-gap rejections, and the

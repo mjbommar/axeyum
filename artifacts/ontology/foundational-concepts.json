@@ -1483,7 +1483,7 @@
           "id": "sequence-limit-shadow-v0",
           "status": "validated",
           "path": "artifacts/examples/math/sequence-limit-shadow-v0",
-          "notes": "Bounded epsilon/N templates and algebraic sequence checks."
+          "notes": "Bounded epsilon/N templates, algebraic sequence checks, and checked bad-tail bounds."
         },
         {
           "id": "bounded-monotone-sequence-v0",
@@ -1508,7 +1508,7 @@
             "docs/proof-cookbook/README.md",
             "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md"
           ],
-          "notes": "Bounded epsilon/N templates and algebraic sequence checks."
+          "notes": "Bounded epsilon/N templates, algebraic sequence checks, and checked bad-tail bounds."
         }
       ],
       "source_refs": [
@@ -4697,7 +4697,7 @@
           "id": "sequence-limit-shadow-v0",
           "status": "validated",
           "path": "artifacts/examples/math/sequence-limit-shadow-v0",
-          "notes": "Bounded epsilon-N and finite Cauchy-tail checks for sequence-limit shadows."
+          "notes": "Bounded epsilon-N, finite Cauchy-tail, and bad reciprocal-tail checks for sequence-limit shadows."
         },
         {
           "id": "bounded-monotone-sequence-v0",

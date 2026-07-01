@@ -154,12 +154,14 @@ tail = n = 3..8
 The `sequence-limit-shadow-v0` validator checks the finite tail only. It also
 checks a finite counterexample to a proposed limit, a monotone bounded prefix,
 a fixed geometric partial-sum identity, and a finite Cauchy-tail
-no-counterexample row.
+no-counterexample row, plus a checked rejection of a bad reciprocal-tail bound.
 
 For the Cauchy-tail row, replay computes the largest listed pairwise distance
 as `4/21`; the source QF_LRA artifact rejects the malformed threshold claim
 `max_pair_distance >= 1/2` with checked `UnsatFarkas` evidence. This is still a
-finite tail fact, not Cauchy completeness.
+finite tail fact, not Cauchy completeness. For the reciprocal-tail bad row,
+replay computes `a_2 = 1/3` and rejects the strict claim that this distance is
+below `1/4` through the same QF_LRA/Farkas route.
 
 For bounded monotone sequence shadows, encode exact rational prefix values:
 

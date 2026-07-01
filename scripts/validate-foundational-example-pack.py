@@ -9110,6 +9110,8 @@ def validate_sequence_limit_shadow(expected: dict[str, Any]) -> None:
     for value in sequence[start_index : horizon + 1]:
         if abs(value - limit) >= epsilon:
             fail("reciprocal-tail-bounded-epsilon found a finite tail counterexample")
+    reciprocal_limit = limit
+    reciprocal_sequence = sequence
 
     counterexample = checks["constant-one-limit-counterexample"]
     if counterexample["expected_result"] != "sat":
@@ -9209,6 +9211,62 @@ def validate_sequence_limit_shadow(expected: dict[str, Any]) -> None:
     require_string("bounded cauchy farkas_regression", farkas_regression)
     if "sequence_limit_bounded_cauchy_tail_artifact_emits_checked_farkas" not in farkas_regression:
         fail("bounded-cauchy-tail-no-counterexample must link the Farkas regression")
+
+    bad_tail = checks["bad-reciprocal-tail-bound-rejected"]
+    if bad_tail["expected_result"] != "unsat" or bad_tail.get("proof_status") != "checked":
+        fail("bad-reciprocal-tail-bound-rejected must be a checked unsat row")
+    data = bad_tail.get("data", {})
+    if data.get("source_witness") != "reciprocal-tail":
+        fail("bad-reciprocal-tail-bound-rejected must cite the reciprocal-tail source witness")
+    claimed_start_index = require_nonnegative_int(
+        "bad reciprocal tail claimed_start_index",
+        data.get("claimed_start_index"),
+    )
+    witness_index = require_nonnegative_int(
+        "bad reciprocal tail witness_index",
+        data.get("witness_index"),
+    )
+    bad_limit = require_fraction("bad reciprocal tail limit", data.get("limit"))
+    bad_epsilon = require_fraction("bad reciprocal tail epsilon", data.get("epsilon"))
+    witness_value = require_fraction("bad reciprocal tail witness_value", data.get("witness_value"))
+    tail_distance = require_fraction("bad reciprocal tail tail_distance", data.get("tail_distance"))
+    tail_excess = require_fraction("bad reciprocal tail tail_excess", data.get("tail_excess"))
+    if bad_epsilon <= 0:
+        fail("bad-reciprocal-tail-bound-rejected epsilon must be positive")
+    if bad_limit != reciprocal_limit:
+        fail("bad-reciprocal-tail-bound-rejected limit must match the reciprocal-tail witness")
+    if claimed_start_index > witness_index:
+        fail("bad-reciprocal-tail-bound-rejected witness_index must be inside the claimed tail")
+    if witness_index >= len(reciprocal_sequence):
+        fail("bad-reciprocal-tail-bound-rejected witness_index is outside the source sequence")
+    if reciprocal_sequence[witness_index] != witness_value:
+        fail("bad-reciprocal-tail-bound-rejected witness_value does not match replay")
+    if abs(witness_value - bad_limit) != tail_distance:
+        fail("bad-reciprocal-tail-bound-rejected tail_distance does not match replay")
+    if tail_distance - bad_epsilon != tail_excess:
+        fail("bad-reciprocal-tail-bound-rejected tail_excess is incorrect")
+    if tail_excess <= 0:
+        fail("bad-reciprocal-tail-bound-rejected must document a positive epsilon violation")
+    tail_claim = data.get("farkas_tail_claim")
+    require_string("bad reciprocal tail farkas_tail_claim", tail_claim)
+    if tail_claim != "tail_distance < epsilon":
+        fail("bad-reciprocal-tail-bound-rejected must document the Farkas tail claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad reciprocal tail smt2_artifact", smt2_artifact)
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/sequence-limit-shadow-v0/smt2/bad-reciprocal-tail-bound-farkas-conflict.smt2"
+    ):
+        fail("bad-reciprocal-tail-bound-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad reciprocal tail smt2_artifact", smt2_artifact)
+    farkas_regression = data.get("farkas_regression")
+    require_string("bad reciprocal tail farkas_regression", farkas_regression)
+    if "sequence_limit_bad_reciprocal_tail_bound_artifact_emits_checked_farkas" not in farkas_regression:
+        fail("bad-reciprocal-tail-bound-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad reciprocal tail certificate", certificate)
+    if "UnsatFarkas" not in certificate or "Evidence::check" not in certificate:
+        fail("bad-reciprocal-tail-bound-rejected certificate must document checked Farkas evidence")
 
     horizon = checks["general-limit-lean-horizon"]
     if horizon["expected_result"] != "not-run":

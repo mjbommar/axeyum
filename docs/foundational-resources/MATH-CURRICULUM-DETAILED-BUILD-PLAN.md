@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 631 expected checks.
-- 308 checked proof/evidence rows.
+- 632 expected checks.
+- 309 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -250,7 +250,7 @@ Exit criteria:
 | `rings` | maintain | BV fixed finite rings only when width is conceptually relevant |
 | `fields` | maintain | finite fields plus linear-algebra links; arbitrary-field facts horizon |
 | `polynomials` | deepen | polynomial identities now have a QF_LIA false-root regression; factorization has a QF_LRA/Farkas discriminant regression; root-finding has exact polynomial evaluation plus QF_LRA/Farkas bad-step and bad-width regressions |
-| `sequences-and-limits` | deepen | bounded Cauchy-tail and bounded monotone-prefix bad-bound rows now have QF_LRA/Farkas regressions; convergence theorems stay Lean horizon |
+| `sequences-and-limits` | deepen | bounded Cauchy-tail, bad reciprocal-tail, and bounded monotone-prefix bad-bound rows now have QF_LRA/Farkas regressions; convergence theorems stay Lean horizon |
 | `counting` | maintain | finite-counting replay bridge now groups pigeonhole CNF/LRAT, coefficient-count, double-counting, finite orbit-count, and exact tail-count rows |
 | `number-theory` | maintain | bounded residue and Diophantine families |
 | `linear-algebra` | deepen | matrix corpus notes, dot-product/separator/KKT/active-set-QP/SDP/gradient-step/line-search/Wolfe/projected-gradient/proximal-gradient/circle-tangent/inversion rows, and route-specific regression back-links |
@@ -275,8 +275,9 @@ Pick one row per commit unless the change is purely navigational.
    quantifier-expansion Bool/CNF artifact and DRAT/LRAT route regression.
 6. Landed: promote `calculus-riemann-sum-v0` through a source-linked false
    integral QF_LRA/Farkas artifact and route regression.
-7. Landed: promote `sequence-limit-shadow-v0` through a source-linked bounded
-   Cauchy-tail QF_LRA/Farkas artifact and route regression.
+7. Landed: promote `sequence-limit-shadow-v0` through source-linked bounded
+   Cauchy-tail and bad reciprocal-tail bound QF_LRA/Farkas artifacts and route
+   regressions.
 8. Landed: add `bounded-monotone-sequence-v0` with finite monotone-prefix,
    finite supremum, finite tail-gap replay, a checked bad upper-bound
    QF_LRA/Farkas artifact, and a monotone-convergence Lean-horizon row.

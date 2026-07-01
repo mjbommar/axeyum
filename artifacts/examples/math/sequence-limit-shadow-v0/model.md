@@ -37,3 +37,21 @@ For the promoted Cauchy-tail row, finite replay computes the largest pairwise
 distance in `[1/3, 1/4, 1/5, 1/6, 1/7]` as `1/3 - 1/7 = 4/21`. The source
 SMT-LIB artifact then asks Axeyum to refute the contradictory threshold claim
 `max_pair_distance >= 1/2` with QF_LRA/Farkas evidence.
+
+For the bad reciprocal-tail row, finite replay reuses the same reciprocal
+sequence table. The malformed row starts the tail at index `2` and claims all
+listed values are strictly within `1/4` of `0`. Exact replay rejects the
+specific witness:
+
+```text
+a_2 = 1/3
+|a_2 - 0| = 1/3
+1/3 < 1/4 is false
+```
+
+The source SMT-LIB artifact isolates the final strict-bound contradiction:
+
+```text
+tail_distance = 1/3
+tail_distance < 1/4
+```

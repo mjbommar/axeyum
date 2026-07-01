@@ -5,8 +5,9 @@ bounded sequence checks and real-analysis theorems.
 
 This pack checks finite shadows of sequence reasoning: bounded epsilon tails,
 finite counterexamples, monotone bounded prefixes, finite Cauchy-tail checks,
-and a geometric partial-sum identity at a fixed index. It does not claim the
-general epsilon-N theorem.
+checked rejection of a malformed reciprocal-tail bound, and a geometric
+partial-sum identity at a fixed index. It does not claim the general epsilon-N
+theorem.
 
 ## Concept Rows
 
@@ -23,6 +24,8 @@ general epsilon-N theorem.
 - A fixed geometric partial sum can be checked against its closed form.
 - A fixed finite tail can have no Cauchy counterexample for one epsilon, with
   source-linked QF_LRA/Farkas evidence for the final threshold contradiction.
+- A malformed finite reciprocal-tail bound can be rejected after exact replay
+  computes `a_2 = 1/3` but the bad row claims distance below `1/4`.
 - General convergence theorems remain Lean-horizon.
 
 ## Validation
@@ -39,7 +42,9 @@ the geometric partial-sum identity, and every pair in the finite Cauchy-tail
 row. For the checked Cauchy-tail row, it also recomputes the maximum pair
 distance `4/21` and links the rejected `>= 1/2` counterexample claim to
 `smt2/bounded-cauchy-tail-farkas-conflict.smt2`, which Axeyum checks with
-`UnsatFarkas` evidence.
+`UnsatFarkas` evidence. For the checked bad reciprocal-tail row, it recomputes
+the witness value `1/3` and links the rejected `< 1/4` strict-bound claim to
+`smt2/bad-reciprocal-tail-bound-farkas-conflict.smt2`.
 
 ## Limitations
 

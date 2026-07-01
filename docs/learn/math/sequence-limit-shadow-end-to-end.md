@@ -3,7 +3,7 @@
 This lesson follows one finite analysis resource from exact rational sequence
 values to bounded epsilon-tail checks, finite counterexamples, monotone prefix
 replay, a geometric partial-sum identity, and a bounded Cauchy-tail
-no-counterexample row. It uses
+no-counterexample row plus a checked bad reciprocal-tail bound. It uses
 [sequence-limit-shadow-v0](../../../artifacts/examples/math/sequence-limit-shadow-v0/).
 
 Concept rows:
@@ -22,6 +22,7 @@ Concept rows:
 | `monotone-bounded-prefix` | `sat` | replay-only |
 | `geometric-partial-sum-identity` | `sat` | replay-only |
 | `bounded-cauchy-tail-no-counterexample` | `unsat` | checked |
+| `bad-reciprocal-tail-bound-rejected` | `unsat` | checked |
 | `general-limit-lean-horizon` | `not-run` | lean-horizon |
 
 Every executable row is finite and exact-rational. The pack does not prove
@@ -141,6 +142,38 @@ exact-rational threshold conflict.
 That `unsat` row is still bounded. It says no bad pair exists in the listed
 finite tail for one epsilon, not that the sequence is Cauchy.
 
+## Reject A Bad Reciprocal-Tail Bound
+
+The second checked `unsat` row reuses the reciprocal sequence table and asks
+Axeyum to reject a malformed tail claim:
+
+```text
+claimed_start_index = 2
+witness_index = 2
+a_2 = 1/3
+epsilon = 1/4
+```
+
+Exact replay computes:
+
+```text
+|a_2 - 0| = 1/3
+1/3 - 1/4 = 1/12
+```
+
+So the claim that every listed value from index `2` onward is strictly within
+`1/4` of `0` is false. The source SMT-LIB artifact
+`artifacts/examples/math/sequence-limit-shadow-v0/smt2/bad-reciprocal-tail-bound-farkas-conflict.smt2`
+checks the final contradiction:
+
+```text
+tail_distance = 1/3
+tail_distance < 1/4
+```
+
+Axeyum emits and independently checks `UnsatFarkas` evidence for that strict
+threshold conflict.
+
 ## Why This Matters
 
 Sequence resources are the clearest place to teach the boundary:
@@ -161,6 +194,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes sequence_limit_bounded_cauchy_tail_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes sequence_limit_bad_reciprocal_tail_bound_artifact_emits_checked_farkas
 ```
 
 ## Trust Boundary
@@ -168,8 +202,9 @@ cargo test -p axeyum-solver --test math_resource_lra_routes sequence_limit_bound
 The validator checks exact rational sequence values, finite epsilon-tail
 inequalities, finite monotone-prefix inequalities, one geometric partial-sum
 identity, and every pair in one finite Cauchy-tail row. The Farkas route checks
-the final exact-rational max-distance threshold contradiction. The full
-epsilon-N definition and completeness theorems remain future Lean work.
+the final exact-rational max-distance threshold contradiction and the bad
+reciprocal-tail strict-bound contradiction. The full epsilon-N definition and
+completeness theorems remain future Lean work.
 
 For a focused monotone-prefix and upper-bound trace, read
 [End To End: Bounded Monotone Sequence](bounded-monotone-sequence-end-to-end.md).

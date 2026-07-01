@@ -28,10 +28,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sequence-limit-shadow-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "bounded sequence-tail QF_LRA/Farkas regression seed",
-    "pressure": "Exact finite replay computes the listed tail's maximum pair distance as 4/21, while the malformed Cauchy-counterexample row requires a distance at least 1/2.",
+    "target": "bounded sequence-tail and bad reciprocal-tail QF_LRA/Farkas regression seeds",
+    "pressure": "Exact finite replay computes the listed tail's maximum pair distance as 4/21 and the reciprocal value a_2 as 1/3, while malformed rows require a pairwise distance at least 1/2 or a strict tail distance below 1/4.",
     "evidence": [
-      "bounded-cauchy-tail-no-counterexample"
+      "bounded-cauchy-tail-no-counterexample",
+      "bad-reciprocal-tail-bound-rejected"
     ],
     "next_step": "Promote additional sequence rows only when they add distinct bounded-tail, finite-prefix, recurrence, or exact-sum solver pressure; keep general convergence, Cauchy completeness, monotone convergence, and compactness theorems in the Lean-horizon lane."
   },
@@ -42,6 +43,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "artifacts/examples/math/sequence-limit-shadow-v0/smt2/bounded-cauchy-tail-farkas-conflict.smt2",
+    "artifacts/examples/math/sequence-limit-shadow-v0/smt2/bad-reciprocal-tail-bound-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
@@ -51,12 +53,13 @@
     "monotone-bounded-prefix",
     "geometric-partial-sum-identity",
     "bounded-cauchy-tail-no-counterexample",
+    "bad-reciprocal-tail-bound-rejected",
     "general-limit-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode bounded epsilon-tail and Cauchy-tail checks as deterministic LRA/NRA queries.",
     "Replay finite sequence witnesses through Axeyum model evaluation.",
-    "Keep the bounded Cauchy-tail UNSAT row tied to source-linked QF_LRA/Farkas evidence for the exact max-distance threshold contradiction.",
+    "Keep the bounded Cauchy-tail and bad reciprocal-tail UNSAT rows tied to source-linked QF_LRA/Farkas evidence for exact threshold contradictions.",
     "Keep general convergence, completeness, and compactness theorems under Lean horizon until no-sorry Lean artifacts exist."
   ]
 }

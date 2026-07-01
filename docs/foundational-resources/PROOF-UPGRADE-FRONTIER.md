@@ -239,9 +239,10 @@ First targets:
   (source-linked Farkas regression landed for the bad gradient-component row
   after exact bivariate polynomial derivative replay computes the gradient)
 - [sequence-limit-shadow-v0](../../artifacts/examples/math/sequence-limit-shadow-v0/)
-  (source-linked Farkas regression landed for the bounded Cauchy-tail
+  (source-linked Farkas regressions landed for the bounded Cauchy-tail
   no-counterexample row after exact finite replay computes the maximum pairwise
-  distance)
+  distance and for the bad reciprocal-tail bound after replay computes
+  `a_2 = 1/3`)
 - [bounded-monotone-sequence-v0](../../artifacts/examples/math/bounded-monotone-sequence-v0/)
   (source-linked Farkas regressions landed for the bad upper-bound and bad
   tail-gap rows after exact finite-prefix and finite-tail replay compute the

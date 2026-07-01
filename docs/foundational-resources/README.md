@@ -222,7 +222,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/sequence-limit-shadow-v0/`](../../artifacts/examples/math/sequence-limit-shadow-v0/)
   validates bounded epsilon-tail replay, finite limit counterexamples,
   monotone bounded prefixes, a fixed geometric partial-sum identity, a bounded
-  finite Cauchy-tail check, and a general convergence Lean-horizon row.
+  finite Cauchy-tail check, checked rejection of a bad reciprocal-tail bound,
+  and a general convergence Lean-horizon row.
 - [`artifacts/examples/math/bounded-monotone-sequence-v0/`](../../artifacts/examples/math/bounded-monotone-sequence-v0/)
   validates finite monotone-prefix replay, finite prefix supremum, finite tail
   gaps, checked rejection of false upper-bound and tail-gap claims, and a

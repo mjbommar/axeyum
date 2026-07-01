@@ -332,7 +332,7 @@ CURRICULUM_MAP = {
     "sequences-and-limits": {
         "field_ids": ["real_analysis", "topology"],
         "pack": "sequence-limit-shadow-v0",
-        "slice": "Bounded epsilon/N templates and algebraic sequence checks.",
+        "slice": "Bounded epsilon/N templates, algebraic sequence checks, and checked bad-tail bounds.",
         "proof": "Bounded arithmetic replay; general limits require Lean.",
         "extra_packs": [
             (
@@ -3022,7 +3022,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "sequence-limit-shadow-v0",
-                "Bounded epsilon-N and finite Cauchy-tail checks for sequence-limit shadows.",
+                "Bounded epsilon-N, finite Cauchy-tail, and bad reciprocal-tail checks for sequence-limit shadows.",
             ),
             (
                 "bounded-monotone-sequence-v0",

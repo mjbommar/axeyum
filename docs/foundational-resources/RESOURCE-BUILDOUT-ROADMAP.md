@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 631 expected checks.
-- 308 checked proof/evidence rows.
+- 632 expected checks.
+- 309 checked proof/evidence rows.
 - 252 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -654,9 +654,9 @@ Build next:
 - Add concept rows for rational interval, sequence tail, Cauchy shadow,
   squeeze shadow, derivative identity, and integration horizon.
 - Promote exact rational bad-bound rows through QF_LRA/Farkas.
-- Keep `sequence-limit-shadow-v0`'s promoted bounded Cauchy-tail row and
-  `bounded-monotone-sequence-v0`'s bad upper-bound and bad tail-gap rows tied to source
-  QF_LRA/Farkas artifacts; keep `finite-recurrence-prefix-v0`'s bad
+- Keep `sequence-limit-shadow-v0`'s promoted bounded Cauchy-tail and bad
+  reciprocal-tail rows plus `bounded-monotone-sequence-v0`'s bad upper-bound
+  and bad tail-gap rows tied to source QF_LRA/Farkas artifacts; keep `finite-recurrence-prefix-v0`'s bad
   finite-value and bad affine-step rows tied to their source QF_LRA/Farkas
   artifacts; keep
   `finite-root-finding-v0`'s bad Newton-step and bad bisection-width rows tied

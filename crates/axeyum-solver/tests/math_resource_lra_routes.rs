@@ -73,6 +73,9 @@ const COMPLEX_PLANE_BAD_CONJUGATION_PRODUCT_IMAGINARY: &str = include_str!(
 const SEQUENCE_LIMIT_BOUNDED_CAUCHY: &str = include_str!(
     "../../../artifacts/examples/math/sequence-limit-shadow-v0/smt2/bounded-cauchy-tail-farkas-conflict.smt2"
 );
+const SEQUENCE_LIMIT_BAD_RECIPROCAL_TAIL_BOUND: &str = include_str!(
+    "../../../artifacts/examples/math/sequence-limit-shadow-v0/smt2/bad-reciprocal-tail-bound-farkas-conflict.smt2"
+);
 const RANDOM_MATRIX_BAD_EXPECTED_RANK: &str = include_str!(
     "../../../artifacts/examples/math/random-matrix-finite-v0/smt2/bad-expected-rank-farkas-conflict.smt2"
 );
@@ -730,6 +733,14 @@ fn sequence_limit_bounded_cauchy_tail_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "sequence-limit-shadow-v0 bounded-Cauchy-tail SMT-LIB artifact",
         SEQUENCE_LIMIT_BOUNDED_CAUCHY,
+    );
+}
+
+#[test]
+fn sequence_limit_bad_reciprocal_tail_bound_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "sequence-limit-shadow-v0 bad-reciprocal-tail-bound SMT-LIB artifact",
+        SEQUENCE_LIMIT_BAD_RECIPROCAL_TAIL_BOUND,
     );
 }
 

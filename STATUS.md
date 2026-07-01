@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Sequence-limit bad reciprocal-tail QF_LRA row landed.**
+  `sequence-limit-shadow-v0` now includes a checked rejection for a malformed
+  reciprocal-tail bound: exact replay reuses the reciprocal sequence witness,
+  computes `a_2 = 1/3`, and rejects the strict claim that this distance from
+  `0` is below `1/4`. The validator pins the source witness, claimed tail
+  start, witness index, limit, epsilon, witness value, tail distance, positive
+  excess, source SMT-LIB artifact, and route regression. The shared
+  `math_resource_lra_routes` regression parses the new QF_LRA artifact and
+  checks the `UnsatFarkas` evidence. Generated dashboards and the public query
+  summary now report 111 concept rows, 108 non-template packs, 632 expected
+  checks, 309 checked rows, 252 replay-only rows, and 71 Lean-horizon rows.
+
 - **Metric-continuity bad open-ball-preimage QF_LRA row landed.**
   `metric-continuity-v0` now includes a checked rejection for a malformed
   open-ball preimage row: exact finite metric replay computes the preimage of
@@ -214,7 +226,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   artifact, and route regression. The shared `math_resource_lra_routes`
   regression parses the source QF_LRA artifact and checks the `UnsatFarkas`
   evidence. Generated dashboards and the public query summary now report 111
-  concept rows, 108 non-template packs, 631 expected checks, 308 checked rows,
+  concept rows, 108 non-template packs, 632 expected checks, 309 checked rows,
   252 replay-only rows, and 71 Lean-horizon rows.
 
 - **Linear algebra bad nullspace-component QF_LRA row landed.**
