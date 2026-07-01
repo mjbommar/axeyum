@@ -4901,6 +4901,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
      **FM → simplex** for the LRA-DPLL cube check (`lra_online.rs`
      `MAX_FM_CONSTRAINTS`) — it caps the sign pass's reach on fully-free multi-var
      systems and is ~8 standalone QF_NRA declines.
+  3. **FM → simplex keystone opened + first slice landed.** A monotonicity-lemma
+     extension of the sign pass was tried and **reverted** — it regressed even the
+     pinned cases by overrunning FM, *empirically* confirming the engine (not the
+     lemmas) is the bottleneck. So planned the top lever as
+     [`P1.9`](docs/plan/track-1-engine/P1.9-lra-simplex.md) (both LRA entry points
+     are Fourier–Motzkin, ADR-0015; simplex scales + its dual = the Farkas cert the
+     proof route already consumes) and **landed T1.9.1** (`59fa3b0b`): a standalone
+     exact-rational general-simplex (Dutertre–de Moura) feasibility core
+     `simplex::feasible` — Bland's rule (terminating), `checked_*` (overflow →
+     `unknown`), + the self-checking `check_farkas` verifier; 8 unit tests, clippy
+     `-D warnings` clean, lib 613/613. Next: T1.9.2 (route into the LRA layer behind
+     a size threshold + δ-relaxation for strict rows; fuzz-gated) and T1.9.3 (Farkas
+     extraction from the tableau).
 
 - **Session 2026-06-30/07-01 — Nonlinear (P2.5): QF_NRA 9→11, and a pre-existing div-by-zero WRONG-SAT found + fixed.**
   Five things superseded the plan-writing entry below:
