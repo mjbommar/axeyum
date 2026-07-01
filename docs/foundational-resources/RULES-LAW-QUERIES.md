@@ -28,11 +28,11 @@ python3 scripts/query-rules-as-code.py summary
 Current expected summary:
 
 ```text
-rule_packs=4
-bounded_sample_rows=882
-generated_query_rows=1626
-check_results={'sat': 6, 'unsat': 17}
-proof_statuses={'checked': 17, 'replayed': 6}
+rule_packs=5
+bounded_sample_rows=1007
+generated_query_rows=1766
+check_results={'sat': 7, 'unsat': 22}
+proof_statuses={'checked': 22, 'replayed': 7}
 ```
 
 ## Find Packs By Pattern
@@ -46,6 +46,15 @@ python3 scripts/query-rules-as-code.py packs \
   --require-any
 ```
 
+All checked QF_LRA/Farkas packs:
+
+```sh
+python3 scripts/query-rules-as-code.py packs \
+  --fragment QF_LRA \
+  --proof-status checked \
+  --require-any
+```
+
 The procurement scoring pack:
 
 ```sh
@@ -55,8 +64,8 @@ python3 scripts/query-rules-as-code.py packs \
 ```
 
 Use this when a downstream consumer needs to locate the current policy domains:
-benefit eligibility, authorization, tax/benefit arithmetic, and procurement
-scoring.
+benefit eligibility, authorization, tax/benefit arithmetic, procurement
+scoring, and grant allocation.
 
 ## Find Checked Obligations
 
@@ -66,6 +75,16 @@ All source-linked checked obligations:
 python3 scripts/query-rules-as-code.py checks \
   --proof-status checked \
   --validation bool_qf_lia_solver_regression \
+  --require-any
+```
+
+Grant-allocation QF_LRA/Farkas obligations:
+
+```sh
+python3 scripts/query-rules-as-code.py checks \
+  --pack grant_allocation_v0 \
+  --validation qf_lra_farkas_solver_regression \
+  --proof-status checked \
   --require-any
 ```
 
@@ -84,6 +103,14 @@ implementation-equivalence rows. Each row points back through
 `rules_as_code_examples` regression.
 
 ## Find Generated Query Families
+
+Grant allocation generated families:
+
+```sh
+python3 scripts/query-rules-as-code.py families \
+  --pack grant_allocation_v0 \
+  --require-any
+```
 
 Procurement generated families:
 
@@ -108,6 +135,13 @@ The two current procurement families are:
 - `quality_monotonicity_adjacent`: adjacent quality-score comparisons for
   fixed non-score facts.
 
+The two grant-allocation families are:
+
+- `bounded_allocations`: every bounded shelter/clinic/admin rational share
+  triple;
+- `balanced_budget_allocations`: only triples whose shares sum to exactly `1`,
+  with floor and cap flags exposed.
+
 ## Inspect Generated Rows
 
 Late procurement rows:
@@ -117,6 +151,17 @@ python3 scripts/query-rules-as-code.py rows \
   --pack procurement_scoring_v0 \
   --family bounded_awards \
   --text 2026-08-02 \
+  --limit 3 \
+  --require-any
+```
+
+Balanced grant-allocation rows:
+
+```sh
+python3 scripts/query-rules-as-code.py rows \
+  --pack grant_allocation_v0 \
+  --family balanced_budget_allocations \
+  --text 1/2 \
   --limit 3 \
   --require-any
 ```
@@ -172,6 +217,10 @@ python3 scripts/query-rules-as-code.py packs --text procurement --require-any
 python3 scripts/query-rules-as-code.py checks --pack procurement_scoring_v0 --proof-status checked --require-any
 python3 scripts/query-rules-as-code.py families --pack procurement_scoring_v0 --text quality --require-any
 python3 scripts/query-rules-as-code.py rows --pack procurement_scoring_v0 --family bounded_awards --text 2026-08-02 --limit 3 --require-any
+python3 scripts/query-rules-as-code.py packs --pack grant_allocation_v0 --require-any
+python3 scripts/query-rules-as-code.py checks --pack grant_allocation_v0 --validation qf_lra_farkas_solver_regression --proof-status checked --require-any
+python3 scripts/query-rules-as-code.py families --pack grant_allocation_v0 --text balanced --require-any
+python3 scripts/query-rules-as-code.py rows --pack grant_allocation_v0 --family balanced_budget_allocations --text 1/2 --limit 3 --require-any
 ```
 
 Run the solver evidence regression when a checked SMT-LIB fixture changes:

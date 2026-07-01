@@ -205,6 +205,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Grant allocation rules/law pack landed.**
+  `grant-allocation-v0` adds the fifth rules-as-code pack, reusing exact
+  rational allocation shares, budget balance, minimum-share floors,
+  administrative caps, finite rational replay, and source-linked QF_LRA/Farkas
+  checked fixtures. The generated rules query dashboard now reports 5 packs,
+  1,007 bounded sample rows, 1,766 generated query rows, 22 checked rows, and 7
+  replayed rows.
+
 - **Algebra equality-certificate boundary landed.**
   [`algebra-equality-certificate-boundary.md`](docs/learn/math/algebra-equality-certificate-boundary.md)
   now makes the finite algebra promotion rule explicit: table replay owns the
@@ -317,8 +325,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   now emit certified evidence through the shared
   `rules_as_code_examples` regression: debarment exclusion, late submission,
   bid-cap enforcement, score monotonicity, and implementation equivalence. The
-  generated rules query dashboard now reports 4 packs, 882 bounded sample rows,
-  1,626 generated query rows, 17 checked rows, and 6 replayed rows.
+  generated rules query dashboard reported 4 packs, 882 bounded sample rows,
+  1,626 generated query rows, 17 checked rows, and 6 replayed rows for that
+  increment.
 
 - **Polynomial coefficient/factor bridge row landed.**
   The generated concept atlas now includes

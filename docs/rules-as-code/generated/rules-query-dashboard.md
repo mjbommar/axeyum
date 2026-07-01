@@ -6,14 +6,15 @@ This dashboard turns the current rule-pack JSON into a bounded query
 planning surface. It is not a legal corpus and not a solver-performance
 benchmark; it records which finite rule domains can be expanded into
 generated coverage, equivalence, threshold, cap, or monotonicity checks.
+It now also includes the rational-allocation rows that exercise the QF_LRA/Farkas route.
 
 ## Summary
 
-- Rule packs: 4
-- Bounded sample rows: 882
-- Generated query rows: 1626
-- Check results: sat:6, unsat:17
-- Proof statuses: checked:17, replayed:6
+- Rule packs: 5
+- Bounded sample rows: 1007
+- Generated query rows: 1766
+- Check results: sat:7, unsat:22
+- Proof statuses: checked:22, replayed:7
 
 ## Pack Query Surface
 
@@ -21,6 +22,7 @@ generated coverage, equivalence, threshold, cap, or monotonicity checks.
 |---|---:|---:|---|---|---|---|
 | [Example Authorization Policy With Tenant Isolation](../examples/authorization-policy-v0/README.md) | 96 | 144 | [queries/authorization-policy-v0.json](queries/authorization-policy-v0.json) | bounded role/action/version rows: 96<br>adjacent version-delta comparisons: 48<br>version-delta replay witnesses: 2<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:1 | Generate tenant/action/version coverage and equivalence queries across the bounded request domain. |
 | [Example Benefit Eligibility With Exceptions](../examples/benefit-eligibility-v0/README.md) | 576 | 1104 | [queries/benefit-eligibility-v0.json](queries/benefit-eligibility-v0.json) | complete eligibility coverage rows: 576<br>income monotonicity adjacent scans: 528<br>threshold/temporal replay witnesses: 4<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:2 | Generate coverage and equivalence fixtures across the full bounded applicant domain. |
+| [Example Grant Allocation With Rational Shares](../examples/grant-allocation-v0/README.md) | 125 | 140 | [queries/grant-allocation-v0.json](queries/grant-allocation-v0.json) | bounded rational allocation rows: 125<br>balanced-budget allocation rows: 15<br>allocation replay witnesses: 5<br>checked QF_LRA/Farkas fixtures: 5 | checked:5, replayed:1 | Generate rational allocation coverage and balanced-budget query rows across the bounded share domain. |
 | [Example Procurement Scoring With Deadline And Exclusions](../examples/procurement-scoring-v0/README.md) | 144 | 252 | [queries/procurement-scoring-v0.json](queries/procurement-scoring-v0.json) | bounded procurement award rows: 144<br>quality-score adjacent scans: 108<br>bonus-threshold replay witnesses: 2<br>checked Bool/QF_LIA fixtures: 5 | checked:5, replayed:1 | Generate debarment, deadline, bid-cap, bonus-threshold, and score-monotonicity fixtures across the bounded procurement domain. |
 | [Example Tax Benefit Arithmetic With Phase-Out](../examples/tax-benefit-arithmetic-v0/README.md) | 66 | 126 | [queries/tax-benefit-arithmetic-v0.json](queries/tax-benefit-arithmetic-v0.json) | bounded benefit replay rows: 66<br>income phase-out adjacent scans: 60<br>threshold/temporal replay witnesses: 4<br>checked Bool/QF_LIA fixtures: 4 | checked:4, replayed:2 | Generate threshold, cap, and phase-out fixtures across the bounded income/date/household domain. |
 

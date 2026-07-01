@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "grant_allocation_v0",
+  "title": "Example Grant Allocation With Rational Shares",
+  "domain": "grant_allocation",
+  "jurisdiction": "example",
+  "source_citations": [
+    {"label": "Example Rule 5(a)", "uri": "source.md#rule-5a-total-allocation-balance"},
+    {"label": "Example Rule 5(b)", "uri": "source.md#rule-5b-shelter-minimum"},
+    {"label": "Example Rule 5(c)", "uri": "source.md#rule-5c-clinic-minimum"},
+    {"label": "Example Rule 5(d)", "uri": "source.md#rule-5d-administrative-cap"},
+    {"label": "Example Rule 5(e)", "uri": "source.md#rule-5e-nonnegative-shares"},
+    {"label": "Example Rule 5(f)", "uri": "source.md#rule-5f-implementation"}
+  ],
+  "effective_interval": {
+    "from": "2026-01-01",
+    "to": null
+  },
+  "actors": ["grant_office", "program_allocator"],
+  "inputs": [
+    {"name": "shelter_share", "sort": "Real"},
+    {"name": "clinic_share", "sort": "Real"},
+    {"name": "admin_share", "sort": "Real"}
+  ],
+  "outputs": [
+    {"name": "compliant", "sort": "Bool"}
+  ],
+  "checks": [
+    "allocation_witnesses",
+    "total_budget_respected",
+    "shelter_minimum_respected",
+    "clinic_minimum_respected",
+    "admin_cap_respected",
+    "implementation_equivalence"
+  ],
+  "axeyum_fragments": ["QF_LRA", "finite replay"],
+  "proof_expectation": "Budget balance, minimum-share, administrative-cap, and bounded implementation-equivalence checks have source-linked QF_LRA/Farkas fixtures. Representative allocation triples remain finite witness replay."
+}

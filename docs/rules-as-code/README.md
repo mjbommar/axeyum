@@ -26,12 +26,14 @@ docs/rules-as-code/
     queries/
       authorization-policy-v0.json
       benefit-eligibility-v0.json
+      grant-allocation-v0.json
       procurement-scoring-v0.json
       tax-benefit-arithmetic-v0.json
     rules-query-dashboard.md
   examples/
     benefit-eligibility-v0/
     authorization-policy-v0/
+    grant-allocation-v0/
     procurement-scoring-v0/
     tax-benefit-arithmetic-v0/
 artifacts/ontology/
@@ -47,6 +49,7 @@ Current example packs:
 - [Authorization Policy V0](examples/authorization-policy-v0/README.md)
 - [Tax Benefit Arithmetic V0](examples/tax-benefit-arithmetic-v0/README.md)
 - [Procurement Scoring V0](examples/procurement-scoring-v0/README.md)
+- [Grant Allocation V0](examples/grant-allocation-v0/README.md)
 
 ## Roadmap
 
@@ -110,6 +113,12 @@ The fourth pack,
 finite predicates, bid caps, score thresholds, submission deadlines,
 small-business bonus edge cases, monotonicity, and bounded
 implementation-equivalence checks for a procurement award shape.
+
+The fifth pack,
+[Grant Allocation V0](examples/grant-allocation-v0/README.md), reuses exact
+rational shares, budget-balance constraints, minimum program shares,
+administrative caps, finite replay, and QF_LRA/Farkas evidence for an
+allocation shape.
 
 Validate the current packs with:
 

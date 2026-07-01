@@ -39,12 +39,13 @@ for formalized rule obligations.
 
 ## Current Status
 
-The first four rule packs have landed:
+The first five rule packs have landed:
 
 - [Benefit Eligibility V0](examples/benefit-eligibility-v0/README.md)
 - [Authorization Policy V0](examples/authorization-policy-v0/README.md)
 - [Tax Benefit Arithmetic V0](examples/tax-benefit-arithmetic-v0/README.md)
 - [Procurement Scoring V0](examples/procurement-scoring-v0/README.md)
+- [Grant Allocation V0](examples/grant-allocation-v0/README.md)
 
 The first metadata schema lives at
 [rules-core.schema.json](../../artifacts/ontology/rules-core.schema.json).
@@ -60,16 +61,19 @@ admin tenant guarding, and bounded implementation equivalence do as well; and
 tax/benefit non-negativity, cap, active phase-out monotonicity, and bounded
 implementation equivalence now have checked fixtures. Procurement debarment,
 late submission, bid-cap, score-monotonicity, and bounded implementation
-equivalence checks also have checked fixtures. They are checked by
+equivalence checks also have checked fixtures. Grant allocation budget-balance,
+minimum-share, administrative-cap, and bounded implementation-equivalence
+checks now have source-linked QF_LRA/Farkas fixtures. They are checked by
 `cargo test -p axeyum-solver --test rules_as_code_examples`; benefit threshold
 and temporal-transition rows, authorization version-delta rows, tax/benefit
 threshold-cliff and temporal-transition rows, and procurement bonus-threshold
-rows remain replayed witnesses.
+rows, plus grant allocation edge allocations, remain replayed witnesses.
 The generated
-[Rules Query Dashboard](generated/rules-query-dashboard.md) now reads the four
-pack JSON files and exposes 882 bounded sample rows plus 1,626 deterministic
+[Rules Query Dashboard](generated/rules-query-dashboard.md) now reads the five
+pack JSON files and exposes 1,007 bounded sample rows plus 1,766 deterministic
 generated query rows for coverage, income monotonicity, version deltas,
-threshold/cap checks, deadlines, bid-cap exclusions, and monotonicity.
+threshold/cap checks, deadlines, bid-cap exclusions, monotonicity, and rational
+allocation rows.
 
 The cross-resource reuse map is
 [Rules/Law Crosswalk For Foundational Resources](../foundational-resources/RULES-LAW-CROSSWALK.md).
@@ -79,8 +83,9 @@ before adding new rule packs.
 The current pattern matrix is
 [Rules/Law Pattern Matrix](../foundational-resources/RULES-LAW-PATTERN-MATRIX.md).
 It records which finite predicate, role/tenant, threshold, monotonicity,
-version, precedence, and bounded-equivalence patterns are actually covered by
-the four current packs and which math proof routes they reuse.
+version, precedence, rational-allocation, and bounded-equivalence patterns are
+actually covered by the five current packs and which math proof routes they
+reuse.
 
 The learner-facing trust-boundary page is
 [Rules/Law Trust Boundary](../learn/rules-law-trust-boundary.md). It explains
@@ -267,6 +272,33 @@ Checks:
 
 This pack exercises finite predicates, integer thresholds, encoded dates,
 monotonicity, and checked implementation-equivalence fixtures.
+
+## Fifth Example Pack: Grant Allocation
+
+Status: landed as
+[Grant Allocation V0](examples/grant-allocation-v0/README.md), with
+source-linked QF_LRA/Farkas proof fixtures for exact budget balance, minimum
+program shares, administrative caps, and bounded implementation equivalence.
+
+Model a tiny rational allocation rule:
+
+- shelter share;
+- clinic share;
+- administrative share;
+- total budget balance;
+- minimum program shares;
+- administrative cap.
+
+Checks:
+
+- representative rational allocation witnesses replay over the finite sample;
+- shares cannot total both `1` and `5/4`;
+- shelter and clinic minimums cannot be violated;
+- the administrative cap cannot be violated;
+- implementation agrees with the logical model on bounded rational inputs.
+
+This pack exercises exact rational replay, QF_LRA/Farkas evidence, and
+allocation-style policy checks.
 
 ## Validation Checks
 

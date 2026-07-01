@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "pack_id": "grant_allocation_v0",
+  "parameters": {
+    "total_share": "1",
+    "shelter_minimum": "1/2",
+    "clinic_minimum": "1/4",
+    "admin_cap": "1/4"
+  },
+  "sample_domain": {
+    "shares": ["0", "1/4", "1/2", "3/4", "1"]
+  },
+  "witnesses": [
+    {
+      "id": "floor_split_compliant",
+      "facts": {
+        "shelter_share": "1/2",
+        "clinic_share": "1/4",
+        "admin_share": "1/4"
+      },
+      "expected_compliant": true,
+      "source_citations": ["Example Rule 5(a)", "Example Rule 5(b)", "Example Rule 5(c)", "Example Rule 5(d)", "Example Rule 5(e)"],
+      "explanation": "The shares sum to 1 while shelter and clinic sit at their floors and administration sits at its cap."
+    },
+    {
+      "id": "clinic_heavy_compliant",
+      "facts": {
+        "shelter_share": "3/4",
+        "clinic_share": "1/4",
+        "admin_share": "0"
+      },
+      "expected_compliant": true,
+      "source_citations": ["Example Rule 5(a)", "Example Rule 5(b)", "Example Rule 5(c)", "Example Rule 5(d)", "Example Rule 5(e)"],
+      "explanation": "The shares sum to 1, shelter exceeds its floor, clinic meets its floor, and administration is zero."
+    },
+    {
+      "id": "low_shelter_denied",
+      "facts": {
+        "shelter_share": "1/4",
+        "clinic_share": "1/2",
+        "admin_share": "1/4"
+      },
+      "expected_compliant": false,
+      "source_citations": ["Example Rule 5(a)", "Example Rule 5(b)"],
+      "explanation": "The budget balances, but the shelter share is below the required one-half floor."
+    },
+    {
+      "id": "over_admin_denied",
+      "facts": {
+        "shelter_share": "1/2",
+        "clinic_share": "0",
+        "admin_share": "1/2"
+      },
+      "expected_compliant": false,
+      "source_citations": ["Example Rule 5(c)", "Example Rule 5(d)"],
+      "explanation": "The budget balances, but clinic is below its floor and administration exceeds the one-quarter cap."
+    },
+    {
+      "id": "over_budget_denied",
+      "facts": {
+        "shelter_share": "1/2",
+        "clinic_share": "1/2",
+        "admin_share": "1/4"
+      },
+      "expected_compliant": false,
+      "source_citations": ["Example Rule 5(a)"],
+      "explanation": "The shares sum to 5/4 rather than exactly 1."
+    }
+  ],
+  "checks": [
+    {
+      "id": "allocation_witnesses",
+      "expected_result": "sat",
+      "validation": "witness_replay",
+      "witnesses": ["floor_split_compliant", "clinic_heavy_compliant", "low_shelter_denied", "over_admin_denied", "over_budget_denied"],
+      "proof_status": "replayed",
+      "source_citations": ["Example Rule 5(a)", "Example Rule 5(b)", "Example Rule 5(c)", "Example Rule 5(d)", "Example Rule 5(e)"]
+    },
+    {
+      "id": "total_budget_respected",
+      "expected_result": "unsat",
+      "validation": "qf_lra_farkas_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 5(a)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/grant-allocation-v0/smt2/total-budget-respected-farkas-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples grant_allocation_total_budget_respected_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "shelter_minimum_respected",
+      "expected_result": "unsat",
+      "validation": "qf_lra_farkas_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 5(b)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/grant-allocation-v0/smt2/shelter-minimum-respected-farkas-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples grant_allocation_shelter_minimum_respected_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "clinic_minimum_respected",
+      "expected_result": "unsat",
+      "validation": "qf_lra_farkas_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 5(c)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/grant-allocation-v0/smt2/clinic-minimum-respected-farkas-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples grant_allocation_clinic_minimum_respected_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "admin_cap_respected",
+      "expected_result": "unsat",
+      "validation": "qf_lra_farkas_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 5(d)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/grant-allocation-v0/smt2/admin-cap-respected-farkas-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples grant_allocation_admin_cap_respected_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      }
+    },
+    {
+      "id": "implementation_equivalence",
+      "expected_result": "unsat",
+      "validation": "qf_lra_farkas_solver_regression",
+      "proof_status": "checked",
+      "source_citations": ["Example Rule 5(a)", "Example Rule 5(b)", "Example Rule 5(c)", "Example Rule 5(d)", "Example Rule 5(e)", "Example Rule 5(f)"],
+      "data": {
+        "smt2_artifact": "docs/rules-as-code/examples/grant-allocation-v0/smt2/implementation-equivalence-farkas-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples grant_allocation_implementation_equivalence_emits_checked_evidence",
+        "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
+      },
+      "notes": "The SMT-LIB mismatch query compares two identical formalizations of the bounded rational allocation rule; the validator replays the finite rational sample from the JSON rule model."
+    }
+  ]
+}

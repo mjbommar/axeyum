@@ -799,11 +799,16 @@ exclusions, bid caps, encoded submission deadlines, small-business
 bonus-threshold witnesses, score monotonicity, and checked Bool/QF_LIA fixtures
 for debarment, late submission, bid-cap, monotonicity, and bounded
 implementation-equivalence obligations.
+`grant-allocation-v0` now adds the fifth rules/law pack: exact rational
+allocation shares, budget balance, shelter/clinic minimum floors,
+administrative caps, finite allocation witnesses, and checked QF_LRA/Farkas
+fixtures for total-budget, minimum-share, cap, and bounded
+implementation-equivalence obligations.
 The rules/law lane now also has a generated query dashboard that reads the
-four committed rule-pack JSON files, exposes 882 bounded sample rows, and
-links deterministic generated query-row JSON for 1,626 coverage, equivalence,
-threshold, cap, deadline, version-delta, and monotonicity rows without promoting the
-packs to legal or solver benchmarks.
+five committed rule-pack JSON files, exposes 1,007 bounded sample rows, and
+links deterministic generated query-row JSON for 1,766 coverage, equivalence,
+threshold, cap, deadline, version-delta, monotonicity, and rational-allocation
+rows without promoting the packs to legal or solver benchmarks.
 `RULES-LAW-QUERIES.md` and `scripts/query-rules-as-code.py` now make that
 rules/law boundary queryable by pack, proof status, generated family, and
 bounded row; `just rules-as-code` smoke-checks the procurement pack, checked
@@ -813,7 +818,7 @@ concepts and proof routes, and the rules-as-code smoke gate also checks
 monotonicity checks, adjacent generated families, and quality-monotonicity
 rows.
 `docs/learn/rules-law-trust-boundary.md` now gives learners the corresponding
-source-rule -> model -> replay/check -> horizon walkthrough for the four
+source-rule -> model -> replay/check -> horizon walkthrough for the five
 current rule packs.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, finite tensor products, and finite

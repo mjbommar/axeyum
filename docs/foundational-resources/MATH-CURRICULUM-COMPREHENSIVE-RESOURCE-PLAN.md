@@ -510,11 +510,17 @@ Prefer one row, page, route upgrade, or query surface per commit.
     monotonicity, and Bool/QF_LIA proof fixtures through the current JSON
     boundary.
 12. Landed: add
+    [`grant-allocation-v0`](../rules-as-code/examples/grant-allocation-v0/)
+    as the rational-allocation rules/law example, reusing exact rational
+    shares, budget balance, minimum-share floors, administrative caps, finite
+    replay, and QF_LRA/Farkas checked fixtures through the current JSON
+    boundary.
+13. Landed: add
     [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) and
     `scripts/query-rules-as-code.py` so downstream consumers can query rule
     packs, checked obligations, generated query families, and bounded generated
     rows without parsing JSON by hand.
-13. Landed: add
+14. Landed: add
     [`RULES-LAW-PATTERN-MATRIX.md`](RULES-LAW-PATTERN-MATRIX.md) so the current
     rule-pattern surface maps back to math concept rows, proof routes, pack
     checks, generated query families, and copyable query commands.

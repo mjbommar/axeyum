@@ -418,8 +418,12 @@ Pick one item per commit unless the change is purely navigational.
     [`rules-law-trust-boundary.md`](../learn/rules-law-trust-boundary.md) as
     the learner-facing rules/law page that walks from human source rule to
     formal model, replayed witness, checked obligation, and explicit
-    legal/theorem horizon for the four current packs.
-15. Add the next rules/law example only if it exercises a distinct current
+    legal/theorem horizon for the current packs.
+15. Landed: add `grant-allocation-v0` as the rational-allocation rules/law
+    example, reusing exact shares, budget balance, minimum-share floors,
+    administrative caps, finite rational replay, and QF_LRA/Farkas checked
+    fixtures through the current JSON boundary.
+16. Add the next rules/law example only if it exercises a distinct current
     math proof shape or a repeated consumer need.
 
 ## Maintenance Commands

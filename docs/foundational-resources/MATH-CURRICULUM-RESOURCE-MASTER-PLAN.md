@@ -373,20 +373,25 @@ Use one row per commit unless the change is purely navigational.
    encoded deadlines, bonus thresholds, quality-score monotonicity, and
    Bool/QF_LIA proof fixtures through the current JSON boundary.
 12. Landed: add
+   [`grant-allocation-v0`](../rules-as-code/examples/grant-allocation-v0/)
+   as a rules/law pack that reuses exact rational allocation shares, budget
+   balance, shelter/clinic floors, administrative caps, and QF_LRA/Farkas proof
+   fixtures through the current JSON boundary.
+13. Landed: add
    [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) and
    `scripts/query-rules-as-code.py` as the rules/law consumer-query surface,
    with smoke-checked lookup of packs, checked obligations, generated query
    families, and bounded rows through `just rules-as-code`.
-13. Landed: add
+14. Landed: add
    [`RULES-LAW-PATTERN-MATRIX.md`](RULES-LAW-PATTERN-MATRIX.md) so finite
    predicates, role/tenant relations, thresholds, monotonicity, version
    transitions, precedence, and implementation-equivalence rule patterns map
    back to math concepts, proof routes, current packs, and copyable queries.
-14. Landed: add
+15. Landed: add
    [`rules-law-trust-boundary.md`](../learn/rules-law-trust-boundary.md) so
    learners can trace the rules/law lane from source rule to formal model,
    replayed witness, checked obligation, and explicit horizon.
-15. Landed: add functional-analysis/operator consumer-query coverage through
+16. Landed: add functional-analysis/operator consumer-query coverage through
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
    `scripts/check-foundational-resources.sh`, making finite operator bounds,
    inner-product positivity and projection orthogonality, Chebyshev grids,
@@ -511,18 +516,22 @@ Use one row per commit unless the change is purely navigational.
 26. Landed: add `procurement-scoring-v0` as the next rules/law crosswalk
     example, reusing finite predicates, bid caps, encoded dates, bonus
     thresholds, monotonicity, and checked Bool/QF_LIA fixtures.
-27. Landed: add `RULES-LAW-QUERIES.md` and
+27. Landed: add `grant-allocation-v0` as the rational-allocation rules/law
+    crosswalk example, reusing exact shares, budget balance, minimum-share
+    floors, administrative caps, finite replay, and checked QF_LRA/Farkas
+    fixtures.
+28. Landed: add `RULES-LAW-QUERIES.md` and
     `scripts/query-rules-as-code.py` so the rules/law transfer lane has a
     smoke-checked consumer query surface before any schema or repo split.
-28. Landed: add `RULES-LAW-PATTERN-MATRIX.md` so the current rule-pattern
+29. Landed: add `RULES-LAW-PATTERN-MATRIX.md` so the current rule-pattern
     surface is mapped to math concept rows and proof routes before a new
     rule ontology or rule-pack family is introduced.
-29. Landed: add `docs/learn/rules-law-trust-boundary.md` as the educational
+30. Landed: add `docs/learn/rules-law-trust-boundary.md` as the educational
     trust-boundary page for the current rules/law packs.
-30. Add future rules/law crosswalk examples only by reusing existing
+31. Add future rules/law crosswalk examples only by reusing existing
     math-resource patterns; do not create a separate rule ontology until the
     current JSON boundary is exercised by more consumers.
-31. Landed: add `bridge_finite_chain_homology_replay` so finite
+32. Landed: add `bridge_finite_chain_homology_replay` so finite
     simplicial-complex closure, boundary replay, boundary-squared-zero,
     Betti-rank replay, and the checked bad-boundary coefficient row are
     discoverable as a shared topology/linear-algebra bridge without promoting

@@ -618,12 +618,18 @@ Pick one row per commit unless the change is purely navigational.
     rules validator replays the bounded procurement sample and generated query
     rows.
 68. Landed: add
+    [`grant-allocation-v0`](../rules-as-code/examples/grant-allocation-v0/)
+    as the rational-allocation rules/law pack. The pack reuses exact shares,
+    budget balance, minimum-share floors, administrative caps, bounded
+    rational replay, and checked QF_LRA/Farkas proof fixtures while the rules
+    validator replays bounded allocation and balanced-budget generated rows.
+69. Landed: add
     [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) plus
     `scripts/query-rules-as-code.py` as the rules/law consumer-query surface.
     The standard `just rules-as-code` gate now smoke-checks summary counts,
     procurement pack lookup, checked obligation lookup, generated
     quality-score family lookup, and bounded late-submission generated rows.
-69. Landed: add
+70. Landed: add
     [`RULES-LAW-PATTERN-MATRIX.md`](RULES-LAW-PATTERN-MATRIX.md) as the
     rules/law pattern matrix. The matrix maps finite predicates, exclusions,
     role/tenant relations, thresholds, caps, deadlines, monotonicity, version
@@ -631,7 +637,7 @@ Pick one row per commit unless the change is purely navigational.
     back to math concept rows, proof routes, current rule packs, generated
     query families, and smoke-checked query commands without adding a premature
     rule ontology.
-70. Landed: add
+71. Landed: add
     [`rules-law-trust-boundary.md`](../learn/rules-law-trust-boundary.md) as
     the learner-facing trust-boundary walkthrough for rules/law resources. The
     page explains how to read current packs from source rule to formal model,

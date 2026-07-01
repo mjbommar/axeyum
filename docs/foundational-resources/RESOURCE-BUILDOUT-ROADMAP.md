@@ -1131,7 +1131,8 @@ Detailed mapping:
 shapes, source math packs, Axeyum fragments, proof routes, and the current
 `benefit-eligibility-v0`, `authorization-policy-v0`, and
 `tax-benefit-arithmetic-v0` mappings, plus the
-`procurement-scoring-v0` exclusion/deadline/bid-cap/bonus mapping.
+`procurement-scoring-v0` exclusion/deadline/bid-cap/bonus mapping and the
+`grant-allocation-v0` rational-share/budget/cap mapping.
 
 Next work:
 
@@ -1139,10 +1140,11 @@ Next work:
   `tax-benefit-arithmetic-v0` Bool/QF_LIA proof harnesses, plus the
   `procurement-scoring-v0` debarment/deadline/bid-cap/monotonicity fixtures, as
   reference patterns for generated multi-row coverage/equivalence and
-  threshold/cap/deadline queries.
+  threshold/cap/deadline queries. Use `grant-allocation-v0` as the QF_LRA/Farkas
+  reference for rational allocation, exact shares, and budget-balance queries.
   Status: the deterministic generated query-row JSON under
   [`../rules-as-code/generated/queries/`](../rules-as-code/generated/queries/)
-  now materializes 1,626 replayed rows from the four current rule packs, and
+  now materializes 1,766 replayed rows from the five current rule packs, and
   the generated
   [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
   exposes the bounded row counts, generated row counts, query artifacts, and
@@ -1212,14 +1214,19 @@ Pick one item per commit unless the change is purely navigational.
    source-linked Bool/QF_LIA proof fixtures for debarment exclusion, late
    submission, bid-cap enforcement, score monotonicity, and bounded
    implementation equivalence. The generated query-row JSON now brings the
-   rules/law surface to 1,626 replayed rows across four packs.
-13. Landed: add
+   rules/law surface to 1,626 replayed rows across four packs for that increment.
+13. Landed: add `grant-allocation-v0` as the fifth rules/law pack, with
+   source-linked QF_LRA/Farkas proof fixtures for budget balance, shelter and
+   clinic minimum shares, administrative caps, and bounded implementation
+   equivalence. The generated query-row JSON now brings the rules/law surface
+   to 1,766 replayed rows across five packs.
+14. Landed: add
    [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) plus
    `scripts/query-rules-as-code.py` so downstream consumers can query rule
    packs, checked obligations, generated query families, and bounded generated
    rows without parsing JSON by hand. `just rules-as-code` smoke-checks the
    current procurement queries.
-14. Landed: add
+15. Landed: add
    [`RULES-LAW-PATTERN-MATRIX.md`](RULES-LAW-PATTERN-MATRIX.md) so current
    rules/law patterns map back to math concept rows, proof routes, pack
    checks, generated query families, and copyable query commands before any
@@ -1676,19 +1683,27 @@ Pick one item per commit unless the change is purely navigational.
     as a rules/law pack that reuses finite predicate exclusions, bid caps,
     encoded deadlines, small-business bonus thresholds, score monotonicity, and
     Bool/QF_LIA checked fixtures. The generated rules query surface now reports
-    882 bounded sample rows and 1,626 generated query rows across four packs.
+    882 bounded sample rows and 1,626 generated query rows across four packs
+    for that increment.
 77c. Landed: add
+    [`grant-allocation-v0`](../rules-as-code/examples/grant-allocation-v0/)
+    as a rational-allocation rules/law pack that reuses exact shares, budget
+    balance, minimum-share floors, administrative caps, finite replay, and
+    QF_LRA/Farkas checked fixtures. The generated rules query surface now
+    reports 1,007 bounded sample rows and 1,766 generated query rows across
+    five packs.
+77d. Landed: add
     [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) plus
     `scripts/query-rules-as-code.py` as the rules/law consumer query surface,
     with `just rules-as-code` smoke-checking summary counts, procurement pack
     lookup, checked obligations, generated quality-score families, and late
     generated rows.
-77d. Landed: add
+77e. Landed: add
     [`RULES-LAW-PATTERN-MATRIX.md`](RULES-LAW-PATTERN-MATRIX.md) as the
     rules/law pattern matrix, mapping the current predicate, relation,
     threshold, monotonicity, version, precedence, and implementation-equivalence
     patterns back to math concepts, proof routes, and smoke-checked queries.
-77e. Landed: add
+77f. Landed: add
     [`rules-law-trust-boundary.md`](../learn/rules-law-trust-boundary.md) as
     the learner-facing trust-boundary page for reading current rules/law packs
     without treating them as legal advice or solver benchmarks.

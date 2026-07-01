@@ -308,6 +308,9 @@ Build sequence:
    predicate exclusions, bid-cap and deadline arithmetic, bonus-threshold
    witnesses, score monotonicity, and Bool/QF_LIA checked fixtures through the
    current JSON boundary.
+   `grant-allocation-v0` now adds the rational-allocation slice with exact
+   share replay, budget balance, shelter/clinic floors, administrative caps,
+   and QF_LRA/Farkas checked fixtures through the same JSON boundary.
    `authorization-policy-v0` now adds the access-control slice with checked
    Bool/QF_LIA fixtures for tenant isolation, explicit deny precedence, admin
    tenant guarding, and bounded implementation equivalence.
@@ -522,7 +525,12 @@ Build sequence:
 49. [`rules-law-trust-boundary.md`](../learn/rules-law-trust-boundary.md) now
     adds the learner-facing rules/law trust-boundary page, covering source
     rules, formal models, replayed witnesses, checked obligations, and
-    legal/theorem horizons for the four current packs.
+    legal/theorem horizons for the current packs.
+50. [`grant-allocation-v0`](../rules-as-code/examples/grant-allocation-v0/)
+    now adds the rational-allocation rules/law slice, with source-linked
+    QF_LRA/Farkas fixtures for budget balance, shelter and clinic minimum
+    shares, administrative caps, and bounded implementation equivalence plus
+    generated bounded allocation and balanced-budget query rows.
 48. Functional-analysis/operator field-readiness consumer queries now land in
     [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
     `scripts/check-foundational-resources.sh`, covering the Farkas field

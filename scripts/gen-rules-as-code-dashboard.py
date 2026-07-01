@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,16 @@ def product(values: list[int]) -> int:
     for value in values:
         result *= value
     return result
+
+
+def parse_rational(value: Any) -> Fraction:
+    if isinstance(value, bool):
+        raise TypeError(f"rational value must not be a boolean: {value!r}")
+    if isinstance(value, int):
+        return Fraction(value, 1)
+    if not isinstance(value, str):
+        raise TypeError(f"rational value must be a string or integer: {value!r}")
+    return Fraction(value)
 
 
 def check_counts(expected: dict[str, Any]) -> Counter[str]:
@@ -100,6 +111,21 @@ def procurement_award(facts: dict[str, Any], params: dict[str, Any]) -> bool:
         and facts["received_date"] <= params["deadline"]
         and facts["bid_amount"] <= params["max_bid"]
         and adjusted_score >= params["award_threshold"]
+    )
+
+
+def grant_allocation_compliant(facts: dict[str, Any], params: dict[str, Any]) -> bool:
+    shelter = parse_rational(facts["shelter_share"])
+    clinic = parse_rational(facts["clinic_share"])
+    admin = parse_rational(facts["admin_share"])
+    return (
+        shelter + clinic + admin == parse_rational(params["total_share"])
+        and shelter >= parse_rational(params["shelter_minimum"])
+        and clinic >= parse_rational(params["clinic_minimum"])
+        and admin <= parse_rational(params["admin_cap"])
+        and shelter >= 0
+        and clinic >= 0
+        and admin >= 0
     )
 
 
@@ -202,6 +228,31 @@ def procurement_metrics(expected: dict[str, Any]) -> tuple[int, list[tuple[str, 
         ("checked Bool/QF_LIA fixtures", check_counts(expected)["checked"]),
     ]
     return rows, families, "Generate debarment, deadline, bid-cap, bonus-threshold, and score-monotonicity fixtures across the bounded procurement domain."
+
+
+def grant_allocation_metrics(expected: dict[str, Any]) -> tuple[int, list[tuple[str, int]], str]:
+    sample = expected["sample_domain"]
+    shares = sample["shares"]
+    rows = len(shares) ** 3
+    total_share = parse_rational(expected["parameters"]["total_share"])
+    balanced_rows = 0
+    for shelter in shares:
+        for clinic in shares:
+            for admin in shares:
+                if (
+                    parse_rational(shelter)
+                    + parse_rational(clinic)
+                    + parse_rational(admin)
+                    == total_share
+                ):
+                    balanced_rows += 1
+    families = [
+        ("bounded rational allocation rows", rows),
+        ("balanced-budget allocation rows", balanced_rows),
+        ("allocation replay witnesses", witness_count(expected, {"allocation_witnesses"})),
+        ("checked QF_LRA/Farkas fixtures", check_counts(expected)["checked"]),
+    ]
+    return rows, families, "Generate rational allocation coverage and balanced-budget query rows across the bounded share domain."
 
 
 def generic_metrics(expected: dict[str, Any]) -> tuple[int, list[tuple[str, int]], str]:
@@ -502,11 +553,69 @@ def procurement_query_families(expected: dict[str, Any]) -> list[dict[str, Any]]
     ]
 
 
+def grant_allocation_query_families(expected: dict[str, Any]) -> list[dict[str, Any]]:
+    params = expected["parameters"]
+    sample = expected["sample_domain"]
+    shares = sample["shares"]
+    allocation_rows = []
+    balanced_rows = []
+    total_share = parse_rational(params["total_share"])
+    for shelter in shares:
+        for clinic in shares:
+            for admin in shares:
+                facts = {
+                    "shelter_share": shelter,
+                    "clinic_share": clinic,
+                    "admin_share": admin,
+                }
+                compliant = grant_allocation_compliant(facts, params)
+                allocation_rows.append(
+                    {
+                        "id": f"allocation-{len(allocation_rows):04d}",
+                        "facts": facts,
+                        "expected_compliant": compliant,
+                    }
+                )
+                if (
+                    parse_rational(shelter)
+                    + parse_rational(clinic)
+                    + parse_rational(admin)
+                    == total_share
+                ):
+                    balanced_rows.append(
+                        {
+                            "id": f"balanced-allocation-{len(balanced_rows):04d}",
+                            "facts": facts,
+                            "shelter_floor_holds": parse_rational(shelter)
+                            >= parse_rational(params["shelter_minimum"]),
+                            "clinic_floor_holds": parse_rational(clinic)
+                            >= parse_rational(params["clinic_minimum"]),
+                            "admin_cap_holds": parse_rational(admin)
+                            <= parse_rational(params["admin_cap"]),
+                            "expected_compliant": compliant,
+                        }
+                    )
+
+    return [
+        {
+            "id": "bounded_allocations",
+            "description": "Complete bounded rational allocation triples with replayed compliance output.",
+            "rows": allocation_rows,
+        },
+        {
+            "id": "balanced_budget_allocations",
+            "description": "Balanced-budget allocation triples, exposing floor and cap outcomes separately.",
+            "rows": balanced_rows,
+        },
+    ]
+
+
 METRIC_DISPATCH = {
     "benefit_eligibility_v0": benefit_metrics,
     "authorization_policy_v0": authorization_metrics,
     "tax_benefit_arithmetic_v0": tax_benefit_metrics,
     "procurement_scoring_v0": procurement_metrics,
+    "grant_allocation_v0": grant_allocation_metrics,
 }
 
 QUERY_DISPATCH = {
@@ -514,6 +623,7 @@ QUERY_DISPATCH = {
     "authorization_policy_v0": authorization_query_families,
     "tax_benefit_arithmetic_v0": tax_benefit_query_families,
     "procurement_scoring_v0": procurement_query_families,
+    "grant_allocation_v0": grant_allocation_query_families,
 }
 
 
@@ -625,6 +735,7 @@ def render(packs: list[dict[str, Any]]) -> str:
         "planning surface. It is not a legal corpus and not a solver-performance",
         "benchmark; it records which finite rule domains can be expanded into",
         "generated coverage, equivalence, threshold, cap, or monotonicity checks.",
+        "It now also includes the rational-allocation rows that exercise the QF_LRA/Farkas route.",
         "",
         "## Summary",
         "",

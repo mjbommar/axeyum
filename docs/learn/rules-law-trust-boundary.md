@@ -22,14 +22,14 @@ python3 scripts/query-rules-as-code.py summary
 The current result is:
 
 ```text
-rule_packs=4
-bounded_sample_rows=882
-generated_query_rows=1626
-check_results={'sat': 6, 'unsat': 17}
-proof_statuses={'checked': 17, 'replayed': 6}
+rule_packs=5
+bounded_sample_rows=1007
+generated_query_rows=1766
+check_results={'sat': 7, 'unsat': 22}
+proof_statuses={'checked': 22, 'replayed': 7}
 ```
 
-The four packs are deliberately small:
+The five packs are deliberately small:
 
 | Pack | What It Teaches | Trust Boundary |
 |---|---|---|
@@ -37,6 +37,7 @@ The four packs are deliberately small:
 | [authorization policy](../rules-as-code/examples/authorization-policy-v0/README.md) | roles, tenants, explicit deny, policy versions | version-delta witnesses replay; tenant isolation, deny precedence, admin guard, and equivalence obligations are checked |
 | [tax benefit arithmetic](../rules-as-code/examples/tax-benefit-arithmetic-v0/README.md) | caps, phase-outs, monotone integer formulas | threshold/date witnesses replay; nonnegativity, cap, phase-out monotonicity, and equivalence obligations are checked |
 | [procurement scoring](../rules-as-code/examples/procurement-scoring-v0/README.md) | exclusions, deadlines, bid caps, score monotonicity | bonus-threshold witnesses replay; exclusion, deadline, cap, score monotonicity, and equivalence obligations are checked |
+| [grant allocation](../rules-as-code/examples/grant-allocation-v0/README.md) | exact rational shares, budget balance, minimum floors, administrative caps | allocation witnesses replay; budget, floor, cap, and equivalence obligations are checked through QF_LRA/Farkas |
 
 The model and evidence boundary is recorded in three places:
 
@@ -99,9 +100,9 @@ Representative checked shapes:
 | uncovered complete fact pattern | benefit `coverage` | finite predicate totality |
 | forbidden actor/resource boundary | authorization `tenant_isolation` | relations/functions now; QF_UF/Alethe later for role maps |
 | deny-over-permit | authorization `explicit_deny_precedence` | finite orders and Boolean replay |
-| bad threshold or cap | tax `cap_respected`, procurement `bid_cap_respected` | QF_LIA now; QF_LRA/Farkas when rational allocation appears |
+| bad threshold or cap | tax `cap_respected`, procurement `bid_cap_respected`, grant `admin_cap_respected` | QF_LIA for integer caps; QF_LRA/Farkas for rational shares |
 | bad monotonicity | benefit income, tax phase-out, procurement quality score | exact arithmetic monotonicity |
-| model vs implementation mismatch | all four packs | bounded equivalence and executable replay |
+| model vs implementation mismatch | all five packs | bounded equivalence and executable replay |
 
 ## How To Read A Rule Pack
 
@@ -119,21 +120,22 @@ Then run:
 python3 scripts/gen-rules-as-code-dashboard.py
 python3 scripts/validate-rules-as-code.py
 python3 scripts/query-rules-as-code.py checks --text monotonicity --require-any
+python3 scripts/query-rules-as-code.py checks --pack grant_allocation_v0 --validation qf_lra_farkas_solver_regression --proof-status checked --require-any
 python3 scripts/query-rules-as-code.py families --text adjacent --require-any
 cargo test -p axeyum-solver --test rules_as_code_examples
 ```
 
 ## What Would Justify The Next Pack
 
-Do not add a fifth pack just to have five. Add one only if it exercises a
-distinct proof shape or repeated consumer need:
+Do not add another pack just to increase the count. Add one only if it
+exercises a distinct proof shape or repeated consumer need:
 
 | Needed Shape | Why It Would Be New | Likely Route |
 |---|---|---|
 | workflow reachability | policy state transitions and forbidden paths, not just scalar facts | Boolean CNF/LRAT or finite graph replay |
-| rational allocation | exact shares, rates, or LP-style caps beyond integer thresholds | QF_LRA/Farkas |
 | role/category equivalence | role maps, category quotients, or policy classification functions | QF_UF/Alethe |
 | pure Boolean coverage certificate | tiny coverage/consistency rows that should show proof-object anatomy | Boolean CNF/LRAT |
+| multi-period allocation | repeated rational budgets with carryover/state transitions | QF_LRA/Farkas plus finite transition replay |
 
 Until one of those appears, the right work is improving queries, validation,
 and explanations around the existing packs.

@@ -58,6 +58,21 @@ const PROCUREMENT_SCORING_SCORE_MONOTONICITY: &str = include_str!(
 const PROCUREMENT_SCORING_IMPLEMENTATION_EQUIVALENCE: &str = include_str!(
     "../../../docs/rules-as-code/examples/procurement-scoring-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2"
 );
+const GRANT_ALLOCATION_TOTAL_BUDGET: &str = include_str!(
+    "../../../docs/rules-as-code/examples/grant-allocation-v0/smt2/total-budget-respected-farkas-conflict.smt2"
+);
+const GRANT_ALLOCATION_SHELTER_MINIMUM: &str = include_str!(
+    "../../../docs/rules-as-code/examples/grant-allocation-v0/smt2/shelter-minimum-respected-farkas-conflict.smt2"
+);
+const GRANT_ALLOCATION_CLINIC_MINIMUM: &str = include_str!(
+    "../../../docs/rules-as-code/examples/grant-allocation-v0/smt2/clinic-minimum-respected-farkas-conflict.smt2"
+);
+const GRANT_ALLOCATION_ADMIN_CAP: &str = include_str!(
+    "../../../docs/rules-as-code/examples/grant-allocation-v0/smt2/admin-cap-respected-farkas-conflict.smt2"
+);
+const GRANT_ALLOCATION_IMPLEMENTATION_EQUIVALENCE: &str = include_str!(
+    "../../../docs/rules-as-code/examples/grant-allocation-v0/smt2/implementation-equivalence-farkas-conflict.smt2"
+);
 
 #[test]
 fn benefit_eligibility_consistency_emits_checked_evidence() {
@@ -192,6 +207,46 @@ fn procurement_scoring_implementation_equivalence_emits_checked_evidence() {
     assert_rule_unsat_evidence(
         "procurement-scoring-v0 implementation equivalence",
         PROCUREMENT_SCORING_IMPLEMENTATION_EQUIVALENCE,
+    );
+}
+
+#[test]
+fn grant_allocation_total_budget_respected_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "grant-allocation-v0 total budget respected",
+        GRANT_ALLOCATION_TOTAL_BUDGET,
+    );
+}
+
+#[test]
+fn grant_allocation_shelter_minimum_respected_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "grant-allocation-v0 shelter minimum respected",
+        GRANT_ALLOCATION_SHELTER_MINIMUM,
+    );
+}
+
+#[test]
+fn grant_allocation_clinic_minimum_respected_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "grant-allocation-v0 clinic minimum respected",
+        GRANT_ALLOCATION_CLINIC_MINIMUM,
+    );
+}
+
+#[test]
+fn grant_allocation_admin_cap_respected_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "grant-allocation-v0 admin cap respected",
+        GRANT_ALLOCATION_ADMIN_CAP,
+    );
+}
+
+#[test]
+fn grant_allocation_implementation_equivalence_emits_checked_evidence() {
+    assert_rule_unsat_evidence(
+        "grant-allocation-v0 implementation equivalence",
+        GRANT_ALLOCATION_IMPLEMENTATION_EQUIVALENCE,
     );
 }
 

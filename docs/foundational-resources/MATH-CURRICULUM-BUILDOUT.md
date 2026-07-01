@@ -2219,7 +2219,7 @@ Recurring fixed-width finite algebra, residue, and one-bit graph encodings now
 also have `family_fixed_width_bv_drat`, spanning finite fields, finite rings,
 graph coloring, and bounded number-theory residue search/bad-witness packs
 backed by the shared `math_resource_bv_routes` regression.
-The rules/law transfer lane now has four concrete packs beyond the crosswalk:
+The rules/law transfer lane now has five concrete packs beyond the crosswalk:
 `authorization-policy-v0` reuses finite predicates, tenant/resource relations,
 explicit deny precedence, bounded version-delta witnesses, and checked
 Bool/QF_LIA evidence for tenant isolation, deny precedence, admin tenant
@@ -2232,14 +2232,18 @@ piecewise finite sample; `procurement-scoring-v0` reuses finite predicate
 exclusions, bid caps, deadline arithmetic, small-business bonus-threshold
 witnesses, score monotonicity, and checked Bool/QF_LIA evidence for debarment,
 late submission, bid-cap, score-monotonicity, and bounded
+implementation-equivalence obligations; `grant-allocation-v0` reuses exact
+rational shares, budget balance, shelter/clinic minimum floors,
+administrative caps, finite allocation witnesses, and checked QF_LRA/Farkas
+evidence for total-budget, minimum-share, cap, and bounded
 implementation-equivalence obligations.
 The rules/law lane now also has a generated
 [`rules-query-dashboard.md`](../rules-as-code/generated/rules-query-dashboard.md)
-that reads the committed rule-pack JSON and exposes 882 bounded sample rows,
+that reads the committed rule-pack JSON and exposes 1,007 bounded sample rows,
 links deterministic generated query-row JSON under
-[`generated/queries/`](../rules-as-code/generated/queries/), and replays 1,626
-coverage, equivalence, threshold, cap, deadline, version-delta, and monotonicity rows
-through the rules validator.
+[`generated/queries/`](../rules-as-code/generated/queries/), and replays 1,766
+coverage, equivalence, threshold, cap, deadline, version-delta, monotonicity,
+and rational-allocation rows through the rules validator.
 [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) now exposes the same boundary
 through copyable `scripts/query-rules-as-code.py` commands for summary counts,
 pack lookup, checked obligations, generated query families, and bounded row

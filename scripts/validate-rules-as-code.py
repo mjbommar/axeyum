@@ -7,6 +7,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -63,6 +64,16 @@ def require_bool(context: str, value: Any) -> bool:
     return value
 
 
+def require_rational(context: str, value: Any) -> Fraction:
+    if isinstance(value, bool):
+        fail(f"{context} must not be a boolean")
+    if isinstance(value, int):
+        return Fraction(value, 1)
+    if not isinstance(value, str) or not re.fullmatch(r"-?\d+(?:/[1-9]\d*)?", value):
+        fail(f"{context} must be an integer or rational string")
+    return Fraction(value)
+
+
 def check_repo_path(context: str, value: Any) -> str:
     path_text = require_string(context, value)
     path = ROOT / path_text
@@ -105,6 +116,13 @@ class ProcurementFacts:
     small_business: bool
     debarred: bool
     received_date: str
+
+
+@dataclass(frozen=True)
+class GrantAllocationFacts:
+    shelter_share: Fraction
+    clinic_share: Fraction
+    admin_share: Fraction
 
 
 def benefit_facts_from_json(context: str, value: Any) -> BenefitFacts:
@@ -192,6 +210,17 @@ def procurement_facts_from_json(context: str, value: Any) -> ProcurementFacts:
     )
 
 
+def grant_allocation_facts_from_json(context: str, value: Any) -> GrantAllocationFacts:
+    if not isinstance(value, dict):
+        fail(f"{context} must be an object")
+    require_keys(context, value, {"shelter_share", "clinic_share", "admin_share"})
+    return GrantAllocationFacts(
+        shelter_share=require_rational(f"{context}.shelter_share", value["shelter_share"]),
+        clinic_share=require_rational(f"{context}.clinic_share", value["clinic_share"]),
+        admin_share=require_rational(f"{context}.admin_share", value["admin_share"]),
+    )
+
+
 def standard_threshold(date: str, params: dict[str, Any]) -> int:
     return (
         params["standard_threshold_before"]
@@ -271,6 +300,23 @@ def procurement_award(facts: ProcurementFacts, params: dict[str, Any]) -> bool:
     )
 
 
+def grant_allocation_compliant(
+    facts: GrantAllocationFacts, params: dict[str, Any]
+) -> bool:
+    return (
+        facts.shelter_share + facts.clinic_share + facts.admin_share
+        == require_rational("parameters.total_share", params["total_share"])
+        and facts.shelter_share
+        >= require_rational("parameters.shelter_minimum", params["shelter_minimum"])
+        and facts.clinic_share
+        >= require_rational("parameters.clinic_minimum", params["clinic_minimum"])
+        and facts.admin_share <= require_rational("parameters.admin_cap", params["admin_cap"])
+        and facts.shelter_share >= 0
+        and facts.clinic_share >= 0
+        and facts.admin_share >= 0
+    )
+
+
 def validate_metadata(pack_dir: Path, metadata: dict[str, Any]) -> None:
     require_keys(
         "metadata",
@@ -337,6 +383,8 @@ def validate_expected(pack_dir: Path, metadata: dict[str, Any], expected: dict[s
         witness_ids = validate_tax_benefit_expected(expected, citations)
     elif pack_id == "procurement_scoring_v0":
         witness_ids = validate_procurement_expected(expected, citations)
+    elif pack_id == "grant_allocation_v0":
+        witness_ids = validate_grant_allocation_expected(expected, citations)
     else:
         fail(f"unsupported rules-as-code pack id {pack_id}")
 
@@ -550,6 +598,46 @@ def validate_procurement_expected(
     return witness_ids
 
 
+def validate_grant_allocation_expected(
+    expected: dict[str, Any], citations: set[str]
+) -> set[str]:
+    params = expected["parameters"]
+    require_keys(
+        "parameters",
+        params,
+        {"total_share", "shelter_minimum", "clinic_minimum", "admin_cap"},
+    )
+    for key in ("total_share", "shelter_minimum", "clinic_minimum", "admin_cap"):
+        value = require_rational(f"parameters.{key}", params[key])
+        if value < 0:
+            fail(f"parameters.{key} must be non-negative")
+
+    witness_ids: set[str] = set()
+    for index, witness in enumerate(expected["witnesses"]):
+        require_keys(
+            f"witnesses[{index}]",
+            witness,
+            {"id", "facts", "expected_compliant", "source_citations", "explanation"},
+        )
+        witness_id = witness["id"]
+        if witness_id in witness_ids:
+            fail(f"duplicate witness id {witness_id}")
+        witness_ids.add(witness_id)
+        expected_compliant = require_bool(
+            f"{witness_id}.expected_compliant", witness["expected_compliant"]
+        )
+        facts = grant_allocation_facts_from_json(f"{witness_id}.facts", witness["facts"])
+        actual = grant_allocation_compliant(facts, params)
+        if actual != expected_compliant:
+            fail(
+                f"{witness_id} replay mismatch: expected {expected_compliant}, got {actual}"
+            )
+        validate_citations(witness_id, witness["source_citations"], citations)
+
+    validate_grant_allocation_finite_sample(expected["sample_domain"], params)
+    return witness_ids
+
+
 def validate_citations(context: str, labels: Any, citations: set[str]) -> None:
     if not isinstance(labels, list):
         fail(f"{context}.source_citations must be a list")
@@ -562,8 +650,14 @@ def validate_solver_fixture(pack_dir: Path, check: dict[str, Any]) -> None:
     check_id = check["id"]
     if check["expected_result"] != "unsat":
         fail(f"{check_id} checked solver fixture must be unsat")
-    if check["validation"] != "bool_qf_lia_solver_regression":
-        fail(f"{check_id} must use bool_qf_lia_solver_regression validation")
+    if check["validation"] not in {
+        "bool_qf_lia_solver_regression",
+        "qf_lra_farkas_solver_regression",
+    }:
+        fail(
+            f"{check_id} must use bool_qf_lia_solver_regression "
+            "or qf_lra_farkas_solver_regression validation"
+        )
     data = check.get("data")
     if not isinstance(data, dict):
         fail(f"{check_id} checked solver fixture must include data")
@@ -790,6 +884,39 @@ def validate_procurement_finite_sample(
         fail("procurement finite sample was empty")
 
 
+def validate_grant_allocation_finite_sample(
+    sample_domain: dict[str, Any], params: dict[str, Any]
+) -> None:
+    require_keys("sample_domain", sample_domain, {"shares"})
+    shares = sample_domain["shares"]
+    if not isinstance(shares, list) or not shares:
+        fail("grant allocation sample_domain.shares must be a non-empty list")
+    parsed_shares = [require_rational("sample_domain.shares[]", share) for share in shares]
+    if sorted(parsed_shares) != parsed_shares:
+        fail("grant allocation sample_domain.shares must be sorted")
+    if any(share < 0 for share in parsed_shares):
+        fail("grant allocation sample_domain.shares must be non-negative")
+
+    checked = 0
+    compliant_count = 0
+    noncompliant_count = 0
+    for shelter in parsed_shares:
+        for clinic in parsed_shares:
+            for admin in parsed_shares:
+                facts = GrantAllocationFacts(shelter, clinic, admin)
+                compliant = grant_allocation_compliant(facts, params)
+                if compliant:
+                    compliant_count += 1
+                else:
+                    noncompliant_count += 1
+                checked += 1
+
+    if checked == 0:
+        fail("grant allocation finite sample was empty")
+    if compliant_count == 0 or noncompliant_count == 0:
+        fail("grant allocation sample must contain compliant and noncompliant rows")
+
+
 def validate_generated_queries(
     pack_dir: Path, metadata: dict[str, Any], expected: dict[str, Any]
 ) -> None:
@@ -831,6 +958,8 @@ def validate_generated_queries(
         validate_tax_benefit_generated_queries(expected, families)
     elif pack_id == "procurement_scoring_v0":
         validate_procurement_generated_queries(expected, families)
+    elif pack_id == "grant_allocation_v0":
+        validate_grant_allocation_generated_queries(expected, families)
     else:
         fail(f"unsupported generated query pack id {pack_id}")
 
@@ -1255,6 +1384,93 @@ def validate_procurement_generated_queries(
             fail(f"generated procurement monotonicity row {index} has wrong holds flag")
         if not holds:
             fail(f"generated procurement monotonicity row {index} violates monotonicity")
+
+
+def validate_grant_allocation_generated_queries(
+    expected: dict[str, Any], families: dict[str, dict[str, Any]]
+) -> None:
+    require_exact_families(
+        "grant allocation",
+        families,
+        {"bounded_allocations", "balanced_budget_allocations"},
+    )
+    params = expected["parameters"]
+    sample = expected["sample_domain"]
+    shares = sample["shares"]
+    allocation_rows = families["bounded_allocations"]["rows"]
+    expected_allocations = len(shares) ** 3
+    if len(allocation_rows) != expected_allocations:
+        fail("grant allocation generated row count mismatch")
+    for index, row in enumerate(allocation_rows):
+        if row["id"] != f"allocation-{index:04d}":
+            fail("grant allocation generated row ids must be sequential")
+        facts = grant_allocation_facts_from_json(
+            f"generated grant allocation {index}.facts",
+            row.get("facts"),
+        )
+        expected_compliant = require_bool(
+            f"generated grant allocation {index}.expected_compliant",
+            row.get("expected_compliant"),
+        )
+        if grant_allocation_compliant(facts, params) != expected_compliant:
+            fail(f"generated grant allocation row {index} replay mismatch")
+
+    balanced_rows = families["balanced_budget_allocations"]["rows"]
+    total_share = require_rational("parameters.total_share", params["total_share"])
+    expected_balanced = 0
+    for shelter in shares:
+        for clinic in shares:
+            for admin in shares:
+                if (
+                    require_rational("sample_domain.shares[]", shelter)
+                    + require_rational("sample_domain.shares[]", clinic)
+                    + require_rational("sample_domain.shares[]", admin)
+                    == total_share
+                ):
+                    expected_balanced += 1
+    if len(balanced_rows) != expected_balanced:
+        fail("grant allocation balanced generated row count mismatch")
+    for index, row in enumerate(balanced_rows):
+        if row["id"] != f"balanced-allocation-{index:04d}":
+            fail("grant allocation balanced row ids must be sequential")
+        facts = grant_allocation_facts_from_json(
+            f"generated grant balanced {index}.facts",
+            row.get("facts"),
+        )
+        if facts.shelter_share + facts.clinic_share + facts.admin_share != total_share:
+            fail(f"generated grant balanced row {index} does not balance")
+        expected_compliant = require_bool(
+            f"generated grant balanced {index}.expected_compliant",
+            row.get("expected_compliant"),
+        )
+        if grant_allocation_compliant(facts, params) != expected_compliant:
+            fail(f"generated grant balanced row {index} replay mismatch")
+        shelter_floor = require_bool(
+            f"generated grant balanced {index}.shelter_floor_holds",
+            row.get("shelter_floor_holds"),
+        )
+        clinic_floor = require_bool(
+            f"generated grant balanced {index}.clinic_floor_holds",
+            row.get("clinic_floor_holds"),
+        )
+        admin_cap = require_bool(
+            f"generated grant balanced {index}.admin_cap_holds",
+            row.get("admin_cap_holds"),
+        )
+        if shelter_floor != (
+            facts.shelter_share
+            >= require_rational("parameters.shelter_minimum", params["shelter_minimum"])
+        ):
+            fail(f"generated grant balanced row {index} has wrong shelter floor flag")
+        if clinic_floor != (
+            facts.clinic_share
+            >= require_rational("parameters.clinic_minimum", params["clinic_minimum"])
+        ):
+            fail(f"generated grant balanced row {index} has wrong clinic floor flag")
+        if admin_cap != (
+            facts.admin_share <= require_rational("parameters.admin_cap", params["admin_cap"])
+        ):
+            fail(f"generated grant balanced row {index} has wrong admin cap flag")
 
 
 def validate_pack(pack_dir: Path) -> str:
