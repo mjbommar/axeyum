@@ -20,6 +20,7 @@ Reference reading: [`../references/z3-core.md`](../references/z3-core.md),
 | [P1.6](P1.6-theory-combination.md) | Theory combination | M | P1.4, P1.5 | th_eq bus, interface equalities (Nelson–Oppen) |
 | [P1.7](P1.7-pbls-engine.md) | PBLS local-search BV engine | L | — | portfolio for hard satisfiable QF_BV |
 | [P1.8](P1.8-strategy-tactics.md) | Strategy & tactics | M | — | combinators + probes + per-logic scripts |
+| [P1.9](P1.9-lra-simplex.md) | LRA feasibility: FM → exact-rational simplex | L | ADR-0015 | measured: FM budget caps QF_NRA/LRA + the sign-refutation pass; simplex dual = Farkas cert |
 
 ## Sequencing within the track
 
