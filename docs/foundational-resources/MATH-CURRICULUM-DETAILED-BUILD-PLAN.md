@@ -1380,6 +1380,16 @@ Pick one row per commit unless the change is purely navigational.
      existing inline Farkas route because the current SMT-LIB route rejects its
      strict-inequality artifact shape; the pack still validates, and that row
      remains checked without overstating source-artifact coverage.
+163. Landed: add `real-completeness-theorem-boundary.md` as the next
+     real-analysis theorem-boundary artifact. The page ties
+     `real-analysis-rational-v0`, `sequence-limit-shadow-v0`,
+     `bounded-monotone-sequence-v0`, `metric-continuity-v0`,
+     `reals-rcf-shadow-v0`, and `finite-compactness-v0` to
+     least-upper-bound completeness, Cauchy completeness, monotone
+     convergence, compactness, and uniform-continuity prerequisites. It records
+     copyable checked-row queries, replay commands, Lean dependency rows, and
+     graduation criteria while keeping finite rational samples, finite tails,
+     finite covers, and algebraic shadows separate from theorem-level claims.
 
 ## Validation Checklist
 

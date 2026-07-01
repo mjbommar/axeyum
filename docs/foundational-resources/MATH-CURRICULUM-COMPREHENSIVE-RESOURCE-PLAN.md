@@ -484,8 +484,14 @@ Prefer one row, page, route upgrade, or query surface per commit.
    shared QF_LRA/Farkas route tests. The strict-inequality inner-product
    negative-norm row remains checked by its existing inline Farkas regression
    until the SMT-LIB parser/evidence path accepts that artifact shape.
-8. Deepen real analysis through theorem-boundary pages before adding more
-   bounded examples.
+8. Landed: deepen real analysis through theorem-boundary pages before adding
+   more bounded examples.
+   [`real-completeness-theorem-boundary.md`](../learn/math/real-completeness-theorem-boundary.md)
+   now maps least-upper-bound completeness, Cauchy completeness, monotone
+   convergence, RCF shadows, metric continuity, and compactness prerequisites
+   to existing checked packs and copyable queries. It keeps finite rational
+   rows as executable examples and names the missing no-`sorry` Lean theorem
+   dependencies before any completeness claim can graduate.
 9. Deepen algebra by adding equality/certificate rows only when table replay
    and congruence proof tell different useful stories.
 10. Landed: add `bridge_polynomial_coefficient_factor_replay` for fixed

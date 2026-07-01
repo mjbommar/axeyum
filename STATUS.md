@@ -205,6 +205,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Real-completeness theorem-boundary page landed.**
+  [`real-completeness-theorem-boundary.md`](docs/learn/math/real-completeness-theorem-boundary.md)
+  now expands the analysis/calculus horizon map's real-completeness row into a
+  concrete dependency ledger. It links rational interval replay, finite
+  sequence-tail and Cauchy-tail rows, bounded monotone-prefix checks, metric
+  continuity, RCF shadows, and finite compactness to copyable checked-row
+  queries and replay commands, while keeping least-upper-bound completeness,
+  Cauchy completeness, monotone convergence, Heine-Borel, and uniform
+  continuity in the no-`sorry` Lean-horizon lane.
+
 - **Matrix-corpus source-artifact regression pass landed.**
   Five existing exact-rational matrix/statistics Farkas rows now prove the
   committed SMT-LIB artifacts directly instead of duplicating constraints inline:

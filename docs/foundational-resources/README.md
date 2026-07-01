@@ -133,6 +133,12 @@ schemas, examples, and validation workflows.
 - [../learn/math/proof-route-learner-snippets.md](../learn/math/proof-route-learner-snippets.md)
   gives reusable learner-facing trust-boundary snippets for Boolean CNF/LRAT,
   QF_LRA/Farkas, QF_UF/Alethe, QF_LIA/Diophantine, and QF_BV/DRAT rows.
+- [../learn/math/real-completeness-theorem-boundary.md](../learn/math/real-completeness-theorem-boundary.md)
+  records the real-completeness theorem boundary: existing rational interval,
+  sequence-tail, Cauchy-tail, monotone-prefix, metric-continuity, compactness,
+  and RCF-shadow resources are finite examples, while least-upper-bound,
+  Cauchy-completeness, monotone-convergence, Heine-Borel, and related claims
+  need no-`sorry` Lean theorem routes.
 - [generated/math-coverage.md](generated/math-coverage.md) is generated
   curriculum-node coverage from the current concept atlas.
 - [generated/curriculum-status-audit.md](generated/curriculum-status-audit.md)

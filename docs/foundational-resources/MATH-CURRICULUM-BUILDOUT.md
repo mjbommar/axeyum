@@ -2503,6 +2503,14 @@ root-finding, optimization, measure/probability, functional-analysis/operator,
 and dynamics finite shadows to checked evidence routes, missing Lean/theorem
 dependencies, and next build artifacts without counting finite checks as
 general theorem proofs.
+The learner/planning layer now also has
+[`real-completeness-theorem-boundary.md`](../learn/math/real-completeness-theorem-boundary.md),
+which expands the real-completeness row into a concrete dependency ledger:
+least-upper-bound completeness, Cauchy completeness, monotone convergence,
+RCF shadows, metric continuity, and compactness prerequisites are linked to
+existing checked packs, copyable queries, replay commands, missing Lean
+dependencies, and graduation criteria while keeping finite samples separate
+from theorem-level real-analysis claims.
 The number-system concept layer now also has `bridge_gcd_divisibility_witness`.
 It groups gcd/common-divisor replay, Bezout replay, quotient witnesses,
 modular nonunit obstructions, and checked gcd non-divisibility certificates

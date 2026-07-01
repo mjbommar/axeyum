@@ -527,6 +527,12 @@ root-finding convergence, optimization convergence/duality,
 measure/probability convergence, functional-analysis/operator theory, and
 dynamics by finite shadow, checked evidence route, missing Lean/theorem
 dependency, and next build artifact.
+The real-completeness theorem-boundary page now expands that first horizon row
+into a concrete dependency ledger, linking existing rational interval,
+sequence-tail, monotone-prefix, metric-continuity, RCF-shadow, and finite
+compactness packs to least-upper-bound, Cauchy-completeness, monotone-
+convergence, compactness, and uniform-continuity proof obligations without
+turning finite shadows into theorem claims.
 Those four certificate anatomy stories now also have first-class bridge rows in
 the foundational concept atlas, making the active proof-object routes queryable
 through shared R1 vocabulary.

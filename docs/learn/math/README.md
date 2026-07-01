@@ -49,6 +49,10 @@ Companion maps:
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md):
   maps finite analysis, calculus, optimization, measure, dynamics, and operator
   shadows to their missing Lean/theorem reconstruction routes.
+- [Real Completeness Theorem Boundary](real-completeness-theorem-boundary.md):
+  separates exact rational interval, finite sequence-tail, finite monotone
+  prefix, finite compactness, and RCF-shadow resources from least-upper-bound,
+  Cauchy-completeness, and monotone-convergence theorem targets.
 - [Metric Balls And Epsilon-Delta Index](metric-ball-epsilon-delta-index.md):
   connects bounded rational balls, finite metric continuity, sequence-tail
   shadows, finite compactness, finite connectedness, and open-preimage replay.
@@ -253,6 +257,10 @@ Companion maps:
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md):
   groups finite analysis, calculus, optimization, measure, dynamics, and
   operator shadows by the general theorem route needed before graduation.
+- [Real Completeness Theorem Boundary](real-completeness-theorem-boundary.md):
+  maps least-upper-bound, Cauchy-completeness, monotone-convergence,
+  compactness, and uniform-continuity dependencies to existing finite shadows
+  and the missing no-`sorry` Lean route.
 - [Matrix Invariants](matrix-invariants-end-to-end.md): follows exact trace,
   determinant, characteristic-polynomial, root, Cayley-Hamilton, Gershgorin,
   and a QF_LRA/Farkas bad-characteristic-polynomial certificate for a fixed
