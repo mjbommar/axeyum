@@ -39,10 +39,17 @@ use crate::dpll_t::{check_with_lra_dpll_within, check_with_nra_dpll_within};
 use crate::model::Model;
 
 // Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
+use std::time::Duration;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
+
+/// Wall-clock budget for the cheap sign/zero refutation attempted before the
+/// cross-product admission cap declines. Sign-refutable instances converge in well
+/// under this; the bound keeps a *capped* instance declining promptly even when the
+/// caller set no global timeout (a tighter global deadline still wins).
+const SIGN_REFUTE_BUDGET: Duration = Duration::from_millis(500);
 
 /// An `unknown` result attributed to the wall-clock timeout (a resource limit,
 /// not fundamental incompleteness).
@@ -56,6 +63,15 @@ fn timed_out() -> CheckResult {
 /// Whether `deadline` (if set) has passed.
 fn past_deadline(deadline: Option<Instant>) -> bool {
     deadline.is_some_and(|d| Instant::now() >= d)
+}
+
+/// The earlier of two optional deadlines (`None` means "no bound on that side").
+fn earliest_deadline(a: Option<Instant>, b: Option<Instant>) -> Option<Instant> {
+    match (a, b) {
+        (Some(x), Some(y)) => Some(x.min(y)),
+        (Some(x), None) => Some(x),
+        (None, y) => y,
+    }
 }
 
 /// Bound on the incremental-linearization refinement rounds before returning
@@ -253,6 +269,41 @@ fn check_with_nra_impl(
     let cross_products = crate::nra_real_root::normalized_cross_product_count(arena, assertions)
         .unwrap_or_else(|| triples.iter().filter(|&&(pa, pb, _)| pa != pb).count());
     if cross_products > MAX_CROSS_PRODUCTS {
+        // Before declining, try a CHEAP sign/zero refutation. The sign and zero
+        // lemmas for each `r = a·b` are small disjunctive *linear* implications
+        // (`¬p ∨ q`, a handful per product) with **no** McCormick envelopes and
+        // **no** sum-of-squares coupling — the parts that make the full relaxation
+        // OOM. So they are safe to apply past the cross-product bound. Many capped
+        // multi-variable instances are refutable by sign alone — e.g.
+        // `b>0 ∧ c>0 ∧ a·b·c·d² < 0` (a positive product cannot be negative) or
+        // `b,c,d ≥ 1 ∧ b·c·d < 1` (via the sign chain) — so this turns a cap
+        // `unknown` into a real `unsat` without lifting the OOM guard.
+        //
+        // Sound: the sign/zero lemmas are valid facts about `r = a·b`, so
+        // `base + sign_lemmas` is a *relaxation* of the original (every real model,
+        // with `r = a·b`, satisfies them); an `unsat` of the relaxation therefore
+        // transfers to the original. Only `unsat` is acted on — a `sat`/`unknown`
+        // of this weak relaxation proves nothing and falls through to the decline —
+        // so it can never produce a wrong verdict.
+        let mut sign_base = base.clone();
+        for &(pa, pb, r) in &triples {
+            for lemma in sign_zero_lemmas(arena, pa, pb, r)? {
+                let rewritten = replace_subterms(arena, lemma, &map, &mut memo)
+                    .map_err(|e| SolverError::Backend(e.to_string()))?;
+                sign_base.push(rewritten);
+            }
+        }
+        // Bound the pre-check so a capped instance still declines promptly even with
+        // no global timeout; a tighter caller deadline still wins. A hit here is a
+        // sound `unknown` (never a wrong verdict), so cutting it short only forgoes a
+        // possible refutation, never risks one.
+        let sign_deadline =
+            earliest_deadline(deadline, Instant::now().checked_add(SIGN_REFUTE_BUDGET));
+        if let CheckResult::Unsat =
+            check_with_lra_dpll_within(arena, &sign_base, config, sign_deadline)?
+        {
+            return Ok(CheckResult::Unsat);
+        }
         return Ok(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::ResourceLimit,
             detail: format!(
@@ -672,12 +723,15 @@ fn point_lemma(
     arena.or(nprem, r_eq)
 }
 
-/// Sound linear lemmas about the product `r = a·b`: the sign rules and the zero
-/// rule. All are valid facts about real multiplication, so adding them keeps the
-/// abstraction a relaxation (original models, with `r = a·b`, satisfy them) while
-/// making it strong enough to decide sign-based nonlinear queries.
+/// The **sign and zero** lemmas about the product `r = a·b` — the cheap linear
+/// core of [`product_lemmas`]. Each is a valid fact about real multiplication and,
+/// crucially, a small disjunctive *linear* implication (`¬p ∨ q`): a handful per
+/// product, with **no** `McCormick` envelopes and **no** sum-of-squares coupling. So
+/// unlike the full relaxation they cannot blow up a single LRA/DPLL(T) solve, which
+/// is why they can be applied even past the cross-product admission bound (see the
+/// sign-refutation pre-check in [`check_with_nra_impl`]).
 #[allow(clippy::similar_names)] // a_ge/a_le/b_ge/… mirror the sign-rule structure
-fn product_lemmas(
+fn sign_zero_lemmas(
     arena: &mut TermArena,
     a: TermId,
     b: TermId,
@@ -713,6 +767,34 @@ fn product_lemmas(
     let either_z = arena.or(a_z, b_z)?;
     out.push(imp(arena, either_z, r_z)?);
     out.push(imp(arena, r_z, either_z)?);
+    Ok(out)
+}
+
+/// Sound linear lemmas about the product `r = a·b`: the sign rules and the zero
+/// rule ([`sign_zero_lemmas`]), plus threshold-1 monotonicity. All are valid facts
+/// about real multiplication, so adding them keeps the abstraction a relaxation
+/// (original models, with `r = a·b`, satisfy them) while making it strong enough to
+/// decide sign-based nonlinear queries.
+#[allow(clippy::similar_names)] // a_ge/a_le/b_ge/… mirror the sign-rule structure
+fn product_lemmas(
+    arena: &mut TermArena,
+    a: TermId,
+    b: TermId,
+    r: TermId,
+) -> Result<Vec<TermId>, IrError> {
+    let zero = arena.real_const(axeyum_ir::Rational::integer(0));
+    let a_ge = arena.real_ge(a, zero)?;
+    let a_le = arena.real_le(a, zero)?;
+    let b_ge = arena.real_ge(b, zero)?;
+    let b_le = arena.real_le(b, zero)?;
+
+    // implication p → q, as ¬p ∨ q.
+    let imp = |arena: &mut TermArena, p: TermId, q: TermId| -> Result<TermId, IrError> {
+        let np = arena.not(p)?;
+        arena.or(np, q)
+    };
+    // sign + zero rules (the cheap, blowup-free core).
+    let mut out = sign_zero_lemmas(arena, a, b, r)?;
 
     // Monotonicity at threshold 1: multiplying by a factor ≥ 1 moves the other
     // operand away from 0. Each is a sound consequence of r = a·b — e.g. a≥1 ∧ b≥0

@@ -210,7 +210,7 @@ impl Instance {
             // same `(numerator, divisor)` and a divisor can be forced to 0 — the
             // congruence + div-by-zero cases `eliminate_real_div` must model.
             let divisor = if rng.below(4) == 0 {
-                Some(rng.below(num_vars as u64) as usize)
+                Some(rng.below(num_vars as u64))
             } else {
                 None
             };
@@ -288,7 +288,7 @@ impl Instance {
                 }
                 let mut lhs = poly.expect("every atom has at least one monomial");
                 if let Some(d) = atom.divisor {
-                    lhs = lhs / vars[d].clone();
+                    lhs /= vars[d].clone();
                 }
                 match atom.cmp {
                     Cmp::Eq => lhs.eq(&zero),

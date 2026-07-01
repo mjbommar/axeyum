@@ -409,6 +409,38 @@ fn real_division_by_zero_is_sound_unknown() {
 }
 
 #[test]
+fn capped_simple_mono_unsat_boolean_shape() {
+    // The cvc5 QF_NRA `simple-mono-unsat` regression:
+    //   (or (= a 4) (= a 3)) ∧ b>0 ∧ c>0 ∧ (< (* a b c d d) 0).
+    // Boolean structure over a > 2-cross-product nonlinear atom: in each Boolean
+    // branch the leading constant (4 or 3) is positive, so a·b·c·d² is a positive
+    // product and cannot be < 0. The sign refutation decides both cubes ⇒ `unsat`.
+    let mut a = TermArena::new();
+    let av = real(&mut a, "a");
+    let bv = real(&mut a, "b");
+    let cv = real(&mut a, "c");
+    let dv = real(&mut a, "d");
+    let zero = a.real_const(Rational::integer(0));
+    let four = a.real_const(Rational::integer(4));
+    let three = a.real_const(Rational::integer(3));
+    let a4 = a.eq(av, four).unwrap();
+    let a3 = a.eq(av, three).unwrap();
+    let a43 = a.or(a4, a3).unwrap();
+    let bpos = a.real_gt(bv, zero).unwrap();
+    let cpos = a.real_gt(cv, zero).unwrap();
+    let p1 = a.real_mul(av, bv).unwrap();
+    let p2 = a.real_mul(p1, cv).unwrap();
+    let p3 = a.real_mul(p2, dv).unwrap();
+    let p4 = a.real_mul(p3, dv).unwrap(); // a·b·c·d²
+    let neg = a.real_lt(p4, zero).unwrap();
+    let r = check_with_nra(&mut a, &[a43, bpos, cpos, neg], &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(r, CheckResult::Unsat),
+        "simple-mono-unsat shape must be unsat, got {r:?}"
+    );
+}
+
+#[test]
 fn mixed_sign_product_cannot_be_positive() {
     // x > 0 ∧ y < 0 ∧ x*y > 0 is unsat: opposite signs give a non-positive
     // product (the (a≥0 ∧ b≤0) → r≤0 sign lemma), with no model needed.
