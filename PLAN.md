@@ -195,6 +195,11 @@ The optimization/convexity consumer query guide is
 it records exact concept-plus-route queries for LP objectives, convexity
 shadows, KKT/QP/SDP rows, first-order method steps, projections, residuals,
 and exact-vs-floating boundary resources.
+The functional-analysis/operator consumer query guide is
+[`docs/foundational-resources/FUNCTIONAL-OPERATOR-QUERIES.md`](docs/foundational-resources/FUNCTIONAL-OPERATOR-QUERIES.md);
+it records exact concept-plus-route queries for finite operators, Chebyshev
+rows, inner-product/projection rows, spectral rows, and dual/tensor equality
+resources.
 The rules/law transfer crosswalk that maps finite predicates, arithmetic
 thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
@@ -621,6 +626,14 @@ line-search, projected-gradient, and proximal-gradient rows, so downstream
 consumers can discover finite optimization resources without promoting
 duality, KKT sufficiency, SDP strong duality, method convergence, stability, or
 benchmark claims.
+The functional-analysis/operator lane now has
+[`FUNCTIONAL-OPERATOR-QUERIES.md`](docs/foundational-resources/FUNCTIONAL-OPERATOR-QUERIES.md),
+and the foundational smoke checks finite operator/Chebyshev, eigenpair,
+Rayleigh, inner-product/projection, and finite dual/tensor rows through
+Farkas/Alethe queries, so downstream consumers can discover finite
+functional/operator resources without promoting Banach/Hilbert-space,
+compact-operator, topological-dual, minimax, alternation-theorem, stability, or
+infinite-dimensional approximation claims.
 The proof-route lane now has
 [`PROOF-ROUTE-QUERY-MATRIX.md`](docs/foundational-resources/PROOF-ROUTE-QUERY-MATRIX.md),
 and the query helper accepts `routes` summaries with route aliases and optional

@@ -56,6 +56,9 @@ For graph/discrete discovery by bridge concept and proof route, use the
 [Graph And Discrete Resource Consumer Queries](GRAPH-DISCRETE-QUERIES.md).
 For optimization/convexity discovery by bridge concept and proof route, use the
 [Optimization And Convexity Resource Consumer Queries](OPTIMIZATION-CONVEXITY-QUERIES.md).
+For functional-analysis/operator discovery by bridge concept and proof route,
+use the
+[Functional Analysis And Operator Resource Consumer Queries](FUNCTIONAL-OPERATOR-QUERIES.md).
 This file remains the phase contract and landed-history log.
 
 The product is not a textbook and not a formal-library clone. It is a set of
@@ -2289,6 +2292,14 @@ line-search, projected-gradient, and proximal-gradient rows through
 concept-scoped or pack-scoped Farkas queries, making finite optimization
 resources discoverable while keeping duality, KKT sufficiency, SDP strong
 duality, convergence, stability, and benchmark claims in the horizon lanes.
+The functional-analysis/operator consumer layer now also has
+[`FUNCTIONAL-OPERATOR-QUERIES.md`](FUNCTIONAL-OPERATOR-QUERIES.md). The guide
+and resource smoke expose finite operator/Chebyshev rows, eigenpair and
+Rayleigh rows, inner-product/projection rows, and finite dual/tensor equality
+rows through concept-scoped Farkas and Alethe queries, making finite
+functional/operator resources discoverable while keeping Banach/Hilbert-space,
+compact-operator, topological-dual, minimax, Haar-space, alternation-theorem,
+stability, and infinite-dimensional approximation claims in the horizon lanes.
 The proof-route consumer layer now also has
 [`PROOF-ROUTE-QUERY-MATRIX.md`](PROOF-ROUTE-QUERY-MATRIX.md), and
 `query-foundational-resources.py routes` summarizes route coverage from

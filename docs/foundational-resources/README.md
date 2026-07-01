@@ -83,6 +83,9 @@ schemas, examples, and validation workflows.
   copyable concept-plus-route queries for LP objectives, convexity shadows,
   KKT/QP/SDP rows, first-order method steps, projections, residuals, and
   exact-vs-floating boundary rows.
+- [FUNCTIONAL-OPERATOR-QUERIES.md](FUNCTIONAL-OPERATOR-QUERIES.md) gives
+  copyable concept-plus-route queries for finite operators, Chebyshev rows,
+  inner-product/projection rows, spectral rows, and dual/tensor equality rows.
 - [GRAPH-DISCRETE-QUERIES.md](GRAPH-DISCRETE-QUERIES.md) gives copyable
   concept-plus-route queries for finite graph coloring, reachability,
   matching, cuts, d-separation, fixed-width coloring, and BFS/DFS runtime rows.

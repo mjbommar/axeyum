@@ -35,6 +35,8 @@ For concept-plus-route geometry discovery, see
 [GEOMETRY-RESOURCE-QUERIES.md](GEOMETRY-RESOURCE-QUERIES.md).
 For concept-plus-route optimization and convexity discovery, see
 [OPTIMIZATION-CONVEXITY-QUERIES.md](OPTIMIZATION-CONVEXITY-QUERIES.md).
+For concept-plus-route functional analysis and operator discovery, see
+[FUNCTIONAL-OPERATOR-QUERIES.md](FUNCTIONAL-OPERATOR-QUERIES.md).
 
 ## Contract Summary
 
