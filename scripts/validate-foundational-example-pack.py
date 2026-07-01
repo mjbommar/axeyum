@@ -18707,6 +18707,88 @@ def validate_finite_conditional_expectation(expected: dict[str, Any]) -> None:
     if "finite_conditional_expectation_bad_table_emits_checked_farkas" not in regression:
         fail("bad-conditional-expectation-rejected must link the Farkas regression")
 
+    bad_tower = checks["bad-tower-property-rejected"]
+    if bad_tower["expected_result"] != "unsat":
+        fail("bad-tower-property-rejected must expect unsat")
+    if bad_tower["proof_status"] != "checked":
+        fail("bad-tower-property-rejected must be checked")
+    data = bad_tower.get("data", {})
+    atoms = require_probability_atoms("bad tower property atoms", data.get("atoms"), require_events=False)
+    require_normalized_atoms("bad-tower-property-rejected", atoms)
+    atom_ids = [atom_id for atom_id, _, _ in atoms]
+    variable_values = require_atom_value_table(
+        "bad tower property random_variable_values",
+        data.get("random_variable_values"),
+        atom_ids,
+    )
+    fine_partition = require_atom_partition(
+        "bad tower property fine_partition",
+        data.get("fine_partition"),
+        atom_ids,
+    )
+    coarse_partition = require_atom_partition(
+        "bad tower property coarse_partition",
+        data.get("coarse_partition"),
+        atom_ids,
+    )
+    if not partition_refines(fine_partition, coarse_partition):
+        fail("bad-tower-property-rejected fine_partition must refine coarse_partition")
+    fine_table = require_atom_value_table(
+        "bad tower property fine_conditional_expectation",
+        data.get("fine_conditional_expectation"),
+        atom_ids,
+    )
+    coarse_table = require_atom_value_table(
+        "bad tower property coarse_conditional_expectation",
+        data.get("coarse_conditional_expectation"),
+        atom_ids,
+    )
+    actual_tower = require_atom_value_table(
+        "bad tower property actual_tower_conditional_expectation",
+        data.get("actual_tower_conditional_expectation"),
+        atom_ids,
+    )
+    claimed_tower = require_atom_value_table(
+        "bad tower property claimed_tower_conditional_expectation",
+        data.get("claimed_tower_conditional_expectation"),
+        atom_ids,
+    )
+    computed_fine = finite_conditional_expectation(atoms, variable_values, fine_partition)
+    computed_coarse = finite_conditional_expectation(atoms, variable_values, coarse_partition)
+    computed_tower = finite_conditional_expectation(atoms, fine_table, coarse_partition)
+    if computed_fine != fine_table:
+        fail("bad-tower-property-rejected fine conditional expectation is incorrect")
+    if computed_coarse != coarse_table:
+        fail("bad-tower-property-rejected coarse conditional expectation is incorrect")
+    if computed_tower != actual_tower:
+        fail("bad-tower-property-rejected actual tower table is incorrect")
+    if actual_tower != coarse_table:
+        fail("bad-tower-property-rejected tower table does not match coarse conditional expectation")
+    if claimed_tower == actual_tower:
+        fail("bad-tower-property-rejected must document a false tower table")
+    tower_value = require_fraction("bad tower property tower_value", data.get("tower_value"))
+    claimed_tower_value = require_fraction(
+        "bad tower property claimed_tower_value",
+        data.get("claimed_tower_value"),
+    )
+    if set(actual_tower.values()) != {tower_value}:
+        fail("bad-tower-property-rejected actual tower values must match tower_value")
+    if set(claimed_tower.values()) != {claimed_tower_value}:
+        fail("bad-tower-property-rejected claimed tower values must match claimed_tower_value")
+    if claimed_tower_value == tower_value:
+        fail("bad-tower-property-rejected claimed tower value must be false")
+    farkas_claim = data.get("farkas_claim")
+    require_string("bad tower property farkas_claim", farkas_claim)
+    if farkas_claim != "tower_value = 4":
+        fail("bad-tower-property-rejected must document the Farkas claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad tower property smt2_artifact", smt2_artifact)
+    check_source("bad tower property smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad tower property farkas_regression", regression)
+    if "finite_conditional_expectation_bad_tower_property_artifact_emits_checked_farkas" not in regression:
+        fail("bad-tower-property-rejected must link the Farkas regression")
+
     horizon = checks["general-conditional-expectation-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-conditional-expectation-lean-horizon must be not-run")

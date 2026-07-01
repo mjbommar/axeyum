@@ -33,6 +33,18 @@ conditional-expectation contradiction as `QF_LRA`:
 `(1/2)*high_block_expectation = 3` and
 `high_block_expectation = 5`, requiring rechecked `UnsatFarkas` evidence.
 
+## `bad-tower-property-rejected`
+
+Expected result: `unsat`.
+
+The validator rejects the claimed tower-property table because exact
+nested-partition replay computes `E[E[X|G]|H] = 7/2` on the coarse block, not
+`4`.
+
+The source-linked Axeyum regression checks the final scalar tower contradiction
+as `QF_LRA`: `tower_value = 7/2` and `tower_value = 4`, requiring rechecked
+`UnsatFarkas` evidence.
+
 ## `general-conditional-expectation-lean-horizon`
 
 Expected result: `not-run`.

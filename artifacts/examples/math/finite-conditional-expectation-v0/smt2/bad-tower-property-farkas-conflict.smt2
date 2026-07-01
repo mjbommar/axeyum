@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const tower_value Real)
+(assert (= tower_value (/ 7 2)))
+(assert (= tower_value 4))
+(check-sat)

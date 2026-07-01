@@ -148,6 +148,64 @@
       "notes": "The validator rejects the claim because the high block average is 6, not 5; the Axeyum regression refutes (1/2)*high_block_expectation = 3 together with high_block_expectation = 5 using rechecked Farkas evidence."
     },
     {
+      "id": "bad-tower-property-rejected",
+      "claim": "For the nested partitions, E[E[X|G]|H] is 4 on the coarse block.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_tower_property_refutation",
+      "proof_status": "checked",
+      "data": {
+        "atoms": [
+          {"id": "a", "probability": "1/4"},
+          {"id": "b", "probability": "1/4"},
+          {"id": "c", "probability": "1/4"},
+          {"id": "d", "probability": "1/4"}
+        ],
+        "random_variable_values": {
+          "a": "0",
+          "b": "2",
+          "c": "4",
+          "d": "8"
+        },
+        "fine_partition": [
+          {"id": "low", "atoms": ["a", "b"]},
+          {"id": "high", "atoms": ["c", "d"]}
+        ],
+        "coarse_partition": [
+          {"id": "all", "atoms": ["a", "b", "c", "d"]}
+        ],
+        "fine_conditional_expectation": {
+          "a": "1",
+          "b": "1",
+          "c": "6",
+          "d": "6"
+        },
+        "coarse_conditional_expectation": {
+          "a": "7/2",
+          "b": "7/2",
+          "c": "7/2",
+          "d": "7/2"
+        },
+        "actual_tower_conditional_expectation": {
+          "a": "7/2",
+          "b": "7/2",
+          "c": "7/2",
+          "d": "7/2"
+        },
+        "claimed_tower_conditional_expectation": {
+          "a": "4",
+          "b": "4",
+          "c": "4",
+          "d": "4"
+        },
+        "tower_value": "7/2",
+        "claimed_tower_value": "4",
+        "farkas_claim": "tower_value = 4",
+        "smt2_artifact": "artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-tower-property-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_tower_property_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator rejects the claim because exact nested-partition replay computes E[E[X|G]|H] = 7/2 on the coarse block, not 4; the Axeyum regression refutes tower_value = 7/2 together with tower_value = 4 using rechecked Farkas evidence."
+    },
+    {
       "id": "general-conditional-expectation-lean-horizon",
       "claim": "General conditional expectation and martingale theorems require future Lean resources.",
       "expected_result": "not-run",

@@ -22,6 +22,7 @@ Concept rows:
 | `law-total-expectation-witness` | `sat` | replay-only |
 | `tower-property-witness` | `sat` | replay-only |
 | `bad-conditional-expectation-rejected` | `unsat` | checked |
+| `bad-tower-property-rejected` | `unsat` | checked |
 | `general-conditional-expectation-lean-horizon` | `not-run` | lean-horizon |
 
 Every checked row is exact finite rational arithmetic over normalized atom
@@ -180,6 +181,47 @@ The candidate conditional-expectation table is untrusted; the small checker
 rebuilds it from the atom probabilities, random-variable values, and partition,
 then checks the small Farkas certificate for the final linear refutation.
 
+## Reject A False Tower Value
+
+The second negative row claims that the coarse-block value of
+`E[E[X | G] | H]` is `4`:
+
+```text
+claimed E[E[X | G] | H] = 4
+```
+
+The checker recomputes the fine table:
+
+```text
+CE_G(a) = 1
+CE_G(b) = 1
+CE_G(c) = 6
+CE_G(d) = 6
+```
+
+Then it conditions that fine table on the one-block coarse partition:
+
+```text
+E[E[X | G] | H]
+  = 1*(1/4) + 1*(1/4) + 6*(1/4) + 6*(1/4)
+  = 7/2
+```
+
+and rejects the claim because:
+
+```text
+7/2 != 4
+```
+
+The resource regression checks the scalar contradiction as `QF_LRA`:
+
+```text
+tower_value = 7/2
+tower_value = 4
+```
+
+That `unsat` result must also carry checked `Evidence::UnsatFarkas`.
+
 ## Name The Lean Horizon
 
 The finite pack checks:
@@ -191,6 +233,7 @@ blockwise weighted averages
 law of total expectation
 nested-partition tower property
 bad conditional-expectation-table refutations
+bad tower-property refutations
 ```
 
 The following remain proof-assistant targets:
@@ -234,5 +277,5 @@ remaining horizon -> general conditional-expectation theory
 The graduation target is to encode finite conditioning sigma-algebras as
 partitions of probability atoms, replay finite conditional expectations, total
 expectation, and tower-property witnesses by exact rational model evaluation,
-emit checked QF_LRA/Farkas evidence for rejected conditional-expectation tables
-when the block-average contradiction is linear.
+and emit checked QF_LRA/Farkas evidence for rejected conditional-expectation or
+tower-property tables when the final contradiction is linear.

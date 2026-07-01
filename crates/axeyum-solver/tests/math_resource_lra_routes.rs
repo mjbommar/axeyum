@@ -172,6 +172,9 @@ const FINITE_PRODUCT_MEASURE_BAD_MARGINAL: &str = include_str!(
 const FINITE_RANDOM_VARIABLES_BAD_EXPECTATION_THROUGH_PUSHFORWARD: &str = include_str!(
     "../../../artifacts/examples/math/finite-random-variables-v0/smt2/bad-expectation-through-pushforward-farkas-conflict.smt2"
 );
+const FINITE_CONDITIONAL_EXPECTATION_BAD_TOWER_PROPERTY: &str = include_str!(
+    "../../../artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-tower-property-farkas-conflict.smt2"
+);
 const RATIONALS_TRICHOTOMY_NONLESS: &str = include_str!(
     "../../../artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-nonless-farkas-conflict.smt2"
 );
@@ -1063,6 +1066,14 @@ fn finite_conditional_expectation_bad_table_emits_checked_farkas() {
         "finite-conditional-expectation-v0 bad-conditional-expectation-rejected",
         &arena,
         &[block_average_equation, false_claim],
+    );
+}
+
+#[test]
+fn finite_conditional_expectation_bad_tower_property_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-conditional-expectation-v0 bad-tower-property SMT-LIB artifact",
+        FINITE_CONDITIONAL_EXPECTATION_BAD_TOWER_PROPERTY,
     );
 }
 

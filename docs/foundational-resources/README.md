@@ -485,9 +485,9 @@ schemas, examples, and validation workflows.
   random-variable Lean-horizon row.
 - [`artifacts/examples/math/finite-conditional-expectation-v0/`](../../artifacts/examples/math/finite-conditional-expectation-v0/)
   validates exact finite partition conditional expectations, law of total
-  expectation, tower property replay, checked rejection of a false
-  conditional-expectation table, and a general conditional-expectation
-  Lean-horizon row.
+  expectation, tower property replay, checked rejection of false
+  conditional-expectation and tower-property tables, and a general
+  conditional-expectation Lean-horizon row.
 - [`artifacts/examples/math/finite-martingales-v0/`](../../artifacts/examples/math/finite-martingales-v0/)
   validates exact finite filtrations, adapted process values, martingale
   conditional-expectation equalities, square submartingale inequalities,

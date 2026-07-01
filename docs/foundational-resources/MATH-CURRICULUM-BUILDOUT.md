@@ -852,8 +852,8 @@ claim, and a general random-variable/conditional expectation Lean-horizon row.
 `artifacts/examples/math/finite-conditional-expectation-v0/` now validates
 exact finite partition conditional expectations, the law of total expectation,
 the finite tower property over nested partitions, checked QF_LRA/Farkas
-rejection of a false conditional-expectation table, and a general
-conditional-expectation/martingale Lean-horizon row.
+rejection of false conditional-expectation and tower-property tables, and a
+general conditional-expectation/martingale Lean-horizon row.
 `artifacts/examples/math/finite-martingales-v0/` now validates exact finite
 filtrations, adaptedness, martingale conditional-expectation equalities,
 finite square-submartingale inequalities, bounded stopping-time replay, checked
@@ -1051,7 +1051,8 @@ Recommended order:
     bad pushforward and bad expectation-through-pushforward rejection.
 27. `finite-conditional-expectation-v0`: finite partition conditional
     expectations, law of total expectation, tower property replay, and
-    QF_LRA/Farkas bad conditional-expectation rejection.
+    QF_LRA/Farkas bad conditional-expectation and bad tower-property
+    rejections.
 28. `finite-martingales-v0`: finite filtrations, adaptedness, martingale
     equalities, square submartingale inequalities, bounded stopping replay, and
     QF_LRA/Farkas bad martingale rejection.
@@ -1513,7 +1514,8 @@ finite partition conditional-expectation, total-expectation, and tower-property
 bridge toward martingales and general conditional expectation.
 `finite-martingales-v0` now adds the exact finite filtration, martingale,
 submartingale, and bounded-stopping bridge toward stochastic-process theory,
-with checked QF_LRA/Farkas evidence for the bad conditional-expectation row.
+with checked QF_LRA/Farkas evidence for bad conditional-expectation and
+bad tower-property rows.
 `finite-stochastic-kernels-v0` now adds the finite conditional-distribution,
 pushforward, disintegration, and composition bridge toward Markov kernels and
 regular conditional probabilities, with a checked QF_LRA/Farkas bad-row
@@ -1811,7 +1813,8 @@ Lean horizon.
 `finite-conditional-expectation-v0` now has a learner-facing end-to-end lesson
 for finite conditioning partitions, blockwise conditional expectations, total
 expectation replay, tower-property replay, checked QF_LRA/Farkas bad table
-rejection, and the general conditional-expectation Lean horizon.
+and bad tower-property rejection, and the general conditional-expectation Lean
+horizon.
 `finite-martingales-v0` now has a learner-facing end-to-end lesson for finite
 filtrations, adaptedness, martingale conditional-expectation equalities,
 square-submartingale inequalities, bounded stopping replay, checked bad
@@ -1998,9 +2001,10 @@ path after exact replay computes `D = -4`.
 row through the same checked Farkas evidence path after exact replay computes
 `D = -4`, while keeping square-nonnegativity and general SOS/CAD/RCF proof
 routes distinct.
-`finite-conditional-expectation-v0` now routes its bad high-block table through
-a source-linked checked Farkas evidence path using the denominator-cleared block
-average contradiction, and its metadata promotes that row for solver reuse.
+`finite-conditional-expectation-v0` now routes its bad high-block and
+tower-property tables through source-linked checked Farkas evidence paths using
+the denominator-cleared block-average contradiction and the scalar tower-value
+contradiction, and its metadata promotes both rows for solver reuse.
 `finite-euler-method-v0` now routes its bad fixed-step transition and bad
 max-error bound through source-linked checked Farkas evidence paths after exact
 derivative and finite error-table replay, and its metadata promotes those rows

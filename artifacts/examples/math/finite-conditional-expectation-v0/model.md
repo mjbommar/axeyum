@@ -68,3 +68,22 @@ high_block_expectation = 5
 ```
 
 The pack keeps this contradiction on the checked `UnsatFarkas` route.
+
+## Bad Tower Claim
+
+The false tower-property claim says the coarse-block value of
+`E[E[X | low/high] | all]` is `4`. The checker rejects it because exact
+nested-partition replay computes:
+
+```text
+E[E[X | low/high] | all] = 1*(1/4) + 1*(1/4) + 6*(1/4) + 6*(1/4) = 7/2
+```
+
+The final linear contradiction is:
+
+```text
+tower_value = 7/2
+tower_value = 4
+```
+
+The pack keeps this contradiction on the checked `UnsatFarkas` route.

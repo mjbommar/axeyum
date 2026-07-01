@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 582 expected checks.
-- 264 checked proof/evidence rows.
+- 583 expected checks.
+- 265 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1267,12 +1267,15 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/finite-concentration-v0/smt2/bad-concentration-bound-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_tail_bound_emits_checked_farkas`.
-26. Landed: promote `finite-conditional-expectation-v0` through a source-linked
-    QF_LRA/Farkas regression for `bad-conditional-expectation-rejected`. The
-    existing artifact
+26. Landed: promote `finite-conditional-expectation-v0` through source-linked
+    QF_LRA/Farkas regressions for `bad-conditional-expectation-rejected` and
+    `bad-tower-property-rejected`. The artifacts
     `artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-conditional-expectation-farkas-conflict.smt2`
-    is checked by
-    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_table_emits_checked_farkas`.
+    and
+    `artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-tower-property-farkas-conflict.smt2`
+    are checked by
+    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_table_emits_checked_farkas` and
+    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_tower_property_artifact_emits_checked_farkas`.
 27. Landed: promote `finite-hitting-times-v0` through a source-linked
     QF_LRA/Farkas regression for `bad-expected-time-rejected`. The existing
     artifact

@@ -164,7 +164,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 582 expected checks, 264 checked
+111 concept rows, 108 non-template packs, 583 expected checks, 265 checked
 rows, 247 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -188,15 +188,15 @@ product-measure's bad product-probability and bad marginal rows through
 source-linked exact linear contradictions after replay computes the product
 mass and row marginal, plus finite random-variables' bad pushforward row after
 replay computes the outcome mass and bad expectation-through-pushforward row
-after replay computes `E[X] = 20`, with finite-integration's bad expectation
-row after replay computes the integral,
-with finite-measure's bad complement row promoted after finite replay computes
-the event and total measures, finite-measure-monotonicity's bad subset-measure
-row promoted after finite replay computes the subset and superset measures,
-finite-martingales' bad conditional-expectation row now promoted after finite
-filtration replay computes the up-block expectation, and finite Markov-chain's
-existing bad stochastic-row artifact now explicitly promoted in solver-reuse
-metadata.
+after replay computes `E[X] = 20`, finite-integration's bad expectation row
+after replay computes the integral, finite-conditional-expectation's bad
+tower-property row after nested-partition replay computes `7/2` rather than
+`4`, finite-measure's bad complement row after finite replay computes the event
+and total measures, finite-measure-monotonicity's bad subset-measure row after
+finite replay computes the subset and superset measures, finite-martingales'
+bad conditional-expectation row after finite filtration replay computes the
+up-block expectation, and finite Markov-chain's existing bad stochastic-row
+artifact now explicitly promoted in solver-reuse metadata.
 The foundational concept atlas now also includes 65 generated R1 bridge
 rows: finite model replay, counterexample proof, bounded theorem shadows,
 refutation-as-query, finite proof-pattern replay, finite quantifier expansion,
@@ -565,7 +565,7 @@ tail-bound obstruction, with finite hitting times now source-linked and
 promoted for the bad expected-time equation; least-squares regression is now
 promoted for the bad coefficient row, and bounded rational real analysis for
 the bad linear-delta row, with finite conditional expectation now promoted for
-the bad high-block table, finite Euler method now source-linked and promoted
+the bad high-block and tower-property tables, finite Euler method now source-linked and promoted
 for its bad max-error and bad fixed-step rows, bounded dynamics now promoted
 for its bad invariant-bound conflict, and finite probability now promoted for
 a bad Bayes-posterior conflict, with orientation/area geometry now promoted

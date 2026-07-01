@@ -414,7 +414,8 @@ Companion maps:
 - [Finite Conditional Expectation](finite-conditional-expectation-end-to-end.md):
   follows finite conditioning partitions, blockwise conditional expectations,
   total-expectation replay, tower-property replay, checked QF_LRA/Farkas bad
-  table rejection, and the general conditional-expectation Lean horizon.
+  table and bad tower-property rejection, and the general conditional-expectation
+  Lean horizon.
 - [Finite Martingales](finite-martingales-end-to-end.md): follows finite
   filtrations, adaptedness, martingale conditional-expectation equalities,
   square-submartingale inequalities, bounded stopping replay, checked bad

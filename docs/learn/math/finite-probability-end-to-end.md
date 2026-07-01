@@ -41,6 +41,7 @@ Concept rows:
 | `law-total-expectation-witness` | `sat` | replay-only |
 | `tower-property-witness` | `sat` | replay-only |
 | `bad-conditional-expectation-rejected` | `unsat` | checked |
+| `bad-tower-property-rejected` | `unsat` | checked |
 | `kernel-normalization-witness` | `sat` | replay-only |
 | `kernel-pushforward-witness` | `sat` | replay-only |
 | `joint-disintegration-witness` | `sat` | replay-only |
@@ -232,7 +233,8 @@ E[E[X | G]] = E[X] = 7/2
 ```
 
 It also checks a finite tower-property row for a two-block partition refining
-the one-block partition.
+the one-block partition, and rejects a false tower value with checked
+QF_LRA/Farkas evidence.
 
 For a fuller focused trace, read
 [End To End: Finite Conditional Expectation](finite-conditional-expectation-end-to-end.md).

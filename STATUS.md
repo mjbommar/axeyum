@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-conditional-expectation bad tower-property QF_LRA row landed.**
+  `finite-conditional-expectation-v0` now has a second checked Farkas row:
+  exact nested-partition replay computes `E[E[X|G]|H] = 7/2` on the coarse
+  block, then rejects the malformed claim that the tower value is `4`. The new
+  source SMT-LIB artifact isolates the final exact-linear scalar conflict, the
+  shared `math_resource_lra_routes` regression parses it and checks
+  `UnsatFarkas` evidence, and the validator pins the atom table, fine/coarse
+  partitions, exact conditional-expectation tables, actual tower table, claimed
+  tower table, artifact path, and regression. Generated dashboards and the
+  public query summary now report 111 concept rows, 108 non-template packs, 583
+  expected checks, 265 checked rows, 247 replay-only rows, and 71 Lean-horizon
+  rows.
+
 - **Finite-random-variable bad expectation-through-pushforward QF_LRA row landed.**
   `finite-random-variables-v0` now has a second checked Farkas row: exact
   finite random-variable replay computes `E[X] = 20` both from source atoms and
@@ -215,8 +228,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   total random-variable map, pushforward distribution, outcome values, source
   expectation, pushforward expectation, claimed expectation, artifact path,
   regression, and certificate note. Generated dashboards and the public query
-  summary now report 111 concept rows, 108 non-template packs, 582 expected
-  checks, 264 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+  summary now report 111 concept rows, 108 non-template packs, 583 expected
+  checks, 265 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
 
 - **Comprehensive math-curriculum resource plan landed.**
   Added
@@ -225,7 +238,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   educational content, ontology/taxonomy rows, example packs, proof artifacts,
   solver feedback, rules/law transfer, consumer boundaries, and future library
   splits. The plan is grounded in the current 2026-07-01 resource baseline
-  (111 concept rows, 108 non-template packs, 582 expected checks, 264 checked
+  (111 concept rows, 108 non-template packs, 583 expected checks, 265 checked
   rows, 247 replay-only rows, 71 Lean-horizon rows, and 108 promoted
   solver-reuse packs) and is linked from the foundational-resource index,
   mdBook summary, buildout plan, master plan, build sequence, detailed build
@@ -240,8 +253,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   regression parses it and checks `UnsatFarkas` evidence, and the validator
   pins the factor tables, product table, target axis/atom, artifact path,
   regression, and certificate note. Generated dashboards and the public query
-  summary now report 111 concept rows, 108 non-template packs, 582 expected
-  checks, 264 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+  summary now report 111 concept rows, 108 non-template packs, 583 expected
+  checks, 265 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
 
 - **Finite-inversion bad inverse-distance-product QF_LRA row landed.**
   `finite-inversion-geometry-v0` now has a second checked Farkas row: exact
@@ -1949,10 +1962,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Finite-conditional-expectation QF_LRA/Farkas regression landed.**
   [`finite-conditional-expectation-v0`](artifacts/examples/math/finite-conditional-expectation-v0/)
-  now binds its bad high-block table to Axeyum's evidence path. The new SMT-LIB
-  artifact encodes `(1/2)*high_block_expectation = 3` and the false claim
-  `high_block_expectation = 5`; the shared LRA resource regression requires
-  `Evidence::UnsatFarkas` and rechecks the rational certificate independently.
+  now binds its bad high-block and tower-property tables to Axeyum's evidence
+  path. The SMT-LIB artifacts encode `(1/2)*high_block_expectation = 3` with
+  the false claim `high_block_expectation = 5`, and `tower_value = 7/2` with
+  the false claim `tower_value = 4`; the shared LRA resource regressions
+  require `Evidence::UnsatFarkas` and recheck the rational certificates
+  independently.
 
 - **Finite-Euler-method QF_LRA/Farkas regression landed.**
   [`finite-euler-method-v0`](artifacts/examples/math/finite-euler-method-v0/)
@@ -2656,9 +2671,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`finite-conditional-expectation-end-to-end.md`](docs/learn/math/finite-conditional-expectation-end-to-end.md)
   as the learner-facing trace for the finite-conditional-expectation pack:
   finite conditioning partitions, blockwise conditional expectations, total
-  expectation replay, tower-property replay, checked bad table rejection, and
-  the general conditional-expectation Lean horizon. The lesson is linked from
-  the math learning index plus the probability/statistics path.
+  expectation replay, tower-property replay, checked bad table and bad
+  tower-property rejection, and the general conditional-expectation Lean
+  horizon. The lesson is linked from the math learning index plus the
+  probability/statistics path.
 
 - **Finite-random-variables end-to-end lesson landed.** Added
   [`finite-random-variables-end-to-end.md`](docs/learn/math/finite-random-variables-end-to-end.md)
@@ -3539,7 +3555,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   variables, probability, measure, and statistics. The pack validates
   conditional expectations as blockwise weighted averages, the law of total
   expectation, a finite tower-property replay over nested partitions, checked
-  rejection of a false conditional-expectation table, and a general
+  rejection of false conditional-expectation and tower-property tables, and a general
   conditional-expectation/martingale Lean-horizon row. The foundational
   example-pack validator now checks finite partitions, exact block averages,
   total-expectation replay, refinement of nested partitions, and finite tower
