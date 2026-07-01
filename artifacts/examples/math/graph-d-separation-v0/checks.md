@@ -54,6 +54,27 @@ Expected result: `unsat`.
 For `a -> b <- c`, the only simple path is blocked because `b` is an
 unconditioned collider and has no conditioned descendant.
 
+The promoted solver artifact is:
+
+```text
+artifacts/examples/math/graph-d-separation-v0/cnf/collider-unconditioned-blocks.cnf
+```
+
+It asserts that the skeleton path `a-b-c` exists, that `b` is the middle
+collider, that no conditioning opens the collider, and that the path is active.
+The final clause encodes the d-separation rule that an active path through a
+collider requires the collider to be opened by conditioning on it or one of its
+descendants.
+
+The shared Boolean regression:
+
+```text
+crates/axeyum-cnf/tests/math_resource_boolean_routes.rs::graph_d_separation_collider_unconditioned_blocks_emits_checked_drat_and_lrat
+```
+
+parses the DIMACS artifact, emits a DRAT refutation, elaborates it to LRAT, and
+checks both proof objects independently.
+
 ## `collider-descendant-opens`
 
 Expected result: `sat`.

@@ -1359,6 +1359,17 @@ Pick one row per commit unless the change is purely navigational.
      distribution-distance conflicts without claiming continuous probability
      metrics, sampling guarantees, asymptotic inference, or measure-theoretic
      probability theorems.
+161. Landed: extend `graph-d-separation-v0` with a source-linked checked
+     unconditioned-collider blocker. Exact finite DAG replay enumerates the
+     only skeleton path in `a -> b <- c`, observes that `b` is a collider and
+     no collider or descendant is conditioned, and rejects the malformed
+     d-connected claim. The new DIMACS artifact encodes the collider-specific
+     blocking rule and is checked by
+     `graph_d_separation_collider_unconditioned_blocks_emits_checked_drat_and_lrat`
+     through emitted DRAT, elaborated LRAT, and independent proof checks.
+     This lands the graph-depth queue item with a learner-readable graph shape
+     without claiming causal identification, do-calculus, or probabilistic
+     graphical-model semantics.
 
 ## Validation Checklist
 

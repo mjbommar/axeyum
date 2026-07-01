@@ -106,9 +106,12 @@
         "conditioning_set": [],
         "all_simple_paths": [
           ["a", "b", "c"]
-        ]
+        ],
+        "cnf_artifact": "artifacts/examples/math/graph-d-separation-v0/cnf/collider-unconditioned-blocks.cnf",
+        "proof_regression": "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs::graph_d_separation_collider_unconditioned_blocks_emits_checked_drat_and_lrat",
+        "certificate": "The Boolean resource regression emits a DRAT refutation, elaborates it to LRAT, and checks both proof objects independently."
       },
-      "notes": "The validator confirms the only path is blocked because b is an unconditioned collider with no conditioned descendant."
+      "notes": "The validator confirms the only path is blocked because b is an unconditioned collider with no conditioned descendant, checks the fixed DIMACS artifact, and the Rust regression confirms emitted DRAT and LRAT proof objects independently check."
     },
     {
       "id": "collider-descendant-opens",

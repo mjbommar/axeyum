@@ -1,7 +1,8 @@
 # End To End: DAG D-Separation Checks
 
 This lesson follows one finite DAG resource from directed edges to active-path
-witness replay, blocked-path refutation, and descendant-opened collider replay.
+witness replay, blocked-path refutation, source-linked CNF evidence, and
+descendant-opened collider replay.
 It uses
 [graph-d-separation-v0](../../../artifacts/examples/math/graph-d-separation-v0/).
 
@@ -19,9 +20,9 @@ Concept rows:
 | Check | Expected | Evidence Status |
 |---|---|---|
 | `chain-active-without-conditioning` | `sat` | checked |
-| `chain-conditioned-blocks` | `unsat` | checked |
+| `chain-conditioned-blocks` | `unsat` | checked CNF/DRAT/LRAT |
 | `fork-conditioned-blocks` | `unsat` | checked |
-| `collider-unconditioned-blocks` | `unsat` | checked |
+| `collider-unconditioned-blocks` | `unsat` | checked CNF/DRAT/LRAT |
 | `collider-descendant-opens` | `sat` | checked |
 
 Every row is a finite graph-theoretic d-separation check. The pack does not
@@ -66,6 +67,10 @@ Now `b` is a conditioned non-collider. The validator enumerates the only simple
 skeleton path from `a` to `c` and confirms that it is blocked, so the
 d-connected claim is rejected.
 
+The source-linked CNF artifact for this row asserts the selected path, the
+conditioned non-collider, and the bad active-path claim. Axeyum emits a DRAT
+refutation, elaborates it to LRAT, and checks both proof objects independently.
+
 ## Refute A Conditioned Fork
 
 The fork row uses:
@@ -96,6 +101,12 @@ conditioning_set = {}
 The path `a, b, c` has a collider at `b`. Because neither `b` nor a descendant
 of `b` is conditioned on, the path is blocked. The validator enumerates the
 only simple path and rejects the d-connected claim.
+
+This row now has its own source-linked CNF artifact. It asserts the selected
+path, the collider fact, `not collider_opened`, and the bad active-path claim.
+The Boolean rule says an active path through a collider requires that collider
+to be opened by conditioning on it or a descendant, so the row refutes by the
+same DRAT-to-LRAT checked route as the conditioned-chain row.
 
 ## Replay A Descendant-Opened Collider
 

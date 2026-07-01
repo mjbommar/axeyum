@@ -4442,7 +4442,7 @@
           "id": "graph-d-separation-v0",
           "status": "validated",
           "path": "artifacts/examples/math/graph-d-separation-v0",
-          "notes": "Finite DAG d-separation path enumeration with conditioned-chain CNF proof route."
+          "notes": "Finite DAG d-separation path enumeration with conditioned-chain and unconditioned-collider CNF proof routes."
         }
       ],
       "proof_routes": [

@@ -114,8 +114,9 @@ First targets:
   bounded post-removal reachability DIMACS artifact, DRAT emission, LRAT
   elaboration, and independent checks)
 - [graph-d-separation-v0](../../artifacts/examples/math/graph-d-separation-v0/)
-  (solver-reuse promotion landed for `chain-conditioned-blocks`: source-linked
-  conditioned non-collider blocking DIMACS artifact, DRAT emission, LRAT
+  (solver-reuse promotion landed for `chain-conditioned-blocks` and
+  `collider-unconditioned-blocks`: source-linked conditioned non-collider and
+  unconditioned-collider blocking DIMACS artifacts, DRAT emission, LRAT
   elaboration, and independent checks)
 - [finite-compactness-v0](../../artifacts/examples/math/finite-compactness-v0/)
   (solver-reuse promotion landed for `bad-open-cover-rejected`: source-linked

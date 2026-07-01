@@ -2801,7 +2801,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "graph-d-separation-v0",
-                "Finite DAG d-separation path enumeration with conditioned-chain CNF proof route.",
+                "Finite DAG d-separation path enumeration with conditioned-chain and unconditioned-collider CNF proof routes.",
             ),
         ],
         "proof_routes": [

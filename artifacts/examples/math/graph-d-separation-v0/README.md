@@ -10,7 +10,7 @@ The examples cover:
 - an active chain with no conditioning;
 - a CNF-backed chain blocked by conditioning on its middle non-collider;
 - a fork blocked by conditioning on its middle non-collider;
-- an unconditioned collider that blocks a path;
+- a CNF-backed unconditioned collider that blocks a path;
 - a collider opened by conditioning on a descendant.
 
 ## Concepts
@@ -30,6 +30,8 @@ The examples cover:
 - The conditioned-chain blocking row also has a source-linked DIMACS artifact
   and a Boolean regression that emits and independently checks DRAT and LRAT
   proof objects.
+- The unconditioned-collider blocking row has its own source-linked DIMACS
+  artifact for the collider-specific rule and the same checked DRAT/LRAT route.
 - Collider activation uses the finite descendant relation computed from the DAG.
 - General causal identification, do-calculus, and statistical semantics remain
   outside this pack.

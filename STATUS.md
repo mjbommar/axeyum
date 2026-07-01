@@ -205,6 +205,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Graph d-separation collider CNF route landed.**
+  `graph-d-separation-v0` now promotes `collider-unconditioned-blocks` through a
+  source-linked DIMACS artifact for the finite DAG `a -> b <- c` with empty
+  conditioning. The validator pins the exact graph, path enumeration, DIMACS
+  header, and clauses; the shared Boolean resource regression emits DRAT,
+  elaborates it to LRAT, and checks both proof objects independently. This
+  closes the graph-depth queue item with a distinct learner-readable
+  collider-specific Boolean proof shape; public check counts stay at 634 because
+  this upgrades an existing checked row rather than adding a new row.
+
 - **Finite probability total-variation row landed.**
   `finite-probability-v0` now has exact replay for total variation between two
   normalized three-atom distributions: atomwise differences `1/6, 0, 1/6`,

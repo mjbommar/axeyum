@@ -796,7 +796,8 @@ witness replay, invalid-overlap rejection, augmenting-path flip replay, and a
 perfect-matching obstruction by exhaustive enumeration.
 `artifacts/examples/math/graph-d-separation-v0/` now validates finite DAG
 d-separation checks for chains, forks, colliders, and descendant-opened
-colliders.
+colliders, with source-linked CNF/DRAT/LRAT evidence for both
+conditioned-chain and unconditioned-collider blocker rows.
 `artifacts/examples/math/graph-cut-v0/` now validates finite minimum edge-cut
 and vertex-cut certificates, plus checked rejection of non-separating one-edge
 and one-vertex cuts.
@@ -1034,7 +1035,8 @@ Recommended order:
    `graph-d-separation-v0`, and `graph-cut-v0` validate SAT colorings,
    non-colorability, finite reachability, traversal traces, finite search
    cost counters, cut separation, matching witnesses, augmenting paths, finite
-   DAG d-separation, and minimum cut certificates.
+   DAG d-separation including checked conditioned-chain and
+   unconditioned-collider CNF blockers, and minimum cut certificates.
 2. `finite-probability-v0`: probability mass, conditioning, Bayes rule,
    finite independence, total variation, and checked bad normalization/
    Bayes-posterior/independence/total-variation certificates.

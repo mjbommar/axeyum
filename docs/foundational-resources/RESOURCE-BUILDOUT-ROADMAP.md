@@ -2101,6 +2101,15 @@ Pick one item per commit unless the change is purely navigational.
      Farkas queries now return checked rows while general factorization,
      algebraic closure, root distribution, and generating-function convergence
      remain proof-horizon work.
+141. Landed: extend `graph-d-separation-v0` with a source-linked checked
+     unconditioned-collider CNF row. The fixed DAG `a -> b <- c` with empty
+     conditioning has one skeleton path whose middle node is a closed collider;
+     the DIMACS artifact encodes that collider-specific blocking rule and the
+     malformed active-path claim. The shared Boolean route now checks both the
+     conditioned-chain and unconditioned-collider d-separation blockers through
+     emitted DRAT, elaborated LRAT, and independent proof checks without
+     promoting causal identification or probabilistic graphical-model
+     semantics.
 
 ## Validation Checklist
 

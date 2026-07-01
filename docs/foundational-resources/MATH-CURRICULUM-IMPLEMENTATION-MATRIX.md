@@ -322,8 +322,10 @@ Build sequence:
     bounded reachability fixed-point DIMACS artifact, and `graph-cut-v0` links
     `one-edge-cut-rejected` to a bounded post-removal reachability DIMACS
     artifact. `graph-d-separation-v0` now links `chain-conditioned-blocks` to
-    a conditioned non-collider blocking DIMACS artifact. These Boolean rows are
-    checked by the `math_resource_boolean_routes` DRAT/LRAT regression.
+    a conditioned non-collider blocking DIMACS artifact and
+    `collider-unconditioned-blocks` to an unconditioned-collider blocking DIMACS
+    artifact. These Boolean rows are checked by the
+    `math_resource_boolean_routes` DRAT/LRAT regression.
     `graph-search-runtime-v0` now links `bad-dfs-cost-bound-rejected` to
     `artifacts/examples/math/graph-search-runtime-v0/smt2/bad-dfs-cost-bound-lia-conflict.smt2`,
     checked by the `math_resource_lia_routes` arithmetic-DPLL regression.

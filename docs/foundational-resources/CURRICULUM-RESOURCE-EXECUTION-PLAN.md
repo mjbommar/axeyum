@@ -662,7 +662,9 @@ Next buildout:
    `graph-cut-v0` now adds
    `artifacts/examples/math/graph-cut-v0/cnf/one-edge-cut-rejected.cnf`.
    `graph-d-separation-v0` now adds
-   `artifacts/examples/math/graph-d-separation-v0/cnf/chain-conditioned-blocks.cnf`.
+   `artifacts/examples/math/graph-d-separation-v0/cnf/chain-conditioned-blocks.cnf`
+   and
+   `artifacts/examples/math/graph-d-separation-v0/cnf/collider-unconditioned-blocks.cnf`.
    All Boolean rows are checked from
    `crates/axeyum-cnf/tests/math_resource_boolean_routes.rs`.
    `graph-search-runtime-v0` now adds

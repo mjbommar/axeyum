@@ -1,0 +1,15 @@
+c graph-d-separation-v0 collider-unconditioned-blocks
+c Variables:
+c 1 = the skeleton path a-b-c exists and is selected.
+c 2 = b is the middle collider on that path in a -> b <- c.
+c 3 = the collider is opened by conditioning on b or one of its descendants.
+c 4 = the path is active, matching the rejected d-connected claim.
+c The last clause encodes the d-separation rule: an active path through a
+c collider requires that collider to be opened by conditioning.
+p cnf 4 6
+1 0
+2 0
+-3 0
+4 0
+-4 1 0
+-4 -2 3 0

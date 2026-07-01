@@ -468,8 +468,13 @@ Prefer one row, page, route upgrade, or query surface per commit.
    three-atom distributions plus a source-linked checked bad total-variation
    row. Exact replay computes the absolute-difference table and `TV=1/6`;
    the QF_LRA/Farkas artifact rejects the malformed claim `TV=1/4`.
-6. Deepen graph resources by adding small CNF/LRAT examples where the source
+6. Landed: deepen graph resources by adding small CNF/LRAT examples where the source
    graph is learner-readable.
+   `graph-d-separation-v0` now promotes the unconditioned collider blocker
+   `a -> b <- c` with no conditioning through a source-linked DIMACS artifact.
+   The Boolean route emits DRAT, elaborates to LRAT, and independently checks
+   both proof objects, giving the graph lane a distinct collider-specific proof
+   shape alongside the existing conditioned-chain blocker.
 7. Deepen linear algebra through source-linked matrix-corpus rows only after
    the pack/learner/regression triangle is explicit.
 8. Deepen real analysis through theorem-boundary pages before adding more

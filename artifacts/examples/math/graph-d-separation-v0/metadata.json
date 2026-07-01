@@ -32,11 +32,12 @@
   "solver_reuse": {
     "status": "promoted",
     "target": "finite DAG d-separation Bool/CNF DRAT/LRAT regression seed",
-    "pressure": "Conditioned non-collider blocking in a fixed chain with independent DRAT/LRAT rechecking.",
+    "pressure": "Conditioned non-collider blocking in a fixed chain and unconditioned collider blocking in a fixed collider DAG, each with independent DRAT/LRAT rechecking.",
     "evidence": [
-      "chain-conditioned-blocks"
+      "chain-conditioned-blocks",
+      "collider-unconditioned-blocks"
     ],
-    "next_step": "Promote collider or fork blocking rows only when they add distinct d-separation regression pressure; keep causal identification and do-calculus claims out of this finite Bool lane."
+    "next_step": "Promote fork blocking or collider-descendant activation rows only when they add distinct d-separation regression pressure; keep causal identification and do-calculus claims out of this finite Bool lane."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -48,6 +49,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
     "artifacts/examples/math/graph-d-separation-v0/cnf/chain-conditioned-blocks.cnf",
+    "artifacts/examples/math/graph-d-separation-v0/cnf/collider-unconditioned-blocks.cnf",
     "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
   ],
   "expected_results": [

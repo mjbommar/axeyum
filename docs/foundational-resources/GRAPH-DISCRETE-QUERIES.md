@@ -67,6 +67,7 @@ needs concrete checked rows to display.
 | All checked graph rows | field `graph_theory` | any route | `checks --field graph_theory --expected-result unsat --proof-status checked` |
 | Runtime-specific rows | pack `graph-search-runtime-v0` | `LIA` | `checks --pack graph-search-runtime-v0 --route LIA --proof-status checked` |
 | Coloring-specific rows | pack `graph-coloring-v0` | `boolean`; `qf-bv` | `checks --pack graph-coloring-v0 --route boolean --proof-status checked`; `checks --pack graph-coloring-v0 --route qf-bv --proof-status checked` |
+| D-separation blocker rows | pack `graph-d-separation-v0` | `boolean` | `checks --pack graph-d-separation-v0 --route boolean --proof-status checked` |
 
 ## Copyable Examples
 
@@ -86,6 +87,24 @@ python3 scripts/query-foundational-resources.py checks \
   --concept bridge_finite_graph_replay_obstruction \
   --route boolean \
   --proof-status checked \
+  --require-any
+```
+
+Display checked finite DAG d-separation blocker rows, including the
+unconditioned-collider CNF route:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-d-separation-v0 \
+  --route boolean \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-d-separation-v0 \
+  --route boolean \
+  --proof-status checked \
+  --text collider \
   --require-any
 ```
 

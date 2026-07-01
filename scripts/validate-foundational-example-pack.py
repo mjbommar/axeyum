@@ -2213,7 +2213,52 @@ def validate_graph_d_separation(expected: dict[str, Any]) -> None:
     collider_blocked = checks["collider-unconditioned-blocks"]
     if collider_blocked["expected_result"] != "unsat" or collider_blocked.get("proof_status") != "checked":
         fail("collider-unconditioned-blocks must be a checked unsat row")
-    validate_blocked_dag_query("collider-unconditioned-blocks", collider_blocked.get("data", {}))
+    collider_blocked_data = collider_blocked.get("data", {})
+    validate_blocked_dag_query("collider-unconditioned-blocks", collider_blocked_data)
+    collider_vertices, collider_edges = require_directed_acyclic_graph(
+        "collider-unconditioned-blocks",
+        collider_blocked_data,
+    )
+    collider_source = require_graph_vertex(
+        "collider-unconditioned-blocks.source",
+        collider_blocked_data.get("source"),
+        collider_vertices,
+    )
+    collider_target = require_graph_vertex(
+        "collider-unconditioned-blocks.target",
+        collider_blocked_data.get("target"),
+        collider_vertices,
+    )
+    collider_conditioned = require_vertex_set(
+        "collider-unconditioned-blocks.conditioning_set",
+        collider_blocked_data.get("conditioning_set", []),
+        collider_vertices,
+        nonempty=False,
+    )
+    collider_paths = collider_blocked_data.get("all_simple_paths")
+    if (
+        collider_vertices != ["a", "b", "c"]
+        or collider_edges != [("a", "b"), ("c", "b")]
+        or collider_source != "a"
+        or collider_target != "c"
+        or collider_conditioned
+        or collider_paths != [["a", "b", "c"]]
+    ):
+        fail("collider-unconditioned-blocks DIMACS artifact is fixed to a -> b <- c with no conditioning")
+    require_dimacs_artifact(
+        "collider-unconditioned-blocks",
+        collider_blocked_data.get("cnf_artifact"),
+        "p cnf 4 6",
+        [["1"], ["2"], ["-3"], ["4"], ["-4", "1"], ["-4", "-2", "3"]],
+    )
+    proof_regression = collider_blocked_data.get("proof_regression")
+    require_string("collider-unconditioned-blocks proof_regression", proof_regression)
+    if "math_resource_boolean_routes.rs::graph_d_separation_collider_unconditioned_blocks" not in proof_regression:
+        fail("collider-unconditioned-blocks proof_regression must name the Boolean resource test")
+    certificate = collider_blocked_data.get("certificate")
+    require_string("collider-unconditioned-blocks certificate", certificate)
+    if "DRAT" not in certificate or "LRAT" not in certificate or "independently" not in certificate:
+        fail("collider-unconditioned-blocks certificate must document DRAT/LRAT independent checking")
 
     collider_open = checks["collider-descendant-opens"]
     if collider_open["expected_result"] != "sat" or collider_open.get("proof_status") != "checked":

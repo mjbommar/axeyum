@@ -56,7 +56,8 @@ checked QF_LIA arithmetic-DPLL regression. The graph
 matching pack checks finite matching witnesses, invalid overlapping edges,
 augmenting path flips, and a perfect-matching obstruction. The DAG
 d-separation pack checks chains, forks, colliders, and descendant-opened
-colliders by enumerating finite skeleton paths. The graph cut pack checks
+colliders by enumerating finite skeleton paths, with CNF/DRAT/LRAT artifacts for
+conditioned-chain and unconditioned-collider blockers. The graph cut pack checks
 minimum edge and vertex cut certificates by replaying separation and
 enumerating smaller candidate cuts.
 
@@ -226,6 +227,8 @@ conditioning set = {d}
 ```
 
 opens the path through `b` because `d` is a descendant of the collider.
+The pack also refutes the unconditioned collider `a -> b <- c` with no
+conditioning through a tiny source-linked CNF artifact checked by DRAT and LRAT.
 
 For cut certificates, encode a finite graph, a source/target pair, and the
 proposed cut:

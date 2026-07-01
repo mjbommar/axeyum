@@ -611,7 +611,8 @@ rows into source-linked regression artifacts with pack back-links.
 `tiny-cnf-refutation`,
 `no-injection-four-to-three`, `triangle-no-perfect-matching`,
 `disconnected-no-path`, `one-edge-cut-rejected`, and
-`chain-conditioned-blocks` now have source-linked DIMACS artifacts; topology's
+`chain-conditioned-blocks` plus `collider-unconditioned-blocks` now have
+source-linked DIMACS artifacts; topology's
 `bad-open-cover-rejected` and `bad-connected-claim-rejected` now do too. The
 Boolean `math_resource_boolean_routes` regression checks emitted DRAT and LRAT
 proof objects, while

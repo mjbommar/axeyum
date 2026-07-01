@@ -47,6 +47,9 @@ const GRAPH_CUT_ONE_EDGE_REJECTED: &str =
 const GRAPH_D_SEPARATION_CHAIN_CONDITIONED_BLOCKS: &str = include_str!(
     "../../../artifacts/examples/math/graph-d-separation-v0/cnf/chain-conditioned-blocks.cnf"
 );
+const GRAPH_D_SEPARATION_COLLIDER_UNCONDITIONED_BLOCKS: &str = include_str!(
+    "../../../artifacts/examples/math/graph-d-separation-v0/cnf/collider-unconditioned-blocks.cnf"
+);
 const GRAPH_MATCHING_TRIANGLE_NO_PERFECT_MATCHING: &str = include_str!(
     "../../../artifacts/examples/math/graph-matching-v0/cnf/triangle-no-perfect-matching.cnf"
 );
@@ -274,6 +277,16 @@ fn graph_d_separation_chain_conditioned_blocks_emits_checked_drat_and_lrat() {
     assert_unsat_resource_cnf_checks(
         "graph-d-separation-v0 chain-conditioned-blocks",
         GRAPH_D_SEPARATION_CHAIN_CONDITIONED_BLOCKS,
+        4,
+        6,
+    );
+}
+
+#[test]
+fn graph_d_separation_collider_unconditioned_blocks_emits_checked_drat_and_lrat() {
+    assert_unsat_resource_cnf_checks(
+        "graph-d-separation-v0 collider-unconditioned-blocks",
+        GRAPH_D_SEPARATION_COLLIDER_UNCONDITIONED_BLOCKS,
         4,
         6,
     );
