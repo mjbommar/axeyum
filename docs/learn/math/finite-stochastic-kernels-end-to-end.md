@@ -178,7 +178,7 @@ pushforward distributions through kernels
 joint-table factorization
 kernel recovery by finite disintegration
 finite kernel composition
-bad kernel-row refutations
+bad kernel-row and bad composition-entry refutations
 ```
 
 The following remain proof-assistant targets:

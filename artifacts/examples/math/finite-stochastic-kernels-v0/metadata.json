@@ -45,10 +45,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-stochastic-kernels-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite stochastic-kernel bad-row QF_LRA/Farkas regression seed",
-    "pressure": "Malformed finite probability-transition row where the exact rational entries 3/5 and 3/5 sum to 6/5 but stochastic-kernel normalization requires row sum 1.",
+    "target": "finite stochastic-kernel bad-row and bad-composition QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed finite probability-transition rows where exact rational replay computes a row sum 6/5 instead of 1 and a composed rainy-to-early transition 22/75 instead of the claimed 1/3.",
     "evidence": [
-      "bad-kernel-row-rejected"
+      "bad-kernel-row-rejected",
+      "bad-kernel-composition-rejected"
     ],
     "next_step": "Promote additional kernel, Markov-chain, or policy-transition rows only when they add distinct exact-linear solver pressure; keep regular conditional probabilities and general disintegration in the Lean-horizon lane."
   },
@@ -64,6 +65,7 @@
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-kernel-row-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-composition-entry-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
@@ -72,12 +74,13 @@
     "joint-disintegration-witness",
     "kernel-composition-witness",
     "bad-kernel-row-rejected",
+    "bad-kernel-composition-rejected",
     "general-kernel-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite kernels as labeled source-to-target probability tables.",
     "Replay kernel normalization, pushforward, joint factorization, disintegration, and composition by exact rational sums.",
-    "Emit checked finite counterexample evidence for malformed kernel rows; the bad-row normalization conflict now has checked QF_LRA/Farkas evidence.",
+    "Emit checked finite counterexample evidence for malformed kernel rows and composed-transition entries; the bad-row normalization and bad-composition conflicts now have checked QF_LRA/Farkas evidence.",
     "Keep regular conditional probabilities, disintegration theorems, and general Markov kernels on measurable spaces marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

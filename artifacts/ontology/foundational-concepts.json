@@ -6987,7 +6987,7 @@
           "id": "finite-stochastic-kernels-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-stochastic-kernels-v0",
-          "notes": "Finite transition-kernel normalization, marginal, composition, and bad-row checks."
+          "notes": "Finite transition-kernel normalization, marginal, composition, bad-row, and bad-composition checks."
         },
         {
           "id": "finite-markov-chain-v0",
@@ -7023,7 +7023,7 @@
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "The finite checker recomputes row sums, transition composition, and expected-time equations exactly; bad row or threshold claims use checked Farkas evidence."
+          "notes": "The finite checker recomputes row sums, transition composition, and expected-time equations exactly; bad row, composed-entry, or threshold claims use checked Farkas evidence."
         }
       ],
       "source_refs": [

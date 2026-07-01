@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const rainy_early Real)
+(assert (= (* 75 rainy_early) 22))
+(assert (= rainy_early (/ 1 3)))
+(check-sat)

@@ -37,6 +37,17 @@ The source-linked QF_LRA artifact isolates the exact-rational contradiction and
 the `math_resource_lra_routes` regression checks Axeyum's emitted Farkas
 evidence independently.
 
+## `bad-kernel-composition-rejected`
+
+Expected result: `unsat`.
+
+The validator recomputes the composed transition
+`(K;L)(rainy, early) = 22/75`, so the claimed value `1/3` is false. The
+source-linked QF_LRA artifact isolates the final exact-rational contradiction
+`75 * rainy_early = 22` and `rainy_early = 1/3`, and the
+`math_resource_lra_routes` regression checks Axeyum's emitted Farkas evidence
+independently.
+
 ## `general-kernel-lean-horizon`
 
 Expected result: `not-run`.

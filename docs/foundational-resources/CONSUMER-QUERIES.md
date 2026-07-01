@@ -815,6 +815,13 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --pack finite-stochastic-kernels-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text composition \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --field statistics \
   --route Diophantine \
   --proof-status checked \

@@ -12,7 +12,7 @@ The examples are:
 - a joint table that factors into a source distribution and kernel, plus
   recovery of the kernel from the joint table;
 - a composed two-step kernel witness;
-- checked rejection of a malformed kernel row;
+- checked rejection of a malformed kernel row and a malformed composed entry;
 - a regular-conditional-probability and disintegration Lean-horizon row.
 
 ## Concepts
@@ -36,14 +36,16 @@ row normalization, pushforward sums, joint probabilities
 `P(x,y) = mu(x) K(x,y)`, marginalization, recovery of `K(x,y)` from
 `P(x,y) / mu(x)`, and finite kernel composition.
 
-This pack is checked finite evidence for malformed kernel rows. It is not a
-proof of regular conditional probabilities, disintegration theorems, general
-Markov kernels on measurable spaces, or stochastic-process convergence.
-The malformed row also has a source-linked QF_LRA/Farkas regression so the
-`unsat` evidence is checked independently of solver search.
+This pack is checked finite evidence for malformed kernel rows and malformed
+composed entries. It is not a proof of regular conditional probabilities,
+disintegration theorems, general Markov kernels on measurable spaces, or
+stochastic-process convergence. The malformed rows also have source-linked
+QF_LRA/Farkas regressions so the `unsat` evidence is checked independently of
+solver search.
 
 Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-stochastic-kernels-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_stochastic_kernel_bad_composition_artifact_emits_checked_farkas
 ```

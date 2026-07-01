@@ -536,7 +536,7 @@ Next buildout:
    `math_resource_lra_routes` regression; finite concentration, finite
    conditional expectation, finite hitting times, finite Euler method, and
    finite stochastic kernels now add source-linked probability/statistics and
-   dynamics/numerics seeds to that route.
+   dynamics/numerics row-normalization and composition seeds to that route.
 15. Add QF_UF/Alethe upgrade rows for equivalence, function, and finite algebra
    examples.
    Status: the first high-use learner-page route-note pass now names these

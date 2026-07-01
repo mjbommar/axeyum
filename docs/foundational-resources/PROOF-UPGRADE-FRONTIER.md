@@ -305,8 +305,8 @@ First targets:
   (source-linked solver-reuse promotions landed for the bad high-block and
   tower-property tables)
 - [finite-stochastic-kernels-v0](../../artifacts/examples/math/finite-stochastic-kernels-v0/)
-  (resource-backed Farkas regression landed for the bad kernel-row
-  normalization conflict)
+  (resource-backed Farkas regressions landed for the bad kernel-row
+  normalization conflict and bad composed-entry conflict)
 - [finite-euler-method-v0](../../artifacts/examples/math/finite-euler-method-v0/)
   (source-linked solver-reuse promotions landed for the bad max-error bound and
   bad fixed-step transition)
@@ -375,7 +375,8 @@ Secondary targets:
   metric-continuity now
   contributes a topology / epsilon-delta exact-linear regression, and finite
   stochastic kernels now
-  contribute a probability/statistics transition-row normalization regression.
+  contribute probability/statistics transition-row normalization and
+  composed-transition regressions.
   Finite integration now contributes a measure-theory expectation regression,
   calculus algebraic shadows now contribute a real-analysis/numerical-analysis
   derivative-value regression, calculus Riemann sums now contribute a

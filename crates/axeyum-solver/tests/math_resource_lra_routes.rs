@@ -196,6 +196,9 @@ const FINITE_RANDOM_VARIABLES_BAD_EXPECTATION_THROUGH_PUSHFORWARD: &str = includ
 const FINITE_CONDITIONAL_EXPECTATION_BAD_TOWER_PROPERTY: &str = include_str!(
     "../../../artifacts/examples/math/finite-conditional-expectation-v0/smt2/bad-tower-property-farkas-conflict.smt2"
 );
+const FINITE_STOCHASTIC_KERNEL_BAD_COMPOSITION: &str = include_str!(
+    "../../../artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-composition-entry-farkas-conflict.smt2"
+);
 const FINITE_PROBABILITY_BAD_CONDITIONAL_PROBABILITY: &str = include_str!(
     "../../../artifacts/examples/math/finite-probability-v0/smt2/bad-conditional-probability-farkas-conflict.smt2"
 );
@@ -1178,6 +1181,14 @@ fn finite_stochastic_kernel_bad_row_emits_checked_farkas() {
             row_sum_matches_entries,
             row_sum_is_one,
         ],
+    );
+}
+
+#[test]
+fn finite_stochastic_kernel_bad_composition_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-stochastic-kernels-v0 bad-composition-entry SMT-LIB artifact",
+        FINITE_STOCHASTIC_KERNEL_BAD_COMPOSITION,
     );
 }
 

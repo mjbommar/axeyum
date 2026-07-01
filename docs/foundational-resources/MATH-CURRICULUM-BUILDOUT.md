@@ -1060,7 +1060,8 @@ Recommended order:
     QF_LRA/Farkas bad martingale rejection.
 29. `finite-stochastic-kernels-v0`: finite source-to-target kernels,
     pushforward distributions, joint disintegration replay, kernel
-    composition, and QF_LRA/Farkas bad kernel-row rejection.
+    composition, and QF_LRA/Farkas bad kernel-row and bad composition-entry
+    rejections.
 30. `finite-hitting-times-v0`: finite first-hit distributions, survival
     probabilities, absorption-probability equations, expected hitting-time
     equations, and bad expected-time rejection.
@@ -1962,9 +1963,10 @@ same checked Farkas evidence path after finite replay computes
 `finite-markov-chain-v0` now routes its bad stochastic-row and
 bad stationary-distribution rejections through the same checked Farkas evidence
 path after exact replay computes the row sum and the next distribution.
-`finite-stochastic-kernels-v0` now routes its bad kernel-row rejection through
-the same checked Farkas evidence path after exact replay computes the malformed
-row sum `3/5 + 3/5 = 6/5`.
+`finite-stochastic-kernels-v0` now routes its bad kernel-row and bad
+composition-entry rejections through the same checked Farkas evidence path
+after exact replay computes the malformed row sum `3/5 + 3/5 = 6/5` and the
+composed transition `(K;L)(rainy, early) = 22/75`.
 `finite-hitting-times-v0` now routes its bad expected-time row through a
 source-linked checked Farkas evidence path after clearing denominators in the
 finite linear equation, and its metadata promotes that row for solver reuse.

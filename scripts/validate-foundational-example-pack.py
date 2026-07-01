@@ -20921,6 +20921,68 @@ def validate_finite_stochastic_kernels(expected: dict[str, Any]) -> None:
         fail("bad-kernel-row-rejected bad_source is not in the source set")
     if row_sums[bad_source] == 1:
         fail("bad-kernel-row-rejected bad row unexpectedly sums to 1")
+    require_string("bad kernel smt2_artifact", data.get("smt2_artifact"))
+    check_source("bad kernel smt2_artifact", data["smt2_artifact"])
+    require_string("bad kernel farkas_regression", data.get("farkas_regression"))
+    if "finite_stochastic_kernel_bad_row_emits_checked_farkas" not in data["farkas_regression"]:
+        fail("bad-kernel-row-rejected must link the Farkas regression")
+
+    bad_composition = checks["bad-kernel-composition-rejected"]
+    if bad_composition["expected_result"] != "unsat":
+        fail("bad-kernel-composition-rejected must expect unsat")
+    data = bad_composition.get("data", {})
+    source_ids = require_string_list("bad kernel composition source", data.get("source"))
+    middle_ids = require_string_list("bad kernel composition middle", data.get("middle"))
+    target_ids = require_string_list("bad kernel composition target", data.get("target"))
+    left_kernel = require_finite_kernel(
+        "bad kernel composition left_kernel",
+        data.get("left_kernel"),
+        source_ids,
+        middle_ids,
+        normalized=True,
+    )
+    right_kernel = require_finite_kernel(
+        "bad kernel composition right_kernel",
+        data.get("right_kernel"),
+        middle_ids,
+        target_ids,
+        normalized=True,
+    )
+    actual_composed_kernel = require_finite_kernel(
+        "bad kernel composition actual_composed_kernel",
+        data.get("actual_composed_kernel"),
+        source_ids,
+        target_ids,
+        normalized=True,
+    )
+    computed = finite_kernel_composition(left_kernel, right_kernel, source_ids, middle_ids, target_ids)
+    if computed != actual_composed_kernel:
+        fail("bad-kernel-composition-rejected actual_composed_kernel is incorrect")
+    bad_source = data.get("bad_source")
+    require_string("bad kernel composition bad_source", bad_source)
+    if bad_source not in set(source_ids):
+        fail("bad-kernel-composition-rejected bad_source is not in the source set")
+    bad_target = data.get("bad_target")
+    require_string("bad kernel composition bad_target", bad_target)
+    if bad_target not in set(target_ids):
+        fail("bad-kernel-composition-rejected bad_target is not in the target set")
+    actual_probability = require_probability(
+        "bad kernel composition actual_probability",
+        data.get("actual_probability"),
+    )
+    claimed_probability = require_probability(
+        "bad kernel composition claimed_probability",
+        data.get("claimed_probability"),
+    )
+    if computed[bad_source][bad_target] != actual_probability:
+        fail("bad-kernel-composition-rejected actual_probability is incorrect")
+    if actual_probability == claimed_probability:
+        fail("bad-kernel-composition-rejected must document a false composed probability")
+    require_string("bad kernel composition smt2_artifact", data.get("smt2_artifact"))
+    check_source("bad kernel composition smt2_artifact", data["smt2_artifact"])
+    require_string("bad kernel composition farkas_regression", data.get("farkas_regression"))
+    if "finite_stochastic_kernel_bad_composition_artifact_emits_checked_farkas" not in data["farkas_regression"]:
+        fail("bad-kernel-composition-rejected must link the Farkas regression")
 
     horizon = checks["general-kernel-lean-horizon"]
     if horizon["expected_result"] != "not-run":

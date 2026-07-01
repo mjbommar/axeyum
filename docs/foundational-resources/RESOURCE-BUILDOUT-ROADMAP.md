@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 594 expected checks.
-- 274 checked proof/evidence rows.
+- 595 expected checks.
+- 275 checked proof/evidence rows.
 - 249 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1148,8 +1148,9 @@ Pick one item per commit unless the change is purely navigational.
    quotient, ideal, module, tensor bilinearity, and group action.
 3. Landed: add "math example using this route" sections to the six active
    proof cookbook recipes.
-4. Landed: promote `finite-stochastic-kernels-v0` for a small exact-rational
-   QF_LRA/Farkas bad-row normalization contradiction with strong learner value.
+4. Landed: promote `finite-stochastic-kernels-v0` for small exact-rational
+   QF_LRA/Farkas bad-row normalization and bad composition-entry
+   contradictions with strong learner value.
 5. Landed: promote `finite-ideals-v0` for a quotient-ring representative
    congruence row that exercises equality of induced quotient addition beyond
    the existing bad-ideal closure family row.

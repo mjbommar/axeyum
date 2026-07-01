@@ -44,8 +44,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 594 expected checks.
-- 274 checked proof/evidence rows.
+- 595 expected checks.
+- 275 checked proof/evidence rows.
 - 249 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1044,6 +1044,13 @@ Pick one row per commit unless the change is purely navigational.
      shared QF_LRA/Farkas route now checks both tail and union finite
      concentration contradictions without claiming Chernoff/Hoeffding/LLN/CLT,
      martingale concentration, asymptotics, or general limit theorems.
+126. Landed: extend `finite-stochastic-kernels-v0` with a checked bad
+     composition-entry row. Exact two-step kernel replay computes
+     `(K;L)(rainy, early)=22/75`, while the malformed source SMT-LIB artifact
+     claims `1/3`; the shared QF_LRA/Farkas route now checks both kernel-row
+     normalization and kernel-composition contradictions without claiming
+     regular conditional probabilities, general disintegration, Markov kernels
+     on arbitrary measurable spaces, or stochastic-process convergence.
 
 ## Validation Checklist
 

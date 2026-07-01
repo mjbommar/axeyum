@@ -105,6 +105,7 @@ python3 scripts/query-foundational-resources.py checks --pack exact-statistical-
 python3 scripts/query-foundational-resources.py checks --pack exact-statistical-tests-v0 --route Farkas --proof-status checked --text two-sided --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack exact-statistical-tests-v0 --route Farkas --proof-status checked --text multinomial --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-concentration-v0 --route Farkas --proof-status checked --text union --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-stochastic-kernels-v0 --route Farkas --proof-status checked --text composition --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field statistics --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field linear_algebra --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field linear_algebra --route Alethe --require-any >/dev/null

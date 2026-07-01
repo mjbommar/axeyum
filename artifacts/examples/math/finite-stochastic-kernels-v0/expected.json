@@ -133,6 +133,37 @@
       "notes": "The validator rejects the row because its probabilities sum to 6/5; the Axeyum regression refutes rainy_row_sum = rainy_walk + rainy_bus, rainy_walk = 3/5, rainy_bus = 3/5, rainy_row_sum = 1 with rechecked Farkas evidence."
     },
     {
+      "id": "bad-kernel-composition-rejected",
+      "claim": "The listed weather-to-arrival composition has rainy-to-early probability 1/3.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_kernel_composition_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source": ["sunny", "rainy"],
+        "middle": ["walk", "bus"],
+        "target": ["early", "late"],
+        "left_kernel": [
+          {"source": "sunny", "probabilities": {"walk": "3/4", "bus": "1/4"}},
+          {"source": "rainy", "probabilities": {"walk": "1/5", "bus": "4/5"}}
+        ],
+        "right_kernel": [
+          {"source": "walk", "probabilities": {"early": "2/3", "late": "1/3"}},
+          {"source": "bus", "probabilities": {"early": "1/5", "late": "4/5"}}
+        ],
+        "actual_composed_kernel": [
+          {"source": "sunny", "probabilities": {"early": "11/20", "late": "9/20"}},
+          {"source": "rainy", "probabilities": {"early": "22/75", "late": "53/75"}}
+        ],
+        "bad_source": "rainy",
+        "bad_target": "early",
+        "actual_probability": "22/75",
+        "claimed_probability": "1/3",
+        "smt2_artifact": "artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-composition-entry-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_stochastic_kernel_bad_composition_artifact_emits_checked_farkas"
+      },
+      "notes": "The validator rejects the composed-entry claim because exact kernel composition gives (rainy, early) = 22/75; the Axeyum regression refutes the final linear claim rainy_early = 1/3 with rechecked Farkas evidence."
+    },
+    {
       "id": "general-kernel-lean-horizon",
       "claim": "General regular conditional probability and disintegration require future Lean resources.",
       "expected_result": "not-run",

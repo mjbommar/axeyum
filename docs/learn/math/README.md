@@ -425,8 +425,9 @@ Companion maps:
   martingale rejection, and the general martingale Lean horizon.
 - [Finite Stochastic Kernels](finite-stochastic-kernels-end-to-end.md): follows
   row-normalized finite kernels, pushforward distributions, joint
-  factorization/disintegration, kernel composition, checked bad kernel-row
-  rejection, and the regular-conditional-probability Lean horizon.
+  factorization/disintegration, kernel composition, checked bad kernel-row and
+  bad composition-entry rejection, and the regular-conditional-probability
+  Lean horizon.
 - [Finite Hitting Times](finite-hitting-times-end-to-end.md): follows finite
   absorbing-chain first-hit distributions, survival mass, absorption
   equations, expected hitting-time equations, checked bad expected-time

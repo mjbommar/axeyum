@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite stochastic-kernel composition QF_LRA row landed.**
+  `finite-stochastic-kernels-v0` now includes a checked bad composed-entry row:
+  exact kernel-composition replay computes `(K;L)(rainy, early) = 22/75`, then
+  rejects the malformed claim `(K;L)(rainy, early) = 1/3` through a source
+  SMT-LIB artifact on the shared QF_LRA/Farkas route. The validator pins both
+  component kernels, the recomputed composed kernel, the bad source/target
+  entry, artifact path, and regression; the shared `math_resource_lra_routes`
+  regression parses the artifact and checks `UnsatFarkas` evidence. Generated
+  dashboards and the public query summary now report 111 concept rows,
+  108 non-template packs, 595 expected checks, 275 checked rows, 249
+  replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite concentration bad union-bound QF_LRA row landed.**
   `finite-concentration-v0` now includes a checked bad union-bound row: exact
   atom-table replay computes `P(A union B) = 3/4` for events with

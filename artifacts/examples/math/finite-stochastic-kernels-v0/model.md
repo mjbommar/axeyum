@@ -73,3 +73,20 @@ K(rainy, bus) = 3/5
 ```
 
 The checker rejects it because the row sum is `6/5`, not `1`.
+
+## Bad Composition Entry
+
+The false composition row reuses the weather-to-commute kernel `K` and the
+commute-to-arrival kernel `L`, but claims:
+
+```text
+(K;L)(rainy, early) = 1/3
+```
+
+Exact replay computes:
+
+```text
+(K;L)(rainy, early) = 1/5*2/3 + 4/5*1/5 = 22/75
+```
+
+The final contradictory equality is checked through QF_LRA/Farkas evidence.

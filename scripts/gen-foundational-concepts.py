@@ -5212,7 +5212,7 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "finite-stochastic-kernels-v0",
-                "Finite transition-kernel normalization, marginal, composition, and bad-row checks.",
+                "Finite transition-kernel normalization, marginal, composition, bad-row, and bad-composition checks.",
             ),
             (
                 "finite-markov-chain-v0",
@@ -5245,7 +5245,8 @@ BRIDGE_CONCEPTS = [
                 "notes": (
                     "The finite checker recomputes row sums, transition "
                     "composition, and expected-time equations exactly; bad "
-                    "row or threshold claims use checked Farkas evidence."
+                    "row, composed-entry, or threshold claims use checked "
+                    "Farkas evidence."
                 ),
             }
         ],
