@@ -350,6 +350,17 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+For the concrete finite measure union-subadditivity proof row:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-measure-monotonicity-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text union \
+  --require-any
+```
+
 Use the atlas lookup for reusable finite-probability and finite random-matrix
 vocabulary:
 

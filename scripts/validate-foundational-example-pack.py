@@ -18031,6 +18031,58 @@ def validate_finite_measure_monotonicity(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-subset-measure-rejected certificate must document checked Farkas evidence")
 
+    bad_union = checks["bad-union-subadditivity-rejected"]
+    if bad_union["expected_result"] != "unsat" or bad_union.get("proof_status") != "checked":
+        fail("bad-union-subadditivity-rejected must be a checked unsat row")
+    data = bad_union.get("data", {})
+    if data.get("source_witness") != "finite-union-subadditivity":
+        fail("bad-union-subadditivity-rejected must cite the finite-union-subadditivity source witness")
+    claimed_union_measure = require_fraction(
+        "bad union claimed_union_measure",
+        data.get("claimed_union_measure"),
+    )
+    computed_union_measure = require_fraction(
+        "bad union computed_union_measure",
+        data.get("computed_union_measure"),
+    )
+    computed_left_measure = require_fraction(
+        "bad union computed_left_measure",
+        data.get("computed_left_measure"),
+    )
+    computed_right_measure = require_fraction(
+        "bad union computed_right_measure",
+        data.get("computed_right_measure"),
+    )
+    computed_subadditivity_bound = require_fraction(
+        "bad union computed_subadditivity_bound",
+        data.get("computed_subadditivity_bound"),
+    )
+    if computed_union_measure != union_measures[union]:
+        fail("bad-union-subadditivity-rejected computed_union_measure must match replay")
+    if computed_left_measure != union_measures[left]:
+        fail("bad-union-subadditivity-rejected computed_left_measure must match replay")
+    if computed_right_measure != union_measures[right]:
+        fail("bad-union-subadditivity-rejected computed_right_measure must match replay")
+    if computed_subadditivity_bound != union_measures[left] + union_measures[right]:
+        fail("bad-union-subadditivity-rejected computed_subadditivity_bound must match replay")
+    if claimed_union_measure == union_measures[union]:
+        fail("bad-union-subadditivity-rejected must disagree with the replayed union measure")
+    if claimed_union_measure <= computed_subadditivity_bound:
+        fail("bad-union-subadditivity-rejected must falsify finite subadditivity")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad union smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-measure-monotonicity-v0/smt2/bad-union-subadditivity-farkas-conflict.smt2":
+        fail("bad-union-subadditivity-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad union smt2_artifact", smt2_artifact)
+    farkas_regression = data.get("farkas_regression")
+    require_string("bad union farkas_regression", farkas_regression)
+    if "finite_measure_monotonicity_bad_union_subadditivity_artifact_emits_checked_farkas" not in farkas_regression:
+        fail("bad-union-subadditivity-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad union certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-union-subadditivity-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-measure-monotonicity-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-measure-monotonicity-lean-horizon must be not-run")

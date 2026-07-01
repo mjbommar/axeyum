@@ -833,8 +833,8 @@ sigma-algebra axioms, exact finite additivity, event/complement measure
 replay, and checked QF_LRA/Farkas rejection of a bad complement-measure row.
 `artifacts/examples/math/finite-measure-monotonicity-v0/` now validates
 normalized finite measure-table replay, subset monotonicity, union
-subadditivity, checked QF_LRA/Farkas rejection of a bad subset-measure row,
-and a convergence/countable-measure Lean-horizon row.
+subadditivity, checked QF_LRA/Farkas rejection of bad subset-measure and
+union-subadditivity rows, and a convergence/countable-measure Lean-horizon row.
 `artifacts/examples/math/finite-integration-v0/` now validates exact finite
 simple-function integrals, indicator integrals, integral linearity, checked
 QF_LRA/Farkas rejection of a false expectation, and a Lebesgue-integration
@@ -1001,7 +1001,8 @@ Recommended order:
    checked Bool/CNF bad-empty-open rejection.
 9. `finite-measure-v0` and `finite-measure-monotonicity-v0`: finite
    sigma-algebras, finite measure checks, monotonicity/subadditivity, and
-   QF_LRA/Farkas false complement-measure and false subset-measure rejection.
+   QF_LRA/Farkas false complement-measure, false subset-measure, and false
+   union-subadditivity rejection.
 10. `bounded-dynamics-v0` and `finite-euler-method-v0`: recurrence systems,
    Euler step replay, finite error checks, invariants, and QF_LRA/Farkas bad
    error-bound plus fixed-step rejection.
@@ -1957,9 +1958,10 @@ the relevant conditioning, disease-positive, and evidence probabilities.
 `finite-measure-v0` now routes its bad complement-measure row through the same
 checked Farkas evidence path after finite replay computes `mu(A) = 1/3` and
 `mu(U) = 1`.
-`finite-measure-monotonicity-v0` routes its bad subset-measure row through the
-same checked Farkas evidence path after finite replay computes
-`mu({a}) = 1/6` and `mu({a,b}) = 1/2`.
+`finite-measure-monotonicity-v0` routes its bad subset-measure and bad
+union-subadditivity rows through the same checked Farkas evidence path after
+finite replay computes `mu({a}) = 1/6`, `mu({a,b}) = 1/2`, and
+`mu(A)+mu(B)=4/3` for the overlapping union witness.
 `finite-markov-chain-v0` now routes its bad stochastic-row and
 bad stationary-distribution rejections through the same checked Farkas evidence
 path after exact replay computes the row sum and the next distribution.

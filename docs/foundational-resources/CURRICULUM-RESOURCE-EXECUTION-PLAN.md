@@ -471,8 +471,9 @@ Next buildout:
    event complements, and checked QF_LRA/Farkas bad-complement rejection.
    `docs/learn/math/finite-measure-monotonicity-end-to-end.md` now follows
    normalized finite measure-table replay, subset monotonicity, union
-   subadditivity, checked QF_LRA/Farkas bad subset-measure rejection, and the
-   convergence/countable-measure Lean horizon.
+   subadditivity, checked QF_LRA/Farkas bad subset-measure rejection, checked
+   bad union-subadditivity rejection, and the convergence/countable-measure
+   Lean horizon.
 5. Landed: add standalone linear optimization and finite topology lessons. The
    finite topology page now follows topology axiom replay, closure/interior
    replay, exact metric-ball replay, and checked Bool/CNF missing-empty-set

@@ -164,7 +164,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 597 expected checks, 277 checked
+111 concept rows, 108 non-template packs, 598 expected checks, 278 checked
 rows, 249 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -194,8 +194,9 @@ after replay computes `E[X] = 20`, finite-integration's bad expectation row
 after replay computes the integral, finite-conditional-expectation's bad
 tower-property row after nested-partition replay computes `7/2` rather than
 `4`, finite-measure's bad complement row after finite replay computes the event
-and total measures, finite-measure-monotonicity's bad subset-measure row after
-finite replay computes the subset and superset measures, finite-martingales'
+and total measures, finite-measure-monotonicity's bad subset-measure and
+union-subadditivity rows after finite replay computes the subset/superset
+measures and the union bound `mu(A)+mu(B)=4/3`, finite-martingales'
 bad stopped-expectation and conditional-expectation rows after bounded stopping
 replay computes `E[M_tau] = 0` and finite filtration replay computes the
 up-block expectation, finite Markov-chain's bad stochastic-row and false
@@ -676,7 +677,8 @@ incidence-geometry bad intersection-coordinate and point-on-line QF_LRA/Farkas
 promotion,
 rigid-configuration bad translation-image and distance-table QF_LRA/Farkas
 promotion,
-finite-measure-monotonicity bad subset-measure QF_LRA/Farkas promotion,
+finite-measure-monotonicity bad subset-measure and bad union-subadditivity
+QF_LRA/Farkas promotion,
 bounded-monotone-sequence bad upper-bound QF_LRA/Farkas promotion,
 finite-recurrence-prefix bad Fibonacci-value QF_LRA/Farkas promotion,
 finite-topology missing-empty-set Bool/CNF DRAT/LRAT promotion,

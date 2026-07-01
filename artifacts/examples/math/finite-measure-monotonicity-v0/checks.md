@@ -31,6 +31,16 @@ Finite replay computes `mu({a}) = 1/6`. The malformed row claims
 `{a,b}` with measure `1/2`. The committed SMT-LIB artifact isolates the final
 exact-rational contradiction and checks it through QF_LRA/Farkas evidence.
 
+## `bad-union-subadditivity-rejected`
+
+Expected result: `unsat`.
+
+Finite replay computes `mu(A union B) = 1` and
+`mu(A) + mu(B) = 4/3` for `A = {a,b}` and `B = {b,c}`. The malformed row
+claims `mu(A union B) = 3/2`, which violates the finite subadditivity bound.
+The committed SMT-LIB artifact isolates that final exact-linear inequality
+conflict and checks it through QF_LRA/Farkas evidence.
+
 ## `general-measure-monotonicity-lean-horizon`
 
 Expected result: `not-run`.

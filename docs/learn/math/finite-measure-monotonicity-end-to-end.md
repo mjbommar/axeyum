@@ -2,7 +2,7 @@
 
 This lesson follows one finite measure resource from a normalized powerset
 measure table to subset monotonicity, union subadditivity, and checked
-rejection of a malformed subset-measure row. It uses the
+rejection of malformed subset-measure and union-subadditivity rows. It uses the
 [finite-measure-monotonicity-v0](../../../artifacts/examples/math/finite-measure-monotonicity-v0/)
 pack.
 
@@ -24,6 +24,7 @@ Concept rows:
 | `subset-monotonicity-witness` | `sat` | replay-only |
 | `finite-union-subadditivity-witness` | `sat` | replay-only |
 | `bad-subset-measure-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-union-subadditivity-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-measure-monotonicity-lean-horizon` | `not-run` | Lean horizon |
 
 All finite rows are exact rational table checks. The pack does not prove
@@ -87,6 +88,19 @@ The committed SMT-LIB artifact
 [`bad-subset-measure-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-measure-monotonicity-v0/smt2/bad-subset-measure-farkas-conflict.smt2)
 checks only the final exact-rational contradiction.
 
+The second promoted bad row keeps the source table fixed but changes the union
+measure claim:
+
+```text
+computed mu(A union B) = 1
+computed mu(A) + mu(B) = 4/3
+claimed mu(A union B) = 3/2
+```
+
+The committed SMT-LIB artifact
+[`bad-union-subadditivity-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-measure-monotonicity-v0/smt2/bad-union-subadditivity-farkas-conflict.smt2)
+checks only the final exact-linear inequality contradiction.
+
 The solver search is untrusted. The accepted evidence is rechecked
 `UnsatFarkas` arithmetic over the source artifact.
 
@@ -97,6 +111,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-monotonicity-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_monotonicity_bad_subset_measure_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_monotonicity_bad_union_subadditivity_artifact_emits_checked_farkas
 ```
 
 Expected validator output:

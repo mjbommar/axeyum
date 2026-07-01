@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite measure monotonicity bad union-subadditivity QF_LRA row landed.**
+  `finite-measure-monotonicity-v0` now includes a checked bad
+  union-subadditivity row: exact inclusion-exclusion replay computes
+  `mu(A union B)=1` and `mu(A)+mu(B)=4/3` for `A={a,b}` and `B={b,c}`, then
+  rejects the malformed claim `mu(A union B)=3/2` under the finite
+  subadditivity obligation through a source SMT-LIB artifact on the shared
+  QF_LRA/Farkas route. The validator pins the source witness, claimed and
+  computed union/left/right/bound measures, artifact path, and regression; the
+  shared `math_resource_lra_routes` regression parses the artifact and checks
+  `UnsatFarkas` evidence. Generated dashboards and the public query summary
+  now report 111 concept rows, 108 non-template packs, 598 expected checks,
+  278 checked rows, 249 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite martingales bad stopped-expectation QF_LRA row landed.**
   `finite-martingales-v0` now includes a checked bad stopped-expectation row:
   exact bounded stopping replay computes `E[M_tau] = 0` for stopped values

@@ -4820,7 +4820,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-measure-monotonicity-v0",
-                "Finite subset monotonicity, union subadditivity, and bad subset-measure rows.",
+                "Finite subset monotonicity, union subadditivity, and bad subset-measure/union rows.",
             ),
             (
                 "finite-probability-v0",

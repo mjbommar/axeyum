@@ -97,6 +97,7 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_finite_c
 python3 scripts/query-foundational-resources.py fields --field measure_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field measure_theory --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field measure_theory --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-measure-monotonicity-v0 --route Farkas --proof-status checked --text union --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field statistics --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field statistics --text tail --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field statistics --text finite --require-any >/dev/null

@@ -50,8 +50,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 597 expected checks.
-- 277 checked proof/evidence rows.
+- 598 expected checks.
+- 278 checked proof/evidence rows.
 - 249 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1376,8 +1376,8 @@ Pick one item per commit unless the change is purely navigational.
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas`.
 43. Landed: add `finite-measure-monotonicity-v0` with normalized finite
     measure-table replay, subset monotonicity, union subadditivity, checked
-    QF_LRA/Farkas rejection of a false subset-measure row, and a focused
-    learner page.
+    QF_LRA/Farkas rejection of false subset-measure and union-subadditivity
+    rows, and a focused learner page.
 44. Landed: add standalone finite topology and finite measure learner pages.
     `docs/learn/math/finite-topology-end-to-end.md` follows
     `finite-topology-v0` through finite topology axiom replay,

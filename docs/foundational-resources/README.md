@@ -475,8 +475,9 @@ schemas, examples, and validation workflows.
   event/complement measure replay.
 - [`artifacts/examples/math/finite-measure-monotonicity-v0/`](../../artifacts/examples/math/finite-measure-monotonicity-v0/)
   validates finite measure-table replay, subset monotonicity, union
-  subadditivity, checked rejection of a false subset-measure claim, and a
-  convergence/countable-measure Lean-horizon row.
+  subadditivity, checked rejection of false subset-measure and
+  union-subadditivity claims, and a convergence/countable-measure Lean-horizon
+  row.
 - [`artifacts/examples/math/finite-integration-v0/`](../../artifacts/examples/math/finite-integration-v0/)
   validates exact finite simple-function integrals, indicator integrals,
   integral linearity, checked rejection of a false expectation, and a

@@ -144,6 +144,25 @@
       "notes": "The validator replays the finite measure table to compute mu({a}) = 1/6 and mu({a,b}) = 1/2; the source artifact checks the false subset-measure equality through QF_LRA/Farkas evidence."
     },
     {
+      "id": "bad-union-subadditivity-rejected",
+      "claim": "The overlapping events have union measure 3/2 while still satisfying finite union subadditivity.",
+      "expected_result": "unsat",
+      "validation": "finite_measure_bad_union_subadditivity_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "finite-union-subadditivity",
+        "claimed_union_measure": "3/2",
+        "computed_union_measure": "1",
+        "computed_left_measure": "1/2",
+        "computed_right_measure": "5/6",
+        "computed_subadditivity_bound": "4/3",
+        "smt2_artifact": "artifacts/examples/math/finite-measure-monotonicity-v0/smt2/bad-union-subadditivity-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_monotonicity_bad_union_subadditivity_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "The validator replays inclusion-exclusion to compute mu(A union B)=1 and mu(A)+mu(B)=4/3; the source artifact checks that the malformed union measure 3/2 violates the finite subadditivity inequality."
+    },
+    {
       "id": "general-measure-monotonicity-lean-horizon",
       "claim": "General measure monotonicity, countable subadditivity, and convergence theorems require future Lean resources.",
       "expected_result": "not-run",

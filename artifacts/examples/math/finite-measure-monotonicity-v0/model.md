@@ -67,5 +67,28 @@ subset_measure = 1/6
 subset_measure = 2/3
 ```
 
+## Bad Union-Subadditivity Claim
+
+The malformed union row reuses the subadditivity witness but claims:
+
+```text
+mu(A union B) = 3/2
+```
+
+Exact replay computes:
+
+```text
+mu(A) + mu(B) = 1/2 + 5/6 = 4/3
+```
+
+The QF_LRA artifact checks only that final inequality conflict:
+
+```text
+claimed_union_measure = 3/2
+left_measure = 1/2
+right_measure = 5/6
+claimed_union_measure <= left_measure + right_measure
+```
+
 This is a finite table replay target, not a proof of countable additivity,
 monotone convergence, dominated convergence, or general measure-space facts.

@@ -6569,7 +6569,7 @@
           "id": "finite-measure-monotonicity-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-measure-monotonicity-v0",
-          "notes": "Finite subset monotonicity, union subadditivity, and bad subset-measure rows."
+          "notes": "Finite subset monotonicity, union subadditivity, and bad subset-measure/union rows."
         },
         {
           "id": "finite-probability-v0",

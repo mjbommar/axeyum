@@ -396,8 +396,9 @@ Companion maps:
   Lean horizon.
 - [Finite Measure Monotonicity](finite-measure-monotonicity-end-to-end.md):
   follows normalized finite measure-table replay, subset monotonicity, union
-  subadditivity, checked QF_LRA/Farkas bad subset-measure rejection, and the
-  convergence/countable-measure Lean horizon.
+  subadditivity, checked QF_LRA/Farkas bad subset-measure and
+  union-subadditivity rejection, and the convergence/countable-measure Lean
+  horizon.
 - [Finite Topology And Measure](finite-topology-measure-end-to-end.md):
   follows finite topology replay, finite sigma-algebra replay, exact finite
   measure additivity, event complements, checked Bool/CNF bad-empty-open

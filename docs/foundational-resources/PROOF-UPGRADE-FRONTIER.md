@@ -214,8 +214,9 @@ First targets:
   (resource-backed Farkas regression landed for the bad complement-measure row
   after exact finite-measure replay computes the event and total measures)
 - [finite-measure-monotonicity-v0](../../artifacts/examples/math/finite-measure-monotonicity-v0/)
-  (resource-backed Farkas regression landed for the bad subset-measure row
-  after exact finite-measure replay computes the subset and superset measures)
+  (resource-backed Farkas regressions landed for the bad subset-measure and
+  bad union-subadditivity rows after exact finite-measure replay computes the
+  subset/superset measures and union subadditivity bound)
 - [finite-integration-v0](../../artifacts/examples/math/finite-integration-v0/)
   (resource-backed Farkas regression landed for the bad expectation row after
   exact finite weighted-sum replay computes the integral)
