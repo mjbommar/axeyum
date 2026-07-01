@@ -92,7 +92,7 @@ polynomial derivative identities, exact finite Riemann sums, antiderivative
 endpoint replay, exact rational gradients, Jacobian chain-rule replay, Hessian
 minor checks, bounded recurrence traces, finite invariant witnesses, matrix
 operator bounds, explicit Euler-step replay, finite Euler error tables,
-QF_LRA/Farkas bad Euler-step rejection, Chebyshev recurrence values at fixed
+QF_LRA/Farkas bad Euler-step and bad error-bound rejection, Chebyshev recurrence values at fixed
 points,
 finite Chebyshev-system interpolation/sign-pattern checks, exact rational
 inner-product Gram matrices, fixed Cauchy-Schwarz/projection/Gram-Schmidt

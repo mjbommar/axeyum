@@ -10,6 +10,7 @@ The pack covers:
 - explicit Euler replay for the linear decay equation `y' = -y`;
 - exact finite error replay for Euler on `y' = 2t` with solution `y = t^2`;
 - a nonnegative monotone invariant over a finite Euler trace;
+- checked QF_LRA/Farkas rejection of a bad finite error bound;
 - checked QF_LRA/Farkas rejection of a bad Euler update;
 - a Lean-horizon row for continuous-time ODE theory and convergence theorems.
 
@@ -26,8 +27,9 @@ The pack covers:
 
 The validator parses step sizes, time grids, states, derivatives, exact
 solutions, and errors as exact rational strings. It recomputes every Euler
-update and every listed error without floating point. The false fixed-step row
-is also routed through Axeyum's checked `UnsatFarkas` evidence path.
+update and every listed error without floating point. The false error-bound and
+fixed-step rows are also routed through Axeyum's checked `UnsatFarkas` evidence
+path.
 
 This is a finite replay pack. It does not prove existence/uniqueness,
 stability, global convergence rates, stiffness behavior, or PDE theory.
@@ -36,4 +38,5 @@ Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-euler-method-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_max_error_bound_artifact_emits_checked_farkas
 ```

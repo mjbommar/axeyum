@@ -42,8 +42,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 572 expected checks.
-- 254 checked proof/evidence rows.
+- 573 expected checks.
+- 255 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -384,8 +384,8 @@ Pick one row per commit unless the change is purely navigational.
    evidence out of the combined finite dynamics/Euler bridge lesson.
 38. Landed: add standalone finite-Euler learner page, splitting exact
    explicit-Euler transition replay, finite polynomial-solution error tables,
-   monotone invariant checking, checked QF_LRA/Farkas bad-step evidence, and
-   the ODE/numerical-analysis Lean horizon out of the combined finite
+   monotone invariant checking, checked QF_LRA/Farkas bad max-error plus
+   bad-step evidence, and the ODE/numerical-analysis Lean horizon out of the combined finite
    dynamics/Euler bridge lesson.
 39. Landed: add dynamics field-readiness consumer query coverage, extending
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
@@ -923,6 +923,12 @@ Pick one row per commit unless the change is purely navigational.
      transition arithmetic and invariant-bound conflicts without claiming
      continuous-time dynamics, ODE existence/uniqueness, stability, chaos, or
      PDE coverage.
+110. Landed: extend `finite-euler-method-v0` with a checked bad max-error-bound
+     row. Exact finite error-table replay computes maximum error `3/4` for the
+     quadratic-forcing Euler trace, while the malformed source SMT-LIB artifact
+     claims `max_error <= 1/2`; the shared QF_LRA/Farkas route now checks both
+     finite error-bound and fixed-step conflicts without claiming convergence,
+     stability, floating-point accuracy, or continuous-time ODE theory.
 
 ## Validation Checklist
 

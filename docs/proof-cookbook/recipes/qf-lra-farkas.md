@@ -153,6 +153,9 @@ Canonical examples:
 - [Bounded Dynamics](../../../artifacts/examples/math/bounded-dynamics-v0/)
   uses bad transition-step and invariant-bound rows after exact recurrence
   replay computes the next state and terminal state.
+- [Finite Euler Method](../../../artifacts/examples/math/finite-euler-method-v0/)
+  uses bad fixed-step and max-error-bound rows after exact Euler and error-table
+  replay compute the next state and maximum error.
 
 The focused resource regression is
 `cargo test -p axeyum-solver --test math_resource_lra_routes`.

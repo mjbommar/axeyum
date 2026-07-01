@@ -20744,6 +20744,47 @@ def validate_finite_euler_method(expected: dict[str, Any]) -> None:
     if max(absolute_errors) != max_error:
         fail("quadratic-forcing-error-replay max_error is incorrect")
 
+    bad_error = checks["bad-max-error-bound-rejected"]
+    if bad_error["expected_result"] != "unsat" or bad_error.get("proof_status") != "checked":
+        fail("bad-max-error-bound-rejected must be a checked unsat row")
+    data = bad_error.get("data", {})
+    replay = validate_euler_trace("bad max error Euler", data)
+    if replay["ode"] != "y_prime_equals_2t":
+        fail("bad-max-error-bound-rejected must use y' = 2t")
+    exact_solution = require_fraction_vector("bad max error exact_solution", data.get("exact_solution"))
+    absolute_errors = require_fraction_vector("bad max error absolute_errors", data.get("absolute_errors"))
+    computed_max_error = require_fraction(
+        "bad max error computed_max_error",
+        data.get("computed_max_error"),
+    )
+    claimed_error_bound = require_fraction(
+        "bad max error claimed_error_bound",
+        data.get("claimed_error_bound"),
+    )
+    if len(exact_solution) != len(replay["states"]) or len(absolute_errors) != len(replay["states"]):
+        fail("bad-max-error-bound-rejected exact_solution and absolute_errors must match state length")
+    for index, time in enumerate(replay["times"]):
+        expected_exact = time * time
+        if exact_solution[index] != expected_exact:
+            fail(f"bad-max-error-bound-rejected exact_solution[{index}] is incorrect")
+        if absolute_errors[index] != abs(exact_solution[index] - replay["states"][index]):
+            fail(f"bad-max-error-bound-rejected absolute_errors[{index}] is incorrect")
+    if max(absolute_errors) != computed_max_error:
+        fail("bad-max-error-bound-rejected computed_max_error is incorrect")
+    if computed_max_error <= claimed_error_bound:
+        fail("bad-max-error-bound-rejected must claim a bound below the replayed max error")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad max error smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-euler-method-v0/smt2/bad-max-error-bound-farkas-conflict.smt2":
+        fail("bad-max-error-bound-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad max error smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad max error farkas_regression", regression)
+    if "finite_euler_bad_max_error_bound_artifact_emits_checked_farkas" not in regression:
+        fail("bad-max-error-bound-rejected must link the Farkas regression")
+    if "Farkas" not in bad_error.get("notes", ""):
+        fail("bad-max-error-bound-rejected notes must document checked Farkas evidence")
+
     invariant = checks["nonnegative-monotone-invariant"]
     if invariant["expected_result"] != "sat":
         fail("nonnegative-monotone-invariant must expect sat")

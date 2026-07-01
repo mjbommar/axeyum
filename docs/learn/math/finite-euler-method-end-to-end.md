@@ -1,7 +1,8 @@
 # End To End: Finite Euler Method
 
 This lesson follows one finite Euler-method resource from exact transition
-replay to checked rejection of a false one-step update. It uses the
+replay and error replay to checked rejection of a false error bound and false
+one-step update. It uses the
 [finite-euler-method-v0](../../../artifacts/examples/math/finite-euler-method-v0/)
 pack.
 
@@ -21,6 +22,7 @@ Concept rows:
 |---|---|---|
 | `linear-decay-euler-trace` | `sat` | replay-only |
 | `quadratic-forcing-error-replay` | `sat` | replay-only |
+| `bad-max-error-bound-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `nonnegative-monotone-invariant` | `sat` | replay-only |
 | `bad-euler-step-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-ode-theory-lean-horizon` | `not-run` | Lean horizon |
@@ -72,6 +74,32 @@ errors = 0, 1/4, 1/2, 3/4
 The validator checks the Euler updates, evaluates `t^2` on the finite grid,
 computes absolute errors, and confirms the maximum error `3/4`. This is a
 finite error table, not a convergence-rate theorem.
+
+## Check The Bad Error Bound
+
+The first negative row reuses the finite error table but claims:
+
+```text
+max_error <= 1/2
+```
+
+Exact replay computes:
+
+```text
+max(0, 1/4, 1/2, 3/4) = 3/4
+```
+
+The committed SMT-LIB artifact
+[`bad-max-error-bound-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-euler-method-v0/smt2/bad-max-error-bound-farkas-conflict.smt2)
+isolates the exact-linear contradiction:
+
+```text
+max_error = 3/4
+max_error <= 1/2
+```
+
+The source object is still the exact finite error table; the solver proof is
+accepted only after the emitted `UnsatFarkas` certificate checks independently.
 
 ## Replay A Finite Invariant
 
@@ -127,6 +155,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-euler-method-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_max_error_bound_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_step_emits_checked_farkas
 ```
 

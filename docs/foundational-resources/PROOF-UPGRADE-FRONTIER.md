@@ -292,7 +292,8 @@ First targets:
   (resource-backed Farkas regression landed for the bad kernel-row
   normalization conflict)
 - [finite-euler-method-v0](../../artifacts/examples/math/finite-euler-method-v0/)
-  (source-linked solver-reuse promotion landed for the bad fixed-step transition)
+  (source-linked solver-reuse promotions landed for the bad max-error bound and
+  bad fixed-step transition)
 - [orientation-area-geometry-v0](../../artifacts/examples/math/orientation-area-geometry-v0/)
   (resource-backed Farkas regression landed for the bad fixed-orientation row)
 - [numerical-linear-algebra-v0](../../artifacts/examples/math/numerical-linear-algebra-v0/)
@@ -388,6 +389,9 @@ Secondary targets:
   Finite root finding now contributes the numerical-analysis version of that
   boundary: exact replay computes the bisection/Newton data and the next
   iterate, then Farkas checks the final bad-step equality conflict.
+  Finite Euler now contributes the finite-error-table version of that boundary:
+  exact replay computes the finite error table and maximum error, then Farkas
+  checks the final bad-error-bound inequality conflict.
   Finite separation now contributes the convex-optimization version of that
   boundary: exact replay computes convex weights, separator scores, and the
   tight face, then Farkas checks the final bad-separator inequality conflict.

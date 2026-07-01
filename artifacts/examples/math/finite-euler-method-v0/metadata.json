@@ -33,9 +33,10 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-euler-method-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite Euler bad fixed-step QF_LRA/Farkas regression seed",
-    "pressure": "Malformed explicit-Euler step where exact replay forces next_state = state + (1/2)*derivative = 1/2, but the row claims next_state = 3/4.",
+    "target": "finite Euler bad fixed-step and bad max-error QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed finite Euler rows where exact replay forces next_state = state + (1/2)*derivative = 1/2 but a row claims next_state = 3/4, and computes max error 3/4 but a row claims max_error <= 1/2.",
     "evidence": [
+      "bad-max-error-bound-rejected",
       "bad-euler-step-rejected"
     ],
     "next_step": "Promote additional finite-error or invariant rows only when they add distinct exact-linear solver pressure; keep continuous-time existence, uniqueness, stability, stiffness, convergence-rate, and PDE claims in Lean-horizon or numerical-honesty lanes."
@@ -49,12 +50,14 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-euler-method-v0/smt2/bad-max-error-bound-farkas-conflict.smt2",
     "artifacts/examples/math/finite-euler-method-v0/smt2/bad-euler-step-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "linear-decay-euler-trace",
     "quadratic-forcing-error-replay",
+    "bad-max-error-bound-rejected",
     "nonnegative-monotone-invariant",
     "bad-euler-step-rejected",
     "general-ode-theory-lean-horizon"
@@ -62,7 +65,7 @@
   "graduation_criteria": [
     "Encode fixed Euler-step and finite-error checks as deterministic QF_LRA transition obligations.",
     "Replay SAT witnesses through Axeyum model evaluation rather than pack-local Python only.",
-    "Route false fixed-step transition rows through checked QF_LRA/Farkas certificates once derivatives are replayed exactly.",
+    "Route false fixed-step transition and finite error-bound rows through checked QF_LRA/Farkas certificates once derivatives and error tables are replayed exactly.",
     "Keep continuous-time existence, uniqueness, stability, stiffness, convergence-rate, and PDE claims under Lean horizon or numerical-honesty metadata until formal routes exist."
   ]
 }

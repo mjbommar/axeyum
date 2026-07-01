@@ -142,6 +142,9 @@ const BOUNDED_DYNAMICS_BAD_INVARIANT_BOUND: &str = include_str!(
 const BOUNDED_DYNAMICS_BAD_TRANSITION_STEP: &str = include_str!(
     "../../../artifacts/examples/math/bounded-dynamics-v0/smt2/bad-transition-step-farkas-conflict.smt2"
 );
+const FINITE_EULER_BAD_MAX_ERROR_BOUND: &str = include_str!(
+    "../../../artifacts/examples/math/finite-euler-method-v0/smt2/bad-max-error-bound-farkas-conflict.smt2"
+);
 const RATIONALS_TRICHOTOMY_NONLESS: &str = include_str!(
     "../../../artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-nonless-farkas-conflict.smt2"
 );
@@ -1031,6 +1034,14 @@ fn finite_euler_bad_step_emits_checked_farkas() {
             euler_step,
             false_next_state,
         ],
+    );
+}
+
+#[test]
+fn finite_euler_bad_max_error_bound_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-euler-method-v0 bad-max-error-bound SMT-LIB artifact",
+        FINITE_EULER_BAD_MAX_ERROR_BOUND,
     );
 }
 

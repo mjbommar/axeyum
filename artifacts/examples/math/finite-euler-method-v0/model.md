@@ -37,6 +37,18 @@ The exact polynomial solution is `y = t^2`, so on the grid
 
 The listed absolute errors are checked exactly.
 
+## Bad Error Bound
+
+The same finite error table supplies a checked negative row. Exact replay
+computes:
+
+```text
+max(0, 1/4, 1/2, 3/4) = 3/4
+```
+
+so the malformed claim that the maximum error is at most `1/2` is rejected by
+the source-linked QF_LRA/Farkas artifact.
+
 ## Invariant And Bad Step
 
 The linear-decay trace remains inside `[0, 1]` and is monotone nonincreasing.

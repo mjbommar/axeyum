@@ -6898,7 +6898,7 @@
           "id": "finite-euler-method-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-euler-method-v0",
-          "notes": "Exact explicit-Euler transitions, finite error tables, monotone invariant replay, and checked bad Euler-step rows."
+          "notes": "Exact explicit-Euler transitions, finite error tables, monotone invariant replay, and checked bad error-bound plus bad Euler-step rows."
         }
       ],
       "proof_routes": [

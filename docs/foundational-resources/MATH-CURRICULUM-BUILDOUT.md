@@ -872,8 +872,8 @@ and checked QF_LRA/Farkas rejection of bad transition-step and invariant-bound
 rows.
 `artifacts/examples/math/finite-euler-method-v0/` now validates exact finite
 Euler-method traces, polynomial-solution error replay, invariant checks,
-checked QF_LRA/Farkas rejection of a bad Euler step, and an ODE-theory
-Lean-horizon row.
+checked QF_LRA/Farkas rejection of bad max-error and bad Euler-step rows, and
+an ODE-theory Lean-horizon row.
 `artifacts/examples/math/finite-operator-v0/` now validates exact
 finite-dimensional norm, matrix-operator, Chebyshev recurrence checks, and a
 checked QF_LRA/Farkas bad `l1` norm row plus a bad operator-bound row.
@@ -994,7 +994,7 @@ Recommended order:
    QF_LRA/Farkas false complement-measure and false subset-measure rejection.
 10. `bounded-dynamics-v0` and `finite-euler-method-v0`: recurrence systems,
    Euler step replay, finite error checks, invariants, and QF_LRA/Farkas bad
-   fixed-step rejection.
+   error-bound plus fixed-step rejection.
 11. `finite-operator-v0` and `inner-product-spaces-rational-v0`:
    finite-dimensional norms/operators, exact rational inner products,
    projections, Gram-Schmidt replay, QF_LRA/Farkas bad-bound, bad-norm, and
@@ -1567,8 +1567,8 @@ rejection, a checked QF_LRA/Farkas discriminant conflict, and a general
 polynomial-factorization Lean-horizon row.
 `finite-euler-method-v0` now adds the next exact finite dynamics/numerical
 bridge: explicit Euler replay, polynomial-solution error replay, finite
-invariant checks, checked QF_LRA/Farkas rejection of a bad Euler step, and an
-ODE-theory Lean-horizon row. `finite-algebra-homomorphisms-v0` now adds the
+invariant checks, checked QF_LRA/Farkas rejection of bad max-error and bad
+Euler-step rows, and an ODE-theory Lean-horizon row. `finite-algebra-homomorphisms-v0` now adds the
 next exact finite algebra bridge after group/ring tables: homomorphism preservation,
 kernel/image replay, quotient/induced-map replay, QF_UF/Alethe preservation
 congruence, checked bad-homomorphism rejection, concrete bad-map Alethe
@@ -1720,8 +1720,8 @@ reachability, checked QF_LRA/Farkas bad transition-step plus bad
 invariant-bound rejection, and the continuous-dynamics/ODE Lean horizon.
 `finite-euler-method-v0` now also has a standalone finite Euler method lesson
 for exact explicit-Euler transition replay, finite polynomial-solution error
-tables, monotone invariant checking, checked QF_LRA/Farkas bad-step rejection,
-and the ODE/numerical-analysis Lean horizon.
+tables, monotone invariant checking, checked QF_LRA/Farkas bad max-error plus
+bad-step rejection, and the ODE/numerical-analysis Lean horizon.
 `finite-operator-v0` now also has a standalone finite-dimensional operator
 lesson for exact `l1` norm replay, row-sum operator-bound replay, finite
 Chebyshev recurrence replay, checked QF_LRA/Farkas bad `l1` norm and bad
@@ -1986,9 +1986,10 @@ routes distinct.
 `finite-conditional-expectation-v0` now routes its bad high-block table through
 a source-linked checked Farkas evidence path using the denominator-cleared block
 average contradiction, and its metadata promotes that row for solver reuse.
-`finite-euler-method-v0` now routes its bad fixed-step transition through a
-source-linked checked Farkas evidence path after exact derivative replay, and
-its metadata promotes that row for solver reuse.
+`finite-euler-method-v0` now routes its bad fixed-step transition and bad
+max-error bound through source-linked checked Farkas evidence paths after exact
+derivative and finite error-table replay, and its metadata promotes those rows
+for solver reuse.
 `orientation-area-geometry-v0` now routes its bad fixed-orientation row through
 the same checked Farkas evidence path after exact signed-area replay.
 `incidence-geometry-v0` now routes its bad point-on-line row through the same

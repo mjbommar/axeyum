@@ -5122,7 +5122,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-euler-method-v0",
-                "Exact explicit-Euler transitions, finite error tables, monotone invariant replay, and checked bad Euler-step rows.",
+                "Exact explicit-Euler transitions, finite error tables, monotone invariant replay, and checked bad error-bound plus bad Euler-step rows.",
             ),
         ],
         "proof_routes": [
