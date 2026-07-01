@@ -39,6 +39,9 @@ const FINITE_PREDICATE_FORALL_IMPLIES_EXISTS: &str = include_str!(
 const FINITE_CARDINALITY_NO_INJECTION_FOUR_TO_THREE: &str = include_str!(
     "../../../artifacts/examples/math/finite-cardinality-v0/cnf/no-injection-four-to-three.cnf"
 );
+const FINITE_ORDER_LATTICES_BAD_TOP_ELEMENT: &str = include_str!(
+    "../../../artifacts/examples/math/finite-order-lattices-v0/cnf/bad-top-element-rejected.cnf"
+);
 const GRAPH_CUT_ONE_EDGE_REJECTED: &str =
     include_str!("../../../artifacts/examples/math/graph-cut-v0/cnf/one-edge-cut-rejected.cnf");
 const GRAPH_D_SEPARATION_CHAIN_CONDITIONED_BLOCKS: &str = include_str!(
@@ -243,6 +246,16 @@ fn finite_cardinality_no_injection_four_to_three_emits_checked_drat_and_lrat() {
         FINITE_CARDINALITY_NO_INJECTION_FOUR_TO_THREE,
         12,
         34,
+    );
+}
+
+#[test]
+fn finite_order_lattices_bad_top_element_emits_checked_drat_and_lrat() {
+    assert_unsat_resource_cnf_checks(
+        "finite-order-lattices-v0 bad-top-element-rejected",
+        FINITE_ORDER_LATTICES_BAD_TOP_ELEMENT,
+        1,
+        2,
     );
 }
 

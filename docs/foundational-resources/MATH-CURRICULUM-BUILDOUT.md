@@ -417,7 +417,8 @@ composition-application proof row, and a general function-law Lean-horizon row.
 `finite-order-lattices-v0` now deepens the
 finite relation path with Boolean-lattice partial-order replay, meet/join
 table replay, distributivity checks, monotone-map fixed-point replay, checked
-QF_UF/Alethe bad-order rejection, and a general order/lattice Lean-horizon row.
+QF_UF/Alethe bad-order rejection, checked Bool/CNF bad top-element rejection,
+and a general order/lattice Lean-horizon row.
 `finite-fields-v0` now
 validates prime-field inverse replay, exhaustive distributivity over a fixed
 prime field, a checked composite-modulus non-field contrast, and a
@@ -1601,8 +1602,9 @@ rejection, checked quotient representative congruence, and an ideal-theory
 Lean-horizon row.
 `finite-order-lattices-v0` now adds the exact finite order-theory bridge:
 Boolean-lattice partial-order replay, meet/join table checks, distributivity,
-monotone-map fixed-point replay, checked QF_UF/Alethe bad-order rejection, and
-an order/lattice Lean-horizon row.
+monotone-map fixed-point replay, checked QF_UF/Alethe bad-order rejection,
+checked Bool/CNF bad top-element rejection, and an order/lattice Lean-horizon
+row.
 `multivariable-calculus-rational-v0` now adds the exact finite multivariable
 calculus bridge: bivariate-polynomial gradient/value replay, directional
 derivatives as gradient dot products, Jacobian chain-rule replay, Hessian
@@ -2076,10 +2078,11 @@ The consumer query layer now also exposes core algebra, number-theory, and
 graph-theory readiness: `CONSUMER-QUERIES.md` shows abstract-algebra Alethe
 field summaries, homomorphism/ideal bridge lookups, checked Alethe and
 concept-scoped homomorphism-preservation Alethe rows, fixed-width QF_BV
-finite-algebra rows, number-theory Diophantine field
-summaries with finite-family lookups and checked integer-arithmetic rows, and
-graph-theory Boolean and LIA field summaries with checked finite coloring,
-reachability, matching, cut, d-separation, and BFS/DFS runtime-counter rows.
+finite-algebra rows, set/foundations and discrete finite-Boolean-algebra
+Boolean route drill-downs, number-theory Diophantine field summaries with
+finite-family lookups and checked integer-arithmetic rows, and graph-theory
+Boolean and LIA field summaries with checked finite coloring, reachability,
+matching, cut, d-separation, and BFS/DFS runtime-counter rows.
 The foundational-resource
 smoke check runs those same queries so the core curriculum lanes are visible
 through the public JSON boundary without promoting arbitrary algebraic
@@ -2210,6 +2213,13 @@ finite orbit-count replay, and exact finite tail-count contradictions across
 exercises discrete-math counting lookup plus concept-scoped Boolean and
 Diophantine route queries while keeping asymptotic counting and unbounded
 combinatorics in the horizon lane.
+The finite Boolean-algebra concept layer now also exposes the
+`finite-order-lattices-v0` false top-element row alongside finite-set and
+finite-topology set-family contradictions. The foundational-resource smoke
+check exercises concept-scoped Boolean queries for
+`bridge_finite_boolean_algebra`, keeping powerset/lattice replay concrete
+while leaving arbitrary order/lattice and infinite Boolean-algebra theorems in
+the horizon lane.
 The topology concept layer now also has
 `bridge_finite_topology_operator_homeomorphism`. It groups finite topology
 axiom replay, closure/interior replay, continuity by open preimage, finite

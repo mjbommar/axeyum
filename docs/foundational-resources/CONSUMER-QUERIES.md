@@ -216,35 +216,53 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
-For set theory and foundations, query the Alethe route to keep finite
-relations, functions, quotient maps, lattices, continuous-map preimages,
-finite algebra maps, modules, tensors, and equality-heavy finite structure
-rows grouped while leaving ZFC, ordinals, choice, infinite cardinality, and
-complete-lattice theorems in the proof-horizon lane:
+For set theory and foundations, query both the Alethe and Boolean routes:
+Alethe keeps finite relations, functions, quotient maps, lattices,
+continuous-map preimages, finite algebra maps, modules, tensors, and
+equality-heavy finite structure rows grouped, while Boolean exposes finite
+set-family and lattice refutations. ZFC, ordinals, choice, infinite
+cardinality, and complete-lattice theorems stay in the proof-horizon lane:
 
 ```sh
 python3 scripts/query-foundational-resources.py fields \
   --field set_theory_and_foundations \
   --route Alethe \
   --require-any
+
+python3 scripts/query-foundational-resources.py fields \
+  --field set_theory_and_foundations \
+  --route boolean \
+  --require-any
 ```
 
-Use atlas lookups for reusable partition and quotient vocabulary:
+Use atlas lookups for reusable partition, quotient, and finite Boolean-algebra
+vocabulary:
 
 ```sh
 python3 scripts/query-foundational-resources.py concepts \
   --field set_theory_and_foundations \
   --text partition \
   --require-any
+
+python3 scripts/query-foundational-resources.py concepts \
+  --field set_theory_and_foundations \
+  --text Boolean \
+  --require-any
 ```
 
-To display concrete checked foundation rows, drill into checked Alethe
-examples:
+To display concrete checked foundation rows, drill into checked Alethe and
+finite Boolean-algebra examples:
 
 ```sh
 python3 scripts/query-foundational-resources.py checks \
   --field set_theory_and_foundations \
   --route Alethe \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_boolean_algebra \
+  --route boolean \
   --proof-status checked \
   --require-any
 ```
@@ -1354,8 +1372,11 @@ python3 scripts/query-foundational-resources.py fields --field logic_and_proof -
 python3 scripts/query-foundational-resources.py concepts --field logic_and_proof --text proof --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field logic_and_proof --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field set_theory_and_foundations --route Alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field set_theory_and_foundations --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field set_theory_and_foundations --text partition --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field set_theory_and_foundations --text Boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field set_theory_and_foundations --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_boolean_algebra --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field discrete_math --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field discrete_math --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field discrete_math --text counting --require-any >/dev/null

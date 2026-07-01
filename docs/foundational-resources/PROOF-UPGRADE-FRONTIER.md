@@ -25,7 +25,7 @@ Candidate route totals:
 
 | Route | Pack Count | Meaning |
 |---|---:|---|
-| [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 8 | Boolean refutations that should carry checked CNF proof objects. |
+| [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 16 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 4 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 11 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions, including finite graph traversal cost counters. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 57 | Exact rational infeasibility and linear inequality obligations. |
@@ -124,14 +124,18 @@ First targets:
   (solver-reuse promotion landed for `bad-empty-open-rejected`: source-linked
   missing-empty-set DIMACS artifact, DRAT emission, LRAT elaboration, and
   independent checks)
+- [finite-order-lattices-v0](../../artifacts/examples/math/finite-order-lattices-v0/)
+  (solver-reuse promotion landed for `bad-top-element-rejected`: source-linked
+  Boolean-lattice top-element DIMACS artifact, DRAT emission, LRAT elaboration,
+  and independent checks)
 
 Secondary targets:
 
 - pigeonhole/counting rows are now represented by proof-methods refutation and
-  counting, and topology/set-family Boolean rows are now represented by finite
-  compactness, finite connectedness, and finite topology; pick the next Boolean
-  CNF target only when the finite encoding is source-level obvious and not
-  better expressed as finite replay.
+  counting, and topology/order/set-family Boolean rows are now represented by
+  finite compactness, finite connectedness, finite topology, and finite
+  order/lattices; pick the next Boolean CNF target only when the finite encoding
+  is source-level obvious and not better expressed as finite replay.
 
 Expected artifact:
 
@@ -448,7 +452,9 @@ First targets:
 - [finite-monoids-v0](../../artifacts/examples/math/finite-monoids-v0/)
   (resource-backed QF_UF/Alethe regression landed for the bad associativity conflict)
 - [finite-order-lattices-v0](../../artifacts/examples/math/finite-order-lattices-v0/)
-  (resource-backed QF_UF/Alethe regression landed for the bad antisymmetry conflict)
+  (resource-backed QF_UF/Alethe regression landed for the bad antisymmetry
+  conflict; the separate bad top-element set-family conflict is promoted
+  through the Boolean CNF/LRAT route above)
 - [finite-permutation-groups-v0](../../artifacts/examples/math/finite-permutation-groups-v0/)
   (resource-backed QF_UF/Alethe regression landed for the bad nonbijection conflict)
 - [finite-vector-spaces-v0](../../artifacts/examples/math/finite-vector-spaces-v0/)

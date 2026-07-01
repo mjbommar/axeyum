@@ -1,0 +1,7 @@
+c finite-order-lattices-v0 bad-top-element-rejected
+c variable 1: B <= A in the four-element Boolean lattice P({a,b})
+c fixed subset relation: B is not a subset of A, so B <= A is false
+c false top-element claim: A is top, so every element, including B, is <= A
+p cnf 1 2
+-1 0
+1 0

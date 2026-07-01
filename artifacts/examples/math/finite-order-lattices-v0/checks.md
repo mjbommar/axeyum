@@ -35,6 +35,16 @@ The validator rejects the relation with `x <= y` and `y <= x` for distinct
 `x` and `y`, because antisymmetry fails. The linked `QF_UF` artifact turns the
 fixed antisymmetry equality claim into a checked Alethe refutation.
 
+## `bad-top-element-rejected`
+
+Expected result: `unsat`.
+
+The validator rejects the claim that `A` is top in the four-element Boolean
+lattice. The relation has `B <= AB`, but not `B <= A`; a top-element claim for
+`A` would require `B <= A`. The linked CNF artifact records the fixed false
+comparison and the false top claim as a one-variable contradiction checked by
+DRAT and LRAT.
+
 ## `general-order-lattice-theory-lean-horizon`
 
 Expected result: `not-run`.

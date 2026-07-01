@@ -23,6 +23,7 @@ Concept rows:
 | `distributive-lattice-replay` | `sat` | replay-only |
 | `monotone-map-fixed-points` | `sat` | replay-only |
 | `bad-partial-order-rejected` | `unsat` | checked QF_UF/Alethe |
+| `bad-top-element-rejected` | `unsat` | checked Bool/CNF/LRAT |
 | `general-order-lattice-theory-lean-horizon` | `not-run` | lean-horizon |
 
 The checked rows are finite relation and table replay rows. The pack does not
@@ -181,6 +182,34 @@ The linked `QF_UF` artifact records the two relation-table facts, fixes the
 antisymmetry consequence `x = y`, and refutes it against `x != y`; Axeyum emits
 and independently rechecks an `UnsatAletheProof` for that equality conflict.
 
+## Check The Set-Family CNF Refutation
+
+The Boolean lattice also has a tiny false top-element row. The actual top is
+`AB`, not `A`:
+
+```text
+B <= AB
+B !<= A
+```
+
+A bad claim that `A` is top would require every element to be below `A`,
+including:
+
+```text
+B <= A
+```
+
+The CNF artifact uses one variable:
+
+```text
+B_le_A
+```
+
+Exact relation replay contributes `not B_le_A`; the false top claim contributes
+`B_le_A`. Axeyum emits a DRAT proof, elaborates it to LRAT, and checks both
+proof objects. This proves only the fixed finite contradiction, not a theorem
+about all lattices.
+
 ## Run It
 
 From the repository root:
@@ -202,7 +231,8 @@ This lesson shows Axeyum's resource pattern for finite order theory:
 ```text
 untrusted fast search -> candidate relation, meet/join tables, monotone map
 trusted small checking -> order laws, bounds, distributivity, fixed points, counterexample row
-checked proof object -> QF_UF/Alethe certificate for the bad antisymmetry row
+checked proof object -> QF_UF/Alethe certificate for bad antisymmetry,
+                        CNF/DRAT/LRAT certificate for the bad top row
 ```
 
 Complete lattice theory, Knaster-Tarski fixed-point theorems, Galois

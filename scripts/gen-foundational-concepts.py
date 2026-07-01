@@ -73,7 +73,7 @@ CURRICULUM_MAP = {
         "extra_packs": [
             (
                 "finite-order-lattices-v0",
-                "Finite partial orders, lattice meet/join tables, distributivity, monotone maps, and fixed-point replay.",
+                "Finite partial orders, lattice meet/join tables, distributivity, monotone maps, fixed-point replay, and bad top-element CNF evidence.",
             ),
         ],
     },
@@ -105,7 +105,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-order-lattices-v0",
-                "Finite partial orders, meet/join lattice tables, monotone maps, fixed points, and bad-order counterexamples.",
+                "Finite partial orders, meet/join lattice tables, monotone maps, fixed points, bad-order counterexamples, and bad top-element CNF evidence.",
             ),
         ],
     },
@@ -121,7 +121,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-order-lattices-v0",
-                "Finite Boolean lattice over a two-element powerset, meet/join replay, and monotone fixed points.",
+                "Finite Boolean lattice over a two-element powerset, meet/join replay, monotone fixed points, and bad top-element CNF evidence.",
             ),
         ],
     },
@@ -2151,7 +2151,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-order-lattices-v0",
-                "Powerset lattice, meet/join table replay, distributive replay, and monotone-map rows.",
+                "Powerset lattice, meet/join table replay, distributive replay, monotone-map rows, and checked bad top-element CNF evidence.",
             ),
             (
                 "cardinality-principles-v0",
@@ -2179,7 +2179,9 @@ BRIDGE_CONCEPTS = [
                 "notes": (
                     "Positive rows replay finite set operations directly. "
                     "Negative rows become solver-reuse candidates only when "
-                    "the Bool/CNF source artifact and certificate are linked."
+                    "the Bool/CNF source artifact and certificate are linked; "
+                    "finite-order-lattices-v0 now includes a one-variable "
+                    "bad top-element DRAT/LRAT row."
                 ),
             }
         ],
@@ -2202,6 +2204,7 @@ BRIDGE_CONCEPTS = [
                 "Rows state the finite carrier and encode set membership without implicit universe changes.",
                 "The validator recomputes the Boolean operation or order relation from the row data.",
                 "Malformed identities with solver evidence link to source Bool/CNF artifacts and checked certificates.",
+                "Bad finite lattice set-family rows distinguish table replay from the checked CNF contradiction.",
             ],
         },
     },
@@ -7127,6 +7130,10 @@ EXAMPLE_FAMILIES = [
             (
                 "finite-cardinality-v0",
                 "No-injection finite cardinality row rechecked through CNF/LRAT.",
+            ),
+            (
+                "finite-order-lattices-v0",
+                "Bad Boolean-lattice top-element claim encoded as a one-variable CNF.",
             ),
             (
                 "graph-coloring-v0",

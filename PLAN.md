@@ -154,7 +154,10 @@ finite group actions, with topology/preimage, finite specialization-order,
 finite quotient-topology, finite cohomology, finite universal-coefficient shadow, and finite cup-product
 extensions. The finite algebra-homomorphism lane now also promotes the
 concrete bad group-homomorphism row through QF_UF/Alethe after exact table
-replay isolates `phi(1+1)=1` versus `phi(1)+phi(1)=0`. The topology
+replay isolates `phi(1+1)=1` versus `phi(1)+phi(1)=0`. The finite
+order/lattice lane now also promotes the false Boolean-lattice top-element row
+through Bool/CNF DRAT/LRAT after exact relation replay isolates `B !<= A`
+while the bad claim that `A` is top requires `B <= A`. The topology
 QF_LIA/Diophantine lane now also includes finite chain-complex torsion via
 one-entry Smith diagonal replay and checked rejection of `2*k = 1`. The measure/probability QF_LRA/Farkas lane now
 also promotes finite product-measure's bad product-probability row through a
@@ -268,9 +271,11 @@ claims.
 The public foundational-resource consumer query layer now also exercises the
 foundations/discrete/probability lanes: logic/proof Boolean readiness,
 proof-vocabulary lookups, and checked proof-pattern/CNF rows; set-theory and
-foundations Alethe readiness, partition lookups, and checked finite
-relation/function/quotient/equality rows; discrete-math Diophantine readiness,
-finite-family lookups, and checked counting/coefficient/tail-count rows; and
+foundations Alethe/Boolean readiness, partition and finite-Boolean-algebra
+lookups, and checked finite relation/function/quotient/equality and set-family
+contradiction rows; discrete-math Diophantine/Boolean readiness,
+finite-family lookups, and checked counting/coefficient/tail-count and finite
+Boolean-algebra rows; and
 probability-theory Farkas readiness, probability-table lookups, and checked
 finite probability/process rows. These are smoke-checked through the committed
 JSON contract without promoting proof automation, ZFC/infinite set theory,

@@ -1731,6 +1731,13 @@ Pick one item per commit unless the change is purely navigational.
      regression checks the emitted Alethe proof object, and the consumer smoke
      now exercises `bridge_homomorphism_preservation` checked-row drilldowns
      without promoting general isomorphism or infinite algebra claims.
+109. Landed: promote the false top-element set-family row in
+     `finite-order-lattices-v0` through Bool/CNF DRAT/LRAT. The new
+     `bad-top-element-rejected.cnf` artifact isolates `B !<= A` versus the bad
+     claim that `A` is top and therefore requires `B <= A`; the CNF regression
+     emits and checks DRAT/LRAT evidence, and the consumer smoke now exercises
+     `bridge_finite_boolean_algebra` checked-row drilldowns without promoting
+     complete-lattice or infinite order-theory claims.
 
 ## Validation Checklist
 

@@ -666,6 +666,49 @@ def validate_finite_order_lattices(expected: dict[str, Any]) -> None:
     if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
         fail("bad-partial-order-rejected certificate must document zero-trust Alethe evidence")
 
+    bad_top = checks["bad-top-element-rejected"]
+    if bad_top["expected_result"] != "unsat" or bad_top.get("proof_status") != "checked":
+        fail("bad-top-element-rejected must be a checked unsat row")
+    if bad_top["validation"] != "finite_bad_top_element_refutation":
+        fail("bad-top-element-rejected must use finite_bad_top_element_refutation validation")
+    data = bad_top.get("data", {})
+    elements, pairs = require_relation_data("bad top element relation", data)
+    if not is_partial_order(elements, pairs):
+        fail("bad-top-element-rejected relation should be a valid partial order")
+    claimed_top = data.get("claimed_top")
+    missing_below = data.get("missing_below")
+    require_string("bad top claimed_top", claimed_top)
+    require_string("bad top missing_below", missing_below)
+    if claimed_top not in set(elements):
+        fail("bad-top-element-rejected claimed_top must be in the carrier")
+    if missing_below not in set(elements):
+        fail("bad-top-element-rejected missing_below must be in the carrier")
+    if leq(pairs, missing_below, claimed_top):
+        fail("bad-top-element-rejected missing_below is unexpectedly below the claimed top")
+    if all(leq(pairs, element, claimed_top) for element in elements):
+        fail("bad-top-element-rejected claimed_top unexpectedly is a top element")
+    cnf_variable = data.get("cnf_variable")
+    require_string("bad top cnf_variable", cnf_variable)
+    if cnf_variable != f"{missing_below}_le_{claimed_top}":
+        fail("bad-top-element-rejected cnf_variable must name the missing comparison")
+    require_dimacs_artifact(
+        "bad-top-element-rejected",
+        data.get("cnf_artifact"),
+        "p cnf 1 2",
+        [["-1"], ["1"]],
+    )
+    cnf_artifact = data.get("cnf_artifact")
+    if cnf_artifact != "artifacts/examples/math/finite-order-lattices-v0/cnf/bad-top-element-rejected.cnf":
+        fail("bad-top-element-rejected cnf_artifact must name the checked DIMACS artifact")
+    regression = data.get("boolean_regression")
+    require_string("bad top boolean_regression", regression)
+    if "finite_order_lattices_bad_top_element_emits_checked_drat_and_lrat" not in regression:
+        fail("bad-top-element-rejected must link the Boolean proof-route regression")
+    certificate = data.get("certificate")
+    require_string("bad top certificate", certificate)
+    if not all(token in certificate for token in ("DRAT", "LRAT", "check_drat", "check_lrat")):
+        fail("bad-top-element-rejected certificate must document checked DRAT/LRAT evidence")
+
     horizon = checks["general-order-lattice-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-order-lattice-theory-lean-horizon must be not-run")

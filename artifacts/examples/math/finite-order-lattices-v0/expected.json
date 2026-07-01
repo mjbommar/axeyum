@@ -121,6 +121,34 @@
       "notes": "The validator checks the relation is reflexive and transitive but violates antisymmetry because x <= y and y <= x while x != y; the linked QF_UF artifact emits a zero-trust Alethe refutation for the fixed antisymmetry equality claim."
     },
     {
+      "id": "bad-top-element-rejected",
+      "claim": "The element A is the top element of the four-element Boolean lattice.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_top_element_refutation",
+      "proof_status": "checked",
+      "data": {
+        "elements": ["0", "A", "B", "AB"],
+        "pairs": [
+          ["0", "0"],
+          ["0", "A"],
+          ["0", "B"],
+          ["0", "AB"],
+          ["A", "A"],
+          ["A", "AB"],
+          ["B", "B"],
+          ["B", "AB"],
+          ["AB", "AB"]
+        ],
+        "claimed_top": "A",
+        "missing_below": "B",
+        "cnf_variable": "B_le_A",
+        "cnf_artifact": "artifacts/examples/math/finite-order-lattices-v0/cnf/bad-top-element-rejected.cnf",
+        "boolean_regression": "cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_order_lattices_bad_top_element_emits_checked_drat_and_lrat",
+        "certificate": "solve_with_drat_proof emits a DRAT refutation for B_le_A = false and B_le_A = true, elaborate_drat_to_lrat emits LRAT, and check_drat/check_lrat independently recheck both proof objects"
+      },
+      "notes": "Exact relation replay checks that B is not below A in the Boolean lattice, while the false top-element claim would require every element, including B, to be below A. The linked DIMACS artifact isolates that one-variable contradiction and Axeyum emits checked DRAT/LRAT evidence."
+    },
+    {
       "id": "general-order-lattice-theory-lean-horizon",
       "claim": "General order, lattice, and fixed-point theory requires future proof resources.",
       "expected_result": "not-run",

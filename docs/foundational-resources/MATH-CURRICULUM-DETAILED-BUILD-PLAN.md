@@ -835,6 +835,16 @@ Pick one row per commit unless the change is purely navigational.
     `bridge_homomorphism_preservation` Alethe checked-row queries while
     keeping general isomorphism, quotient, categorical, and infinite-algebra
     theorems in the Lean-horizon lane.
+98. Landed: promote the `finite-order-lattices-v0` bad top-element
+    set-family row through Bool/CNF DRAT/LRAT. Finite relation replay checks
+    the Boolean lattice order and identifies `B !<= A`; the bad claim that
+    `A` is top requires `B <= A`. The new one-variable DIMACS artifact,
+    `bad-top-element-rejected.cnf`, is now checked by
+    `math_resource_boolean_routes`, and the consumer smoke includes
+    concept-scoped `bridge_finite_boolean_algebra` Boolean checked-row
+    queries. Complete-lattice fixed-point theorems, Boolean representation
+    theorems, domain theory, Galois connections, and infinite order theory
+    remain Lean-horizon.
 
 ## Validation Checklist
 

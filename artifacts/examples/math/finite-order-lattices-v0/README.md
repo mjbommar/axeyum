@@ -13,6 +13,7 @@ The pack covers:
 - distributive lattice identity replay;
 - monotone finite map and fixed-point replay;
 - checked QF_UF/Alethe rejection of a non-partial-order relation;
+- checked Bool/CNF DRAT/LRAT rejection of a false top-element claim;
 - a Lean-horizon row for general order and lattice theory.
 
 ## Concepts
@@ -36,6 +37,11 @@ For the bad partial-order row, exact relation replay identifies `x <= y` and
 `y <= x` for distinct elements. The linked `QF_UF` artifact fixes the
 antisymmetry consequence `x = y`, refutes it against `x != y`, and checks the
 resulting `UnsatAletheProof` independently.
+
+For the bad top-element row, exact relation replay identifies that `B <= A` is
+false in the Boolean lattice, while the false claim that `A` is top requires
+`B <= A`. The linked DIMACS artifact isolates that one-variable contradiction
+and the resource regression checks both DRAT and LRAT proof objects.
 
 This is a finite replay pack. It does not prove complete-lattice fixed-point
 theorems, domain theory, Galois connections, Boolean representation theorems,

@@ -277,7 +277,8 @@ one of:
       `logic_and_proof`.
     - Checks: finite partial-order replay, Boolean-lattice meet/join table
       replay, distributivity replay, monotone-map fixed-point replay,
-      bad-order rejection, and a general order/lattice Lean-horizon row.
+      bad-order rejection, checked Bool/CNF bad top-element rejection, and a
+      general order/lattice Lean-horizon row.
 29. `artifacts/examples/math/multivariable-calculus-rational-v0/`
     - Fields: `real_analysis`, `linear_algebra`,
       `optimization_and_convexity`, `numerical_analysis`.

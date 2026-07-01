@@ -1381,6 +1381,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   emits DRAT, elaborates LRAT, and checks both proof objects; the first-wave
   Boolean CNF/LRAT target set is now covered by concrete resource artifacts.
 
+- **Finite-order-lattices bad top-element CNF/LRAT regression landed.**
+  [`finite-order-lattices-v0`](artifacts/examples/math/finite-order-lattices-v0/)
+  now promotes the false Boolean-lattice top-element claim to checked evidence:
+  exact relation replay identifies `B !<= A`, the bad claim that `A` is top
+  requires `B <= A`, and the one-variable CNF contradiction is emitted through
+  DRAT, elaborated to LRAT, and checked by the shared Boolean resource
+  regression.
+
 - **Rationals QF_LRA/Farkas regression landed.**
   [`rationals-lra-v0`](artifacts/examples/math/rationals-lra-v0/) now promotes
   its fixed trichotomy and order-transitivity `unsat` rows to checked evidence.
@@ -2692,8 +2700,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`finite-order-lattices-end-to-end.md`](docs/learn/math/finite-order-lattices-end-to-end.md)
   as the learner-facing trace for the finite order/lattice pack: Boolean
   lattice partial-order replay, meet/join recomputation, distributivity
-  checks, monotone fixed-point replay, checked bad-order rejection, and the
-  Lean horizon for complete-lattice and infinite-order theory. The lesson is
+  checks, monotone fixed-point replay, checked bad-order rejection, checked
+  Bool/CNF/LRAT bad top-element refutation, and the Lean horizon for
+  complete-lattice and infinite-order theory. The lesson is
   linked from the math learning index plus the sets/relations path.
 
 - **Finite groups end-to-end lesson landed.** Added

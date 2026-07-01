@@ -450,8 +450,8 @@ bad-ideal rejection, checked quotient representative congruence, and an
 ideal-theory Lean-horizon row.
 [`finite-order-lattices-v0`](../../artifacts/examples/math/finite-order-lattices-v0/)
 validates finite partial-order replay, Boolean-lattice meet/join tables,
-distributivity, monotone-map fixed points, checked bad-order rejection, and an
-order/lattice Lean-horizon row.
+distributivity, monotone-map fixed points, checked bad-order rejection, checked
+Bool/CNF bad top-element rejection, and an order/lattice Lean-horizon row.
 [`finite-cardinality-v0`](../../artifacts/examples/math/finite-cardinality-v0/)
 validates finite bijection replay, proper-subset injection replay, exhaustive
 finite injection/surjection refutations, and an infinite-cardinality

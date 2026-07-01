@@ -381,7 +381,10 @@ Pick one item per commit unless the change is purely navigational.
 8. Landed: promote the concrete bad finite group-homomorphism row in
    `finite-algebra-homomorphisms-v0` through QF_UF/Alethe after table replay
    identifies `phi(1+1)=1` versus `phi(1)+phi(1)=0`.
-9. Promote one small graph or set-family Boolean row through CNF/LRAT.
+9. Landed: promote the false top-element set-family row in
+   `finite-order-lattices-v0` through Bool/CNF DRAT/LRAT after exact relation
+   replay identifies `B !<= A` while the bad claim that `A` is top requires
+   `B <= A`.
 10. Add the next rules/law example only by reusing an existing math proof
     shape and the current JSON boundary.
 

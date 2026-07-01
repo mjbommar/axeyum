@@ -204,8 +204,9 @@ fixed_points(f) = A, AB
 The `finite-order-lattices-v0` validator checks the partial-order laws,
 recomputes meet and join as greatest lower and least upper bounds, checks both
 distributive laws over all triples, checks monotonicity of `f`, recomputes the
-fixed points, and links the bad antisymmetry row to checked QF_UF/Alethe
-evidence.
+fixed points, links the bad antisymmetry row to checked QF_UF/Alethe evidence,
+and links the false claim that `A` is top to a checked one-variable
+Bool/CNF/LRAT refutation.
 For finite quotient topology, reuse the quotient-map and finite-open-set data:
 
 ```text

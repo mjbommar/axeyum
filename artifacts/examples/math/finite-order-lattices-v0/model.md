@@ -85,3 +85,24 @@ x = y
 The linked `QF_UF` artifact is therefore unsatisfiable by equality reasoning.
 The resource regression checks that Axeyum emits independently rechecked
 `UnsatAletheProof` evidence with no trusted reduction step.
+
+## Bad Top-Element Certificate
+
+The same Boolean lattice also gives a tiny set-family Boolean refutation.
+Claiming that `A` is top would require:
+
+```text
+B <= A
+```
+
+But subset replay computes:
+
+```text
+B <= AB
+B !<= A
+```
+
+The linked CNF artifact uses one variable for `B <= A`, asserts the replayed
+fact `not B_le_A`, and asserts the false top claim `B_le_A`. The CNF/DRAT/LRAT
+route checks only this fixed finite contradiction, not any complete-lattice
+theorem.

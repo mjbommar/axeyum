@@ -30,8 +30,11 @@ python3 scripts/query-foundational-resources.py fields --field logic_and_proof -
 python3 scripts/query-foundational-resources.py concepts --field logic_and_proof --text proof --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field logic_and_proof --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field set_theory_and_foundations --route Alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field set_theory_and_foundations --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field set_theory_and_foundations --text partition --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field set_theory_and_foundations --text Boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field set_theory_and_foundations --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_boolean_algebra --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field discrete_math --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field discrete_math --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field discrete_math --text counting --require-any >/dev/null

@@ -28,18 +28,20 @@
     "finite functions",
     "finite lattices",
     "Bool / enumeration",
+    "Bool / CNF",
     "QF_UF",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-order-lattices-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite order antisymmetry QF_UF/Alethe regression seed",
-    "pressure": "Antisymmetry conflict where x <= y and y <= x force x = y, but the malformed row also asserts x != y.",
+    "target": "finite order antisymmetry QF_UF/Alethe and bad-top Bool/CNF regression seeds",
+    "pressure": "Antisymmetry conflict where x <= y and y <= x force x = y, plus a Boolean-lattice top-element conflict where B <= A is false but a bad top claim for A requires it.",
     "evidence": [
-      "bad-partial-order-rejected"
+      "bad-partial-order-rejected",
+      "bad-top-element-rejected"
     ],
-    "next_step": "Promote additional finite order or lattice rows only when they add distinct equality, monotonicity, or table solver pressure; keep complete lattices and fixed-point theorems in the Lean-horizon lane."
+    "next_step": "Promote additional finite order or lattice rows only when they add distinct equality, Boolean set-family, monotonicity, or table solver pressure; keep complete lattices and fixed-point theorems in the Lean-horizon lane."
   },
   "source_refs": [
     "docs/curriculum/00-foundations/sets.md",
@@ -48,9 +50,12 @@
     "docs/foundational-resources/MATH-FIELDS.md",
     "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
     "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/finite-order-lattices-v0/cnf/bad-top-element-rejected.cnf",
     "artifacts/examples/math/finite-order-lattices-v0/smt2/bad-partial-order-antisymmetry-conflict.smt2",
+    "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
     "crates/axeyum-solver/tests/math_resource_uf_routes.rs"
   ],
   "expected_results": [
@@ -59,12 +64,14 @@
     "distributive-lattice-replay",
     "monotone-map-fixed-points",
     "bad-partial-order-rejected",
+    "bad-top-element-rejected",
     "general-order-lattice-theory-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode fixed finite order and lattice tables as deterministic finite-relation and finite-function obligations.",
     "Replay poset, meet, join, distributivity, monotone-map, and fixed-point witnesses through Axeyum model evaluation.",
     "Route bad finite antisymmetry conflicts through checked QF_UF/Alethe evidence once exact relation replay identifies the failing pair.",
+    "Route bad finite top-element set-family conflicts through checked Bool/CNF DRAT/LRAT evidence once exact relation replay identifies the missing comparison.",
     "Keep general lattice theory, complete lattices, fixed-point theorems, domain theory, and order-enriched algebra under Lean horizon until formal routes exist."
   ]
 }

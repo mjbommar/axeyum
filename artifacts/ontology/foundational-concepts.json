@@ -318,7 +318,7 @@
           "id": "finite-order-lattices-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-order-lattices-v0",
-          "notes": "Finite partial orders, lattice meet/join tables, distributivity, monotone maps, and fixed-point replay."
+          "notes": "Finite partial orders, lattice meet/join tables, distributivity, monotone maps, fixed-point replay, and bad top-element CNF evidence."
         }
       ],
       "proof_routes": [
@@ -422,7 +422,7 @@
           "id": "finite-order-lattices-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-order-lattices-v0",
-          "notes": "Finite partial orders, meet/join lattice tables, monotone maps, fixed points, and bad-order counterexamples."
+          "notes": "Finite partial orders, meet/join lattice tables, monotone maps, fixed points, bad-order counterexamples, and bad top-element CNF evidence."
         }
       ],
       "proof_routes": [
@@ -497,7 +497,7 @@
           "id": "finite-order-lattices-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-order-lattices-v0",
-          "notes": "Finite Boolean lattice over a two-element powerset, meet/join replay, and monotone fixed points."
+          "notes": "Finite Boolean lattice over a two-element powerset, meet/join replay, monotone fixed points, and bad top-element CNF evidence."
         }
       ],
       "proof_routes": [
@@ -3731,7 +3731,7 @@
           "id": "finite-order-lattices-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-order-lattices-v0",
-          "notes": "Powerset lattice, meet/join table replay, distributive replay, and monotone-map rows."
+          "notes": "Powerset lattice, meet/join table replay, distributive replay, monotone-map rows, and checked bad top-element CNF evidence."
         },
         {
           "id": "cardinality-principles-v0",
@@ -3760,7 +3760,7 @@
             "docs/learn/math/cardinality-principles-end-to-end.md",
             "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs"
           ],
-          "notes": "Positive rows replay finite set operations directly. Negative rows become solver-reuse candidates only when the Bool/CNF source artifact and certificate are linked."
+          "notes": "Positive rows replay finite set operations directly. Negative rows become solver-reuse candidates only when the Bool/CNF source artifact and certificate are linked; finite-order-lattices-v0 now includes a one-variable bad top-element DRAT/LRAT row."
         }
       ],
       "source_refs": [
@@ -3781,7 +3781,8 @@
         "criteria": [
           "Rows state the finite carrier and encode set membership without implicit universe changes.",
           "The validator recomputes the Boolean operation or order relation from the row data.",
-          "Malformed identities with solver evidence link to source Bool/CNF artifacts and checked certificates."
+          "Malformed identities with solver evidence link to source Bool/CNF artifacts and checked certificates.",
+          "Bad finite lattice set-family rows distinguish table replay from the checked CNF contradiction."
         ]
       }
     },
@@ -9146,6 +9147,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-cardinality-v0",
           "notes": "No-injection finite cardinality row rechecked through CNF/LRAT."
+        },
+        {
+          "id": "finite-order-lattices-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-order-lattices-v0",
+          "notes": "Bad Boolean-lattice top-element claim encoded as a one-variable CNF."
         },
         {
           "id": "graph-coloring-v0",
