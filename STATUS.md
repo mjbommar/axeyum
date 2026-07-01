@@ -876,6 +876,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   holomorphicity, contour integration, analytic continuation, and algebraic
   closure remain horizon work.
 
+- **Foundations/discrete query guide landed.**
+  `FOUNDATIONS-DISCRETE-QUERIES.md` now gives downstream consumers copyable
+  concept-plus-route and pack-specific queries for Boolean proof/CNF rows,
+  refutation-as-query rows, finite proof patterns, bounded induction, finite
+  quantifier expansion, finite cardinality/bijection, finite Boolean algebra,
+  counting, partition/equivalence, and finite relation/function/image/preimage
+  rows. The foundational-resource smoke check now runs those Boolean, Alethe,
+  Diophantine, and LIA drills, while proof automation, ZFC, infinite
+  sets/cardinality, unbounded induction, asymptotic enumeration, and broad
+  combinatorial theorem families remain horizon work.
+
 - **Chebyshev/operator learner index landed.**
   `chebyshev-operator-index.md` now ties finite-dimensional operator bounds,
   Chebyshev recurrence values, Vandermonde interpolation matrices,
@@ -13367,6 +13378,17 @@ plan is built and committed on the current branch:
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | DONE — committed multi-division scoreboard plus Pareto-dominance report. Current regenerated state: 35 measured rows, 992 files, 663 decided, 611 oracle-compared, DISAGREE=0, and 23 complete per-instance dominance audits under `bench-results/dominance/`. The first `audit now` queue is fully measured; BV-quantified/ABV/AUFBV/QF_ALIA/QF_AX/QF_BV-bvred/QF_BVFP/QF_DT/QF_FF/QF_FP/QF_LRA/QF_LIA/QF_NIA/QF_NRA/QF_UF/QF_UFBV/QF_UFFF/QF_UFLIA exact audits have zero audit errors/timeouts, and the proof/evidence work has moved exact coverage to BV/bitwuzla quantified **4/4**, BV/cvc5 quantified **37/37**, QF_ABV **169/169**, QF_ALIA **6/6**, QF_AUFBV **41/41**, QF_AX **8/8**, QF_BV/bvred **6/6**, QF_BVFP **7/7**, QF_DT **3/3**, QF_FF **24/24**, QF_FP **16/16**, QF_LRA **9/9**, QF_LIA **10/10**, QF_NIA synthetic **32/32**, QF_NRA synthetic **30/30**, QF_UF bounded declared-sort **44/44**, QF_UF overbound declared-sort **4/4**, QF_UFBV/bitwuzla **2/2**, QF_UFFF **8/8**, QF_UFLIA curated **2/2**, QF_UFLIA bounded **6/6**, and QF_UFLIA parent **6/6** dominant. Remaining work is broader proof/Lean coverage plus faster actual decisions on the hard array/UF/arithmetic solve frontier, not standing up the gate. |
 
 ## Changelog
+
+- **2026-07-01** — **Foundations/discrete query guide landed.**
+  Added
+  [`docs/foundational-resources/FOUNDATIONS-DISCRETE-QUERIES.md`](docs/foundational-resources/FOUNDATIONS-DISCRETE-QUERIES.md)
+  as the focused consumer guide for logic/proof, set-theory/foundations, and
+  discrete-math resources. It records Boolean queries for proof/CNF and
+  refutation rows, Alethe queries for finite quantifier, partition, quotient,
+  and relation/function rows, Diophantine/LIA queries for finite counting and
+  bounded induction rows, plus checked finite cardinality and Boolean-algebra
+  drills. Updated PLAN, buildout docs, consumer indexes, and the
+  foundational-resource smoke check.
 
 - **2026-07-01** — **Analysis/numerical query guide landed.**
   Added

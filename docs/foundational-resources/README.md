@@ -90,6 +90,10 @@ schemas, examples, and validation workflows.
   copyable concept-plus-route queries for bounded real-analysis rows,
   numerical-method rows, residuals, dynamics/Euler rows, and complex real-pair
   rows.
+- [FOUNDATIONS-DISCRETE-QUERIES.md](FOUNDATIONS-DISCRETE-QUERIES.md) gives
+  copyable concept-plus-route queries for Boolean proof rows, finite proof
+  patterns, bounded induction, finite quantifiers, cardinality, counting,
+  Boolean algebra, partition, and relation/function rows.
 - [GRAPH-DISCRETE-QUERIES.md](GRAPH-DISCRETE-QUERIES.md) gives copyable
   concept-plus-route queries for finite graph coloring, reachability,
   matching, cuts, d-separation, fixed-width coloring, and BFS/DFS runtime rows.

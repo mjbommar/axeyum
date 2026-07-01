@@ -40,6 +40,8 @@ For concept-plus-route functional analysis and operator discovery, see
 For concept-plus-route real-analysis, numerical-analysis, and complex-analysis
 discovery, see
 [ANALYSIS-NUMERICAL-QUERIES.md](ANALYSIS-NUMERICAL-QUERIES.md).
+For concept-plus-route logic, foundations, and discrete-math discovery, see
+[FOUNDATIONS-DISCRETE-QUERIES.md](FOUNDATIONS-DISCRETE-QUERIES.md).
 
 ## Contract Summary
 

@@ -62,6 +62,9 @@ use the
 For real-analysis, numerical-analysis, and complex-analysis discovery by bridge
 concept and proof route, use the
 [Analysis And Numerical Resource Consumer Queries](ANALYSIS-NUMERICAL-QUERIES.md).
+For logic/proof, set-foundations, and discrete-math discovery by bridge concept
+and proof route, use the
+[Foundations And Discrete Resource Consumer Queries](FOUNDATIONS-DISCRETE-QUERIES.md).
 This file remains the phase contract and landed-history log.
 
 The product is not a textbook and not a formal-library clone. It is a set of
@@ -2313,6 +2316,17 @@ queries, making finite analysis resources discoverable while keeping
 completeness, IVT/MVT/FTC, convergence, numerical stability, floating-point
 error, holomorphicity, contour-integration, analytic-continuation, and
 algebraic-closure claims in the horizon lanes.
+The foundations/discrete consumer layer now also has
+[`FOUNDATIONS-DISCRETE-QUERIES.md`](FOUNDATIONS-DISCRETE-QUERIES.md). The
+guide and resource smoke expose Boolean proof/CNF rows, refutation-as-query
+rows, finite proof-pattern rows, bounded induction and arithmetic obligations,
+finite quantifier rows, finite cardinality/bijection rows, finite Boolean
+algebra rows, finite counting rows, partition/equivalence rows, and finite
+relation/function/image/preimage rows through Boolean, Alethe, Diophantine, and
+LIA queries, making finite foundations resources discoverable while keeping
+proof automation, ZFC, infinite sets/cardinality, unbounded induction,
+asymptotic enumeration, and broad combinatorial theorem families in the
+horizon lanes.
 The proof-route consumer layer now also has
 [`PROOF-ROUTE-QUERY-MATRIX.md`](PROOF-ROUTE-QUERY-MATRIX.md), and
 `query-foundational-resources.py routes` summarizes route coverage from

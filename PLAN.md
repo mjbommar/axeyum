@@ -205,6 +205,11 @@ The analysis/numerical consumer query guide is
 it records exact concept-plus-route queries for bounded real-analysis rows,
 numerical-method rows, residuals, dynamics/Euler rows, and complex real-pair
 resources.
+The foundations/discrete consumer query guide is
+[`docs/foundational-resources/FOUNDATIONS-DISCRETE-QUERIES.md`](docs/foundational-resources/FOUNDATIONS-DISCRETE-QUERIES.md);
+it records exact concept-plus-route queries for Boolean proof rows, finite
+proof patterns, bounded induction, finite quantifiers, cardinality, counting,
+Boolean algebra, partition, and relation/function resources.
 The rules/law transfer crosswalk that maps finite predicates, arithmetic
 thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
@@ -648,6 +653,16 @@ so downstream consumers can discover finite analysis resources without
 promoting completeness, IVT/MVT/FTC, convergence, numerical stability,
 floating-point error, holomorphicity, contour-integration,
 analytic-continuation, or algebraic-closure claims.
+The foundations/discrete lane now has
+[`FOUNDATIONS-DISCRETE-QUERIES.md`](docs/foundational-resources/FOUNDATIONS-DISCRETE-QUERIES.md),
+and the foundational smoke checks Boolean proof/CNF, refutation-as-query,
+finite proof-pattern, bounded induction, finite quantifier, finite
+cardinality/bijection, finite Boolean algebra, finite counting,
+partition/equivalence, and finite relation/function/image/preimage rows through
+Boolean, Alethe, Diophantine, and LIA queries, so downstream consumers can
+discover finite foundations resources without promoting proof automation, ZFC,
+infinite sets/cardinality, unbounded induction, asymptotic enumeration, or
+broad combinatorial theorem claims.
 The proof-route lane now has
 [`PROOF-ROUTE-QUERY-MATRIX.md`](docs/foundational-resources/PROOF-ROUTE-QUERY-MATRIX.md),
 and the query helper accepts `routes` summaries with route aliases and optional
