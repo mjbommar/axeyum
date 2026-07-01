@@ -66,6 +66,26 @@ fn symbol_redeclaration_same_sort_is_idempotent() {
     assert!(matches!(err, IrError::SymbolSortConflict { .. }));
 }
 
+#[test]
+fn string_sort_is_declarable_and_displays(/* P2.7 A.1a / ADR-0051 */) {
+    // The `String` sort is `Seq(BitVec(18))` — Copy, declarable, and rendered
+    // structurally. This slice adds only the representation (no sequence ops yet),
+    // so the sort must at least declare, round-trip through `sort_of`, and display.
+    assert_eq!(Sort::string(), Sort::Seq(ArraySortKey::BitVec(18)));
+    assert_eq!(Sort::string().to_string(), "(Seq (_ BitVec 18))");
+    // A sequence is not a bit-vector.
+    assert_eq!(Sort::string().bv_width(), None);
+
+    let mut a = TermArena::new();
+    let s = a.declare("str", Sort::string()).unwrap();
+    let t = a.var(s);
+    assert_eq!(a.sort_of(t), Sort::string());
+    // Copy semantics preserved (a plain assignment, not a move).
+    let s2 = Sort::string();
+    let _copy = s2;
+    assert_eq!(s2, Sort::string());
+}
+
 // ----- build-time validation ---------------------------------------------
 
 #[test]
