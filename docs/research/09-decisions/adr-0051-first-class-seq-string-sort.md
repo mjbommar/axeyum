@@ -103,6 +103,24 @@ representation.**
   `axeyum-strings` crate split and a superseding ADR for the solver architecture); and
   if the Unicode alphabet bound (`0x2FFFF`) ever needs the full `0x10FFFF` range.
 
+## ⚠ Open reconciliation with ADR-0029 (found during A.1c, 2026-07-01)
+
+This ADR proposed `Sort::Seq` without accounting for the fact that a **committed
+bounded finite-Sequences front-end (ADR-0029) already owns the `(Seq E)` SMT-LIB
+syntax and every `seq.*` operator**, parsing them to a *packed `Sort::BitVec`* and
+lowering to BV (with soundness tests). So `(Seq E)` now has **two** candidate
+representations — ADR-0029's bounded packed-BV and this ADR's first-class
+`Sort::Seq` — and one syntax cannot resolve to both. The A.1a `Sort::Seq` therefore
+sits *above* the SMT-LIB front-end for now: it is reachable via the `axeyum-ir`
+builders (`arena.seq_*`) but the parser still routes `(Seq E)` to ADR-0029's bounded
+sort, and the first-class ops write as `seq.*` but do not parse back to themselves.
+**Resolving the fork (which representation `(Seq E)` parses to, and how the two
+relate) is deferred to A.2 and requires a dedicated superseding/《companion》 ADR** —
+the leading option is that the bounded ADR-0029 encoder becomes a *lowering pass*
+over `Sort::Seq` (unbounded ⇒ first-class, provably-bounded ⇒ packed-BV pre-check),
+keeping the ADR-0029 soundness surface intact. Until that ADR lands, do NOT re-route
+`parse_sort`.
+
 ## Foundational-DAG / register updates
 
 - Add `Sort::Seq`/`String` as a new sort node under the foundational DAG's sort layer

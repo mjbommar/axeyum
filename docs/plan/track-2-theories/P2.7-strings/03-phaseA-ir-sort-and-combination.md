@@ -63,26 +63,40 @@ added. So A.1 must be sliced to keep each commit compiling:
    the value alone (falls back to the `String` element with a `TODO` — not
    load-bearing, the term's `SeqEmpty` key carries the true sort); a precise
    empty-seq value-sort needs the element key in the variant (a later ADR).
-3. **Slice A.1c — SMT-LIB read/write** round-trip for the sort + core ops.
-   **Design caution (scoped 2026-07-01 — do NOT rush this):** A.1c *intersects the
-   validated bounded string encoder* and must not regress it (DISAGREE=0 / 371).
-   Concretely: `parse_sort` currently maps `String → Sort::BitVec(STRING_TOTAL)`
-   (the bounded `(len, content)` representation), and A.1b's writer maps
-   `Op::SeqLen → "str.len"`, `Op::SeqConcat → "str.++"` — **the same SMT-LIB names
-   the bounded encoder already owns**. So the safe A.1c is:
-   - **Keep `String → bounded BV`** for now (the pre-check stays the decision path);
-     do NOT re-route `String` to `Sort::Seq` here — that is A.2's job once
-     `len`↔LIA can actually decide the first-class path.
-   - **Parse the general `(Seq E)` sort → `Sort::Seq(E)`** and the `seq.*` operator
-     names into the new `Op` variants; the `str.*` names stay dispatched to the
-     bounded encoder **unless the operand's sort is `Seq`** (route by operand sort,
-     not by name alone) — that operand-sort routing is the one subtle piece.
-   - Round-trip test on an explicit `(Seq (_ BitVec 8))` term through the new ops,
-     asserting no change to any existing `String`/`str.*` bounded test.
-4. **A.2** (`len`↔LIA Nelson–Oppen) and the ADR follow once the sort is load-bearing.
-   This is the Phase-A **exit criterion** (the `str.len`-unsat gap) and the point at
-   which re-routing `String → Sort::Seq` becomes correct (the first-class path can
-   then decide via the `len` combination, not just the bounded encoder).
+3. **Slice A.1c — SMT-LIB write half landed; parse half BLOCKED on a representation
+   fork (found 2026-07-01, `3d0ad49c`).** The **write** side is done+safe: the
+   first-class ops render as `seq.len`/`seq.++`/`seq.unit`/`seq.empty` (these
+   `Op::Seq*` variants are produced only by the arena builders, never by any bounded
+   encoder, so the rename touches no bounded output). **The parse side is
+   deliberately NOT done — and cannot be a confined edit — because of the collision
+   below.**
+
+   ### ⚠ Architectural finding: `Sort::Seq` (A.1a) collides with the ADR-0029 bounded sequence encoder
+
+   A.1a's premise (and this doc's earlier A.1c note) was that `(Seq E)`/`seq.*` were
+   *unowned*. **They are not.** A mature, committed **bounded finite-Sequences
+   front-end (ADR-0029)** already:
+   - routes `parse_sort` `(Seq E)` → a **packed `Sort::BitVec`** (like the bounded
+     `String` encoder maps `String` → packed BV), and
+   - parses **every** `seq.*` name (`seq.len`/`++`/`unit`/`empty`/`nth`/`at`/
+     `extract`/`rev`/`update`/`prefixof`/`suffixof`/`contains`) and lowers them to BV
+     ops, with extensive soundness tests (`smtlib.rs`); `(Seq (_ BitVec 8))` is even
+     *reserved* (byte-width 8 is owned by `String`).
+
+   So there are now **two representations of a sequence**: ADR-0029's bounded
+   packed-BV (the front-end/decision path) and A.1a's first-class `Sort::Seq` (the
+   IR-level unbounded representation). One `(Seq E)` syntax cannot yield both. **This
+   fork is the real content of A.2 and needs a new ADR** — options: (a) `(Seq E)`
+   parses to `Sort::Seq` and the bounded encoder becomes a lowering *pass* over it
+   (unifies the two, biggest change); (b) keep ADR-0029 as the default and introduce
+   `Sort::Seq` only where unboundedness is needed (a routing predicate); (c) a
+   provably-bounded ⇒ ADR-0029, else ⇒ first-class split. Do NOT re-route
+   `parse_sort` until that ADR is written.
+4. **A.2** (`len`↔LIA Nelson–Oppen) — the Phase-A **exit criterion** (`str.len`-unsat
+   gap). **Reordered by the finding above:** A.2 now *also* owns the ADR-0029↔`Sort::Seq`
+   reconciliation ADR (the representation fork). Once `len`↔LIA can decide the
+   first-class path, the fork can resolve to route unbounded/`len`-constrained
+   `(Seq E)` to `Sort::Seq` while the bounded encoder stays the fast pre-check.
 
 > **Pre-existing lint (unrelated to this keystone, flagged 2026-07-01):** the A.1b
 > sweep surfaced a `clippy::needless_raw_string_hashes` warning at
