@@ -41,6 +41,12 @@
 use axeyum_ir::Rational;
 
 /// The comparator of a constraint row `Σ aⱼ·xⱼ ⋈ b`.
+///
+/// The full set is part of the feasibility API (and exercised by the tests); the
+/// current sole in-tree caller — the LRA fallback in [`crate::lra`] — normalizes
+/// every atom to a `≤`/`<` row, so it only constructs `Le`/`Lt`. Keep the complete
+/// enum for the direct-`Constraint` API and the coming callers (T1.9.2+).
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rel {
     /// `Σ aⱼ·xⱼ ≤ b`.

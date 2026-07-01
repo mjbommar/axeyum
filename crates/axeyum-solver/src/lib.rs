@@ -120,10 +120,8 @@ mod records;
 pub mod route_trace;
 mod sat_bv_backend;
 mod set_cardinality;
-// P1.9 · T1.9.1 — exact-rational simplex feasibility core. Validated in isolation
-// (unit-tested + self-checked Farkas); routed into the LRA layer in T1.9.2+, so it
-// is not yet called from the dispatch (allow dead_code until then).
-#[allow(dead_code)]
+// P1.9 — exact-rational simplex feasibility core; the LRA layer (`lra.rs`) routes
+// FM-timeout cases through it (T1.9.2).
 mod simplex;
 mod skolem_alethe;
 mod smtlib;

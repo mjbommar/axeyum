@@ -279,7 +279,17 @@ fn decide_within(
 
     let nvars = ctx.vars.len();
     match solve(&ctx.constraints, nvars, deadline) {
-        Feasibility::TimedOut => Ok(Decision::TimedOut),
+        Feasibility::TimedOut => {
+            // Fourier–Motzkin exhausted its size budget (it is doubly-exponential in
+            // the variable count). Retry on the exact-rational simplex (P1.9 · T1.9.2),
+            // which scales polynomially. Sound: `simplex_fallback` returns a decision
+            // only for a replay-checked `sat` or a Farkas-verified `unsat`; otherwise
+            // we keep the FM `unknown`.
+            if let Some(decision) = simplex_fallback(arena, assertions, &ctx)? {
+                return Ok(decision);
+            }
+            Ok(Decision::TimedOut)
+        }
         Feasibility::Unsat(multipliers) => {
             let certificate = FarkasCertificate {
                 atoms,
@@ -331,6 +341,88 @@ fn decide_within(
             }
             Ok(Decision::Sat(model))
         }
+    }
+}
+
+/// P1.9 · T1.9.2 — feasibility fallback for when Fourier–Motzkin exhausts its size
+/// budget: retry on the exact-rational simplex over the **same** collected
+/// constraints. Returns `Some(Decision)` only for a *certified* outcome — a
+/// replay-checked `Sat` model, or an `Unsat` whose Farkas certificate re-verifies —
+/// and `None` (keep the FM `unknown`) otherwise, so it can never produce a wrong
+/// verdict.
+///
+/// Each collected constraint is `Σ cᵢ·xᵢ + k {<,≤} 0`; translated to the simplex
+/// row `Σ cᵢ·xᵢ {<,≤} −k`. Because every collected constraint is a `≤`/`<` row, the
+/// simplex Farkas multipliers are all `≥ 0` — exactly the nonnegative multipliers a
+/// [`FarkasCertificate`] expects, in the same atom order — so the certificate maps
+/// across directly and its self-check (`Σ λ·k > 0`, or `= 0` with a strict atom)
+/// coincides with the simplex verifier.
+// Returns `Result` to match `decide_within`'s style and the `?` call site; the body
+// is currently infallible (declines to `Ok(None)` on every non-decision).
+#[allow(clippy::unnecessary_wraps)]
+fn simplex_fallback(
+    arena: &TermArena,
+    assertions: &[TermId],
+    ctx: &Collector,
+) -> Result<Option<Decision>, SolverError> {
+    let nvars = ctx.vars.len();
+    let mut rows = Vec::with_capacity(ctx.constraints.len());
+    for constraint in &ctx.constraints {
+        let mut coeffs = vec![Rational::zero(); nvars];
+        for (&index, &value) in &constraint.expr.coeffs {
+            coeffs[index] = value;
+        }
+        // `Σ cᵢxᵢ + k {<,≤} 0`  ⇒  `Σ cᵢxᵢ {<,≤} −k`.
+        let Some(rhs) = constraint.expr.constant.checked_neg() else {
+            return Ok(None); // overflow → keep `unknown`
+        };
+        let rel = if constraint.strict {
+            crate::simplex::Rel::Lt
+        } else {
+            crate::simplex::Rel::Le
+        };
+        rows.push(crate::simplex::Constraint { coeffs, rel, rhs });
+    }
+
+    match crate::simplex::feasible(nvars, &rows) {
+        crate::simplex::SimplexOutcome::Feasible(point) => {
+            // Build a model over the original symbols and replay-check it (the trust
+            // anchor for `sat`); decline to `unknown` if it does not verify.
+            let mut model = Model::new();
+            let mut assignment = axeyum_ir::Assignment::new();
+            for (index, &symbol) in ctx.vars.iter().enumerate() {
+                model.set(symbol, Value::Real(point[index]));
+                assignment.set(symbol, Value::Real(point[index]));
+            }
+            for &assertion in assertions {
+                if !matches!(eval(arena, assertion, &assignment), Ok(Value::Bool(true))) {
+                    return Ok(None);
+                }
+            }
+            Ok(Some(Decision::Sat(model)))
+        }
+        crate::simplex::SimplexOutcome::Infeasible(multipliers) if !multipliers.is_empty() => {
+            // `multipliers` line up 1:1 with `ctx.constraints` (same build order).
+            let atoms: Vec<FarkasAtom> = ctx.constraints.iter().map(FarkasAtom::from).collect();
+            let origins: Vec<usize> = ctx.constraints.iter().map(|c| c.origin).collect();
+            let certificate = FarkasCertificate {
+                atoms,
+                multipliers,
+                origins: origins.clone(),
+                vars: ctx.vars.clone(),
+            };
+            if certificate.verify() {
+                Ok(Some(Decision::UnsatFarkas {
+                    certificate,
+                    origins,
+                }))
+            } else {
+                Ok(None)
+            }
+        }
+        // Infeasible with no rational certificate (strict-δ), or `Unknown` (overflow):
+        // keep the Fourier–Motzkin `unknown` rather than an uncertified verdict.
+        _ => Ok(None),
     }
 }
 
