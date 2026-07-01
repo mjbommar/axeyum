@@ -75,6 +75,11 @@ It maps finite predicates, tenant relations, thresholds, monotonicity,
 versioning, precedence, and bounded equivalence back to math concept rows,
 proof routes, current packs, and copyable queries.
 
+The learner-facing trust-boundary walkthrough is
+[Rules/Law Trust Boundary](../learn/rules-law-trust-boundary.md). It explains
+how to read a rule pack from source text through replayed witnesses and checked
+obligations without treating the pack as legal advice or a solver benchmark.
+
 ## First Example Theme
 
 Start with a small eligibility rule, not a full statute:

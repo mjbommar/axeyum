@@ -117,6 +117,10 @@ schemas, examples, and validation workflows.
 - [RULES-LAW-PATTERN-MATRIX.md](RULES-LAW-PATTERN-MATRIX.md) maps the current
   rules/law patterns back to math concept rows, proof routes, current packs,
   and copyable query commands.
+- [../learn/rules-law-trust-boundary.md](../learn/rules-law-trust-boundary.md)
+  is the learner-facing walkthrough for the current rules/law trust boundary:
+  source rule, formal model, replayed witness, checked obligation, and
+  legal/theorem horizon.
 - [ROADMAP.md](ROADMAP.md) is the implementation roadmap.
 - [../learn/math/README.md](../learn/math/README.md) is the learner-facing
   math path built from the curriculum, concept atlas, and validated packs.

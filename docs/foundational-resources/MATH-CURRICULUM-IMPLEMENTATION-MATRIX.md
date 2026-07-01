@@ -515,6 +515,10 @@ Build sequence:
     current rules/law patterns back to math concept rows, proof routes, pack
     checks, generated query families, and copyable query commands so the next
     rule pack is gated on distinct proof-shape or consumer demand.
+49. [`rules-law-trust-boundary.md`](../learn/rules-law-trust-boundary.md) now
+    adds the learner-facing rules/law trust-boundary page, covering source
+    rules, formal models, replayed witnesses, checked obligations, and
+    legal/theorem horizons for the four current packs.
 48. Functional-analysis/operator field-readiness consumer queries now land in
     [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
     `scripts/check-foundational-resources.sh`, covering the Farkas field

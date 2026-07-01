@@ -235,6 +235,10 @@ it maps finite predicates, role/tenant relations, thresholds, monotonicity,
 version transitions, precedence, and bounded implementation-equivalence
 patterns back to math concept rows, proof routes, current packs, and copyable
 queries.
+The learner-facing rules/law trust-boundary page is
+[`docs/learn/rules-law-trust-boundary.md`](docs/learn/rules-law-trust-boundary.md);
+it walks from human-authored source rules through formal models, replayed
+witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
 119 concept rows, 108 non-template packs, 632 expected checks (334 `sat`,
 227 `unsat`, 71 `not-run`), 309 checked rows, 252 replay-only rows, and 71
@@ -775,6 +779,9 @@ obligations, quality-score query family, and late-submission generated rows.
 concepts and proof routes, and the rules-as-code smoke gate also checks
 monotonicity checks, adjacent generated families, and quality-monotonicity
 rows.
+`docs/learn/rules-law-trust-boundary.md` now gives learners the corresponding
+source-rule -> model -> replay/check -> horizon walkthrough for the four
+current rule packs.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, finite tensor products, and finite
 group actions now add secondary equality-heavy promotions for bad antisymmetry,

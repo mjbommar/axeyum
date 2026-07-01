@@ -82,6 +82,11 @@ It records which finite predicate, role/tenant, threshold, monotonicity,
 version, precedence, and bounded-equivalence patterns are actually covered by
 the four current packs and which math proof routes they reuse.
 
+The learner-facing trust-boundary page is
+[Rules/Law Trust Boundary](../learn/rules-law-trust-boundary.md). It explains
+how to read current packs from source rule to formal model, replayed witness,
+checked obligation, and explicit legal/theorem horizon.
+
 ## Audience
 
 | Audience | Need |

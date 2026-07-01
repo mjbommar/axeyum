@@ -7,6 +7,8 @@ It is the practical companion to the
 [Rules/Law Resource Queries](RULES-LAW-QUERIES.md): the crosswalk explains the
 reuse story, the query guide shows the raw JSON boundary, and this page says
 which rule patterns are actually covered today.
+For the learner-facing walkthrough, see
+[Rules/Law Trust Boundary](../learn/rules-law-trust-boundary.md).
 
 Scope:
 

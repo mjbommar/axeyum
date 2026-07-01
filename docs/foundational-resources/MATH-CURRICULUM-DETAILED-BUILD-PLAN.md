@@ -614,6 +614,12 @@ Pick one row per commit unless the change is purely navigational.
     back to math concept rows, proof routes, current rule packs, generated
     query families, and smoke-checked query commands without adding a premature
     rule ontology.
+70. Landed: add
+    [`rules-law-trust-boundary.md`](../learn/rules-law-trust-boundary.md) as
+    the learner-facing trust-boundary walkthrough for rules/law resources. The
+    page explains how to read current packs from source rule to formal model,
+    replayed witness, checked obligation, and legal/theorem horizon, while
+    preserving the no-legal-advice and no-benchmark boundary.
 69. Landed: add functional-analysis/operator field-readiness consumer query
     coverage. `CONSUMER-QUERIES.md` and
     `check-foundational-resources.sh` now exercise the

@@ -44,6 +44,7 @@
   - [What is automated reasoning?](learn/01-what-is-automated-reasoning.md)
   - [sat, unsat, and unknown](learn/05-models-unsat-and-unknown.md)
   - [How Axeyum solves a query](learn/07-how-axeyum-solves-a-query.md)
+  - [Rules/Law Trust Boundary](learn/rules-law-trust-boundary.md)
 
 # User Guide
 

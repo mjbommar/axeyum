@@ -205,6 +205,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Rules/law trust-boundary learner page landed.**
+  [`docs/learn/rules-law-trust-boundary.md`](docs/learn/rules-law-trust-boundary.md)
+  now walks through the current eligibility, authorization, tax/benefit, and
+  procurement packs from human-authored source rule to formal model, replayed
+  witness, checked obligation, and explicit legal/theorem horizon. It links
+  the crosswalk, pattern matrix, and query guide, and records the next-pack rule:
+  add another rule pack only for a distinct proof shape or repeated consumer
+  need.
+
 - **Rules/law pattern matrix landed.**
   [`RULES-LAW-PATTERN-MATRIX.md`](docs/foundational-resources/RULES-LAW-PATTERN-MATRIX.md)
   now maps finite predicates, exclusions, role/tenant relations, thresholds,

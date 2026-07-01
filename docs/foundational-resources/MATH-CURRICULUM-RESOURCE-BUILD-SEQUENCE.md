@@ -404,7 +404,12 @@ Pick one item per commit unless the change is purely navigational.
     map back to math concepts, proof routes, pack checks, generated query
     families, and smoke-checked query commands without adding a premature rule
     ontology.
-14. Add the next rules/law example only if it exercises a distinct current
+14. Landed: add
+    [`rules-law-trust-boundary.md`](../learn/rules-law-trust-boundary.md) as
+    the learner-facing rules/law page that walks from human source rule to
+    formal model, replayed witness, checked obligation, and explicit
+    legal/theorem horizon for the four current packs.
+15. Add the next rules/law example only if it exercises a distinct current
     math proof shape or a repeated consumer need.
 
 ## Maintenance Commands

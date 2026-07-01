@@ -34,6 +34,13 @@ The [math learner path](math/README.md) connects the curriculum and foundational
 example packs. It is organized by concept cluster and keeps a hard boundary
 between finite checkable slices and Lean or numerical horizons.
 
+## Rules/Law Resource Path
+
+[Rules/Law Trust Boundary](rules-law-trust-boundary.md) shows how the same
+resource pattern applies to human-authored eligibility, authorization,
+tax/benefit, and procurement rule packs: replay concrete witnesses, check small
+obligations, and keep legal interpretation outside the solver claim.
+
 > Pages marked *(planned)* are stubs in the [documentation plan](../documentation-plan.md);
 > the linked ones are written. See the [glossary](glossary.md) for terms like
 > QF_BV, CNF, DRAT, and Alethe before they're defined inline.

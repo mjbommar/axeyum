@@ -23,6 +23,8 @@ untrusted fast search, trusted small checking
 For the current covered-pattern table and copyable JSON queries, see the
 [Rules/Law Pattern Matrix](RULES-LAW-PATTERN-MATRIX.md). This crosswalk is the
 design map; the pattern matrix is the current coverage map.
+For a learner-facing walkthrough of the trust boundary, see
+[Rules/Law Trust Boundary](../learn/rules-law-trust-boundary.md).
 
 ## Workflow
 

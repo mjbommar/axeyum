@@ -41,6 +41,9 @@ For copyable queries over the current rules-as-code JSON boundary, use the
 For the current map from reusable rules/law patterns to math concepts, proof
 routes, rule packs, and query commands, use the
 [Rules/Law Pattern Matrix](RULES-LAW-PATTERN-MATRIX.md).
+For the learner-facing walkthrough from rule text to formal model, replayed
+witness, checked obligation, and legal/theorem horizon, use
+[Rules/Law Trust Boundary](../learn/rules-law-trust-boundary.md).
 For the compact all-field consumer query surface, use the
 [Field Readiness Query Matrix](FIELD-READINESS-QUERY-MATRIX.md).
 For proof-route coverage queries, use the

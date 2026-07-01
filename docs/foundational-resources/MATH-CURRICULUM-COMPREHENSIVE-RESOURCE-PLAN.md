@@ -484,11 +484,15 @@ Prefer one row, page, route upgrade, or query surface per commit.
     [`RULES-LAW-PATTERN-MATRIX.md`](RULES-LAW-PATTERN-MATRIX.md) so the current
     rule-pattern surface maps back to math concept rows, proof routes, pack
     checks, generated query families, and copyable query commands.
-14. Add rules/law examples only by reusing existing math proof shapes and the
+14. Landed: add
+    [`rules-law-trust-boundary.md`](../learn/rules-law-trust-boundary.md) so the
+    current rules/law packs have a learner-facing source-rule, formal-model,
+    replayed-witness, checked-obligation, and horizon walkthrough.
+15. Add rules/law examples only by reusing existing math proof shapes and the
     current JSON boundary.
-15. Add schema fields only after validators and query scripts show repeated
+16. Add schema fields only after validators and query scripts show repeated
     awkwardness.
-16. Revisit crate/repo boundaries after consumer scripts have at least three
+17. Revisit crate/repo boundaries after consumer scripts have at least three
     duplicated access patterns.
 
 ## Validation Protocol

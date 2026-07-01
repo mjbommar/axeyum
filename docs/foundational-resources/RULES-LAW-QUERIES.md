@@ -8,6 +8,8 @@ can find the committed rule packs, checked obligations, and generated bounded
 query rows without reading prose.
 For the current pattern-to-route coverage table, see the
 [Rules/Law Pattern Matrix](RULES-LAW-PATTERN-MATRIX.md).
+For the learner-facing trust-boundary walkthrough, see
+[Rules/Law Trust Boundary](../learn/rules-law-trust-boundary.md).
 
 The scope remains deliberately small:
 

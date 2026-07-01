@@ -1215,7 +1215,11 @@ Pick one item per commit unless the change is purely navigational.
    rules/law patterns map back to math concept rows, proof routes, pack
    checks, generated query families, and copyable query commands before any
    new rule ontology or rule-pack count push.
-15. Landed: add a consumer-query recipe for "find all packs for a field and
+15. Landed: add
+   [`rules-law-trust-boundary.md`](../learn/rules-law-trust-boundary.md) as the
+   learner-facing rules/law trust-boundary walkthrough from source rule to
+   formal model, replayed witness, checked obligation, and explicit horizon.
+16. Landed: add a consumer-query recipe for "find all packs for a field and
    route" through the `--route` filter in
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md).
@@ -1674,6 +1678,10 @@ Pick one item per commit unless the change is purely navigational.
     rules/law pattern matrix, mapping the current predicate, relation,
     threshold, monotonicity, version, precedence, and implementation-equivalence
     patterns back to math concepts, proof routes, and smoke-checked queries.
+77e. Landed: add
+    [`rules-law-trust-boundary.md`](../learn/rules-law-trust-boundary.md) as
+    the learner-facing trust-boundary page for reading current rules/law packs
+    without treating them as legal advice or solver benchmarks.
 78. Landed: add functional-analysis/operator field-readiness consumer queries
     through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational
     smoke check, covering Farkas field readiness, the operator bridge lookup,
