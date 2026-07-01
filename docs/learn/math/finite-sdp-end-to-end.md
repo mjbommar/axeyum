@@ -32,7 +32,7 @@ X = [[1, 0],
 
 ## What Gets Checked
 
-The pack has five rows:
+The pack has six rows:
 
 | Row | Result | Evidence |
 |---|---|---|
@@ -40,6 +40,7 @@ The pack has five rows:
 | `finite-sdp-objective-replay` | `sat` | replay-only |
 | `finite-sdp-dual-slack-replay` | `sat` | replay-only |
 | `bad-sdp-objective-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-sdp-duality-gap-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-sdp-duality-lean-horizon` | `not-run` | Lean horizon |
 
 The replay rows use exact rational arithmetic and two-by-two matrix arithmetic.
@@ -128,6 +129,32 @@ is zero:
 Axeyum parses that source row, emits `UnsatFarkas` evidence, and independently
 checks the certificate.
 
+## Bad Duality-Gap Row
+
+The dual replay computes:
+
+```text
+primal objective = 1
+dual objective = 1
+duality gap = 0
+```
+
+The malformed row claims the same witness has gap `1/2`, leaving exact error
+`1/2`.
+
+The source SMT-LIB artifact fixes that gap error and also claims it is zero:
+
+```smt2
+(set-logic QF_LRA)
+(declare-const gap_error Real)
+(assert (= gap_error (/ 1 2)))
+(assert (= gap_error 0))
+(check-sat)
+```
+
+The Farkas route checks this final contradiction after the pack validator has
+replayed the primal/dual arithmetic.
+
 ## What This Does Not Prove
 
 The pack does not prove general SDP weak duality, strong duality, Slater
@@ -145,5 +172,5 @@ general SDP theory: future Lean reconstruction
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_objective_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_
 ```

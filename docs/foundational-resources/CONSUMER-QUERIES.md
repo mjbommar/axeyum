@@ -1464,7 +1464,7 @@ python3 scripts/query-foundational-resources.py checks \
 For optimization and convexity, query the Farkas route to keep exact LP
 thresholds, finite convexity shadows, regression normal equations, residual
 bounds, gradient/Hessian replay, finite KKT stationarity, finite SDP
-objective/slack replay, finite gradient-descent replay, and finite
+objective/slack/gap replay, finite gradient-descent replay, and finite
 line-search replay, finite Wolfe line-search replay, finite active-set QP
 replay, finite projected-gradient replay, finite proximal-gradient replay, and
 checked gradient step-coordinate rows together while

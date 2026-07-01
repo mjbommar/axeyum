@@ -225,7 +225,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 616 expected checks, 293 checked
+111 concept rows, 108 non-template packs, 617 expected checks, 294 checked
 rows, 252 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -404,7 +404,7 @@ soft-threshold plus box-constrained replay, and checked
 QF_LRA/Farkas rejection of bad upper-bound, bad finite-value, bad Newton-step,
 bad bisection-width, bad convex-combination,
 bad separator, bad stationarity, bad free-gradient, bad degenerate active-set
-multiplier, bad objective, bad decrease, bad Armijo, bad Wolfe-curvature, bad
+multiplier, bad objective, bad duality-gap, bad decrease, bad Armijo, bad Wolfe-curvature, bad
 projection, bad proximal-point, and bad box-proximal-point rows, while
 monotone convergence, closed-form recurrence solving, asymptotics, and
 separation/KKT/active-set/SDP/descent/Wolfe/line-search/projected-gradient/proximal-gradient/stability/convergence theorems remain Lean-horizon.
@@ -413,7 +413,7 @@ objective-threshold Farkas replay, finite midpoint/Jensen shadows, affine
 monotonicity, gradient replay, Hessian-minor witnesses, least-squares
 normal-equation replay, finite root-finding steps, and finite hyperplane
 separation plus finite KKT stationarity/complementarity, finite active-set QP
-face/slack replay, and finite SDP objective/slack replay plus finite
+face/slack replay, and finite SDP objective/slack/gap replay plus finite
 gradient-descent step/decrease replay and finite line-search
 rejection/acceptance replay plus finite Wolfe line-search replay plus finite
 projected-gradient interval replay plus finite proximal-gradient soft-threshold
@@ -832,7 +832,7 @@ the latest finite-line-search bad accepted-candidate QF_LRA/Farkas promotion,
 the latest finite-line-search bad Armijo QF_LRA/Farkas promotion,
 the latest finite-gradient-descent bad step-coordinate and bad decrease
 QF_LRA/Farkas promotions,
-the latest finite-SDP bad objective QF_LRA/Farkas promotion,
+the latest finite-SDP bad objective and bad duality-gap QF_LRA/Farkas promotion,
 the latest finite-KKT bad stationarity QF_LRA/Farkas promotion,
 the latest finite-separation bad convex-combination and bad separator
 QF_LRA/Farkas promotions,

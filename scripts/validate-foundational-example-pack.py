@@ -11694,6 +11694,37 @@ def validate_finite_sdp(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-sdp-objective-rejected certificate must document checked Farkas evidence")
 
+    bad_gap = checks["bad-sdp-duality-gap-rejected"]
+    if bad_gap["expected_result"] != "unsat" or bad_gap.get("proof_status") != "checked":
+        fail("bad-sdp-duality-gap-rejected must be a checked unsat row")
+    data = bad_gap.get("data", {})
+    if data.get("source_witness") != "rank-one-primal-dual-sdp":
+        fail("bad-sdp-duality-gap-rejected must cite the rank-one-primal-dual-sdp witness")
+    computed_gap = require_fraction("bad SDP computed_gap", data.get("computed_gap"))
+    claimed_gap = require_fraction("bad SDP claimed_gap", data.get("claimed_gap"))
+    gap_error = require_fraction("bad SDP gap_error", data.get("gap_error"))
+    if computed_gap != duality_gap:
+        fail("bad-sdp-duality-gap-rejected computed gap does not match replay")
+    if computed_gap == claimed_gap:
+        fail("bad-sdp-duality-gap-rejected malformed gap must disagree with replay")
+    if claimed_gap - computed_gap != gap_error:
+        fail("bad-sdp-duality-gap-rejected gap error is incorrect")
+    if gap_error <= 0:
+        fail("bad-sdp-duality-gap-rejected gap error must be positive")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad SDP duality-gap smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-sdp-v0/smt2/bad-duality-gap-farkas-conflict.smt2":
+        fail("bad-sdp-duality-gap-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad SDP duality-gap smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad SDP duality-gap farkas_regression", regression)
+    if "finite_sdp_bad_duality_gap_artifact_emits_checked_farkas" not in regression:
+        fail("bad-sdp-duality-gap-rejected must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("bad SDP duality-gap certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-sdp-duality-gap-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-sdp-duality-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-sdp-duality-lean-horizon must be not-run")

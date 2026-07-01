@@ -22,6 +22,8 @@ SDP strong duality and convex-optimization theorems remain proof horizons.
   is positive semidefinite, and verifies the zero primal-dual gap.
 - `bad-sdp-objective-rejected`: rejects the malformed claim that the same
   primal matrix has objective `0`; exact replay computes objective `1`.
+- `bad-sdp-duality-gap-rejected`: rejects the malformed claim that the same
+  primal/dual witness has duality gap `1/2`; exact replay computes gap `0`.
 - `general-sdp-duality-lean-horizon`: names the future proof route for general
   SDP duality, constraint qualifications, and strong-duality theorems.
 
@@ -29,7 +31,7 @@ SDP strong duality and convex-optimization theorems remain proof horizons.
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_objective_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_
 ```
 
 ## Trust Boundary

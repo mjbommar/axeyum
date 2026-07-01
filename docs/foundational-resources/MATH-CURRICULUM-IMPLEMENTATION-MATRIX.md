@@ -406,6 +406,8 @@ Build sequence:
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
 31. `finite-sdp-v0` now links `bad-sdp-objective-rejected` to
     `artifacts/examples/math/finite-sdp-v0/smt2/bad-objective-farkas-conflict.smt2`,
+    and `bad-sdp-duality-gap-rejected` to
+    `artifacts/examples/math/finite-sdp-v0/smt2/bad-duality-gap-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
 32. `finite-gradient-descent-v0` now links `bad-descent-value-rejected` and
     `bad-step-coordinate-rejected` to

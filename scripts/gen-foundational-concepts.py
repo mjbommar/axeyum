@@ -173,7 +173,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-sdp-v0",
-                "Finite two-by-two SDP primal/dual replay with checked bad-objective rejection.",
+                "Finite two-by-two SDP primal/dual replay with checked bad-objective and bad duality-gap rejections.",
             ),
             (
                 "finite-gradient-descent-v0",
@@ -519,7 +519,7 @@ FIELD_PACKS = {
         ("finite-separation-v0", "Finite convex-hull and hyperplane-separation replay with checked bad convex-combination and bad-separator rejections."),
         ("finite-kkt-v0", "Finite KKT stationarity, complementary slackness, and bad-stationarity rejection."),
         ("finite-active-set-qp-v0", "Finite active-set QP replay with checked bad-free-gradient rejection."),
-        ("finite-sdp-v0", "Finite SDP primal/dual slack replay with checked bad-objective rejection."),
+        ("finite-sdp-v0", "Finite SDP primal/dual slack replay with checked bad-objective and bad duality-gap rejections."),
         ("finite-gradient-descent-v0", "Finite gradient-descent step replay with checked bad-decrease and bad step-coordinate rejections."),
         ("finite-line-search-v0", "Finite Armijo line-search replay with checked bad-acceptance and bad accepted-candidate rejections."),
         ("finite-wolfe-line-search-v0", "Finite Wolfe line-search replay with checked bad-minimizer and bad-curvature rejections."),
@@ -1480,7 +1480,7 @@ BRIDGE_CONCEPTS = [
             "instances, finite second differences, affine monotonicity, exact "
             "gradient replay, Hessian-minor witnesses, finite gradient-descent, "
             "Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT "
-            "stationarity/complementarity, and finite SDP primal/dual slack "
+            "stationarity/complementarity, and finite SDP primal/dual slack/gap "
             "rows over rational data while keeping "
             "general convex-analysis theorems separate."
         ),
@@ -1559,7 +1559,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-sdp-v0",
-                "Finite two-by-two PSD, trace, objective, slack, and dual-gap rows over exact rationals.",
+                "Finite two-by-two PSD, trace, objective, slack, dual-gap, and checked bad-gap rows over exact rationals.",
             ),
             (
                 "reals-rcf-shadow-v0",
@@ -1591,7 +1591,7 @@ BRIDGE_CONCEPTS = [
                     "The finite checker recomputes midpoint values, grid "
                     "differences, gradients, Jacobians, Hessian minors, and "
                     "normal-equation residuals, finite gradient, Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT residuals, and "
-                    "two-by-two SDP slack/objective arithmetic exactly; false linearized "
+                    "two-by-two SDP slack/objective/gap arithmetic exactly; false linearized "
                     "claims use checked Farkas evidence when promoted."
                 ),
             }

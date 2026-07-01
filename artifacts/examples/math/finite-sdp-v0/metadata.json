@@ -33,10 +33,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite SDP bad objective QF_LRA/Farkas regression seed",
-    "pressure": "Exact SDP replay computes objective 1 for a trace-one rank-one primal matrix, so the malformed objective 0 row has error 1.",
+    "target": "finite SDP bad objective and bad duality-gap QF_LRA/Farkas regression seeds",
+    "pressure": "Exact SDP replay computes objective 1 and dual objective 1 for a trace-one rank-one primal/dual witness, so the malformed objective 0 row has error 1 and the malformed duality-gap 1/2 row has error 1/2.",
     "evidence": [
-      "bad-sdp-objective-rejected"
+      "bad-sdp-objective-rejected",
+      "bad-sdp-duality-gap-rejected"
     ],
     "next_step": "Promote additional SDP rows only when they add distinct primal/dual slack, complementarity, active-set, or certificate pressure; keep general SDP duality, Slater conditions, and convergence claims in horizon lanes."
   },
@@ -50,6 +51,7 @@
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "docs/learn/math/finite-sdp-end-to-end.md",
     "artifacts/examples/math/finite-sdp-v0/smt2/bad-objective-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-sdp-v0/smt2/bad-duality-gap-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
@@ -57,12 +59,13 @@
     "finite-sdp-objective-replay",
     "finite-sdp-dual-slack-replay",
     "bad-sdp-objective-rejected",
+    "bad-sdp-duality-gap-rejected",
     "general-sdp-duality-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite SDP witnesses as deterministic exact-rational replay rows.",
     "Replay matrix symmetry, principal minors, trace constraints, objective values, slack matrices, dual objectives, and primal-dual gaps over exact rationals.",
-    "Route false SDP objective claims through checked QF_LRA/Farkas evidence after replay computes the offending objective error.",
+    "Route false SDP objective and duality-gap claims through checked QF_LRA/Farkas evidence after replay computes the offending exact errors.",
     "Keep general SDP weak/strong duality, Slater conditions, KKT sufficiency, and algorithm convergence marked Lean-horizon until proof artifacts exist."
   ]
 }

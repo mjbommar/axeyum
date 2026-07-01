@@ -103,6 +103,9 @@ const FINITE_ACTIVE_SET_QP_BAD_DEGENERATE_MULTIPLIER: &str = include_str!(
 const FINITE_SDP_BAD_OBJECTIVE: &str = include_str!(
     "../../../artifacts/examples/math/finite-sdp-v0/smt2/bad-objective-farkas-conflict.smt2"
 );
+const FINITE_SDP_BAD_DUALITY_GAP: &str = include_str!(
+    "../../../artifacts/examples/math/finite-sdp-v0/smt2/bad-duality-gap-farkas-conflict.smt2"
+);
 const FINITE_GRADIENT_DESCENT_BAD_DECREASE: &str = include_str!(
     "../../../artifacts/examples/math/finite-gradient-descent-v0/smt2/bad-decrease-farkas-conflict.smt2"
 );
@@ -765,6 +768,14 @@ fn finite_sdp_bad_objective_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-sdp-v0 bad-objective SMT-LIB artifact",
         FINITE_SDP_BAD_OBJECTIVE,
+    );
+}
+
+#[test]
+fn finite_sdp_bad_duality_gap_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-sdp-v0 bad-duality-gap SMT-LIB artifact",
+        FINITE_SDP_BAD_DUALITY_GAP,
     );
 }
 

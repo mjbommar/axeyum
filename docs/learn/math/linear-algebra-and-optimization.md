@@ -93,8 +93,8 @@ active-set QP slice adds exact active-face replay, inactive-constraint slack
 checking, degenerate active-bound replay, and checked QF_LRA/Farkas
 bad-free-gradient plus bad-degenerate-multiplier certificates. The finite
 SDP slice adds two-by-two PSD replay, trace/objective arithmetic, dual-slack
-matrix replay, zero duality-gap checking, and a checked QF_LRA/Farkas
-bad-objective certificate. The finite-gradient-descent slice adds exact
+matrix replay, zero duality-gap checking, and checked QF_LRA/Farkas
+bad-objective plus bad-duality-gap certificates. The finite-gradient-descent slice adds exact
 quadratic gradient replay, step-update replay, objective-decrease checking,
 finite descent-bound replay, and a checked QF_LRA/Farkas bad-decrease
 certificate. The finite line-search slice adds exact Armijo trial rejection,
@@ -436,9 +436,9 @@ S = C - yI
 
 The `finite-sdp-v0` validator checks the primal matrix and slack matrix by
 two-by-two principal minors, recomputes `<I,X> = 1`, `<C,X> = 1`, and verifies
-zero primal-dual gap. Its bad row changes the objective to `0`, giving
-objective error `1`; the final contradiction `error = 1` versus `error = 0` is
-checked through QF_LRA/Farkas evidence. For a focused trace, read
+zero primal-dual gap. Its bad rows change the objective to `0` and the gap to
+`1/2`, giving objective error `1` and gap error `1/2`; the final contradictions
+are checked through QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite SDP Checks](finite-sdp-end-to-end.md).
 
 For a finite gradient-descent example, encode a quadratic, start point, step
@@ -590,7 +590,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stati
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-active-set-qp-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_active_set_qp_bad_free_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_objective_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_step_coordinate_artifact_emits_checked_farkas

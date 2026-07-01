@@ -66,6 +66,23 @@
       "notes": "Exact replay computes <C,X> = 1, so the claimed objective 0 has error 1; the source artifact checks that the same error cannot equal zero."
     },
     {
+      "id": "bad-sdp-duality-gap-rejected",
+      "claim": "The same primal/dual witness has duality gap 1/2.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_sdp_duality_gap_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "rank-one-primal-dual-sdp",
+        "computed_gap": "0",
+        "claimed_gap": "1/2",
+        "gap_error": "1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-sdp-v0/smt2/bad-duality-gap-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_duality_gap_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes primal objective 1 and dual objective 1, so the duality gap is 0; the malformed gap claim 1/2 leaves positive error 1/2."
+    },
+    {
       "id": "general-sdp-duality-lean-horizon",
       "claim": "General SDP weak/strong duality, Slater-style conditions, and KKT sufficiency require future Lean reconstruction.",
       "expected_result": "not-run",

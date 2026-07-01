@@ -45,3 +45,12 @@ the dual objective is `y = 1`, and the primal-dual gap is `0`.
 
 The checked bad row changes the claimed objective to `0`. Exact replay computes
 `<C, X> = 1`, so the claimed objective has error `1`.
+
+The checked bad duality-gap row keeps the same primal and dual witness but
+claims gap `1/2`. Exact replay computes:
+
+```text
+<C, X> - y = 1 - 1 = 0
+```
+
+so the malformed gap claim has error `1/2`.

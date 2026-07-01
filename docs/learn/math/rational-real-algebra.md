@@ -261,10 +261,10 @@ S = [[0,0],
 ```
 
 The `finite-sdp-v0` validator recomputes two-by-two principal minors, trace,
-objective value, slack matrix, dual objective, and primal-dual gap. Its bad row
-changes the objective to `0`, computes objective error `1`, and checks the
-resulting exact-linear contradiction through QF_LRA/Farkas evidence. For a
-focused trace, read
+objective value, slack matrix, dual objective, and primal-dual gap. Its bad
+rows change the objective to `0` and the gap to `1/2`, compute exact errors
+`1` and `1/2`, and check the resulting exact-linear contradictions through
+QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite SDP Checks](finite-sdp-end-to-end.md).
 
 For a finite gradient-descent check, encode a fixed quadratic step:
@@ -507,7 +507,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stati
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-active-set-qp-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_active_set_qp_bad_free_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sdp-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_objective_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_sdp_bad_
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gradient-descent-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_step_coordinate_artifact_emits_checked_farkas
