@@ -838,7 +838,8 @@ Lean-horizon row.
 `artifacts/examples/math/finite-product-measure-v0/` now validates exact
 finite product-measure tables, rectangle probabilities, left and right
 marginals, finite Fubini replay, checked QF_LRA/Farkas rejection of a false
-product probability, and a Fubini/Tonelli Lean-horizon row.
+product probability and a false marginal, and a Fubini/Tonelli Lean-horizon
+row.
 `artifacts/examples/math/finite-random-variables-v0/` now validates exact
 finite random-variable pushforwards, expectation through pushforward
 distributions, finite independence checks, checked QF_LRA/Farkas rejection of
@@ -1040,7 +1041,7 @@ Recommended order:
     integrals, exact linearity, and bad-expectation rejection.
 25. `finite-product-measure-v0`: finite product probability tables,
     rectangle probabilities, marginals, finite Fubini replay, and bad
-    product-probability rejection.
+    product-probability and bad marginal rejection.
 26. `finite-random-variables-v0`: finite random-variable pushforwards,
     expectation through pushforward distributions, independence checks, and
     bad pushforward rejection.
@@ -1795,8 +1796,8 @@ simple-function integrals, indicator integrals, integral linearity, checked bad
 expectation rejection, and the Lebesgue-integration Lean horizon.
 `finite-product-measure-v0` now has a learner-facing end-to-end lesson for
 Cartesian-product probability tables, rectangle probabilities, marginals,
-finite Fubini replay, checked bad product-probability rejection, and the
-Fubini/Tonelli Lean horizon.
+finite Fubini replay, checked bad product-probability and bad marginal
+rejection, and the Fubini/Tonelli Lean horizon.
 `finite-random-variables-v0` now has a learner-facing end-to-end lesson for
 finite random-variable functions, pushforward distributions, expectation
 through pushforwards, finite independence, checked bad pushforward rejection,

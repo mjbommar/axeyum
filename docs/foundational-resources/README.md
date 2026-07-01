@@ -472,7 +472,8 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-product-measure-v0/`](../../artifacts/examples/math/finite-product-measure-v0/)
   validates exact finite product-measure tables, rectangle probabilities,
   left and right marginals, finite Fubini replay, checked rejection of a false
-  product probability, and a Fubini/Tonelli Lean-horizon row.
+  product probability and a false marginal, and a Fubini/Tonelli Lean-horizon
+  row.
 - [`artifacts/examples/math/finite-random-variables-v0/`](../../artifacts/examples/math/finite-random-variables-v0/)
   validates exact finite random-variable pushforwards, expectation through
   pushforward distributions, finite independence checks, checked rejection of a

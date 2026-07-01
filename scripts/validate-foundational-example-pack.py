@@ -19480,6 +19480,67 @@ def validate_finite_product_measure(expected: dict[str, Any]) -> None:
     if "finite_product_measure_bad_probability_emits_checked_farkas" not in data["farkas_regression"]:
         fail("bad-product-measure-rejected must link the Farkas regression")
 
+    bad_marginal = checks["bad-product-marginal-rejected"]
+    if bad_marginal["expected_result"] != "unsat" or bad_marginal.get("proof_status") != "checked":
+        fail("bad-product-marginal-rejected must be a checked unsat row")
+    data = bad_marginal.get("data", {})
+    left_atoms = require_probability_atoms("bad product marginal left_atoms", data.get("left_atoms"), require_events=False)
+    right_atoms = require_probability_atoms("bad product marginal right_atoms", data.get("right_atoms"), require_events=False)
+    require_normalized_atoms("bad-product-marginal-rejected left_atoms", left_atoms)
+    require_normalized_atoms("bad-product-marginal-rejected right_atoms", right_atoms)
+    left_ids = [atom_id for atom_id, _, _ in left_atoms]
+    right_ids = [atom_id for atom_id, _, _ in right_atoms]
+    left_probabilities = atom_probability_map(left_atoms)
+    right_probabilities = atom_probability_map(right_atoms)
+    distribution = require_product_distribution(
+        "bad product marginal product_atoms",
+        data.get("product_atoms"),
+        left_ids,
+        right_ids,
+    )
+    validate_product_probabilities(
+        "bad-product-marginal-rejected",
+        left_probabilities,
+        right_probabilities,
+        distribution,
+    )
+    target_axis = data.get("target_axis")
+    if target_axis not in {"left", "right"}:
+        fail("bad-product-marginal-rejected target_axis must be left or right")
+    target_atom = data.get("target_atom")
+    require_string("bad product marginal target_atom", target_atom)
+    if target_axis == "left":
+        if target_atom not in left_ids:
+            fail("bad-product-marginal-rejected target_atom is not a left atom")
+        marginals = finite_product_left_marginals(distribution, left_ids)
+    else:
+        if target_atom not in right_ids:
+            fail("bad-product-marginal-rejected target_atom is not a right atom")
+        marginals = finite_product_right_marginals(distribution, right_ids)
+    actual_marginal = require_probability("bad product actual_marginal", data.get("actual_marginal"))
+    claimed_marginal = require_probability("bad product claimed_marginal", data.get("claimed_marginal"))
+    if marginals[target_atom] != actual_marginal:
+        fail("bad-product-marginal-rejected actual_marginal is incorrect")
+    if actual_marginal == claimed_marginal:
+        fail("bad-product-marginal-rejected must document a false marginal claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad product marginal smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-product-measure-v0/smt2/"
+        "bad-product-marginal-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-product-marginal-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad product marginal smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad product marginal farkas_regression", regression)
+    if "finite_product_measure_bad_marginal_artifact_emits_checked_farkas" not in regression:
+        fail("bad-product-marginal-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad product marginal certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-product-marginal-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["fubini-tonelli-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("fubini-tonelli-lean-horizon must be not-run")

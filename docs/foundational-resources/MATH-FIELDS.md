@@ -169,7 +169,8 @@ one of:
 10. `artifacts/examples/math/finite-product-measure-v0/`
    - Fields: `measure_theory`, `probability_theory`, `statistics`, `real_analysis`.
    - Checks: finite product probability tables, marginals, rectangle measures,
-     finite Fubini replay, and bad product-probability rejection.
+     finite Fubini replay, bad product-probability rejection, and bad
+     marginal rejection.
 11. `artifacts/examples/math/finite-random-variables-v0/`
     - Fields: `probability_theory`, `statistics`, `measure_theory`,
       `real_analysis`, `set_theory_and_foundations`.

@@ -10,7 +10,7 @@ The examples are:
 - a product-measure table witness;
 - a marginalization witness;
 - a finite Fubini witness;
-- checked rejection of a false product probability;
+- checked rejection of false product probability and marginal claims;
 - a product-measure and Fubini/Tonelli Lean-horizon row.
 
 ## Concepts
@@ -29,13 +29,14 @@ The validator checks normalized finite factor distributions, verifies that each
 product atom has probability `P(x) * Q(y)`, recomputes rectangle measures,
 recomputes left and right marginals, and checks that a direct finite integral
 matches both iterated finite sums. The false product-probability row is also
-mirrored by a QF_LRA/Farkas regression over the replay-computed product mass.
-All arithmetic is exact rational arithmetic.
+mirrored by a QF_LRA/Farkas regression over the replay-computed product mass,
+and the false marginal row is mirrored by a source-linked Farkas regression
+over the replay-computed row sum. All arithmetic is exact rational arithmetic.
 
-This pack is checked finite evidence for the bad product-probability row. It is
-not a proof of general product-measure construction, Fubini/Tonelli, measurably
-indexed kernels, stochastic processes, or almost-everywhere reasoning over
-arbitrary measure spaces.
+This pack is checked finite evidence for bad product-probability and bad
+marginal rows. It is not a proof of general product-measure construction,
+Fubini/Tonelli, measurably indexed kernels, stochastic processes, or
+almost-everywhere reasoning over arbitrary measure spaces.
 
 Validation:
 

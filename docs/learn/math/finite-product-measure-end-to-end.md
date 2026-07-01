@@ -20,6 +20,7 @@ Concept rows:
 | `marginalization-witness` | `sat` | replay-only |
 | `finite-fubini-witness` | `sat` | replay-only |
 | `bad-product-measure-rejected` | `unsat` | checked |
+| `bad-product-marginal-rejected` | `unsat` | checked |
 | `fubini-tonelli-lean-horizon` | `not-run` | lean-horizon |
 
 Every checked row is exact finite rational arithmetic over normalized factor
@@ -166,6 +167,31 @@ and rejects the claim because:
 The candidate product probability is untrusted; the small checker multiplies
 the factor probabilities directly.
 
+## Reject A False Marginal
+
+The second negative row claims:
+
+```text
+sum_y R(heads, y) = 2/3
+```
+
+The checker recomputes the row sum from the product table:
+
+```text
+R(heads, one) + R(heads, two) + R(heads, three)
+  = 1/6 + 1/6 + 1/6
+  = 1/2
+```
+
+and rejects the claim because:
+
+```text
+1/2 != 2/3
+```
+
+The product table is untrusted; the small checker independently sums the row
+before the QF_LRA/Farkas artifact checks only the final scalar conflict.
+
 ## Name The Lean Horizon
 
 The finite pack checks:
@@ -177,6 +203,7 @@ rectangle probabilities
 left and right marginals
 finite direct and iterated sums
 bad product-probability refutations
+bad marginal refutations
 ```
 
 The following remain proof-assistant targets:
@@ -205,6 +232,12 @@ Expected output:
 validated 1 foundational example pack(s)
 ```
 
+Route regression:
+
+```sh
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_product_measure_bad_marginal_artifact_emits_checked_farkas
+```
+
 ## Trust Boundary
 
 This lesson shows Axeyum's current finite product-measure resource pattern:
@@ -218,4 +251,5 @@ remaining horizon -> general product-measure and Fubini/Tonelli theory
 The graduation target is to encode finite product measures as exact rational
 Cartesian-product probability tables, replay finite rectangle, marginalization,
 and iterated-integral witnesses through Axeyum model evaluation, and emit
-checked counterexample evidence for rejected product-probability claims.
+checked counterexample evidence for rejected product-probability and marginal
+claims.

@@ -166,6 +166,9 @@ const BOUNDED_DYNAMICS_BAD_TRANSITION_STEP: &str = include_str!(
 const FINITE_EULER_BAD_MAX_ERROR_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/finite-euler-method-v0/smt2/bad-max-error-bound-farkas-conflict.smt2"
 );
+const FINITE_PRODUCT_MEASURE_BAD_MARGINAL: &str = include_str!(
+    "../../../artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-marginal-farkas-conflict.smt2"
+);
 const RATIONALS_TRICHOTOMY_NONLESS: &str = include_str!(
     "../../../artifacts/examples/math/rationals-lra-v0/smt2/trichotomy-nonless-farkas-conflict.smt2"
 );
@@ -866,6 +869,14 @@ fn finite_product_measure_bad_probability_emits_checked_farkas() {
         "finite-product-measure-v0 bad-product-measure-rejected",
         &arena,
         &[replay_computed_mass, false_claimed_mass],
+    );
+}
+
+#[test]
+fn finite_product_measure_bad_marginal_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-product-measure-v0 bad-product-marginal SMT-LIB artifact",
+        FINITE_PRODUCT_MEASURE_BAD_MARGINAL,
     );
 }
 

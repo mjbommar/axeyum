@@ -268,8 +268,9 @@ First targets:
   exact L1 soft-threshold replay computes residual `-3/2` for the malformed
   point)
 - [finite-product-measure-v0](../../artifacts/examples/math/finite-product-measure-v0/)
-  (resource-backed Farkas regression landed for the bad product-probability
-  row after exact finite product replay computes the product mass)
+  (resource-backed Farkas regressions landed for the bad product-probability
+  and bad marginal rows after exact finite product replay computes the product
+  mass and row marginal)
 - [finite-random-variables-v0](../../artifacts/examples/math/finite-random-variables-v0/)
   (resource-backed Farkas regression landed for the bad pushforward-distribution
   row after exact finite random-variable replay computes the outcome mass)
@@ -366,9 +367,9 @@ Secondary targets:
   real-analysis/numerical-analysis polynomial-integral regression, and complex
   algebraic plus complex plane transforms now contribute real-pair algebra
   exact-linear regressions,
-  finite product measure contributes a product-probability exact-linear
-  regression where the nonlinear product itself is replayed before Farkas checks
-  the final contradictory masses, and finite random variables contribute a
+  finite product measure contributes product-probability and marginal
+  exact-linear regressions where the nonlinear product table itself is replayed
+  before Farkas checks the final contradictory masses, and finite random variables contribute a
   pushforward-distribution regression with the same replay-then-Farkas boundary.
   Finite martingales now add the stochastic-process version of that pattern:
   replay a conditional expectation from a finite filtration, then let Farkas

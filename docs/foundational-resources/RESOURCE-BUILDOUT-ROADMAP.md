@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 580 expected checks.
-- 262 checked proof/evidence rows.
+- 581 expected checks.
+- 263 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -1224,11 +1224,13 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_uf_routes finite_continuous_maps_bad_preimage_emits_checked_alethe`.
-19. Landed: promote `finite-product-measure-v0` through a source-linked
-    QF_LRA/Farkas regression for `bad-product-measure-rejected`. The artifact
+19. Landed: promote `finite-product-measure-v0` through source-linked
+    QF_LRA/Farkas regressions for `bad-product-measure-rejected` and
+    `bad-product-marginal-rejected`. The artifacts
     `artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-measure-farkas-conflict.smt2`
-    is checked by
-    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_product_measure_bad_probability_emits_checked_farkas`.
+    and
+    `artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-marginal-farkas-conflict.smt2`
+    are checked by `math_resource_lra_routes`.
 20. Landed: promote `finite-random-variables-v0` through a source-linked
     QF_LRA/Farkas regression for `bad-pushforward-rejected`. The artifact
     `artifacts/examples/math/finite-random-variables-v0/smt2/bad-pushforward-farkas-conflict.smt2`
@@ -1829,6 +1831,12 @@ Pick one item per commit unless the change is purely navigational.
      artifact claims `2`; the shared QF_LRA/Farkas route now checks both
      inverse-coordinate and inverse-distance-product conflicts without
      promoting general inversion theorems.
+117. Landed: extend `finite-product-measure-v0` with a checked bad marginal
+     row. Exact finite product-table replay recomputes the `heads` marginal as
+     `1/2`, while the malformed source SMT-LIB artifact claims `2/3`; the
+     shared QF_LRA/Farkas route now checks both product atom and marginal
+     conflicts without promoting general product-measure or Fubini/Tonelli
+     theorems.
 
 ## Validation Checklist
 

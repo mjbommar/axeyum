@@ -357,8 +357,10 @@ Build sequence:
     `artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2`,
     checked by the `math_resource_uf_routes` QF_UF/Alethe regression.
 21. `finite-product-measure-v0` now links `bad-product-measure-rejected` to
-    `artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-measure-farkas-conflict.smt2`,
-    checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
+    `artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-measure-farkas-conflict.smt2`
+    and `bad-product-marginal-rejected` to
+    `artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-marginal-farkas-conflict.smt2`,
+    both checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
 22. `finite-random-variables-v0` now links `bad-pushforward-rejected` to
     `artifacts/examples/math/finite-random-variables-v0/smt2/bad-pushforward-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.

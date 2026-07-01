@@ -58,3 +58,14 @@ sum_y Q(y) * sum_x f(x,y) P(x) = 3
 
 The false claim says `R(heads, one) = 1/5`. The checker rejects it because the
 exact product probability is `(1/2) * (1/3) = 1/6`.
+
+## Bad Marginal Claim
+
+The false marginal claim says the left marginal of `heads` is `2/3`. The
+checker rejects it because the product row sum is:
+
+```text
+R(heads, one) + R(heads, two) + R(heads, three)
+  = 1/6 + 1/6 + 1/6
+  = 1/2
+```

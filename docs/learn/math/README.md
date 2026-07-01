@@ -404,8 +404,8 @@ Companion maps:
   bad-expectation rejection, and the Lebesgue-integration Lean horizon.
 - [Finite Product Measure](finite-product-measure-end-to-end.md): follows
   Cartesian-product probability tables, rectangle probabilities, marginals,
-  finite Fubini replay, checked bad product-probability rejection, and the
-  Fubini/Tonelli Lean horizon.
+  finite Fubini replay, checked bad product-probability and bad marginal
+  rejection, and the Fubini/Tonelli Lean horizon.
 - [Finite Random Variables](finite-random-variables-end-to-end.md): follows
   finite random-variable functions, pushforward distributions, expectation
   through pushforwards, finite independence, checked bad pushforward rejection,

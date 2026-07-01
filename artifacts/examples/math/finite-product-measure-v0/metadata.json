@@ -36,12 +36,13 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite product-measure bad probability QF_LRA/Farkas regression seed",
-    "pressure": "Malformed finite product-probability row where independent factor probabilities 1/2 and 1/3 force product mass 1/6 but the false table claims 1/5.",
+    "target": "finite product-measure bad probability and marginal QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed finite product-probability and marginal rows where independent factor probabilities force product mass 1/6 and left marginal 1/2, but the false table claims product mass 1/5 and marginal 2/3.",
     "evidence": [
-      "bad-product-measure-rejected"
+      "bad-product-measure-rejected",
+      "bad-product-marginal-rejected"
     ],
-    "next_step": "Promote additional product-measure, marginal, or finite-integration rows only when they add distinct exact-linear solver pressure; keep general product-measure construction and Fubini/Tonelli in the Lean-horizon lane."
+    "next_step": "Promote additional product-measure or finite-integration rows only when they add distinct exact-linear solver pressure beyond product atoms and marginals; keep general product-measure construction and Fubini/Tonelli in the Lean-horizon lane."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -52,6 +53,7 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-measure-farkas-conflict.smt2",
+    "artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-marginal-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
@@ -60,12 +62,13 @@
     "marginalization-witness",
     "finite-fubini-witness",
     "bad-product-measure-rejected",
+    "bad-product-marginal-rejected",
     "fubini-tonelli-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite product measures as exact rational Cartesian-product probability tables.",
     "Replay finite rectangle, marginalization, and iterated-integral witnesses through Axeyum model evaluation.",
-    "Emit checked finite counterexample evidence for rejected product-probability claims; the bad product-probability row now has checked QF_LRA/Farkas evidence.",
+    "Emit checked finite counterexample evidence for rejected product-probability and marginal claims; the bad product-probability and bad marginal rows now have checked QF_LRA/Farkas evidence.",
     "Keep general product-measure construction, Fubini/Tonelli, kernels, and almost-everywhere theorems marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

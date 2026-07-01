@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-product-measure bad marginal QF_LRA row landed.**
+  `finite-product-measure-v0` now has a second checked Farkas row: exact
+  finite product-table replay sums the `heads` row as
+  `1/6 + 1/6 + 1/6 = 1/2`, then rejects the malformed claim that the left
+  marginal is `2/3`. The new source SMT-LIB artifact isolates the final
+  exact-linear marginal conflict, the shared `math_resource_lra_routes`
+  regression parses it and checks `UnsatFarkas` evidence, and the validator
+  pins the factor tables, product table, target axis/atom, artifact path,
+  regression, and certificate note. Generated dashboards and the public query
+  summary now report 111 concept rows, 108 non-template packs, 581 expected
+  checks, 263 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite-inversion bad inverse-distance-product QF_LRA row landed.**
   `finite-inversion-geometry-v0` now has a second checked Farkas row: exact
   unit-circle inversion replay computes `|p|^2 = 5`, `|I(p)|^2 = 1/5`, and

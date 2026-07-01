@@ -57,6 +57,7 @@ Concept rows:
 | `marginalization-witness` | `sat` | replay-only |
 | `finite-fubini-witness` | `sat` | replay-only |
 | `bad-product-measure-rejected` | `unsat` | checked |
+| `bad-product-marginal-rejected` | `unsat` | checked |
 | `simple-function-integral-witness` | `sat` | replay-only |
 | `bad-expectation-rejected` | `unsat` | checked |
 
@@ -287,6 +288,9 @@ sum_y R(heads, y) = 1/2
 sum_x R(x, two) = 1/3
 ```
 
+The checked bad marginal row rejects the malformed claim
+`sum_y R(heads, y) = 2/3` after replay computes the row sum as `1/2`.
+
 For the finite Fubini row, it checks the direct finite sum and both iterated
 sums over the same product table:
 
@@ -311,6 +315,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-concentration-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-martingales-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-product-measure-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_product_measure_bad_marginal_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0
 ```
 

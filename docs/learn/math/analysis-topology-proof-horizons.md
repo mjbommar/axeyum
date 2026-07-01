@@ -513,8 +513,8 @@ R(heads, one) = 1/6
 ```
 
 The `finite-product-measure-v0` validator checks every product probability,
-rectangle measures, marginals, and equality of the direct finite integral with
-both iterated finite sums.
+rectangle measures, marginals, equality of the direct finite integral with
+both iterated finite sums, and checked rejection of a malformed marginal claim.
 
 Run the checks from the repository root:
 

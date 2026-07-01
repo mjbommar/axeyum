@@ -31,6 +31,15 @@ factor product for `(heads, one)` is `1/6`. The source-linked QF_LRA artifact
 records the final exact-linear contradiction checked by the shared Farkas route
 regression.
 
+## `bad-product-marginal-rejected`
+
+Expected result: `unsat`.
+
+The validator rejects the claimed left marginal `2/3` because summing the
+`heads` row in the product table gives `1/2`. The source-linked QF_LRA artifact
+records the final exact-linear contradiction checked by the shared Farkas route
+regression.
+
 ## `fubini-tonelli-lean-horizon`
 
 Expected result: `not-run`.
