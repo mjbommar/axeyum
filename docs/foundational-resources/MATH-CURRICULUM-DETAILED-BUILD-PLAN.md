@@ -1176,6 +1176,14 @@ Pick one row per commit unless the change is purely navigational.
      stochastic-kernel, tail-count, and random-matrix moment rows without
      claiming continuous probability, asymptotic statistics, stochastic-process
      limits, simulation quality, or floating-point inference guarantees.
+143. Landed: add
+     [`TOPOLOGY-HOMOLOGY-QUERIES.md`](TOPOLOGY-HOMOLOGY-QUERIES.md) as the
+     topology/homology consumer query guide. The guide and resource smoke now
+     exercise concept-scoped Boolean, Farkas, Alethe, Diophantine, and QF_BV
+     checks for metric shadows, compactness, connectedness, quotient topology,
+     specialization order, finite homology, torsion, cohomology, UCT shadows,
+     and cup-product rows without claiming general topology, invariance,
+     exact-sequence, UCT naturality, or cohomology-ring theorems.
 
 ## Validation Checklist
 

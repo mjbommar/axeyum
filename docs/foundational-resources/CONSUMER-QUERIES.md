@@ -23,6 +23,8 @@ For concept-plus-route matrix discovery, see
 [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md).
 For concept-plus-route probability/statistics discovery, see
 [PROBABILITY-STATISTICS-QUERIES.md](PROBABILITY-STATISTICS-QUERIES.md).
+For concept-plus-route topology and homology discovery, see
+[TOPOLOGY-HOMOLOGY-QUERIES.md](TOPOLOGY-HOMOLOGY-QUERIES.md).
 For concept-plus-route finite algebra discovery, see
 [ALGEBRA-STRUCTURE-QUERIES.md](ALGEBRA-STRUCTURE-QUERIES.md).
 For concept-plus-route number and arithmetic discovery, see
@@ -643,6 +645,18 @@ python3 scripts/query-foundational-resources.py packs \
 python3 scripts/query-foundational-resources.py checks \
   --concept bridge_bounded_epsilon_delta_shadow \
   --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_compactness_shadow \
+  --route boolean \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_connectedness_shadow \
+  --route boolean \
   --proof-status checked \
   --require-any
 
@@ -1781,6 +1795,8 @@ python3 scripts/query-foundational-resources.py checks --field topology --route 
 python3 scripts/query-foundational-resources.py packs --concept bridge_metric_ball --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_bounded_epsilon_delta_shadow --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_bounded_epsilon_delta_shadow --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_compactness_shadow --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_connectedness_shadow --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_topology_operator_homeomorphism --route alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_topology_operator_homeomorphism --route alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_specialization_order_replay --route alethe --require-any >/dev/null

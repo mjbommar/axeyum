@@ -165,6 +165,11 @@ it records exact concept-plus-route queries for finite probability tables,
 finite measure, product/integration, pushforwards, conditional expectation,
 stochastic kernels, tail counts, exact tests, and finite random-matrix
 moments.
+The topology/homology consumer query guide is
+[`docs/foundational-resources/TOPOLOGY-HOMOLOGY-QUERIES.md`](docs/foundational-resources/TOPOLOGY-HOMOLOGY-QUERIES.md);
+it records exact concept-plus-route queries for metric balls, finite topology,
+compactness, connectedness, quotient/specialization rows, finite homology,
+cohomology, UCT shadows, and cup-product resources.
 The algebra structure consumer query guide is
 [`docs/foundational-resources/ALGEBRA-STRUCTURE-QUERIES.md`](docs/foundational-resources/ALGEBRA-STRUCTURE-QUERIES.md);
 it records exact concept-plus-route queries for finite groups/actions,
@@ -566,6 +571,14 @@ expectation, stochastic kernels, tail counts, and random-matrix moments, so
 downstream consumers can discover exact finite-table resources without
 promoting continuous probability, asymptotic statistics, stochastic-process
 limit, simulation-quality, or floating-point inference claims.
+The topology/homology lane now has
+[`TOPOLOGY-HOMOLOGY-QUERIES.md`](docs/foundational-resources/TOPOLOGY-HOMOLOGY-QUERIES.md),
+and the foundational smoke checks concept-scoped Boolean, Farkas, Alethe,
+Diophantine, and QF_BV rows for metric shadows, compactness, connectedness,
+continuity, quotient topology, specialization order, boundary/homology,
+torsion, cohomology, UCT, and cup-product resources, so downstream consumers
+can discover finite topology resources without promoting general topology or
+algebraic-topology theorem claims.
 The algebra structure lane now has
 [`ALGEBRA-STRUCTURE-QUERIES.md`](docs/foundational-resources/ALGEBRA-STRUCTURE-QUERIES.md),
 and the foundational smoke checks concept-scoped Alethe/QF_BV rows for

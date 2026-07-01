@@ -459,6 +459,14 @@ Use one row per commit unless the change is purely navigational.
    Farkas routes without adding a typed API or claiming continuous
    probability, asymptotic statistics, stochastic-process limits, simulation
    quality, or floating-point inference guarantees.
+21f. Landed: add
+   [TOPOLOGY-HOMOLOGY-QUERIES.md](TOPOLOGY-HOMOLOGY-QUERIES.md), making metric,
+   finite-topology, compactness, connectedness, quotient, specialization,
+   boundary/homology, torsion, cohomology, UCT-shadow, and cup-product rows
+   queryable by bridge concept plus Boolean, Farkas, Alethe, Diophantine, and
+   QF_BV routes without adding a typed API or claiming general topology,
+   invariance, exact-sequence, UCT naturality, or cohomology-ring theorem
+   coverage.
 22. Landed: add number-system semantic-boundary bridge rows for
    exact-vs-floating arithmetic and totality conventions, plus consumer smoke
    queries for number-theory totality and numerical-analysis floating-boundary

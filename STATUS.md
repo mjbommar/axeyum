@@ -872,6 +872,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   limits, simulation quality, random-matrix limit laws, and floating-point
   inference guarantees in the proof-horizon or numerical-honesty lanes.
 
+- **Topology/homology query guide landed.**
+  `TOPOLOGY-HOMOLOGY-QUERIES.md` now gives downstream consumers copyable
+  concept-plus-route queries for finite topology and finite
+  homology/cohomology resources. It groups metric balls, bounded epsilon-delta
+  shadows, compactness, connectedness, continuity, quotient topology,
+  specialization order, boundary/homology, torsion, cohomology, UCT shadows,
+  and cup products across Boolean, Farkas, Alethe, Diophantine, and QF_BV
+  routes, and `check-foundational-resources.sh` now smoke-checks the compactness
+  and connectedness bridge drilldowns. This is count-neutral and keeps general
+  topology, invariance, exact-sequence, UCT naturality, and cohomology-ring
+  theorem claims in the proof-horizon lane.
+
 - **Algebra structure query guide landed.**
   `ALGEBRA-STRUCTURE-QUERIES.md` now gives downstream consumers copyable
   concept-plus-route queries for finite algebra resources. It groups

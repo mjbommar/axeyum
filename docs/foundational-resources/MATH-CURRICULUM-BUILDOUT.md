@@ -44,6 +44,8 @@ For matrix computation discovery by bridge concept and proof route, use the
 [Matrix Computation Consumer Queries](MATRIX-COMPUTATION-QUERIES.md).
 For probability/statistics discovery by bridge concept and proof route, use the
 [Probability And Statistics Resource Consumer Queries](PROBABILITY-STATISTICS-QUERIES.md).
+For topology/homology discovery by bridge concept and proof route, use the
+[Topology And Homology Resource Consumer Queries](TOPOLOGY-HOMOLOGY-QUERIES.md).
 For finite algebra discovery by bridge concept and proof route, use the
 [Algebra Structure Consumer Queries](ALGEBRA-STRUCTURE-QUERIES.md).
 For number/arithmetic discovery by bridge concept and proof route, use the
@@ -2240,6 +2242,14 @@ Farkas queries, making exact finite-table rows discoverable while keeping
 continuous probability, asymptotic statistics, stochastic-process limits,
 simulation quality, and floating-point inference claims in proof-horizon or
 numerical-honesty lanes.
+The topology/homology consumer layer now also has
+[`TOPOLOGY-HOMOLOGY-QUERIES.md`](TOPOLOGY-HOMOLOGY-QUERIES.md). The guide and
+resource smoke expose metric, bounded epsilon-delta, compactness,
+connectedness, topology-operator/homeomorphism, quotient, specialization,
+boundary/homology, torsion, cohomology, universal-coefficient, and cup-product
+bridge concepts through route-scoped Boolean, Farkas, Alethe, Diophantine, and
+QF_BV queries, making finite topology rows discoverable while keeping general
+topology and algebraic-topology theorem claims in the proof-horizon lane.
 The finite-algebra consumer layer now also has
 [`ALGEBRA-STRUCTURE-QUERIES.md`](ALGEBRA-STRUCTURE-QUERIES.md). The guide and
 resource smoke expose homomorphism, group-action, module-action, ideal, and

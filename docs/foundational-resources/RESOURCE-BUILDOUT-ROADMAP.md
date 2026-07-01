@@ -1927,6 +1927,14 @@ Pick one item per commit unless the change is purely navigational.
      kernels, tail counts, and random-matrix moments while keeping continuous
      probability, asymptotic statistics, stochastic-process limits, simulation
      quality, and floating-point inference claims in horizon lanes.
+126. Landed: add
+     [TOPOLOGY-HOMOLOGY-QUERIES.md](TOPOLOGY-HOMOLOGY-QUERIES.md), making the
+     topology/homology lane queryable by bridge concept plus proof route. The
+     guide and foundational smoke cover concept-scoped Boolean, Farkas,
+     Alethe, Diophantine, and QF_BV queries for metric shadows, compactness,
+     connectedness, quotient topology, specialization order, finite homology,
+     torsion, cohomology, UCT shadows, and cup products while keeping general
+     topology and algebraic-topology theorem claims in the horizon lane.
 
 ## Validation Checklist
 
