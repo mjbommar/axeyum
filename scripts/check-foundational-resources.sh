@@ -165,11 +165,14 @@ python3 scripts/query-foundational-resources.py checks --pack linear-algebra-rat
 python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_rank_nullity --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field abstract_algebra --route Alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text "equality certificate" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text homomorphism --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text ideal --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text action --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text tensor --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field abstract_algebra --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_algebra_equality_certificate_boundary --route Alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_algebra_equality_certificate_boundary --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_homomorphism_preservation --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_group_action --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_module_action --route Alethe --proof-status checked --require-any >/dev/null

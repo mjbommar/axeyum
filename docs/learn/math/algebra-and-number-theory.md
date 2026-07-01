@@ -7,6 +7,8 @@ Concept rows:
 - `curriculum_modular_arithmetic`, `curriculum_divisibility_and_euclid`, and
   `curriculum_fields` in the
   [math coverage dashboard](../../foundational-resources/generated/math-coverage.md)
+- `bridge_algebra_equality_certificate_boundary` for the rule that separates
+  finite table replay from checked QF_UF/Alethe equality certificates.
 
 Example packs:
 
@@ -94,6 +96,13 @@ conjugation-product and unit-square claims.
 
 These examples teach algebra as data that can be replayed: a candidate inverse
 either multiplies to `1` modulo `n`, or it does not.
+
+For the route-selection rule over equality-heavy algebra rows, read
+[Algebra Equality Certificate Boundary](algebra-equality-certificate-boundary.md).
+It groups the finite rows where table replay finds the concrete failure and a
+separate QF_UF/Alethe certificate checks the isolated equality, congruence,
+closure, representative, preservation, identity-action, or bilinearity
+conflict.
 
 ## Encode / Check Walkthrough
 
@@ -415,6 +424,9 @@ data through replay, read
 data, read [End To End: Finite Tensor Products](finite-tensor-products-end-to-end.md).
 For finite Hom/Ext bookkeeping, read
 [End To End: Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md).
+For the route-selection boundary that decides when a finite algebra row earns a
+separate equality certificate, read
+[Algebra Equality Certificate Boundary](algebra-equality-certificate-boundary.md).
 
 ## Proof Upgrade Notes
 

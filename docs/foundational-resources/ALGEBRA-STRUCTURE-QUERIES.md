@@ -21,6 +21,10 @@ theorems, category-level universal properties, infinite algebra, arbitrary
 field/ring/module facts, general factorization, and algebraic closure remain in
 the proof-horizon lane.
 
+For the boundary between finite table replay and checked equality certificates,
+start with
+[Algebra Equality Certificate Boundary](../learn/math/algebra-equality-certificate-boundary.md).
+
 ## Query Shape
 
 Start with field summaries:
@@ -59,6 +63,7 @@ needs concrete checked rows to display.
 
 | Algebra Family | Concept Filter | Route Filter | Start Query |
 |---|---|---|---|
+| Algebra equality certificates versus table replay | `bridge_algebra_equality_certificate_boundary` | `Alethe` | `checks --concept bridge_algebra_equality_certificate_boundary --route Alethe --proof-status checked` |
 | Group operations, homomorphisms, and permutation rows | `bridge_homomorphism_preservation` | `Alethe` | `checks --concept bridge_homomorphism_preservation --route Alethe --proof-status checked` |
 | Group actions and permutation actions | `bridge_group_action` | `Alethe` | `checks --concept bridge_group_action --route Alethe --proof-status checked` |
 | Kernels, images, and quotient maps | `bridge_kernel_image`; `bridge_quotient_map` | `Alethe` | `packs --concept bridge_kernel_image --route Alethe`; `packs --concept bridge_quotient_map --route Alethe` |
@@ -84,6 +89,26 @@ Display checked Alethe algebra rows:
 ```sh
 python3 scripts/query-foundational-resources.py checks \
   --field abstract_algebra \
+  --route Alethe \
+  --proof-status checked \
+  --require-any
+```
+
+Display the algebra equality-certificate boundary:
+
+```sh
+python3 scripts/query-foundational-resources.py concepts \
+  --field abstract_algebra \
+  --text "equality certificate" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py packs \
+  --concept bridge_algebra_equality_certificate_boundary \
+  --route Alethe \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_algebra_equality_certificate_boundary \
   --route Alethe \
   --proof-status checked \
   --require-any

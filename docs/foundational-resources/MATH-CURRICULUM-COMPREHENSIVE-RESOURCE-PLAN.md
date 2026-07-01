@@ -45,7 +45,7 @@ with prose, fix the JSON, metadata, generator, or prose source.
 
 As of 2026-07-01, the public resource query reports:
 
-- 119 concept rows: 23 curriculum nodes, 18 math fields, 73 bridge concepts, and
+- 120 concept rows: 23 curriculum nodes, 18 math fields, 74 bridge concepts, and
   5 example families.
 - 108 non-template math packs.
 - 634 expected checks: 335 `sat`, 228 `unsat`, and 71 `not-run`.
@@ -492,8 +492,13 @@ Prefer one row, page, route upgrade, or query surface per commit.
    to existing checked packs and copyable queries. It keeps finite rational
    rows as executable examples and names the missing no-`sorry` Lean theorem
    dependencies before any completeness claim can graduate.
-9. Deepen algebra by adding equality/certificate rows only when table replay
-   and congruence proof tell different useful stories.
+9. Landed: deepen algebra by adding equality/certificate rows only when table
+   replay and congruence proof tell different useful stories.
+   [`algebra-equality-certificate-boundary.md`](../learn/math/algebra-equality-certificate-boundary.md)
+   and `bridge_algebra_equality_certificate_boundary` now make that rule
+   queryable: exact finite replay must identify the bad equality, closure,
+   representative, preservation, identity-action, or bilinearity obligation
+   before a scoped QF_UF/Alethe row can claim checked certificate value.
 10. Landed: add `bridge_polynomial_coefficient_factor_replay` for fixed
     polynomial coefficients, factor/division witnesses, coefficient windows,
     root-finding steps, derivative shadows, and polynomial geometry obligations;

@@ -44,7 +44,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 73 bridge-concept rows.
+- 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
 - 634 expected checks.
@@ -1390,6 +1390,14 @@ Pick one row per commit unless the change is purely navigational.
      copyable checked-row queries, replay commands, Lean dependency rows, and
      graduation criteria while keeping finite rational samples, finite tails,
      finite covers, and algebraic shadows separate from theorem-level claims.
+164. Landed: add `bridge_algebra_equality_certificate_boundary` and
+     `algebra-equality-certificate-boundary.md` as the algebra promotion
+     boundary for finite table replay versus scoped QF_UF/Alethe equality
+     certificates. The page ties finite groups, monoids, permutation groups,
+     group actions, homomorphisms, ideals, vector spaces, dual spaces, modules,
+     and tensor products to copyable concept, pack, and checked-row queries
+     while keeping arbitrary algebraic theorems and universal properties in the
+     Lean-horizon lane.
 
 ## Validation Checklist
 

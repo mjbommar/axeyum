@@ -34,6 +34,10 @@ Companion maps:
 - [Proof Route Learner Snippets](proof-route-learner-snippets.md):
   gives reusable trust-boundary snippets for Boolean CNF/LRAT, QF_LRA/Farkas,
   QF_UF/Alethe, QF_LIA/Diophantine, and QF_BV/DRAT rows.
+- [Algebra Equality Certificate Boundary](algebra-equality-certificate-boundary.md):
+  separates finite algebra table replay from checked QF_UF/Alethe equality
+  certificates for homomorphisms, quotients, ideals, modules, actions, and
+  tensor rows.
 - [Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md):
   separates educational matrix resources, solver regressions, benchmark-corpus
   rows, and theorem horizons.
@@ -247,6 +251,9 @@ Companion maps:
   coefficient extraction, Cauchy product convolution, a bounded Fibonacci
   generating-function identity, bad-product rejection, and the general
   recurrence/asymptotic Lean horizon.
+- [Algebra Equality Certificate Boundary](algebra-equality-certificate-boundary.md):
+  groups equality-heavy finite algebra rows by the distinction between exact
+  table replay and scoped QF_UF/Alethe certificate checking.
 - [Matrix Computation Index](matrix-computation-index.md): groups LU,
   rank/nullity, residual, projection, eigenpair, characteristic-polynomial,
   random-matrix, module, tensor, chain-complex, and operator rows by proof

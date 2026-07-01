@@ -30,7 +30,7 @@ is checked, what is trusted, and what remains a theorem/proof horizon.
 
 The committed public query boundary currently reports:
 
-- 119 concept rows: 23 curriculum nodes, 18 field rows, 73 bridge concepts, and
+- 120 concept rows: 23 curriculum nodes, 18 field rows, 74 bridge concepts, and
   5 example-family rows.
 - 108 non-template math example packs.
 - 634 expected checks: 335 `sat`, 228 `unsat`, and 71 `not-run`.

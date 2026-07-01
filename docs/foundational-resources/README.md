@@ -133,6 +133,11 @@ schemas, examples, and validation workflows.
 - [../learn/math/proof-route-learner-snippets.md](../learn/math/proof-route-learner-snippets.md)
   gives reusable learner-facing trust-boundary snippets for Boolean CNF/LRAT,
   QF_LRA/Farkas, QF_UF/Alethe, QF_LIA/Diophantine, and QF_BV/DRAT rows.
+- [../learn/math/algebra-equality-certificate-boundary.md](../learn/math/algebra-equality-certificate-boundary.md)
+  records the algebra row-promotion rule: add checked QF_UF/Alethe evidence
+  only when exact finite table replay identifies a distinct equality,
+  congruence, closure, representative, preservation, identity-action, or
+  bilinearity conflict.
 - [../learn/math/real-completeness-theorem-boundary.md](../learn/math/real-completeness-theorem-boundary.md)
   records the real-completeness theorem boundary: existing rational interval,
   sequence-tail, Cauchy-tail, monotone-prefix, metric-continuity, compactness,

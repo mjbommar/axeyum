@@ -253,7 +253,7 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-119 concept rows, 108 non-template packs, 634 expected checks (335 `sat`,
+120 concept rows, 108 non-template packs, 634 expected checks (335 `sat`,
 228 `unsat`, 71 `not-run`), 310 checked rows, 253 replay-only rows, and 71
 Lean-horizon rows. The learner coverage audit records all 108 non-template
 packs as focused-lesson linked, with no path-only, index-only, or missing
@@ -285,7 +285,11 @@ Lean-horizon lane. The polynomial bridge lane now also makes fixed coefficient
 tuples, division/factor witnesses, coefficient windows, root-finding steps,
 derivative shadows, and polynomial geometry obligations queryable by one
 concept while keeping general factorization, algebraic closure, root
-distribution, and generating-function convergence as proof horizons. The finite
+distribution, and generating-function convergence as proof horizons. The algebra
+equality-certificate lane now makes the table-replay-versus-QF_UF/Alethe
+promotion rule queryable by one bridge concept, so finite algebra rows graduate
+only when the table checker and congruence certificate tell different useful
+stories. The finite
 order/lattice lane now also promotes the false Boolean-lattice top-element row
 through Bool/CNF DRAT/LRAT after exact relation replay isolates `B !<= A`
 while the bad claim that `A` is top requires `B <= A`. The modular-arithmetic
@@ -533,6 +537,10 @@ sequence-tail, monotone-prefix, metric-continuity, RCF-shadow, and finite
 compactness packs to least-upper-bound, Cauchy-completeness, monotone-
 convergence, compactness, and uniform-continuity proof obligations without
 turning finite shadows into theorem claims.
+The algebra equality-certificate boundary page now makes the finite-algebra
+promotion rule explicit: table replay owns concrete structure evaluation, while
+QF_UF/Alethe rows are added only for isolated equality, congruence, closure,
+representative, preservation, identity-action, or bilinearity certificates.
 Those four certificate anatomy stories now also have first-class bridge rows in
 the foundational concept atlas, making the active proof-object routes queryable
 through shared R1 vocabulary.

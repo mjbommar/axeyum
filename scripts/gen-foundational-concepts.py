@@ -6464,6 +6464,133 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_algebra_equality_certificate_boundary",
+        "title": "Algebra Equality Certificate Boundary",
+        "field_ids": [
+            "abstract_algebra",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "This boundary decides when a finite algebra row deserves a "
+            "checked equality certificate instead of remaining ordinary table "
+            "replay: the table checker must identify a concrete equality, "
+            "closure, representative, preservation, identity-action, or "
+            "bilinearity conflict, and the QF_UF/Alethe artifact must isolate "
+            "that proof shape without redoing the whole finite model."
+        ),
+        "prerequisites": [
+            "bridge_finite_model_replay",
+            "bridge_counterexample_proof",
+            "bridge_homomorphism_preservation",
+            "bridge_quotient_map",
+        ],
+        "unlocks": [
+            "bridge_kernel_image",
+            "bridge_ideal_closure",
+            "bridge_module_action",
+            "bridge_tensor_bilinearity",
+            "field_abstract_algebra",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite algebra tables",
+            "finite functions",
+            "QF_UF",
+            "EUF congruence",
+            "Alethe proof checking",
+            "finite replay",
+        ],
+        "example_packs": [
+            (
+                "finite-groups-v0",
+                "Binary-operation congruence separated from full Cayley-table replay.",
+            ),
+            (
+                "finite-monoids-v0",
+                "A malformed associativity table replayed first, then isolated as an equality conflict.",
+            ),
+            (
+                "finite-permutation-groups-v0",
+                "Non-bijection replay promoted only for the injectivity equality conflict.",
+            ),
+            (
+                "finite-group-actions-v0",
+                "Identity-action table failure isolated as an equality conflict.",
+            ),
+            (
+                "finite-algebra-homomorphisms-v0",
+                "Homomorphism preservation and concrete bad-map conflicts kept separate from table replay.",
+            ),
+            (
+                "finite-ideals-v0",
+                "Ideal closure replay plus quotient representative congruence as distinct equality artifacts.",
+            ),
+            (
+                "finite-vector-spaces-v0",
+                "Subspace closure failure promoted only after the finite vector table identifies the bad sum.",
+            ),
+            (
+                "finite-dual-spaces-v0",
+                "Covector additivity failure isolated after function-table replay.",
+            ),
+            (
+                "finite-modules-v0",
+                "Submodule scalar-closure failure separated from module table replay.",
+            ),
+            (
+                "finite-tensor-products-v0",
+                "Bilinear left-additivity failure isolated as a finite map equality conflict.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite table replay plus scoped QF_UF/Alethe equality certificate",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_uf_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+                    "docs/learn/math/algebra-equality-certificate-boundary.md",
+                    "docs/learn/math/algebra-and-number-theory.md",
+                    "docs/foundational-resources/ALGEBRA-STRUCTURE-QUERIES.md",
+                    "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker owns structure evaluation. The Alethe "
+                    "row owns only the isolated EUF contradiction or "
+                    "congruence obligation, and must link a source SMT-LIB "
+                    "artifact plus a route regression before solver reuse is "
+                    "claimed."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/learn/math/algebra-equality-certificate-boundary.md",
+            "docs/learn/math/algebra-and-number-theory.md",
+            "docs/foundational-resources/ALGEBRA-STRUCTURE-QUERIES.md",
+            "docs/foundational-resources/MATH-CURRICULUM-COMPREHENSIVE-RESOURCE-PLAN.md",
+            "crates/axeyum-solver/tests/math_resource_uf_routes.rs",
+        ],
+        "open_gaps": [
+            "This boundary does not prove arbitrary group, ring, module, quotient, tensor, or isomorphism theorems.",
+            "A finite algebra row should not be promoted to this concept merely because it is about algebra; it needs a distinct equality, congruence, closure, representative, preservation, identity-action, or bilinearity certificate shape.",
+            "Lean reconstruction remains partial until recurring finite algebra EUF shapes have kernel-checked routes.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "A candidate row first states and validates the finite algebra table, map, subset, quotient, or bilinear data.",
+                "Exact replay identifies the concrete failing equality or representative-independence obligation.",
+                "The QF_UF/Alethe source artifact isolates that equality conflict without hiding table enumeration in the solver.",
+                "A math_resource_uf_routes regression emits and independently checks UnsatAletheProof evidence.",
+                "Learner and query docs keep table replay, certificate checking, and theorem horizons visibly separate.",
+            ],
+        },
+    },
+    {
         "id": "bridge_kernel_image",
         "title": "Kernel And Image Replay",
         "field_ids": ["abstract_algebra", "linear_algebra", "set_theory_and_foundations"],

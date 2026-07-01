@@ -2511,6 +2511,16 @@ RCF shadows, metric continuity, and compactness prerequisites are linked to
 existing checked packs, copyable queries, replay commands, missing Lean
 dependencies, and graduation criteria while keeping finite samples separate
 from theorem-level real-analysis claims.
+The learner/planning layer now also has
+[`algebra-equality-certificate-boundary.md`](../learn/math/algebra-equality-certificate-boundary.md),
+which turns the algebra queue rule into an explicit promotion boundary:
+finite table replay must find the concrete equality, congruence, closure,
+representative, preservation, identity-action, or bilinearity conflict before
+a scoped QF_UF/Alethe certificate row can graduate. It links finite groups,
+monoids, permutation groups, group actions, homomorphisms, ideals, vector
+spaces, dual spaces, modules, and tensor products to copyable concept, pack,
+checked-row, and replay commands while keeping general algebraic theorem
+claims in the Lean-horizon lane.
 The number-system concept layer now also has `bridge_gcd_divisibility_witness`.
 It groups gcd/common-divisor replay, Bezout replay, quotient witnesses,
 modular nonunit obstructions, and checked gcd non-divisibility certificates

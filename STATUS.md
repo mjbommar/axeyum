@@ -205,6 +205,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Algebra equality-certificate boundary landed.**
+  [`algebra-equality-certificate-boundary.md`](docs/learn/math/algebra-equality-certificate-boundary.md)
+  now makes the finite algebra promotion rule explicit: table replay owns the
+  concrete finite structure, while QF_UF/Alethe rows are added only for isolated
+  equality, congruence, closure, representative, preservation, identity-action,
+  or bilinearity certificate shapes. The generated concept atlas now includes
+  `bridge_algebra_equality_certificate_boundary`; the public summary reports
+  120 concept rows: 23 curriculum nodes, 18 field rows, 74 bridge rows, and 5
+  example-family rows.
+
 - **Real-completeness theorem-boundary page landed.**
   [`real-completeness-theorem-boundary.md`](docs/learn/math/real-completeness-theorem-boundary.md)
   now expands the analysis/calculus horizon map's real-completeness row into a
@@ -241,7 +251,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   normalized three-atom distributions: atomwise differences `1/6, 0, 1/6`,
   `l1 = 1/3`, and `TV = 1/6`. The malformed row claims `TV = 1/4` and is routed
   through source-linked QF_LRA/Farkas evidence plus the shared
-  `math_resource_lra_routes` regression. The public summary now reports
+  `math_resource_lra_routes` regression. For that increment, the public summary
+  reported
   119 concept rows, 108 non-template packs, 634 expected checks, 310 checked
   rows, 253 replay-only rows, and 71 Lean-horizon rows.
 
@@ -318,8 +329,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   checked rows from polynomial identities, rational factorization, generating
   functions, root finding, calculus shadows, and rational geometry while
   keeping general factorization, algebraic closure, root distribution, and
-  generating-function convergence in the proof-horizon lane. The public summary
-  now reports 119 concept rows: 23 curriculum nodes, 18 field rows, 73 bridge
+  generating-function convergence in the proof-horizon lane. For that increment,
+  the public summary reported 119 concept rows: 23 curriculum nodes, 18 field rows, 73 bridge
   concepts, and 5 example-family rows; pack and check counts remain 108 packs,
   632 expected checks, 309 checked rows, 252 replay-only rows, and 71
   Lean-horizon rows.
