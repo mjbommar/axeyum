@@ -102,3 +102,56 @@ Probing what `-O` LLVM IR real branchy code produces changed the CFG plan:
 plus `classify` (nested selects → range property) and `day` (match-as-arithmetic
 → bound) — demonstrating the reflector already spans straight-line + if-converted
 + mixed-width leaf functions, the bulk of a protocol parser's per-field code.
+
+## N — loops: reflect an LLVM loop into a `TransitionSystem`, prove all iterations
+
+The M finding was that true `br`/`phi` multi-block IR appears with **loops**; N
+reflects those into the solver's `TransitionSystem` and proves a property for
+*every* iteration via **PDR / k-induction** — connecting the LLVM front end to the
+same unbounded-safety machinery used for the protocol FSMs.
+
+**Measured `-O` loop hostility (2026-06-30).** LLVM mangles loops aggressively:
+`fn count(n){while i<n {i+=1}}` at `-O` → **`ret %n`** (scalar-evolution closed the
+loop away); a capped accumulator → **unrolled ×4 + epilogue + `llvm.assume`** (a
+preheader/`unroll_iter`/`xtraiter`/epilogue-phi mess). Real `-O` loop IR is not
+reflectable by a simple parser.
+
+**The clean canonical form** comes from `clang -O1 -fno-unroll-loops -fno-vectorize`
+— the textbook shape a frontend (or `-O` before unrolling) emits. For
+`unsigned capsum(unsigned n){ unsigned acc=0; for(unsigned i=0;i<n;i++){ acc++; if(acc>100) acc=100; } return acc; }`
+the loop block carries two `phi`s and a clean body:
+
+```llvm
+5:                                    ; the loop header/latch (branches back to %5)
+  %6  = phi i32 [ %10, %5 ], [ 0, %1 ]     ; i   : 0 on entry, %10 on back-edge
+  %7  = phi i32 [ %9,  %5 ], [ 0, %1 ]     ; acc : 0 on entry, %9  on back-edge
+  %8  = tail call i32 @llvm.umin.i32(i32 %7, i32 99)
+  %9  = add nuw nsw i32 %8, 1              ; acc' = min(acc,99)+1  (caps at 100)
+  %10 = add nuw i32 %6, 1                  ; i'   = i+1
+  %11 = icmp eq i32 %10, %0
+  br i1 %11, label %3, label %5
+```
+
+**The reflection scheme (reusing the `lower_rhs` op-lowering):**
+
+- **state vars** = the loop block's `phi` targets (`i`, `acc`) → one BV symbol each.
+- **init** = each `phi`'s *entry* incoming value (the pair NOT labelled with the
+  loop block): `i=0 ∧ acc=0`.
+- **trans** = seed an env mapping each `phi` name → the *pre*-state symbol, lower
+  the loop body (`umin`/`add`/…) via `lower_rhs`, then set each post-state symbol
+  to the `phi`'s *back-edge* incoming value (`i' = %10 = i+1`, `acc' = %9 =
+  umin(acc,99)+1`).
+- **bad** = the safety property (the user's spec, not in the IR): here `acc > 100`.
+
+`prove_safety_pdr` / `prove_safety_k_induction` then prove `acc ≤ 100` for **all
+iterations** — a property of *real compiled C loop code*, unbounded. (It is even
+1-inductive: `acc' = umin(acc,99)+1 ≤ 100` from any `acc`.)
+
+**Honest scope:** canonical single-loop-block form only; real `-O` IR (unrolled,
+SCEV-closed, `llvm.assume`, memory) needs a much larger, SCEV-aware parser — the
+deferred frontier. Loops with memory or nested control are out. Fixtures are
+committed `.ll` (no clang at test time → CI-robust).
+
+**N plan:** N2 reflect `capsum`'s canonical loop → `TransitionSystem`, prove
+`acc ≤ 100` via PDR (all iterations); N3 cross-check bounded BMC vs unbounded PDR
++ scoreboard; N4 gates.
