@@ -13764,6 +13764,64 @@ def validate_finite_cyclic_geometry(expected: dict[str, Any]) -> None:
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
         fail("bad-cyclic-diagonal-intersection-rejected certificate must document checked Farkas evidence")
 
+    bad_angle = checks["bad-cyclic-opposite-angle-rejected"]
+    if (
+        bad_angle["expected_result"] != "unsat"
+        or bad_angle.get("proof_status") != "checked"
+    ):
+        fail("bad-cyclic-opposite-angle-rejected must be a checked unsat row")
+    if bad_angle["validation"] != "exact_bad_cyclic_opposite_angle_refutation":
+        fail("bad-cyclic-opposite-angle-rejected must use exact_bad_cyclic_opposite_angle_refutation validation")
+    data = bad_angle.get("data", {})
+    vertex = data.get("vertex")
+    require_string("bad cyclic angle vertex", vertex)
+    if vertex != "B":
+        fail("bad-cyclic-opposite-angle-rejected is fixed to the angle at B")
+    raw_bad_angle_vectors = data.get("angle_vectors")
+    if not isinstance(raw_bad_angle_vectors, list) or len(raw_bad_angle_vectors) != 2:
+        fail("bad-cyclic-opposite-angle-rejected angle_vectors must contain two vectors")
+    bad_angle_vectors = [
+        require_point2(f"bad cyclic angle_vectors[{index}]", vector)
+        for index, vector in enumerate(raw_bad_angle_vectors)
+    ]
+    if bad_angle_vectors != angle_b_vectors:
+        fail("bad-cyclic-opposite-angle-rejected must reuse the replayed B angle vectors")
+    computed_dot = require_fraction("bad cyclic computed_dot", data.get("computed_dot"))
+    claimed_dot = require_fraction("bad cyclic claimed_dot", data.get("claimed_dot"))
+    actual_dot = (
+        bad_angle_vectors[0][0] * bad_angle_vectors[1][0]
+        + bad_angle_vectors[0][1] * bad_angle_vectors[1][1]
+    )
+    if computed_dot != actual_dot:
+        fail("bad-cyclic-opposite-angle-rejected computed_dot is incorrect")
+    if computed_dot != 0 or claimed_dot != 1:
+        fail("bad-cyclic-opposite-angle-rejected is fixed to angle_b_dot=0 versus claimed 1")
+    if computed_dot == claimed_dot:
+        fail("bad-cyclic-opposite-angle-rejected must document a false dot-product claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad cyclic angle smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-cyclic-geometry-v0/smt2/"
+        "bad-opposite-angle-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail(
+            "bad-cyclic-opposite-angle-rejected smt2_artifact must "
+            "name the checked source artifact"
+        )
+    check_source("bad cyclic angle smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad cyclic angle farkas_regression", regression)
+    if (
+        "finite_cyclic_geometry_bad_opposite_angle_artifact_emits_checked_farkas"
+        not in regression
+    ):
+        fail("bad-cyclic-opposite-angle-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad cyclic angle certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("bad-cyclic-opposite-angle-rejected certificate must document checked Farkas evidence")
+
     horizon = checks["general-cyclic-geometry-lean-horizon"]
     if horizon["expected_result"] != "not-run":
         fail("general-cyclic-geometry-lean-horizon must be not-run")

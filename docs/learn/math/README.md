@@ -291,8 +291,8 @@ Companion maps:
   rejection, and the general inversion-geometry Lean horizon.
 - [Finite Cyclic Geometry](finite-cyclic-geometry-end-to-end.md): follows
   exact cyclic quadrilateral replay, diagonal-intersection checking, opposite
-  right-angle replay, checked QF_LRA/Farkas bad diagonal-intersection
-  rejection, and the general cyclic-geometry Lean horizon.
+  right-angle replay, checked QF_LRA/Farkas bad diagonal-intersection and
+  bad opposite-angle rejection, and the general cyclic-geometry Lean horizon.
 - [Rational Multivariable Calculus](multivariable-calculus-end-to-end.md):
   follows exact polynomial gradient replay, directional derivatives, Jacobian
   chain-rule matrix multiplication, Hessian minor checks, QF_LRA/Farkas

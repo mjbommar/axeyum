@@ -2,8 +2,9 @@
 
 This pack turns one exact rational cyclic quadrilateral into resource rows. It
 checks a square on the unit circle, diagonal intersection and perpendicularity,
-opposite right angles, one false diagonal-intersection claim, and one general
-theorem horizon. It does not prove general cyclic quadrilateral theorems.
+opposite right angles, false diagonal-intersection and opposite-angle claims,
+and one general theorem horizon. It does not prove general cyclic quadrilateral
+theorems.
 
 ## Audience
 
@@ -23,6 +24,8 @@ theorem horizon. It does not prove general cyclic quadrilateral theorems.
   opposite vertices `B` and `D` and checks both dot products are zero.
 - `bad-cyclic-diagonal-intersection-rejected`: rejects the malformed claim that
   the diagonal intersection has x-coordinate `1/2`.
+- `bad-cyclic-opposite-angle-rejected`: rejects the malformed claim that the
+  angle at `B` has dot product `1` after replay computes `0`.
 - `general-cyclic-geometry-lean-horizon`: names the future proof route for
   general cyclic quadrilateral, Ptolemy, and angle-chasing theorems.
 
@@ -31,11 +34,12 @@ theorem horizon. It does not prove general cyclic quadrilateral theorems.
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_opposite_angle_artifact_emits_checked_farkas
 ```
 
 ## Trust Boundary
 
 Untrusted search may propose a cyclic configuration, angle claim, diagonal
 intersection, or general theorem instance. The trusted work is small: exact
-rational coordinate replay and checked `UnsatFarkas` evidence over the source
-SMT-LIB row for the final false diagonal-intersection coordinate.
+rational coordinate replay and checked `UnsatFarkas` evidence over source
+SMT-LIB rows for final false coordinate and dot-product claims.

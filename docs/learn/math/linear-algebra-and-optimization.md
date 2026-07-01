@@ -143,8 +143,8 @@ vector replay, inverse-distance products, and collinearity determinants, then
 rejects a bad inverse-coordinate row through QF_LRA/Farkas evidence.
 The finite cyclic-geometry slice checks an inscribed square as exact vector
 data: radius-squared rows, diagonal midpoints, diagonal dot products, and
-opposite-angle dot products, then rejects a bad diagonal-intersection row
-through QF_LRA/Farkas evidence.
+opposite-angle dot products, then rejects bad diagonal-intersection and
+opposite-angle rows through QF_LRA/Farkas evidence.
 
 This is a strong resource path because the trusted checker can be small: matrix
 multiplication, vector norms, linear inequalities, and certificate arithmetic.
@@ -395,8 +395,9 @@ D = (0,-1)
 The `finite-cyclic-geometry-v0` validator recomputes all four radii, both
 diagonal midpoints, both diagonal directions, and opposite-angle vector pairs.
 Its bad row claims diagonal-intersection x-coordinate `1/2`; exact replay
-computes `0`, and the final conflict is checked through QF_LRA/Farkas
-evidence. For a focused trace, read
+computes `0`. The new bad opposite-angle row claims the dot product at `B` is
+`1`; exact replay computes `0`. Both final conflicts are checked through
+QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Cyclic Geometry](finite-cyclic-geometry-end-to-end.md).
 
 For a finite SDP example, encode a two-by-two trace-one PSD matrix and dual
@@ -596,6 +597,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_x_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_opposite_angle_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0

@@ -451,7 +451,9 @@ diagonals have midpoint `(0,0)`, the diagonal directions have dot product `0`,
 and the opposite angle vector pairs at `B` and `D` have zero dot product. The
 bad row claims the diagonal intersection has x-coordinate `1/2`; exact replay
 computes `0`, and the source QF_LRA artifact checks that final conflict with
-`UnsatFarkas` evidence.
+`UnsatFarkas` evidence. The new bad angle row claims the dot product at `B` is
+`1`; exact replay computes `0`, and the source QF_LRA artifact checks that
+final conflict with the same evidence route.
 
 Run the checks from the repository root:
 
@@ -503,6 +505,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_inversion_geometry_bad_inverse_x_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_opposite_angle_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 ```

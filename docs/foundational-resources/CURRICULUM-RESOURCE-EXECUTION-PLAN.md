@@ -447,7 +447,7 @@ Next buildout:
 | `optimization_and_convexity` | standalone LP/Farkas, finite KKT, finite active-set QP, finite SDP, and finite gradient-descent lessons landed; maintain convexity/gradient/Hessian bridge rows |
 | `numerical_analysis` | residual/error-bound examples with exact rational shadows and numerical limits |
 | `differential_equations_and_dynamical_systems` | bounded recurrence/Euler lessons plus invariant-counterexample rows |
-| `geometry` | finite cyclic-geometry lesson landed; keep combined coordinate/affine/orientation lesson and add only distinct angle variants beyond the square witness, circle-line correspondence, Ptolemy, or higher-degree polynomial-geometry rows later |
+| `geometry` | finite cyclic-geometry lesson landed; keep combined coordinate/affine/orientation lesson and add only distinct angle variants beyond the current square dot-product witness, circle-line correspondence, Ptolemy, or higher-degree polynomial-geometry rows later |
 | `functional_analysis_and_operator_theory` | finite operator and Chebyshev-system lessons; keep Banach/Hilbert theorems Lean-horizon |
 
 ## Forward Increments From Here

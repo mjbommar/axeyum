@@ -29,6 +29,7 @@ diagonal, and angle claims without diagrams or floating-point tolerances.
 | `cyclic-diagonal-intersection-witness` | `sat` | replay-only |
 | `cyclic-opposite-right-angles-witness` | `sat` | replay-only |
 | `bad-cyclic-diagonal-intersection-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-cyclic-opposite-angle-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-cyclic-geometry-lean-horizon` | `not-run` | Lean horizon |
 
 ## Cyclic Witness
@@ -84,6 +85,15 @@ C - D = (-1,1)
 Their dot product is also zero. The pack checks these exact angle witnesses for
 the fixed square; it does not prove the general inscribed-angle theorem.
 
+The checked bad opposite-angle row keeps the replayed angle at `B` but claims:
+
+```text
+(A - B) . (C - B) = 1
+```
+
+Exact replay computes the dot product as `0`, and the promoted source row
+checks the final exact-rational conflict with `UnsatFarkas` evidence.
+
 ## Bad Diagonal Row
 
 The malformed row claims that the diagonal intersection has x-coordinate
@@ -124,4 +134,5 @@ general cyclic geometry: future Lean reconstruction
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_opposite_angle_artifact_emits_checked_farkas
 ```

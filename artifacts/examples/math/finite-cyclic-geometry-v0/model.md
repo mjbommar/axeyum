@@ -55,3 +55,12 @@ only the final exact linear contradiction:
 diagonal_intersection_x = 0
 diagonal_intersection_x = 1/2
 ```
+
+The bad opposite-angle row follows the same trust split. The validator replays
+the two vectors at `B`, recomputes the dot product, and the SMT-LIB artifact
+checks only the final exact linear contradiction:
+
+```text
+angle_b_dot = 0
+angle_b_dot = 1
+```

@@ -84,6 +84,26 @@
       "notes": "Exact diagonal replay computes midpoint/intersection x-coordinate 0, while the malformed row claims 1/2; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
     },
     {
+      "id": "bad-cyclic-opposite-angle-rejected",
+      "claim": "The angle at B in the square has dot product 1.",
+      "expected_result": "unsat",
+      "validation": "exact_bad_cyclic_opposite_angle_refutation",
+      "proof_status": "checked",
+      "data": {
+        "vertex": "B",
+        "angle_vectors": [
+          ["1", "-1"],
+          ["-1", "-1"]
+        ],
+        "computed_dot": "0",
+        "claimed_dot": "1",
+        "smt2_artifact": "artifacts/examples/math/finite-cyclic-geometry-v0/smt2/bad-opposite-angle-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_opposite_angle_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact opposite-angle replay computes (A-B).(C-B)=0, while the malformed row claims dot product 1; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
       "id": "general-cyclic-geometry-lean-horizon",
       "claim": "General cyclic quadrilateral theorems, Ptolemy, angle chasing, and circle-line correspondences require future Lean reconstruction.",
       "expected_result": "not-run",

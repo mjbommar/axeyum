@@ -313,9 +313,9 @@ First targets:
   (source-linked Farkas regression landed for the bad inverse-coordinate row
   after exact inversion replay computes the inverse x-coordinate)
 - [finite-cyclic-geometry-v0](../../artifacts/examples/math/finite-cyclic-geometry-v0/)
-  (source-linked Farkas regression landed for the bad diagonal-intersection row
-  after exact cyclic-configuration replay computes the intersection
-  x-coordinate)
+  (source-linked Farkas regressions landed for the bad diagonal-intersection
+  and bad opposite-angle rows after exact cyclic-configuration replay computes
+  the intersection x-coordinate and angle dot product)
 - [finite-operator-v0](../../artifacts/examples/math/finite-operator-v0/)
   (source-linked Farkas regression landed for the bad operator-bound row after
   exact matrix/operator replay computes the image infinity norm)

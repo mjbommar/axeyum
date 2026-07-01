@@ -205,6 +205,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite cyclic-geometry bad opposite-angle QF_LRA row landed.**
+  `finite-cyclic-geometry-v0` now has a second checked Farkas row in addition
+  to the bad diagonal-intersection conflict: finite cyclic replay computes the
+  angle dot product at `B` in the square as `0`, while the malformed row claims
+  `1`. The new source SMT-LIB artifact isolates the exact equality conflict,
+  the shared `math_resource_lra_routes` regression parses it and checks
+  `UnsatFarkas` evidence, and the validator pins the replayed angle vectors,
+  computed/claimed dot products, artifact path, regression, and certificate
+  note. The cyclic pack docs, learner pages, proof frontier, field matrix, and
+  buildout ledgers now reference both checked cyclic-geometry rows. Generated
+  dashboards and the public query summary now report 111 concept rows, 108
+  non-template packs, 562 expected checks, 246 checked rows, 245 replay-only
+  rows, and 71 Lean-horizon rows.
+
 - **Finite-Chebyshev alternation QF_LRA row landed.**
   `finite-chebyshev-systems-v0` now has a third checked Farkas row:
   finite replay recomputes the alternating residual table
@@ -509,10 +523,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   circle-geometry, inversion-geometry, and cyclic-geometry rows queryable from
   one shared atlas concept, with exact coordinate replay and checked
   QF_LRA/Farkas bad-radius, bad-inverse-coordinate, and
-  bad-diagonal-intersection rows kept separate from general circle,
-  inversion, cyclic-quadrilateral, angle, Ptolemy, and synthetic geometry
-  theorems. `CONSUMER-QUERIES.md`, `FIELD-READINESS-QUERY-MATRIX.md`, and
-  `check-foundational-resources.sh` now exercise circle lookup plus
+  bad-diagonal-intersection and bad-opposite-angle rows kept separate from
+  general circle, inversion, cyclic-quadrilateral, Ptolemy, and synthetic
+  geometry theorems. `CONSUMER-QUERIES.md`, `FIELD-READINESS-QUERY-MATRIX.md`,
+  and `check-foundational-resources.sh` now exercise circle lookup plus
   concept-scoped Farkas route queries through the public JSON/query boundary.
   Focused concept queries, pack validation, the three geometry Farkas
   regressions, link checks, and the resource consumer smoke all pass for the
@@ -733,8 +747,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   linear-algebra, and polynomial resource paths. The pack validates cyclic
   quadrilateral replay, diagonal-intersection and diagonal-perpendicularity
   replay, opposite-angle dot-product replay, a source-linked checked
-  QF_LRA/Farkas rejection for a false diagonal-intersection claim, and a
-  cyclic-geometry Lean-horizon row. The generated resource summary is now 102
+  QF_LRA/Farkas rejection for false diagonal-intersection and opposite-angle
+  claims, and a cyclic-geometry Lean-horizon row. The generated resource
+  summary is now 102
   promoted non-template packs, 516 checks, 222 checked rows, 229 replay-only
   rows, and 65 Lean-horizon rows.
 

@@ -794,8 +794,8 @@ and a general inversion-geometry Lean-horizon row.
 `artifacts/examples/math/finite-cyclic-geometry-v0/` now validates exact
 cyclic quadrilateral replay, diagonal-intersection and diagonal-perpendicularity
 replay, opposite-angle dot-product replay, checked QF_LRA/Farkas rejection of a
-false diagonal-intersection claim, and a general cyclic-geometry Lean-horizon
-row.
+false diagonal-intersection claim and a false opposite-angle claim, and a
+general cyclic-geometry Lean-horizon row.
 `artifacts/examples/math/finite-topology-v0/` now validates finite topology
 axioms, closure/interior computation, exact finite metric-ball replay, and a
 checked Bool/CNF DRAT/LRAT rejection of a malformed open-set family that omits
@@ -1541,8 +1541,8 @@ coordinates, and an inversion-geometry Lean-horizon row.
 `finite-cyclic-geometry-v0` now adds the exact finite cyclic bridge for
 geometry: cyclic quadrilateral replay, diagonal-intersection and
 diagonal-perpendicularity replay, opposite-angle dot-product replay, checked
-QF_LRA/Farkas rejection of false diagonal-intersection coordinates, and a
-cyclic-geometry Lean-horizon row.
+QF_LRA/Farkas rejection of false diagonal-intersection coordinates and false
+opposite-angle dot products, and a cyclic-geometry Lean-horizon row.
 `complex-plane-transforms-v0` now adds the next exact finite complex-analysis
 bridge: unit-root cycles, conjugation/product replay, rational
 Mobius-transform replay, checked rejection of a false unit-square real-part
@@ -1694,8 +1694,8 @@ opposite-angle dot-product replay, checked QF_LRA/Farkas bad squared-distance, c
 checked QF_LRA/Farkas bad distance-table data, checked QF_LRA/Farkas
 bad-distance-preservation, checked QF_LRA/Farkas bad-orientation, checked
 QF_LRA/Farkas bad-radius, checked QF_LRA/Farkas bad inverse-coordinate,
-checked QF_LRA/Farkas bad diagonal-intersection, and general geometry
-Lean-horizon rows.
+checked QF_LRA/Farkas bad diagonal-intersection and bad opposite-angle rows,
+and general geometry Lean-horizon rows.
 `finite-topology-v0` and `finite-measure-v0` now have a learner-facing
 end-to-end lesson for finite topology axioms, closure/interior, finite
 metric-ball replay, checked Bool/CNF bad-empty-open rejection, finite
@@ -2001,10 +2001,10 @@ radius `2` for the malformed unit-circle point.
 through the same checked Farkas evidence path after exact inversion replay
 computes inverse x-coordinate `2/5` for the malformed unit-circle inversion
 claim.
-`finite-cyclic-geometry-v0` now routes its bad diagonal-intersection row
-through the same checked Farkas evidence path after exact cyclic-configuration
-replay computes intersection x-coordinate `0` for the malformed cyclic
-quadrilateral claim.
+`finite-cyclic-geometry-v0` now routes its bad diagonal-intersection and bad
+opposite-angle rows through the same checked Farkas evidence path after exact
+cyclic-configuration replay computes intersection x-coordinate `0` and angle
+dot product `0` for the malformed cyclic quadrilateral claims.
 `inner-product-spaces-rational-v0` now routes its bad inner-product row
 through the same checked Farkas evidence path after exact negative-norm replay.
 `spectral-linear-algebra-v0` now routes its bad eigenpair row through the same
