@@ -1910,6 +1910,14 @@ Pick one item per commit unless the change is purely navigational.
      d-separation, fixed-width coloring, and BFS/DFS runtime rows while
      keeping general graph theorems and asymptotic algorithm claims in the
      horizon lane.
+124. Landed: add
+     [NUMBER-ARITHMETIC-QUERIES.md](NUMBER-ARITHMETIC-QUERIES.md), making the
+     number/arithmetic lane queryable by bridge concept plus proof route. The
+     guide and foundational smoke cover concept-scoped Diophantine, QF_BV,
+     totality, ideal/quotient, and exact-vs-floating queries for finite
+     arithmetic rows while keeping analytic number theory, algebraic number
+     theory, unbounded induction, and floating-point guarantees in the horizon
+     or numerical-honesty lanes.
 
 ## Validation Checklist
 

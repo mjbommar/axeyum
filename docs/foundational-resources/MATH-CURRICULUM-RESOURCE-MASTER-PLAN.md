@@ -444,6 +444,13 @@ Use one row per commit unless the change is purely navigational.
    and BFS/DFS runtime rows queryable by bridge concept plus Boolean, QF_BV,
    and LIA routes without adding a typed API or claiming general graph-theory
    or asymptotic algorithm coverage.
+21d. Landed: add
+   [NUMBER-ARITHMETIC-QUERIES.md](NUMBER-ARITHMETIC-QUERIES.md), making
+   gcd/divisibility, CRT, nonunit inverse, fixed-width residue, totality,
+   quotient/ideal, and exact-vs-floating rows queryable by bridge concept plus
+   Diophantine, QF_BV, Alethe, and Farkas routes without adding a typed API or
+   claiming analytic/algebraic number theory, unbounded induction, or
+   floating-point guarantees.
 22. Landed: add number-system semantic-boundary bridge rows for
    exact-vs-floating arithmetic and totality conventions, plus consumer smoke
    queries for number-theory totality and numerical-analysis floating-boundary

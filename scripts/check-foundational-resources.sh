@@ -139,12 +139,20 @@ python3 scripts/query-foundational-resources.py checks --field abstract_algebra 
 python3 scripts/query-foundational-resources.py packs --concept bridge_modular_crt_inverse_witness --route qf-bv --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_modular_crt_inverse_witness --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field number_theory --route Diophantine --require-any >/dev/null
+python3 scripts/query-foundational-resources.py fields --field number_theory --route qf-bv --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack modular-arithmetic-v0 --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field number_theory --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field number_theory --text totality --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field number_theory --text gcd --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field number_theory --text CRT --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field number_theory --route Diophantine --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field number_theory --route qf-bv --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_gcd_divisibility_witness --route Diophantine --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_gcd_divisibility_witness --route Diophantine --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_modular_crt_inverse_witness --route Diophantine --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_modular_crt_inverse_witness --route Diophantine --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_totality_conventions --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field graph_theory --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field graph_theory --route qf-bv --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field graph_theory --route LIA --require-any >/dev/null

@@ -44,6 +44,8 @@ For matrix computation discovery by bridge concept and proof route, use the
 [Matrix Computation Consumer Queries](MATRIX-COMPUTATION-QUERIES.md).
 For finite algebra discovery by bridge concept and proof route, use the
 [Algebra Structure Consumer Queries](ALGEBRA-STRUCTURE-QUERIES.md).
+For number/arithmetic discovery by bridge concept and proof route, use the
+[Number And Arithmetic Resource Consumer Queries](NUMBER-ARITHMETIC-QUERIES.md).
 For finite geometry discovery by bridge concept and proof route, use the
 [Geometry Resource Consumer Queries](GEOMETRY-RESOURCE-QUERIES.md).
 For graph/discrete discovery by bridge concept and proof route, use the
@@ -2233,6 +2235,14 @@ resource smoke expose homomorphism, group-action, module-action, ideal, and
 modular residue bridge concepts through Alethe/QF_BV pack/check queries,
 making finite algebra rows discoverable while keeping arbitrary algebraic
 structure theorems in the proof-horizon lane.
+The number/arithmetic consumer layer now also has
+[`NUMBER-ARITHMETIC-QUERIES.md`](NUMBER-ARITHMETIC-QUERIES.md). The guide and
+resource smoke expose gcd/divisibility, modular CRT/inverse, QF_BV bit-blast,
+totality, ideal/quotient, and exact-vs-floating bridge concepts through
+Diophantine, QF_BV, Alethe, and Farkas queries, making finite arithmetic rows
+discoverable while keeping analytic number theory, algebraic number theory,
+unbounded induction, and floating-point guarantees in the proof-horizon or
+numerical-honesty lanes.
 The finite-geometry consumer layer now also has
 [`GEOMETRY-RESOURCE-QUERIES.md`](GEOMETRY-RESOURCE-QUERIES.md). The guide and
 resource smoke expose `bridge_coordinate_orientation_geometry` and

@@ -1160,6 +1160,14 @@ Pick one row per commit unless the change is purely navigational.
      BFS/DFS runtime rows discoverable without claiming general graph
      theorems, asymptotic algorithms, graph-family lower bounds, or
      average-case traversal guarantees.
+141. Landed: add
+     [`NUMBER-ARITHMETIC-QUERIES.md`](NUMBER-ARITHMETIC-QUERIES.md) as the
+     number/arithmetic consumer query guide. The guide and resource smoke now
+     exercise concept-scoped Diophantine, QF_BV, totality, and
+     exact-vs-floating checks for gcd/divisibility, modular CRT/inverse,
+     fixed-width residue, quotient/ideal, and semantic-boundary rows without
+     claiming analytic number theory, algebraic number theory, unbounded
+     induction, or floating-point guarantees.
 
 ## Validation Checklist
 

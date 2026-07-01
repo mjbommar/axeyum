@@ -164,6 +164,11 @@ The algebra structure consumer query guide is
 it records exact concept-plus-route queries for finite groups/actions,
 homomorphisms, ideals, quotient rows, modules, tensor rows, and fixed-width
 residue/field resources.
+The number and arithmetic consumer query guide is
+[`docs/foundational-resources/NUMBER-ARITHMETIC-QUERIES.md`](docs/foundational-resources/NUMBER-ARITHMETIC-QUERIES.md);
+it records exact concept-plus-route queries for gcd/divisibility, CRT,
+nonunit inverse, fixed-width residue, totality, quotient/ideal, and
+exact-vs-floating resources.
 The geometry resource consumer query guide is
 [`docs/foundational-resources/GEOMETRY-RESOURCE-QUERIES.md`](docs/foundational-resources/GEOMETRY-RESOURCE-QUERIES.md);
 it records exact concept-plus-route queries for finite coordinate/incidence/
@@ -553,6 +558,14 @@ and the foundational smoke checks concept-scoped Alethe/QF_BV rows for
 homomorphisms, group actions, module actions, ideals, and modular residue
 witnesses, so downstream consumers can discover finite algebra resources
 without promoting arbitrary algebraic structure theorems.
+The number/arithmetic lane now has
+[`NUMBER-ARITHMETIC-QUERIES.md`](docs/foundational-resources/NUMBER-ARITHMETIC-QUERIES.md),
+and the foundational smoke checks concept-scoped Diophantine, QF_BV, totality,
+and exact-vs-floating rows for gcd/divisibility, CRT, nonunit inverse,
+fixed-width residue, quotient/ideal, and semantic-boundary resources, so
+downstream consumers can discover finite arithmetic rows without promoting
+analytic number theory, algebraic number theory, unbounded induction, or
+floating-point guarantee claims.
 The geometry resource lane now has
 [`GEOMETRY-RESOURCE-QUERIES.md`](docs/foundational-resources/GEOMETRY-RESOURCE-QUERIES.md),
 and the foundational smoke checks concept-scoped Farkas pack/check queries for

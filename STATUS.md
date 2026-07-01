@@ -870,6 +870,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   keeps arbitrary group/ring/module/category, classification, isomorphism, and
   infinite-algebra claims in the proof-horizon lane.
 
+- **Number/arithmetic query guide landed.**
+  `NUMBER-ARITHMETIC-QUERIES.md` now gives downstream consumers copyable
+  concept-plus-route queries for finite arithmetic resources. It groups
+  gcd/divisibility, CRT, nonunit inverse, fixed-width residue, totality,
+  quotient/ideal, and exact-vs-floating rows across Diophantine, QF_BV,
+  Alethe, and Farkas routes, and `check-foundational-resources.sh` now
+  smoke-checks representative concept-scoped arithmetic queries. This is
+  count-neutral and keeps analytic number theory, algebraic number theory,
+  unbounded induction, prime-distribution claims, arbitrary structure
+  theorems, and floating-point guarantees in the proof-horizon or
+  numerical-honesty lanes.
+
 - **Geometry resource query guide landed.**
   `GEOMETRY-RESOURCE-QUERIES.md` now gives downstream consumers copyable
   concept-plus-route queries for finite geometry resources. It separates
