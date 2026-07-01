@@ -31,6 +31,11 @@ step doc    cargo doc --workspace --all-features --no-deps
 step foundational-resources ./scripts/check-foundational-resources.sh
 step rules-as-code-generate python3 scripts/gen-rules-as-code-dashboard.py
 step rules-as-code-validate python3 scripts/validate-rules-as-code.py
+step rules-as-code-query-summary python3 scripts/query-rules-as-code.py summary
+step rules-as-code-query-pack python3 scripts/query-rules-as-code.py packs --text procurement --require-any
+step rules-as-code-query-checks python3 scripts/query-rules-as-code.py checks --pack procurement_scoring_v0 --proof-status checked --require-any
+step rules-as-code-query-families python3 scripts/query-rules-as-code.py families --pack procurement_scoring_v0 --text quality --require-any
+step rules-as-code-query-rows python3 scripts/query-rules-as-code.py rows --pack procurement_scoring_v0 --family bounded_awards --text 2026-08-02 --limit 3 --require-any
 step rules-as-code-generated-clean git diff --exit-code docs/rules-as-code/generated
 step links         ./scripts/check-links.sh
 

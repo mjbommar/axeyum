@@ -1204,7 +1204,13 @@ Pick one item per commit unless the change is purely navigational.
    submission, bid-cap enforcement, score monotonicity, and bounded
    implementation equivalence. The generated query-row JSON now brings the
    rules/law surface to 1,626 replayed rows across four packs.
-13. Landed: add a consumer-query recipe for "find all packs for a field and
+13. Landed: add
+   [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) plus
+   `scripts/query-rules-as-code.py` so downstream consumers can query rule
+   packs, checked obligations, generated query families, and bounded generated
+   rows without parsing JSON by hand. `just rules-as-code` smoke-checks the
+   current procurement queries.
+14. Landed: add a consumer-query recipe for "find all packs for a field and
    route" through the `--route` filter in
    `scripts/query-foundational-resources.py` and
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md).
@@ -1652,6 +1658,12 @@ Pick one item per commit unless the change is purely navigational.
     encoded deadlines, small-business bonus thresholds, score monotonicity, and
     Bool/QF_LIA checked fixtures. The generated rules query surface now reports
     882 bounded sample rows and 1,626 generated query rows across four packs.
+77c. Landed: add
+    [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) plus
+    `scripts/query-rules-as-code.py` as the rules/law consumer query surface,
+    with `just rules-as-code` smoke-checking summary counts, procurement pack
+    lookup, checked obligations, generated quality-score families, and late
+    generated rows.
 78. Landed: add functional-analysis/operator field-readiness consumer queries
     through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational
     smoke check, covering Farkas field readiness, the operator bridge lookup,

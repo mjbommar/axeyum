@@ -475,11 +475,16 @@ Prefer one row, page, route upgrade, or query surface per commit.
     bid-cap and deadline arithmetic, bonus-threshold replay, score
     monotonicity, and Bool/QF_LIA proof fixtures through the current JSON
     boundary.
-12. Add rules/law examples only by reusing existing math proof shapes and the
+12. Landed: add
+    [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) and
+    `scripts/query-rules-as-code.py` so downstream consumers can query rule
+    packs, checked obligations, generated query families, and bounded generated
+    rows without parsing JSON by hand.
+13. Add rules/law examples only by reusing existing math proof shapes and the
     current JSON boundary.
-13. Add schema fields only after validators and query scripts show repeated
+14. Add schema fields only after validators and query scripts show repeated
     awkwardness.
-14. Revisit crate/repo boundaries after consumer scripts have at least three
+15. Revisit crate/repo boundaries after consumer scripts have at least three
     duplicated access patterns.
 
 ## Validation Protocol

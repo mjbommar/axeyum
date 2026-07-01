@@ -266,6 +266,7 @@ just rules-as-code
 ./scripts/check-links.sh
 python3 scripts/gen-rules-as-code-dashboard.py
 python3 scripts/validate-rules-as-code.py
+python3 scripts/query-rules-as-code.py summary
 ```
 
 Rule-pack solver checks:

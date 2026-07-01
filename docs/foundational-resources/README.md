@@ -111,6 +111,9 @@ schemas, examples, and validation workflows.
   patterns into rules/law checks for finite predicates, thresholds, graph
   reachability, precedence, proof routes, and current rules-as-code packs,
   including benefit eligibility and authorization policy examples.
+- [RULES-LAW-QUERIES.md](RULES-LAW-QUERIES.md) gives copyable queries for the
+  rules-as-code JSON boundary, including pack discovery, checked obligations,
+  generated query families, and bounded generated rows.
 - [ROADMAP.md](ROADMAP.md) is the implementation roadmap.
 - [../learn/math/README.md](../learn/math/README.md) is the learner-facing
   math path built from the curriculum, concept atlas, and validated packs.

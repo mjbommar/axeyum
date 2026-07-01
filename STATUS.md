@@ -205,6 +205,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Rules/law query surface landed.**
+  [`RULES-LAW-QUERIES.md`](docs/foundational-resources/RULES-LAW-QUERIES.md)
+  and `scripts/query-rules-as-code.py` now expose the rules-as-code JSON
+  boundary through copyable summary, pack, checked-obligation,
+  generated-family, and bounded-row queries. `just rules-as-code` now also
+  smoke-checks summary counts, procurement pack lookup, checked procurement
+  obligations, quality-score generated families, and late-submission generated
+  rows, while preserving the no-legal-advice/no-benchmark boundary.
+
 - **Procurement scoring rules/law pack landed.**
   `procurement-scoring-v0` now adds the fourth rules-as-code pack, reusing
   finite predicate exclusions, bid caps, encoded submission deadlines,

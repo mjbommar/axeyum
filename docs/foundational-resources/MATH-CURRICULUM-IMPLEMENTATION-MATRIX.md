@@ -506,7 +506,12 @@ Build sequence:
     now adds debarment, late-submission, bid-cap, score-monotonicity, and
     implementation-equivalence proof fixtures plus generated award and adjacent
     quality-score query rows to the rules/law lane.
-47. Functional-analysis/operator field-readiness consumer queries now land in
+47. [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) and
+    `scripts/query-rules-as-code.py` now add a copyable rules/law query
+    surface for pack discovery, checked obligations, generated query families,
+    and bounded generated rows; `just rules-as-code` smoke-checks the current
+    procurement queries.
+48. Functional-analysis/operator field-readiness consumer queries now land in
     [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
     `scripts/check-foundational-resources.sh`, covering the Farkas field
     summary, operator bridge lookup, and checked finite-operator,

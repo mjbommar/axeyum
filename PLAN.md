@@ -224,6 +224,11 @@ The rules/law transfer crosswalk that maps finite predicates, arithmetic
 thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
+The rules/law query guide is
+[`docs/foundational-resources/RULES-LAW-QUERIES.md`](docs/foundational-resources/RULES-LAW-QUERIES.md);
+it records copyable `scripts/query-rules-as-code.py` commands for pack
+discovery, checked-obligation lookup, generated query-family lookup, and
+bounded generated-row inspection.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
 119 concept rows, 108 non-template packs, 632 expected checks (334 `sat`,
 227 `unsat`, 71 `not-run`), 309 checked rows, 252 replay-only rows, and 71
@@ -756,6 +761,10 @@ four committed rule-pack JSON files, exposes 882 bounded sample rows, and
 links deterministic generated query-row JSON for 1,626 coverage, equivalence,
 threshold, cap, deadline, version-delta, and monotonicity rows without promoting the
 packs to legal or solver benchmarks.
+`RULES-LAW-QUERIES.md` and `scripts/query-rules-as-code.py` now make that
+rules/law boundary queryable by pack, proof status, generated family, and
+bounded row; `just rules-as-code` smoke-checks the procurement pack, checked
+obligations, quality-score query family, and late-submission generated rows.
 Finite order lattices, finite permutation groups, finite vector spaces, finite
 dual spaces, finite modules, finite ideals, finite tensor products, and finite
 group actions now add secondary equality-heavy promotions for bad antisymmetry,

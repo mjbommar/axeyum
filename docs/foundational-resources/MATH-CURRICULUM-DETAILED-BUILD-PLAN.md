@@ -600,7 +600,13 @@ Pick one row per commit unless the change is purely navigational.
     score-monotonicity rows, and checked Bool/QF_LIA proof fixtures while the
     rules validator replays the bounded procurement sample and generated query
     rows.
-68. Landed: add functional-analysis/operator field-readiness consumer query
+68. Landed: add
+    [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) plus
+    `scripts/query-rules-as-code.py` as the rules/law consumer-query surface.
+    The standard `just rules-as-code` gate now smoke-checks summary counts,
+    procurement pack lookup, checked obligation lookup, generated
+    quality-score family lookup, and bounded late-submission generated rows.
+69. Landed: add functional-analysis/operator field-readiness consumer query
     coverage. `CONSUMER-QUERIES.md` and
     `check-foundational-resources.sh` now exercise the
     `functional_analysis_and_operator_theory` Farkas field summary, the

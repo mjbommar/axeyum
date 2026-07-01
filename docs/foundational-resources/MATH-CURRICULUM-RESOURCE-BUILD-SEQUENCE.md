@@ -396,7 +396,11 @@ Pick one item per commit unless the change is purely navigational.
     reusing finite predicate exclusions, bid caps, encoded deadline arithmetic,
     bonus-threshold witnesses, quality-score monotonicity, and Bool/QF_LIA
     checked fixtures through the current JSON boundary.
-12. Add the next rules/law example only if it exercises a distinct current
+12. Landed: add `RULES-LAW-QUERIES.md` and
+    `scripts/query-rules-as-code.py` so the current rules/law JSON boundary has
+    smoke-checked pack, checked-obligation, generated-family, and generated-row
+    lookup commands.
+13. Add the next rules/law example only if it exercises a distinct current
     math proof shape or a repeated consumer need.
 
 ## Maintenance Commands

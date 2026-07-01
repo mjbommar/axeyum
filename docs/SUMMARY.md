@@ -31,6 +31,9 @@
   - [Rules-as-Code Roadmap](rules-as-code/ROADMAP.md)
   - [Benefit Eligibility V0](rules-as-code/examples/benefit-eligibility-v0/README.md)
   - [Authorization Policy V0](rules-as-code/examples/authorization-policy-v0/README.md)
+  - [Tax Benefit Arithmetic V0](rules-as-code/examples/tax-benefit-arithmetic-v0/README.md)
+  - [Procurement Scoring V0](rules-as-code/examples/procurement-scoring-v0/README.md)
+  - [Rules/Law Resource Queries](foundational-resources/RULES-LAW-QUERIES.md)
 
 # Learn
 

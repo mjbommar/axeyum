@@ -36,6 +36,8 @@ rules/law transfer, and future library splits, use the
 For the concrete rules/law transfer map from math-resource patterns into
 policy and legal-rule checks, use the
 [Rules/Law Crosswalk](RULES-LAW-CROSSWALK.md).
+For copyable queries over the current rules-as-code JSON boundary, use the
+[Rules/Law Resource Queries](RULES-LAW-QUERIES.md).
 For the compact all-field consumer query surface, use the
 [Field Readiness Query Matrix](FIELD-READINESS-QUERY-MATRIX.md).
 For proof-route coverage queries, use the
@@ -2213,6 +2215,10 @@ links deterministic generated query-row JSON under
 [`generated/queries/`](../rules-as-code/generated/queries/), and replays 1,626
 coverage, equivalence, threshold, cap, deadline, version-delta, and monotonicity rows
 through the rules validator.
+[`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) now exposes the same boundary
+through copyable `scripts/query-rules-as-code.py` commands for summary counts,
+pack lookup, checked obligations, generated query families, and bounded row
+inspection; `just rules-as-code` smoke-checks those queries.
 The consumer query layer now also exposes topology readiness:
 `CONSUMER-QUERIES.md` shows the Boolean/Diophantine field summaries,
 metric/compactness/preimage/closure/homeomorphism/specialization/boundary/homology

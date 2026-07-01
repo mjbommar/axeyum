@@ -372,7 +372,12 @@ Use one row per commit unless the change is purely navigational.
    as a rules/law pack that reuses finite predicate exclusions, bid caps,
    encoded deadlines, bonus thresholds, quality-score monotonicity, and
    Bool/QF_LIA proof fixtures through the current JSON boundary.
-12. Landed: add functional-analysis/operator consumer-query coverage through
+12. Landed: add
+   [`RULES-LAW-QUERIES.md`](RULES-LAW-QUERIES.md) and
+   `scripts/query-rules-as-code.py` as the rules/law consumer-query surface,
+   with smoke-checked lookup of packs, checked obligations, generated query
+   families, and bounded rows through `just rules-as-code`.
+13. Landed: add functional-analysis/operator consumer-query coverage through
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
    `scripts/check-foundational-resources.sh`, making finite operator bounds,
    inner-product positivity and projection orthogonality, Chebyshev grids,
@@ -497,10 +502,13 @@ Use one row per commit unless the change is purely navigational.
 26. Landed: add `procurement-scoring-v0` as the next rules/law crosswalk
     example, reusing finite predicates, bid caps, encoded dates, bonus
     thresholds, monotonicity, and checked Bool/QF_LIA fixtures.
-27. Add future rules/law crosswalk examples only by reusing existing
+27. Landed: add `RULES-LAW-QUERIES.md` and
+    `scripts/query-rules-as-code.py` so the rules/law transfer lane has a
+    smoke-checked consumer query surface before any schema or repo split.
+28. Add future rules/law crosswalk examples only by reusing existing
     math-resource patterns; do not create a separate rule ontology until the
     current JSON boundary is exercised by more consumers.
-28. Landed: add `bridge_finite_chain_homology_replay` so finite
+29. Landed: add `bridge_finite_chain_homology_replay` so finite
     simplicial-complex closure, boundary replay, boundary-squared-zero,
     Betti-rank replay, and the checked bad-boundary coefficient row are
     discoverable as a shared topology/linear-algebra bridge without promoting
