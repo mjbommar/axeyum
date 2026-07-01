@@ -62,6 +62,24 @@
       "notes": "The validator checks every target point equals source point plus the translation and that both distance tables match."
     },
     {
+      "id": "bad-translation-image-x-rejected",
+      "claim": "Translation by (1,-2) sends the source point (3,0) to a target with x-coordinate 5.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_rigid_translation_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_point": ["3", "0"],
+        "translation": ["1", "-2"],
+        "computed_target": ["4", "-2"],
+        "claimed_target_x": "5",
+        "farkas_target_claim": "target_b_x = 5",
+        "smt2_artifact": "artifacts/examples/math/rigid-configuration-geometry-v0/smt2/bad-translation-image-x-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes rigid_configuration_bad_translation_image_x_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact translation replay computes target point (4,-2), while the malformed row claims x-coordinate 5; the source QF_LRA artifact isolates the final coordinate equality conflict for Farkas checking."
+    },
+    {
       "id": "congruent-triangle-distance-witness",
       "claim": "The listed triangles have the same squared-distance table.",
       "expected_result": "sat",

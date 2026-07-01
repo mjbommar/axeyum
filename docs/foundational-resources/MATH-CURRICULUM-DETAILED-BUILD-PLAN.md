@@ -42,8 +42,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 577 expected checks.
-- 259 checked proof/evidence rows.
+- 578 expected checks.
+- 260 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -957,6 +957,13 @@ Pick one row per commit unless the change is purely navigational.
      QF_LRA/Farkas route now checks both intersection-coordinate and
      point-on-line conflicts without claiming projective, synthetic, or
      configuration geometry theorems.
+115. Landed: extend `rigid-configuration-geometry-v0` with a checked bad
+     translation-image row. Exact translation replay computes
+     `(3,0) + (1,-2) = (4,-2)`, while the malformed source SMT-LIB artifact
+     claims translated x-coordinate `5`; the shared QF_LRA/Farkas route now
+     checks both translation-image and distance-table conflicts without
+     claiming graph rigidity, rigid-motion classification, or synthetic
+     geometry theorems.
 
 ## Validation Checklist
 

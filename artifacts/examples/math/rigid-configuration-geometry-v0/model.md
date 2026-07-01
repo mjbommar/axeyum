@@ -42,6 +42,23 @@ Translation by `(1,-2)` sends:
 
 The target triangle has the same squared distance table.
 
+## Bad Translation Image
+
+The promoted bad translation row uses source point `(3,0)` and translation
+`(1,-2)`. Exact replay computes:
+
+```text
+(3,0) + (1,-2) = (4,-2)
+```
+
+The malformed row claims the translated x-coordinate is `5`. The QF_LRA
+artifact checks only the final conflict:
+
+```text
+target_b_x = 4
+target_b_x = 5
+```
+
 ## Congruent Triangles
 
 The triangles:

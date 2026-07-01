@@ -2,9 +2,9 @@
 
 This lesson follows
 [rigid-configuration-geometry-v0](../../../artifacts/examples/math/rigid-configuration-geometry-v0/)
-from exact triangle distance-table replay to a checked malformed distance
-claim. It is a finite coordinate resource for `field_geometry`, not a theorem
-about all rigid graphs or synthetic Euclidean geometry.
+from exact triangle distance-table replay to checked malformed translation and
+distance-table claims. It is a finite coordinate resource for `field_geometry`,
+not a theorem about all rigid graphs or synthetic Euclidean geometry.
 
 Concept rows:
 
@@ -19,6 +19,7 @@ Concept rows:
 |---|---|---|
 | `triangle-distance-table` | `sat` | replay-only |
 | `translation-isometry-witness` | `sat` | replay-only |
+| `bad-translation-image-x-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `congruent-triangle-distance-witness` | `sat` | replay-only |
 | `bad-rigid-distance-table-rejected` | `unsat` | checked QF_LRA/Farkas |
 | `general-rigidity-geometry-lean-horizon` | `not-run` | lean-horizon |
@@ -60,6 +61,25 @@ The target triangle has the same squared distance table. This is a finite
 isometry shadow: useful as replay data, but not a proof of the full Euclidean
 isometry classification theorem.
 
+## Reject A Bad Translation Image
+
+For source point `B = (3,0)` and translation `(1,-2)`, exact replay gives:
+
+```text
+B' = (3,0) + (1,-2) = (4,-2)
+```
+
+The malformed claim says the translated x-coordinate is `5`. The SMT-LIB
+artifact isolates exactly that conflict:
+
+```text
+target_b_x = 4
+target_b_x = 5
+```
+
+The geometry work is exact replay; the solver only checks the final linear
+contradiction with `Evidence::UnsatFarkas`.
+
 ## Reject A Bad Distance Table
 
 The bad row uses the segment from `(0,0)` to `(3,0)`. Exact replay gives:
@@ -98,6 +118,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rigid-configuration-geometry-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes rigid_configuration_bad_translation_image_x_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes rigid_configuration_bad_distance_table_artifact_emits_checked_farkas
 ```
 
@@ -105,6 +126,6 @@ cargo test -p axeyum-solver --test math_resource_lra_routes rigid_configuration_
 
 ```text
 untrusted fast search -> candidate point configurations and distance tables
-trusted small checking -> exact distance replay plus QF_LRA/Farkas certificate
+trusted small checking -> exact translation/distance replay plus QF_LRA/Farkas certificate
 remaining horizon -> graph rigidity and synthetic Euclidean proofs
 ```

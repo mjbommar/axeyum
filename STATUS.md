@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Rigid-configuration bad translation-image QF_LRA row landed.**
+  `rigid-configuration-geometry-v0` now has a second checked Farkas row: exact
+  translation replay computes `(3,0) + (1,-2) = (4,-2)`, then rejects the
+  malformed claim that the translated x-coordinate is `5`. The new source
+  SMT-LIB artifact isolates the final exact-linear coordinate conflict, the
+  shared `math_resource_lra_routes` regression parses it and checks
+  `UnsatFarkas` evidence, and the validator pins the source point, translation
+  vector, computed target, claimed coordinate, artifact path, regression, and
+  certificate note. Generated dashboards and the public query summary now
+  report 111 concept rows, 108 non-template packs, 578 expected checks, 260
+  checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+
 - **Incidence-geometry bad intersection-coordinate QF_LRA row landed.**
   `incidence-geometry-v0` now has a second checked Farkas row: exact
   line-intersection replay checks `(2,1)` for `x + y - 3 = 0` and
@@ -213,10 +225,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   exact-linear coordinate conflict, the shared `math_resource_lra_routes`
   regression parses it and checks `UnsatFarkas` evidence, and the validator
   pins both lines, determinant, computed intersection, claimed coordinate,
-  artifact path, regression, and certificate note. Generated dashboards and
-  the public query summary now report 111 concept rows, 108 non-template
-  packs, 577 expected checks, 259 checked rows, 247 replay-only rows, and 71
-  Lean-horizon rows.
+  artifact path, regression, and certificate note. This advanced the generated
+  dashboard and public query-summary counters by one checked row.
 
 - **Affine-geometry bad midpoint-coordinate QF_LRA row landed.**
   `affine-geometry-v0` now has a second checked Farkas row: exact affine replay

@@ -33,9 +33,10 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rigid-configuration-geometry-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "rigid configuration bad distance-table QF_LRA/Farkas regression seed",
-    "pressure": "Malformed triangle distance table where exact replay computes squared distance 9 between (0,0) and (3,0), but the row claims 10.",
+    "target": "rigid configuration bad translation-image and bad distance-table QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed rigid-configuration rows where exact replay computes translated point (4,-2) but a row claims x-coordinate 5, and computes squared distance 9 between (0,0) and (3,0) but a row claims 10.",
     "evidence": [
+      "bad-translation-image-x-rejected",
       "bad-rigid-distance-table-rejected"
     ],
     "next_step": "Promote additional rigidity rows only when they add distinct distance-table, isometry, or polynomial-geometry solver pressure; keep graph rigidity and synthetic theorem claims in the Lean-horizon lane."
@@ -50,12 +51,14 @@
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
     "docs/learn/math/rigid-configuration-geometry-end-to-end.md",
+    "artifacts/examples/math/rigid-configuration-geometry-v0/smt2/bad-translation-image-x-farkas-conflict.smt2",
     "artifacts/examples/math/rigid-configuration-geometry-v0/smt2/bad-rigid-distance-table-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "triangle-distance-table",
     "translation-isometry-witness",
+    "bad-translation-image-x-rejected",
     "congruent-triangle-distance-witness",
     "bad-rigid-distance-table-rejected",
     "general-rigidity-geometry-lean-horizon"
@@ -63,6 +66,7 @@
   "graduation_criteria": [
     "Encode fixed finite point-configuration checks as deterministic exact-rational replay rows.",
     "Replay SAT witnesses through exact pairwise squared-distance evaluation.",
+    "Route false translation-image claims through checked QF_LRA/Farkas evidence after exact replay computes the translated coordinate.",
     "Route false distance-table claims through checked QF_LRA/Farkas evidence after exact replay computes the distance.",
     "Keep graph rigidity, synthetic rigidity, and general rigid-motion classification theorems under Lean horizon until formal proof routes exist."
   ]

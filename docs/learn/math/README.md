@@ -281,8 +281,9 @@ Companion maps:
   the projective/synthetic geometry Lean horizon.
 - [Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md):
   follows triangle distance-table replay, translation isometry replay,
-  congruent-triangle distance replay, checked QF_LRA/Farkas bad-distance-table
-  rejection, and the graph-rigidity Lean horizon.
+  congruent-triangle distance replay, checked QF_LRA/Farkas bad
+  translation-image and bad-distance-table rejection, and the graph-rigidity
+  Lean horizon.
 - [Finite Circle Geometry](finite-circle-geometry-end-to-end.md): follows
   exact point-on-circle replay, tangent-line/radius perpendicularity,
   chord-midpoint perpendicularity, circle-line intersection replay, checked

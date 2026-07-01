@@ -1700,7 +1700,7 @@ tangent-line/radius perpendicularity, chord-midpoint perpendicularity,
 circle-line intersection replay, unit-circle inversion replay, inverse-distance products, inversion
 collinearity, cyclic quadrilateral replay, diagonal-intersection replay,
 opposite-angle dot-product replay, rational Ptolemy replay, checked QF_LRA/Farkas bad squared-distance, checked QF_LRA/Farkas bad intersection-coordinate and bad incidence,
-checked QF_LRA/Farkas bad distance-table data, checked QF_LRA/Farkas
+checked QF_LRA/Farkas bad translation-image and bad distance-table data, checked QF_LRA/Farkas
 bad affine midpoint-coordinate and bad-distance-preservation, checked QF_LRA/Farkas bad area-scaling,
 checked QF_LRA/Farkas bad-orientation, checked QF_LRA/Farkas bad-radius and bad line-intersection, checked QF_LRA/Farkas bad inverse-coordinate,
 checked QF_LRA/Farkas bad diagonal-intersection, bad opposite-angle, and bad Ptolemy rows,
@@ -2000,8 +2000,9 @@ exact signed-area replay.
 `incidence-geometry-v0` now routes its bad intersection-coordinate and bad
 point-on-line rows through the same checked Farkas evidence path after exact
 line-intersection and line-value replay.
-`rigid-configuration-geometry-v0` now routes its bad distance-table row through
-the same checked Farkas evidence path after exact squared-distance replay.
+`rigid-configuration-geometry-v0` now routes its bad translation-image and bad
+distance-table rows through the same checked Farkas evidence path after exact
+translation and squared-distance replay.
 `numerical-linear-algebra-v0` now routes its bad residual-bound row through the
 same checked Farkas evidence path after exact residual-norm replay.
 `random-matrix-finite-v0` now routes its bad trace-square row through the same

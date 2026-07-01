@@ -14,6 +14,26 @@ Expected result: `sat`.
 The validator checks that translating the triangle by `(1,-2)` preserves every
 pairwise squared distance.
 
+## `bad-translation-image-x-rejected`
+
+Expected result: `unsat`.
+
+For source point `(3,0)` and translation `(1,-2)`, exact replay gives:
+
+```text
+(3,0) + (1,-2) = (4,-2)
+```
+
+The malformed row claims the translated x-coordinate is `5`. The source
+SMT-LIB artifact isolates the final exact-linear conflict:
+
+```text
+target_b_x = 4
+target_b_x = 5
+```
+
+The QF_LRA route must emit checked `UnsatFarkas` evidence.
+
 ## `congruent-triangle-distance-witness`
 
 Expected result: `sat`.

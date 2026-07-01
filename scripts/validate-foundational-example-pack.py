@@ -14544,6 +14544,43 @@ def validate_rigid_configuration_geometry(expected: dict[str, Any]) -> None:
     if source_distances != target_distances:
         fail("translation-isometry-witness must preserve the full distance table")
 
+    bad_translation = checks["bad-translation-image-x-rejected"]
+    if bad_translation["expected_result"] != "unsat" or bad_translation.get("proof_status") != "checked":
+        fail("bad-translation-image-x-rejected must be a checked unsat row")
+    data = bad_translation.get("data", {})
+    source_point = require_point2("bad rigid translation source_point", data.get("source_point"))
+    vector = require_point2("bad rigid translation vector", data.get("translation"))
+    computed_target = require_point2("bad rigid translation computed_target", data.get("computed_target"))
+    claimed_target_x = require_fraction(
+        "bad rigid translation claimed_target_x",
+        data.get("claimed_target_x"),
+    )
+    if point_add2(source_point, vector) != computed_target:
+        fail("bad-translation-image-x-rejected computed target is incorrect")
+    if computed_target[0] == claimed_target_x:
+        fail("bad-translation-image-x-rejected must document a false x-coordinate claim")
+    farkas_target_claim = data.get("farkas_target_claim")
+    require_string("bad rigid translation farkas_target_claim", farkas_target_claim)
+    if farkas_target_claim != "target_b_x = 5":
+        fail("bad-translation-image-x-rejected must document the Farkas target claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad rigid translation smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/rigid-configuration-geometry-v0/smt2/"
+        "bad-translation-image-x-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-translation-image-x-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad rigid translation smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad rigid translation farkas_regression", regression)
+    if "rigid_configuration_bad_translation_image_x_artifact_emits_checked_farkas" not in regression:
+        fail("bad-translation-image-x-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad rigid translation certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("bad-translation-image-x-rejected certificate must document Farkas evidence")
+
     congruent = checks["congruent-triangle-distance-witness"]
     if congruent["expected_result"] != "sat":
         fail("congruent-triangle-distance-witness must expect sat")

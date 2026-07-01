@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 577 expected checks.
-- 259 checked proof/evidence rows.
+- 578 expected checks.
+- 260 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -967,8 +967,9 @@ Build next:
 - Keep `incidence-geometry-v0`'s promoted bad intersection-coordinate and
   point-on-line rows tied to exact replay plus the source QF_LRA/Farkas
   artifacts.
-- Keep `rigid-configuration-geometry-v0`'s promoted bad distance-table row
-  tied to exact distance replay plus the source QF_LRA/Farkas artifact.
+- Keep `rigid-configuration-geometry-v0`'s promoted bad translation-image and
+  distance-table rows tied to exact replay plus the source QF_LRA/Farkas
+  artifacts.
 - Keep `affine-geometry-v0`'s promoted bad midpoint-coordinate and
   bad-distance-preservation rows tied to exact affine replay plus the source
   QF_LRA/Farkas artifacts.
@@ -1457,7 +1458,8 @@ Pick one item per commit unless the change is purely navigational.
 59. Landed: add `rigid-configuration-geometry-v0`.
     The new geometry pack validates exact triangle distance-table replay,
     translation isometry replay, congruent-triangle distance replay, checked
-    QF_LRA/Farkas rejection of a false distance-table claim, and a
+    QF_LRA/Farkas rejection of false translation-image and distance-table
+    claims, and a
     graph-rigidity/rigid-motion-classification Lean horizon. The geometry learner path
     now includes a focused rigid-configuration end-to-end page.
 60. Landed: add `finite-root-finding-v0`.
