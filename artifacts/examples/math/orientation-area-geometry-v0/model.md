@@ -38,6 +38,15 @@ T(x, y) = (2x + y + 1, x + 3y - 1)
 Its matrix determinant is `5`. The source triangle has signed double area
 `12`; its image triangle has signed double area `60`, exactly `5 * 12`.
 
+The bad area-scaling row keeps the nonlinear determinant multiplication in
+exact replay and checks only the final linear contradiction:
+
+```text
+source_signed_double_area = 12
+image_signed_double_area = 60
+image_signed_double_area = source_signed_double_area
+```
+
 ### Barycentric Point
 
 The point `(9/4, 3/4)` is represented as:
@@ -61,8 +70,8 @@ signed_double_area = -1
 signed_double_area > 0
 ```
 
-The pack keeps this false fixed-orientation claim on the checked
-`UnsatFarkas` route.
+The pack keeps this false fixed-orientation claim, and the false affine-area
+preservation claim above, on the checked `UnsatFarkas` route.
 
 These are exact finite replay targets, not a complete formalization of
 oriented geometry.

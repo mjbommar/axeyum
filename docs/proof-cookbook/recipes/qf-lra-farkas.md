@@ -156,6 +156,9 @@ Canonical examples:
 - [Finite Euler Method](../../../artifacts/examples/math/finite-euler-method-v0/)
   uses bad fixed-step and max-error-bound rows after exact Euler and error-table
   replay compute the next state and maximum error.
+- [Orientation And Area Geometry](../../../artifacts/examples/math/orientation-area-geometry-v0/)
+  uses bad affine-area-scaling and fixed-orientation rows after exact signed
+  double-area replay computes the image area and triangle orientation.
 
 The focused resource regression is
 `cargo test -p axeyum-solver --test math_resource_lra_routes`.

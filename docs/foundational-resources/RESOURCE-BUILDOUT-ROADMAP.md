@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 573 expected checks.
-- 255 checked proof/evidence rows.
+- 574 expected checks.
+- 256 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -967,6 +967,9 @@ Build next:
   replay plus the source QF_LRA/Farkas artifact.
 - Keep `rigid-configuration-geometry-v0`'s promoted bad distance-table row
   tied to exact distance replay plus the source QF_LRA/Farkas artifact.
+- Keep `orientation-area-geometry-v0`'s promoted bad affine-area-scaling and
+  bad orientation rows tied to exact signed-area replay plus the source
+  QF_LRA/Farkas artifacts.
 - Keep `finite-circle-geometry-v0`'s promoted bad radius and bad
   line-intersection rows tied to exact circle-coordinate replay plus the source
   QF_LRA/Farkas artifacts.
@@ -977,8 +980,8 @@ Build next:
   replay plus the source QF_LRA/Farkas artifacts.
 - Promote additional false affine/distance/orientation/incidence/circle/inversion/cyclic
   claims through QF_LRA/Farkas or NRA only when they add distinct exact-rational
-  nontrivial circle-line, higher-degree polynomial-geometry, or
-  theorem-reconstruction pressure.
+  pressure beyond the current area-scaling, nontrivial circle-line,
+  higher-degree polynomial-geometry, or theorem-reconstruction rows.
 - Keep differential geometry, algebraic geometry, global geometry, and
   topology-heavy geometry as Lean-horizon.
 

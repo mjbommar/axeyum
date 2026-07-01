@@ -426,8 +426,8 @@ schemas, examples, and validation workflows.
   and an affine-geometry Lean-horizon row.
 - [`artifacts/examples/math/orientation-area-geometry-v0/`](../../artifacts/examples/math/orientation-area-geometry-v0/)
   validates exact signed-area/orientation replay, affine area scaling,
-  barycentric point-inside replay, checked rejection of a false orientation
-  claim, and an oriented-geometry Lean-horizon row.
+  barycentric point-inside replay, checked rejection of false affine-area
+  scaling and orientation claims, and an oriented-geometry Lean-horizon row.
 - [`artifacts/examples/math/finite-circle-geometry-v0/`](../../artifacts/examples/math/finite-circle-geometry-v0/)
   validates exact point-on-circle replay, tangent-line/radius perpendicularity,
   chord-midpoint perpendicularity, circle-line intersection replay, checked

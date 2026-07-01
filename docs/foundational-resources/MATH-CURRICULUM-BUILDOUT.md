@@ -781,8 +781,9 @@ QF_LRA/Farkas rejection of a false affine distance-preservation claim, and a
 general affine-geometry Lean-horizon row.
 `artifacts/examples/math/orientation-area-geometry-v0/` now validates exact
 signed-area/orientation replay, affine area scaling by determinant,
-barycentric point-inside replay, checked QF_LRA/Farkas rejection of a false
-orientation claim, and a general oriented-geometry Lean-horizon row.
+barycentric point-inside replay, checked QF_LRA/Farkas rejection of false
+affine-area scaling and orientation claims, and a general oriented-geometry
+Lean-horizon row.
 `artifacts/examples/math/finite-circle-geometry-v0/` now validates exact
 point-on-circle replay, tangent-line/radius perpendicularity, chord-midpoint
 perpendicularity, circle-line intersection replay, checked QF_LRA/Farkas
@@ -986,7 +987,8 @@ Recommended order:
    preservation, QF_LRA/Farkas false squared-distance rejection,
    QF_LRA/Farkas false incidence rejection, QF_LRA/Farkas false
    distance-table rejection, QF_LRA/Farkas false distance-preservation
-   rejection, and QF_LRA/Farkas false orientation rejection.
+   rejection, QF_LRA/Farkas false area-scaling rejection, and QF_LRA/Farkas
+   false orientation rejection.
 8. `finite-topology-v0`: finite closure/interior, metric-ball examples, and
    checked Bool/CNF bad-empty-open rejection.
 9. `finite-measure-v0` and `finite-measure-monotonicity-v0`: finite
@@ -1532,7 +1534,8 @@ Lean-horizon row.
 `orientation-area-geometry-v0` now adds the exact finite orientation/area
 bridge for geometry: signed-area replay, affine determinant area scaling,
 barycentric point-inside replay, checked QF_LRA/Farkas rejection of false
-orientation, and an oriented-geometry Lean-horizon row.
+affine-area scaling and orientation claims, and an oriented-geometry
+Lean-horizon row.
 `finite-circle-geometry-v0` now adds the exact finite circle bridge for
 geometry: point-on-circle replay, tangent-line/radius perpendicularity,
 chord-midpoint perpendicularity, circle-line intersection replay, checked
@@ -1697,8 +1700,8 @@ circle-line intersection replay, unit-circle inversion replay, inverse-distance 
 collinearity, cyclic quadrilateral replay, diagonal-intersection replay,
 opposite-angle dot-product replay, rational Ptolemy replay, checked QF_LRA/Farkas bad squared-distance, checked QF_LRA/Farkas bad incidence,
 checked QF_LRA/Farkas bad distance-table data, checked QF_LRA/Farkas
-bad-distance-preservation, checked QF_LRA/Farkas bad-orientation, checked
-QF_LRA/Farkas bad-radius and bad line-intersection, checked QF_LRA/Farkas bad inverse-coordinate,
+bad-distance-preservation, checked QF_LRA/Farkas bad area-scaling,
+checked QF_LRA/Farkas bad-orientation, checked QF_LRA/Farkas bad-radius and bad line-intersection, checked QF_LRA/Farkas bad inverse-coordinate,
 checked QF_LRA/Farkas bad diagonal-intersection, bad opposite-angle, and bad Ptolemy rows,
 and general geometry Lean-horizon rows.
 `finite-topology-v0` and `finite-measure-v0` now have a learner-facing
@@ -1990,8 +1993,9 @@ average contradiction, and its metadata promotes that row for solver reuse.
 max-error bound through source-linked checked Farkas evidence paths after exact
 derivative and finite error-table replay, and its metadata promotes those rows
 for solver reuse.
-`orientation-area-geometry-v0` now routes its bad fixed-orientation row through
-the same checked Farkas evidence path after exact signed-area replay.
+`orientation-area-geometry-v0` now routes its bad affine-area-scaling and bad
+fixed-orientation rows through the same checked Farkas evidence path after
+exact signed-area replay.
 `incidence-geometry-v0` now routes its bad point-on-line row through the same
 checked Farkas evidence path after exact line-value replay.
 `rigid-configuration-geometry-v0` now routes its bad distance-table row through

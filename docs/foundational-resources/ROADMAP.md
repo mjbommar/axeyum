@@ -598,8 +598,8 @@ preservation, checked rejection of false distance preservation, and an
 affine-geometry Lean-horizon row.
 [`orientation-area-geometry-v0`](../../artifacts/examples/math/orientation-area-geometry-v0/)
 validates exact signed-area/orientation replay, affine area scaling,
-barycentric point-inside replay, checked rejection of a false orientation
-claim, and an oriented-geometry Lean-horizon row.
+barycentric point-inside replay, checked rejection of false affine-area scaling
+and orientation claims, and an oriented-geometry Lean-horizon row.
 [`finite-topology-v0`](../../artifacts/examples/math/finite-topology-v0/)
 validates finite topology axioms, closure/interior computation, exact finite
 metric-ball replay, and checked rejection of a missing-empty-set topology claim.

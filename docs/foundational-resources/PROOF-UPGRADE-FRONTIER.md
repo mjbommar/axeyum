@@ -295,7 +295,8 @@ First targets:
   (source-linked solver-reuse promotions landed for the bad max-error bound and
   bad fixed-step transition)
 - [orientation-area-geometry-v0](../../artifacts/examples/math/orientation-area-geometry-v0/)
-  (resource-backed Farkas regression landed for the bad fixed-orientation row)
+  (resource-backed Farkas regressions landed for the bad affine-area-scaling
+  and bad fixed-orientation rows)
 - [numerical-linear-algebra-v0](../../artifacts/examples/math/numerical-linear-algebra-v0/)
   (resource-backed Farkas regression landed for the bad residual-bound row)
 - [random-matrix-finite-v0](../../artifacts/examples/math/random-matrix-finite-v0/)

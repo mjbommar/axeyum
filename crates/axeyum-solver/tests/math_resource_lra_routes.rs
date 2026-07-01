@@ -118,6 +118,9 @@ const INCIDENCE_GEOMETRY_BAD_POINT_ON_LINE: &str = include_str!(
 const RIGID_CONFIGURATION_BAD_DISTANCE_TABLE: &str = include_str!(
     "../../../artifacts/examples/math/rigid-configuration-geometry-v0/smt2/bad-rigid-distance-table-farkas-conflict.smt2"
 );
+const ORIENTATION_AREA_BAD_AFFINE_AREA_SCALING: &str = include_str!(
+    "../../../artifacts/examples/math/orientation-area-geometry-v0/smt2/bad-affine-area-scaling-farkas-conflict.smt2"
+);
 const FINITE_OPERATOR_BAD_OPERATOR_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/finite-operator-v0/smt2/bad-operator-bound-farkas-conflict.smt2"
 );
@@ -1073,6 +1076,14 @@ fn orientation_area_bad_orientation_emits_checked_farkas() {
         "orientation-area-geometry-v0 bad-orientation-rejected",
         &arena,
         &[area_is_negative_one, false_ccw_claim],
+    );
+}
+
+#[test]
+fn orientation_area_bad_affine_area_scaling_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "orientation-area-geometry-v0 bad-affine-area-scaling SMT-LIB artifact",
+        ORIENTATION_AREA_BAD_AFFINE_AREA_SCALING,
     );
 }
 

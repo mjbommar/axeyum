@@ -52,8 +52,8 @@ As of 2026-07-01, the committed resource query reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 573 expected checks.
-- 255 checked proof/evidence rows.
+- 574 expected checks.
+- 256 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -318,7 +318,7 @@ Next useful increments:
 | `optimization_and_convexity` | LP, convexity, least squares, root finding, KKT, active-set QP, SDP, gradient/line-search/projected/proximal rows | duality, degenerate active sets, working-set pivots, strong-Wolfe, box-plus-L1, stochastic/convergence horizons | QF_LRA/Farkas, QF_NRA, Lean horizon | finite KKT/duality/algorithm rows do not claim general sufficiency/convergence |
 | `numerical_analysis` | residuals, Euler steps, root-finding, finite optimization iterations, operator bounds | landed finite dynamics/Euler bridge for recurrence prefixes, invariants, Euler steps, and finite error tables; add only distinct pivoting/stability or reproducible numerical metadata pressure | QF_LRA/Farkas, replay, Lean horizon | exact replay is separate from floating-point experiment claims |
 | `differential_equations_and_dynamical_systems` | bounded recurrences, Euler traces, finite invariants, stochastic kernels/hitting times | landed finite dynamics/Euler bridge plus stochastic-kernel bridge; add transition/invariant variants only when they add distinct finite pressure | QF_LRA/Farkas, finite replay, Lean horizon | continuous existence/uniqueness and PDE claims stay horizon |
-| `geometry` | coordinate, incidence, rigid, affine, oriented area, circle, inversion, cyclic quadrilaterals | landed finite circle/inversion/cyclic replay bridge; add only distinct nontrivial circle-line correspondence, higher-degree polynomial geometry, or theorem-reconstruction pressure beyond the current circle-line, square angle-dot, and Ptolemy rows | QF_LRA/Farkas, finite replay, QF_NRA horizon | synthetic/global geometry claims stay Lean horizon |
+| `geometry` | coordinate, incidence, rigid, affine, oriented area, circle, inversion, cyclic quadrilaterals | landed finite circle/inversion/cyclic replay bridge; add only distinct nontrivial circle-line correspondence, higher-degree polynomial geometry, or theorem-reconstruction pressure beyond the current area-scaling, circle-line, square angle-dot, and Ptolemy rows | QF_LRA/Farkas, finite replay, QF_NRA horizon | synthetic/global geometry claims stay Lean horizon |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, projections, Chebyshev slices, finite duals | norm variants, finite approximation/alternation, operator-spectrum rows after the landed checked Chebyshev interpolation conflict | QF_LRA/Farkas, finite replay, Lean horizon | Banach/Hilbert and infinite-dimensional claims are not finite checks |
 
 ## Near-Term Commit Queue

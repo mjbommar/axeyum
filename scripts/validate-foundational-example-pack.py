@@ -14736,6 +14736,67 @@ def validate_orientation_area_geometry(expected: dict[str, Any]) -> None:
     if image_area != determinant * source_area:
         fail("affine-area-scaling image area does not equal det(A) times source area")
 
+    bad_area = checks["bad-affine-area-scaling-rejected"]
+    if bad_area["expected_result"] != "unsat" or bad_area.get("proof_status") != "checked":
+        fail("bad-affine-area-scaling-rejected must be a checked unsat row")
+    data = bad_area.get("data", {})
+    matrix = require_matrix2("bad affine area matrix", data.get("matrix"))
+    translation = require_point2("bad affine area translation", data.get("translation"))
+    determinant = require_fraction("bad affine area determinant", data.get("determinant"))
+    if matrix_determinant(matrix) != determinant:
+        fail("bad-affine-area-scaling-rejected determinant is incorrect")
+    raw_source_points = data.get("source_points")
+    raw_image_points = data.get("image_points")
+    if not isinstance(raw_source_points, list) or not isinstance(raw_image_points, list):
+        fail("bad-affine-area-scaling-rejected source_points and image_points must be lists")
+    source_points = [
+        require_point2(f"bad affine area source_points[{index}]", point)
+        for index, point in enumerate(raw_source_points)
+    ]
+    image_points = [
+        require_point2(f"bad affine area image_points[{index}]", point)
+        for index, point in enumerate(raw_image_points)
+    ]
+    if len(source_points) != 3 or len(image_points) != 3:
+        fail("bad-affine-area-scaling-rejected requires exactly three source and image points")
+    source_area = require_fraction(
+        "bad affine area source_signed_double_area",
+        data.get("source_signed_double_area"),
+    )
+    image_area = require_fraction(
+        "bad affine area image_signed_double_area",
+        data.get("image_signed_double_area"),
+    )
+    claimed_image_area = require_fraction(
+        "bad affine area claimed_image_signed_double_area",
+        data.get("claimed_image_signed_double_area"),
+    )
+    if [affine_image(matrix, translation, point) for point in source_points] != image_points:
+        fail("bad-affine-area-scaling-rejected image points do not match A*p + b")
+    if collinearity_determinant(source_points[0], source_points[1], source_points[2]) != source_area:
+        fail("bad-affine-area-scaling-rejected source signed double area is incorrect")
+    if collinearity_determinant(image_points[0], image_points[1], image_points[2]) != image_area:
+        fail("bad-affine-area-scaling-rejected image signed double area is incorrect")
+    if image_area != determinant * source_area:
+        fail("bad-affine-area-scaling-rejected image area must equal determinant times source area")
+    if claimed_image_area == image_area or claimed_image_area != source_area:
+        fail("bad-affine-area-scaling-rejected must falsely claim image area equals the source area")
+    farkas_area_claim = data.get("farkas_area_claim")
+    require_string("bad affine area farkas_area_claim", farkas_area_claim)
+    if farkas_area_claim != "image_signed_double_area = source_signed_double_area":
+        fail("bad-affine-area-scaling-rejected must document the Farkas area claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad affine area smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/orientation-area-geometry-v0/smt2/bad-affine-area-scaling-farkas-conflict.smt2":
+        fail("bad-affine-area-scaling-rejected smt2_artifact must name the checked QF_LRA artifact")
+    check_source("bad affine area smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad affine area farkas_regression", regression)
+    if "orientation_area_bad_affine_area_scaling_artifact_emits_checked_farkas" not in regression:
+        fail("bad-affine-area-scaling-rejected must link the Farkas regression")
+    if "Farkas" not in bad_area.get("notes", ""):
+        fail("bad-affine-area-scaling-rejected notes must document checked Farkas evidence")
+
     barycentric = checks["barycentric-point-inside"]
     if barycentric["expected_result"] != "sat":
         fail("barycentric-point-inside must expect sat")

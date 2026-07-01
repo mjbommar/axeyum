@@ -16,6 +16,16 @@ The validator checks that the affine map has determinant `5`, recomputes the
 three image points, and verifies that the image triangle's signed double area
 is `60`, exactly `5 * 12`.
 
+## `bad-affine-area-scaling-rejected`
+
+Expected result: `unsat`.
+
+The validator rejects the false claim that the determinant-`5` affine map
+preserves the source signed double area. Exact replay computes source signed
+double area `12`, image signed double area `60`, and the final malformed
+equality `image_signed_double_area = source_signed_double_area` is checked by a
+linked `QF_LRA` artifact and a resource-backed `UnsatFarkas` regression.
+
 ## `barycentric-point-inside`
 
 Expected result: `sat`.

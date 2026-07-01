@@ -49,6 +49,7 @@ Concept rows:
 | `bad-distance-preservation-rejected` | `unsat` | checked |
 | `triangle-orientation-witness` | `sat` | replay-only |
 | `affine-area-scaling` | `sat` | replay-only |
+| `bad-affine-area-scaling-rejected` | `unsat` | checked |
 | `barycentric-point-inside` | `sat` | replay-only |
 | `bad-orientation-rejected` | `unsat` | checked |
 | `point-on-circle-witness` | `sat` | replay-only |
@@ -239,6 +240,20 @@ The determinant of the linear part is `5`, so the validator checks:
 image signed double area = 60 = 5 * 12
 ```
 
+## Reject A Bad Area Scaling Claim
+
+The bad row keeps the exact affine replay above, then claims the image signed
+double area is unchanged:
+
+```text
+source_signed_double_area = 12
+image_signed_double_area = 60
+image_signed_double_area = source_signed_double_area
+```
+
+The resource regression checks this final equality conflict as `QF_LRA`, and
+the `unsat` result must carry `Evidence::UnsatFarkas`.
+
 ## Replay Barycentric Coordinates
 
 For the same source triangle, the barycentric weights are:
@@ -314,6 +329,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/co
 cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes orientation_area_bad_affine_area_scaling_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-circle-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_circle_geometry_bad_radius_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-inversion-geometry-v0

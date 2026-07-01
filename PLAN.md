@@ -162,7 +162,7 @@ thresholds, graph reachability, precedence, and proof routes into concrete
 policy/rule checks is
 [`docs/foundational-resources/RULES-LAW-CROSSWALK.md`](docs/foundational-resources/RULES-LAW-CROSSWALK.md).
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-111 concept rows, 108 non-template packs, 573 expected checks, 255 checked
+111 concept rows, 108 non-template packs, 574 expected checks, 256 checked
 rows, 247 replay-only rows, and 71 Lean-horizon rows. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -562,11 +562,11 @@ promoted for the bad expected-time equation; least-squares regression is now
 promoted for the bad coefficient row, and bounded rational real analysis for
 the bad linear-delta row, with finite conditional expectation now promoted for
 the bad high-block table, finite Euler method now source-linked and promoted
-for its bad max-error and bad fixed-step rows, bounded dynamics now promoted for its bad
-invariant-bound conflict, and finite probability now promoted for a
-bad Bayes-posterior
-conflict, with orientation/area geometry now promoted for its bad fixed
-orientation claim and numerical linear algebra now promoted for its bad
+for its bad max-error and bad fixed-step rows, bounded dynamics now promoted
+for its bad invariant-bound conflict, and finite probability now promoted for
+a bad Bayes-posterior conflict, with orientation/area geometry now promoted
+for its bad affine-area-scaling and bad fixed-orientation claims and numerical
+linear algebra now promoted for its bad
 residual-bound row, and random matrix finite now promoted for its bad
 trace-square moment row, with affine geometry now promoted for its bad
 distance-preservation row and inner-product spaces now promoted for its bad

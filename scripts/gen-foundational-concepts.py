@@ -6249,7 +6249,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "orientation-area-geometry-v0",
-                "Signed double-area orientation, polygon area, barycentric coordinate, and bad-orientation rows.",
+                "Signed double-area orientation, affine area-scaling, barycentric coordinate, and bad area/orientation rows.",
             ),
             (
                 "incidence-geometry-v0",
@@ -7003,7 +7003,7 @@ EXAMPLE_FAMILIES = [
             ),
             (
                 "orientation-area-geometry-v0",
-                "False orientation claim rejected after signed-area replay.",
+                "False affine-area scaling and orientation claims rejected after signed-area replay.",
             ),
             (
                 "numerical-linear-algebra-v0",

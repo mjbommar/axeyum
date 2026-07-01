@@ -205,6 +205,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Orientation/area bad affine-area-scaling QF_LRA row landed.**
+  `orientation-area-geometry-v0` now has a second checked Farkas row: exact
+  affine replay computes source signed double area `12`, determinant `5`, and
+  image signed double area `60`, then rejects the malformed claim that the
+  image signed double area is still `12`. The new source SMT-LIB artifact
+  isolates the final exact-linear area-preservation conflict, the shared
+  `math_resource_lra_routes` regression parses it and checks `UnsatFarkas`
+  evidence, and the validator pins the matrix, translation, source/image
+  points, determinant, signed-area values, claimed image area, artifact path,
+  regression, and certificate note. Generated dashboards and the public query
+  summary now report 111 concept rows, 108 non-template packs, 574 expected
+  checks, 256 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite-Euler bad max-error QF_LRA row landed.**
   `finite-euler-method-v0` now has a second checked Farkas row: exact finite
   error-table replay computes maximum error `3/4` for the quadratic-forcing
@@ -213,10 +226,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   contradiction, the shared `math_resource_lra_routes` regression parses it and
   checks `UnsatFarkas` evidence, and the validator pins the Euler table,
   exact-solution values, absolute errors, computed max error, claimed bound,
-  artifact path, regression, and certificate note. Generated dashboards and the
-  public query summary now report 111 concept rows, 108 non-template packs, 573
-  expected checks, 255 checked rows, 247 replay-only rows, and 71 Lean-horizon
-  rows.
+  artifact path, regression, and certificate note. This advanced the generated
+  dashboard and public query-summary counters by one checked row.
 
 - **Bounded-dynamics bad transition-step QF_LRA row landed.**
   `bounded-dynamics-v0` now has a second checked Farkas row: exact recurrence

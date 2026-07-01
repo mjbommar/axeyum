@@ -32,9 +32,10 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/orientation-area-geometry-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "orientation/area bad fixed-orientation QF_LRA/Farkas regression seed",
-    "pressure": "Malformed orientation row where exact signed-area replay computes signed_double_area = -1, but the row claims signed_double_area > 0.",
+    "target": "orientation/area bad fixed-orientation and bad affine-area-scaling QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed orientation/area rows where exact signed-area replay computes signed_double_area = -1 but the row claims signed_double_area > 0, and exact affine-area replay computes image signed double area 60 while the row claims it equals the source area 12.",
     "evidence": [
+      "bad-affine-area-scaling-rejected",
       "bad-orientation-rejected"
     ],
     "next_step": "Promote additional fixed coordinate-geometry rows only when they add distinct exact-linear solver pressure; keep projective, differential, and higher-dimensional orientation theorems in the Lean-horizon lane."
@@ -48,12 +49,14 @@
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "artifacts/examples/math/orientation-area-geometry-v0/smt2/bad-affine-area-scaling-farkas-conflict.smt2",
     "artifacts/examples/math/orientation-area-geometry-v0/smt2/bad-orientation-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "triangle-orientation-witness",
     "affine-area-scaling",
+    "bad-affine-area-scaling-rejected",
     "barycentric-point-inside",
     "bad-orientation-rejected",
     "general-oriented-geometry-lean-horizon"
@@ -61,7 +64,7 @@
   "graduation_criteria": [
     "Encode fixed orientation, signed-area, and barycentric checks as deterministic QF_LRA formulas.",
     "Replay SAT witnesses through Axeyum model evaluation rather than pack-local Python only.",
-    "Route false fixed-orientation claims through checked QF_LRA/Farkas certificates once signed area is replayed exactly.",
+    "Route false fixed-orientation and false affine-area-scaling claims through checked QF_LRA/Farkas certificates once signed areas are replayed exactly.",
     "Keep projective, differential, and higher-dimensional orientation theorems under Lean horizon until formal proof routes exist."
   ]
 }

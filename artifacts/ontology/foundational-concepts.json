@@ -8137,7 +8137,7 @@
           "id": "orientation-area-geometry-v0",
           "status": "validated",
           "path": "artifacts/examples/math/orientation-area-geometry-v0",
-          "notes": "Signed double-area orientation, polygon area, barycentric coordinate, and bad-orientation rows."
+          "notes": "Signed double-area orientation, affine area-scaling, barycentric coordinate, and bad area/orientation rows."
         },
         {
           "id": "incidence-geometry-v0",
@@ -8992,7 +8992,7 @@
           "id": "orientation-area-geometry-v0",
           "status": "validated",
           "path": "artifacts/examples/math/orientation-area-geometry-v0",
-          "notes": "False orientation claim rejected after signed-area replay."
+          "notes": "False affine-area scaling and orientation claims rejected after signed-area replay."
         },
         {
           "id": "numerical-linear-algebra-v0",
