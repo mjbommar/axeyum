@@ -31,9 +31,10 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "coordinate geometry bad squared-distance QF_LRA/Farkas regression seed",
-    "pressure": "Malformed exact coordinate row where replay computes squared distance 25 but the row claims 26.",
+    "target": "coordinate geometry bad midpoint-coordinate and bad squared-distance QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed exact coordinate rows where replay computes midpoint (2,1) but a row claims x-coordinate 3, and computes squared distance 25 but a row claims 26.",
     "evidence": [
+      "bad-midpoint-x-rejected",
       "bad-distance-squared-rejected"
     ],
     "next_step": "Promote additional coordinate-geometry rows only when they add distinct midpoint, collinearity, incidence, or exact-distance solver pressure; keep broad synthetic, projective, and differential geometry theorems in the Lean-horizon lane."
@@ -46,12 +47,14 @@
     "docs/curriculum/02-structures/polynomials.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/coordinate-geometry-v0/smt2/bad-midpoint-x-farkas-conflict.smt2",
     "artifacts/examples/math/coordinate-geometry-v0/smt2/bad-distance-squared-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
     "midpoint-witness",
+    "bad-midpoint-x-rejected",
     "collinearity-witness",
     "distance-squared-witness",
     "bad-distance-squared-rejected"
@@ -60,7 +63,7 @@
     "Encode midpoint and incidence checks as deterministic QF_LRA formulas.",
     "Encode squared-distance checks as deterministic NRA-shadow formulas with exact replay.",
     "Replay SAT witnesses through Axeyum model evaluation.",
-    "Emit checked exact-distance counterexample evidence; the bad squared-distance row now has checked QF_LRA/Farkas evidence after replay computes the distance.",
+    "Emit checked coordinate counterexample evidence; the bad midpoint-coordinate and bad squared-distance rows now have checked QF_LRA/Farkas evidence after exact replay.",
     "Add non-incidence and rigid-configuration examples once proof routes for polynomial constraints are explicit."
   ]
 }

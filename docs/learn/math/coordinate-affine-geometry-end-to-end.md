@@ -118,7 +118,22 @@ distance^2 = (4 - 1)^2 + (5 - 1)^2 = 3^2 + 4^2 = 25
 
 These are finite coordinate calculations, not diagram reasoning.
 
-## Reject A Bad Squared Distance
+## Reject Bad Coordinate Claims
+
+The midpoint bad row keeps the same segment:
+
+```text
+A = (0,0)
+B = (4,2)
+```
+
+Exact replay computes midpoint `(2,1)`. The malformed row claims the midpoint
+x-coordinate is `3`, so the source QF_LRA artifact checks only:
+
+```text
+midpoint_x = 2
+midpoint_x = 3
+```
 
 The coordinate-geometry bad row keeps the same fixed points:
 
@@ -348,6 +363,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_midpoint_x_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes affine_geometry_bad_midpoint_image_y_artifact_emits_checked_farkas

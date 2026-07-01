@@ -307,8 +307,9 @@ First targets:
   (resource-backed Farkas regressions landed for the bad midpoint-coordinate
   and bad distance-preservation rows)
 - [coordinate-geometry-v0](../../artifacts/examples/math/coordinate-geometry-v0/)
-  (source-linked Farkas regression landed for the bad squared-distance row
-  after exact coordinate replay computes the squared distance)
+  (source-linked Farkas regressions landed for the bad midpoint-coordinate and
+  bad squared-distance rows after exact coordinate replay computes the midpoint
+  and squared distance)
 - [incidence-geometry-v0](../../artifacts/examples/math/incidence-geometry-v0/)
   (source-linked Farkas regressions landed for the bad intersection-coordinate
   and bad point-on-line rows after exact line replay computes the intersection
@@ -434,6 +435,7 @@ Validation:
 cargo test -p axeyum-solver --test evidence lra_unsat_evidence_carries_a_recheckable_farkas_certificate
 cargo test -p axeyum-solver --test evidence tampered_farkas_evidence_fails_its_own_check
 cargo test -p axeyum-solver --test math_resource_lra_routes qf_lra_resource_route_rejects_tampered_farkas_certificate
+cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_midpoint_x_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes incidence_geometry_bad_intersection_x_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes rigid_configuration_bad_translation_image_x_artifact_emits_checked_farkas

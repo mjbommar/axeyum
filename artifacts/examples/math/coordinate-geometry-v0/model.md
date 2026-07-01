@@ -18,6 +18,21 @@ For `A = (0, 0)` and `B = (4, 2)`, the midpoint is:
 M = ((0 + 4) / 2, (0 + 2) / 2) = (2, 1)
 ```
 
+### Bad Midpoint Coordinate
+
+The promoted bad midpoint row keeps the same segment but claims:
+
+```text
+midpoint_x(A, B) = 3
+```
+
+Exact replay computes `2`; the QF_LRA artifact checks only the final conflict:
+
+```text
+midpoint_x = 2
+midpoint_x = 3
+```
+
 ### Collinearity
 
 For `A = (0, 0)`, `B = (2, 2)`, and `C = (5, 5)`, the determinant

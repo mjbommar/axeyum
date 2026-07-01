@@ -7,6 +7,15 @@ Expected result: `sat`.
 The validator recomputes the midpoint of `(0, 0)` and `(4, 2)` and checks it is
 exactly `(2, 1)`.
 
+## `bad-midpoint-x-rejected`
+
+Expected result: `unsat`.
+
+For the segment from `(0,0)` to `(4,2)`, exact replay computes midpoint
+`(2,1)`. The malformed row claims the midpoint x-coordinate is `3`; the source
+SMT-LIB artifact isolates that final exact-linear conflict and the QF_LRA route
+checks Farkas evidence.
+
 ## `collinearity-witness`
 
 Expected result: `sat`.

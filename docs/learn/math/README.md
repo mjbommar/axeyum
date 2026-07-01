@@ -271,9 +271,9 @@ Companion maps:
   tail-count certificate, and the statistical numerical-honesty horizon.
 - [Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md):
   follows exact midpoint, collinearity, distance, affine-map, area-scaling,
-  barycentric, QF_LRA/Farkas bad squared-distance, QF_LRA/Farkas
-  bad affine midpoint-coordinate, QF_LRA/Farkas bad-distance-preservation,
-  QF_LRA/Farkas bad area-scaling, and
+  barycentric, QF_LRA/Farkas bad midpoint-coordinate, QF_LRA/Farkas bad
+  squared-distance, QF_LRA/Farkas bad affine midpoint-coordinate,
+  QF_LRA/Farkas bad-distance-preservation, QF_LRA/Farkas bad area-scaling, and
   QF_LRA/Farkas bad-orientation checks.
 - [Incidence Geometry](incidence-geometry-end-to-end.md): follows exact line
   equations, non-parallel line intersection, point-on-line replay, checked

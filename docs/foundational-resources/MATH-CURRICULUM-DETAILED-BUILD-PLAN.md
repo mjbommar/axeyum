@@ -42,8 +42,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 578 expected checks.
-- 260 checked proof/evidence rows.
+- 579 expected checks.
+- 261 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -964,6 +964,13 @@ Pick one row per commit unless the change is purely navigational.
      checks both translation-image and distance-table conflicts without
      claiming graph rigidity, rigid-motion classification, or synthetic
      geometry theorems.
+116. Landed: extend `coordinate-geometry-v0` with a checked bad
+     midpoint-coordinate row. Exact midpoint replay computes `(2,1)` for the
+     segment `(0,0)` to `(4,2)`, while the malformed source SMT-LIB artifact
+     claims midpoint x-coordinate `3`; the shared QF_LRA/Farkas route now
+     checks both midpoint-coordinate and squared-distance conflicts without
+     claiming synthetic, projective, differential, or global geometry
+     theorems.
 
 ## Validation Checklist
 

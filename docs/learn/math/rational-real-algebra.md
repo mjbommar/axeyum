@@ -387,12 +387,14 @@ B = (4, 2)
 M = (2, 1)
 ```
 
-The checker recomputes both midpoint coordinates. For optimization, encode
+The checker recomputes both midpoint coordinates. The coordinate-geometry pack
+now also rejects a bad midpoint-coordinate claim: exact replay computes
+midpoint x-coordinate `2`, while the source QF_LRA artifact checks the
+malformed claim `3` with `UnsatFarkas` evidence. For optimization, encode
 linear constraints and a candidate assignment; the checker evaluates each
-constraint exactly. The coordinate-geometry pack now also rejects a bad
-squared-distance claim: exact replay computes `25` for `(1,1)` to `(4,5)`,
-while the source QF_LRA artifact checks the malformed claim `26` with
-`UnsatFarkas` evidence.
+constraint exactly. The pack also rejects a bad squared-distance claim: exact
+replay computes `25` for `(1,1)` to `(4,5)`, while the source QF_LRA artifact
+checks the malformed claim `26`.
 
 For an incidence-geometry check, encode a line as exact rational coefficients:
 
@@ -510,6 +512,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ma
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes multivariable_calculus_bad_gradient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/coordinate-geometry-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_midpoint_x_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/incidence-geometry-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes incidence_geometry_bad_point_on_line_artifact_emits_checked_farkas

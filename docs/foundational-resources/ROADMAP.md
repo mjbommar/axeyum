@@ -591,7 +591,7 @@ affine threshold monotonicity, checked bad midpoint-convexity rejection, and a
 general convex-analysis Lean-horizon row.
 [`coordinate-geometry-v0`](../../artifacts/examples/math/coordinate-geometry-v0/)
 validates exact midpoint, collinearity, squared-distance coordinate checks, and
-checked rejection of a bad squared-distance claim.
+checked rejection of bad midpoint-coordinate and squared-distance claims.
 [`affine-geometry-v0`](../../artifacts/examples/math/affine-geometry-v0/)
 validates exact affine point-image replay, midpoint preservation, collinearity
 preservation, checked rejection of false midpoint-coordinate and distance

@@ -13451,6 +13451,43 @@ def validate_coordinate_geometry(expected: dict[str, Any]) -> None:
     if mx != (ax + bx) / 2 or my != (ay + by) / 2:
         fail("midpoint witness does not match segment endpoints")
 
+    bad_midpoint = checks["bad-midpoint-x-rejected"]
+    if bad_midpoint["expected_result"] != "unsat" or bad_midpoint.get("proof_status") != "checked":
+        fail("bad-midpoint-x-rejected must be a checked unsat row")
+    data = bad_midpoint.get("data", {})
+    a = require_point2("bad coordinate midpoint a", data.get("a"))
+    b = require_point2("bad coordinate midpoint b", data.get("b"))
+    computed_midpoint = require_point2(
+        "bad coordinate computed_midpoint",
+        data.get("computed_midpoint"),
+    )
+    claimed_midpoint_x = require_fraction(
+        "bad coordinate claimed_midpoint_x",
+        data.get("claimed_midpoint_x"),
+    )
+    actual_midpoint = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+    if actual_midpoint != computed_midpoint:
+        fail("bad-midpoint-x-rejected computed midpoint is incorrect")
+    if computed_midpoint[0] == claimed_midpoint_x:
+        fail("bad-midpoint-x-rejected must document a false x-coordinate claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad coordinate midpoint smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/coordinate-geometry-v0/smt2/"
+        "bad-midpoint-x-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-midpoint-x-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad coordinate midpoint smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad coordinate midpoint farkas_regression", regression)
+    if "coordinate_geometry_bad_midpoint_x_artifact_emits_checked_farkas" not in regression:
+        fail("bad-midpoint-x-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad coordinate midpoint certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("bad-midpoint-x-rejected certificate must document Farkas evidence")
+
     collinearity = checks["collinearity-witness"]
     if collinearity["expected_result"] != "sat":
         fail("collinearity-witness must expect sat")

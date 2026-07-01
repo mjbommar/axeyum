@@ -766,7 +766,7 @@ minors, checked rejection of a bad gradient, and a multivariable-calculus
 Lean-horizon row.
 `artifacts/examples/math/coordinate-geometry-v0/` now validates exact midpoint,
 collinearity, squared-distance coordinate checks, and checked QF_LRA/Farkas
-rejection of a bad squared-distance claim.
+rejection of bad midpoint-coordinate and squared-distance claims.
 `artifacts/examples/math/incidence-geometry-v0/` now validates exact
 line-equation replay, non-parallel line intersection, point-on-line replay,
 checked QF_LRA/Farkas rejection of false intersection-coordinate and incidence
@@ -1699,7 +1699,9 @@ affine-map, signed-area, area-scaling, barycentric, point-on-circle,
 tangent-line/radius perpendicularity, chord-midpoint perpendicularity,
 circle-line intersection replay, unit-circle inversion replay, inverse-distance products, inversion
 collinearity, cyclic quadrilateral replay, diagonal-intersection replay,
-opposite-angle dot-product replay, rational Ptolemy replay, checked QF_LRA/Farkas bad squared-distance, checked QF_LRA/Farkas bad intersection-coordinate and bad incidence,
+opposite-angle dot-product replay, rational Ptolemy replay,
+checked QF_LRA/Farkas bad midpoint-coordinate and bad squared-distance,
+checked QF_LRA/Farkas bad intersection-coordinate and bad incidence,
 checked QF_LRA/Farkas bad translation-image and bad distance-table data, checked QF_LRA/Farkas
 bad affine midpoint-coordinate and bad-distance-preservation, checked QF_LRA/Farkas bad area-scaling,
 checked QF_LRA/Farkas bad-orientation, checked QF_LRA/Farkas bad-radius and bad line-intersection, checked QF_LRA/Farkas bad inverse-coordinate,

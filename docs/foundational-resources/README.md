@@ -419,7 +419,8 @@ schemas, examples, and validation workflows.
   rejection, and a general proximal-gradient convergence Lean-horizon row.
 - [`artifacts/examples/math/coordinate-geometry-v0/`](../../artifacts/examples/math/coordinate-geometry-v0/)
   validates exact midpoint, collinearity, and squared-distance coordinate
-  checks, plus checked rejection of a bad squared-distance claim.
+  checks, plus checked rejection of bad midpoint-coordinate and squared-distance
+  claims.
 - [`artifacts/examples/math/affine-geometry-v0/`](../../artifacts/examples/math/affine-geometry-v0/)
   validates exact affine point-image replay, midpoint preservation,
   collinearity preservation, checked rejection of false midpoint-coordinate

@@ -41,6 +41,23 @@
       "notes": "The validator recomputes both midpoint coordinates exactly."
     },
     {
+      "id": "bad-midpoint-x-rejected",
+      "claim": "The midpoint of (0,0) and (4,2) has x-coordinate 3.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_coordinate_bad_midpoint_refutation",
+      "proof_status": "checked",
+      "data": {
+        "a": ["0", "0"],
+        "b": ["4", "2"],
+        "computed_midpoint": ["2", "1"],
+        "claimed_midpoint_x": "3",
+        "smt2_artifact": "artifacts/examples/math/coordinate-geometry-v0/smt2/bad-midpoint-x-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_midpoint_x_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact midpoint replay computes (2,1), while the malformed row claims x-coordinate 3; the source QF_LRA artifact isolates the final midpoint-coordinate equality conflict for Farkas checking."
+    },
+    {
       "id": "collinearity-witness",
       "claim": "The listed three points are collinear.",
       "expected_result": "sat",

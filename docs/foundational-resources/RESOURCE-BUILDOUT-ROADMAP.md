@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 578 expected checks.
-- 260 checked proof/evidence rows.
+- 579 expected checks.
+- 261 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -962,8 +962,9 @@ Build next:
 - Add concept rows for midpoint, distance, collinearity, affine map,
   incidence, line equations, barycentric coordinate, signed area, orientation,
   determinant scaling, isometry shadow, and rigidity horizon.
-- Keep `coordinate-geometry-v0`'s promoted bad squared-distance row tied to
-  exact replay plus the source QF_LRA/Farkas artifact.
+- Keep `coordinate-geometry-v0`'s promoted bad midpoint-coordinate and
+  squared-distance rows tied to exact replay plus the source QF_LRA/Farkas
+  artifacts.
 - Keep `incidence-geometry-v0`'s promoted bad intersection-coordinate and
   point-on-line rows tied to exact replay plus the source QF_LRA/Farkas
   artifacts.
