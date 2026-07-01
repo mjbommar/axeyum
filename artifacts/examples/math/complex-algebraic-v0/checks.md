@@ -7,6 +7,14 @@ Expected result: `sat`.
 The validator recomputes the sum and product of `1 + 2i` and `3 - i` using the
 real-pair operations.
 
+## `bad-product-real-part-rejected`
+
+Expected result: `unsat`.
+
+The validator recomputes `(1 + 2i) * (3 - i) = 5 + 5i`. The malformed row
+claims the product real part is `4`, so the source QF_LRA artifact closes the
+final equality conflict with checked Farkas evidence.
+
 ## `conjugate-norm-replay`
 
 Expected result: `sat`.

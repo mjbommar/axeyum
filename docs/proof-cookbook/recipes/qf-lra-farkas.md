@@ -109,8 +109,8 @@ Canonical examples:
   uses a bad unit-square real-part row after exact real-pair replay computes
   `i^2 = -1`.
 - [Complex Algebraic](../../../artifacts/examples/math/complex-algebraic-v0/)
-  uses a bad norm-squared row after exact real-pair replay computes
-  `|3 + 4i|^2 = 25`.
+  uses bad product-coordinate and norm-squared rows after exact real-pair
+  replay computes `(1 + 2i) * (3 - i) = 5 + 5i` and `|3 + 4i|^2 = 25`.
 - [Rational Multivariable Calculus](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
   uses a bad gradient-component row after exact bivariate polynomial derivative
   replay computes the gradient.

@@ -145,7 +145,7 @@ Companion maps:
 - [Complex Algebraic Replay](complex-algebraic-end-to-end.md): follows exact
   complex real-pair addition, multiplication, conjugate/norm replay, and the
   fixed `i` root witness for `x^2 + 1`, with checked QF_LRA/Farkas rejection
-  of a bad norm-squared row.
+  of bad product-coordinate and norm-squared rows.
 - [Complex Plane Transforms](complex-plane-transforms-end-to-end.md): follows
   unit-root cycle replay, conjugation over products, a rational Mobius
   transform, QF_LRA/Farkas bad unit-square real-part rejection, and the

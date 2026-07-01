@@ -12765,6 +12765,42 @@ def validate_complex_algebraic(expected: dict[str, Any]) -> None:
     if complex_mul(z_value, w_value) != product_value:
         fail("complex arithmetic product does not match z * w")
 
+    bad_product = checks["bad-product-real-part-rejected"]
+    if bad_product["expected_result"] != "unsat" or bad_product.get("proof_status") != "checked":
+        fail("bad-product-real-part-rejected must be a checked unsat row")
+    data = bad_product.get("data", {})
+    z_value = require_complex_pair("bad complex product z", data.get("z"))
+    w_value = require_complex_pair("bad complex product w", data.get("w"))
+    computed_product = require_complex_pair(
+        "bad complex computed_product",
+        data.get("computed_product"),
+    )
+    claimed_product_real = require_fraction(
+        "bad complex claimed_product_real",
+        data.get("claimed_product_real"),
+    )
+    if complex_mul(z_value, w_value) != computed_product:
+        fail("bad-product-real-part-rejected computed product is incorrect")
+    if computed_product[0] == claimed_product_real:
+        fail("bad-product-real-part-rejected must document a false real-part claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("bad complex product smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/complex-algebraic-v0/smt2/"
+        "bad-product-real-part-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("bad-product-real-part-rejected smt2_artifact must name the checked source artifact")
+    check_source("bad complex product smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("bad complex product farkas_regression", regression)
+    if "complex_algebraic_bad_product_real_part_artifact_emits_checked_farkas" not in regression:
+        fail("bad-product-real-part-rejected must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("bad complex product certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("bad-product-real-part-rejected certificate must document Farkas evidence")
+
     conjugate = checks["conjugate-norm-replay"]
     if conjugate["expected_result"] != "sat":
         fail("conjugate-norm-replay must expect sat")

@@ -37,6 +37,9 @@ const REALS_RCF_NEGATIVE_DISCRIMINANT: &str = include_str!(
 const COMPLEX_ALGEBRAIC_BAD_NORM_SQUARED: &str = include_str!(
     "../../../artifacts/examples/math/complex-algebraic-v0/smt2/bad-norm-squared-farkas-conflict.smt2"
 );
+const COMPLEX_ALGEBRAIC_BAD_PRODUCT_REAL_PART: &str = include_str!(
+    "../../../artifacts/examples/math/complex-algebraic-v0/smt2/bad-product-real-part-farkas-conflict.smt2"
+);
 const COMPLEX_PLANE_BAD_UNIT_SQUARE_REAL_PART: &str = include_str!(
     "../../../artifacts/examples/math/complex-plane-transforms-v0/smt2/bad-unit-square-real-part-farkas-conflict.smt2"
 );
@@ -505,6 +508,14 @@ fn complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "complex-algebraic-v0 bad-norm-squared SMT-LIB artifact",
         COMPLEX_ALGEBRAIC_BAD_NORM_SQUARED,
+    );
+}
+
+#[test]
+fn complex_algebraic_bad_product_real_part_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "complex-algebraic-v0 bad-product-real-part SMT-LIB artifact",
+        COMPLEX_ALGEBRAIC_BAD_PRODUCT_REAL_PART,
     );
 }
 

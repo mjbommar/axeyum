@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Complex-algebraic bad product-coordinate QF_LRA row landed.**
+  `complex-algebraic-v0` now has a second checked Farkas row: exact real-pair
+  replay computes `(1 + 2i) * (3 - i) = 5 + 5i`, then rejects the malformed
+  claim that the product real part is `4`. The new source SMT-LIB artifact
+  isolates the final exact-linear real-part conflict, the shared
+  `math_resource_lra_routes` regression parses it and checks `UnsatFarkas`
+  evidence, and the validator pins the source operands, computed product,
+  claimed real part, artifact path, regression, and certificate note. Generated
+  dashboards and the public query summary now report 111 concept rows, 108
+  non-template packs, 575 expected checks, 257 checked rows, 247 replay-only
+  rows, and 71 Lean-horizon rows.
+
 - **Orientation/area bad affine-area-scaling QF_LRA row landed.**
   `orientation-area-geometry-v0` now has a second checked Farkas row: exact
   affine replay computes source signed double area `12`, determinant `5`, and
@@ -214,9 +226,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_lra_routes` regression parses it and checks `UnsatFarkas`
   evidence, and the validator pins the matrix, translation, source/image
   points, determinant, signed-area values, claimed image area, artifact path,
-  regression, and certificate note. Generated dashboards and the public query
-  summary now report 111 concept rows, 108 non-template packs, 574 expected
-  checks, 256 checked rows, 247 replay-only rows, and 71 Lean-horizon rows.
+  regression, and certificate note. This advanced the generated dashboard and
+  public query-summary counters by one checked row.
 
 - **Finite-Euler bad max-error QF_LRA row landed.**
   `finite-euler-method-v0` now has a second checked Farkas row: exact finite

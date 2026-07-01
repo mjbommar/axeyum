@@ -43,6 +43,23 @@
       "notes": "The validator recomputes pair addition and twisted multiplication exactly."
     },
     {
+      "id": "bad-product-real-part-rejected",
+      "claim": "The listed product (1 + 2i) * (3 - i) has real part 4.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_complex_bad_product_refutation",
+      "proof_status": "checked",
+      "data": {
+        "z": ["1", "2"],
+        "w": ["3", "-1"],
+        "computed_product": ["5", "5"],
+        "claimed_product_real": "4",
+        "smt2_artifact": "artifacts/examples/math/complex-algebraic-v0/smt2/bad-product-real-part-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_product_real_part_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact real-pair replay computes (1 + 2i) * (3 - i) = 5 + 5i, while the malformed row claims real part 4; the source QF_LRA artifact isolates the final real-part equality conflict for Farkas checking."
+    },
+    {
       "id": "conjugate-norm-replay",
       "claim": "The listed conjugate and norm-squared product match the fixed complex number.",
       "expected_result": "sat",

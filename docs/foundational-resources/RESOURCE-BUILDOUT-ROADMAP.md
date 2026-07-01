@@ -46,8 +46,8 @@ The current committed data boundary reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 574 expected checks.
-- 256 checked proof/evidence rows.
+- 575 expected checks.
+- 257 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -699,8 +699,9 @@ Build next:
 - Add concept rows for complex-as-real-pair, conjugation, norm, unit roots,
   Mobius transform, fixed polynomial root, and analytic-function horizon.
 - Route algebraic claims through real-pair LRA/NRA or finite replay.
-- Keep `complex-algebraic-v0`'s promoted bad norm-squared row tied to exact
-  real-pair replay plus the source QF_LRA/Farkas artifact.
+- Keep `complex-algebraic-v0`'s promoted bad product-coordinate and bad
+  norm-squared rows tied to exact real-pair replay plus the source
+  QF_LRA/Farkas artifacts.
 - Keep `complex-plane-transforms-v0`'s promoted bad unit-square real-part row
   tied to the source QF_LRA/Farkas artifact after real-pair replay computes
   `i^2 = -1`.

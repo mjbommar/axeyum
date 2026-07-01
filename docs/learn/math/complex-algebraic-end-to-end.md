@@ -21,13 +21,14 @@ Concept rows:
 | Check | Expected | Evidence Status |
 |---|---|---|
 | `complex-arithmetic-replay` | `sat` | replay-only |
+| `bad-product-real-part-rejected` | `unsat` | checked |
 | `conjugate-norm-replay` | `sat` | replay-only |
 | `bad-norm-squared-rejected` | `unsat` | checked |
 | `quadratic-root-witness` | `sat` | replay-only |
 
 The satisfiable rows are exact witness replays over rational real-pair data.
-The malformed norm-squared row is checked by QF_LRA/Farkas after exact replay
-computes the norm.
+The malformed product-coordinate and norm-squared rows are checked by
+QF_LRA/Farkas after exact replay computes the product and norm.
 
 ## Encode Complex Numbers As Pairs
 
@@ -65,6 +66,22 @@ and twisted multiplication:
 
 ```text
 (1 + 2i) * (3 - i) = 5 + 5i = [5, 5]
+```
+
+## Reject A Bad Product Coordinate
+
+The bad row reuses the same source object but claims:
+
+```text
+real((1 + 2i) * (3 - i)) = 4
+```
+
+The validator recomputes the product exactly, and the source QF_LRA artifact
+checks the final equality conflict with Farkas evidence:
+
+```text
+product_real = 5
+product_real = 4
 ```
 
 ## Replay Conjugation And Norm
@@ -138,6 +155,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_product_real_part_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas
 ```
 

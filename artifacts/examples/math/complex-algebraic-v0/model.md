@@ -24,6 +24,15 @@ z + w = 4 + i
 z * w = 5 + 5i
 ```
 
+The bad product row reuses this source object but claims:
+
+```text
+real((1 + 2i) * (3 - i)) = 4
+```
+
+Exact replay computes product real part `5`, so the final equality is a small
+QF_LRA/Farkas contradiction.
+
 ## Conjugate Norm Witness
 
 For `z = 3 + 4i`:

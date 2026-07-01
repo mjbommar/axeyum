@@ -35,9 +35,10 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "complex real-pair bad norm-squared QF_LRA/Farkas regression seed",
-    "pressure": "Malformed exact complex real-pair row where replay computes |3 + 4i|^2 = 25 but the row claims 26.",
+    "target": "complex real-pair bad product-coordinate and bad norm-squared QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed exact complex real-pair rows where replay computes (1 + 2i) * (3 - i) = 5 + 5i but a row claims product real part 4, and |3 + 4i|^2 = 25 but a row claims 26.",
     "evidence": [
+      "bad-product-real-part-rejected",
       "bad-norm-squared-rejected"
     ],
     "next_step": "Promote additional complex algebraic rows only when they add distinct exact real-pair arithmetic, polynomial-root, or algebraic-identity pressure; keep holomorphy, contour integration, residues, analytic continuation, and algebraic-closure theorems in the Lean-horizon lane."
@@ -50,12 +51,14 @@
     "docs/curriculum/02-structures/polynomials.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "artifacts/examples/math/complex-algebraic-v0/smt2/bad-product-real-part-farkas-conflict.smt2",
     "artifacts/examples/math/complex-algebraic-v0/smt2/bad-norm-squared-farkas-conflict.smt2",
     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
     "docs/proof-cookbook/recipes/lean-horizon-template.md"
   ],
   "expected_results": [
     "complex-arithmetic-replay",
+    "bad-product-real-part-rejected",
     "conjugate-norm-replay",
     "quadratic-root-witness",
     "bad-norm-squared-rejected"
@@ -63,7 +66,7 @@
   "graduation_criteria": [
     "Encode real-pair complex arithmetic as deterministic NRA obligations.",
     "Replay algebraic complex witnesses through Axeyum model evaluation.",
-    "Emit checked bad real-pair algebra evidence; the bad norm-squared row now has checked QF_LRA/Farkas evidence after replay computes the norm.",
+    "Emit checked bad real-pair algebra evidence; the bad product-coordinate and norm-squared rows now have checked QF_LRA/Farkas evidence after replay computes the product and norm.",
     "Add polynomial identity and eigenvalue examples before broadening the complex-analysis slice.",
     "Keep the fundamental theorem of algebra, holomorphy, contour integration, residues, and analytic continuation marked Lean-horizon."
   ]

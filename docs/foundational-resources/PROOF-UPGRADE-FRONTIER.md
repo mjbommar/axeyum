@@ -219,8 +219,9 @@ First targets:
   (source-linked Farkas regression landed for the bad unit-square real-part
   row after exact real-pair replay computes `i^2 = -1`)
 - [complex-algebraic-v0](../../artifacts/examples/math/complex-algebraic-v0/)
-  (source-linked Farkas regression landed for the bad norm-squared row after
-  exact real-pair replay computes `|3 + 4i|^2 = 25`)
+  (source-linked Farkas regressions landed for the bad product-coordinate and
+  bad norm-squared rows after exact real-pair replay computes
+  `(1 + 2i) * (3 - i) = 5 + 5i` and `|3 + 4i|^2 = 25`)
 - [multivariable-calculus-rational-v0](../../artifacts/examples/math/multivariable-calculus-rational-v0/)
   (source-linked Farkas regression landed for the bad gradient-component row
   after exact bivariate polynomial derivative replay computes the gradient)

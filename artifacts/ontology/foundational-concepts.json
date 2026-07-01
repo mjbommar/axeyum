@@ -8371,7 +8371,7 @@
           "id": "complex-algebraic-v0",
           "status": "validated",
           "path": "artifacts/examples/math/complex-algebraic-v0",
-          "notes": "Exact complex addition, multiplication, conjugation, norm-squared, and bad norm rows."
+          "notes": "Exact complex addition, multiplication, conjugation, norm-squared, bad product-coordinate, and bad norm rows."
         },
         {
           "id": "complex-plane-transforms-v0",

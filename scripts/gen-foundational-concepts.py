@@ -6460,7 +6460,7 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "complex-algebraic-v0",
-                "Exact complex addition, multiplication, conjugation, norm-squared, and bad norm rows.",
+                "Exact complex addition, multiplication, conjugation, norm-squared, bad product-coordinate, and bad norm rows.",
             ),
             (
                 "complex-plane-transforms-v0",

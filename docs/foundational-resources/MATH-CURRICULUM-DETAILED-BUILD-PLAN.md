@@ -42,8 +42,8 @@ The committed resource query currently reports:
 - 65 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 574 expected checks.
-- 256 checked proof/evidence rows.
+- 575 expected checks.
+- 257 checked proof/evidence rows.
 - 247 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
@@ -215,7 +215,7 @@ Exit criteria:
 | `linear_algebra` | exact matrices, vector spaces, duals, modules, tensors, spectral rows, active-set QP rows, SDP rows, descent-step rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | make matrix rows queryable by computation type and solver route | QF_LRA/Farkas, finite replay, QF_UF/Alethe |
 | `abstract_algebra` | finite groups/rings/fields, homomorphisms, ideals, modules, tensors | add narrower rows only when multiple packs reuse them | QF_UF/Alethe, QF_BV, finite replay |
 | `real_analysis` | bounded rational intervals, metric continuity, RCF shadows, calculus shadows, root-finding shadows, separation/KKT/active-set/SDP/gradient-descent/line-search/Wolfe/projected-gradient/proximal-gradient shadows | keep bounded shadows distinct from completeness/convergence/separation/KKT/active-set/SDP/descent/line-search/Wolfe/projected/proximal-gradient theorems | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon |
-| `complex_analysis` | real-pair algebra and transformations | complex algebra now has a checked bad norm-squared row; add only distinct real-pair arithmetic, polynomial-root, or algebraic-identity pressure | real-pair LRA/NRA, finite replay, Lean horizon |
+| `complex_analysis` | real-pair algebra and transformations | complex algebra now has checked bad product-coordinate and bad norm-squared rows; add only distinct real-pair arithmetic, polynomial-root, or algebraic-identity pressure | real-pair LRA/NRA, finite replay, Lean horizon |
 | `topology` | finite topologies, quotient topologies, compactness, connectedness, continuous maps, specialization orders, homology, torsion homology, cohomology, cup products | maintain landed topology-shadow, finite topology-operator/homeomorphism, finite quotient-topology, finite specialization-order, finite boundary-operator, finite chain-complex/homology, finite torsion-homology, finite cohomology, and finite cup-product bridge rows; add only distinct cohomology-ring quotienting or theorem-invariance pressure | Bool/CNF, QF_UF/Alethe, QF_LIA, QF_BV, Lean horizon |
 | `measure_theory` | finite measures, monotonicity/subadditivity, product measure, integration, random variables | finite measure/additivity, monotonicity/subadditivity, and finite product/integration bridge rows landed; promote only distinct convergence-horizon, countable-measure, or new measure-table pressure next | QF_LRA/Farkas, finite replay, Lean horizon |
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | standalone finite probability mass-table lesson landed; keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
@@ -936,6 +936,12 @@ Pick one row per commit unless the change is purely navigational.
      area; the shared QF_LRA/Farkas route now checks both area-scaling and
      fixed-orientation conflicts without claiming general affine-volume,
      projective, differential, or synthetic geometry theorems.
+112. Landed: extend `complex-algebraic-v0` with a checked bad product-real-part
+     row. Exact real-pair replay computes `(1 + 2i) * (3 - i) = 5 + 5i`,
+     while the malformed source SMT-LIB artifact claims product real part `4`;
+     the shared QF_LRA/Farkas route now checks both product-coordinate and
+     norm-squared conflicts without claiming holomorphy, contour integration,
+     residues, analytic continuation, or algebraic-closure theorems.
 
 ## Validation Checklist
 

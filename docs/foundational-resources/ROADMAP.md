@@ -642,8 +642,8 @@ validates exact finite Vandermonde unisolvence, interpolation matrix replay,
 alternating residual signs, and checked rejection of a duplicate-node grid.
 [`complex-algebraic-v0`](../../artifacts/examples/math/complex-algebraic-v0/)
 validates exact complex arithmetic, conjugate/norm replay, checked
-QF_LRA/Farkas rejection of a bad norm-squared row, and a fixed polynomial-root
-witness using real-pair algebra.
+QF_LRA/Farkas rejection of bad product-coordinate and norm-squared rows, and a
+fixed polynomial-root witness using real-pair algebra.
 [`complex-plane-transforms-v0`](../../artifacts/examples/math/complex-plane-transforms-v0/)
 validates exact unit-root cycles, conjugation/product replay, rational
 Mobius-transform replay, checked rejection of a false unit-square real-part
