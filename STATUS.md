@@ -234,6 +234,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Topological-sort theorem-boundary resource landed.**
+  `topological-sort-theorem-boundary.md` now separates
+  `finite-dag-topological-order-v0` checked finite topological-order replay,
+  independent-swap order replay, bad-order rejection, and directed-cycle
+  obstruction replay from finite DAG linear-extension, cycle-completeness,
+  Kahn/DFS algorithm-correctness, partial-order, and asymptotic-runtime theorem
+  claims. The theorem horizon, graph/discrete query guide, learner map, and
+  smoke query docs now expose the topological-sort boundary directly.
+
 - **Shortest-path theorem-boundary resource landed.**
   `shortest-path-theorem-boundary.md` now separates
   `finite-shortest-path-v0` checked path-distance replay, potential optimality

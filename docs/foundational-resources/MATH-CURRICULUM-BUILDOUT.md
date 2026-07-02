@@ -2094,6 +2094,12 @@ optimality replay, bad-path-distance rejection, and bad-shorter-distance
 rejection separate from arbitrary-graph shortest-path, negative-cycle,
 all-pairs, algorithm-correctness, data-structure, and asymptotic-runtime claims
 while linking the public shortest-path horizon query to the finite checked rows.
+`finite-dag-topological-order-v0` now also has a focused topological-sort
+theorem-boundary page that keeps checked finite order replay, alternate-order
+replay, bad-order rejection, and cycle-obstruction replay separate from finite
+DAG linear-extension, cycle-completeness, Kahn/DFS algorithm-correctness,
+partial-order, and asymptotic-runtime theorem claims while linking the public
+topological-sort horizon query to the finite checked rows.
 `graph-d-separation-v0` now has a learner-facing end-to-end lesson for finite
 active-chain replay, conditioned chain/fork blocking, unconditioned-collider
 blocking, descendant-opened collider replay, and the causal-identification

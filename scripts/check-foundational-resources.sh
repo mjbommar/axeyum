@@ -383,6 +383,11 @@ python3 scripts/query-foundational-resources.py checks --pack finite-shortest-pa
 python3 scripts/query-foundational-resources.py packs --field graph_theory --text topological --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --expected-result not-run --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text "topological-sort" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --proof-status checked --text "every vertex appears once" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --proof-status checked --text "no edge between algebra and analysis" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --proof-status checked --text "algebra must precede" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --proof-status checked --text "directed cycle" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route LIA --proof-status checked --require-any >/dev/null

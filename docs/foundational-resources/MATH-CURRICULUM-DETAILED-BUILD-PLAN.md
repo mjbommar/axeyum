@@ -2060,6 +2060,15 @@ Pick one row per commit unless the change is purely navigational.
      routes, and adds shortest-path-specific horizon and checked-row queries
      to the public smoke gate without adding a duplicate pack or changing
      resource counts.
+244. Landed: add `topological-sort-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-dag-topological-order-v0`. It maps
+     checked finite topological-order replay, independent-swap order replay,
+     bad-order rejection, and directed-cycle obstruction replay to the missing
+     finite DAG linear-extension, cycle-completeness, Kahn/DFS
+     algorithm-correctness, partial-order, and asymptotic-runtime theorem
+     routes, and adds topological-sort-specific horizon and checked-row
+     queries to the public smoke gate without adding a duplicate pack or
+     changing resource counts.
 
 ## Validation Checklist
 

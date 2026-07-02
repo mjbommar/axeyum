@@ -71,7 +71,7 @@ needs concrete checked rows to display.
 | Finite shortest-path certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay`; exact rational | `checks --pack finite-shortest-path-v0 --proof-status checked` |
 | Shortest-path theorem boundary | pack `finite-shortest-path-v0` | `lean-horizon` | `horizon-frontier --text shortest`; `checks --pack finite-shortest-path-v0 --expected-result not-run --proof-status lean-horizon` |
 | Finite DAG topological-order certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay` | `checks --pack finite-dag-topological-order-v0 --proof-status checked` |
-| Topological-sort theorem boundary | pack `finite-dag-topological-order-v0` | `lean-horizon` | `checks --pack finite-dag-topological-order-v0 --expected-result not-run --proof-status lean-horizon` |
+| Topological-sort theorem boundary | pack `finite-dag-topological-order-v0` | `lean-horizon` | `horizon-frontier --text "topological-sort"`; `checks --pack finite-dag-topological-order-v0 --expected-result not-run --proof-status lean-horizon` |
 | Bounded family rows versus asymptotic theorem boundaries | `bridge_bounded_family_asymptotic_boundary` | `LIA`; `Farkas` | `checks --concept bridge_bounded_family_asymptotic_boundary --route LIA --proof-status checked`; `checks --concept bridge_bounded_family_asymptotic_boundary --route Farkas --proof-status checked` |
 | All checked graph rows | field `graph_theory` | any route | `checks --field graph_theory --expected-result unsat --proof-status checked` |
 | Runtime-specific rows | pack `graph-search-runtime-v0` | `LIA` | `checks --pack graph-search-runtime-v0 --route LIA --proof-status checked` |
@@ -250,6 +250,34 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-dag-topological-order-v0 \
   --expected-result not-run \
   --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text "topological-sort" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-dag-topological-order-v0 \
+  --proof-status checked \
+  --text "every vertex appears once" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-dag-topological-order-v0 \
+  --proof-status checked \
+  --text "no edge between algebra and analysis" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-dag-topological-order-v0 \
+  --proof-status checked \
+  --text "algebra must precede" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-dag-topological-order-v0 \
+  --proof-status checked \
+  --text "directed cycle" \
   --require-any
 ```
 
