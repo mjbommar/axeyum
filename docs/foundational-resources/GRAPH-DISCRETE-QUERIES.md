@@ -69,7 +69,7 @@ needs concrete checked rows to display.
 | Finite directed flow and cut certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay`; exact rational | `checks --pack finite-flow-cut-v0 --proof-status checked` |
 | Max-flow/min-cut theorem boundary | pack `finite-flow-cut-v0` | `lean-horizon` | `horizon-frontier --text "max-flow"`; `checks --pack finite-flow-cut-v0 --expected-result not-run --proof-status lean-horizon` |
 | Finite shortest-path certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay`; exact rational | `checks --pack finite-shortest-path-v0 --proof-status checked` |
-| Shortest-path theorem boundary | pack `finite-shortest-path-v0` | `lean-horizon` | `checks --pack finite-shortest-path-v0 --expected-result not-run --proof-status lean-horizon` |
+| Shortest-path theorem boundary | pack `finite-shortest-path-v0` | `lean-horizon` | `horizon-frontier --text shortest`; `checks --pack finite-shortest-path-v0 --expected-result not-run --proof-status lean-horizon` |
 | Finite DAG topological-order certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay` | `checks --pack finite-dag-topological-order-v0 --proof-status checked` |
 | Topological-sort theorem boundary | pack `finite-dag-topological-order-v0` | `lean-horizon` | `checks --pack finite-dag-topological-order-v0 --expected-result not-run --proof-status lean-horizon` |
 | Bounded family rows versus asymptotic theorem boundaries | `bridge_bounded_family_asymptotic_boundary` | `LIA`; `Farkas` | `checks --concept bridge_bounded_family_asymptotic_boundary --route LIA --proof-status checked`; `checks --concept bridge_bounded_family_asymptotic_boundary --route Farkas --proof-status checked` |
@@ -208,6 +208,28 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-shortest-path-v0 \
   --expected-result not-run \
   --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text shortest \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-shortest-path-v0 \
+  --proof-status checked \
+  --text "exact length" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-shortest-path-v0 \
+  --proof-status checked \
+  --text potentials \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-shortest-path-v0 \
+  --proof-status checked \
+  --text "at most 4" \
   --require-any
 ```
 

@@ -2051,6 +2051,15 @@ Pick one row per commit unless the change is purely navigational.
      min-cost-flow, and asymptotic-runtime theorem routes, and adds
      max-flow-specific horizon and checked-row queries to the public smoke gate
      without adding a duplicate pack or changing resource counts.
+243. Landed: add `shortest-path-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-shortest-path-v0`. It maps checked
+     finite path-distance replay, potential optimality replay,
+     bad-path-distance rejection, and bad-shorter-distance rejection to the
+     missing arbitrary-graph shortest-path, negative-cycle, all-pairs,
+     algorithm-correctness, data-structure, and asymptotic-runtime theorem
+     routes, and adds shortest-path-specific horizon and checked-row queries
+     to the public smoke gate without adding a duplicate pack or changing
+     resource counts.
 
 ## Validation Checklist
 

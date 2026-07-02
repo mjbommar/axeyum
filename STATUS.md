@@ -234,6 +234,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Shortest-path theorem-boundary resource landed.**
+  `shortest-path-theorem-boundary.md` now separates
+  `finite-shortest-path-v0` checked path-distance replay, potential optimality
+  replay, bad-path-distance rejection, and bad-shorter-distance rejection from
+  arbitrary-graph shortest-path, negative-cycle, all-pairs,
+  algorithm-correctness, data-structure, and asymptotic-runtime theorem
+  claims. The theorem horizon, graph/discrete query guide, learner map, and
+  smoke query docs now expose the shortest-path boundary directly.
+
 - **Max-flow/min-cut theorem-boundary resource landed.**
   `max-flow-min-cut-theorem-boundary.md` now separates `finite-flow-cut-v0`
   checked finite flow-feasibility replay, saturated-cut optimality replay,

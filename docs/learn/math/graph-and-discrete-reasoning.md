@@ -72,7 +72,9 @@ claimed flow value above that cut bound. Its focused theorem boundary is
 The finite shortest-path pack checks
 one directed weighted graph by replaying a path length, verifying a potential
 lower-bound certificate, rejecting a malformed path length, and rejecting a
-claimed shorter distance below the potential lower bound. The finite DAG
+claimed shorter distance below the potential lower bound. Its focused theorem
+boundary is [Shortest Path Theorem Boundary](shortest-path-theorem-boundary.md).
+The finite DAG
 topological-order pack checks two valid linear extensions of one prerequisite
 DAG, rejects an order with a backward edge, and rejects a cyclic graph by
 replaying a directed cycle obstruction.
@@ -305,6 +307,7 @@ For a fuller trace from data row to replay result and evidence status, read
 [End To End: Graph Cut Certificates](graph-cut-end-to-end.md),
 [End To End: Finite Flow And Cut Certificates](finite-flow-cut-end-to-end.md),
 [Max-Flow Min-Cut Theorem Boundary](max-flow-min-cut-theorem-boundary.md),
+[Shortest Path Theorem Boundary](shortest-path-theorem-boundary.md),
 [End To End: DAG D-Separation Checks](graph-d-separation-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md), and
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md).

@@ -394,6 +394,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Shortest-path optimality, negative-cycle, all-pairs, and algorithm-correctness
+horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text shortest \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-shortest-path-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Circle-geometry tangent, chord, power-of-a-point, cyclic, and inversion
 horizons:
 
@@ -512,6 +526,7 @@ The main learner maps that explain these boundaries are:
 - [Projected Gradient Convergence Theorem Boundary](../learn/math/projected-gradient-convergence-theorem-boundary.md)
 - [Proximal Gradient Convergence Theorem Boundary](../learn/math/proximal-gradient-convergence-theorem-boundary.md)
 - [Max-Flow Min-Cut Theorem Boundary](../learn/math/max-flow-min-cut-theorem-boundary.md)
+- [Shortest Path Theorem Boundary](../learn/math/shortest-path-theorem-boundary.md)
 - [Circle Geometry Theorem Boundary](../learn/math/circle-geometry-theorem-boundary.md)
 - [Inversion Geometry Theorem Boundary](../learn/math/inversion-geometry-theorem-boundary.md)
 - [Cyclic Geometry Theorem Boundary](../learn/math/cyclic-geometry-theorem-boundary.md)

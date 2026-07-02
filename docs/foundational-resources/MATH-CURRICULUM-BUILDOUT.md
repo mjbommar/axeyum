@@ -2088,6 +2088,12 @@ one checked finite flow, cut, bad-capacity, and bad-flow-value replay separate
 from arbitrary-network theorem, integrality, residual-network,
 algorithm-correctness, min-cost-flow, and asymptotic-runtime claims while
 linking the public max-flow horizon query to the finite checked rows.
+`finite-shortest-path-v0` now also has a focused shortest-path theorem-boundary
+page that keeps this one checked finite path-length replay, potential
+optimality replay, bad-path-distance rejection, and bad-shorter-distance
+rejection separate from arbitrary-graph shortest-path, negative-cycle,
+all-pairs, algorithm-correctness, data-structure, and asymptotic-runtime claims
+while linking the public shortest-path horizon query to the finite checked rows.
 `graph-d-separation-v0` now has a learner-facing end-to-end lesson for finite
 active-chain replay, conditioned chain/fork blocking, unconditioned-collider
 blocking, descendant-opened collider replay, and the causal-identification

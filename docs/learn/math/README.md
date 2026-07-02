@@ -182,6 +182,11 @@ Companion maps:
   follows exact directed weighted path replay, potential optimality
   certificates, malformed path-length rejection, and the shortest-path theorem
   horizon.
+- [Shortest Path Theorem Boundary](shortest-path-theorem-boundary.md): maps
+  those finite path-distance, potential-optimality, bad-path-distance, and
+  bad-shorter-distance rows to the missing arbitrary-graph shortest-path,
+  negative-cycle, all-pairs, algorithm-correctness, data-structure, and
+  asymptotic-runtime theorem routes.
 - [Finite DAG Topological Order Certificates](finite-dag-topological-order-end-to-end.md):
   follows finite topological-order replay, alternate linear-extension replay,
   bad-order rejection, cycle-obstruction replay, and the topological-sort
