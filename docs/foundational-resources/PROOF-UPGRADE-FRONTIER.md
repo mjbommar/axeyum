@@ -399,8 +399,10 @@ First targets:
   (resource-backed Farkas regressions landed for the bad trace and bad
   characteristic-polynomial rows)
 - [finite-chebyshev-systems-v0](../../artifacts/examples/math/finite-chebyshev-systems-v0/)
-  (resource-backed Farkas regressions landed for the duplicate-node determinant
-  conflict, bad interpolation-sample row, and bad alternation-magnitude row)
+  (resource-backed Farkas regressions landed for
+  `qf-lra-bad-duplicate-node-grid`, `qf-lra-bad-interpolation-sample`, and
+  `qf-lra-bad-alternating-residual`, while the malformed source rows remain
+  exact replay)
 - [polynomial-factorization-rational-v0](../../artifacts/examples/math/polynomial-factorization-rational-v0/)
   (resource-backed Farkas regression landed for the fixed irreducible-quadratic
   discriminant conflict after exact replay computes `D = -4`)

@@ -11183,6 +11183,10 @@ def validate_finite_chebyshev_systems(expected: dict[str, Any]) -> None:
     bad = checks["bad-duplicate-node-grid-rejected"]
     if bad["expected_result"] != "unsat":
         fail("bad-duplicate-node-grid-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-duplicate-node-grid-rejected must be replay-only")
+    if bad["validation"] != "finite_bad_chebyshev_grid_replay":
+        fail("bad-duplicate-node-grid-rejected must use finite_bad_chebyshev_grid_replay validation")
     data = bad.get("data", {})
     points = require_fraction_vector("bad Chebyshev points", data.get("points"))
     degree = require_basis_degree("bad Chebyshev basis_degree", data.get("basis_degree"))
@@ -11210,30 +11214,60 @@ def validate_finite_chebyshev_systems(expected: dict[str, Any]) -> None:
         fail("bad-duplicate-node-grid-rejected null_coefficients do not vanish on the grid")
     if any(value != 0 for value in zero_values):
         fail("bad-duplicate-node-grid-rejected zero_values must be all zero")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad duplicate-node Chebyshev smt2_artifact", smt2_artifact)
-    check_source("bad duplicate-node Chebyshev smt2_artifact", smt2_artifact)
+    notes = bad.get("notes", "")
+    if "separate qf-lra-bad-duplicate-node-grid" not in notes:
+        fail("bad-duplicate-node-grid-rejected notes must name the separate qf-lra-bad-duplicate-node-grid row")
+
+    qf_bad_grid = checks["qf-lra-bad-duplicate-node-grid"]
+    if qf_bad_grid["expected_result"] != "unsat":
+        fail("qf-lra-bad-duplicate-node-grid must expect unsat")
+    if qf_bad_grid.get("proof_status") != "checked":
+        fail("qf-lra-bad-duplicate-node-grid must be checked")
+    if qf_bad_grid["validation"] != "qf_lra_finite_chebyshev_bad_duplicate_node_grid_refutation":
+        fail("qf-lra-bad-duplicate-node-grid must use qf_lra_finite_chebyshev_bad_duplicate_node_grid_refutation validation")
+    qf_data = qf_bad_grid.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-duplicate-node-grid-rejected":
+        fail("qf-lra-bad-duplicate-node-grid must cite bad-duplicate-node-grid-rejected")
+    qf_actual_determinant = require_fraction(
+        "qf-lra bad duplicate-node actual_determinant",
+        qf_data.get("actual_determinant"),
+    )
+    qf_claimed_determinant = require_fraction(
+        "qf-lra bad duplicate-node claimed_determinant",
+        qf_data.get("claimed_determinant"),
+    )
+    if qf_actual_determinant != actual_determinant:
+        fail("qf-lra-bad-duplicate-node-grid actual_determinant must match replay")
+    if qf_claimed_determinant != claimed_determinant:
+        fail("qf-lra-bad-duplicate-node-grid claimed_determinant must match replay")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf-lra bad duplicate-node farkas_conflict", conflict)
+    if conflict != "determinant = 0 and determinant = 1":
+        fail("qf-lra-bad-duplicate-node-grid must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad duplicate-node Chebyshev smt2_artifact", smt2_artifact)
     if (
         smt2_artifact
         != "artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-duplicate-node-grid-farkas-conflict.smt2"
     ):
-        fail("bad-duplicate-node-grid-rejected smt2_artifact must name the checked QF_LRA artifact")
-    regression = data.get("farkas_regression")
-    require_string("bad duplicate-node Chebyshev farkas_regression", regression)
+        fail("qf-lra-bad-duplicate-node-grid smt2_artifact must name the checked QF_LRA artifact")
+    check_source("qf-lra bad duplicate-node Chebyshev smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad duplicate-node Chebyshev farkas_regression", regression)
     if "finite_chebyshev_duplicate_node_grid_emits_checked_farkas" not in regression:
-        fail("bad-duplicate-node-grid-rejected must link the Farkas regression")
-    certificate = data.get("certificate")
-    require_string("bad duplicate-node Chebyshev certificate", certificate)
-    if "UnsatFarkas" not in certificate or "Evidence::check" not in certificate:
-        fail("bad-duplicate-node-grid-rejected certificate must document checked Farkas evidence")
+        fail("qf-lra-bad-duplicate-node-grid must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad duplicate-node Chebyshev certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-duplicate-node-grid certificate must document checked Farkas evidence")
 
     bad_interpolation = checks["bad-interpolation-sample-rejected"]
     if bad_interpolation["expected_result"] != "unsat":
         fail("bad-interpolation-sample-rejected must expect unsat")
-    if bad_interpolation["proof_status"] != "checked":
-        fail("bad-interpolation-sample-rejected must be checked")
-    if bad_interpolation["validation"] != "finite_bad_chebyshev_interpolation_refutation":
-        fail("bad-interpolation-sample-rejected must use finite_bad_chebyshev_interpolation_refutation validation")
+    if bad_interpolation.get("proof_status") != "replay-only":
+        fail("bad-interpolation-sample-rejected must be replay-only")
+    if bad_interpolation["validation"] != "finite_bad_chebyshev_interpolation_replay":
+        fail("bad-interpolation-sample-rejected must use finite_bad_chebyshev_interpolation_replay validation")
     data = bad_interpolation.get("data", {})
     points = require_fraction_vector("bad interpolation points", data.get("points"))
     degree = require_basis_degree("bad interpolation basis_degree", data.get("basis_degree"))
@@ -11257,30 +11291,54 @@ def validate_finite_chebyshev_systems(expected: dict[str, Any]) -> None:
         fail("bad-interpolation-sample-rejected must document a false sample claim")
     if evaluation_point != 1 or actual_value != 4 or claimed_value != 5:
         fail("bad-interpolation-sample-rejected is fixed to p(1)=4 versus claimed p(1)=5")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad interpolation Chebyshev smt2_artifact", smt2_artifact)
-    check_source("bad interpolation Chebyshev smt2_artifact", smt2_artifact)
+    notes = bad_interpolation.get("notes", "")
+    if "separate qf-lra-bad-interpolation-sample" not in notes:
+        fail("bad-interpolation-sample-rejected notes must name the separate qf-lra-bad-interpolation-sample row")
+
+    qf_bad_interpolation = checks["qf-lra-bad-interpolation-sample"]
+    if qf_bad_interpolation["expected_result"] != "unsat":
+        fail("qf-lra-bad-interpolation-sample must expect unsat")
+    if qf_bad_interpolation.get("proof_status") != "checked":
+        fail("qf-lra-bad-interpolation-sample must be checked")
+    if qf_bad_interpolation["validation"] != "qf_lra_finite_chebyshev_bad_interpolation_sample_refutation":
+        fail("qf-lra-bad-interpolation-sample must use qf_lra_finite_chebyshev_bad_interpolation_sample_refutation validation")
+    qf_data = qf_bad_interpolation.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-interpolation-sample-rejected":
+        fail("qf-lra-bad-interpolation-sample must cite bad-interpolation-sample-rejected")
+    qf_actual_value = require_fraction("qf-lra bad interpolation actual_value", qf_data.get("actual_value"))
+    qf_claimed_value = require_fraction("qf-lra bad interpolation claimed_value", qf_data.get("claimed_value"))
+    if qf_actual_value != actual_value:
+        fail("qf-lra-bad-interpolation-sample actual_value must match replay")
+    if qf_claimed_value != claimed_value:
+        fail("qf-lra-bad-interpolation-sample claimed_value must match replay")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf-lra bad interpolation farkas_conflict", conflict)
+    if conflict != "sample_value = 4 and sample_value = 5":
+        fail("qf-lra-bad-interpolation-sample must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad interpolation Chebyshev smt2_artifact", smt2_artifact)
     if (
         smt2_artifact
         != "artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-interpolation-sample-farkas-conflict.smt2"
     ):
-        fail("bad-interpolation-sample-rejected smt2_artifact must name the checked QF_LRA artifact")
-    regression = data.get("farkas_regression")
-    require_string("bad interpolation Chebyshev farkas_regression", regression)
+        fail("qf-lra-bad-interpolation-sample smt2_artifact must name the checked QF_LRA artifact")
+    check_source("qf-lra bad interpolation Chebyshev smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad interpolation Chebyshev farkas_regression", regression)
     if "finite_chebyshev_bad_interpolation_sample_artifact_emits_checked_farkas" not in regression:
-        fail("bad-interpolation-sample-rejected must link the Farkas regression")
-    certificate = data.get("certificate")
-    require_string("bad interpolation Chebyshev certificate", certificate)
-    if "UnsatFarkas" not in certificate or "Evidence::check" not in certificate:
-        fail("bad-interpolation-sample-rejected certificate must document checked Farkas evidence")
+        fail("qf-lra-bad-interpolation-sample must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad interpolation Chebyshev certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-interpolation-sample certificate must document checked Farkas evidence")
 
     bad_alternation = checks["bad-alternating-residual-rejected"]
     if bad_alternation["expected_result"] != "unsat":
         fail("bad-alternating-residual-rejected must expect unsat")
-    if bad_alternation["proof_status"] != "checked":
-        fail("bad-alternating-residual-rejected must be checked")
-    if bad_alternation["validation"] != "finite_bad_chebyshev_alternation_refutation":
-        fail("bad-alternating-residual-rejected must use finite_bad_chebyshev_alternation_refutation validation")
+    if bad_alternation.get("proof_status") != "replay-only":
+        fail("bad-alternating-residual-rejected must be replay-only")
+    if bad_alternation["validation"] != "finite_bad_chebyshev_alternation_replay":
+        fail("bad-alternating-residual-rejected must use finite_bad_chebyshev_alternation_replay validation")
     data = bad_alternation.get("data", {})
     points = require_fraction_vector("bad alternation points", data.get("points"))
     residual_polynomial = require_polynomial(
@@ -11314,22 +11372,52 @@ def validate_finite_chebyshev_systems(expected: dict[str, Any]) -> None:
         fail("bad-alternating-residual-rejected must document a false uniform error claim")
     if actual_uniform_error != Fraction(1, 2) or claimed_uniform_error != Fraction(2, 3):
         fail("bad-alternating-residual-rejected is fixed to uniform_error=1/2 versus claimed 2/3")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad alternation Chebyshev smt2_artifact", smt2_artifact)
-    check_source("bad alternation Chebyshev smt2_artifact", smt2_artifact)
+    notes = bad_alternation.get("notes", "")
+    if "separate qf-lra-bad-alternating-residual" not in notes:
+        fail("bad-alternating-residual-rejected notes must name the separate qf-lra-bad-alternating-residual row")
+
+    qf_bad_alternation = checks["qf-lra-bad-alternating-residual"]
+    if qf_bad_alternation["expected_result"] != "unsat":
+        fail("qf-lra-bad-alternating-residual must expect unsat")
+    if qf_bad_alternation.get("proof_status") != "checked":
+        fail("qf-lra-bad-alternating-residual must be checked")
+    if qf_bad_alternation["validation"] != "qf_lra_finite_chebyshev_bad_alternating_residual_refutation":
+        fail("qf-lra-bad-alternating-residual must use qf_lra_finite_chebyshev_bad_alternating_residual_refutation validation")
+    qf_data = qf_bad_alternation.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-alternating-residual-rejected":
+        fail("qf-lra-bad-alternating-residual must cite bad-alternating-residual-rejected")
+    qf_actual_uniform_error = require_fraction(
+        "qf-lra bad alternation actual_uniform_error",
+        qf_data.get("actual_uniform_error"),
+    )
+    qf_claimed_uniform_error = require_fraction(
+        "qf-lra bad alternation claimed_uniform_error",
+        qf_data.get("claimed_uniform_error"),
+    )
+    if qf_actual_uniform_error != actual_uniform_error:
+        fail("qf-lra-bad-alternating-residual actual_uniform_error must match replay")
+    if qf_claimed_uniform_error != claimed_uniform_error:
+        fail("qf-lra-bad-alternating-residual claimed_uniform_error must match replay")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf-lra bad alternation farkas_conflict", conflict)
+    if conflict != "uniform_error = 1/2 and uniform_error = 2/3":
+        fail("qf-lra-bad-alternating-residual must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad alternation Chebyshev smt2_artifact", smt2_artifact)
     if (
         smt2_artifact
         != "artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-alternating-residual-farkas-conflict.smt2"
     ):
-        fail("bad-alternating-residual-rejected smt2_artifact must name the checked QF_LRA artifact")
-    regression = data.get("farkas_regression")
-    require_string("bad alternation Chebyshev farkas_regression", regression)
+        fail("qf-lra-bad-alternating-residual smt2_artifact must name the checked QF_LRA artifact")
+    check_source("qf-lra bad alternation Chebyshev smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad alternation Chebyshev farkas_regression", regression)
     if "finite_chebyshev_bad_alternating_residual_artifact_emits_checked_farkas" not in regression:
-        fail("bad-alternating-residual-rejected must link the Farkas regression")
-    certificate = data.get("certificate")
-    require_string("bad alternation Chebyshev certificate", certificate)
-    if "UnsatFarkas" not in certificate or "Evidence::check" not in certificate:
-        fail("bad-alternating-residual-rejected certificate must document checked Farkas evidence")
+        fail("qf-lra-bad-alternating-residual must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad alternation Chebyshev certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-alternating-residual certificate must document checked Farkas evidence")
 
     horizon = checks["general-chebyshev-system-lean-horizon"]
     if horizon["expected_result"] != "not-run":

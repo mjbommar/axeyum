@@ -41,9 +41,9 @@ These rows live in the
 |---|---|---|---|
 | Does a finite operator/norm row replay? | `finite-operator-v0` | vector-sum replay, exact `l1` norm, matrix-vector replay, exact infinity norm, row-sum bound, replay-only bad norm/bound rows, and separate checked `qf-lra-*` Farkas rows | Banach/Hilbert-space operator theory |
 | Does a Chebyshev recurrence prefix replay? | `finite-operator-v0` | fixed rational recurrence values such as `T0`, `T1`, `T2`, `T3` at `x = 1/2`, plus replay-only bad `T3` rejection and a separate checked `qf-lra-bad-chebyshev-t3` row | general Chebyshev polynomial theory |
-| Is a finite interpolation grid unisolvent? | `finite-chebyshev-systems-v0` | exact Vandermonde matrix and determinant replay | Haar-space and Chebyshev-system theorems |
-| Do finite samples match listed coefficients? | `finite-chebyshev-systems-v0` | exact evaluation-matrix times coefficient-vector replay plus checked bad-sample Farkas row | general interpolation and approximation theory |
-| Does a residual alternate on a finite grid? | `finite-chebyshev-systems-v0` | exact residual values, signs, common absolute error, and checked bad-uniform-error Farkas row | minimax and alternation theorems |
+| Is a finite interpolation grid unisolvent? | `finite-chebyshev-systems-v0` | exact Vandermonde matrix and determinant replay, replay-only bad-grid rejection, and separate checked `qf-lra-bad-duplicate-node-grid` row | Haar-space and Chebyshev-system theorems |
+| Do finite samples match listed coefficients? | `finite-chebyshev-systems-v0` | exact evaluation-matrix times coefficient-vector replay, replay-only bad-sample rejection, and separate checked `qf-lra-bad-interpolation-sample` row | general interpolation and approximation theory |
+| Does a residual alternate on a finite grid? | `finite-chebyshev-systems-v0` | exact residual values, signs, common absolute error, replay-only bad-error rejection, and separate checked `qf-lra-bad-alternating-residual` row | minimax and alternation theorems |
 | Do spectral or characteristic-polynomial rows share the same route? | `spectral-linear-algebra-v0`, `matrix-invariants-v0` | exact matrix arithmetic plus checked Farkas rows for bad Rayleigh-quotient, eigenpair, or characteristic-polynomial claims | spectral theorem and general Cayley-Hamilton claims |
 
 ## Checkable Shapes
@@ -97,8 +97,8 @@ actual determinant = 0
 claimed determinant = 1
 ```
 
-That final determinant conflict is checked by the same exact-rational Farkas
-route after replay exposes the bad claim.
+That final determinant conflict is checked by the separate
+`qf-lra-bad-duplicate-node-grid` row after replay exposes the bad claim.
 
 The bad interpolation-sample row uses the ordinary coefficient replay:
 
@@ -108,8 +108,8 @@ p(1) = 4
 false claim: p(1) = 5
 ```
 
-After finite replay computes `4`, the final sample-value conflict is another
-checked QF_LRA/Farkas row.
+After finite replay computes `4`, the final sample-value conflict is the
+separate `qf-lra-bad-interpolation-sample` row.
 
 The alternation row is also finite:
 
@@ -130,7 +130,7 @@ false claim: uniform_error = 2/3
 ```
 
 After finite replay computes `1/2`, the final uniform-error conflict is checked
-as a QF_LRA/Farkas row.
+by the separate `qf-lra-bad-alternating-residual` row.
 
 ## Use The Lessons
 
@@ -146,8 +146,8 @@ bad projection-orthogonality evidence.
 
 Then read [Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md)
 for Vandermonde unisolvence, interpolation values, alternating residuals, and
-checked duplicate-node, bad interpolation-sample, and bad alternation-magnitude
-rejection.
+replay-only duplicate-node, bad interpolation-sample, and bad
+alternation-magnitude rejection with separate checked QF_LRA/Farkas rows.
 
 Use [Matrix Computation Index](matrix-computation-index.md) when you want the
 surrounding matrix-resource cluster: residuals, projections, eigenpairs,

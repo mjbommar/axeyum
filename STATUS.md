@@ -234,6 +234,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Chebyshev-system Farkas rows split landed.**
+  `finite-chebyshev-systems-v0` now keeps
+  `bad-duplicate-node-grid-rejected`, `bad-interpolation-sample-rejected`, and
+  `bad-alternating-residual-rejected` as exact finite replay rows: they
+  recompute determinant `0`, `p(1)=4`, and common residual error `1/2` before
+  rejecting the malformed fixed claims. The checked proof-object paths are now
+  the explicit `qf-lra-bad-duplicate-node-grid`,
+  `qf-lra-bad-interpolation-sample`, and
+  `qf-lra-bad-alternating-residual` rows linked to the QF_LRA/Farkas artifacts
+  and regressions. Focused validation passes; the public summary now reports
+  120 concept rows, 108 packs, 674 expected checks, 322 checked rows, 281
+  replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite operator Farkas rows split landed.**
   `finite-operator-v0` now keeps `bad-l1-sum-norm-rejected`,
   `bad-operator-bound-rejected`, and `bad-chebyshev-t3-rejected` as exact

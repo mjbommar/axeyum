@@ -9,10 +9,10 @@ The examples are:
 - a Vandermonde unisolvence witness for the basis `1, x, x^2`;
 - an interpolation replay from coefficients to sample values;
 - an alternating residual sign-pattern witness on three sample points;
-- checked rejection of a degenerate duplicate-node interpolation grid;
-- checked rejection of a false interpolation sample value;
-- checked rejection of a false alternating-residual uniform error;
-- a QF_LRA/Farkas proof-route artifact for the duplicate-node determinant
+- replay-only rejection of a degenerate duplicate-node interpolation grid;
+- replay-only rejection of a false interpolation sample value;
+- replay-only rejection of a false alternating-residual uniform error;
+- separate QF_LRA/Farkas proof-route rows for the duplicate-node determinant,
   bad interpolation-sample, and bad alternation-magnitude conflicts;
 - a general Chebyshev-space Lean-horizon row.
 
@@ -35,18 +35,22 @@ degenerate-grid null vectors. The bad-grid row is checked by showing the
 evaluation matrix has determinant zero and a nonzero coefficient vector that
 vanishes on all listed sample points.
 
-The duplicate-node row has a QF_LRA proof-route artifact:
+The malformed duplicate-node, interpolation-sample, and alternating-residual
+rows are replay-only source checks. Separate `qf-lra-*` rows own the
+proof-object path.
+
+The duplicate-node QF_LRA row uses:
 [`smt2/bad-duplicate-node-grid-farkas-conflict.smt2`](smt2/bad-duplicate-node-grid-farkas-conflict.smt2).
 It isolates the final false determinant claim as `determinant = 0` and
 `determinant = 1`; Axeyum emits `Evidence::UnsatFarkas`, and
 `Evidence::check` independently rechecks the certificate.
 
-The bad interpolation-sample row has the same route:
+The bad interpolation-sample QF_LRA row has the same route:
 [`smt2/bad-interpolation-sample-farkas-conflict.smt2`](smt2/bad-interpolation-sample-farkas-conflict.smt2).
 It follows exact coefficient replay for `p(1)=4` and rejects the final
 malformed claim `p(1)=5` with checked Farkas evidence.
 
-The bad alternating-residual row follows the finite residual replay
+The bad alternating-residual QF_LRA row follows the finite residual replay
 `1/2, -1/2, 1/2`, then checks the malformed uniform-error claim:
 [`smt2/bad-alternating-residual-farkas-conflict.smt2`](smt2/bad-alternating-residual-farkas-conflict.smt2).
 It isolates the final exact-linear conflict `uniform_error = 1/2` and

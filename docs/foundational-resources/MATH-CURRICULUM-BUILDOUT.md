@@ -962,8 +962,9 @@ and bad projection-orthogonality claim, and a general
 inner-product/Hilbert-space Lean-horizon row.
 `artifacts/examples/math/finite-chebyshev-systems-v0/` now validates exact
 finite Vandermonde unisolvence, interpolation matrix replay, alternating
-residual sign patterns, checked QF_LRA/Farkas rejection of duplicate-node
-determinant and bad interpolation-sample conflicts, and a general
+residual sign patterns, replay-only rejection of duplicate-node, false
+interpolation-sample, and false alternation-magnitude source rows, separate
+checked QF_LRA/Farkas rows for the final exact-linear conflicts, and a general
 Chebyshev-system Lean-horizon row.
 `artifacts/examples/math/complex-algebraic-v0/` now validates exact complex
 arithmetic, conjugate/norm replay, checked QF_LRA/Farkas rejection of bad
@@ -1152,8 +1153,9 @@ Recommended order:
 31. `finite-concentration-v0`: finite Markov, Chebyshev, and union-bound
     tail checks, plus rejection of a false concentration bound.
 32. `finite-chebyshev-systems-v0`: finite Vandermonde unisolvence,
-    interpolation replay, alternating residual signs, duplicate-node rejection,
-    and checked bad interpolation-sample rejection.
+    interpolation replay, alternating residual signs, replay-only
+    duplicate-node/bad-sample/bad-alternation rejection, and separate checked
+    QF_LRA/Farkas proof rows.
 33. `finite-root-finding-v0`: exact bisection/Newton iteration replay,
     residual-decrease checking, and checked QF_LRA/Farkas bad-step plus
     bad-width rejection, while convergence and floating-point stability remain
@@ -1799,9 +1801,9 @@ bad-proximal-point and bad box-proximal-point rejection with QF_LRA/Farkas
 evidence, and the general proximal-gradient convergence Lean horizon.
 `finite-chebyshev-systems-v0` now has a learner-facing end-to-end lesson for
 exact Vandermonde unisolvence, interpolation, alternating residual signs,
-checked duplicate-node-grid, bad interpolation-sample, and bad
-alternation-magnitude rejection with QF_LRA/Farkas evidence, and the
-Chebyshev/Haar/minimax Lean horizon.
+replay-only duplicate-node-grid, bad interpolation-sample, and bad
+alternation-magnitude rejection, separate checked QF_LRA/Farkas evidence rows,
+and the Chebyshev/Haar/minimax Lean horizon.
 `spectral-linear-algebra-v0` now has a learner-facing end-to-end lesson for
 exact eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotient
 checking, spectral decomposition reconstruction, checked bad-Rayleigh-quotient
@@ -2506,8 +2508,8 @@ from checked `qf-lra-*` Farkas evidence, plus inner-product, Chebyshev, spectral
 and characteristic-polynomial Farkas rows. The foundational-resource smoke check
 runs those same queries so finite-dimensional operator bounds, inner-product
 positivity and projection-orthogonality, finite Chebyshev-prefix conflicts,
-Chebyshev duplicate-node grids,
-interpolation/residual rows, alternation-magnitude refutations,
+Chebyshev duplicate-node grids, interpolation/residual rows,
+alternation-magnitude refutations, explicit Chebyshev `qf-lra-*` proof rows,
 spectral/eigenpair witnesses,
 characteristic-polynomial arithmetic, and
 dual-space rows remain visible through the public JSON boundary without

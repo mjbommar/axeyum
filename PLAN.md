@@ -252,9 +252,9 @@ The learner-facing rules/law trust-boundary page is
 [`docs/learn/rules-law-trust-boundary.md`](docs/learn/rules-law-trust-boundary.md);
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
-Current resource-buildout status (2026-07-01): the public JSON layer reports
-120 concept rows, 108 non-template packs, 671 expected checks (336 `sat`,
-264 `unsat`, 71 `not-run`), 322 checked rows, 278 replay-only rows, and 71
+Current resource-buildout status (2026-07-02): the public JSON layer reports
+120 concept rows, 108 non-template packs, 674 expected checks (336 `sat`,
+267 `unsat`, 71 `not-run`), 322 checked rows, 281 replay-only rows, and 71
 Lean-horizon rows. The rules/law JSON layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
@@ -942,7 +942,8 @@ emitted resource certificate and require the independent checker to reject it;
 the foundational resource dashboards now report **108 promoted solver-reuse
 packs**, **0 non-benchmark-horizon packs**, and **0 unclassified packs** after
 the latest finite-specialization-order bad `T0` QF_UF/Alethe promotion,
-the latest finite-Chebyshev bad alternation-magnitude QF_LRA/Farkas promotion,
+the latest finite-Chebyshev split into replay rows plus explicit `qf-lra-*`
+Farkas rows,
 the latest finite-circle-geometry bad line-intersection QF_LRA/Farkas promotion,
 the latest finite-cyclic-geometry bad Ptolemy QF_LRA/Farkas promotion,
 the latest finite-inversion-geometry bad inverse-distance-product QF_LRA/Farkas promotion,

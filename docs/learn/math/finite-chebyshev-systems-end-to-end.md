@@ -2,8 +2,9 @@
 
 This lesson follows one exact finite Chebyshev-system resource from
 Vandermonde unisolvence replay to interpolation, alternating residual signs,
-checked duplicate-node rejection, checked bad interpolation-sample rejection,
-and checked bad alternation-magnitude rejection. It uses the
+replay-only duplicate-node, bad interpolation-sample, and bad alternation
+rejections, plus separate checked QF_LRA/Farkas rows for the final exact-linear
+conflicts. It uses the
 [finite-chebyshev-systems-v0](../../../artifacts/examples/math/finite-chebyshev-systems-v0/)
 pack.
 
@@ -24,15 +25,18 @@ Concept rows:
 | `vandermonde-unisolvence-witness` | `sat` | replay-only |
 | `interpolation-polynomial-witness` | `sat` | replay-only |
 | `alternating-residual-witness` | `sat` | replay-only |
-| `bad-duplicate-node-grid-rejected` | `unsat` | checked |
-| `bad-interpolation-sample-rejected` | `unsat` | checked |
-| `bad-alternating-residual-rejected` | `unsat` | checked |
+| `bad-duplicate-node-grid-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-duplicate-node-grid` | `unsat` | checked |
+| `bad-interpolation-sample-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-interpolation-sample` | `unsat` | checked |
+| `bad-alternating-residual-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-alternating-residual` | `unsat` | checked |
 | `general-chebyshev-system-lean-horizon` | `not-run` | lean-horizon |
 
 The positive rows replay finite exact-rational matrix and polynomial
-calculations. The negative rows are checked refutations of a false unisolvence
-claim, a false interpolation sample, and a false alternation uniform-error
-claim, with promoted QF_LRA/Farkas routes for the final exact-linear conflicts.
+calculations. The malformed negative rows are replay-only source checks; the
+explicit `qf-lra-*` rows are checked refutations of a false unisolvence claim,
+a false interpolation sample, and a false alternation uniform-error claim.
 General Chebyshev-system and minimax theorems remain Lean-horizon.
 
 ## Replay Vandermonde Unisolvence
@@ -82,7 +86,7 @@ p(1)  = 4
 This gives the learner a concrete path from polynomial coefficients to a finite
 sample table.
 
-The checked bad interpolation row reuses the same coefficient replay but claims
+The bad interpolation row reuses the same coefficient replay but claims
 the last sample is `5`:
 
 ```text
@@ -90,9 +94,9 @@ p(1) = 4
 false claim: p(1) = 5
 ```
 
-The pack validator handles the coefficient replay; the QF_LRA/Farkas artifact
-then keeps the final sample-value conflict small enough for independent
-certificate checking.
+The pack validator handles the coefficient replay; the separate
+`qf-lra-bad-interpolation-sample` row keeps the final sample-value conflict
+small enough for independent certificate checking.
 
 ## Replay Alternating Residual Signs
 
@@ -115,14 +119,14 @@ The signs alternate `+, -, +`, and every absolute value is `1/2`. This is a
 finite alternation-style witness, not a proof of the full minimax alternation
 theorem.
 
-The checked bad alternation row keeps the same residual table but claims:
+The bad alternation row keeps the same residual table but claims:
 
 ```text
 uniform_error = 2/3
 ```
 
 Exact replay recomputes the common absolute value as `1/2`, and the promoted
-solver-facing slice checks the final rational contradiction:
+`qf-lra-bad-alternating-residual` row checks the final rational contradiction:
 
 ```text
 uniform_error = 1/2
@@ -162,10 +166,11 @@ q(x) = x - x^2
 q(0), q(0), q(1) = 0, 0, 0
 ```
 
-So the grid cannot determine every quadratic polynomial uniquely, and the bad
-unisolvence claim is checked `unsat`.
+So the grid cannot determine every quadratic polynomial uniquely, and replay
+rejects the bad unisolvence claim.
 
-The promoted solver-facing slice isolates the final determinant contradiction:
+The promoted `qf-lra-bad-duplicate-node-grid` row isolates the final determinant
+contradiction:
 
 ```text
 determinant = 0

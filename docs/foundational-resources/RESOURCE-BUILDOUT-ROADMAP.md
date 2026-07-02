@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 671 expected checks.
+- 674 expected checks.
 - 322 checked proof/evidence rows.
-- 278 replay-only rows.
+- 281 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -688,9 +688,10 @@ Build next:
   rows tied to their source QF_LRA/Farkas artifacts; keep
   `finite-proximal-gradient-v0`'s bad proximal
   point, bad composite-decrease, and bad box-proximal-point rows tied to their source QF_LRA/Farkas artifacts; keep
-  `finite-chebyshev-systems-v0`'s duplicate-node, bad interpolation-sample,
-  and bad alternation-magnitude rows tied to their source QF_LRA/Farkas
-  artifacts; and keep general
+  `finite-chebyshev-systems-v0`'s explicit duplicate-node,
+  bad interpolation-sample, and bad alternation-magnitude `qf-lra-*` rows tied
+  to their source QF_LRA/Farkas artifacts while the malformed source rows remain
+  exact replay; and keep general
   convergence, Cauchy completeness, monotone convergence, closed-form
   recurrence solving, root existence, Newton/bisection convergence, separation
   theorems, KKT sufficiency, active-set method theory, SDP duality,

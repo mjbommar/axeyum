@@ -76,8 +76,8 @@
       "id": "bad-duplicate-node-grid-rejected",
       "claim": "The duplicate-node grid is unisolvent for quadratic polynomials.",
       "expected_result": "unsat",
-      "validation": "finite_bad_chebyshev_grid_refutation",
-      "proof_status": "checked",
+      "validation": "finite_bad_chebyshev_grid_replay",
+      "proof_status": "replay-only",
       "data": {
         "points": ["0", "0", "1"],
         "basis_degree": 2,
@@ -89,19 +89,33 @@
         "claimed_determinant": "1",
         "actual_determinant": "0",
         "null_coefficients": ["0", "1", "-1"],
-        "zero_values": ["0", "0", "0"],
+        "zero_values": ["0", "0", "0"]
+      },
+      "notes": "Exact replay rejects the grid because the determinant is zero and x - x^2 vanishes on all listed sample points. The separate qf-lra-bad-duplicate-node-grid row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-duplicate-node-grid",
+      "claim": "The fixed malformed duplicate-node determinant claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_finite_chebyshev_bad_duplicate_node_grid_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-duplicate-node-grid-rejected",
+        "actual_determinant": "0",
+        "claimed_determinant": "1",
+        "farkas_conflict": "determinant = 0 and determinant = 1",
         "smt2_artifact": "artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-duplicate-node-grid-farkas-conflict.smt2",
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_duplicate_node_grid_emits_checked_farkas",
-        "certificate": "produce_lra_evidence emits Evidence::UnsatFarkas checked by Evidence::check for the duplicate-node determinant contradiction determinant = 0 and determinant = 1"
+        "certificate": "The resource regression constructs the source QF_LRA conflict, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "The validator rejects the grid because the determinant is zero and x - x^2 vanishes on all listed sample points. The SMT-LIB artifact isolates the false determinant claim as a QF_LRA contradiction, and Axeyum emits checked Farkas evidence."
+      "notes": "The Axeyum regression refutes determinant = 0 together with determinant = 1 using rechecked Farkas evidence."
     },
     {
       "id": "bad-interpolation-sample-rejected",
       "claim": "The listed quadratic interpolation polynomial has value 5 at x = 1.",
       "expected_result": "unsat",
-      "validation": "finite_bad_chebyshev_interpolation_refutation",
-      "proof_status": "checked",
+      "validation": "finite_bad_chebyshev_interpolation_replay",
+      "proof_status": "replay-only",
       "data": {
         "points": ["-1", "0", "1"],
         "basis_degree": 2,
@@ -109,31 +123,59 @@
         "evaluation_point": "1",
         "evaluation_row": ["1", "1", "1"],
         "actual_value": "4",
+        "claimed_value": "5"
+      },
+      "notes": "Exact replay recomputes p(1)=4 for p(x)=2 - x + 3*x^2. The separate qf-lra-bad-interpolation-sample row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-interpolation-sample",
+      "claim": "The fixed malformed finite Chebyshev interpolation sample claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_finite_chebyshev_bad_interpolation_sample_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-interpolation-sample-rejected",
+        "actual_value": "4",
         "claimed_value": "5",
+        "farkas_conflict": "sample_value = 4 and sample_value = 5",
         "smt2_artifact": "artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-interpolation-sample-farkas-conflict.smt2",
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_bad_interpolation_sample_artifact_emits_checked_farkas",
-        "certificate": "produce_lra_evidence emits Evidence::UnsatFarkas checked by Evidence::check for the replayed interpolation conflict p(1) = 4 and p(1) = 5"
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "The validator recomputes p(1)=4 for p(x)=2 - x + 3*x^2. The SMT-LIB artifact isolates the final false sample-value claim as a QF_LRA contradiction, and Axeyum emits checked Farkas evidence."
+      "notes": "The Axeyum regression refutes the final sample-value equality conflict using rechecked Farkas evidence."
     },
     {
       "id": "bad-alternating-residual-rejected",
       "claim": "The listed alternating residual table has uniform error 2/3.",
       "expected_result": "unsat",
-      "validation": "finite_bad_chebyshev_alternation_refutation",
-      "proof_status": "checked",
+      "validation": "finite_bad_chebyshev_alternation_replay",
+      "proof_status": "replay-only",
       "data": {
         "points": ["-1", "0", "1"],
         "residual_polynomial": ["-1/2", "0", "1"],
         "residual_values": ["1/2", "-1/2", "1/2"],
         "signs": [1, -1, 1],
         "actual_uniform_error": "1/2",
+        "claimed_uniform_error": "2/3"
+      },
+      "notes": "Exact replay recomputes residual values 1/2,-1/2,1/2 and common magnitude 1/2. The separate qf-lra-bad-alternating-residual row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-alternating-residual",
+      "claim": "The fixed malformed finite Chebyshev alternation uniform-error claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_finite_chebyshev_bad_alternating_residual_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-alternating-residual-rejected",
+        "actual_uniform_error": "1/2",
         "claimed_uniform_error": "2/3",
+        "farkas_conflict": "uniform_error = 1/2 and uniform_error = 2/3",
         "smt2_artifact": "artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-alternating-residual-farkas-conflict.smt2",
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_chebyshev_bad_alternating_residual_artifact_emits_checked_farkas",
-        "certificate": "produce_lra_evidence emits Evidence::UnsatFarkas checked by Evidence::check for the replayed alternation conflict uniform_error = 1/2 and uniform_error = 2/3"
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "The validator recomputes residual values 1/2,-1/2,1/2 and common magnitude 1/2. The SMT-LIB artifact isolates the final false uniform-error claim as a QF_LRA contradiction, and Axeyum emits checked Farkas evidence."
+      "notes": "The Axeyum regression refutes the final uniform-error equality conflict using rechecked Farkas evidence."
     },
     {
       "id": "general-chebyshev-system-lean-horizon",

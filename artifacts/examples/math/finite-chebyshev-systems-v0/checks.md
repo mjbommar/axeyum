@@ -26,11 +26,18 @@ absolute magnitude.
 
 Expected result: `unsat`.
 
-The validator rejects the claimed unisolvence because the duplicate-node
+The validator replays and rejects the claimed unisolvence because the duplicate-node
 evaluation matrix has determinant zero and a listed nonzero coefficient vector
 vanishes on every listed sample point.
 
-The promoted QF_LRA route isolates the determinant conflict:
+This row is replay-only; the separate `qf-lra-bad-duplicate-node-grid` row owns
+the proof-object refutation.
+
+## `qf-lra-bad-duplicate-node-grid`
+
+Expected result: `unsat`.
+
+The promoted QF_LRA route isolates the replayed determinant conflict:
 
 ```text
 determinant = 0
@@ -57,6 +64,13 @@ The malformed row claims:
 p(1) = 5
 ```
 
+This row is replay-only; the separate `qf-lra-bad-interpolation-sample` row owns
+the proof-object refutation.
+
+## `qf-lra-bad-interpolation-sample`
+
+Expected result: `unsat`.
+
 The promoted QF_LRA route takes the replayed sample value and checks the final
 exact-rational conflict with `UnsatFarkas` evidence.
 
@@ -77,6 +91,13 @@ The malformed row claims:
 ```text
 uniform_error = 2/3
 ```
+
+This row is replay-only; the separate `qf-lra-bad-alternating-residual` row owns
+the proof-object refutation.
+
+## `qf-lra-bad-alternating-residual`
+
+Expected result: `unsat`.
 
 The promoted QF_LRA route takes the replayed common magnitude and checks the
 final exact-rational conflict with `UnsatFarkas` evidence.

@@ -135,8 +135,8 @@ convexity slice checks midpoint Jensen replay, finite-grid second differences,
 affine threshold monotonicity, and bad midpoint-convexity plus affine-threshold
 rejections over exact rational data. The finite
 Chebyshev-system slice checks Vandermonde unisolvence, interpolation replay,
-alternating residual signs, duplicate-node rejection, and a checked bad
-interpolation sample plus a checked bad alternation-magnitude claim over exact
+alternating residual signs, replay-only duplicate-node, bad interpolation, and
+bad alternation rejections, plus separate checked QF_LRA/Farkas rows over exact
 rational sample grids. The finite-operator slice also checks a bad
 Chebyshev-prefix value after exact recurrence replay computes `T3(1/2) = -1`.
 The incidence-geometry slice checks line equations and
@@ -576,8 +576,9 @@ It recomputes determinant `2`, checks interpolation values for
 rejects the false interpolation sample claim `p(1)=5` after replay computes
 `p(1)=4`. It also checks the residual table `1/2, -1/2, 1/2` and rejects a
 malformed uniform-error claim `2/3` after replay computes `1/2`. The bad-grid,
-bad-sample, and bad-alternation rows route their final exact-linear conflicts
-through checked QF_LRA/Farkas evidence.
+bad-sample, and bad-alternation rows are replay-only; separate `qf-lra-*` rows
+route their final exact-linear conflicts through checked QF_LRA/Farkas
+evidence.
 
 Run the checks from the repository root:
 

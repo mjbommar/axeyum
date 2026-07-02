@@ -61,9 +61,12 @@ Concept rows:
 | `vandermonde-unisolvence-witness` | `sat` | replay-only |
 | `interpolation-polynomial-witness` | `sat` | replay-only |
 | `alternating-residual-witness` | `sat` | replay-only |
-| `bad-duplicate-node-grid-rejected` | `unsat` | checked |
-| `bad-interpolation-sample-rejected` | `unsat` | checked |
-| `bad-max-error-bound-rejected` | `unsat` | checked |
+| `bad-duplicate-node-grid-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-duplicate-node-grid` | `unsat` | checked |
+| `bad-interpolation-sample-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-interpolation-sample` | `unsat` | checked |
+| `bad-alternating-residual-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-alternating-residual` | `unsat` | checked |
 | `spectral-decomposition-witness` | `sat` | replay-only |
 
 These are bounded finite traces and finite-dimensional algebra checks, not
@@ -161,11 +164,11 @@ r(-1), r(0), r(1) = 1/2, -1/2, 1/2
 ```
 
 It also rejects a duplicate-node grid by recomputing determinant `0` and a
-nonzero null vector, then checks the final false determinant-`1` claim through
-QF_LRA/Farkas evidence. The same pack rejects a false interpolation sample by
-replaying `p(1)=4` and checking the malformed `p(1)=5` claim through the same
-Farkas route, and rejects a false alternation uniform-error claim by replaying
-common residual magnitude `1/2` before checking the malformed `2/3` claim.
+nonzero null vector, rejects a false interpolation sample by replaying
+`p(1)=4`, and rejects a false alternation uniform-error claim by replaying
+common residual magnitude `1/2`. Separate `qf-lra-*` rows then check the final
+false determinant-`1`, sample-value-`5`, and uniform-error-`2/3` conflicts
+through QF_LRA/Farkas evidence.
 
 For the Markov-chain row, it checks exact stochastic evolution:
 

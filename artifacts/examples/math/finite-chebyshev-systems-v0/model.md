@@ -38,8 +38,8 @@ p(1) = 4
 
 The bad interpolation-sample row keeps the same coefficients but claims
 `p(1) = 5`. The pack validator checks the coefficient sum
-`2 + (-1) + 3 = 4`; the solver-facing QF_LRA artifact then rejects the false
-sample value `5` with checked Farkas evidence.
+`2 + (-1) + 3 = 4`; the separate solver-facing QF_LRA row then rejects the
+false sample value `5` with checked Farkas evidence.
 
 ## Alternating Residual
 
@@ -59,7 +59,7 @@ The checker verifies nonzero alternating signs and common magnitude `1/2`.
 
 The bad alternating-residual row keeps this same table but claims uniform error
 `2/3`. The validator recomputes the residual values, signs, and common
-magnitude, then the solver-facing QF_LRA artifact rejects:
+magnitude, then the separate solver-facing QF_LRA row rejects:
 
 ```text
 uniform_error = 1/2
@@ -76,7 +76,7 @@ all listed sample points.
 
 The finite replay computes the degenerate determinant, null vector,
 interpolation value, and alternation magnitude. The solver-facing artifacts
-then check small exact-rational conflicts such as:
+are separate checked rows that then check small exact-rational conflicts such as:
 
 ```text
 determinant = 0

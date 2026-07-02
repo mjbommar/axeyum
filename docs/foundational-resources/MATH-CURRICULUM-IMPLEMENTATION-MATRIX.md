@@ -353,10 +353,11 @@ Build sequence:
     `artifacts/examples/math/modular-arithmetic-v0/smt2/fermat-units-mod5-bitblast-conflict.smt2`,
     both checked by the shared QF_BV/DRAT route regression.
     `finite-chebyshev-systems-v0` now links
-    `bad-duplicate-node-grid-rejected` and
-    `bad-interpolation-sample-rejected` plus
-    `bad-alternating-residual-rejected` to source-level QF_LRA/Farkas
-    artifacts, checked by the `math_resource_lra_routes` regression.
+    `qf-lra-bad-duplicate-node-grid`,
+    `qf-lra-bad-interpolation-sample`, and
+    `qf-lra-bad-alternating-residual` to source-level QF_LRA/Farkas artifacts,
+    checked by the `math_resource_lra_routes` regression while the malformed
+    source rows remain exact replay.
     `finite-stochastic-kernels-v0` now links `qf-lra-bad-kernel-row` to
     `artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-kernel-row-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
