@@ -6,6 +6,9 @@ checked bad midpoint-convexity and affine-threshold rejection. It uses the
 [convexity-rational-v0](../../../artifacts/examples/math/convexity-rational-v0/)
 pack.
 
+For the focused finite-versus-theorem boundary, read
+[Convexity Theorem Boundary](convexity-theorem-boundary.md).
+
 Concept rows:
 
 - `curriculum_reals`, `curriculum_rationals`, and

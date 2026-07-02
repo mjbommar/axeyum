@@ -650,7 +650,8 @@ and [Calculus Theorem Boundary](calculus-theorem-boundary.md).
 For exact LP feasibility and Farkas threshold evidence, read
 [End To End: Linear Optimization](linear-optimization-end-to-end.md).
 For exact finite convexity and KKT replay, read
-[End To End: Rational Convexity](convexity-rational-end-to-end.md) and
+[End To End: Rational Convexity](convexity-rational-end-to-end.md),
+[Convexity Theorem Boundary](convexity-theorem-boundary.md), and
 [End To End: Finite KKT Checks](finite-kkt-end-to-end.md). For exact finite
 active-set QP, gradient descent, line search, projected gradient, and proximal gradient, read
 [End To End: Finite Active-Set QP Checks](finite-active-set-qp-end-to-end.md),

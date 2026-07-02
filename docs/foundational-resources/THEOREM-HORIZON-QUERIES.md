@@ -184,6 +184,19 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Convexity, Jensen, separation, duality, and convex-optimization horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text convex-analysis \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack convexity-rational-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Calculus differentiability, integration, FTC, multivariable, and manifold
 horizons:
 

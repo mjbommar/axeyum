@@ -749,7 +749,13 @@ Build sequence:
     evidence to the missing differentiability, MVT, integrability, FTC,
     inverse/implicit-function, change-of-variables, and manifold-calculus
     theorem routes, with pack-specific checked-row and horizon-frontier queries.
-73. Revisit crate/repo boundaries only after three real consumers or repeated
+73. Landed: add the convexity theorem-boundary page.
+    `convexity-theorem-boundary.md` maps exact midpoint/Jensen replay, finite
+    second-difference checks, affine-threshold replay, and checked QF_LRA/Farkas
+    bad-row evidence to the missing Jensen, convexity-equivalence, separation,
+    duality, KKT/SDP, first-order optimality, nonsmooth, and convergence theorem
+    routes, with pack-specific checked-row and horizon-frontier queries.
+74. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

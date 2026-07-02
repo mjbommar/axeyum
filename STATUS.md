@@ -234,6 +234,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Convexity theorem-boundary resource landed.**
+  `convexity-theorem-boundary.md` now separates `convexity-rational-v0` exact
+  midpoint Jensen replay, finite second-difference checks, affine-threshold
+  replay, and checked bad midpoint/bad threshold QF_LRA/Farkas rows from
+  Jensen, convexity-equivalence, separation, duality, KKT/SDP, first-order
+  optimality, nonsmooth, and convergence theorem claims. The theorem-horizon,
+  optimization/convexity, learner-map, and smoke-query docs now expose the
+  convexity boundary through pack-specific checked-row and horizon-frontier
+  queries.
 - **Calculus theorem-boundary resource landed.**
   `calculus-theorem-boundary.md` now separates
   `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, and

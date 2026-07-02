@@ -736,6 +736,7 @@ replay, read
 [End To End: Linear Optimization](linear-optimization-end-to-end.md),
 [End To End: Farkas Certificate Anatomy](farkas-certificate-anatomy-end-to-end.md),
 [End To End: Rational Convexity](convexity-rational-end-to-end.md),
+[Convexity Theorem Boundary](convexity-theorem-boundary.md),
 [End To End: Matrix Invariants](matrix-invariants-end-to-end.md),
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md),
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md),

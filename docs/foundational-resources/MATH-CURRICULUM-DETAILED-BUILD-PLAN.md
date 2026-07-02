@@ -2224,6 +2224,15 @@ Pick one row per commit unless the change is purely navigational.
      theorem layers, and adds pack-specific checked-row and horizon-frontier
      queries to the public smoke gate without promoting finite polynomial rows
      into theorem coverage.
+261. Landed: add `convexity-theorem-boundary.md` as the focused finite/general
+     convex-analysis theorem-boundary page for `convexity-rational-v0`. It
+     maps exact midpoint Jensen replay, finite second-difference checks,
+     affine-threshold replay, and scoped QF_LRA/Farkas bad midpoint/bad
+     threshold evidence to the missing Jensen, convexity-equivalence,
+     separation, duality, KKT/SDP, first-order optimality, nonsmooth, and
+     convergence theorem layers, and adds pack-specific checked-row and
+     horizon-frontier queries to the public smoke gate without promoting finite
+     rational samples into theorem coverage.
 
 ## Validation Checklist
 

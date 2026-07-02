@@ -54,6 +54,10 @@ Companion maps:
   matrices, rank-mixture probabilities, checked bad trace-square and
   expected-rank Farkas evidence, and
   random-matrix asymptotic horizons.
+- [Convexity Theorem Boundary](convexity-theorem-boundary.md):
+  separates finite midpoint/Jensen, second-difference, affine-threshold, and
+  checked bad convexity rows from Jensen, convexity, separation, duality, and
+  convergence theorem targets.
 - [Random Variable Theorem Boundary](random-variable-theorem-boundary.md):
   separates finite total-function, pushforward, expectation, independence,
   and checked bad-row replay from measurable-random-variable, distribution-law,
@@ -557,6 +561,9 @@ Companion maps:
   midpoint Jensen replay, finite second differences, affine threshold
   monotonicity, checked bad midpoint-convexity and affine-threshold
   rejections, and the convex-analysis Lean horizon.
+- [Convexity Theorem Boundary](convexity-theorem-boundary.md): maps those
+  finite convexity shadows to the missing Jensen, convexity-equivalence,
+  separation, duality, and convergence theorem routes.
 - [Rational Inner Product Spaces](inner-product-spaces-end-to-end.md):
   follows exact Gram-matrix replay, fixed Cauchy-Schwarz, orthogonal
   projection, Gram-Schmidt, and QF_LRA/Farkas bad-inner-product plus

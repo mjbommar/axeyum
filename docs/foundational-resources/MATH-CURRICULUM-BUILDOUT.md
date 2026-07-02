@@ -1827,6 +1827,9 @@ midpoint Jensen replay, finite second-difference checks, affine threshold
 monotonicity, checked bad midpoint-convexity and affine-threshold rejections,
 and the general
 convex-analysis Lean horizon.
+The focused `convexity-theorem-boundary.md` learner page now maps those finite
+midpoint/grid/threshold rows to the missing Jensen, convexity-equivalence,
+separation, duality, and convergence theorem layers.
 `finite-kkt-v0` now has a learner-facing end-to-end lesson for exact
 constrained-quadratic grid replay, KKT stationarity and complementary
 slackness, checked bad-stationarity and bad-complementarity rejection with
@@ -2739,7 +2742,8 @@ asymptotic algorithm claims in the proof-horizon lane.
 The optimization/convexity consumer layer now also has
 [`OPTIMIZATION-CONVEXITY-QUERIES.md`](OPTIMIZATION-CONVEXITY-QUERIES.md). The
 guide and resource smoke expose LP objective/Farkas rows, rational convexity
-shadows, projection/residual rows, exact-vs-floating boundary rows, and
+shadows, convex-analysis horizon rows, projection/residual rows,
+exact-vs-floating boundary rows, and
 pack-specific KKT, active-set QP, SDP, gradient-descent, Armijo/Wolfe
 line-search, projected-gradient, and proximal-gradient rows through
 concept-scoped or pack-scoped Farkas queries, making finite optimization

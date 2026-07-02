@@ -29,6 +29,9 @@ resources, read
 For the focused calculus boundary over finite derivative, finite Riemann-sum,
 gradient, Jacobian, Hessian, and malformed-row shadows, read
 [Calculus Theorem Boundary](../learn/math/calculus-theorem-boundary.md).
+For the focused convex-analysis boundary over finite midpoint, grid,
+threshold, and malformed-row shadows, read
+[Convexity Theorem Boundary](../learn/math/convexity-theorem-boundary.md).
 
 ## Query Shape
 
@@ -78,6 +81,7 @@ needs concrete checked rows to display.
 | Derivative identities and integration horizons | `bridge_derivative_identity_shadow`; `bridge_integration_horizon` | `Farkas`; Lean horizon | `concepts --field real_analysis --text "Derivative Identity"`; `concepts --field real_analysis --text "Integration Horizon"` |
 | Metric balls and bounded epsilon-delta rows | `bridge_metric_ball`; `bridge_bounded_epsilon_delta_shadow` | `Farkas` | `checks --concept bridge_bounded_epsilon_delta_shadow --route Farkas --proof-status checked` |
 | Algebraic derivative, Riemann-sum, and multivariable calculus shadows | packs `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, `multivariable-calculus-rational-v0` | `Farkas`; Lean horizon | `checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked`; `checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked`; `horizon-frontier --text calculus` |
+| Exact finite convexity and convex-analysis horizons | pack `convexity-rational-v0`; concept `bridge_rational_convexity_shadow` | `Farkas`; Lean horizon | `checks --pack convexity-rational-v0 --route Farkas --proof-status checked`; `horizon-frontier --text convex-analysis` |
 | Polynomial coefficients, factors, roots, and coefficient windows | `bridge_polynomial_coefficient_factor_replay` | `Diophantine`; `Farkas` | `checks --concept bridge_polynomial_coefficient_factor_replay --route Diophantine --proof-status checked`; `checks --concept bridge_polynomial_coefficient_factor_replay --route Farkas --proof-status checked` |
 | Root-finding and Newton-step rows | pack `finite-root-finding-v0`; concept `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --pack finite-root-finding-v0 --route Farkas --proof-status checked` |
 | Finite dynamics, recurrence, and Euler replay | `bridge_finite_dynamics_euler_replay` | `Farkas` | `checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked` |
@@ -194,6 +198,16 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py horizon-frontier \
   --text calculus \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack convexity-rational-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text convex-analysis \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \

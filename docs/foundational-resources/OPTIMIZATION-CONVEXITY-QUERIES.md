@@ -13,12 +13,14 @@ Which checked optimization packs match this finite method family and proof route
 ```
 
 The current optimization surface is finite and exact-rational: LP objective
-thresholds, convexity shadows, finite separation, KKT stationarity and
-complementarity, active-set QP face/slack and degenerate-bound replay, tiny SDP
+thresholds, convexity shadows, convex-analysis theorem boundaries, finite
+separation, KKT stationarity and complementarity, active-set QP face/slack and
+degenerate-bound replay, tiny SDP
 objective/slack/gap replay, gradient-descent steps, Armijo/Wolfe line-search
-rows, projected-gradient interval/decrease replay, proximal-gradient soft-threshold and
-composite-decrease plus box-plus-L1 replay, least-squares rows, residual bounds, and projection
-witnesses. General duality, KKT sufficiency, SDP strong duality, method
+rows, projected-gradient interval/decrease replay, proximal-gradient
+soft-threshold and composite-decrease plus box-plus-L1 replay, least-squares
+rows, residual bounds, and projection witnesses. General duality, KKT
+sufficiency, SDP strong duality, method
 convergence, stability, and floating-point performance claims remain in the
 proof-horizon or numerical-honesty lanes.
 
@@ -58,6 +60,7 @@ needs concrete checked rows to display.
 | LP objective thresholds and Farkas anatomy | `bridge_lp_objective_farkas` | `Farkas` | `checks --concept bridge_lp_objective_farkas --route Farkas --proof-status checked` |
 | Convexity, separation, KKT, QP, SDP, and finite first-order method shadows | `bridge_rational_convexity_shadow` | `Farkas` | `checks --concept bridge_rational_convexity_shadow --route Farkas --proof-status checked` |
 | Affine-threshold convexity display row | pack `convexity-rational-v0`, text `threshold` | `Farkas` | `checks --pack convexity-rational-v0 --route Farkas --proof-status checked --text threshold` |
+| Convex-analysis theorem boundary | pack `convexity-rational-v0` or text `convex-analysis` | `Lean horizon` | `horizon-frontier --pack convexity-rational-v0`; `horizon-frontier --text convex-analysis` |
 | Inner-product projection and least-squares optimality rows | `bridge_inner_product_projection` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked` |
 | Residual bounds and regression/numerical optimization rows | `bridge_residual_bound` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked` |
 | Exact arithmetic and numerical-honesty rows | `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked` |
@@ -139,6 +142,23 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --text threshold \
+  --require-any
+```
+
+Display the convex-analysis theorem boundary:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack convexity-rational-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text convex-analysis \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack convexity-rational-v0 \
+  --proof-status lean-horizon \
   --require-any
 ```
 
@@ -321,6 +341,8 @@ family.
 
 They do not prove:
 
+- Jensen inequalities, midpoint-convexity equivalences, or global convexity
+  criteria;
 - LP or convex-program strong duality;
 - KKT sufficiency or active-set method correctness;
 - SDP strong duality or semidefinite optimization theory;

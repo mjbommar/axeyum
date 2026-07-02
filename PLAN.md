@@ -186,9 +186,9 @@ vector-space/duality/module/tensor structure, finite random-variable,
 recurrence/asymptotic, stochastic-kernel, and
 martingale/stopping theory, root-finding convergence/stability, and
 calculus differentiability/integrability/FTC/multivariable theory,
-complex-analysis/factorization theory, hyperplane-separation/duality, KKT
-sufficiency, active-set method theory, and SDP duality/Slater-condition
-theory, and gradient-descent convergence/rate
+complex-analysis/factorization theory, convexity/Jensen theorem boundaries,
+hyperplane-separation/duality, KKT sufficiency, active-set method theory, SDP
+duality/Slater-condition theory, and gradient-descent convergence/rate
 theory, line-search termination/convergence theory, Wolfe-line-search
 existence/convergence theory, and projected-gradient projection/convergence
 theory, proximal-gradient proximal-map/convergence theory, max-flow/min-cut
