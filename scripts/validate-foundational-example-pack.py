@@ -22767,6 +22767,10 @@ def validate_finite_integration(expected: dict[str, Any]) -> None:
     bad = checks["bad-expectation-rejected"]
     if bad["expected_result"] != "unsat":
         fail("bad-expectation-rejected must expect unsat")
+    if bad["proof_status"] != "replay-only":
+        fail("bad-expectation-rejected must be replay-only")
+    if bad["validation"] != "finite_bad_expectation_replay":
+        fail("bad-expectation-rejected must use finite_bad_expectation_replay validation")
     data = bad.get("data", {})
     atoms = require_probability_atoms("bad expectation atoms", data.get("atoms"), require_events=False)
     require_normalized_atoms("bad-expectation-rejected", atoms)
@@ -22779,11 +22783,41 @@ def validate_finite_integration(expected: dict[str, Any]) -> None:
         fail("bad-expectation-rejected actual_integral is incorrect")
     if claimed == actual:
         fail("bad-expectation-rejected claimed integral unexpectedly matches actual")
-    require_string("bad expectation smt2_artifact", data.get("smt2_artifact"))
-    check_source("bad expectation smt2_artifact", data["smt2_artifact"])
-    require_string("bad expectation farkas_regression", data.get("farkas_regression"))
-    if "finite_integration_bad_expectation_emits_checked_farkas" not in data["farkas_regression"]:
-        fail("bad-expectation-rejected must link the Farkas regression")
+    notes = bad.get("notes", "")
+    if "separate qf-lra-bad-expectation" not in notes:
+        fail("bad-expectation-rejected notes must name the separate qf-lra-bad-expectation row")
+
+    qf_lra_bad = checks["qf-lra-bad-expectation"]
+    if qf_lra_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-expectation must expect unsat")
+    if qf_lra_bad["proof_status"] != "checked":
+        fail("qf-lra-bad-expectation must be checked")
+    if qf_lra_bad["validation"] != "qf_lra_bad_expectation_refutation":
+        fail("qf-lra-bad-expectation must use qf_lra_bad_expectation_refutation validation")
+    qf_data = qf_lra_bad.get("data", {})
+    if qf_data.get("source_witness") != "three-atom-simple-function":
+        fail("qf-lra-bad-expectation must cite three-atom-simple-function")
+    qf_actual = require_fraction("qf-lra bad expectation actual_integral", qf_data.get("actual_integral"))
+    qf_claimed = require_fraction("qf-lra bad expectation claimed_integral", qf_data.get("claimed_integral"))
+    if qf_actual != actual:
+        fail("qf-lra-bad-expectation actual_integral must match bad expectation replay")
+    if qf_claimed != claimed:
+        fail("qf-lra-bad-expectation claimed_integral must match bad expectation replay")
+    equation = qf_data.get("farkas_expectation_equation")
+    require_string("qf-lra bad expectation farkas_expectation_equation", equation)
+    if equation != "integral_value = actual_integral":
+        fail("qf-lra-bad-expectation must document the Farkas expectation equation")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad expectation smt2_artifact", smt2_artifact)
+    check_source("qf-lra bad expectation smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad expectation farkas_regression", regression)
+    if "finite_integration_bad_expectation_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-expectation must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad expectation certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-expectation certificate must document checked UnsatFarkas evidence")
 
     horizon = checks["lebesgue-integration-lean-horizon"]
     if horizon["expected_result"] != "not-run":

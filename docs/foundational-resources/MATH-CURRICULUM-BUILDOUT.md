@@ -901,9 +901,9 @@ normalized finite measure-table replay, subset monotonicity, union
 subadditivity, checked QF_LRA/Farkas rejection of bad subset-measure and
 union-subadditivity rows, and a convergence/countable-measure Lean-horizon row.
 `artifacts/examples/math/finite-integration-v0/` now validates exact finite
-simple-function integrals, indicator integrals, integral linearity, checked
-QF_LRA/Farkas rejection of a false expectation, and a Lebesgue-integration
-Lean-horizon row.
+simple-function integrals, indicator integrals, integral linearity, exact
+bad-expectation replay, a separate checked QF_LRA/Farkas rejection of the false
+expectation, and a Lebesgue-integration Lean-horizon row.
 `artifacts/examples/math/finite-product-measure-v0/` now validates exact
 finite product-measure tables, rectangle probabilities, left and right
 marginals, finite Fubini replay, checked QF_LRA/Farkas rejection of a false
@@ -1603,8 +1603,9 @@ finite algebraic-topology bridge: simplicial closure, oriented boundaries,
 `boundary^2 = 0`, fixed Betti-rank replay, bad-boundary rejection, a checked
 QF_LIA/Diophantine bad-coefficient row, and a homology Lean-horizon row.
 `finite-integration-v0` now adds the exact finite
-simple-function integral bridge and checked QF_LRA/Farkas bad-expectation row
-between finite measure, probability, and statistics.
+simple-function integral bridge, exact bad-expectation replay, and separate
+checked `qf-lra-bad-expectation` row between finite measure, probability, and
+statistics.
 `finite-product-measure-v0` now adds the exact finite product
 measure, marginalization, Fubini bridge, and checked QF_LRA/Farkas bad-product
 probability row toward general measure/probability theory.
@@ -1924,8 +1925,9 @@ finite simplicial-complex closure, oriented-boundary replay, `boundary^2 = 0`,
 Betti-rank replay over `Q`, checked bad-boundary rejection, a checked QF_LIA
 bad-coefficient certificate, and the homology Lean horizon.
 `finite-integration-v0` now has a learner-facing end-to-end lesson for finite
-simple-function integrals, indicator integrals, integral linearity, checked bad
-expectation rejection, and the Lebesgue-integration Lean horizon.
+simple-function integrals, indicator integrals, integral linearity, replayed
+bad expectation rejection, a separate checked `qf-lra-bad-expectation` row, and
+the Lebesgue-integration Lean horizon.
 `finite-product-measure-v0` now has a learner-facing end-to-end lesson for
 Cartesian-product probability tables, rectangle probabilities, marginals,
 finite Fubini replay, checked bad product-probability and bad marginal

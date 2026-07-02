@@ -1323,7 +1323,8 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/finite-random-variables-v0/smt2/bad-expectation-through-pushforward-farkas-conflict.smt2`
     are checked by `math_resource_lra_routes`.
 21. Landed: promote `finite-integration-v0` through a source-linked
-    QF_LRA/Farkas regression for `bad-expectation-rejected`. The artifact
+    QF_LRA/Farkas regression for `qf-lra-bad-expectation`, while
+    `bad-expectation-rejected` remains exact finite replay. The artifact
     `artifacts/examples/math/finite-integration-v0/smt2/bad-expectation-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_integration_bad_expectation_emits_checked_farkas`.

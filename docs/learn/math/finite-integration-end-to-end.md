@@ -19,7 +19,8 @@ Concept rows:
 | `simple-function-integral-witness` | `sat` | replay-only |
 | `indicator-integral-witness` | `sat` | replay-only |
 | `integral-linearity-witness` | `sat` | replay-only |
-| `bad-expectation-rejected` | `unsat` | checked |
+| `bad-expectation-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-expectation` | `unsat` | checked |
 | `lebesgue-integration-lean-horizon` | `not-run` | lean-horizon |
 
 Every checked row is exact finite rational arithmetic over a normalized atom
@@ -139,6 +140,17 @@ and rejects the claim because:
 The candidate expectation is untrusted; the small checker recomputes it from
 the atom table.
 
+The checked proof-object row then strips away the finite table and asks QF_LRA
+to refute only the final exact-linear conflict:
+
+```text
+integral_value = 5/2
+integral_value = 3
+```
+
+That is the source of
+[`bad-expectation-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-integration-v0/smt2/bad-expectation-farkas-conflict.smt2).
+
 ## Name The Lean Horizon
 
 The finite pack checks:
@@ -149,6 +161,7 @@ finite weighted sums
 indicator integrals
 finite integral linearity
 bad expectation refutations
+QF_LRA/Farkas final contradictions
 ```
 
 The following remain proof-assistant targets:
@@ -184,10 +197,12 @@ This lesson shows Axeyum's current finite integration resource pattern:
 ```text
 untrusted fast search -> expectation, event, linearity, or counterexample row
 trusted small checking -> exact rational finite sums
+checked proof object -> final QF_LRA/Farkas contradiction
 remaining horizon -> general measure-theoretic integration
 ```
 
 The graduation target is to encode finite simple-function integrals as exact
 rational weighted sums, replay finite expectation and linearity witnesses
-through Axeyum model evaluation, and emit checked counterexample evidence for
-rejected expectation claims.
+through Axeyum model evaluation, keep malformed replay separate from checked
+QF_LRA/Farkas rows, and emit checked counterexample evidence for rejected
+expectation claims.

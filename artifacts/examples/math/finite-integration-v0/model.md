@@ -51,3 +51,10 @@ integral (2*f - g) dP = 2*(5/2) - 2 = 3
 
 The false claim says `integral f dP = 3`. The checker rejects it because the
 exact weighted sum is `5/2`.
+
+The checked proof-object row then isolates the final linear contradiction:
+
+```text
+integral_value = 5/2
+integral_value = 3
+```

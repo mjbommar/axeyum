@@ -205,6 +205,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite integration expectation Farkas row split landed.**
+  `finite-integration-v0` now keeps `bad-expectation-rejected` as exact
+  finite replay: it recomputes the three-atom simple-function integral as
+  `5/2` while the malformed row claims `3`. The checked proof-object path is
+  now the explicit `qf-lra-bad-expectation` row linked to the existing
+  QF_LRA/Farkas SMT-LIB artifact and regression. Focused validation passes;
+  the public summary now reports 120 concept rows, 108 packs, 656 expected
+  checks, 322 checked rows, 263 replay-only rows, and 71 Lean-horizon rows.
+
 - **Descriptive statistics variance Farkas row split landed.**
   `descriptive-statistics-v0` now keeps `bad-variance-rejected` as exact
   finite-sample replay: it recomputes mean `5/2`, second moment `15/2`,
@@ -4637,10 +4646,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the exact finite simple-function bridge between finite measure,
   probability, and statistics. The pack validates exact rational
   simple-function integrals, indicator integrals, finite integral linearity,
-  checked rejection of a false expectation, and a Lebesgue-integration
-  Lean-horizon row. The foundational example-pack validator now checks finite
-  atom probabilities, exact weighted sums, event measures, linear combinations,
-  and bad-expectation counterexamples.
+  replay rejection of a false expectation, a checked QF_LRA/Farkas
+  bad-expectation row, and a Lebesgue-integration Lean-horizon row. The
+  foundational example-pack validator now checks finite atom probabilities,
+  exact weighted sums, event measures, linear combinations, and
+  bad-expectation counterexamples.
 
 - **Finite continuous-map foundations pack landed.** Added
   [`finite-continuous-maps-v0`](artifacts/examples/math/finite-continuous-maps-v0/README.md)

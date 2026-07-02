@@ -1341,7 +1341,7 @@ fn finite_integration_bad_expectation_emits_checked_farkas() {
     let false_claimed_integral = eq_ratio(&mut arena, integral_value, 3, 1);
 
     assert_farkas_checked(
-        "finite-integration-v0 bad-expectation-rejected",
+        "finite-integration-v0 qf-lra-bad-expectation",
         &arena,
         &[replay_computed_integral, false_claimed_integral],
     );

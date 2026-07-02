@@ -26,8 +26,21 @@ The validator recomputes `integral f`, `integral g`, the pointwise function
 Expected result: `unsat`.
 
 The validator rejects the claimed integral `3` because the exact finite
-weighted sum is `5/2`. The source-linked QF_LRA artifact records the final
-exact-linear contradiction checked by the shared Farkas route regression.
+weighted sum is `5/2`.
+
+Proof route: finite-model replay. This row checks the finite expectation
+computation; the separate `qf-lra-bad-expectation` row owns the proof-object
+refutation.
+
+## `qf-lra-bad-expectation`
+
+Expected result: `unsat`.
+
+The source artifact keeps the replay boundary explicit: it only asks QF_LRA to
+refute the fixed equalities `integral_value = 5/2` and `integral_value = 3`.
+
+Proof route: checked QF_LRA/Farkas evidence. The expectation computation is
+finite replay; the trusted certificate checks the final linear contradiction.
 
 ## `lebesgue-integration-lean-horizon`
 

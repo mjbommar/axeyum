@@ -227,8 +227,8 @@ First targets:
   bad union-subadditivity rows after exact finite-measure replay computes the
   subset/superset measures and union subadditivity bound)
 - [finite-integration-v0](../../artifacts/examples/math/finite-integration-v0/)
-  (resource-backed Farkas regression landed for the bad expectation row after
-  exact finite weighted-sum replay computes the integral)
+  (exact finite weighted-sum replay stays in `bad-expectation-rejected`; the
+  resource-backed Farkas regression now lives in `qf-lra-bad-expectation`)
 - [calculus-riemann-sum-v0](../../artifacts/examples/math/calculus-riemann-sum-v0/)
   (source-linked Farkas regression landed for the bad exact
   polynomial-integral row after antiderivative replay computes the integral)

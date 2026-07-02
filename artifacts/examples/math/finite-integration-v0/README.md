@@ -9,7 +9,8 @@ The examples are:
 - a simple-function integral witness;
 - an indicator-integral witness;
 - an integral-linearity witness;
-- checked rejection of a false expectation claim;
+- replay rejection of a false expectation claim;
+- a checked QF_LRA/Farkas contradiction for the false expectation claim;
 - a Lebesgue-integration Lean-horizon row.
 
 ## Concepts
@@ -26,13 +27,14 @@ The examples are:
 
 The validator checks normalized finite atom probabilities, recomputes
 `sum_x f(x) * P(x)`, recomputes event measures, and checks finite linearity of
-the integral. The false expectation row is also mirrored by a QF_LRA/Farkas
-regression over the replay-computed integral. All arithmetic is exact rational
-arithmetic.
+the integral. The false expectation replay row computes the actual value; the
+separate `qf-lra-bad-expectation` row owns the source QF_LRA/Farkas regression
+over the replay-computed integral. All arithmetic is exact rational arithmetic.
 
-This pack is checked finite evidence for the bad expectation row. It is not a
-proof of Lebesgue integration, monotone convergence, dominated convergence,
-Fubini/Tonelli, or almost-everywhere reasoning over arbitrary measure spaces.
+This pack is checked finite evidence plus a checked final linear contradiction
+for the bad expectation row. It is not a proof of Lebesgue integration,
+monotone convergence, dominated convergence, Fubini/Tonelli, or
+almost-everywhere reasoning over arbitrary measure spaces.
 
 Validation:
 

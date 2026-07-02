@@ -146,6 +146,7 @@ python3 scripts/query-foundational-resources.py checks --pack finite-measure-mon
 python3 scripts/query-foundational-resources.py checks --pack finite-measure-monotonicity-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-product-measure-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-integration-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-integration-v0 --route Farkas --proof-status checked --text qf-lra-bad-expectation --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-martingales-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-hitting-times-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field statistics --route Farkas --require-any >/dev/null

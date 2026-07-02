@@ -393,9 +393,10 @@ Build sequence:
     and `bad-expectation-through-pushforward-rejected` to
     `artifacts/examples/math/finite-random-variables-v0/smt2/bad-expectation-through-pushforward-farkas-conflict.smt2`,
     both checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
-23. `finite-integration-v0` now links `bad-expectation-rejected` to
+23. `finite-integration-v0` now links `qf-lra-bad-expectation` to
     `artifacts/examples/math/finite-integration-v0/smt2/bad-expectation-farkas-conflict.smt2`,
-    checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
+    checked by the `math_resource_lra_routes` QF_LRA/Farkas regression; the
+    original `bad-expectation-rejected` row remains exact finite replay.
 24. `finite-martingales-v0` now links `bad-stopped-expectation-rejected` to
     `artifacts/examples/math/finite-martingales-v0/smt2/bad-stopped-expectation-farkas-conflict.smt2`
     and `bad-martingale-rejected` to

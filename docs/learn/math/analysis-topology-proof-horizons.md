@@ -511,7 +511,8 @@ For a focused finite hitting-time trace, read
 For finite integration, encode a finite atom table and a rational-valued simple
 function. The `finite-integration-v0` validator recomputes weighted sums,
 indicator integrals, linearity, and a false expectation counterexample using
-exact rational arithmetic.
+exact rational arithmetic; the separate `qf-lra-bad-expectation` row checks the
+final exact-linear contradiction.
 
 For a finite product-measure shadow, encode two finite probability spaces and a
 Cartesian-product table:

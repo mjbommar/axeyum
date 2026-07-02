@@ -68,7 +68,8 @@ Concept rows:
 | `bad-product-measure-rejected` | `unsat` | checked |
 | `bad-product-marginal-rejected` | `unsat` | checked |
 | `simple-function-integral-witness` | `sat` | replay-only |
-| `bad-expectation-rejected` | `unsat` | checked |
+| `bad-expectation-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-expectation` | `unsat` | checked |
 
 Every check is exact finite replay over rational numbers.
 

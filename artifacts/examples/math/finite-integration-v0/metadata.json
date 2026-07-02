@@ -35,10 +35,10 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-integration-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite integration bad expectation QF_LRA/Farkas regression seed",
-    "pressure": "Malformed finite simple-function expectation row where exact replay computes integral 5/2 but the false row claims 3.",
+    "target": "finite integration separate bad expectation QF_LRA/Farkas regression seed",
+    "pressure": "Malformed finite simple-function expectation row where exact replay computes integral 5/2 while the separate QF_LRA row rejects the fixed malformed claim 3.",
     "evidence": [
-      "bad-expectation-rejected"
+      "qf-lra-bad-expectation"
     ],
     "next_step": "Promote additional simple-function, indicator, or finite-linearity rows only when they add distinct exact-linear solver pressure; keep Lebesgue integration and convergence theorems in the Lean-horizon lane."
   },
@@ -59,12 +59,13 @@
     "indicator-integral-witness",
     "integral-linearity-witness",
     "bad-expectation-rejected",
+    "qf-lra-bad-expectation",
     "lebesgue-integration-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite simple-function integrals as exact rational weighted sums.",
     "Replay finite expectation, indicator-integral, and linearity witnesses through Axeyum model evaluation.",
-    "Emit checked finite counterexample evidence for rejected expectation claims; the bad expectation row now has checked QF_LRA/Farkas evidence.",
+    "Keep malformed finite-expectation replay separate from checked QF_LRA/Farkas rows for isolated exact-linear contradictions.",
     "Keep Lebesgue integration, monotone convergence, dominated convergence, and almost-everywhere theorems marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

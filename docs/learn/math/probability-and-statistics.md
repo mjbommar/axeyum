@@ -225,7 +225,9 @@ integral f dP = 5/2
 ```
 
 The `finite-integration-v0` validator recomputes the simple-function integral,
-indicator integrals, linear combinations, and a bad expectation counterexample.
+indicator integrals, linear combinations, and a bad expectation counterexample;
+the separate `qf-lra-bad-expectation` row checks the final exact-linear
+contradiction.
 For product measures, the validator checks a fair coin crossed with a fair
 three-sided die:
 

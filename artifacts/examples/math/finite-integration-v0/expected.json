@@ -81,8 +81,8 @@
       "id": "bad-expectation-rejected",
       "claim": "The listed simple function has integral 3.",
       "expected_result": "unsat",
-      "validation": "finite_bad_expectation_refutation",
-      "proof_status": "checked",
+      "validation": "finite_bad_expectation_replay",
+      "proof_status": "replay-only",
       "data": {
         "atoms": [
           {"id": "low", "probability": "1/4"},
@@ -95,11 +95,26 @@
           "high": "4"
         },
         "claimed_integral": "3",
-        "actual_integral": "5/2",
-        "smt2_artifact": "artifacts/examples/math/finite-integration-v0/smt2/bad-expectation-farkas-conflict.smt2",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_integration_bad_expectation_emits_checked_farkas"
+        "actual_integral": "5/2"
       },
-      "notes": "The validator rejects the claim because the exact weighted sum is 5/2, not 3; after replay computes the integral, the Axeyum regression refutes integral_value = 5/2 and integral_value = 3 with rechecked Farkas evidence."
+      "notes": "The validator rejects the claim because the exact weighted sum is 5/2, not 3. The separate qf-lra-bad-expectation row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-expectation",
+      "claim": "The fixed malformed expectation claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_bad_expectation_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "three-atom-simple-function",
+        "actual_integral": "5/2",
+        "claimed_integral": "3",
+        "farkas_expectation_equation": "integral_value = actual_integral",
+        "smt2_artifact": "artifacts/examples/math/finite-integration-v0/smt2/bad-expectation-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_integration_bad_expectation_emits_checked_farkas",
+        "certificate": "The resource regression emits UnsatFarkas evidence for integral_value = 5/2 and integral_value = 3, then independently checks the certificate."
+      },
+      "notes": "The source SMT-LIB artifact isolates the final exact-linear contradiction after finite replay computes the expectation as 5/2."
     },
     {
       "id": "lebesgue-integration-lean-horizon",

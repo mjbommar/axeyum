@@ -434,8 +434,9 @@ Companion maps:
   rejection, exact bad-complement replay, and checked QF_LRA/Farkas
   complement-additivity evidence.
 - [Finite Integration](finite-integration-end-to-end.md): follows finite
-  simple-function integrals, indicator integrals, integral linearity, checked
-  bad-expectation rejection, and the Lebesgue-integration Lean horizon.
+  simple-function integrals, indicator integrals, integral linearity, replayed
+  bad-expectation rejection, a separate checked `qf-lra-bad-expectation` row,
+  and the Lebesgue-integration Lean horizon.
 - [Finite Product Measure](finite-product-measure-end-to-end.md): follows
   Cartesian-product probability tables, rectangle probabilities, marginals,
   finite Fubini replay, checked bad product-probability and bad marginal
