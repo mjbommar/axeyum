@@ -103,6 +103,9 @@ const FINITE_ROOT_FINDING_BAD_NEWTON_STEP: &str = include_str!(
 const FINITE_ROOT_FINDING_BAD_BISECTION_WIDTH: &str = include_str!(
     "../../../artifacts/examples/math/finite-root-finding-v0/smt2/bad-bisection-width-farkas-conflict.smt2"
 );
+const FINITE_FLOW_CUT_BAD_FLOW_VALUE_CUT_BOUND: &str = include_str!(
+    "../../../artifacts/examples/math/finite-flow-cut-v0/smt2/bad-flow-value-cut-bound-farkas-conflict.smt2"
+);
 const FINITE_SEPARATION_BAD_SEPARATOR: &str = include_str!(
     "../../../artifacts/examples/math/finite-separation-v0/smt2/bad-separator-farkas-conflict.smt2"
 );
@@ -825,6 +828,14 @@ fn finite_root_finding_bad_bisection_width_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-root-finding-v0 bad-bisection-width SMT-LIB artifact",
         FINITE_ROOT_FINDING_BAD_BISECTION_WIDTH,
+    );
+}
+
+#[test]
+fn finite_flow_cut_bad_flow_value_cut_bound_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-flow-cut-v0 qf-lra-bad-flow-value-cut-bound SMT-LIB artifact",
+        FINITE_FLOW_CUT_BAD_FLOW_VALUE_CUT_BOUND,
     );
 }
 

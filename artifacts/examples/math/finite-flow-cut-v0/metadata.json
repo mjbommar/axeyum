@@ -33,20 +33,19 @@
     "finite network flow replay",
     "finite cut certificates",
     "exact rational arithmetic",
+    "QF_LRA / Farkas",
+    "UnsatFarkas certificate",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-flow-cut-v0",
   "solver_reuse": {
-    "status": "non-benchmark-horizon",
-    "target": "finite network-flow replay and max-flow/min-cut theorem boundary",
-    "pressure": "Exact replay checks one feasible flow, one cut certificate, one capacity violation, and one cut-capacity upper-bound violation; no source solver artifact is committed yet, so this is not a solver regression or benchmark claim.",
+    "status": "promoted",
+    "target": "finite network-flow cut-bound QF_LRA/Farkas regression seed",
+    "pressure": "Exact replay checks one feasible flow and one cut certificate, then the source-linked QF_LRA artifact isolates the malformed value-4 flow claim as the impossible cut-bound obligation 4 <= 3.",
     "evidence": [
-      "feasible-flow-witness",
-      "flow-cut-optimality-witness",
-      "bad-capacity-bound-rejected",
-      "bad-flow-value-rejected"
+      "qf-lra-bad-flow-value-cut-bound"
     ],
-    "next_step": "Promote only after adding a source exact-arithmetic artifact and checked proof route for capacity, conservation, or cut-bound conflicts; keep the general max-flow/min-cut theorem in the Lean-horizon lane."
+    "next_step": "Promote additional flow rows only when they add distinct capacity, conservation, cut-bound, residual-network, or proof-reconstruction pressure; keep the general max-flow/min-cut theorem in the Lean-horizon lane."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -56,21 +55,25 @@
     "docs/curriculum/02-structures/counting.md",
     "docs/curriculum/03-destinations/linear-algebra.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
-    "docs/learn/math/finite-flow-cut-end-to-end.md"
+    "docs/learn/math/finite-flow-cut-end-to-end.md",
+    "artifacts/examples/math/finite-flow-cut-v0/smt2/bad-flow-value-cut-bound-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "feasible-flow-witness",
     "flow-cut-optimality-witness",
     "bad-capacity-bound-rejected",
     "bad-flow-value-rejected",
+    "qf-lra-bad-flow-value-cut-bound",
     "max-flow-min-cut-theorem-lean-horizon"
   ],
   "graduation_criteria": [
     "Replay finite directed capacities, flows, conservation equations, and source/sink balance over exact rationals.",
     "Replay finite cut partitions and cut capacities before using a cut as an optimality certificate.",
     "Reject malformed rows by recomputing the violating capacity bound or cut-capacity upper bound.",
-    "Add a source exact-arithmetic artifact and checked certificate route before promoting the pack as a solver regression.",
+    "Keep the promoted cut-bound row tied to a committed SMT-LIB artifact and checked QF_LRA/Farkas evidence.",
     "Keep arbitrary-network max-flow/min-cut, integrality, algorithm correctness, min-cost flow, and asymptotic complexity as Lean/theorem horizons until proof artifacts exist."
   ]
 }

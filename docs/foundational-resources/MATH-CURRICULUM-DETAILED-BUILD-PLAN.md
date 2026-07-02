@@ -1830,9 +1830,9 @@ Pick one row per commit unless the change is purely navigational.
      checks exact directed-flow feasibility, saturated cut-capacity optimality
      for one finite network, malformed capacity rejection, malformed
      flow-value rejection by a finite cut bound, and a max-flow/min-cut
-     Lean-horizon row. The pack is intentionally
-     `non-benchmark-horizon` until a source exact-arithmetic artifact and
-     checked proof route exist.
+     Lean-horizon row. It was intentionally introduced as
+     `non-benchmark-horizon`; a later promotion adds the source-linked
+     QF_LRA/Farkas cut-bound artifact.
 217. Landed: add `finite-shortest-path-v0` as a graph/discrete/optimization
      bridge pack. It checks exact directed weighted path replay, potential
      optimality-certificate replay, malformed path-length rejection, claimed
@@ -2299,6 +2299,15 @@ Pick one row per commit unless the change is purely navigational.
      and topological-invariance theorem layers, and adds pack-specific
      checked-row and horizon-frontier queries to the public smoke gate without
      promoting finite quotient arithmetic into theorem coverage.
+268. Landed: promote `finite-flow-cut-v0` with
+     `qf-lra-bad-flow-value-cut-bound` as the source-linked QF_LRA/Farkas row
+     for the finite cut-bound conflict. The new SMT-LIB artifact records
+     `cut_capacity = 3`, `claimed_flow_value = 4`, and
+     `claimed_flow_value <= cut_capacity`; the focused
+     `math_resource_lra_routes` regression requires checked `UnsatFarkas`
+     evidence. The finite flow/cut replay rows still own capacity,
+     conservation, and cut-capacity arithmetic, while solver reuse is promoted
+     only for the final exact-rational `4 <= 3` contradiction.
 
 ## Validation Checklist
 

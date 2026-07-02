@@ -2316,9 +2316,16 @@ Pick one item per commit unless the change is purely navigational.
      The pack replays one exact directed feasible flow, checks a saturated
      source-side cut certificate, rejects a malformed edge-capacity claim,
      rejects a claimed flow value above the finite cut capacity, and records
-     the general max-flow/min-cut theorem as Lean-horizon work. Its
-     `solver_reuse` disposition is deliberately `non-benchmark-horizon` until
-     a source exact-arithmetic artifact and checked proof route are committed.
+     the general max-flow/min-cut theorem as Lean-horizon work. It was
+     introduced as `non-benchmark-horizon`; a later promotion adds the
+     source-linked QF_LRA/Farkas cut-bound artifact.
+156. Landed: promote `finite-flow-cut-v0` with
+     `qf-lra-bad-flow-value-cut-bound` as the source-linked checked Farkas row
+     for the finite cut upper-bound conflict. The committed SMT-LIB artifact
+     isolates `cut_capacity = 3`, `claimed_flow_value = 4`, and
+     `claimed_flow_value <= cut_capacity`, while the theorem boundary keeps
+     arbitrary-network max-flow/min-cut and algorithm correctness in the
+     Lean-horizon lane.
 
 ## Validation Checklist
 

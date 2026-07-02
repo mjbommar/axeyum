@@ -39,6 +39,11 @@ python3 scripts/query-foundational-resources.py fields \
   --field graph_theory \
   --route LIA \
   --require-any
+
+python3 scripts/query-foundational-resources.py fields \
+  --field graph_theory \
+  --route Farkas \
+  --require-any
 ```
 
 Then drill into the shared graph bridge:
@@ -67,7 +72,7 @@ needs concrete checked rows to display.
 | Fixed-width graph-coloring encodings | `bridge_finite_graph_replay_obstruction` | `qf-bv` | `checks --concept bridge_finite_graph_replay_obstruction --route qf-bv --proof-status checked` |
 | BFS/DFS finite traversal cost counters | `bridge_finite_graph_replay_obstruction` | `LIA` | `checks --concept bridge_finite_graph_replay_obstruction --route LIA --proof-status checked` |
 | BFS/DFS runtime theorem boundary | pack `graph-search-runtime-v0` | `lean-horizon` | `horizon-frontier --text BFS`; `checks --pack graph-search-runtime-v0 --proof-status lean-horizon` |
-| Finite directed flow and cut certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay`; exact rational | `checks --pack finite-flow-cut-v0 --proof-status checked` |
+| Finite directed flow and cut certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay`; exact rational; `Farkas` | `checks --pack finite-flow-cut-v0 --proof-status checked`; `checks --pack finite-flow-cut-v0 --route Farkas --proof-status checked` |
 | Max-flow/min-cut theorem boundary | pack `finite-flow-cut-v0` | `lean-horizon` | `horizon-frontier --text "max-flow"`; `checks --pack finite-flow-cut-v0 --expected-result not-run --proof-status lean-horizon` |
 | Finite shortest-path certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay`; exact rational | `checks --pack finite-shortest-path-v0 --proof-status checked` |
 | Shortest-path theorem boundary | pack `finite-shortest-path-v0` | `lean-horizon` | `horizon-frontier --text shortest`; `checks --pack finite-shortest-path-v0 --expected-result not-run --proof-status lean-horizon` |
@@ -104,6 +109,16 @@ Display checked Boolean graph rows:
 python3 scripts/query-foundational-resources.py checks \
   --concept bridge_finite_graph_replay_obstruction \
   --route boolean \
+  --proof-status checked \
+  --require-any
+```
+
+Display checked exact-rational graph rows with Farkas evidence:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --field graph_theory \
+  --route Farkas \
   --proof-status checked \
   --require-any
 ```
@@ -505,6 +520,13 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-flow-cut-v0 \
   --proof-status checked \
   --text "value 4" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-flow-cut-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text qf-lra-bad-flow-value-cut-bound \
   --require-any
 ```
 

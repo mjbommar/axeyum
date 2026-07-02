@@ -62,12 +62,13 @@ They do not prove the general max-flow/min-cut theorem.
 | `flow-cut-optimality-witness` | `sat` | checked | The listed feasible flow saturates the `{s}` cut of capacity `3`, certifying this finite instance. |
 | `bad-capacity-bound-rejected` | `unsat` | checked | The malformed row sends `3` units across edge `s -> a`, whose capacity is `2`. |
 | `bad-flow-value-rejected` | `unsat` | checked | The malformed row claims feasible value `4`, but the listed cut has capacity `3`. |
+| `qf-lra-bad-flow-value-cut-bound` | `unsat` | checked | A QF_LRA/Farkas row checks the isolated cut-bound contradiction `4 <= 3`. |
 | `max-flow-min-cut-theorem-lean-horizon` | `not-run` | lean-horizon | The general theorem for arbitrary finite networks remains future proof-assistant work. |
 
-The checked rows are deterministic exact finite replay. The pack is currently a
-`non-benchmark-horizon` resource, not a promoted solver-regression route: no
-source SMT/CNF artifact or route-specific certificate has been committed for
-the malformed rows.
+The checked finite rows are deterministic exact replay. The promoted
+solver-regression row is deliberately narrower: source SMT-LIB records only the
+final cut-bound contradiction after replay computes `cut_capacity = 3` and the
+malformed claim asks for value `4`.
 
 ## What Is Not Proved Yet
 
@@ -116,6 +117,17 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Find the source-linked Farkas proof row:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-flow-cut-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text qf-lra-bad-flow-value-cut-bound \
+  --require-any
+```
+
 Drill into the checked finite capacity, cut, and value rows:
 
 ```sh
@@ -147,8 +159,8 @@ General flow/cut resources graduate only when they add:
 2. explicit hypotheses for finite directed graphs, nonnegative capacities,
    sources/sinks, feasible flows, cuts, and conservation;
 3. no-`sorry` proofs with an axiom audit;
-4. a source exact-arithmetic artifact plus checked certificate route before
-   promoting malformed flow rows as solver regressions;
+4. source exact-arithmetic artifacts plus checked certificate routes before
+   promoting additional malformed flow rows as solver regressions;
 5. display labels that keep finite replay, route certificates, theorem rows,
    and benchmark claims separate.
 
@@ -156,7 +168,7 @@ Until then, flow/cut rows remain bounded/computable resources:
 
 ```text
 untrusted fast search -> proposed flow, cut, or malformed capacity/value claim
-trusted small checking -> exact capacity, conservation, cut-capacity, and value replay
+trusted small checking -> exact replay plus checked Farkas evidence for the final cut-bound conflict
 theorem horizon       -> arbitrary-network max-flow/min-cut and algorithm correctness
 ```
 
@@ -166,9 +178,11 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-flow-cut-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_flow_cut_bad_flow_value_cut_bound_artifact_emits_checked_farkas
 python3 scripts/query-foundational-resources.py horizon-frontier --text "max-flow" --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-flow-cut-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-flow-cut-v0 --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-flow-cut-v0 --route Farkas --proof-status checked --text qf-lra-bad-flow-value-cut-bound --require-any
 ```
 
 Expected resource boundary: the finite pack validates, the

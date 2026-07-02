@@ -805,7 +805,13 @@ Build sequence:
     universal-coefficient, Ext/Tor, exact-sequence, chain-homotopy, and
     topological-invariance theorem routes, with pack-specific checked-row and
     horizon-frontier queries.
-80. Revisit crate/repo boundaries only after three real consumers or repeated
+80. Landed: promote the finite flow/cut cut-bound row.
+    `finite-flow-cut-v0` now has `qf-lra-bad-flow-value-cut-bound`, a
+    source-linked QF_LRA/Farkas artifact for the final exact-rational
+    contradiction `4 <= 3`. The finite replay rows still compute feasibility,
+    conservation, and cut capacity; only the isolated cut-bound conflict is
+    promoted as solver-reuse evidence.
+81. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

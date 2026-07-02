@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite flow/cut QF_LRA/Farkas promotion landed.**
+  `finite-flow-cut-v0` now has `qf-lra-bad-flow-value-cut-bound`, a
+  source-linked SMT-LIB artifact and focused `math_resource_lra_routes`
+  regression for the final finite cut-bound contradiction `4 <= 3`. Solver
+  reuse is promoted only for that checked `UnsatFarkas` row; the finite replay
+  rows still own capacity, conservation, and cut-capacity arithmetic, and the
+  arbitrary-network max-flow/min-cut theorem remains Lean-horizon work. The
+  public summary now reports 121 concept rows, 111 packs, 704 expected checks,
+  335 checked rows, 295 replay-only rows, 74 Lean-horizon rows, 109 promoted
+  solver-reuse packs, and 2 non-benchmark-horizon packs.
 - **Chain-complex torsion theorem-boundary resource landed.**
   `chain-complex-torsion-theorem-boundary.md` now separates
   `finite-chain-complex-torsion-v0` finite free abelian chain-complex replay,
@@ -762,8 +772,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `finite-flow-cut-v0` adds exact directed-flow feasibility replay, saturated
   cut-capacity optimality replay, malformed capacity rejection, malformed
   flow-value rejection by finite cut bound, and a max-flow/min-cut theorem
-  horizon. It is deliberately `non-benchmark-horizon` until a source
-  exact-arithmetic artifact and checked proof route exist.
+  horizon. It was introduced as `non-benchmark-horizon`; the later
+  `qf-lra-bad-flow-value-cut-bound` promotion adds the source exact-arithmetic
+  artifact and checked Farkas route for the final cut-bound conflict.
 
 - **Proof-upgrade curriculum/R5 filters landed.**
   `upgrade-frontier` now accepts `--curriculum-node` and `--solver-reuse`, so

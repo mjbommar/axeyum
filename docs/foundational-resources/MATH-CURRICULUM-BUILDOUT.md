@@ -857,7 +857,9 @@ and vertex-cut certificates, plus checked rejection of non-separating one-edge
 and one-vertex cuts.
 `artifacts/examples/math/finite-flow-cut-v0/` now validates exact directed-flow
 feasibility, cut-capacity optimality replay, checked rejection of malformed
-capacity and flow-value claims, and the max-flow/min-cut theorem horizon.
+capacity and flow-value claims, a source-linked QF_LRA/Farkas cut-bound
+conflict for the malformed value-4 claim, and the max-flow/min-cut theorem
+horizon.
 `artifacts/examples/math/finite-probability-v0/` now validates finite
 probability mass tables, conditional probability, Bayes posterior replay,
 finite independence replay, total variation replay, and checked QF_LRA/Farkas
@@ -3269,9 +3271,9 @@ obligations.
 The graph curriculum layer now also has `finite-flow-cut-v0`. It adds exact
 finite directed-flow feasibility replay, a saturated source-side cut
 certificate, checked rejection of malformed capacity and flow-value claims, and
-a Lean-horizon row for the general max-flow/min-cut theorem. The pack is
-deliberately marked `non-benchmark-horizon` until a source exact-arithmetic
-artifact and checked proof route are committed.
+a source-linked QF_LRA/Farkas cut-bound proof row for the final `4 <= 3`
+conflict. The pack is promoted as a narrow solver-reuse seed for that checked
+artifact while the general max-flow/min-cut theorem remains Lean-horizon work.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

@@ -43,6 +43,23 @@ Validation: `finite_bad_flow_value_cut_bound_refutation`.
 The validator recomputes the source-side cut capacity as `3`. A claimed
 feasible flow value `4` is therefore rejected by this finite cut upper bound.
 
+## `qf-lra-bad-flow-value-cut-bound`
+
+Expected: `unsat`.
+
+Validation: `qf_lra_farkas_evidence`.
+
+The source SMT-LIB artifact records the final scalar conflict:
+
+```text
+cut_capacity = 3
+claimed_flow_value = 4
+claimed_flow_value <= cut_capacity
+```
+
+Axeyum emits and independently checks `UnsatFarkas` evidence for that
+exact-rational contradiction.
+
 ## `max-flow-min-cut-theorem-lean-horizon`
 
 Expected: `not-run`.

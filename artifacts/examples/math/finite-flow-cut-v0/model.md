@@ -28,6 +28,8 @@ The malformed rows are deliberately small:
   `2`.
 - `bad-flow-value-rejected` claims a feasible flow value `4`, but the cut
   `{s}` has capacity `3`.
+- `qf-lra-bad-flow-value-cut-bound` keeps the same cut-capacity replay and
+  checks the final `4 <= 3` contradiction with source-linked Farkas evidence.
 
 The pack does not prove max-flow/min-cut for arbitrary finite networks,
 integrality, Ford-Fulkerson correctness, Edmonds-Karp complexity, or min-cost

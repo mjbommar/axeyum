@@ -8,8 +8,8 @@ theorem.
 
 - Learners connecting graph cuts, capacities, and linear constraints.
 - Proof contributors looking for the future theorem boundary.
-- Solver contributors looking for exact-rational flow/cut pressure that is not
-  yet promoted as a benchmark or regression.
+- Solver contributors looking for a source-linked exact-rational flow/cut
+  regression seed.
 
 ## Concept Links
 
@@ -28,13 +28,16 @@ theorem.
 - `bad-capacity-bound-rejected`: rejects a malformed edge flow `3 > 2`.
 - `bad-flow-value-rejected`: rejects a claimed flow value 4 using the finite
   cut-capacity upper bound 3.
+- `qf-lra-bad-flow-value-cut-bound`: checks the final scalar contradiction
+  `4 <= 3` through a committed SMT-LIB artifact and `UnsatFarkas` evidence.
 - `max-flow-min-cut-theorem-lean-horizon`: records the general theorem boundary.
 
 ## Trust Boundary
 
 The checker recomputes every arithmetic fact over exact rationals from the
 listed network. Search may propose the flow or cut; trusted checking is only
-capacity, conservation, cut-capacity, and equality/inequality replay.
+capacity, conservation, cut-capacity, equality/inequality replay, and the
+source-linked Farkas certificate for the promoted cut-bound conflict.
 
 ## Run
 
