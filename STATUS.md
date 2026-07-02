@@ -40,12 +40,17 @@ increments**:
   cross-width `prefixof`, long-forcing regex, symbolic over-bound `substr`, the
   lexicographic gap) was found and repaired — string fuzz DISAGREE=0 with an
   extended over-bound generator. Next: Phase B (word-level solver; the gate's
-  `unknown`s are its routing signal) + re-run the QF_S scoreboard (verdicts
-  changed; no decide-rate claim without the re-run).
+  `unknown`s are its routing signal). The scoreboard re-run landed
+  (`cf923084`): QF_S 48/134, QF_SEQ 26/33, QF_SLIA 11/50 — 23 prior `unsat`s
+  are honest `unknown`s, **two of them on declared-`sat` instances** (hidden
+  wrong verdicts, repaired). Next: recover the 21 declared-`unsat` downgrades
+  via regex Parikh intervals + `substr`-family facts + width widening
+  (ADR-0052 residual; in progress).
 - **Nonlinear (P2.5): there is NO new `axeyum-poly` crate** (ADR-0044 keeps the
   primitives in `axeyum-ir`); the FM→simplex keystone (P1.9) is complete, the
   Boolean case-split + sign-refutation landed, and **coprime-split CAD
-  projection landed (98719094): curated QF_NRA 13→20 decided**, DISAGREE=0 on
+  projection landed (98719094) and `/0` division witnesses followed
+  (`124e18aa`): committed curated QF_NRA 21/38 decided** (was 9/38), DISAGREE=0 on
   both z3 fuzzes. Next levers: the free-division `/0` witness route and
   threshold-1 monotonicity (`ones`).
 In parallel: Track 1 decide-rate + *committed* head-to-head PAR-2; Track 3
@@ -225,7 +230,8 @@ where Z3/cvc5 parity is actually won — not more bounded triage. All gains
 DISAGREE=0, fuzz-validated. *(Update 2026-07-01/02: two of the named engine
 levers have since landed — the **FM→simplex LRA core** (P1.9 complete,
 soundness-validated on 1199/1200 FM-blowup systems; large-corpus decide-rate
-payoff still unmeasured) and **CAD coprime-split projection** (QF_NRA 13→20
+payoff still unmeasured) and **CAD coprime-split projection + `/0` witnesses**
+(committed QF_NRA 9/38 → 21/38
 curated). The remaining engine list stands.)*
 
 **Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no
@@ -234,6 +240,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite DAG topological-order QF_LIA promotion landed.**
+  `finite-dag-topological-order-v0` now has
+  `qf-lia-bad-topological-edge-order`, a source-linked SMT-LIB artifact and
+  focused `math_resource_lia_routes` regression for the final finite
+  edge-order contradiction `2 < 1`. Solver reuse is promoted only for that
+  checked arithmetic-evidence row; the finite replay rows still own vertex
+  coverage, edge-position checking, and cycle-obstruction replay, and
+  topological-sort algorithm correctness remains Lean-horizon work. The public
+  summary now reports 121 concept rows, 111 packs, 706 expected checks, 337
+  checked rows, 295 replay-only rows, 74 Lean-horizon rows, and 111 promoted
+  solver-reuse packs, with no non-benchmark-horizon math pack remaining.
 - **Finite shortest-path QF_LRA/Farkas promotion landed.**
   `finite-shortest-path-v0` now has
   `qf-lra-bad-shorter-distance-potential-bound`, a source-linked SMT-LIB
@@ -241,10 +258,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   finite potential-bound contradiction `5 <= 4`. Solver reuse is promoted only
   for that checked `UnsatFarkas` row; the finite replay rows still own
   path-length, edge-relaxation, and potential-certificate arithmetic, and
-  arbitrary-graph shortest-path correctness remains Lean-horizon work. The
-  public summary now reports 121 concept rows, 111 packs, 705 expected checks,
-  336 checked rows, 295 replay-only rows, 74 Lean-horizon rows, 110 promoted
-  solver-reuse packs, and 1 non-benchmark-horizon pack.
+  arbitrary-graph shortest-path correctness remains Lean-horizon work. Current
+  public resource totals are recorded in the latest process-lane entry above.
 - **Finite flow/cut QF_LRA/Farkas promotion landed.**
   `finite-flow-cut-v0` now has `qf-lra-bad-flow-value-cut-bound`, a
   source-linked SMT-LIB artifact and focused `math_resource_lra_routes`
@@ -763,11 +778,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `finite-dag-topological-order-v0` adds finite DAG topological-order replay,
   independent-order witness replay, bad-order rejection by a concrete
   backward-edge position, cyclic-graph rejection by directed-cycle replay, and
-  a topological-sort theorem horizon. It is deliberately
-  `non-benchmark-horizon` until a source Boolean/LIA artifact and checked proof
-  route exist. The public summary now reports 121 concept rows, 111 packs, 703
-  expected checks, 334 checked rows, 295 replay-only rows, 74 Lean-horizon rows,
-  108 promoted solver-reuse packs, and 3 non-benchmark-horizon packs.
+  a topological-sort theorem horizon. It was introduced as
+  `non-benchmark-horizon`; the later
+  `qf-lia-bad-topological-edge-order` promotion adds the source LIA artifact
+  and checked arithmetic-evidence route for the final edge-order conflict.
 
 - **Finite shortest-path graph resource landed.**
   `finite-shortest-path-v0` adds exact directed weighted path replay,
@@ -15156,11 +15170,38 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-02** — **NRA `/0` division witnesses** (`124e18aa`): `Assignment`
+  carries a `real_div_zero` interpretation (numerator→quotient) the evaluator
+  consults at denominator 0; `check_with_nra` builds it from the elimination
+  triples (conflict ⇒ decline). Forced-div-by-zero promotes `unknown → sat`;
+  the nra fuzz caught a dropped-witness wrong-sat mid-development (preprocess/
+  dispatch_reduced now thread the witness — the gate earned its keep); both
+  fuzzes DISAGREE=0. **Committed baseline regenerated: QF_NRA 21/38 decided
+  (was 9/38)**, PAR-2 9.19→8.66; SCOREBOARD row refreshed (also absorbing the
+  coprime-split + sign-refutation gains that had been route-trace-only).
+- **2026-07-02** — **fifo_bc04 un-ignored** (`e67f218f`): root cause was
+  `f4575ea5`'s contextual-`ite` equality saturation running at every
+  read-congruence probe node (O(dag·ite²) — the FIFO row is small but
+  `ite`-dense). Verdict-safe saturation-work gate (probe only declines);
+  >600 s → 3.2 s; qfabv/carcara/array_elim suites confirm no certificate lost.
+- **2026-07-02** — **Strings re-measured under the ADR-0052 gate**
+  (`cf923084`): QF_S 59→48, QF_SLIA 15→11, QF_SEQ 26 unchanged; 23 prior
+  `unsat`s now honest `unknown`s, **two on declared-`sat` instances** (real
+  wrong verdicts the oracle path never compared — it skips unknowns). The
+  9-hour first re-run attempt exposed an exponential per-path skeleton walk in
+  the new blast (`f403991b`, memoized; divisions now measure in ~10 min).
+- **2026-07-02** — **CI plumbing**: the last red job was runner **disk
+  exhaustion** (`878dcffc`: drop test debuginfo + free ~30 GB of preinstalled
+  toolsets); then per-ref cancel-in-progress starved every conclusion under
+  the two-lane push cadence (`ed4a3f2c`→`5970e6b5`: queue-and-complete, keyed
+  by sha). PBLS scope test un-rotted (`377316a8`: Int is in-scope since
+  c093fa91; the decline probe moves to Real).
+
 - **2026-07-02** — **Evidence dispatch un-rotted + zero-trust Alethe outranks
   structural certs** (`459ffc41`): hoisted the `zero_trust_alethe_certificate`
   chain above the structural pre-solve hooks (size-gated at 2000 DAG nodes) —
   three shadowed Alethe-evidence tests green again; the stale integer-route
-  label updated; two honest `#[ignore]`s with tracked follow-ups
+  label updated; honest `#[ignore]`s with tracked follow-ups
   (uninterpreted-sort `ite` SAT → P1.4/P1.5 keystone; `fifo_bc04` perf
   regression). Evidence suite: 66/0/2-ignored in ~14 s.
 - **2026-07-02** — **Exponential evidence walk fixed** (`0bc133c2`):
@@ -15177,7 +15218,9 @@ plan is built and committed on the current branch:
 - **2026-07-01** — **NRA coprime-split CAD projection** (`98719094`): the
   measured dominant CAD decline was a shared-factor `Res ≡ 0`, not a cap;
   McCallum-style coprime splitting at every projection level. **Curated QF_NRA
-  13→20 decided** (sat 6→9, unsat 7→11), all matching declared `:status`;
+  13→20 decided by route-trace** (sat 6→9, unsat 7→11), all matching declared
+  `:status` (the committed-baseline confirmation landed later with `124e18aa`:
+  QF_NRA 21/38);
   `nra`+`nia` differential fuzzes DISAGREE=0.
 - **2026-07-01** — **P2.7 A.2 landed: the `len`↔LIA link + bounded-string
   `unsat` gate** (`50a9fb8b`, ADR-0052): `bv2nat`-linear→BV equivalence blast

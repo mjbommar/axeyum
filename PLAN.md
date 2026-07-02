@@ -80,8 +80,9 @@ Landed 2026-07-01/02: **P2.7 Phase A essentially complete** (A.1a/b sort+ops;
 length abstraction + the bounded-string `unsat` gate at every front door — the
 Gap-10 `str.len`-unsat marker decides, and a **measured pre-existing
 wrong-unsat class vs Z3 was repaired**); **P1.9 FM→simplex keystone complete**;
-**NRA coprime-split CAD projection** (curated QF_NRA 13→20, DISAGREE=0 on both
-fuzzes). Next levers: strings Phase B (word-level solver; the gate's `unknown`s
+**NRA coprime-split CAD projection** plus **first-class `/0` division
+witnesses** (`124e18aa`): the committed curated baseline now shows **QF_NRA
+21/38 decided** (was 9/38), DISAGREE=0. Next levers: strings Phase B (word-level solver; the gate's `unknown`s
 are its routing signal) + recovering the 21 gate-downgraded declared-unsat
 instances via richer length facts/width widening; NRA free-division `/0`
 witnesses and threshold-1 monotonicity.
@@ -96,7 +97,8 @@ primitives in `axeyum-ir`) and "Phase A" is mostly done — see the corrected
 [P2.5 current-state](docs/plan/track-2-theories/P2.5-nra/00-current-state.md).
 
 **Measured (2026-07-01/02, `check_auto` vs z3 4.13.3, curated corpus,
-DISAGREE=0): QF_NRA 20/37 (was 9/36), QF_NIA 20/28.** The 2026-06-30 route-trace
+DISAGREE=0): QF_NRA 21/38 (was 9/38; committed baseline `124e18aa`), QF_NIA
+20/28.** The 2026-06-30 route-trace
 finding (the CAD declines Boolean structure) was resolved by the landed
 case-split (`5ede57f4` — the earlier fuzz "failure" was a benign i128
 eval-overflow, not a wrong verdict), then sign/zero refutation (`f9e06baf`) and
@@ -116,9 +118,10 @@ grinding 8+ hours, stalling every full sweep since 2026-06-26; the `bv2nat`
 blast's skeleton scan `f403991b` — a 9-hour QF_S scoreboard hang); and five
 stale evidence reds that rotted behind the hang were un-rotted (`459ffc41`,
 `4ca37cee` — the zero-trust Alethe emitters again outrank the structural
-pre-solve certs, size-gated). Two honest `#[ignore]`s remain with tracked
-follow-ups (the uninterpreted-sort `ite` SAT row → the P1.4/P1.5 keystone;
-`fifo_bc04` perf → root-cause in progress). All landings keep DISAGREE=0,
+pre-solve certs, size-gated). `fifo_bc04` was root-caused (an O(dag·ite²)
+contextual-`ite` saturation from `f4575ea5`) and un-ignored (`e67f218f`,
+>600 s → 3.2 s); **one honest `#[ignore]` remains** (the uninterpreted-sort
+`ite` SAT row → the P1.4/P1.5 e-graph keystone). All landings keep DISAGREE=0,
 `unknown`-first, and the measured-scoreboard discipline.
 
 The per-track detail, exit criteria, and current frontier levers are in the
@@ -368,10 +371,10 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-02): the public JSON layer reports
-121 concept rows, 111 non-template packs, 705 expected checks (342 `sat`,
-289 `unsat`, 74 `not-run`), 336 checked rows, 295 replay-only rows, 74
-Lean-horizon rows, 110 promoted solver-reuse packs, and 1
-non-benchmark-horizon pack. The rules/law JSON layer now reports 7 packs, 1,037
+121 concept rows, 111 non-template packs, 706 expected checks (342 `sat`,
+290 `unsat`, 74 `not-run`), 337 checked rows, 295 replay-only rows, 74
+Lean-horizon rows, and 111 promoted solver-reuse packs. The rules/law JSON
+layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
 coverage audit records all 111 non-template packs as focused-lesson linked,
@@ -769,8 +772,8 @@ curriculum-pressure dashboards now expose conservative R0-R6 gate/next-gate
 columns and overlapping fragment-pressure buckets, making R4-to-R5 solver-reuse
 candidates and Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
 Lean-horizon demand visible without hand-maintained scans.
-The generated solver-reuse disposition audit now reports 110 promoted math
-packs, 1 non-benchmark-horizon pack, and 0 unclassified rows, so future
+The generated solver-reuse disposition audit now reports 111 promoted math
+packs, 0 non-benchmark-horizon packs, and 0 unclassified rows, so future
 unclassified packs and deliberate non-benchmark rows surface in a
 freshness-checked queue.
 The generated curriculum-status audit now separates source `curriculum_status`
@@ -1109,8 +1112,9 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **110 promoted solver-reuse
-packs**, **1 non-benchmark-horizon pack**, and **0 unclassified packs** after
+the foundational resource dashboards now report **111 promoted solver-reuse
+packs**, **0 non-benchmark-horizon packs**, and **0 unclassified packs** after
+the latest finite-DAG topological bad edge-order QF_LIA promotion,
 the latest finite-shortest-path bad potential-bound QF_LRA/Farkas promotion,
 the latest finite-flow-cut bad cut-bound QF_LRA/Farkas promotion,
 the latest finite-specialization-order bad `T0` QF_UF/Alethe promotion,
