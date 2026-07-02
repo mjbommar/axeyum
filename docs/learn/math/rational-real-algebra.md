@@ -222,6 +222,10 @@ claim `normal . outside <= 1` after exact replay computes
 separate `qf-lra-*` rows route those final exact-linear conflicts through
 checked QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Hyperplane Separation](finite-separation-end-to-end.md).
+For the theorem boundary that keeps those finite hull and separator rows
+separate from convex separation, Farkas-duality, Hahn-Banach, SDP-duality, and
+optimization theorem claims, read
+[Hyperplane Separation Theorem Boundary](hyperplane-separation-theorem-boundary.md).
 
 For a finite KKT check, encode one constrained quadratic:
 

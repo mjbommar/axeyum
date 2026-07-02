@@ -2247,6 +2247,10 @@ source rows as replay-only rows after exact convex-hull replay computes point
 `(1/3,1/3)`, x-coordinate error `1/6`, outside score `4`, and score excess
 `3`; separate checked `qf-lra-*` rows route the fixed scalar contradictions
 through the same Farkas evidence path.
+It also has a focused hyperplane-separation theorem-boundary page that keeps
+finite convex-hull, separator, supporting-face, and checked bad-row Farkas
+evidence separate from convex separation, Farkas-duality, Hahn-Banach,
+cone/SDP duality, and optimization theorem claims.
 `finite-kkt-v0` now routes its bad stationarity and bad complementarity rows
 through the same checked Farkas evidence path after exact KKT replay computes
 stationarity residual `-1`, stationarity error `1`, complementary-slackness
@@ -2667,6 +2671,14 @@ bad-Newton-step and bad-bisection-width QF_LRA/Farkas rows are linked to
 copyable queries and graduation criteria while keeping root-existence,
 uniqueness, convergence, rate, error-bound, and floating-point-stability
 claims in theorem/numerical-honesty lanes.
+The learner/planning layer now also has
+[`hyperplane-separation-theorem-boundary.md`](../learn/math/hyperplane-separation-theorem-boundary.md),
+which expands the finite separation row into a concrete boundary ledger:
+convex-combination replay, separating-hyperplane score replay, supporting-face
+replay, and bad convex-combination/bad separator QF_LRA/Farkas rows are linked
+to copyable queries and graduation criteria while keeping convex separation,
+Farkas-duality, Hahn-Banach, cone/SDP duality, and optimization theorem claims
+in Lean/theorem-horizon lanes.
 The learner/planning layer now also has
 [`real-completeness-theorem-boundary.md`](../learn/math/real-completeness-theorem-boundary.md),
 which expands the real-completeness row into a concrete dependency ledger:

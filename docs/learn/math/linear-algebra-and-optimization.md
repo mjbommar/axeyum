@@ -92,7 +92,9 @@ residual-decrease checking, replay-only bad Newton-step and bad bisection-width
 source rows, and separate checked `qf-lra-*` Farkas proof rows. The finite-separation slice adds exact convex-hull membership,
 separating-hyperplane score replay, supporting-face checking, replay-only bad
 convex-combination and bad-separator source rows, and separate checked
-`qf-lra-*` Farkas proof rows. The finite-KKT slice adds exact
+`qf-lra-*` Farkas proof rows; its theorem boundary is
+[Hyperplane Separation Theorem Boundary](hyperplane-separation-theorem-boundary.md).
+The finite-KKT slice adds exact
 constrained-quadratic grid replay, stationarity replay, complementary-slackness
 checking, and a checked QF_LRA/Farkas bad-stationarity certificate. The finite
 active-set QP slice adds exact active-face replay, inactive-constraint slack

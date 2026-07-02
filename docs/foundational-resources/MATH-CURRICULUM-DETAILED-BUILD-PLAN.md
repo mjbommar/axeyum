@@ -1931,6 +1931,15 @@ Pick one row per commit unless the change is purely navigational.
      floating-point stability theorem routes, and adds root-finding-specific
      horizon queries to the public smoke gate without adding a duplicate pack
      or changing resource counts.
+230. Landed: add `hyperplane-separation-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-separation-v0`. It maps exact
+     convex-combination replay, separating-hyperplane score replay,
+     supporting-face replay, replay-only bad convex-combination and bad
+     separator rows, and checked QF_LRA/Farkas bad-row proof rows to the
+     missing convex separation, Farkas-duality, Hahn-Banach, cone/SDP duality,
+     KKT sufficiency, and optimization theorem routes, and adds
+     separation-specific horizon queries to the public smoke gate without
+     adding a duplicate pack or changing resource counts.
 
 ## Validation Checklist
 

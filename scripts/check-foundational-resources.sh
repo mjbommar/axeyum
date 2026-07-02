@@ -440,6 +440,8 @@ python3 scripts/query-foundational-resources.py checks --pack convexity-rational
 python3 scripts/query-foundational-resources.py checks --pack finite-separation-v0 --route Farkas --proof-status checked --text qf-lra-bad-convex-combination-point --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-separation-v0 --route Farkas --proof-status checked --text qf-lra-bad-separator --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-separation-v0 --proof-status replay-only --text rejected --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text separation --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-separation-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked --require-any >/dev/null
