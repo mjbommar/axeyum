@@ -115,6 +115,68 @@ declines)** > CAD-gate widening > mixed-int routing > monotonicity pre-check.
 NIA at 71% is closer; its residual is the UNSAT side → [Phase E](07-phaseE-nia.md)
 incremental linearization over UFLIA.
 
+#### Re-measured 2026-07-01 (CAD-gate widening: coprime-split in the projection)
+
+Re-run of `explain_corpus` on the QF_NRA `cvc5-regress-clean` set (4 s cap, via
+`scripts/mem-run.sh`): **decided 13 → 20** (`sat` 6 → 9, `unsat` 7 → 11, `unknown`
+24 → 17; the parse-error is unchanged). **DISAGREE = 0** — every one of the seven
+newly-decided instances matches its declared `set-info :status`:
+
+| Instance | verdict | declared |
+|---|---|---|
+| `issue3003` | sat | sat |
+| `mult-po` | sat | sat |
+| `solve-eq-small-qf-nra` | sat | sat |
+| `coeff-unsat-base` | unsat | unsat |
+| `red-exp` | unsat | unsat |
+| `simple-mono` | unsat | unsat |
+| `zero-subset` | unsat | unsat |
+
+> The 13-baseline is the current HEAD re-measurement (the earlier "12" was at
+> `f9e06baf`; the sign-refutation and other work since moved it to 13). `13 → 20`
+> is the measured delta of *this* change alone.
+
+**What the route trace actually showed (measured, not assumed).** Instrumenting the
+CAD *component* decider (`decide_component` / `project_strict` in
+`crates/axeyum-solver/src/nra_real_root.rs`) revealed that the dominant decline on
+these instances was **not** a degree / variable-count / product-count cap. On every
+one of `simple-mono`, `mult-po`, `coeff-unsat-base`, `ones`, `zero-subset` the
+projection declined with `pairwise Res ≡ 0 (shared factor)`: two constraint
+polynomials share a common factor in the elimination variable (e.g.
+`xz − yz = z·(x − y)`, `a² − 3ab = a·(a − 3b)`), so their Sylvester resultant
+vanishes identically, which the delineability-preserving projection conservatively
+declined. Raising `MAX_MULTI_SYLVESTER_DIM` / the cell budget would move **none** of
+these; the blocker is a *coprimality* gap, not a size cap.
+
+**The fix — coprime-split (McCallum-style irreducible-factor projection).** Before
+each projection level the decomposition polynomials are refined so no distinct pair
+couples by exact divisibility: whenever a non-constant `a` exactly divides a distinct
+`b`, `b` is replaced by the cofactor `b / a` (fixpoint, bounded by
+`MAX_COPRIME_SPLIT_ITERS`). This is a *verdict-invariant* refinement — the union of
+zero sets `Z(b) = Z(a) ∪ Z(b/a)` is unchanged, so the cell arrangement is identical,
+and each atom is still evaluated on its **original** polynomial at every rational
+sample. It only removes the shared factor that makes `Res ≡ 0`, letting the existing
+decision-complete CAD proceed. New pure-Rust helpers: `multipoly_exact_divide`
+(exact multivariate division under the admissible grlex leading-term order),
+`coprime_split`, and `mono_key_cmp_grlex`; applied in `project_strict` (covers both
+the strict and non-strict N-var recursions) and in the four component deciders
+(`decide_strict_cad_nvar`, `decide_nonstrict_cad_nvar`, `decide_strict_cad_two_var`,
+`decide_nonstrict_cad_two_var`).
+
+**Soundness held.** `sat` still requires a replay-checked rational witness; `unsat`
+is still the exhaustive cell/CAD coverage over the (unchanged) arrangement. Verified:
+`nra_differential_fuzz` + `nia_differential_fuzz` (z3-gated) **DISAGREE = 0**; lib
+640/640; nra integration suites green; 7 new unit tests (grlex admissibility, exact
+division recovering the monotone-product cofactor, non-factor rejection, split
+idempotence, and a `simple-mono`-style all-strict 3-var `unsat`).
+
+**Residual on this corpus (still declining).** `ones` (`b·c·d < 1` with `b,c,d ≥ 1`)
+no longer hits `Res ≡ 0`, but the 4-var **degree-4** non-strict decomposition still
+declines deeper in the CAD — it needs the *threshold-1 monotonicity* argument the doc
+already flags as low marginal yield. The remaining `unknown`s are the many-product
+`{real,int}` `metitarski-*` / `poly-1025` / `nt-lemmas-bad` cases (FM budget / mixed
+int-real routing) — the FM → simplex lever, unchanged by this pass.
+
 ### ROOT CAUSE (2026-06-30): Boolean structure, not the polynomial algorithms
 
 Inspecting the small undecided instances shows the real bottleneck. They are

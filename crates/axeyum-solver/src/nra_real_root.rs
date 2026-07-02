@@ -2429,13 +2429,13 @@ fn decide_strict_cad_two_var(
             .all(|a| matches!(a.cmp, Cmp::Lt | Cmp::Gt | Cmp::Ne))
     );
 
-    // 1. The distinct constraint polynomials `P` (deduplicated by structure).
-    let mut polys: Vec<&MultiPoly> = Vec::new();
-    for atom in comp {
-        if !polys.iter().any(|p| p.terms == atom.poly.terms) {
-            polys.push(&atom.poly);
-        }
-    }
+    // 1. The distinct constraint polynomials `P`, coprime-split so a shared factor
+    //    does not make a pairwise resultant vanish and force a decline (the split
+    //    preserves the cell arrangement and every atom's per-cell sign; the atoms are
+    //    still evaluated on their ORIGINAL polynomials). See [`coprime_split`].
+    let owned: Vec<MultiPoly> = comp.iter().map(|a| a.poly.clone()).collect();
+    let split = coprime_split(&owned);
+    let polys: Vec<&MultiPoly> = split.iter().collect();
     if polys.is_empty() {
         return None;
     }
@@ -2741,13 +2741,13 @@ fn decide_nonstrict_cad_two_var(
             .any(|a| matches!(a.cmp, Cmp::Eq | Cmp::Le | Cmp::Ge))
     );
 
-    // The distinct constraint polynomials (deduplicated by structure).
-    let mut polys: Vec<&MultiPoly> = Vec::new();
-    for atom in comp {
-        if !polys.iter().any(|p| p.terms == atom.poly.terms) {
-            polys.push(&atom.poly);
-        }
-    }
+    // The distinct constraint polynomials, coprime-split so a shared factor does not
+    // make a pairwise resultant vanish and force a decline (the split preserves the
+    // cell arrangement and every atom's per-cell sign; atoms are still evaluated on
+    // their ORIGINAL polynomials). See [`coprime_split`].
+    let owned: Vec<MultiPoly> = comp.iter().map(|a| a.poly.clone()).collect();
+    let split = coprime_split(&owned);
+    let polys: Vec<&MultiPoly> = split.iter().collect();
     if polys.is_empty() {
         return None;
     }
@@ -3379,6 +3379,15 @@ fn project_strict(
     elim: SymbolId,
     rest: &BTreeSet<SymbolId>,
 ) -> Option<Vec<MultiPoly>> {
+    // Coprime-split the projection INPUTS at every recursion level: a shared factor
+    // between two of them (which arises freshly among the PROJECTED polynomials, not
+    // only among the original atoms) makes their pairwise resultant vanish
+    // (`Res ≡ 0`) and would force a decline. The split preserves the union of zero
+    // sets — hence the whole cell arrangement — so projecting the split factors is a
+    // valid (McCallum-style irreducible-factor) projection for the same arrangement,
+    // never a wrong verdict. See [`coprime_split`].
+    let split = coprime_split(polys);
+    let polys: &[MultiPoly] = &split;
     let mut proj: Vec<MultiPoly> = Vec::new();
     for p in polys {
         if degree_in(p, elim) == 0 {
@@ -3557,6 +3566,187 @@ fn multipoly_in_elim(p: &MultiPoly, elim: SymbolId) -> Option<Vec<MultiPoly>> {
     Some(out)
 }
 
+/// Hard ceiling on the coprime-split fixpoint iterations (a bounded guard; each
+/// successful split strictly lowers a polynomial's total degree or removes one, so
+/// the real bound is far smaller — this only defends against a surprise loop).
+const MAX_COPRIME_SPLIT_ITERS: usize = 64;
+
+/// The total degree of a monomial key (sum of exponents).
+fn mono_key_total_degree(k: &MonoKey) -> u64 {
+    k.iter().map(|&(_, e)| u64::from(e)).sum()
+}
+
+/// Compare two monomial keys under the graded-lexicographic (grlex) order — an
+/// ADMISSIBLE monomial order (well-ordered and multiplicative), required for
+/// polynomial division to terminate and to identify the true leading term. Higher
+/// total degree is larger; on a tie, the monomial with the larger exponent at the
+/// first differing variable (in increasing `SymbolId` order) is larger. The raw
+/// `Vec` lex order is NOT admissible (it can rank `xy < y`), so we compare by
+/// explicit per-variable exponent lookup.
+fn mono_key_cmp_grlex(a: &MonoKey, b: &MonoKey) -> Ordering {
+    let da = mono_key_total_degree(a);
+    let db = mono_key_total_degree(b);
+    if da != db {
+        return da.cmp(&db);
+    }
+    // Equal total degree: lexicographic on the exponent vector over the merged
+    // variable set in increasing SymbolId. A missing variable has exponent 0.
+    let mut ia = a.iter().peekable();
+    let mut ib = b.iter().peekable();
+    loop {
+        match (ia.peek(), ib.peek()) {
+            (None, None) => return Ordering::Equal,
+            (Some(&&(va, ea)), Some(&&(vb, eb))) => match va.cmp(&vb) {
+                Ordering::Equal => {
+                    if ea != eb {
+                        return ea.cmp(&eb);
+                    }
+                    ia.next();
+                    ib.next();
+                }
+                // `a` has variable `va` that `b` lacks (exp 0 in b) ⇒ a larger.
+                Ordering::Less => return Ordering::Greater,
+                Ordering::Greater => return Ordering::Less,
+            },
+            // One key exhausted its remaining variables (exponent 0 for the rest);
+            // the one with a remaining positive exponent is larger. (Total degrees
+            // are equal, so this branch only fires when the shared prefix matched.)
+            (Some(_), None) => return Ordering::Greater,
+            (None, Some(_)) => return Ordering::Less,
+        }
+    }
+}
+
+/// The leading `(monomial, coefficient)` of `p` under grlex, or `None` for the zero
+/// polynomial. Deterministic.
+fn multipoly_leading_term_grlex(p: &MultiPoly) -> Option<(MonoKey, Rational)> {
+    p.terms
+        .iter()
+        .max_by(|(ka, _), (kb, _)| mono_key_cmp_grlex(ka, kb))
+        .map(|(k, &c)| (k.clone(), c))
+}
+
+/// `Some(m_a / m_b)` iff the monomial `m_b` divides `m_a` (every variable's exponent
+/// in `m_b` is ≤ that in `m_a`); otherwise `None`. The quotient key is canonical
+/// (sorted by `SymbolId`, zero exponents dropped).
+fn mono_key_exact_divide(m_a: &MonoKey, m_b: &MonoKey) -> Option<MonoKey> {
+    let mut out: MonoKey = Vec::new();
+    // Exponent of each variable in `m_a`, minus its exponent in `m_b`.
+    let a_map: BTreeMap<SymbolId, u32> = m_a.iter().copied().collect();
+    let b_map: BTreeMap<SymbolId, u32> = m_b.iter().copied().collect();
+    // Every variable of `m_b` must appear in `m_a` with a ≥ exponent.
+    for (&v, &eb) in &b_map {
+        let ea = a_map.get(&v).copied().unwrap_or(0);
+        if ea < eb {
+            return None;
+        }
+    }
+    for (&v, &ea) in &a_map {
+        let eb = b_map.get(&v).copied().unwrap_or(0);
+        let e = ea - eb; // ea ≥ eb guaranteed for shared vars; b-only vars ruled out
+        if e > 0 {
+            out.push((v, e));
+        }
+    }
+    Some(out)
+}
+
+/// Exact multivariate division over the rational [`MultiPoly`] ring: `Some(quotient)`
+/// iff `divisor` divides `dividend` with **zero remainder**; `None` otherwise (a
+/// nonzero remainder — i.e. not an exact factor — or an overflow / degree-guard trip).
+/// Uses the admissible grlex leading-term order, so it terminates and, when the
+/// divisor is a genuine factor, produces the exact quotient regardless of order.
+fn multipoly_exact_divide(dividend: &MultiPoly, divisor: &MultiPoly) -> Option<MultiPoly> {
+    let (dlead_key, dlead_coeff) = multipoly_leading_term_grlex(divisor)?;
+    if dlead_coeff.is_zero() {
+        return None;
+    }
+    let mut remainder = dividend.clone();
+    let mut quotient = MultiPoly::zero();
+    // Each step cancels `remainder`'s leading term; when the divisor is a true factor
+    // the leading monomial strictly decreases under grlex, so the loop terminates. The
+    // cap is a bounded hard stop (a non-divisor bails on the first non-dividing lead).
+    for _ in 0..(MAX_DEGREE + 2)
+        .saturating_mul(dividend.terms.len().max(1))
+        .saturating_add(1)
+    {
+        let Some((rlead_key, rlead_coeff)) = multipoly_leading_term_grlex(&remainder) else {
+            // Remainder is zero ⇒ exact division succeeded.
+            return Some(quotient);
+        };
+        // The divisor's leading monomial must divide the remainder's leading monomial.
+        let factor_key = mono_key_exact_divide(&rlead_key, &dlead_key)?;
+        let factor_coeff = rlead_coeff.checked_div(dlead_coeff)?;
+        let mut term = MultiPoly::zero();
+        term.add_term(factor_key, factor_coeff)?;
+        quotient = quotient.add(&term)?;
+        remainder = remainder.sub(&term.mul(divisor)?)?;
+    }
+    None
+}
+
+/// Refine a set of decomposition polynomials so no distinct pair shares a common
+/// factor detectable by EXACT divisibility: whenever a non-constant `a` divides a
+/// distinct non-constant `b` exactly, replace `b` by the cofactor `b / a` (of strictly
+/// lower total degree), iterating to a fixpoint. Constants are dropped (a constant
+/// never flips sign, so it contributes no CAD critical locus).
+///
+/// **Soundness.** The union of the zero sets is INVARIANT: `Z(b) = Z(a) ∪ Z(b/a)`, so
+/// replacing `{a, b}` by `{a, b/a}` leaves the arrangement (and therefore every cell)
+/// unchanged, while each original atom polynomial stays sign-invariant per cell
+/// (`sign(b) = sign(a) · sign(b/a)`). The decision still evaluates the ORIGINAL atom
+/// polynomials at each rational sample, so no verdict changes — this only lets the
+/// projection proceed where a shared factor would otherwise make a pairwise resultant
+/// vanish (`Res ≡ 0`) and force a decline.
+fn coprime_split(polys: &[MultiPoly]) -> Vec<MultiPoly> {
+    // Seed: deduplicate by structure, drop constants.
+    let mut set: Vec<MultiPoly> = Vec::new();
+    for p in polys {
+        if p.vars().is_empty() {
+            continue;
+        }
+        if !set.iter().any(|q| q.terms == p.terms) {
+            set.push(p.clone());
+        }
+    }
+    for _ in 0..MAX_COPRIME_SPLIT_ITERS {
+        let mut split_at: Option<(usize, MultiPoly)> = None;
+        'search: for i in 0..set.len() {
+            for j in 0..set.len() {
+                if i == j {
+                    continue;
+                }
+                // Does `set[i]` divide `set[j]` exactly?
+                if let Some(quot) = multipoly_exact_divide(&set[j], &set[i]) {
+                    split_at = Some((j, quot));
+                    break 'search;
+                }
+            }
+        }
+        let Some((j, quot)) = split_at else {
+            break; // fixpoint: no pair couples by exact divisibility
+        };
+        if quot.vars().is_empty() {
+            // `set[j]` was a constant multiple of `set[i]` (same zero set) ⇒ drop it.
+            set.remove(j);
+        } else {
+            set[j] = quot;
+        }
+        // Re-normalize (dedup + drop constants) for the next round.
+        let mut fresh: Vec<MultiPoly> = Vec::new();
+        for p in &set {
+            if p.vars().is_empty() {
+                continue;
+            }
+            if !fresh.iter().any(|q| q.terms == p.terms) {
+                fresh.push(p.clone());
+            }
+        }
+        set = fresh;
+    }
+    set
+}
+
 /// Exact determinant of a square matrix over the [`MultiPoly`] ring by Leibniz
 /// permutation expansion (no division — `MultiPoly` is not a field). Bounded by the
 /// caller's dimension cap. `None` on overflow during the ring arithmetic.
@@ -3645,13 +3835,13 @@ fn decide_strict_cad_nvar(comp: &[&MultiAtom], vars: &BTreeSet<SymbolId>) -> Opt
             .all(|a| matches!(a.cmp, Cmp::Lt | Cmp::Gt | Cmp::Ne))
     );
 
-    // The distinct constraint polynomials (deduplicated by structure).
-    let mut polys: Vec<MultiPoly> = Vec::new();
-    for atom in comp {
-        if !polys.iter().any(|p| p.terms == atom.poly.terms) {
-            polys.push(atom.poly.clone());
-        }
-    }
+    // The distinct constraint polynomials, coprime-split so a shared factor does not
+    // make a pairwise projection resultant vanish (`Res ≡ 0`) and force a decline. The
+    // split leaves the cell arrangement unchanged (`Z(a·h) = Z(a) ∪ Z(h)`) and every
+    // atom is still evaluated on its ORIGINAL polynomial at each sample, so no verdict
+    // shifts — see [`coprime_split`].
+    let owned: Vec<MultiPoly> = comp.iter().map(|a| a.poly.clone()).collect();
+    let polys = coprime_split(&owned);
     if polys.is_empty() {
         return None;
     }
@@ -3860,12 +4050,11 @@ fn decide_nonstrict_cad_nvar(
             .any(|a| matches!(a.cmp, Cmp::Eq | Cmp::Le | Cmp::Ge))
     );
 
-    let mut polys: Vec<MultiPoly> = Vec::new();
-    for atom in comp {
-        if !polys.iter().any(|p| p.terms == atom.poly.terms) {
-            polys.push(atom.poly.clone());
-        }
-    }
+    // Coprime-split the decomposition polynomials (see [`coprime_split`]): a shared
+    // factor would make a pairwise projection resultant vanish and force a decline,
+    // while the split preserves the cell arrangement and every atom's per-cell sign.
+    let owned: Vec<MultiPoly> = comp.iter().map(|a| a.poly.clone()).collect();
+    let polys = coprime_split(&owned);
     if polys.is_empty() {
         return None;
     }
@@ -6501,6 +6690,139 @@ mod tests {
         match decide_eq(&ipoly(&[1, 0, 0, 0, 1])).unwrap() {
             Verdict::Unsat => {}
             _ => panic!("x⁴ + 1 = 0 has no real root"),
+        }
+    }
+
+    // === coprime-split / exact-division helpers (CAD-gate widening) ===============
+
+    /// Three distinct fresh Real symbols `(x, y, z)` for the multivariate helpers.
+    fn three_syms() -> (SymbolId, SymbolId, SymbolId) {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Real).unwrap();
+        let y = arena.declare("y", Sort::Real).unwrap();
+        let z = arena.declare("z", Sort::Real).unwrap();
+        (x, y, z)
+    }
+
+    #[test]
+    fn grlex_is_admissible_ranks_higher_degree_first() {
+        let (x, y, _) = three_syms();
+        // x·y (key over both) vs y (key over y alone): grlex ⇒ xy > y (deg 2 > 1).
+        let xy: MonoKey = vec![(x, 1), (y, 1)];
+        let just_y: MonoKey = vec![(y, 1)];
+        assert_eq!(mono_key_cmp_grlex(&xy, &just_y), Ordering::Greater);
+        // The raw Vec lex order gets this WRONG (it would rank xy < y); the explicit
+        // per-variable comparison is why the division terminates.
+        assert!(
+            xy < just_y,
+            "the raw Vec lex order is non-admissible (xy < y)"
+        );
+        // Same total degree, differing first variable: x² > xy under grlex.
+        let x2: MonoKey = vec![(x, 2)];
+        assert_eq!(mono_key_cmp_grlex(&x2, &xy), Ordering::Greater);
+    }
+
+    #[test]
+    fn exact_divide_recovers_monotone_product_cofactor() {
+        let (x, y, z) = three_syms();
+        // xz − yz = z·(x − y): dividing by (x − y) yields exactly z.
+        let xz_minus_yz = MultiPoly::var(x)
+            .mul(&MultiPoly::var(z))
+            .unwrap()
+            .sub(&MultiPoly::var(y).mul(&MultiPoly::var(z)).unwrap())
+            .unwrap();
+        let x_minus_y = MultiPoly::var(x).sub(&MultiPoly::var(y)).unwrap();
+        let quot = multipoly_exact_divide(&xz_minus_yz, &x_minus_y).unwrap();
+        assert_eq!(quot.terms, MultiPoly::var(z).terms, "cofactor must be z");
+        // Multiplying back reproduces the dividend exactly (a genuine factorization).
+        assert_eq!(quot.mul(&x_minus_y).unwrap().terms, xz_minus_yz.terms);
+    }
+
+    #[test]
+    fn exact_divide_rejects_non_factor() {
+        let (x, y, z) = three_syms();
+        // x + y does NOT divide x·z − y·z ⇒ no exact quotient.
+        let xz_minus_yz = MultiPoly::var(x)
+            .mul(&MultiPoly::var(z))
+            .unwrap()
+            .sub(&MultiPoly::var(y).mul(&MultiPoly::var(z)).unwrap())
+            .unwrap();
+        let x_plus_y = MultiPoly::var(x).add(&MultiPoly::var(y)).unwrap();
+        assert!(multipoly_exact_divide(&xz_minus_yz, &x_plus_y).is_none());
+    }
+
+    #[test]
+    fn exact_divide_handles_constant_scalar_multiple() {
+        let (x, y, _) = three_syms();
+        // 2·(x − y) ÷ (x − y) = 2 (a constant quotient).
+        let x_minus_y = MultiPoly::var(x).sub(&MultiPoly::var(y)).unwrap();
+        let doubled = x_minus_y
+            .mul(&MultiPoly::constant(Rational::integer(2)))
+            .unwrap();
+        let quot = multipoly_exact_divide(&doubled, &x_minus_y).unwrap();
+        assert_eq!(quot.as_constant(), Some(Rational::integer(2)));
+    }
+
+    #[test]
+    fn coprime_split_breaks_shared_factor() {
+        let (x, y, z) = three_syms();
+        // {z, x−y, z·(x−y)} has a shared factor (x−y) between the 2nd and 3rd polys,
+        // so their pairwise resultant vanishes. The split replaces the product by its
+        // cofactor z ⇒ {z, x−y} (dedup), which is pairwise coprime.
+        let z_poly = MultiPoly::var(z);
+        let x_minus_y = MultiPoly::var(x).sub(&MultiPoly::var(y)).unwrap();
+        let product = z_poly.mul(&x_minus_y).unwrap();
+        let split = coprime_split(&[z_poly.clone(), x_minus_y.clone(), product]);
+        assert_eq!(split.len(), 2, "product collapses to a duplicate of z");
+        assert!(split.iter().any(|p| p.terms == z_poly.terms));
+        assert!(split.iter().any(|p| p.terms == x_minus_y.terms));
+    }
+
+    #[test]
+    fn coprime_split_drops_constants_and_is_idempotent() {
+        let (x, y, _) = three_syms();
+        let x_minus_y = MultiPoly::var(x).sub(&MultiPoly::var(y)).unwrap();
+        let with_const = vec![x_minus_y.clone(), MultiPoly::constant(Rational::integer(7))];
+        let once = coprime_split(&with_const);
+        assert_eq!(once.len(), 1, "the constant is dropped");
+        let twice = coprime_split(&once);
+        assert_eq!(
+            twice.len(),
+            once.len(),
+            "split is idempotent on a coprime set"
+        );
+    }
+
+    #[test]
+    fn simple_mono_style_all_strict_three_var_decides_unsat() {
+        // z > 0 ∧ x − y > 0 ∧ xz − yz < 0. Since xz − yz = z·(x − y) > 0, the system
+        // is unsat — but the shared factor makes the raw projection resultant vanish.
+        // With coprime-split the strict CAD decides it. (The `simple-mono` shape.)
+        let (x, y, z) = three_syms();
+        let z_pos = MultiAtom {
+            cmp: Cmp::Gt,
+            poly: MultiPoly::var(z),
+        };
+        let x_gt_y = MultiAtom {
+            cmp: Cmp::Gt,
+            poly: MultiPoly::var(x).sub(&MultiPoly::var(y)).unwrap(),
+        };
+        let xz_lt_yz = MultiAtom {
+            cmp: Cmp::Lt,
+            poly: MultiPoly::var(x)
+                .mul(&MultiPoly::var(z))
+                .unwrap()
+                .sub(&MultiPoly::var(y).mul(&MultiPoly::var(z)).unwrap())
+                .unwrap(),
+        };
+        let comp: Vec<&MultiAtom> = vec![&z_pos, &x_gt_y, &xz_lt_yz];
+        let vars: BTreeSet<SymbolId> = [x, y, z].into_iter().collect();
+        match decide_strict_cad_nvar(&comp, &vars) {
+            Some(TwoVarVerdict::Unsat) => {}
+            other => panic!(
+                "expected Unsat, got {:?}",
+                matches!(other, Some(TwoVarVerdict::Sat(_)))
+            ),
         }
     }
 }
