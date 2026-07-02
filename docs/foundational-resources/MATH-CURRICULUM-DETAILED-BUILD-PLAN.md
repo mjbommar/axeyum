@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 120 non-template math packs.
-- 770 expected checks.
-- 346 checked proof/evidence rows.
-- 341 replay-only rows.
-- 83 Lean-horizon rows.
-- 120 promoted solver-reuse packs.
+- 121 non-template math packs.
+- 777 expected checks.
+- 347 checked proof/evidence rows.
+- 346 replay-only rows.
+- 84 Lean-horizon rows.
+- 121 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 120 focused learner-linked packs, with no path-only, index-only, or missing
+- 121 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 120 current non-template packs satisfy the focused-lesson side of this
+all 121 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2395,6 +2395,16 @@ Pick one row per commit unless the change is purely navigational.
      block replay separate from general Schur-complement, block-inverse,
      Gaussian-elimination, pivoting, SDP, statistical-conditioning, and
      numerical-stability theorems.
+279. Landed: add `finite-gaussian-elimination-v0` as an exact finite
+     elimination-transcript resource. The pack replays the first pivot
+     multiplier for `[[2,1],[4,5]] x = [5,17]`, the augmented row replacement
+     `[4,5|17] - 2*[2,1|5] = [0,3|7]`, determinant pivot-product replay, and
+     back-substitution `x = [4/3,7/3]`, then adds
+     `qf-lra-bad-eliminated-rhs` as the source-linked Farkas row for the false
+     eliminated-RHS claim `8` versus exact `7`. The learner and query pages
+     keep exact transcript replay separate from general Gaussian-elimination
+     correctness, pivoting, rank-revealing variants, sparse fill-in,
+     conditioning, and floating-point stability.
 
 ## Validation Checklist
 

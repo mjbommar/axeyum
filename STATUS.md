@@ -240,6 +240,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Gaussian-elimination resource landed.**
+  `finite-gaussian-elimination-v0` now gives the linear-algebra,
+  numerical-analysis, and optimization lanes an exact rational elimination
+  transcript: it checks the pivot multiplier, augmented row replacement,
+  determinant pivot product, and back-substitution for
+  `[[2,1],[4,5]] x = [5,17]`, then isolates the malformed eliminated RHS
+  claim `7 = 8` as a source-linked QF_LRA/Farkas row. The focused learner page,
+  matrix index, concept bridge, query guide, validator, and
+  `math_resource_lra_routes` regression keep fixed transcript replay separate
+  from general Gaussian-elimination correctness, pivoting, rank-revealing,
+  sparse fill-in, conditioning, and floating-point stability theorems. The
+  public summary now reports 122 concept rows, 121 packs, 777 expected checks,
+  347 checked rows, 346 replay-only rows, 84 Lean-horizon rows, and 121
+  promoted solver-reuse packs.
 - **Finite Schur-complement resource landed.**
   `finite-schur-complement-v0` now gives the linear-algebra,
   numerical-analysis, optimization, and statistics lanes an exact rational
@@ -250,9 +264,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `S = 3/2` as a source-linked QF_LRA/Farkas row. The focused learner page and
   query guides keep exact block replay separate from general Schur-complement,
   block-inverse, Gaussian-elimination, pivoting, SDP, statistical-conditioning,
-  and numerical-stability theorems. The public summary now reports 122 concept
-  rows, 120 packs, 770 expected checks, 346 checked rows, 341 replay-only rows,
-  83 Lean-horizon rows, and 120 promoted solver-reuse packs.
+  and numerical-stability theorems.
 - **Finite Jordan-chain resource landed.**
   `finite-jordan-chain-v0` now gives the linear-algebra,
   numerical-analysis, and functional/operator lanes an exact rational

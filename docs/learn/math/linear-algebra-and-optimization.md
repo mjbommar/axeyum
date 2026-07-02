@@ -11,6 +11,7 @@ Concept rows:
 Example packs:
 
 - [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/)
+- [finite-gaussian-elimination-v0](../../../artifacts/examples/math/finite-gaussian-elimination-v0/)
 - [finite-qr-decomposition-v0](../../../artifacts/examples/math/finite-qr-decomposition-v0/)
 - [finite-cholesky-decomposition-v0](../../../artifacts/examples/math/finite-cholesky-decomposition-v0/)
 - [finite-schur-complement-v0](../../../artifacts/examples/math/finite-schur-complement-v0/)
@@ -70,13 +71,16 @@ Companion index:
 
 ## What Axeyum Checks
 
-The linear path uses exact rational matrices. It replays `A*x = b`, checks
-`L*U = A`, rejects a malformed LU product entry by exact replay plus a separate
-checked QF_LRA/Farkas row, rejects a malformed nullspace component after exact
-kernel replay, validates a row-scaling inconsistency certificate, checks LP
-feasibility witnesses, checks a tiny Farkas infeasibility certificate, and
-replays finite convexity/threshold and finite-dimensional norm/operator
-examples. The least-squares regression slice checks normal equations,
+The linear path uses exact rational matrices. It replays `A*x = b`, checks one
+Gaussian-elimination row-operation transcript with pivot multiplier,
+determinant pivot product, and back-substitution, checks `L*U = A`, rejects a
+malformed eliminated RHS entry and a malformed LU product entry by exact replay
+plus separate checked QF_LRA/Farkas rows, rejects a malformed nullspace
+component after exact kernel replay, validates a row-scaling inconsistency
+certificate, checks LP feasibility witnesses, checks a tiny Farkas
+infeasibility certificate, and replays finite convexity/threshold and
+finite-dimensional norm/operator examples. The least-squares regression slice
+checks normal equations,
 residual orthogonality, RSS comparison, and checked `UnsatFarkas`
 bad-RSS and bad-coefficients certificates. The finite-vector-space slice adds `F2^2`,
 subspace/span replay,
@@ -93,7 +97,12 @@ QF_LRA/Farkas rejection of an indefinite bilinear form. The finite
 Walsh-Hadamard slice adds exact order-4 orthogonality replay, transform
 coefficients, inverse reconstruction, Parseval energy scaling, and checked
 QF_LRA/Farkas rejection of a false transform coefficient without claiming fast
-transform algorithms or numerical stability. The QR slice adds exact rational
+transform algorithms or numerical stability. The Gaussian-elimination slice
+adds exact pivot/multiplier replay, row replacement on an augmented system,
+determinant pivot-product replay, back-substitution, and checked QF_LRA/Farkas
+rejection of a bad eliminated RHS without claiming pivoting correctness,
+rank-revealing elimination, sparse fill-in behavior, conditioning, or
+floating-point stability. The QR slice adds exact rational
 orthogonality replay, upper-triangular factor checking, `Q*R` product replay,
 and checked QF_LRA/Farkas rejection of a bad product entry without claiming QR
 existence, algorithm correctness, conditioning, or numerical stability. The

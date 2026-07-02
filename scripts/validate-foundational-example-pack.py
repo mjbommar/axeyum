@@ -12954,6 +12954,203 @@ def validate_finite_schur_complement(expected: dict[str, Any]) -> None:
     require_string("Schur horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_gaussian_elimination(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    multiplier = checks["pivot-multiplier-replay"]
+    if multiplier["expected_result"] != "sat":
+        fail("pivot-multiplier-replay must expect sat")
+    if multiplier.get("proof_status") != "replay-only":
+        fail("pivot-multiplier-replay must be replay-only")
+    values = single_witness_values(multiplier, witnesses)
+    matrix = require_fraction_matrix("Gaussian elimination matrix", values.get("matrix"))
+    rhs = require_fraction_vector("Gaussian elimination rhs", values.get("rhs"))
+    pivot = require_fraction("Gaussian elimination pivot", values.get("pivot"))
+    row_multiplier = require_fraction(
+        "Gaussian elimination multiplier",
+        values.get("multiplier"),
+    )
+    row_before = require_fraction_vector(
+        "Gaussian elimination row_before",
+        values.get("row_before"),
+    )
+    pivot_row = require_fraction_vector(
+        "Gaussian elimination pivot_row",
+        values.get("pivot_row"),
+    )
+    row_after = require_fraction_vector(
+        "Gaussian elimination row_after",
+        values.get("row_after"),
+    )
+    upper = require_fraction_matrix("Gaussian elimination upper", values.get("upper"))
+    transformed_rhs = require_fraction_vector(
+        "Gaussian elimination transformed_rhs",
+        values.get("transformed_rhs"),
+    )
+    solution = require_fraction_vector(
+        "Gaussian elimination solution",
+        values.get("solution"),
+    )
+    det_matrix = require_fraction("Gaussian elimination det_matrix", values.get("det_matrix"))
+    pivot_product = require_fraction(
+        "Gaussian elimination pivot_product",
+        values.get("pivot_product"),
+    )
+    require_square_matrix("Gaussian elimination matrix", matrix)
+    require_square_matrix("Gaussian elimination upper", upper)
+    if len(matrix) != 2 or len(rhs) != 2 or len(solution) != 2:
+        fail("finite Gaussian elimination replay expects one 2x2 system")
+    if len(row_before) != 3 or len(pivot_row) != 3 or len(row_after) != 3:
+        fail("Gaussian elimination augmented rows must have three entries")
+    if pivot != matrix[0][0]:
+        fail("pivot-multiplier-replay pivot must be matrix[0][0]")
+    if pivot == 0:
+        fail("pivot-multiplier-replay pivot must be nonzero")
+    if row_multiplier != matrix[1][0] / pivot:
+        fail("pivot-multiplier-replay multiplier is incorrect")
+    if pivot_row != [matrix[0][0], matrix[0][1], rhs[0]]:
+        fail("pivot-multiplier-replay pivot row does not match augmented system")
+    if row_before != [matrix[1][0], matrix[1][1], rhs[1]]:
+        fail("pivot-multiplier-replay row_before does not match augmented system")
+
+    row_operation = checks["row-operation-replay"]
+    if row_operation["expected_result"] != "sat":
+        fail("row-operation-replay must expect sat")
+    if row_operation.get("proof_status") != "replay-only":
+        fail("row-operation-replay must be replay-only")
+    row_operation_values = single_witness_values(row_operation, witnesses)
+    if row_operation_values != values:
+        fail("row-operation-replay must cite the Gaussian elimination witness")
+    computed_row_after = [
+        item - row_multiplier * pivot_row[index]
+        for index, item in enumerate(row_before)
+    ]
+    if computed_row_after != row_after:
+        fail("row-operation-replay row_after is incorrect")
+    if upper != [[matrix[0][0], matrix[0][1]], [row_after[0], row_after[1]]]:
+        fail("row-operation-replay upper matrix does not match row_after")
+    if transformed_rhs != [rhs[0], row_after[2]]:
+        fail("row-operation-replay transformed_rhs does not match row_after")
+    if upper[1][0] != 0:
+        fail("row-operation-replay expected an upper-triangular 2x2 matrix")
+
+    determinant = checks["determinant-pivot-product-replay"]
+    if determinant["expected_result"] != "sat":
+        fail("determinant-pivot-product-replay must expect sat")
+    if determinant.get("proof_status") != "replay-only":
+        fail("determinant-pivot-product-replay must be replay-only")
+    determinant_values = single_witness_values(determinant, witnesses)
+    if determinant_values != values:
+        fail("determinant-pivot-product-replay must cite the Gaussian elimination witness")
+    computed_det = matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
+    if det_matrix != computed_det:
+        fail("determinant-pivot-product-replay det(A) is incorrect")
+    if pivot_product != pivot * upper[1][1]:
+        fail("determinant-pivot-product-replay pivot product is incorrect")
+    if pivot_product != det_matrix:
+        fail("determinant-pivot-product-replay pivot product must equal det(A)")
+
+    back_substitution = checks["back-substitution-replay"]
+    if back_substitution["expected_result"] != "sat":
+        fail("back-substitution-replay must expect sat")
+    if back_substitution.get("proof_status") != "replay-only":
+        fail("back-substitution-replay must be replay-only")
+    back_substitution_values = single_witness_values(back_substitution, witnesses)
+    if back_substitution_values != values:
+        fail("back-substitution-replay must cite the Gaussian elimination witness")
+    if upper[1][1] == 0 or upper[0][0] == 0:
+        fail("back-substitution-replay expects nonzero pivots")
+    x1 = transformed_rhs[1] / upper[1][1]
+    x0 = (transformed_rhs[0] - upper[0][1] * x1) / upper[0][0]
+    if solution != [x0, x1]:
+        fail("back-substitution-replay solution is incorrect")
+    if mat_vec(upper, solution) != transformed_rhs:
+        fail("back-substitution-replay U*x does not equal transformed_rhs")
+    if mat_vec(matrix, solution) != rhs:
+        fail("back-substitution-replay A*x does not equal rhs")
+
+    bad = checks["bad-eliminated-rhs-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-eliminated-rhs-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-eliminated-rhs-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_eliminated_rhs_replay":
+        fail("bad-eliminated-rhs-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-by-two-elimination-transcript":
+        fail("bad-eliminated-rhs-rejected must cite the Gaussian elimination witness")
+    computed_rhs = require_fraction(
+        "bad Gaussian elimination computed_eliminated_rhs",
+        data.get("computed_eliminated_rhs"),
+    )
+    claimed_rhs = require_fraction(
+        "bad Gaussian elimination claimed_eliminated_rhs",
+        data.get("claimed_eliminated_rhs"),
+    )
+    if computed_rhs != row_after[2]:
+        fail("bad-eliminated-rhs-rejected computed RHS does not match replay")
+    if computed_rhs == claimed_rhs:
+        fail("bad-eliminated-rhs-rejected malformed RHS unexpectedly matches")
+    if "separate qf-lra-bad-eliminated-rhs" not in bad.get("notes", ""):
+        fail("bad-eliminated-rhs-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-eliminated-rhs"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-eliminated-rhs must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-eliminated-rhs must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-eliminated-rhs must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-by-two-elimination-transcript":
+        fail("qf-lra-bad-eliminated-rhs must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-eliminated-rhs-rejected":
+        fail("qf-lra-bad-eliminated-rhs must cite the replay row")
+    qf_computed = require_fraction(
+        "qf Gaussian elimination computed_eliminated_rhs",
+        qf_data.get("computed_eliminated_rhs"),
+    )
+    qf_claimed = require_fraction(
+        "qf Gaussian elimination claimed_eliminated_rhs",
+        qf_data.get("claimed_eliminated_rhs"),
+    )
+    if qf_computed != computed_rhs or qf_claimed != claimed_rhs:
+        fail("qf-lra-bad-eliminated-rhs data must match the replay row")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Gaussian elimination smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-gaussian-elimination-v0/smt2/"
+        "bad-eliminated-rhs-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-eliminated-rhs smt2_artifact must name the checked source artifact")
+    check_source("qf Gaussian elimination smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Gaussian elimination farkas_regression", regression)
+    if "finite_gaussian_elimination_bad_rhs_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-eliminated-rhs must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Gaussian elimination certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-eliminated-rhs certificate must document checked Farkas evidence")
+
+    horizon = checks["general-gaussian-elimination-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-gaussian-elimination-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-gaussian-elimination-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "Gaussian elimination horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string(
+        "Gaussian elimination horizon future_checker",
+        horizon_data.get("future_checker"),
+    )
+
+
 def require_fraction_vector_list(context: str, value: Any) -> list[list[Fraction]]:
     if not isinstance(value, list) or not value:
         fail(f"{context} must be a non-empty list of vectors")
@@ -28634,6 +28831,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_dual_spaces(expected)
     if metadata["id"] == "finite-euler-method-v0":
         validate_finite_euler_method(expected)
+    if metadata["id"] == "finite-gaussian-elimination-v0":
+        validate_finite_gaussian_elimination(expected)
     if metadata["id"] == "finite-gradient-descent-v0":
         validate_finite_gradient_descent(expected)
     if metadata["id"] == "finite-line-search-v0":

@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "finite-gaussian-elimination-v0",
+  "title": "Finite Gaussian Elimination Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_optimization_and_convexity",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_lu_replay",
+    "bridge_residual_bound",
+    "bridge_exact_vs_floating_arithmetic"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "optimization_and_convexity"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite matrices",
+    "exact rational row operations",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gaussian-elimination-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Gaussian elimination bad eliminated-RHS QF_LRA/Farkas regression seed",
+    "pressure": "Exact row-operation replay computes the eliminated RHS as 7 while a malformed row claims 8, isolating a compact equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-eliminated-rhs"
+    ],
+    "next_step": "Promote additional elimination rows only when they add distinct pivoting, singularity, rank-revealing, or numerical-honesty pressure; keep general algorithm correctness and floating-point stability in Lean or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/gaussian-elimination-end-to-end.md",
+    "artifacts/examples/math/finite-gaussian-elimination-v0/smt2/bad-eliminated-rhs-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "pivot-multiplier-replay",
+    "row-operation-replay",
+    "determinant-pivot-product-replay",
+    "back-substitution-replay",
+    "bad-eliminated-rhs-rejected",
+    "qf-lra-bad-eliminated-rhs",
+    "general-gaussian-elimination-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational matrix, right-hand side, pivot multiplier, row operation, determinant product, and back-substitution result as deterministic exact-rational replay obligations.",
+    "Route the false eliminated-RHS row through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting scalar.",
+    "Expose the pack through the matrix computation learner and consumer query surfaces.",
+    "Keep general Gaussian-elimination correctness, pivoting strategy, rank-revealing variants, sparse fill-in, conditioning, and floating-point stability marked Lean or numerical-honesty horizon."
+  ]
+}

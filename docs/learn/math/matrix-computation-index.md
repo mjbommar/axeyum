@@ -23,6 +23,8 @@ For exact rational condition numbers and perturbation-bound shadows, see
 For exact Schur complements, determinant/inverse block shadows, and
 conditional-variance shadows, see
 [End To End: Finite Schur Complement](schur-complement-end-to-end.md).
+For exact Gaussian-elimination row-operation transcripts, see
+[End To End: Finite Gaussian Elimination](gaussian-elimination-end-to-end.md).
 For exact singular-value, spectral-norm, and SVD reconstruction shadows, see
 [End To End: Finite Singular-Value Shadow](singular-value-shadow-end-to-end.md).
 For exact Jordan-chain and generalized-eigenvector shadows, see
@@ -55,7 +57,7 @@ Concept rows:
 
 | Theme | Packs | What Is Checked | Route |
 |---|---|---|---|
-| Linear systems, nullspaces, LU, QR, and Cholesky | [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/), [finite-qr-decomposition-v0](../../../artifacts/examples/math/finite-qr-decomposition-v0/), [finite-cholesky-decomposition-v0](../../../artifacts/examples/math/finite-cholesky-decomposition-v0/), [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/) | Fixed `A*x = b`, `L*U = A`, `Q^T Q = I`, `Q*R = A`, `L*L^T = A`, positive leading minors, exact bad LU/QR/Cholesky product-entry replay, separate checked bad product-entry proof rows, bad nullspace component rejection, singular-row inconsistency, LP objective thresholds | finite replay plus QF_LRA/Farkas |
+| Linear systems, Gaussian elimination, nullspaces, LU, QR, and Cholesky | [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/), [finite-gaussian-elimination-v0](../../../artifacts/examples/math/finite-gaussian-elimination-v0/), [finite-qr-decomposition-v0](../../../artifacts/examples/math/finite-qr-decomposition-v0/), [finite-cholesky-decomposition-v0](../../../artifacts/examples/math/finite-cholesky-decomposition-v0/), [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/) | Fixed `A*x = b`, one exact elimination row operation, pivot multiplier and pivot product replay, back-substitution, `L*U = A`, `Q^T Q = I`, `Q*R = A`, `L*L^T = A`, positive leading minors, exact bad elimination/LU/QR/Cholesky replay, separate checked bad scalar or product-entry proof rows, bad nullspace component rejection, singular-row inconsistency, LP objective thresholds | finite replay plus QF_LRA/Farkas |
 | Block matrices and Schur complements | [finite-schur-complement-v0](../../../artifacts/examples/math/finite-schur-complement-v0/) | Exact leading-block inverse, one-by-one Schur complement, determinant factorization, two-sided inverse replay, positive-definite shadow, conditional-variance shadow, replay-only bad scalar rejection, and separate checked bad scalar proof row | finite replay plus QF_LRA/Farkas |
 | Residuals, Hessian solves, condition numbers, singular values, and numerical shadows | [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/), [finite-condition-number-v0](../../../artifacts/examples/math/finite-condition-number-v0/), [finite-singular-value-shadow-v0](../../../artifacts/examples/math/finite-singular-value-shadow-v0/), [finite-newton-step-v0](../../../artifacts/examples/math/finite-newton-step-v0/), [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/) | Exact residual norms, solution boxes, one Jacobi step, infinity-norm condition number, singular-value/SVD shadow replay, spectral and Frobenius norms, perturbation-bound replay, Hessian linear solve, Newton direction, normal equations, residual orthogonality, RSS improvement, bad condition-number bound, bad singular-value bound, bad Newton coordinate, and bad RSS rejection | finite replay plus QF_LRA/Farkas |
 | Inner products, projections, and orthogonal transforms | [inner-product-spaces-rational-v0](../../../artifacts/examples/math/inner-product-spaces-rational-v0/), [finite-walsh-hadamard-transform-v0](../../../artifacts/examples/math/finite-walsh-hadamard-transform-v0/) | Gram matrices, fixed Cauchy-Schwarz, orthogonal projection, Gram-Schmidt, order-4 Walsh-Hadamard transform replay, inverse reconstruction, Parseval energy scaling, bad negative norm, bad projection orthogonality, and bad transform coefficient | finite replay plus QF_LRA/Farkas |
@@ -69,12 +71,15 @@ Concept rows:
 ## What The Checker Trusts
 
 For exact rational rows, the trusted work is small arithmetic: matrix-vector
-multiplication, matrix multiplication, Schur-complement scalar replay,
+row operations, matrix-vector multiplication, matrix multiplication,
+Schur-complement scalar replay,
 determinant or trace formulas for the
 fixed dimension, exact residuals, rational inequalities, and Farkas certificate
-checking when a row is unsatisfiable. The LU slice now has a positive
-`L*U = A` replay row, a bad product-entry replay row, an explicit checked
-bad product-entry proof row, and a checked nullspace component row, so
+checking when a row is unsatisfiable. The linear-system slice now has one
+Gaussian-elimination transcript with a checked bad eliminated-RHS row, and the
+LU slice has a positive `L*U = A` replay row, a bad product-entry replay row,
+an explicit checked bad product-entry proof row, and a checked nullspace
+component row, so
 consumers can see the replay/certificate boundary without leaving the core
 matrix pack.
 
@@ -118,6 +123,7 @@ The torsion and universal-coefficient part is expanded in
 
 - [Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md)
 - [Linear System And LP Replay](linear-system-end-to-end.md)
+- [Finite Gaussian Elimination](gaussian-elimination-end-to-end.md)
 - [Finite QR Decomposition Checks](qr-decomposition-end-to-end.md)
 - [Finite Cholesky Decomposition Checks](cholesky-decomposition-end-to-end.md)
 - [Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md)
@@ -153,6 +159,7 @@ Run the route-level checks from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gaussian-elimination-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-qr-decomposition-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cholesky-decomposition-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0

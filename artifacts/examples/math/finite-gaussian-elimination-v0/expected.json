@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-gaussian-elimination-v0",
+  "witnesses": [
+    {
+      "id": "two-by-two-elimination-transcript",
+      "description": "Exact rational Gaussian-elimination transcript for a fixed 2x2 augmented system.",
+      "values": {
+        "matrix": [
+          ["2", "1"],
+          ["4", "5"]
+        ],
+        "rhs": ["5", "17"],
+        "pivot": "2",
+        "multiplier": "2",
+        "row_before": ["4", "5", "17"],
+        "pivot_row": ["2", "1", "5"],
+        "row_after": ["0", "3", "7"],
+        "upper": [
+          ["2", "1"],
+          ["0", "3"]
+        ],
+        "transformed_rhs": ["5", "7"],
+        "solution": ["4/3", "7/3"],
+        "det_matrix": "6",
+        "pivot_product": "6"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "pivot-multiplier-replay",
+      "claim": "The first elimination multiplier is row-two-column-one divided by the pivot, equal to 2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_elimination_multiplier_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-elimination-transcript"],
+      "notes": "The validator recomputes the pivot and multiplier exactly over rationals."
+    },
+    {
+      "id": "row-operation-replay",
+      "claim": "Applying row_2 <- row_2 - 2 row_1 to the augmented matrix yields [0, 3 | 7].",
+      "expected_result": "sat",
+      "validation": "exact_rational_elimination_row_operation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-elimination-transcript"],
+      "notes": "The validator recomputes the augmented row operation and upper-triangular matrix exactly."
+    },
+    {
+      "id": "determinant-pivot-product-replay",
+      "claim": "The row replacement preserves determinant and the pivots multiply to det(A) = 6.",
+      "expected_result": "sat",
+      "validation": "exact_rational_elimination_determinant_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-elimination-transcript"],
+      "notes": "The validator recomputes the determinant of the original matrix and the pivot product."
+    },
+    {
+      "id": "back-substitution-replay",
+      "claim": "Back-substitution gives x = [4/3, 7/3], which solves both U*x = y and A*x = b.",
+      "expected_result": "sat",
+      "validation": "exact_rational_back_substitution_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-elimination-transcript"],
+      "notes": "The validator recomputes the triangular solution and checks the original matrix-vector product."
+    },
+    {
+      "id": "bad-eliminated-rhs-rejected",
+      "claim": "The eliminated second right-hand-side entry is 8.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_eliminated_rhs_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "two-by-two-elimination-transcript",
+        "computed_eliminated_rhs": "7",
+        "claimed_eliminated_rhs": "8"
+      },
+      "notes": "Exact replay computes the eliminated RHS as 7, so the claimed value 8 is rejected; the separate qf-lra-bad-eliminated-rhs row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-eliminated-rhs",
+      "claim": "The fixed malformed eliminated-RHS claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "two-by-two-elimination-transcript",
+        "source_replay_row": "bad-eliminated-rhs-rejected",
+        "computed_eliminated_rhs": "7",
+        "claimed_eliminated_rhs": "8",
+        "farkas_conflict": "eliminated_rhs_1 = 7 and eliminated_rhs_1 = 8",
+        "smt2_artifact": "artifacts/examples/math/finite-gaussian-elimination-v0/smt2/bad-eliminated-rhs-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_gaussian_elimination_bad_rhs_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the eliminated RHS as 7, while the malformed row claims 8; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-gaussian-elimination-theory-lean-horizon",
+      "claim": "General Gaussian-elimination correctness, pivoting strategy, rank-revealing elimination, sparse fill-in, conditioning, and floating-point stability require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For arbitrary compatible matrices over exact fields, prove row-equivalence preservation, triangularization correctness, determinant/update invariants, back-substitution soundness, and pivoting conditions; separately state numerical stability for floating-point implementations.",
+        "future_checker": "Lean theorem statements for exact elimination plus separate numerical-honesty artifacts for pivoting, conditioning, sparse fill-in, and floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational elimination transcript, not a theorem about arbitrary Gaussian elimination or a stability claim for numerical implementations."
+    }
+  ]
+}

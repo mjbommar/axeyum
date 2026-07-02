@@ -26,10 +26,10 @@ the route named in the pack metadata.
 
 Generated from the current math resource queue:
 
-- math example packs: 120
-- learner-linked packs: 120 focused links
-- packs with non-checked proof rows: 109
-- non-checked proof rows: 424
+- math example packs: 121
+- learner-linked packs: 121 focused links
+- packs with non-checked proof rows: 110
+- non-checked proof rows: 430
 
 Candidate route totals:
 
@@ -40,7 +40,7 @@ Candidate route totals:
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 15 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions, including finite graph traversal cost counters. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 69 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 19 | Equality-heavy finite structures and congruence conflicts. |
-| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 90 | General theorem statements that remain outside bounded SMT replay. |
+| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 91 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
 

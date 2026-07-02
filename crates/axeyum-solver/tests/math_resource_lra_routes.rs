@@ -19,6 +19,9 @@ const LINEAR_ALGEBRA_BAD_LU_PRODUCT_ENTRY: &str = include_str!(
 const LINEAR_ALGEBRA_BAD_NULLSPACE_COMPONENT: &str = include_str!(
     "../../../artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-nullspace-component-farkas-conflict.smt2"
 );
+const FINITE_GAUSSIAN_ELIMINATION_BAD_RHS: &str = include_str!(
+    "../../../artifacts/examples/math/finite-gaussian-elimination-v0/smt2/bad-eliminated-rhs-farkas-conflict.smt2"
+);
 const FINITE_QR_DECOMPOSITION_BAD_PRODUCT_ENTRY: &str = include_str!(
     "../../../artifacts/examples/math/finite-qr-decomposition-v0/smt2/bad-qr-product-entry-farkas-conflict.smt2"
 );
@@ -620,6 +623,14 @@ fn linear_algebra_bad_nullspace_component_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "linear-algebra-rational-v0 bad-nullspace-component SMT-LIB artifact",
         LINEAR_ALGEBRA_BAD_NULLSPACE_COMPONENT,
+    );
+}
+
+#[test]
+fn finite_gaussian_elimination_bad_rhs_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-gaussian-elimination-v0 bad-eliminated-rhs SMT-LIB artifact",
+        FINITE_GAUSSIAN_ELIMINATION_BAD_RHS,
     );
 }
 
