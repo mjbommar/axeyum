@@ -85,11 +85,13 @@ fn never_reports_unsat_on_an_unsatisfiable_formula() {
 
 #[test]
 fn returns_unknown_for_an_unsupported_sort() {
-    // An integer variable is outside the engine's Bool/BV scope.
+    // A real variable is outside the engine's Bool/Int/BV scope (c093fa91
+    // extended PBLS to integers — deliberate, replay-checked — so `Int` no
+    // longer probes the decline path; real arithmetic remains unsupported).
     let mut arena = TermArena::new();
-    let n = arena.declare("n", Sort::Int).unwrap();
+    let n = arena.declare("n", Sort::Real).unwrap();
     let nv = arena.var(n);
-    let zero = arena.int_const(0);
+    let zero = arena.real_ratio(0, 1);
     let a1 = arena.eq(nv, zero).unwrap();
 
     let out = solve_local_search(&arena, &[a1], &cfg()).unwrap();
