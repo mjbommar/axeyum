@@ -170,6 +170,12 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_random_m
 python3 scripts/query-foundational-resources.py checks --pack random-matrix-finite-v0 --route Farkas --proof-status checked --text rank --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-covariance-matrix-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_random_matrix_finite_moment --route Farkas --proof-status checked --text covariance --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field linear_algebra --text Schur --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_schur_complement --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_schur_complement --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-schur-complement-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-schur-complement-v0 --proof-status replay-only --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-schur-complement-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field logic_and_proof --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field logic_and_proof --text proof --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field logic_and_proof --route boolean --proof-status checked --require-any >/dev/null

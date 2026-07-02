@@ -62,17 +62,17 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 75 bridge-concept rows.
+- 76 bridge-concept rows.
 - 5 example-family rows.
-- 119 non-template math example packs.
-- 762 expected checks.
-- 345 checked proof/evidence rows.
-- 335 replay-only rows.
-- 82 Lean-horizon rows.
-- 119 promoted solver-reuse packs.
+- 120 non-template math example packs.
+- 770 expected checks.
+- 346 checked proof/evidence rows.
+- 341 replay-only rows.
+- 83 Lean-horizon rows.
+- 120 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 119 focused learner-linked packs, with no path-only, index-only, or missing
+- 120 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2398,6 +2398,14 @@ Pick one item per commit unless the change is purely navigational.
      source-linked QF_LRA/Farkas regression without claiming Jordan normal
      form, diagonalizability criteria, multiplicity theorems, or numerical
      eigensolver behavior.
+167. Landed: add `finite-schur-complement-v0` as an exact finite
+     block-matrix resource. The pack computes one one-by-one Schur complement,
+     determinant factorization, two-sided inverse replay, positive-definite
+     shadow, and conditional-variance shadow, then promotes the malformed
+     scalar claim `S = 3/2` through a source-linked QF_LRA/Farkas regression
+     without claiming general Schur-complement, block-inverse,
+     Gaussian-elimination, pivoting, SDP, statistical-conditioning, or
+     numerical-stability theorems.
 
 ## Validation Checklist
 

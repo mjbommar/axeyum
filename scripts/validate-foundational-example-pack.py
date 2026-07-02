@@ -12717,6 +12717,243 @@ def validate_finite_condition_number(expected: dict[str, Any]) -> None:
     require_string("condition horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_schur_complement(expected: dict[str, Any]) -> None:
+    def det_small(context: str, matrix: list[list[Fraction]]) -> Fraction:
+        require_square_matrix(context, matrix)
+        if len(matrix) == 1:
+            return matrix[0][0]
+        if len(matrix) == 2:
+            return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
+        fail(f"{context} determinant replay only supports 1x1 or 2x2 matrices")
+
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    schur = checks["schur-complement-replay"]
+    if schur["expected_result"] != "sat":
+        fail("schur-complement-replay must expect sat")
+    if schur.get("proof_status") != "replay-only":
+        fail("schur-complement-replay must be replay-only")
+    values = single_witness_values(schur, witnesses)
+    matrix = require_fraction_matrix("Schur matrix", values.get("matrix"))
+    top_left = require_fraction_matrix("Schur top_left_block", values.get("top_left_block"))
+    top_right = require_fraction_matrix("Schur top_right_block", values.get("top_right_block"))
+    bottom_left = require_fraction_matrix("Schur bottom_left_block", values.get("bottom_left_block"))
+    bottom_right = require_fraction_matrix("Schur bottom_right_block", values.get("bottom_right_block"))
+    top_left_inverse = require_fraction_matrix(
+        "Schur top_left_inverse",
+        values.get("top_left_inverse"),
+    )
+    schur_complement = require_fraction_matrix(
+        "Schur schur_complement",
+        values.get("schur_complement"),
+    )
+    require_square_matrix("Schur matrix", matrix)
+    if len(matrix) != 2:
+        fail("schur-complement-replay expects a 2x2 matrix")
+    for context, block in [
+        ("Schur top_left_block", top_left),
+        ("Schur top_right_block", top_right),
+        ("Schur bottom_left_block", bottom_left),
+        ("Schur bottom_right_block", bottom_right),
+        ("Schur top_left_inverse", top_left_inverse),
+        ("Schur schur_complement", schur_complement),
+    ]:
+        if len(block) != 1 or len(block[0]) != 1:
+            fail(f"{context} must be 1x1 for this finite Schur resource")
+    if matrix != [
+        [top_left[0][0], top_right[0][0]],
+        [bottom_left[0][0], bottom_right[0][0]],
+    ]:
+        fail("schur-complement-replay block split does not reconstruct the matrix")
+    if mat_mul(top_left, top_left_inverse) != [[Fraction(1)]]:
+        fail("schur-complement-replay B*B^-1 does not equal one")
+    if mat_mul(top_left_inverse, top_left) != [[Fraction(1)]]:
+        fail("schur-complement-replay B^-1*B does not equal one")
+    require_mat_mul_shape("Schur C*B^-1", bottom_left, top_left_inverse)
+    require_mat_mul_shape("Schur C*B^-1*C^T", mat_mul(bottom_left, top_left_inverse), top_right)
+    correction = mat_mul(mat_mul(bottom_left, top_left_inverse), top_right)
+    computed_schur = [[bottom_right[0][0] - correction[0][0]]]
+    if computed_schur != schur_complement:
+        fail("schur-complement-replay listed Schur complement is incorrect")
+    schur_scalar = schur_complement[0][0]
+
+    determinant = checks["block-determinant-replay"]
+    if determinant["expected_result"] != "sat":
+        fail("block-determinant-replay must expect sat")
+    if determinant.get("proof_status") != "replay-only":
+        fail("block-determinant-replay must be replay-only")
+    determinant_values = single_witness_values(determinant, witnesses)
+    if determinant_values != values:
+        fail("block-determinant-replay must cite the Schur-complement witness")
+    det_matrix = require_fraction("Schur det_matrix", values.get("det_matrix"))
+    det_top_left = require_fraction("Schur det_top_left", values.get("det_top_left"))
+    det_schur = require_fraction("Schur det_schur", values.get("det_schur"))
+    det_factor_product = require_fraction(
+        "Schur det_factor_product",
+        values.get("det_factor_product"),
+    )
+    if det_small("Schur matrix", matrix) != det_matrix:
+        fail("block-determinant-replay det(A) is incorrect")
+    if det_small("Schur top_left_block", top_left) != det_top_left:
+        fail("block-determinant-replay det(B) is incorrect")
+    if det_small("Schur schur_complement", schur_complement) != det_schur:
+        fail("block-determinant-replay det(S) is incorrect")
+    if det_top_left * det_schur != det_factor_product:
+        fail("block-determinant-replay det(B)*det(S) is incorrect")
+    if det_factor_product != det_matrix:
+        fail("block-determinant-replay det(A) must equal det(B)*det(S)")
+
+    inverse = checks["block-inverse-replay"]
+    if inverse["expected_result"] != "sat":
+        fail("block-inverse-replay must expect sat")
+    if inverse.get("proof_status") != "replay-only":
+        fail("block-inverse-replay must be replay-only")
+    inverse_values = single_witness_values(inverse, witnesses)
+    if inverse_values != values:
+        fail("block-inverse-replay must cite the Schur-complement witness")
+    matrix_inverse = require_fraction_matrix("Schur matrix_inverse", values.get("matrix_inverse"))
+    identity = require_fraction_matrix("Schur identity", values.get("identity"))
+    require_square_matrix("Schur matrix_inverse", matrix_inverse)
+    require_square_matrix("Schur identity", identity)
+    expected_identity = [
+        [Fraction(1) if row == column else Fraction(0) for column in range(len(matrix))]
+        for row in range(len(matrix))
+    ]
+    if identity != expected_identity:
+        fail("block-inverse-replay identity matrix is incorrect")
+    if mat_mul(matrix, matrix_inverse) != identity:
+        fail("block-inverse-replay A*A^-1 does not equal identity")
+    if mat_mul(matrix_inverse, matrix) != identity:
+        fail("block-inverse-replay A^-1*A does not equal identity")
+
+    positive = checks["positive-definite-schur-replay"]
+    if positive["expected_result"] != "sat":
+        fail("positive-definite-schur-replay must expect sat")
+    if positive.get("proof_status") != "replay-only":
+        fail("positive-definite-schur-replay must be replay-only")
+    positive_values = single_witness_values(positive, witnesses)
+    if positive_values != values:
+        fail("positive-definite-schur-replay must cite the Schur-complement witness")
+    leading_principal_minor = require_fraction(
+        "Schur leading_principal_minor",
+        values.get("leading_principal_minor"),
+    )
+    schur_complement_value = require_fraction(
+        "Schur schur_complement_value",
+        values.get("schur_complement_value"),
+    )
+    if matrix[0][1] != matrix[1][0]:
+        fail("positive-definite-schur-replay expects a symmetric matrix")
+    if leading_principal_minor != top_left[0][0]:
+        fail("positive-definite-schur-replay leading principal minor is incorrect")
+    if schur_complement_value != schur_scalar:
+        fail("positive-definite-schur-replay Schur scalar is incorrect")
+    if leading_principal_minor <= 0 or schur_complement_value <= 0 or det_matrix <= 0:
+        fail("positive-definite-schur-replay expects positive principal data")
+
+    conditional = checks["conditional-variance-replay"]
+    if conditional["expected_result"] != "sat":
+        fail("conditional-variance-replay must expect sat")
+    if conditional.get("proof_status") != "replay-only":
+        fail("conditional-variance-replay must be replay-only")
+    conditional_values = single_witness_values(conditional, witnesses)
+    if conditional_values != values:
+        fail("conditional-variance-replay must cite the Schur-complement witness")
+    var_x = require_fraction("Schur var_x", values.get("var_x"))
+    cov_xy = require_fraction("Schur cov_xy", values.get("cov_xy"))
+    cov_yx = require_fraction("Schur cov_yx", values.get("cov_yx"))
+    var_y = require_fraction("Schur var_y", values.get("var_y"))
+    conditional_variance = require_fraction(
+        "Schur conditional_variance",
+        values.get("conditional_variance"),
+    )
+    if var_x != top_left[0][0] or cov_xy != top_right[0][0]:
+        fail("conditional-variance-replay covariance top row does not match the matrix")
+    if cov_yx != bottom_left[0][0] or var_y != bottom_right[0][0]:
+        fail("conditional-variance-replay covariance bottom row does not match the matrix")
+    if var_x <= 0:
+        fail("conditional-variance-replay expects positive Var(X)")
+    if var_y - cov_yx * (Fraction(1) / var_x) * cov_xy != conditional_variance:
+        fail("conditional-variance-replay conditional variance is incorrect")
+    if conditional_variance != schur_scalar:
+        fail("conditional-variance-replay conditional variance must equal the Schur scalar")
+
+    bad = checks["bad-schur-complement-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-schur-complement-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-schur-complement-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_schur_complement_replay":
+        fail("bad-schur-complement-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-by-two-schur-complement":
+        fail("bad-schur-complement-rejected must cite the Schur-complement witness")
+    computed_schur_bad = require_fraction(
+        "bad Schur computed_schur_complement",
+        data.get("computed_schur_complement"),
+    )
+    claimed_schur = require_fraction(
+        "bad Schur claimed_schur_complement",
+        data.get("claimed_schur_complement"),
+    )
+    if computed_schur_bad != schur_scalar:
+        fail("bad-schur-complement-rejected computed scalar does not match replay")
+    if computed_schur_bad == claimed_schur:
+        fail("bad-schur-complement-rejected malformed scalar unexpectedly matches")
+    if "separate qf-lra-bad-schur-complement" not in bad.get("notes", ""):
+        fail("bad-schur-complement-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-schur-complement"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-schur-complement must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-schur-complement must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-schur-complement must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-by-two-schur-complement":
+        fail("qf-lra-bad-schur-complement must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-schur-complement-rejected":
+        fail("qf-lra-bad-schur-complement must cite the replay row")
+    qf_computed = require_fraction(
+        "qf Schur computed_schur_complement",
+        qf_data.get("computed_schur_complement"),
+    )
+    qf_claimed = require_fraction(
+        "qf Schur claimed_schur_complement",
+        qf_data.get("claimed_schur_complement"),
+    )
+    if qf_computed != computed_schur_bad or qf_claimed != claimed_schur:
+        fail("qf-lra-bad-schur-complement data must match the replay row")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Schur smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-schur-complement-v0/smt2/"
+        "bad-schur-complement-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-schur-complement smt2_artifact must name the checked source artifact")
+    check_source("qf Schur smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Schur farkas_regression", regression)
+    if "finite_schur_complement_bad_value_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-schur-complement must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Schur certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-schur-complement certificate must document checked Farkas evidence")
+
+    horizon = checks["general-schur-complement-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-schur-complement-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-schur-complement-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("Schur horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("Schur horizon future_checker", horizon_data.get("future_checker"))
+
+
 def require_fraction_vector_list(context: str, value: Any) -> list[list[Fraction]]:
     if not isinstance(value, list) or not value:
         fail(f"{context} must be a non-empty list of vectors")
@@ -28459,6 +28696,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_newton_step(expected)
     if metadata["id"] == "finite-condition-number-v0":
         validate_finite_condition_number(expected)
+    if metadata["id"] == "finite-schur-complement-v0":
+        validate_finite_schur_complement(expected)
     if metadata["id"] == "finite-singular-value-shadow-v0":
         validate_finite_singular_value_shadow(expected)
     if metadata["id"] == "finite-jordan-chain-v0":

@@ -1,0 +1,5 @@
+(set-logic QF_LRA)
+(declare-const schur_complement Real)
+(assert (= schur_complement 2))
+(assert (= schur_complement (/ 3 2)))
+(check-sat)

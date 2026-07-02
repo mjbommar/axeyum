@@ -157,13 +157,13 @@ proof upgrades, solver feedback, and consumer boundaries is
 [`docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
 The commit-sized curriculum/resource work matrix is
 [`docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md`](docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
-The current execution ledger for stabilizing the 119 current math packs,
+The current execution ledger for stabilizing the 120 current math packs,
 resolving unclassified solver-reuse rows, completing learner paths, and
 deepening proof routes field by field is
 [`docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md).
 The current learner-spine audit over all non-template math packs is
 [`docs/foundational-resources/LEARNER-COVERAGE-AUDIT.md`](docs/foundational-resources/LEARNER-COVERAGE-AUDIT.md);
-it records all 119 current non-template packs as focused-lesson linked, with no
+it records all 120 current non-template packs as focused-lesson linked, with no
 path-only, index-only, or missing learner buckets.
 The detailed operating roadmap for building the math-curriculum resource system
 across ontology rows, example packs, learner pages, proof routes, solver reuse,
@@ -283,14 +283,14 @@ QF_UF/Alethe, QF_LIA/Diophantine, and QF_BV/DRAT rows.
 The matrix computation consumer query guide is
 [`docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md`](docs/foundational-resources/MATRIX-COMPUTATION-QUERIES.md);
 it records exact concept-plus-route queries for LU/nullspace, residual,
-rank/nullity, eigenpair, singular-value, random-matrix, chain/cochain/UCT,
-tensor/module, operator, and Chebyshev resources.
+Schur complements, rank/nullity, eigenpair, singular-value, random-matrix,
+chain/cochain/UCT, tensor/module, operator, and Chebyshev resources.
 The probability/statistics consumer query guide is
 [`docs/foundational-resources/PROBABILITY-STATISTICS-QUERIES.md`](docs/foundational-resources/PROBABILITY-STATISTICS-QUERIES.md);
 it records exact concept-plus-route queries for finite probability tables,
 finite measure, product/integration, pushforwards, conditional expectation,
 stochastic kernels, tail counts, exact tests, and finite random-matrix
-moments.
+moments, including Schur conditional-variance shadows.
 The measure-theory consumer query guide is
 [`docs/foundational-resources/MEASURE-THEORY-QUERIES.md`](docs/foundational-resources/MEASURE-THEORY-QUERIES.md);
 it records exact concept-plus-route queries for finite measure additivity,
@@ -325,7 +325,7 @@ The optimization/convexity consumer query guide is
 [`docs/foundational-resources/OPTIMIZATION-CONVEXITY-QUERIES.md`](docs/foundational-resources/OPTIMIZATION-CONVEXITY-QUERIES.md);
 it records exact concept-plus-route queries for LP objectives, convexity
 shadows, KKT/QP/SDP rows, first-order method steps, projections, residuals,
-and exact-vs-floating boundary resources.
+Schur-complement shadows, and exact-vs-floating boundary resources.
 The functional-analysis/operator consumer query guide is
 [`docs/foundational-resources/FUNCTIONAL-OPERATOR-QUERIES.md`](docs/foundational-resources/FUNCTIONAL-OPERATOR-QUERIES.md);
 it records exact concept-plus-route queries for finite operators, Chebyshev
@@ -335,7 +335,8 @@ The analysis/numerical consumer query guide is
 [`docs/foundational-resources/ANALYSIS-NUMERICAL-QUERIES.md`](docs/foundational-resources/ANALYSIS-NUMERICAL-QUERIES.md);
 it records exact concept-plus-route queries for bounded real-analysis rows,
 numerical-method rows, residuals, singular-value shadows, dynamics/Euler rows,
-and complex real-pair resources.
+Schur complements, singular-value shadows, dynamics/Euler rows, and complex
+real-pair resources.
 The dynamics consumer query guide is
 [`docs/foundational-resources/DYNAMICS-QUERIES.md`](docs/foundational-resources/DYNAMICS-QUERIES.md);
 it records exact concept-plus-route queries for finite recurrences,
@@ -371,13 +372,13 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-02): the public JSON layer reports
-121 concept rows, 119 non-template packs, 762 expected checks (374 `sat`,
-306 `unsat`, 82 `not-run`), 345 checked rows, 335 replay-only rows, 82
-Lean-horizon rows, and 119 promoted solver-reuse packs. The rules/law JSON
+122 concept rows, 120 non-template packs, 770 expected checks (379 `sat`,
+308 `unsat`, 83 `not-run`), 346 checked rows, 341 replay-only rows, 83
+Lean-horizon rows, and 120 promoted solver-reuse packs. The rules/law JSON
 layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
-coverage audit records all 119 non-template packs as focused-lesson linked,
+coverage audit records all 120 non-template packs as focused-lesson linked,
 with no path-only, index-only, or missing learner buckets. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -772,7 +773,7 @@ curriculum-pressure dashboards now expose conservative R0-R6 gate/next-gate
 columns and overlapping fragment-pressure buckets, making R4-to-R5 solver-reuse
 candidates and Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
 Lean-horizon demand visible without hand-maintained scans.
-The generated solver-reuse disposition audit now reports 119 promoted math
+The generated solver-reuse disposition audit now reports 120 promoted math
 packs, 0 non-benchmark-horizon packs, and 0 unclassified rows, so future
 unclassified packs and deliberate non-benchmark rows surface in a
 freshness-checked queue.
@@ -1112,8 +1113,9 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **119 promoted solver-reuse
+the foundational resource dashboards now report **120 promoted solver-reuse
 packs**, **0 non-benchmark-horizon packs**, and **0 unclassified packs** after
+the latest finite Schur-complement bad scalar QF_LRA/Farkas promotion,
 the latest finite Jordan-chain bad-component QF_LRA/Farkas promotion,
 the latest finite singular-value bad-bound QF_LRA/Farkas promotion,
 the latest finite Cholesky bad product-entry QF_LRA/Farkas promotion,

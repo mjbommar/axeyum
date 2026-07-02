@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-schur-complement-v0",
+  "witnesses": [
+    {
+      "id": "two-by-two-schur-complement",
+      "description": "Exact one-by-one Schur complement for A = [[4,2],[2,3]].",
+      "values": {
+        "matrix": [
+          ["4", "2"],
+          ["2", "3"]
+        ],
+        "top_left_block": [["4"]],
+        "top_right_block": [["2"]],
+        "bottom_left_block": [["2"]],
+        "bottom_right_block": [["3"]],
+        "top_left_inverse": [["1/4"]],
+        "schur_complement": [["2"]],
+        "identity": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "matrix_inverse": [
+          ["3/8", "-1/4"],
+          ["-1/4", "1/2"]
+        ],
+        "det_matrix": "8",
+        "det_top_left": "4",
+        "det_schur": "2",
+        "det_factor_product": "8",
+        "leading_principal_minor": "4",
+        "schur_complement_value": "2",
+        "var_x": "4",
+        "cov_xy": "2",
+        "cov_yx": "2",
+        "var_y": "3",
+        "conditional_variance": "2"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "schur-complement-replay",
+      "claim": "The listed one-by-one Schur complement equals D - C*B^-1*C^T for the fixed block split.",
+      "expected_result": "sat",
+      "validation": "exact_rational_schur_complement_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-schur-complement"],
+      "notes": "The validator recomputes the leading-block inverse check and the Schur complement exactly over rationals."
+    },
+    {
+      "id": "block-determinant-replay",
+      "claim": "The fixed block determinant factors as det(A) = det(B)*det(S).",
+      "expected_result": "sat",
+      "validation": "exact_rational_block_determinant_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-schur-complement"],
+      "notes": "The validator recomputes the two-by-two determinant and the one-by-one block determinants."
+    },
+    {
+      "id": "block-inverse-replay",
+      "claim": "The listed inverse is a two-sided inverse of the fixed matrix.",
+      "expected_result": "sat",
+      "validation": "exact_rational_block_inverse_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-schur-complement"],
+      "notes": "The validator recomputes A*A^-1 and A^-1*A exactly."
+    },
+    {
+      "id": "positive-definite-schur-replay",
+      "claim": "The fixed matrix has a positive leading block and positive Schur complement, matching positive leading principal minors.",
+      "expected_result": "sat",
+      "validation": "exact_rational_positive_definite_schur_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-schur-complement"],
+      "notes": "The validator checks B > 0, S > 0, and det(A) > 0 for the fixed symmetric matrix."
+    },
+    {
+      "id": "conditional-variance-replay",
+      "claim": "Reading the same matrix as a covariance matrix, the conditional-variance shadow is Var(Y) - Cov(Y,X)*Var(X)^-1*Cov(X,Y) = 2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_conditional_variance_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-schur-complement"],
+      "notes": "The validator recomputes the scalar conditional-variance shadow exactly and checks it equals the Schur complement."
+    },
+    {
+      "id": "bad-schur-complement-rejected",
+      "claim": "The one-by-one Schur complement equals 3/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_schur_complement_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "two-by-two-schur-complement",
+        "computed_schur_complement": "2",
+        "claimed_schur_complement": "3/2"
+      },
+      "notes": "Exact replay computes the Schur complement as 2, so the claimed value 3/2 is rejected; the separate qf-lra-bad-schur-complement row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-schur-complement",
+      "claim": "The fixed malformed Schur-complement scalar claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "two-by-two-schur-complement",
+        "source_replay_row": "bad-schur-complement-rejected",
+        "computed_schur_complement": "2",
+        "claimed_schur_complement": "3/2",
+        "farkas_conflict": "schur_complement = 2 and schur_complement = 3/2",
+        "smt2_artifact": "artifacts/examples/math/finite-schur-complement-v0/smt2/bad-schur-complement-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_schur_complement_bad_value_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the scalar as 2, while the malformed row claims 3/2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-schur-complement-theory-lean-horizon",
+      "claim": "General Schur-complement identities, block inverse theorems, Gaussian-elimination correctness, positive-definite equivalences, SDP uses, and conditional Gaussian covariance theorems require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For arbitrary compatible block matrices with an invertible leading block, prove Schur-complement determinant and inverse identities, positive-definite equivalences under symmetry, and the conditional-covariance formula under explicit probabilistic assumptions.",
+        "future_checker": "Lean theorem statements for exact block-matrix algebra plus separate numerical-honesty artifacts for pivoting, stability, and floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational block matrix, not a theorem about arbitrary block matrices, Gaussian elimination, SDP duality, or statistical conditioning."
+    }
+  ]
+}

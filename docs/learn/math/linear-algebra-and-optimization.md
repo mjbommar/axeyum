@@ -13,6 +13,7 @@ Example packs:
 - [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/)
 - [finite-qr-decomposition-v0](../../../artifacts/examples/math/finite-qr-decomposition-v0/)
 - [finite-cholesky-decomposition-v0](../../../artifacts/examples/math/finite-cholesky-decomposition-v0/)
+- [finite-schur-complement-v0](../../../artifacts/examples/math/finite-schur-complement-v0/)
 - [finite-vector-spaces-v0](../../../artifacts/examples/math/finite-vector-spaces-v0/)
 - [finite-dual-spaces-v0](../../../artifacts/examples/math/finite-dual-spaces-v0/)
 - [inner-product-spaces-rational-v0](../../../artifacts/examples/math/inner-product-spaces-rational-v0/)
@@ -99,7 +100,12 @@ existence, algorithm correctness, conditioning, or numerical stability. The
 Cholesky slice adds exact lower-triangular factor replay, positive diagonal and
 leading-minor checks, `L*L^T` product replay, and checked QF_LRA/Farkas
 rejection of a bad product entry without claiming Cholesky existence,
-algorithm correctness, conditioning, or numerical stability. The finite-module
+algorithm correctness, conditioning, or numerical stability. The Schur-complement
+slice adds exact block-matrix replay, leading-block inverse checking,
+determinant factorization, two-sided inverse replay, positive-definite and
+conditional-variance shadows, and checked QF_LRA/Farkas rejection of a bad
+Schur scalar without claiming general block inverse, Gaussian-elimination,
+pivoting, SDP, or statistical-conditioning theorems. The finite-module
 slice adds ring actions on finite additive groups,
 generated submodules, module homomorphisms, kernel/image replay, quotient-module
 tables, and checked QF_UF/Alethe non-submodule rejection. The finite-tensor-product
@@ -369,6 +375,23 @@ The `finite-condition-number-v0` validator checks `A*A^-1 = I`,
 relative bound `1/10 <= 6*(1/60)`. The checked bad row rejects
 `kappa_infinity(A) <= 5` after exact replay computes `6`. For a focused trace,
 read [End To End: Finite Condition Number](condition-number-end-to-end.md).
+
+For block-matrix replay, `finite-schur-complement-v0` uses:
+
+```text
+A = [[4,2],
+     [2,3]]
+B = [[4]]
+S = 3 - 2*(1/4)*2 = 2
+```
+
+The validator checks `B*B^-1 = 1`, `S = D - C*B^-1*C^T`,
+`det(A) = det(B)*det(S)`, `A*A^-1 = I`, `A^-1*A = I`, a finite
+positive-definite Schur shadow, and the matching conditional-variance scalar.
+Its checked bad row rejects `S = 3/2` after exact replay computes `2`; general
+Schur-complement identities, pivoting/stability, SDP equivalences, and
+statistical conditioning stay in the horizon lane. For a focused trace, read
+[End To End: Finite Schur Complement](schur-complement-end-to-end.md).
 
 For singular-value conditioning, `finite-singular-value-shadow-v0` uses one
 diagonal rational matrix `A = [[3,0],[0,1]]`. The validator recomputes
@@ -757,6 +780,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/nu
 cargo test -p axeyum-solver --test math_resource_lra_routes numerical_linear_algebra_bad_solution_box_upper_bound_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-condition-number-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_condition_number_bad_condition_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-schur-complement-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_schur_complement_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-singular-value-shadow-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_singular_value_shadow_bad_bound_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-jordan-chain-v0
@@ -900,7 +925,7 @@ eigenpairs, bad Rayleigh-quotient rows, bad characteristic-polynomial rows,
 bad Jordan-chain components, bad operator-bound and bad Chebyshev-prefix rows, bad Walsh-Hadamard
 transform coefficients, bad QR/Cholesky product entries, bad covariance
 entries, bad KKT stationarity and complementarity rows,
-bad condition-number bounds, bad Newton-coordinate rows, bad proximal residual rows, negative-norm rows, and projection-orthogonality
+bad condition-number bounds, bad Schur-complement scalar rows, bad Newton-coordinate rows, bad proximal residual rows, negative-norm rows, and projection-orthogonality
 examples graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
 Finite vector-space, dual-space, module, ideal, and tensor-product equality
@@ -927,6 +952,6 @@ module theory, universal coefficient theorem schemas, exact sequences,
 Ext/Tor laws,
 Chebyshev-system/Haar-space theorems, minimax approximation, conditioning,
 Walsh-Hadamard/Fourier transform theorems, fast transform algorithms,
-QR/Cholesky existence/algorithm/stability theorems, numerical stability, SDP, general convex analysis, KKT sufficiency, constraint
+QR/Cholesky existence/algorithm/stability theorems, Schur-complement and block-inverse theorems, Gaussian-elimination pivoting/stability, numerical stability, SDP, general convex analysis, KKT sufficiency, constraint
 qualifications, and algorithm convergence need proof routes or carefully
 bounded numerical-experiment metadata.

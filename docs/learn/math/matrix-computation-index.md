@@ -20,6 +20,9 @@ For exact Hessian solves inside Newton steps, see
 [End To End: Finite Newton Step](newton-step-end-to-end.md).
 For exact rational condition numbers and perturbation-bound shadows, see
 [End To End: Finite Condition Number](condition-number-end-to-end.md).
+For exact Schur complements, determinant/inverse block shadows, and
+conditional-variance shadows, see
+[End To End: Finite Schur Complement](schur-complement-end-to-end.md).
 For exact singular-value, spectral-norm, and SVD reconstruction shadows, see
 [End To End: Finite Singular-Value Shadow](singular-value-shadow-end-to-end.md).
 For exact Jordan-chain and generalized-eigenvector shadows, see
@@ -30,7 +33,7 @@ shadows, see
 
 Concept rows:
 
-- `bridge_lu_replay`, `bridge_rank_nullity`, `bridge_residual_bound`,
+- `bridge_lu_replay`, `bridge_schur_complement`, `bridge_rank_nullity`, `bridge_residual_bound`,
   `bridge_eigenpair`, `bridge_characteristic_polynomial`,
   `bridge_random_matrix_finite_moment`,
   `bridge_finite_boundary_operator_replay`,
@@ -53,6 +56,7 @@ Concept rows:
 | Theme | Packs | What Is Checked | Route |
 |---|---|---|---|
 | Linear systems, nullspaces, LU, QR, and Cholesky | [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/), [finite-qr-decomposition-v0](../../../artifacts/examples/math/finite-qr-decomposition-v0/), [finite-cholesky-decomposition-v0](../../../artifacts/examples/math/finite-cholesky-decomposition-v0/), [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/) | Fixed `A*x = b`, `L*U = A`, `Q^T Q = I`, `Q*R = A`, `L*L^T = A`, positive leading minors, exact bad LU/QR/Cholesky product-entry replay, separate checked bad product-entry proof rows, bad nullspace component rejection, singular-row inconsistency, LP objective thresholds | finite replay plus QF_LRA/Farkas |
+| Block matrices and Schur complements | [finite-schur-complement-v0](../../../artifacts/examples/math/finite-schur-complement-v0/) | Exact leading-block inverse, one-by-one Schur complement, determinant factorization, two-sided inverse replay, positive-definite shadow, conditional-variance shadow, replay-only bad scalar rejection, and separate checked bad scalar proof row | finite replay plus QF_LRA/Farkas |
 | Residuals, Hessian solves, condition numbers, singular values, and numerical shadows | [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/), [finite-condition-number-v0](../../../artifacts/examples/math/finite-condition-number-v0/), [finite-singular-value-shadow-v0](../../../artifacts/examples/math/finite-singular-value-shadow-v0/), [finite-newton-step-v0](../../../artifacts/examples/math/finite-newton-step-v0/), [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/) | Exact residual norms, solution boxes, one Jacobi step, infinity-norm condition number, singular-value/SVD shadow replay, spectral and Frobenius norms, perturbation-bound replay, Hessian linear solve, Newton direction, normal equations, residual orthogonality, RSS improvement, bad condition-number bound, bad singular-value bound, bad Newton coordinate, and bad RSS rejection | finite replay plus QF_LRA/Farkas |
 | Inner products, projections, and orthogonal transforms | [inner-product-spaces-rational-v0](../../../artifacts/examples/math/inner-product-spaces-rational-v0/), [finite-walsh-hadamard-transform-v0](../../../artifacts/examples/math/finite-walsh-hadamard-transform-v0/) | Gram matrices, fixed Cauchy-Schwarz, orthogonal projection, Gram-Schmidt, order-4 Walsh-Hadamard transform replay, inverse reconstruction, Parseval energy scaling, bad negative norm, bad projection orthogonality, and bad transform coefficient | finite replay plus QF_LRA/Farkas |
 | Kernel, image, rank, and duals | [finite-vector-spaces-v0](../../../artifacts/examples/math/finite-vector-spaces-v0/), [finite-dual-spaces-v0](../../../artifacts/examples/math/finite-dual-spaces-v0/) | Finite `F2` vector-space tables, subspaces, linear maps, kernel/image, rank-nullity, covectors, annihilators, transpose maps | finite table replay plus QF_UF/Alethe |
@@ -65,7 +69,8 @@ Concept rows:
 ## What The Checker Trusts
 
 For exact rational rows, the trusted work is small arithmetic: matrix-vector
-multiplication, matrix multiplication, determinant or trace formulas for the
+multiplication, matrix multiplication, Schur-complement scalar replay,
+determinant or trace formulas for the
 fixed dimension, exact residuals, rational inequalities, and Farkas certificate
 checking when a row is unsatisfiable. The LU slice now has a positive
 `L*U = A` replay row, a bad product-entry replay row, an explicit checked
@@ -91,7 +96,8 @@ laws, or cohomology-operation invariance.
 
 ## What Remains A Horizon
 
-The finite rows do not prove general rank-nullity, spectral theorem,
+The finite rows do not prove general rank-nullity, Schur-complement theorem,
+block inverse theorem, Gaussian-elimination correctness, spectral theorem,
 Jordan normal form, diagonalizability criteria, Cayley-Hamilton over arbitrary
 rings, Hilbert projection, Riesz representation,
 Hahn-Banach, stability or conditioning of numerical algorithms, asymptotic
@@ -116,6 +122,7 @@ The torsion and universal-coefficient part is expanded in
 - [Finite Cholesky Decomposition Checks](cholesky-decomposition-end-to-end.md)
 - [Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md)
 - [Finite Condition Number](condition-number-end-to-end.md)
+- [Finite Schur Complement](schur-complement-end-to-end.md)
 - [Finite Singular-Value Shadow](singular-value-shadow-end-to-end.md)
 - [Finite Newton Step](newton-step-end-to-end.md)
 - [Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md)
@@ -150,6 +157,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cholesky-decomposition-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-condition-number-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-schur-complement-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-singular-value-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/inner-product-spaces-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-walsh-hadamard-transform-v0

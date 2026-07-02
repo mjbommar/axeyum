@@ -240,6 +240,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Schur-complement resource landed.**
+  `finite-schur-complement-v0` now gives the linear-algebra,
+  numerical-analysis, optimization, and statistics lanes an exact rational
+  block-matrix shadow: it checks `A = [[4,2],[2,3]]`, the one-by-one leading
+  block inverse, `S = D - C*B^-1*C^T = 2`, determinant factorization,
+  two-sided inverse replay, a positive-definite shadow, and a
+  conditional-variance shadow, then isolates a malformed scalar claim
+  `S = 3/2` as a source-linked QF_LRA/Farkas row. The focused learner page and
+  query guides keep exact block replay separate from general Schur-complement,
+  block-inverse, Gaussian-elimination, pivoting, SDP, statistical-conditioning,
+  and numerical-stability theorems. The public summary now reports 122 concept
+  rows, 120 packs, 770 expected checks, 346 checked rows, 341 replay-only rows,
+  83 Lean-horizon rows, and 120 promoted solver-reuse packs.
 - **Finite Jordan-chain resource landed.**
   `finite-jordan-chain-v0` now gives the linear-algebra,
   numerical-analysis, and functional/operator lanes an exact rational
@@ -249,7 +262,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   QF_LRA/Farkas row. The focused learner page and query guides keep exact
   generalized-eigenvector replay separate from Jordan normal form,
   diagonalizability, multiplicity theorems, and numerical eigensolver claims.
-  The public summary now reports 121 concept rows, 119 packs, 762 expected
+  The public summary then reported 121 concept rows, 119 packs, 762 expected
   checks, 345 checked rows, 335 replay-only rows, 82 Lean-horizon rows, and 119
   promoted solver-reuse packs.
 - **Finite singular-value shadow resource landed.**

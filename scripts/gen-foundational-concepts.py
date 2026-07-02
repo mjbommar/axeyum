@@ -406,6 +406,10 @@ CURRICULUM_MAP = {
                 "Exact rational Cholesky replay, positive-diagonal and leading-minor checks, and checked bad product-entry evidence.",
             ),
             (
+                "finite-schur-complement-v0",
+                "Exact block-matrix Schur complement, determinant, inverse, positive-definite, conditional-variance, and checked bad scalar evidence.",
+            ),
+            (
                 "finite-modules-v0",
                 "Finite Z/4Z-module replay, submodules, homomorphisms, kernels, images, and quotient modules.",
             ),
@@ -543,14 +547,14 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky/Schur replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, multivariable-calculus and Newton-step shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
     "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, product measures, and exact discrete distributions."),
-    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance identities, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, and Simpson witnesses."),
+    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, and Simpson witnesses."),
     "optimization_and_convexity": [
         ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
         ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and checked bad midpoint-convexity plus affine-threshold rejection."),
@@ -561,13 +565,14 @@ FIELD_PACKS = {
         ("finite-kkt-v0", "Finite KKT stationarity, complementary slackness, and bad-stationarity rejection."),
         ("finite-active-set-qp-v0", "Finite active-set QP replay with checked bad-free-gradient rejection."),
         ("finite-sdp-v0", "Finite SDP primal/dual slack replay with checked bad-objective and bad duality-gap rejections."),
+        ("finite-schur-complement-v0", "Finite block Schur-complement and positive-definite shadow replay with checked bad scalar rejection."),
         ("finite-gradient-descent-v0", "Finite gradient-descent step replay with checked bad-decrease, bad step-coordinate, and bad descent-bound rejections."),
         ("finite-line-search-v0", "Finite Armijo line-search replay with checked bad-acceptance, bad descent-direction, and bad accepted-candidate rejections."),
         ("finite-wolfe-line-search-v0", "Finite Wolfe line-search replay with checked bad-minimizer and bad-curvature rejections."),
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "LU/QR/Cholesky replay, interval bounds, inner-product projections, condition-number, singular-value, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "LU/QR/Cholesky/Schur replay, interval bounds, inner-product projections, condition-number, singular-value, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -5309,6 +5314,10 @@ BRIDGE_CONCEPTS = [
                 "Exact rational Cholesky factorization, positive diagonal entries, leading principal minors, product replay, and checked bad product-entry evidence.",
             ),
             (
+                "finite-schur-complement-v0",
+                "Exact block Schur complement, determinant factorization, inverse, positive-definite shadow, and checked bad scalar evidence.",
+            ),
+            (
                 "numerical-linear-algebra-v0",
                 "Exact residual, solution-box, and one-step iterative checks that build on matrix replay.",
             ),
@@ -5331,11 +5340,12 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/linear-system-end-to-end.md",
                     "docs/learn/math/qr-decomposition-end-to-end.md",
                     "docs/learn/math/cholesky-decomposition-end-to-end.md",
+                    "docs/learn/math/schur-complement-end-to-end.md",
                     "docs/learn/math/numerical-linear-algebra-end-to-end.md",
                 ],
                 "notes": (
                     "The pack validator recomputes L*U, Q*R, Q^T*Q, L*L^T, "
-                    "leading principal minors, A*x, and A*v exactly over "
+                    "Schur complements, determinant factors, leading principal minors, A*x, and A*v exactly over "
                     "rationals; separate qf-lra product-entry rows, the bad "
                     "nullspace-component row, and bad infeasible linear-system "
                     "rows use the QF_LRA/Farkas route."
@@ -5350,23 +5360,130 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/linear-system-end-to-end.md",
             "docs/learn/math/qr-decomposition-end-to-end.md",
             "docs/learn/math/cholesky-decomposition-end-to-end.md",
+            "docs/learn/math/schur-complement-end-to-end.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
             "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-lu-product-entry-farkas-conflict.smt2",
             "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-nullspace-component-farkas-conflict.smt2",
             "artifacts/examples/math/finite-qr-decomposition-v0/smt2/bad-qr-product-entry-farkas-conflict.smt2",
             "artifacts/examples/math/finite-cholesky-decomposition-v0/smt2/bad-cholesky-product-entry-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-schur-complement-v0/smt2/bad-schur-complement-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
-            "LU, QR, and Cholesky replay check fixed factorizations; they do not prove existence, pivoting strategy correctness, QR/Cholesky algorithm correctness, conditioning, or numerical stability.",
+            "LU, QR, Cholesky, and Schur replay check fixed factorizations or block identities; they do not prove existence, pivoting strategy correctness, QR/Cholesky algorithm correctness, conditioning, or numerical stability.",
             "Ill-conditioned and floating-point claims need separate numerical-honesty metadata before they become solver or learner claims.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
                 "Rows state the exact matrix entries, lower/upper or orthogonal/upper-triangular factors, and rational arithmetic domain.",
-                "The validator recomputes L*U, Q^T*Q, Q*R, L*L^T, and positive leading principal minors, and separate qf-lra product-entry rows reject corrupted equalities through checked QF_LRA/Farkas evidence.",
+                "The validator recomputes L*U, Q^T*Q, Q*R, L*L^T, Schur complements, determinant factors, inverses, and positive leading principal minors, and separate qf-lra product-entry or scalar rows reject corrupted equalities through checked QF_LRA/Farkas evidence.",
                 "Singularity, factorization existence, algorithm correctness, pivoting, conditioning, and stability claims remain separate proof-horizon or numerical-analysis rows.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_schur_complement",
+        "title": "Schur Complement Replay",
+        "field_ids": [
+            "linear_algebra",
+            "numerical_analysis",
+            "optimization_and_convexity",
+            "statistics",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "A finite Schur-complement row replays one block matrix split "
+            "B, C, D, computes S = D - C*B^-1*C^T exactly, and connects "
+            "determinant, inverse, positive-definite, and conditional-variance "
+            "shadows to a checked scalar QF_LRA/Farkas conflict."
+        ),
+        "prerequisites": [
+            "bridge_lu_replay",
+            "bridge_residual_bound",
+            "curriculum_linear_algebra",
+            "curriculum_rationals",
+        ],
+        "unlocks": [
+            "field_linear_algebra",
+            "field_numerical_analysis",
+            "field_optimization_and_convexity",
+            "field_statistics",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite matrices",
+            "block matrix replay",
+            "LRA (exact rationals)",
+            "QF_LRA",
+            "Farkas certificate",
+            "Lean horizon",
+        ],
+        "example_packs": [
+            (
+                "finite-schur-complement-v0",
+                "Exact one-by-one Schur complement, determinant factorization, inverse, positive-definite shadow, conditional-variance shadow, and checked bad scalar row.",
+            ),
+            (
+                "finite-cholesky-decomposition-v0",
+                "Positive-definite factorization rows adjacent to Schur-complement criteria.",
+            ),
+            (
+                "finite-covariance-matrix-v0",
+                "Covariance-matrix rows adjacent to conditional-covariance and Gram-matrix shadows.",
+            ),
+            (
+                "finite-sdp-v0",
+                "PSD/slack rows that use block-positive-semidefinite vocabulary in the optimization lane.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "exact block replay plus QF_LRA/Farkas scalar rejection",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/matrix-computation-index.md",
+                    "docs/learn/math/schur-complement-end-to-end.md",
+                    "docs/learn/math/linear-algebra-and-optimization.md",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The pack validator recomputes B*B^-1, S = D - C*B^-1*C^T, "
+                    "det(A) = det(B)*det(S), A*A^-1, A^-1*A, the positive "
+                    "one-by-one Schur shadow, and the conditional-variance "
+                    "shadow. The checked row isolates the final scalar "
+                    "contradiction as QF_LRA/Farkas evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/matrix-computation-index.md",
+            "docs/learn/math/schur-complement-end-to-end.md",
+            "docs/learn/math/linear-algebra-and-optimization.md",
+            "artifacts/examples/math/finite-schur-complement-v0/smt2/bad-schur-complement-farkas-conflict.smt2",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "The finite row checks one exact block split; it does not prove the general Schur-complement theorem, arbitrary block inverse identity, Gaussian-elimination correctness, pivoting, or numerical stability.",
+            "Positive-definite, SDP, and conditional-covariance uses remain finite shadows until theorem-backed or numerical-honesty routes exist.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the exact block matrix, leading block inverse, Schur complement, determinant factors, inverse, positive-definite shadow, and conditional-variance shadow.",
+                "The validator recomputes every block identity and inverse product exactly over rationals.",
+                "Malformed scalar rows link source SMT-LIB artifacts and route regressions before claiming checked QF_LRA/Farkas evidence.",
+                "General Schur-complement, pivoting, stability, SDP, and statistical-conditioning claims remain Lean-horizon or numerical-honesty rows.",
             ],
         },
     },
@@ -5516,6 +5633,10 @@ BRIDGE_CONCEPTS = [
                 "finite-condition-number-v0",
                 "Two-by-two diagonal inverse replay, infinity-norm condition number, perturbation-bound shadow, and checked bad condition-number bound.",
             ),
+            (
+                "finite-schur-complement-v0",
+                "Two-by-two block Schur complement, determinant, inverse, positive-definite, and conditional-variance shadows with checked bad scalar evidence.",
+            ),
         ],
         "proof_routes": [
             {
@@ -5531,6 +5652,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/numerical-linear-algebra-end-to-end.md",
                     "docs/learn/math/newton-step-end-to-end.md",
                     "docs/learn/math/condition-number-end-to-end.md",
+                    "docs/learn/math/schur-complement-end-to-end.md",
                     "docs/learn/math/linear-algebra-and-optimization.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
@@ -5551,7 +5673,9 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
             "docs/learn/math/newton-step-end-to-end.md",
             "docs/learn/math/condition-number-end-to-end.md",
+            "docs/learn/math/schur-complement-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
+            "artifacts/examples/math/finite-schur-complement-v0/smt2/bad-schur-complement-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],

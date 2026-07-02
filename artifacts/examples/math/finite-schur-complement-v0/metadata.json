@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "finite-schur-complement-v0",
+  "title": "Finite Schur-Complement Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_optimization_and_convexity",
+    "field_statistics",
+    "bridge_lu_replay",
+    "bridge_schur_complement",
+    "bridge_residual_bound"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "optimization_and_convexity",
+    "statistics"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite rational matrices",
+    "block matrix replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-schur-complement-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Schur-complement bad scalar QF_LRA/Farkas regression seed",
+    "pressure": "Exact block replay computes the one-by-one Schur complement as 2 while the malformed row claims 3/2.",
+    "evidence": [
+      "qf-lra-bad-schur-complement"
+    ],
+    "next_step": "Promote additional block inverse, PSD, or conditional-covariance rows only when they add distinct proof pressure; keep general Schur-complement, pivoting, stability, and Gaussian-conditioning theorems in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/schur-complement-end-to-end.md",
+    "artifacts/examples/math/finite-schur-complement-v0/smt2/bad-schur-complement-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "schur-complement-replay",
+    "block-determinant-replay",
+    "block-inverse-replay",
+    "positive-definite-schur-replay",
+    "conditional-variance-replay",
+    "bad-schur-complement-rejected",
+    "qf-lra-bad-schur-complement",
+    "general-schur-complement-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed block matrix, leading block inverse, Schur complement, determinant factors, inverse, positive-definite shadow, and conditional-variance shadow as deterministic exact-rational replay obligations.",
+    "Route false finite Schur-complement scalar claims through checked QF_LRA/Farkas evidence after replay computes the exact scalar.",
+    "Expose the pack through matrix computation, numerical-analysis, optimization, and statistics learner and consumer query surfaces.",
+    "Keep the general Schur-complement theorem, block inverse theorem, Gaussian-elimination correctness, pivoting, stability, SDP equivalences, and statistical conditioning theorem marked Lean-horizon or numerical-honesty until formal routes exist."
+  ]
+}
