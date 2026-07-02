@@ -16,7 +16,12 @@ fn step_ids(report: &EvidenceReport) -> Vec<TrustId> {
 }
 
 fn config() -> SolverConfig {
-    SolverConfig::new().with_timeout(Duration::from_secs(30))
+    // A ceiling, not a target: fast cases stay fast. 30 s flaked on slow CI
+    // runners — the QF_AX lazy-extensionality SAT search needs ~10-20 s of a
+    // fast dev box, so a 2-core runner under parallel test load exceeded the
+    // budget mid-search and declined ("expected replayable SAT evidence, got
+    // Unknown"). Generous relative to the slowest environment.
+    SolverConfig::new().with_timeout(Duration::from_secs(180))
 }
 
 fn unbounded_config() -> SolverConfig {
