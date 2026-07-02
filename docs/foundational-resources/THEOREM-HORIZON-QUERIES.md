@@ -524,6 +524,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Rigid-configuration graph-rigidity, rigid-motion-classification, and
+synthetic-rigidity horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text rigidity \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack rigid-configuration-geometry-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Circle-geometry tangent, chord, power-of-a-point, cyclic, and inversion
 horizons:
 
@@ -684,6 +698,7 @@ The main learner maps that explain these boundaries are:
 - [Graph Search Runtime Theorem Boundary](../learn/math/graph-search-runtime-theorem-boundary.md)
 - [Affine Geometry Theorem Boundary](../learn/math/affine-geometry-theorem-boundary.md)
 - [Incidence Geometry Theorem Boundary](../learn/math/incidence-geometry-theorem-boundary.md)
+- [Rigid Configuration Geometry Theorem Boundary](../learn/math/rigid-configuration-geometry-theorem-boundary.md)
 - [Circle Geometry Theorem Boundary](../learn/math/circle-geometry-theorem-boundary.md)
 - [Inversion Geometry Theorem Boundary](../learn/math/inversion-geometry-theorem-boundary.md)
 - [Cyclic Geometry Theorem Boundary](../learn/math/cyclic-geometry-theorem-boundary.md)

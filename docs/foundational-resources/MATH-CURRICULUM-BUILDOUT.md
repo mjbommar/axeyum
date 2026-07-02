@@ -2019,6 +2019,12 @@ equation, non-parallel intersection, and point-on-line replay plus checked
 QF_LRA/Farkas bad-row evidence separate from projective duality, named
 configuration, synthetic-incidence, algebraic-incidence, and
 numerical-geometry theorem coverage.
+`rigid-configuration-geometry-theorem-boundary.md` now gives
+`rigid-configuration-geometry-v0` a focused finite/general rigidity trust map.
+It keeps exact triangle distance-table, translation-isometry, and congruent
+triangle replay plus checked QF_LRA/Farkas bad-row evidence separate from
+graph rigidity, rigid-motion classification, synthetic-rigidity,
+higher-dimensional, manifold, and numerical-geometry theorem coverage.
 `metric-continuity-v0` now has a learner-facing end-to-end lesson for finite
 metric-table replay, finite Lipschitz checks, epsilon-delta containment,
 open-ball preimage replay, checked QF_LRA/Farkas bad-delta and bad-preimage
@@ -2652,6 +2658,15 @@ QF_LRA/Farkas rows are linked to copyable queries and graduation criteria
 while keeping projective duality, named configuration, synthetic-incidence,
 algebraic-incidence, and numerical-geometry claims in Lean/theorem-horizon
 lanes.
+The learner/planning layer now also has
+[`rigid-configuration-geometry-theorem-boundary.md`](../learn/math/rigid-configuration-geometry-theorem-boundary.md),
+which expands the finite rigid-configuration row into a concrete boundary
+ledger: triangle distance-table replay, translation-isometry replay,
+congruent-triangle distance replay, and bad translation-image plus bad
+distance-table QF_LRA/Farkas rows are linked to copyable queries and
+graduation criteria while keeping graph rigidity, rigid-motion
+classification, synthetic-rigidity, higher-dimensional, manifold, and
+numerical-geometry claims in Lean/theorem-horizon lanes.
 The learner/planning layer now also has
 [`circle-geometry-theorem-boundary.md`](../learn/math/circle-geometry-theorem-boundary.md),
 which expands the finite circle-geometry row into a concrete boundary ledger:

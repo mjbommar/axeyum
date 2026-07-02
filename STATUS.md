@@ -234,6 +234,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Rigid-configuration theorem-boundary resource landed.**
+  `rigid-configuration-geometry-theorem-boundary.md` now separates
+  `rigid-configuration-geometry-v0` exact triangle distance-table,
+  translation-isometry, and congruent-triangle replay plus scoped
+  QF_LRA/Farkas evidence from graph rigidity, rigid-motion classification,
+  synthetic-rigidity, higher-dimensional, manifold, and numerical-geometry
+  theorem claims. The geometry, theorem-horizon, learner-index, rational-real,
+  linear-algebra, and smoke-query docs now expose the boundary through
+  pack-specific checked-row and horizon-frontier queries.
 - **Incidence-geometry theorem-boundary resource landed.**
   `incidence-geometry-theorem-boundary.md` now separates
   `incidence-geometry-v0` exact line-equation, non-parallel intersection, and

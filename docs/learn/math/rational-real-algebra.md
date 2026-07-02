@@ -48,6 +48,7 @@ Companion map:
 - [Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md)
 - [Affine Geometry Theorem Boundary](affine-geometry-theorem-boundary.md)
 - [Incidence Geometry Theorem Boundary](incidence-geometry-theorem-boundary.md)
+- [Rigid Configuration Geometry Theorem Boundary](rigid-configuration-geometry-theorem-boundary.md)
 
 ## What Axeyum Checks
 
@@ -662,7 +663,8 @@ finite coordinate, incidence, rigid-configuration, affine, and oriented geometry
 [Affine Geometry Theorem Boundary](affine-geometry-theorem-boundary.md),
 [End To End: Incidence Geometry](incidence-geometry-end-to-end.md),
 [Incidence Geometry Theorem Boundary](incidence-geometry-theorem-boundary.md), and
-[End To End: Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md).
+[End To End: Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md), and
+[Rigid Configuration Geometry Theorem Boundary](rigid-configuration-geometry-theorem-boundary.md).
 For finite circle point, tangent, and chord replay, read
 [End To End: Finite Circle Geometry](finite-circle-geometry-end-to-end.md) and
 [Circle Geometry Theorem Boundary](circle-geometry-theorem-boundary.md).

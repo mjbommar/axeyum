@@ -2195,6 +2195,15 @@ Pick one row per commit unless the change is purely navigational.
      numerical-geometry theorem layers, and adds pack-specific checked-row and
      horizon-frontier queries to the public smoke gate without promoting
      finite coordinate rows into theorem coverage.
+258. Landed: add `rigid-configuration-geometry-theorem-boundary.md` as the
+     focused finite/general rigidity theorem-boundary page for
+     `rigid-configuration-geometry-v0`. It maps exact triangle
+     distance-table replay, translation-isometry replay, congruent-triangle
+     replay, and scoped QF_LRA/Farkas evidence to the missing graph-rigidity,
+     rigid-motion-classification, synthetic-rigidity, higher-dimensional,
+     manifold, and numerical-geometry theorem layers, and adds pack-specific
+     checked-row and horizon-frontier queries to the public smoke gate without
+     promoting finite coordinate rows into theorem coverage.
 
 ## Validation Checklist
 

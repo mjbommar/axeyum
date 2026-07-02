@@ -5,6 +5,10 @@ This lesson follows
 from exact triangle distance-table replay to checked malformed translation and
 distance-table claims. It is a finite coordinate resource for `field_geometry`,
 not a theorem about all rigid graphs or synthetic Euclidean geometry.
+For the focused boundary between these finite distance-table rows and general
+graph rigidity, rigid-motion classification, and synthetic rigidity theorems,
+use
+[Rigid Configuration Geometry Theorem Boundary](rigid-configuration-geometry-theorem-boundary.md).
 
 Concept rows:
 

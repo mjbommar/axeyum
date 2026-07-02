@@ -728,7 +728,14 @@ Build sequence:
     configuration, synthetic-incidence, algebraic-incidence, and
     numerical-geometry theorem routes, with pack-specific checked-row and
     horizon-frontier queries.
-70. Revisit crate/repo boundaries only after three real consumers or repeated
+70. Landed: add the rigid-configuration geometry theorem-boundary page.
+    `rigid-configuration-geometry-theorem-boundary.md` maps exact triangle
+    distance-table, translation-isometry, and congruent-triangle replay plus
+    checked QF_LRA/Farkas bad-row evidence to the missing graph-rigidity,
+    rigid-motion-classification, synthetic-rigidity, higher-dimensional,
+    manifold, and numerical-geometry theorem routes, with pack-specific
+    checked-row and horizon-frontier queries.
+71. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

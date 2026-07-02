@@ -491,6 +491,11 @@ Companion maps:
   congruent-triangle distance replay, checked QF_LRA/Farkas bad
   translation-image and bad-distance-table rejection, and the graph-rigidity
   Lean horizon.
+- [Rigid Configuration Geometry Theorem Boundary](rigid-configuration-geometry-theorem-boundary.md):
+  maps finite triangle distance-table, translation-isometry,
+  congruent-triangle, bad-translation, and bad-distance shadows to the missing
+  graph-rigidity, rigid-motion-classification, synthetic-rigidity, and
+  numerical-geometry theorem routes.
 - [Finite Circle Geometry](finite-circle-geometry-end-to-end.md): follows
   exact point-on-circle replay, tangent-line/radius perpendicularity,
   chord-midpoint perpendicularity, circle-line intersection replay, checked

@@ -16,6 +16,8 @@ For exact distance-table and finite isometry replay, use
 [rigid-configuration-geometry-v0](../../../artifacts/examples/math/rigid-configuration-geometry-v0/)
 and
 [Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md).
+For the theorem boundary around finite rigid-configuration rows, use
+[Rigid Configuration Geometry Theorem Boundary](rigid-configuration-geometry-theorem-boundary.md).
 For the boundary between finite affine-coordinate replay and general affine,
 projective, and synthetic geometry, use
 [Affine Geometry Theorem Boundary](affine-geometry-theorem-boundary.md).
