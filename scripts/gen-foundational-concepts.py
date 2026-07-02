@@ -430,6 +430,10 @@ CURRICULUM_MAP = {
                 "Exact Gram matrix, singular-vector equations, SVD reconstruction, spectral/Frobenius norms, two-norm conditioning, and checked bad singular-value bound evidence.",
             ),
             (
+                "finite-jordan-chain-v0",
+                "Exact Jordan block, eigenvector, generalized-eigenvector, nilpotent-part, reconstruction, and checked bad-component evidence.",
+            ),
+            (
                 "finite-recurrence-prefix-v0",
                 "Finite recurrence prefixes, companion-matrix state replay, and checked affine-step refutations.",
             ),
@@ -539,8 +543,8 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number and singular-value shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
-    "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, and Cayley-table validation."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
+    "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, multivariable-calculus and Newton-step shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
@@ -583,7 +587,7 @@ FIELD_PACKS = {
             "Finite cyclic quadrilateral, diagonal-intersection, opposite-angle, and bad-intersection replay.",
         ),
     ],
-    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact condition-number and singular-value shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
+    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact condition-number, singular-value, and Jordan/nilpotent shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
 }
 
 FIELD_DECIDABILITY = {
@@ -5572,7 +5576,8 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "A finite eigenpair row checks A*v = lambda*v exactly for a fixed "
             "matrix, and may additionally replay orthogonality, Rayleigh "
-            "quotient, spectral-decomposition, singular-vector, or SVD-shadow "
+            "quotient, spectral-decomposition, generalized-eigenvector, "
+            "nilpotent-part, singular-vector, or SVD-shadow "
             "witnesses within the bounded matrix instance."
         ),
         "prerequisites": [
@@ -5592,11 +5597,16 @@ BRIDGE_CONCEPTS = [
             "NRA shadow",
             "finite-dimensional operator replay",
             "singular-value replay",
+            "Jordan-chain replay",
         ],
         "example_packs": [
             (
                 "spectral-linear-algebra-v0",
                 "Eigenpair, orthogonal eigenbasis, Rayleigh quotient, spectral decomposition, and bad eigenpair rows.",
+            ),
+            (
+                "finite-jordan-chain-v0",
+                "Jordan block, eigenvector, generalized-eigenvector, nilpotent-part, reconstruction, and bad-component rows.",
             ),
             (
                 "finite-singular-value-shadow-v0",
@@ -5628,11 +5638,15 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/matrix-computation-index.md",
                     "docs/learn/math/matrix-corpus-benchmark-boundary.md",
                     "docs/learn/math/spectral-linear-algebra-end-to-end.md",
+                    "docs/learn/math/jordan-chain-end-to-end.md",
                     "docs/learn/math/singular-value-shadow-end-to-end.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
                     "The finite checker recomputes A*v and lambda*v exactly; "
+                    "the Jordan-chain shadow additionally replays "
+                    "(A - lambda I) * v2 = v1, nilpotency, and "
+                    "P*J*P^-1 reconstruction; "
                     "the singular-value shadow also replays A^T*A, "
                     "singular-vector equations, and SVD reconstruction. "
                     "Promoted bad rows check isolated rational component or "
@@ -5648,20 +5662,21 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/matrix-computation-index.md",
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/spectral-linear-algebra-end-to-end.md",
+            "docs/learn/math/jordan-chain-end-to-end.md",
             "docs/learn/math/singular-value-shadow-end-to-end.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Fixed eigenpair and singular-value replay does not prove existence of eigenvalues, SVD, diagonalization, spectral theorem, or stability of numerical eigensolvers.",
-            "Nonlinear characteristic-root reasoning, SVD perturbation theory, and infinite-dimensional operator theory remain separate theorem horizons.",
+            "Fixed eigenpair, Jordan-chain, and singular-value replay does not prove existence of eigenvalues, Jordan normal form, SVD, diagonalization, spectral theorem, or stability of numerical eigensolvers.",
+            "Nonlinear characteristic-root reasoning, algebraic/geometric multiplicity theorems, SVD perturbation theory, and infinite-dimensional operator theory remain separate theorem horizons.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state A, lambda or sigma, vectors, field/domain, and every side condition such as nonzero vector, orthogonality, or reconstruction shape.",
-                "The validator recomputes A*v = lambda*v, A^T*A*v = sigma^2*v, A*v = sigma*u, and decomposition products exactly, then rejects corrupted component or scalar-bound claims.",
-                "General spectral theorem and SVD statements are linked as Lean-horizon rows, not as finite solver evidence.",
+                "Rows state A, lambda or sigma, vectors, field/domain, and every side condition such as nonzero vector, generalized-chain relation, nilpotency, orthogonality, or reconstruction shape.",
+                "The validator recomputes A*v = lambda*v, generalized-eigenvector chain equations, nilpotent powers, A^T*A*v = sigma^2*v, A*v = sigma*u, and decomposition products exactly, then rejects corrupted component or scalar-bound claims.",
+                "General spectral theorem, Jordan normal form, and SVD statements are linked as Lean-horizon rows, not as finite solver evidence.",
             ],
         },
     },
@@ -5704,6 +5719,10 @@ BRIDGE_CONCEPTS = [
                 "Eigenpair and spectral rows that consume characteristic-polynomial vocabulary.",
             ),
             (
+                "finite-jordan-chain-v0",
+                "A repeated-root Jordan-block shadow where one characteristic root has a generalized-eigenvector chain.",
+            ),
+            (
                 "polynomial-factorization-rational-v0",
                 "Fixed-degree rational polynomial division, GCD, factorization, and irreducibility replay.",
             ),
@@ -5721,10 +5740,14 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/matrix-computation-index.md",
                     "docs/learn/math/matrix-corpus-benchmark-boundary.md",
                     "docs/learn/math/matrix-invariants-end-to-end.md",
+                    "docs/learn/math/jordan-chain-end-to-end.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
                     "The finite checker recomputes the listed invariant values; "
+                    "the Jordan-chain resource supplies a repeated-root "
+                    "operator shadow without proving characteristic-root "
+                    "existence in general; "
                     "the promoted bad trace and bad characteristic-polynomial "
                     "rows check isolated exact-rational conflicts with Farkas "
                     "evidence."
@@ -5738,12 +5761,13 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/matrix-computation-index.md",
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/matrix-invariants-end-to-end.md",
+            "docs/learn/math/jordan-chain-end-to-end.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Fixed characteristic-polynomial replay does not prove arbitrary determinant identities or general Cayley-Hamilton over all rings.",
-            "Root-existence and algebraic-closure claims remain Lean/NRA/RCF horizon work depending on the statement.",
+            "Fixed characteristic-polynomial and Jordan-block replay does not prove arbitrary determinant identities, general Cayley-Hamilton over all rings, or Jordan normal form.",
+            "Root-existence, algebraic/geometric multiplicity, diagonalizability, and algebraic-closure claims remain Lean/NRA/RCF horizon work depending on the statement.",
         ],
         "graduation": {
             "status": "validated",
@@ -7857,7 +7881,8 @@ BRIDGE_CONCEPTS = [
         "resource_status": "validated",
         "summary": (
             "Finite operator rows replay exact rational norm and matrix-action "
-            "bounds, while finite Chebyshev rows replay polynomial bases, "
+            "bounds, finite Jordan rows replay nilpotent parts and "
+            "generalized-eigenvector chains, while finite Chebyshev rows replay polynomial bases, "
             "interpolation matrices, duplicate-node failures, and alternating "
             "residual witnesses."
         ),
@@ -7876,6 +7901,8 @@ BRIDGE_CONCEPTS = [
         "decidability": "bounded",
         "axeyum_fragments": [
             "finite-dimensional operators",
+            "nilpotent operator replay",
+            "generalized eigenvectors",
             "Chebyshev polynomial recurrence",
             "interpolation matrices",
             "QF_LRA",
@@ -7899,6 +7926,10 @@ BRIDGE_CONCEPTS = [
                 "Fixed singular-value and SVD-shadow rows that share finite-operator, inner-product, and spectral-norm vocabulary.",
             ),
             (
+                "finite-jordan-chain-v0",
+                "Fixed Jordan-chain, nilpotent-part, and reconstruction rows that share finite-operator and polynomial vocabulary.",
+            ),
+            (
                 "matrix-invariants-v0",
                 "Characteristic-polynomial and finite matrix-invariant rows that supply operator polynomial vocabulary.",
             ),
@@ -7919,12 +7950,15 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/finite-operator-end-to-end.md",
                     "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
                     "docs/learn/math/singular-value-shadow-end-to-end.md",
+                    "docs/learn/math/jordan-chain-end-to-end.md",
                     "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
                     "Finite operator and Chebyshev packs replay the exact "
-                    "matrix, norm, recurrence, or interpolation calculation "
+                    "matrix, norm, recurrence, or interpolation calculation; "
+                    "the Jordan-chain pack replays the exact nilpotent "
+                    "matrix action and similarity reconstruction "
                     "before handing the resulting small rational conflict to "
                     "the shared Farkas route."
                 ),
@@ -7942,19 +7976,20 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/finite-operator-end-to-end.md",
             "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
             "docs/learn/math/singular-value-shadow-end-to-end.md",
+            "docs/learn/math/jordan-chain-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Finite operator replay does not prove Banach-space, Hilbert-space, compact-operator, or spectral theorem claims.",
+            "Finite operator and Jordan-chain replay does not prove Banach-space, Hilbert-space, compact-operator, spectral theorem, or Jordan normal form claims.",
             "Finite Chebyshev grid replay does not prove Haar, minimax, alternation, or infinite-dimensional approximation theorems.",
             "General functional-analysis theorem statements remain Lean-horizon until no-sorry Lean artifacts exist.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state the finite vector space, operator matrix, norm, polynomial basis, or sample grid being replayed.",
-                "The validator recomputes matrix actions, norms, recurrence values, interpolation rows, and alternating residual witnesses.",
+                "Rows state the finite vector space, operator matrix, nilpotent part, norm, polynomial basis, or sample grid being replayed.",
+                "The validator recomputes matrix actions, generalized-chain equations, nilpotent powers, norms, recurrence values, interpolation rows, and alternating residual witnesses.",
                 "Malformed finite operator, recurrence, or interpolation rows link to checked QF_LRA/Farkas regressions after replay.",
             ],
         },

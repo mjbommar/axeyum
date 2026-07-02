@@ -123,8 +123,8 @@ Work by layer:
 | Foundations | logic, predicates, proof methods, induction, sets, relations, cardinality | finite countermodel replay, proof-by-refutation, proof-object anatomy, finite quantifier expansion, bounded induction warnings, finite/infinite cardinality boundary |
 | Number systems | naturals, integers, rationals, reals, complex | exact arithmetic, totality conventions, bounded real shadows, delta-epsilon balls, real-pair complex algebra, completeness/analysis horizon |
 | Core structures | divisibility, modular arithmetic, groups, rings, fields, polynomials, sequences, counting | gcd/CRT certificates, finite algebra tables, quotients, modules, tensors, polynomial factor/replay, recurrence prefixes, finite counting and generating functions |
-| Destinations | number theory, linear algebra, calculus | bounded Diophantine checks, matrix computation index, LU checked product-entry rows, rank/residual/eigen/singular-value/random-matrix rows, exact derivative/integral shadows, root-finding and optimization steps |
-| Field extensions | graph theory, topology, measure/probability/statistics, optimization, numerical analysis, dynamics, geometry, functional analysis | graph coloring/search/runtime, finite topologies and homology shadows, exact finite probability/measure tables, Farkas optimization rows, Euler/root-finding/line-search rows, coordinate/circle/inversion geometry, finite operator and Chebyshev rows |
+| Destinations | number theory, linear algebra, calculus | bounded Diophantine checks, matrix computation index, LU checked product-entry rows, rank/residual/eigen/Jordan/singular-value/random-matrix rows, exact derivative/integral shadows, root-finding and optimization steps |
+| Field extensions | graph theory, topology, measure/probability/statistics, optimization, numerical analysis, dynamics, geometry, functional analysis | graph coloring/search/runtime, finite topologies and homology shadows, exact finite probability/measure tables, Farkas optimization rows, Euler/root-finding/line-search rows, coordinate/circle/inversion geometry, finite operator, Jordan-chain, and Chebyshev rows |
 | Rules/law transfer | eligibility, authorization, tax/benefit arithmetic, procurement scoring, future policy packs | finite predicates, thresholds, caps, deadlines, temporal versions, precedence, reachability, monotonicity, and checked proof fixtures reused from math packs |
 
 Exit:
@@ -219,7 +219,7 @@ Stop line:
 Build next:
 
 - keep the matrix index current for LU replay plus checked product-entry rows,
-  rank/nullity, residual, projection, eigenpair, singular-value/SVD,
+  rank/nullity, residual, projection, eigenpair, Jordan-chain, singular-value/SVD,
   characteristic-polynomial, checked trace-invariant, tensor/module, chain/cochain, operator,
   Chebyshev, and random-matrix rows;
 - add matrix-corpus rows only after the educational pack links the regression
@@ -229,9 +229,9 @@ Build next:
 
 Stop line:
 
-- Numerical stability, spectral theorem, infinite-dimensional operator theory,
-  and asymptotic random-matrix laws are theorem horizons unless a finite exact
-  statement is explicitly named.
+- Numerical stability, spectral theorem, Jordan normal form,
+  infinite-dimensional operator theory, and asymptotic random-matrix laws are
+  theorem horizons unless a finite exact statement is explicitly named.
 
 ### Discrete Math And Graph Theory
 
@@ -289,14 +289,15 @@ Build next:
 - finite Chebyshev-system rows that replay interpolation matrices, sign
   alternation, recurrence, and exact residuals;
 - finite operator rows that connect norms, projections, Gram matrices,
-  Chebyshev slices, and matrix computation queries;
+  Jordan/nilpotent shadows, Chebyshev slices, and matrix computation queries;
 - theorem-horizon rows for Banach/Hilbert facts and minimax/approximation
   theorems.
 
 Stop line:
 
 - Infinite-dimensional completeness, compact operators, spectral theorem
-  variants, and general Chebyshev-space theorems require Lean/theorem work.
+  variants, Jordan normal form, and general Chebyshev-space theorems require
+  Lean/theorem work.
 
 ### Rules And Law Transfer
 
@@ -389,6 +390,8 @@ Pick one item per commit unless the change is purely navigational.
    interpolation matrices, sign alternation, recurrence values, residual rows,
    spectral rows, characteristic-polynomial arithmetic, or checked trace
    invariants.
+   The same matrix/operator route now includes finite Jordan-chain replay for
+   one nilpotent shadow without promoting Jordan normal form.
 7. Landed: add random-matrix learner and query coverage only as exact finite
    matrix-valued atom tables, moment replay, expected Gram replay,
    rank-mixture replay, and checked QF_LRA/Farkas bad-moment/rank rows before

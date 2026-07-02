@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-jordan-chain-v0",
+  "witnesses": [
+    {
+      "id": "two-by-two-jordan-chain",
+      "description": "Exact generalized-eigenvector chain for A = [[2,1],[0,2]].",
+      "values": {
+        "matrix": [
+          ["2", "1"],
+          ["0", "2"]
+        ],
+        "lambda": "2",
+        "identity": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "nilpotent_part": [
+          ["0", "1"],
+          ["0", "0"]
+        ],
+        "nilpotent_square": [
+          ["0", "0"],
+          ["0", "0"]
+        ],
+        "eigenvector": ["1", "0"],
+        "generalized_vector": ["0", "1"],
+        "eigen_image": ["2", "0"],
+        "nilpotent_generalized_image": ["1", "0"],
+        "generalized_image": ["1", "2"],
+        "jordan_matrix": [
+          ["2", "1"],
+          ["0", "2"]
+        ],
+        "basis_matrix": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "inverse_basis_matrix": [
+          ["1", "0"],
+          ["0", "1"]
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "jordan-eigenvector-replay",
+      "claim": "The listed vector is an eigenvector of the fixed Jordan block with eigenvalue 2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_jordan_eigenvector_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-jordan-chain"],
+      "notes": "The validator recomputes A*v1 and lambda*v1 exactly over rationals."
+    },
+    {
+      "id": "generalized-eigenvector-replay",
+      "claim": "The listed generalized vector satisfies (A - 2I)*v2 = v1 and A*v2 = 2*v2 + v1.",
+      "expected_result": "sat",
+      "validation": "exact_rational_generalized_eigenvector_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-jordan-chain"],
+      "notes": "The validator recomputes the nilpotent-part action and the equivalent generalized-eigenvector equation."
+    },
+    {
+      "id": "nilpotent-part-replay",
+      "claim": "The nilpotent part N = A - 2I is nonzero and satisfies N^2 = 0.",
+      "expected_result": "sat",
+      "validation": "exact_rational_nilpotent_part_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-jordan-chain"],
+      "notes": "The validator recomputes A - lambda*I, checks it is nonzero, and checks the listed square."
+    },
+    {
+      "id": "jordan-reconstruction-replay",
+      "claim": "The listed P*J*P^-1 reconstruction equals the fixed matrix.",
+      "expected_result": "sat",
+      "validation": "exact_rational_jordan_reconstruction_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-jordan-chain"],
+      "notes": "The validator recomputes P*P^-1 and P*J*P^-1 exactly."
+    },
+    {
+      "id": "bad-jordan-chain-rejected",
+      "claim": "The first component of (A - 2I)*v2 is 0.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_jordan_chain_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "two-by-two-jordan-chain",
+        "computed_nilpotent_image_0": "1",
+        "claimed_nilpotent_image_0": "0"
+      },
+      "notes": "Exact replay computes the first component of (A - 2I)*v2 as 1, so the claimed value 0 is rejected; the separate qf-lra-bad-jordan-chain row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-jordan-chain",
+      "claim": "The fixed malformed generalized-eigenvector component claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "two-by-two-jordan-chain",
+        "source_replay_row": "bad-jordan-chain-rejected",
+        "computed_nilpotent_image_0": "1",
+        "claimed_nilpotent_image_0": "0",
+        "farkas_conflict": "nilpotent_image_0 = 1 and nilpotent_image_0 = 0",
+        "smt2_artifact": "artifacts/examples/math/finite-jordan-chain-v0/smt2/bad-jordan-chain-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_jordan_chain_bad_component_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the component as 1, while the malformed row claims 0; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-jordan-theory-lean-horizon",
+      "claim": "General Jordan normal form, diagonalization criteria, algebraic/geometric multiplicity theory, and numerical eigensolver behavior require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For arbitrary finite-dimensional matrices over algebraically closed fields, prove Jordan decomposition existence, generalized eigenspace structure, nilpotent chain decomposition, and diagonalization criteria under explicit assumptions.",
+        "future_checker": "Lean theorem statements for exact finite-dimensional linear algebra plus separate numerical-honesty artifacts for eigensolver implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational Jordan block, not a theorem about arbitrary matrices or a numerical eigensolver claim."
+    }
+  ]
+}

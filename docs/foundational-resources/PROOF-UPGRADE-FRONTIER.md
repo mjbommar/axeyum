@@ -26,10 +26,10 @@ the route named in the pack metadata.
 
 Generated from the current math resource queue:
 
-- math example packs: 118
-- learner-linked packs: 118 focused links
-- packs with non-checked proof rows: 107
-- non-checked proof rows: 411
+- math example packs: 119
+- learner-linked packs: 119 focused links
+- packs with non-checked proof rows: 108
+- non-checked proof rows: 417
 
 Candidate route totals:
 
@@ -38,9 +38,9 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 16 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 7 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 15 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions, including finite graph traversal cost counters. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 67 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 68 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 19 | Equality-heavy finite structures and congruence conflicts. |
-| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 88 | General theorem statements that remain outside bounded SMT replay. |
+| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 89 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
 
@@ -410,6 +410,9 @@ First targets:
 - [spectral-linear-algebra-v0](../../artifacts/examples/math/spectral-linear-algebra-v0/)
   (resource-backed Farkas regressions landed for the bad Rayleigh-quotient and
   bad eigenpair rows)
+- [finite-jordan-chain-v0](../../artifacts/examples/math/finite-jordan-chain-v0/)
+  (source-linked Farkas regression landed for the bad Jordan-chain component
+  after exact replay computes the nilpotent-part image)
 - [matrix-invariants-v0](../../artifacts/examples/math/matrix-invariants-v0/)
   (resource-backed Farkas regressions landed for the bad trace and bad
   characteristic-polynomial rows)
@@ -479,6 +482,10 @@ Secondary targets:
   boundary: exact replay computes the vector sum norm, matrix image, infinity
   norm, and Chebyshev prefix value, then Farkas checks the final bad-norm,
   bad-bound, and bad-prefix conflicts.
+  Finite Jordan chains now contribute the non-diagonal operator version of
+  that boundary: exact replay computes the eigenvector, generalized
+  eigenvector, nilpotent part, and similarity reconstruction, then Farkas
+  checks the final bad nilpotent-component conflict.
   Finite root finding now contributes the numerical-analysis version of that
   boundary: exact replay computes the bisection/Newton data and the next
   iterate, then Farkas checks the final bad-step equality conflict.

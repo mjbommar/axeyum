@@ -22,6 +22,8 @@ For exact rational condition numbers and perturbation-bound shadows, see
 [End To End: Finite Condition Number](condition-number-end-to-end.md).
 For exact singular-value, spectral-norm, and SVD reconstruction shadows, see
 [End To End: Finite Singular-Value Shadow](singular-value-shadow-end-to-end.md).
+For exact Jordan-chain and generalized-eigenvector shadows, see
+[End To End: Finite Jordan Chain](jordan-chain-end-to-end.md).
 For finite vector-space, dual-space, module, and tensor rows as theorem
 shadows, see
 [Linear Algebra Structure Theorem Boundary](linear-algebra-structure-theorem-boundary.md).
@@ -55,7 +57,7 @@ Concept rows:
 | Inner products, projections, and orthogonal transforms | [inner-product-spaces-rational-v0](../../../artifacts/examples/math/inner-product-spaces-rational-v0/), [finite-walsh-hadamard-transform-v0](../../../artifacts/examples/math/finite-walsh-hadamard-transform-v0/) | Gram matrices, fixed Cauchy-Schwarz, orthogonal projection, Gram-Schmidt, order-4 Walsh-Hadamard transform replay, inverse reconstruction, Parseval energy scaling, bad negative norm, bad projection orthogonality, and bad transform coefficient | finite replay plus QF_LRA/Farkas |
 | Kernel, image, rank, and duals | [finite-vector-spaces-v0](../../../artifacts/examples/math/finite-vector-spaces-v0/), [finite-dual-spaces-v0](../../../artifacts/examples/math/finite-dual-spaces-v0/) | Finite `F2` vector-space tables, subspaces, linear maps, kernel/image, rank-nullity, covectors, annihilators, transpose maps | finite table replay plus QF_UF/Alethe |
 | Modules and tensors | [finite-modules-v0](../../../artifacts/examples/math/finite-modules-v0/), [finite-tensor-products-v0](../../../artifacts/examples/math/finite-tensor-products-v0/) | Scalar actions, generated submodules, module homomorphisms, quotients, bilinear maps, tensor basis rows, Kronecker products | finite table replay plus QF_UF/Alethe |
-| Spectral and singular-value rows | [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/), [finite-singular-value-shadow-v0](../../../artifacts/examples/math/finite-singular-value-shadow-v0/), [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/) | Eigenpairs, orthogonal eigenbasis arithmetic, Rayleigh quotients, bad Rayleigh quotients, spectral reconstruction, `A^T A` singular-vector equations, SVD reconstruction, trace, determinant, characteristic roots, Cayley-Hamilton, Gershgorin intervals, bad singular-value bounds, bad trace, and bad characteristic-polynomial rows | finite replay plus QF_LRA/Farkas |
+| Spectral, singular-value, and Jordan-chain rows | [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/), [finite-singular-value-shadow-v0](../../../artifacts/examples/math/finite-singular-value-shadow-v0/), [finite-jordan-chain-v0](../../../artifacts/examples/math/finite-jordan-chain-v0/), [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/) | Eigenpairs, orthogonal eigenbasis arithmetic, Rayleigh quotients, bad Rayleigh quotients, spectral reconstruction, `A^T A` singular-vector equations, SVD reconstruction, generalized-eigenvector chains, nilpotent-part replay, Jordan reconstruction, trace, determinant, characteristic roots, Cayley-Hamilton, Gershgorin intervals, bad singular-value bounds, bad Jordan components, bad trace, and bad characteristic-polynomial rows | finite replay plus QF_LRA/Farkas |
 | Random matrices and covariance | [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/), [finite-covariance-matrix-v0](../../../artifacts/examples/math/finite-covariance-matrix-v0/) | Finite matrix-valued probability tables, trace/determinant moments, expected Gram matrices, rank mixture probabilities, sample means, centered Gram matrices, covariance matrices, positive-semidefinite shadows, bad trace-square, bad expected-rank, and bad covariance-entry rows | finite expectation/rank/covariance replay plus QF_LRA/Farkas |
 | Chain, cochain, cup-product, and torsion matrices | [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/), [finite-chain-complex-torsion-v0](../../../artifacts/examples/math/finite-chain-complex-torsion-v0/), [finite-simplicial-cohomology-v0](../../../artifacts/examples/math/finite-simplicial-cohomology-v0/), [finite-universal-coefficient-shadow-v0](../../../artifacts/examples/math/finite-universal-coefficient-shadow-v0/), [finite-simplicial-cup-products-v0](../../../artifacts/examples/math/finite-simplicial-cup-products-v0/) | Boundary matrices, boundary squared, Betti-rank replay, boundary-square coefficient cancellation, one-entry Smith diagonal replay, `Z/2` torsion quotient, integer dual cochain maps, finite Hom/Ext shadow bookkeeping, F2 coboundary matrices, cohomology-rank replay, finite F2 cup-product table replay, bad oriented-boundary coefficient, bad boundary-square coefficient, bad torsion generator, bad `H^1 = 0`, bad coboundary value, bad cup-product value | finite replay plus QF_LIA/Diophantine, QF_UF/Alethe, or QF_BV/DRAT |
 | Operators and interpolation matrices | [finite-operator-v0](../../../artifacts/examples/math/finite-operator-v0/), [finite-chebyshev-systems-v0](../../../artifacts/examples/math/finite-chebyshev-systems-v0/) | Operator norm bounds, matrix action, Chebyshev recurrence, bad Chebyshev-prefix value, Vandermonde unisolvence, interpolation values, alternating residuals | finite replay plus QF_LRA/Farkas |
@@ -90,7 +92,8 @@ laws, or cohomology-operation invariance.
 ## What Remains A Horizon
 
 The finite rows do not prove general rank-nullity, spectral theorem,
-Cayley-Hamilton over arbitrary rings, Hilbert projection, Riesz representation,
+Jordan normal form, diagonalizability criteria, Cayley-Hamilton over arbitrary
+rings, Hilbert projection, Riesz representation,
 Hahn-Banach, stability or conditioning of numerical algorithms, asymptotic
 random-matrix laws, covariance-estimator consistency, PCA theorem claims,
 minimax approximation, general Smith normal form,
@@ -129,6 +132,7 @@ The torsion and universal-coefficient part is expanded in
 - [Chain Complex Torsion Theorem Boundary](chain-complex-torsion-theorem-boundary.md)
 - [Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md)
 - [Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md)
+- [Finite Jordan Chain](jordan-chain-end-to-end.md)
 - [Matrix Invariants](matrix-invariants-end-to-end.md)
 - [Finite Random Matrices](random-matrix-finite-end-to-end.md)
 - [Finite Covariance Matrix](covariance-matrix-end-to-end.md)
@@ -155,6 +159,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-tensor-products-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-jordan-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0

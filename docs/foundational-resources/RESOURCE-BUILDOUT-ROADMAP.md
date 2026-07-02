@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 75 bridge-concept rows.
 - 5 example-family rows.
-- 118 non-template math example packs.
-- 755 expected checks.
-- 344 checked proof/evidence rows.
-- 330 replay-only rows.
-- 81 Lean-horizon rows.
-- 118 promoted solver-reuse packs.
+- 119 non-template math example packs.
+- 762 expected checks.
+- 345 checked proof/evidence rows.
+- 335 replay-only rows.
+- 82 Lean-horizon rows.
+- 119 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 118 focused learner-linked packs, with no path-only, index-only, or missing
+- 119 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2391,6 +2391,13 @@ Pick one item per commit unless the change is purely navigational.
      QF_LRA/Farkas regression without claiming the general SVD theorem,
      perturbation theory, pseudospectra, rank-revealing algorithms, or
      floating-point SVD stability.
+166. Landed: add `finite-jordan-chain-v0` as an exact finite Jordan-chain
+     resource. The pack computes one non-diagonal Jordan block, eigenvector,
+     generalized eigenvector, nilpotent part, and similarity reconstruction,
+     then promotes a malformed nilpotent-component claim through a
+     source-linked QF_LRA/Farkas regression without claiming Jordan normal
+     form, diagonalizability criteria, multiplicity theorems, or numerical
+     eigensolver behavior.
 
 ## Validation Checklist
 

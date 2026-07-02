@@ -12960,6 +12960,196 @@ def validate_finite_singular_value_shadow(expected: dict[str, Any]) -> None:
     require_string("singular horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_jordan_chain(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    eigen = checks["jordan-eigenvector-replay"]
+    if eigen["expected_result"] != "sat":
+        fail("jordan-eigenvector-replay must expect sat")
+    if eigen.get("proof_status") != "replay-only":
+        fail("jordan-eigenvector-replay must be replay-only")
+    values = single_witness_values(eigen, witnesses)
+    matrix = require_fraction_matrix("Jordan matrix", values.get("matrix"))
+    identity = require_fraction_matrix("Jordan identity", values.get("identity"))
+    eigenvalue = require_fraction("Jordan lambda", values.get("lambda"))
+    nilpotent = require_fraction_matrix("Jordan nilpotent_part", values.get("nilpotent_part"))
+    eigenvector = require_fraction_vector("Jordan eigenvector", values.get("eigenvector"))
+    eigen_image = require_fraction_vector("Jordan eigen_image", values.get("eigen_image"))
+    require_square_matrix("Jordan matrix", matrix)
+    require_square_matrix("Jordan identity", identity)
+    require_square_matrix("Jordan nilpotent_part", nilpotent)
+    if len(matrix) != len(identity) or len(matrix) != len(nilpotent):
+        fail("Jordan matrix, identity, and nilpotent part must have matching dimensions")
+    expected_identity = [
+        [Fraction(1) if row == column else Fraction(0) for column in range(len(matrix))]
+        for row in range(len(matrix))
+    ]
+    if identity != expected_identity:
+        fail("jordan-eigenvector-replay identity matrix is incorrect")
+    computed_nilpotent = [
+        [
+            matrix[row][column] - (eigenvalue if row == column else Fraction(0))
+            for column in range(len(matrix))
+        ]
+        for row in range(len(matrix))
+    ]
+    if computed_nilpotent != nilpotent:
+        fail("jordan-eigenvector-replay nilpotent part is not A - lambda*I")
+    require_mat_vec_shape("Jordan eigenvector", matrix, eigenvector)
+    if mat_vec(matrix, eigenvector) != eigen_image:
+        fail("jordan-eigenvector-replay eigen_image does not equal A*v1")
+    if scalar_vec(eigenvalue, eigenvector) != eigen_image:
+        fail("jordan-eigenvector-replay eigen_image does not equal lambda*v1")
+    if all(component == 0 for component in eigenvector):
+        fail("jordan-eigenvector-replay eigenvector must be nonzero")
+
+    generalized = checks["generalized-eigenvector-replay"]
+    if generalized["expected_result"] != "sat":
+        fail("generalized-eigenvector-replay must expect sat")
+    if generalized.get("proof_status") != "replay-only":
+        fail("generalized-eigenvector-replay must be replay-only")
+    values = single_witness_values(generalized, witnesses)
+    generalized_vector = require_fraction_vector(
+        "Jordan generalized_vector",
+        values.get("generalized_vector"),
+    )
+    nilpotent_image = require_fraction_vector(
+        "Jordan nilpotent_generalized_image",
+        values.get("nilpotent_generalized_image"),
+    )
+    generalized_image = require_fraction_vector(
+        "Jordan generalized_image",
+        values.get("generalized_image"),
+    )
+    require_mat_vec_shape("Jordan nilpotent generalized vector", nilpotent, generalized_vector)
+    require_mat_vec_shape("Jordan generalized vector", matrix, generalized_vector)
+    if mat_vec(nilpotent, generalized_vector) != nilpotent_image:
+        fail("generalized-eigenvector-replay nilpotent image is incorrect")
+    if nilpotent_image != eigenvector:
+        fail("generalized-eigenvector-replay nilpotent image must equal the eigenvector")
+    if mat_vec(matrix, generalized_vector) != generalized_image:
+        fail("generalized-eigenvector-replay generalized image is incorrect")
+    if vector_add_fraction(scalar_vec(eigenvalue, generalized_vector), eigenvector) != generalized_image:
+        fail("generalized-eigenvector-replay A*v2 must equal lambda*v2 + v1")
+    if generalized_vector == eigenvector:
+        fail("generalized-eigenvector-replay expects a distinct generalized vector")
+
+    nilpotent_check = checks["nilpotent-part-replay"]
+    if nilpotent_check["expected_result"] != "sat":
+        fail("nilpotent-part-replay must expect sat")
+    if nilpotent_check.get("proof_status") != "replay-only":
+        fail("nilpotent-part-replay must be replay-only")
+    values = single_witness_values(nilpotent_check, witnesses)
+    nilpotent_square = require_fraction_matrix(
+        "Jordan nilpotent_square",
+        values.get("nilpotent_square"),
+    )
+    require_mat_mul_shape("Jordan nilpotent square", nilpotent, nilpotent)
+    if mat_mul(nilpotent, nilpotent) != nilpotent_square:
+        fail("nilpotent-part-replay nilpotent square is incorrect")
+    if any(entry != 0 for row in nilpotent_square for entry in row):
+        fail("nilpotent-part-replay expects N^2 = 0")
+    if all(entry == 0 for row in nilpotent for entry in row):
+        fail("nilpotent-part-replay expects a nonzero nilpotent part")
+
+    reconstruction = checks["jordan-reconstruction-replay"]
+    if reconstruction["expected_result"] != "sat":
+        fail("jordan-reconstruction-replay must expect sat")
+    if reconstruction.get("proof_status") != "replay-only":
+        fail("jordan-reconstruction-replay must be replay-only")
+    values = single_witness_values(reconstruction, witnesses)
+    jordan_matrix = require_fraction_matrix("Jordan normal matrix", values.get("jordan_matrix"))
+    basis = require_fraction_matrix("Jordan basis_matrix", values.get("basis_matrix"))
+    inverse_basis = require_fraction_matrix(
+        "Jordan inverse_basis_matrix",
+        values.get("inverse_basis_matrix"),
+    )
+    require_square_matrix("Jordan normal matrix", jordan_matrix)
+    require_square_matrix("Jordan basis_matrix", basis)
+    require_square_matrix("Jordan inverse_basis_matrix", inverse_basis)
+    if mat_mul(basis, inverse_basis) != identity:
+        fail("jordan-reconstruction-replay P*P^-1 is not identity")
+    require_mat_mul_shape("Jordan P*J", basis, jordan_matrix)
+    require_mat_mul_shape("Jordan P*J*P^-1", mat_mul(basis, jordan_matrix), inverse_basis)
+    if mat_mul(mat_mul(basis, jordan_matrix), inverse_basis) != matrix:
+        fail("jordan-reconstruction-replay P*J*P^-1 does not reconstruct A")
+
+    bad = checks["bad-jordan-chain-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-jordan-chain-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-jordan-chain-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_jordan_chain_replay":
+        fail("bad-jordan-chain-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-by-two-jordan-chain":
+        fail("bad-jordan-chain-rejected must cite the Jordan-chain witness")
+    computed_component = require_fraction(
+        "bad Jordan computed_nilpotent_image_0",
+        data.get("computed_nilpotent_image_0"),
+    )
+    claimed_component = require_fraction(
+        "bad Jordan claimed_nilpotent_image_0",
+        data.get("claimed_nilpotent_image_0"),
+    )
+    if computed_component != nilpotent_image[0]:
+        fail("bad-jordan-chain-rejected computed component does not match replay")
+    if computed_component == claimed_component:
+        fail("bad-jordan-chain-rejected malformed component unexpectedly matches")
+    if "separate qf-lra-bad-jordan-chain" not in bad.get("notes", ""):
+        fail("bad-jordan-chain-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-jordan-chain"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-jordan-chain must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-jordan-chain must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-jordan-chain must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-by-two-jordan-chain":
+        fail("qf-lra-bad-jordan-chain must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-jordan-chain-rejected":
+        fail("qf-lra-bad-jordan-chain must cite the replay row")
+    qf_computed = require_fraction(
+        "qf Jordan computed_nilpotent_image_0",
+        qf_data.get("computed_nilpotent_image_0"),
+    )
+    qf_claimed = require_fraction(
+        "qf Jordan claimed_nilpotent_image_0",
+        qf_data.get("claimed_nilpotent_image_0"),
+    )
+    if qf_computed != computed_component or qf_claimed != claimed_component:
+        fail("qf-lra-bad-jordan-chain data must match the replay row")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Jordan smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-jordan-chain-v0/smt2/"
+        "bad-jordan-chain-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-jordan-chain smt2_artifact must name the checked source artifact")
+    check_source("qf Jordan smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Jordan farkas_regression", regression)
+    if "finite_jordan_chain_bad_component_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-jordan-chain must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Jordan certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-jordan-chain certificate must document checked Farkas evidence")
+
+    horizon = checks["general-jordan-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-jordan-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-jordan-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("Jordan horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("Jordan horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_finite_separation(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -28271,6 +28461,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_condition_number(expected)
     if metadata["id"] == "finite-singular-value-shadow-v0":
         validate_finite_singular_value_shadow(expected)
+    if metadata["id"] == "finite-jordan-chain-v0":
+        validate_finite_jordan_chain(expected)
     if metadata["id"] == "metric-continuity-v0":
         validate_metric_continuity(expected)
     if metadata["id"] == "finite-predicate-v0":

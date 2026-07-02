@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "finite-jordan-chain-v0",
+  "title": "Finite Jordan-Chain Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_polynomials",
+    "field_linear_algebra",
+    "field_abstract_algebra",
+    "field_functional_analysis_and_operator_theory",
+    "bridge_eigenpair",
+    "bridge_characteristic_polynomial",
+    "bridge_finite_operator_chebyshev"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "abstract_algebra",
+    "functional_analysis_and_operator_theory"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "polynomials"
+  ],
+  "axeyum_fragments": [
+    "finite rational matrices",
+    "finite-dimensional operator replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-jordan-chain-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Jordan-chain bad nilpotent-image component QF_LRA/Farkas regression seed",
+    "pressure": "Exact Jordan-chain replay computes the first component of (A - 2I)*v2 as 1 while the malformed row claims the same component is 0.",
+    "evidence": [
+      "qf-lra-bad-jordan-chain"
+    ],
+    "next_step": "Promote additional Jordan-chain rows only when they add distinct generalized-eigenvector, nilpotent-part, multiplicity, or proof-route pressure; keep the Jordan normal form theorem, diagonalization criteria, and numerical eigensolver behavior in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/02-structures/polynomials.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/jordan-chain-end-to-end.md",
+    "artifacts/examples/math/finite-jordan-chain-v0/smt2/bad-jordan-chain-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "jordan-eigenvector-replay",
+    "generalized-eigenvector-replay",
+    "nilpotent-part-replay",
+    "jordan-reconstruction-replay",
+    "bad-jordan-chain-rejected",
+    "qf-lra-bad-jordan-chain",
+    "general-jordan-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed Jordan block, eigenvalue, nilpotent part, eigenvector, generalized eigenvector, nilpotent square, and reconstruction as deterministic exact-rational replay obligations.",
+    "Route false finite generalized-eigenvector component claims through checked QF_LRA/Farkas evidence after replay computes the exact component.",
+    "Expose the pack through matrix computation, spectral, operator, and characteristic-polynomial learner and consumer query surfaces.",
+    "Keep the general Jordan normal form theorem, algebraic/geometric multiplicity theory, diagonalization criteria, and numerical eigensolver behavior marked Lean-horizon or numerical-honesty until formal routes exist."
+  ]
+}

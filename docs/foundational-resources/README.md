@@ -32,11 +32,11 @@ schemas, examples, and validation workflows.
   is the commit-sized build matrix for every curriculum node, math field,
   resource gate, and proof route.
 - [MATH-CURRICULUM-DETAILED-BUILD-PLAN.md](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
-  is the current execution ledger for stabilizing the existing 113 math packs,
+  is the current execution ledger for stabilizing the existing math packs,
   resolving unclassified solver-reuse rows, completing learner paths, and
   deepening proof routes field by field.
 - [LEARNER-COVERAGE-AUDIT.md](LEARNER-COVERAGE-AUDIT.md) records the current
-  learner-spine audit: all 116 non-template math packs are focused-lesson
+  learner-spine audit: all current non-template math packs are focused-lesson
   linked, with no path-only, index-only, or missing learner buckets.
 - [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md) is the detailed
   operating roadmap for building the curriculum-driven resource system across
@@ -76,8 +76,8 @@ schemas, examples, and validation workflows.
   QF_LIA/Diophantine, QF_LRA/Farkas, QF_UF/Alethe, and Lean-horizon rows.
 - [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md) gives
   copyable concept-plus-route queries for checked LU rows, residuals,
-  rank/nullity, eigenpairs, random matrices, tensor/module rows, operators,
-  and Chebyshev systems.
+  rank/nullity, eigenpairs, Jordan chains, random matrices, tensor/module rows,
+  operators, and Chebyshev systems.
 - [PROBABILITY-STATISTICS-QUERIES.md](PROBABILITY-STATISTICS-QUERIES.md) gives
   copyable concept-plus-route queries for finite probability tables, measure
   additivity, product/integration, pushforwards, stochastic kernels, tail
@@ -103,8 +103,8 @@ schemas, examples, and validation workflows.
   exact-vs-floating boundary rows.
 - [FUNCTIONAL-OPERATOR-QUERIES.md](FUNCTIONAL-OPERATOR-QUERIES.md) gives
   copyable concept-plus-route queries for finite operators, Chebyshev rows,
-  inner-product/projection rows, spectral and singular-value rows, and
-  dual/tensor equality rows.
+  inner-product/projection rows, spectral, Jordan-chain, and singular-value
+  rows, and dual/tensor equality rows.
 - [ANALYSIS-NUMERICAL-QUERIES.md](ANALYSIS-NUMERICAL-QUERIES.md) gives
   copyable concept-plus-route queries for bounded real-analysis rows,
   numerical-method rows, residuals, dynamics/Euler rows, and complex real-pair
@@ -415,6 +415,10 @@ schemas, examples, and validation workflows.
   validates exact `A^T A` replay, singular-vector equations, SVD
   reconstruction, spectral/Frobenius norm rows, two-norm condition-number
   replay, and checked rejection of a false largest-singular-value bound.
+- [`artifacts/examples/math/finite-jordan-chain-v0/`](../../artifacts/examples/math/finite-jordan-chain-v0/)
+  validates exact eigenvector, generalized-eigenvector, nilpotent-part,
+  Jordan-block reconstruction, and checked rejection of a false nilpotent
+  component.
 - [`artifacts/examples/math/matrix-invariants-v0/`](../../artifacts/examples/math/matrix-invariants-v0/)
   validates exact trace/determinant characteristic-polynomial replay,
   characteristic roots, Cayley-Hamilton replay, finite Gershgorin intervals,
@@ -721,6 +725,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-singular-value-shadow-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-jordan-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0

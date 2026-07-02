@@ -22,6 +22,7 @@ Example packs:
 - [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
 - [finite-condition-number-v0](../../../artifacts/examples/math/finite-condition-number-v0/)
 - [finite-singular-value-shadow-v0](../../../artifacts/examples/math/finite-singular-value-shadow-v0/)
+- [finite-jordan-chain-v0](../../../artifacts/examples/math/finite-jordan-chain-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
 - [finite-newton-step-v0](../../../artifacts/examples/math/finite-newton-step-v0/)
@@ -377,6 +378,24 @@ diagonal rational matrix `A = [[3,0],[0,1]]`. The validator recomputes
 replay computes `3`; the general SVD theorem and numerical SVD stability stay
 in the horizon lane. For a focused trace, read
 [End To End: Finite Singular-Value Shadow](singular-value-shadow-end-to-end.md).
+
+For a Jordan-chain shadow, `finite-jordan-chain-v0` uses one non-diagonal
+rational matrix:
+
+```text
+A = [[2,1],
+     [0,2]]
+N = A - 2I
+v1 = [1,0]
+v2 = [0,1]
+```
+
+The validator recomputes `A*v1 = 2*v1`, `N*v2 = v1`, `N^2 = 0`, and
+`P*J*P^-1 = A`. Its checked bad row rejects a malformed nilpotent component
+after exact replay computes `0`; Jordan normal form, diagonalizability
+criteria, and algebraic/geometric multiplicity theorems stay in the horizon
+lane. For a focused trace, read
+[End To End: Finite Jordan Chain](jordan-chain-end-to-end.md).
 
 For an operator example, the finite-operator pack checks:
 
@@ -740,6 +759,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_condition_number_bad_condition_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-singular-value-shadow-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_singular_value_shadow_bad_bound_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-jordan-chain-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_jordan_chain_bad_component_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0
@@ -821,6 +842,7 @@ replay, read
 [End To End: Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md),
 [End To End: Finite Condition Number](condition-number-end-to-end.md),
 [End To End: Finite Singular-Value Shadow](singular-value-shadow-end-to-end.md),
+[End To End: Finite Jordan Chain](jordan-chain-end-to-end.md),
 [End To End: Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md),
 [End To End: Finite Root Finding](finite-root-finding-end-to-end.md),
 [End To End: Finite Newton Step](newton-step-end-to-end.md),
@@ -875,7 +897,7 @@ finite-dimensional operator rows start as
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md).
 Infeasible rational systems, LP thresholds, bad residual and solution-box bounds, malformed
 eigenpairs, bad Rayleigh-quotient rows, bad characteristic-polynomial rows,
-bad operator-bound and bad Chebyshev-prefix rows, bad Walsh-Hadamard
+bad Jordan-chain components, bad operator-bound and bad Chebyshev-prefix rows, bad Walsh-Hadamard
 transform coefficients, bad QR/Cholesky product entries, bad covariance
 entries, bad KKT stationarity and complementarity rows,
 bad condition-number bounds, bad Newton-coordinate rows, bad proximal residual rows, negative-norm rows, and projection-orthogonality
@@ -887,8 +909,8 @@ conflicts use
 when the key step is functional consistency or congruence. Integer boundary
 matrix coefficient conflicts use
 [QF_LIA / Diophantine Evidence](../../proof-cookbook/recipes/qf-lia-diophantine.md).
-Rank-nullity, spectral theorems, Hilbert-space projection, Riesz
-representation, Newton convergence/globalization, conditioning, and
+Rank-nullity, spectral theorems, Jordan normal form, Hilbert-space projection,
+Riesz representation, Newton convergence/globalization, conditioning, and
 convergence of numerical algorithms remain
 [Lean Horizon](../../proof-cookbook/recipes/lean-horizon-template.md) or
 explicit numerical-honesty work, not consequences of these finite rows. The
@@ -897,7 +919,8 @@ finite vector/dual/module/tensor split is expanded in
 
 ## Horizon
 
-General spectral theorems, rank theorems, vector-space dimension theorems,
+General spectral theorems, Jordan normal form and diagonalizability theorems,
+rank theorems, vector-space dimension theorems,
 duality and bidual theorems, Cauchy-Schwarz and Gram-Schmidt as general
 theorems, Hilbert projection/Riesz representation results, topological duals,
 module theory, universal coefficient theorem schemas, exact sequences,

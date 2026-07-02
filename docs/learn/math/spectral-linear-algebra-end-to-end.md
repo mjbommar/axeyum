@@ -174,12 +174,15 @@ numerical eigensolver correctness
 spectral convergence
 Rayleigh-Ritz optimization theorems
 SVD theorem and singular-value perturbation theory
+Jordan normal form and diagonalizability criteria
 ```
 
 Those require Lean resources, proof-producing spectral certificates, or
 carefully scoped numerical metadata. This pack only checks finite rational
 matrix evidence. For one exact finite singular-value/SVD shadow, see
 [End To End: Finite Singular-Value Shadow](singular-value-shadow-end-to-end.md).
+For one exact non-diagonalizable Jordan-chain shadow, see
+[End To End: Finite Jordan Chain](jordan-chain-end-to-end.md).
 
 ## Run It
 
@@ -205,6 +208,7 @@ untrusted fast search -> eigenpair, basis, quotient, or decomposition candidate
 trusted small checking -> exact rational matrix-vector and matrix-matrix replay
 proof upgrade -> QF_LRA/Farkas certificate for false quotient/eigenpair claims
 remaining horizon -> general spectral, compact-operator, and numerical proofs
+                     plus Jordan normal form and diagonalizability proofs
 ```
 
 The graduation route is deterministic exact-rational finite-matrix checking

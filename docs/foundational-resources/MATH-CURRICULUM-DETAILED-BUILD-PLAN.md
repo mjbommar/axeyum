@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 75 bridge-concept rows.
 - 5 example-family rows.
-- 118 non-template math packs.
-- 755 expected checks.
-- 344 checked proof/evidence rows.
-- 330 replay-only rows.
-- 81 Lean-horizon rows.
-- 118 promoted solver-reuse packs.
+- 119 non-template math packs.
+- 762 expected checks.
+- 345 checked proof/evidence rows.
+- 335 replay-only rows.
+- 82 Lean-horizon rows.
+- 119 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 118 focused learner-linked packs, with no path-only, index-only, or missing
+- 119 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 118 current non-template packs satisfy the focused-lesson side of this
+all 119 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2377,6 +2377,14 @@ Pick one row per commit unless the change is purely navigational.
      shadows separate from the general SVD theorem, spectral theorem,
      perturbation theory, pseudospectra, rank-revealing algorithms, and
      floating-point SVD stability.
+277. Landed: add `finite-jordan-chain-v0` as an exact finite Jordan-chain
+     resource. The pack replays `A = [[2,1],[0,2]]`, `N = A - 2I`,
+     `A*v1 = 2*v1`, `N*v2 = v1`, `N^2 = 0`, and `P*J*P^-1 = A`, then adds
+     `qf-lra-bad-jordan-chain` as the source-linked Farkas row for a false
+     nilpotent component. The learner and query pages keep exact generalized
+     eigenvector replay separate from Jordan normal form, diagonalizability,
+     algebraic/geometric multiplicity theorems, and numerical eigensolver
+     claims.
 
 ## Validation Checklist
 

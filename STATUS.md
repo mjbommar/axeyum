@@ -240,6 +240,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Jordan-chain resource landed.**
+  `finite-jordan-chain-v0` now gives the linear-algebra,
+  numerical-analysis, and functional/operator lanes an exact rational
+  non-diagonalizable matrix shadow: it checks `A = [[2,1],[0,2]]`,
+  `N = A - 2I`, `A*v1 = 2*v1`, `N*v2 = v1`, `N^2 = 0`, and `P*J*P^-1 = A`,
+  then isolates a malformed nilpotent-component claim as a source-linked
+  QF_LRA/Farkas row. The focused learner page and query guides keep exact
+  generalized-eigenvector replay separate from Jordan normal form,
+  diagonalizability, multiplicity theorems, and numerical eigensolver claims.
+  The public summary now reports 121 concept rows, 119 packs, 762 expected
+  checks, 345 checked rows, 335 replay-only rows, 82 Lean-horizon rows, and 119
+  promoted solver-reuse packs.
 - **Finite singular-value shadow resource landed.**
   `finite-singular-value-shadow-v0` now gives the linear-algebra,
   numerical-analysis, and functional/operator lanes an exact rational SVD
@@ -249,7 +261,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `sigma_max(A) <= 2` as a source-linked QF_LRA/Farkas row. The focused learner
   page and query guides keep exact rational singular-value replay separate from
   the general SVD theorem, perturbation theory, pseudospectra, rank-revealing
-  algorithms, and floating-point SVD stability. The public summary now reports
+  algorithms, and floating-point SVD stability. The public summary then reported
   121 concept rows, 118 packs, 755 expected checks, 344 checked rows,
   330 replay-only rows, 81 Lean-horizon rows, and 118 promoted solver-reuse
   packs.

@@ -72,9 +72,9 @@ As of this plan, the math resource lane has:
   vocabulary, coordinate/incidence/rigid/oriented geometry replay, finite
   circle/inversion/cyclic geometry replay, complex real-pair transform replay,
   finite inner-product/projection replay, finite
-  operator/Chebyshev replay, and Lean horizons, plus five route-specific
+  operator/Jordan/Chebyshev replay, and Lean horizons, plus five route-specific
   example families.
-- 116 non-template math example packs, plus the validating template pack.
+- 119 non-template math example packs, plus the validating template pack.
 - generated coverage, curriculum-status audit, field, proof-gap,
   learner/proof-upgrade, and curriculum-pressure dashboards under
   [generated/](generated/).
@@ -280,7 +280,7 @@ Add bridge-concept or example-family rows for repeated subtopics:
   and finite Euler error rows, keeping asymptotic runtime, closed forms,
   convergence rates, and limiting theorem claims in the Lean-horizon lane;
 - linear algebra: landed bridge rows for LU replay, rank/nullity, residual
-  bounds, eigenpair witnesses, singular-value/SVD shadows,
+  bounds, eigenpair witnesses, Jordan-chain shadows, singular-value/SVD shadows,
   characteristic-polynomial replay, and finite random-matrix moments, with
   dual spaces, inner products, tensor maps, and additional spectral
   decompositions needing narrower rows only when reuse demands them;
@@ -310,11 +310,12 @@ Add bridge-concept or example-family rows for repeated subtopics:
   projective configuration theorems, and analytic complex analysis as Lean
   horizons;
 - functional analysis/operator theory: landed bridge rows for finite
-  inner-product/projection replay and finite operator/Chebyshev replay, backed
+  inner-product/projection replay and finite operator/Jordan/Chebyshev replay, backed
   by inner-product, numerical-linear-algebra, least-squares, finite-operator,
-  finite-Chebyshev, spectral, singular-value, and matrix-invariant packs while
-  leaving Banach, Hilbert, compact-operator, SVD theorem, minimax, and
-  infinite-dimensional approximation theorems as Lean horizons;
+  finite-Chebyshev, spectral, Jordan-chain, singular-value, and matrix-invariant
+  packs while leaving Banach, Hilbert, compact-operator, SVD theorem, Jordan
+  normal form, minimax, and infinite-dimensional approximation theorems as Lean
+  horizons;
 - proof-route families: landed example-family rows for finite algebra
   QF_UF/Alethe congruence, exact-rational QF_LRA/Farkas infeasibility, and
   finite Boolean CNF/LRAT refutations, plus integer/count QF_LIA Diophantine
@@ -498,7 +499,7 @@ Next buildout:
 | `discrete_math` | graph search, matching, cuts, generating functions, asymptotic horizons |
 | `graph_theory` | focused lessons for non-coloring graph packs and proof routes for refutations |
 | `number_theory` | arithmetic certificate recipes and bounded Diophantine families |
-| `linear_algebra` | matrix corpus promotion, rank/spectral/SVD proof horizons, numerical residual lessons |
+| `linear_algebra` | matrix corpus promotion, rank/spectral/Jordan/SVD proof horizons, numerical residual lessons |
 | `abstract_algebra` | QF_UF/Alethe upgrades for table and homomorphism packs |
 | `real_analysis` | bounded-vs-general concept rows for limits, continuity, compactness, integration |
 | `complex_analysis` | real-pair algebra lessons now; analytic theorem rows as Lean horizon |
@@ -510,7 +511,7 @@ Next buildout:
 | `numerical_analysis` | residual/error-bound examples with exact rational shadows and numerical limits |
 | `differential_equations_and_dynamical_systems` | bounded recurrence/Euler lessons plus invariant-counterexample rows |
 | `geometry` | finite cyclic-geometry lesson landed; keep combined coordinate/affine/orientation lesson and add only distinct nontrivial circle-line correspondence, higher-degree polynomial-geometry, or theorem-reconstruction pressure beyond the current circle-line, square angle-dot, and Ptolemy rows |
-| `functional_analysis_and_operator_theory` | finite operator, singular-value, and Chebyshev-system lessons; keep Banach/Hilbert/SVD theorems Lean-horizon |
+| `functional_analysis_and_operator_theory` | finite operator, Jordan-chain, singular-value, and Chebyshev-system lessons; keep Banach/Hilbert/Jordan/SVD theorems Lean-horizon |
 
 ## Forward Increments From Here
 

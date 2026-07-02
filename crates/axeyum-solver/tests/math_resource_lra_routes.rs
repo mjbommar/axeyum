@@ -205,6 +205,9 @@ const FINITE_CONDITION_NUMBER_BAD_CONDITION: &str = include_str!(
 const FINITE_SINGULAR_VALUE_SHADOW_BAD_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/finite-singular-value-shadow-v0/smt2/bad-singular-value-bound-farkas-conflict.smt2"
 );
+const FINITE_JORDAN_CHAIN_BAD_COMPONENT: &str = include_str!(
+    "../../../artifacts/examples/math/finite-jordan-chain-v0/smt2/bad-jordan-chain-farkas-conflict.smt2"
+);
 const FINITE_MEASURE_BAD_COMPLEMENT: &str = include_str!(
     "../../../artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2"
 );
@@ -1116,6 +1119,14 @@ fn finite_singular_value_shadow_bad_bound_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-singular-value-shadow-v0 bad-singular-value-bound SMT-LIB artifact",
         FINITE_SINGULAR_VALUE_SHADOW_BAD_BOUND,
+    );
+}
+
+#[test]
+fn finite_jordan_chain_bad_component_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-jordan-chain-v0 bad-component SMT-LIB artifact",
+        FINITE_JORDAN_CHAIN_BAD_COMPONENT,
     );
 }
 
