@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Curriculum-node query guide landed.**
+  `CURRICULUM-NODE-QUERIES.md` now documents how consumers start from formal
+  curriculum nodes such as `sets`, `linear-algebra`, `modular-arithmetic`, and
+  `calculus`, then drill into concept rows, packs, checked field/route rows,
+  and Lean-horizon boundaries. The foundational resource smoke script now
+  checks representative curriculum-node concept, pack, Farkas, QF_BV,
+  Diophantine, and Lean-horizon lookups. The public summary remains 121
+  concept rows, 75 bridge concepts, 108 packs, 688 expected checks, 322 checked
+  rows, 295 replay-only rows, and 71 Lean-horizon rows.
+
 - **Proof-upgrade query guide landed.**
   `PROOF-UPGRADE-QUERIES.md` now documents how proof contributors find
   replay-only UNSAT rows, route-relevant packs with replay rows, checked-row

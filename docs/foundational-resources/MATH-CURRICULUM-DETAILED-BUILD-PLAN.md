@@ -1679,6 +1679,11 @@ Pick one row per commit unless the change is purely navigational.
      pack, checked-row contrast, and horizon queries so contributors can choose
      certificate upgrades without treating every replay-only row as a gap or
      over-promoting finite examples.
+195. Landed: add `CURRICULUM-NODE-QUERIES.md` as the focused query guide for
+     consumers that start from the formal curriculum DAG. It records executable
+     curriculum-node concept, pack, field, route, checked-row, and
+     Lean-horizon drilldowns for nodes such as `sets`, `linear-algebra`,
+     `modular-arithmetic`, and `calculus`.
 
 ## Validation Checklist
 

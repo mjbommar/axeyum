@@ -48,6 +48,8 @@ witness, checked obligation, and legal/theorem horizon, use
 [Rules/Law Trust Boundary](../learn/rules-law-trust-boundary.md).
 For the compact all-field consumer query surface, use the
 [Field Readiness Query Matrix](FIELD-READINESS-QUERY-MATRIX.md).
+For queries that start from formal curriculum nodes, use the
+[Curriculum Node Queries](CURRICULUM-NODE-QUERIES.md).
 For proof-route coverage queries, use the
 [Proof Route Query Matrix](PROOF-ROUTE-QUERY-MATRIX.md).
 For Lean/theorem-boundary discovery, use the

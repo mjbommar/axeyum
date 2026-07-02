@@ -173,6 +173,11 @@ The proof-upgrade query guide is
 it records route-summary, replay-only row, route-relevant pack, checked-row,
 and horizon queries for choosing certificate upgrades without over-promoting
 finite replay rows.
+The curriculum-node query guide is
+[`docs/foundational-resources/CURRICULUM-NODE-QUERIES.md`](docs/foundational-resources/CURRICULUM-NODE-QUERIES.md);
+it records concept, pack, field, route, checked-row, and horizon drilldowns for
+consumers that start from the formal curriculum DAG rather than a field or
+proof route.
 The proof-route family selector is
 [`docs/foundational-resources/PROOF-ROUTE-FAMILY-SELECTION.md`](docs/foundational-resources/PROOF-ROUTE-FAMILY-SELECTION.md);
 it picks one representative replay-heavy family per active proof route and
@@ -300,7 +305,10 @@ consumer query guide for finding promoted packs by proof route, field, and
 checked row while keeping educational resources separate from benchmark and
 parity claims. The proof-upgrade lane now also has a consumer query guide for
 finding replay-only rows, route-relevant packs, checked evidence contrasts, and
-Lean horizons before promoting another certificate row. The
+Lean horizons before promoting another certificate row. The curriculum-node
+lane now also has a consumer query guide for starting from nodes such as
+`sets`, `linear-algebra`, `modular-arithmetic`, and `calculus`, then drilling
+into concepts, packs, checked rows, and theorem horizons. The
 finite algebra-homomorphism lane now also promotes the
 concrete bad group-homomorphism row through QF_UF/Alethe after exact table
 replay isolates `phi(1+1)=1` versus `phi(1)+phi(1)=0`. The finite

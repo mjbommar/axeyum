@@ -40,6 +40,14 @@ python3 scripts/query-foundational-resources.py packs --proof-status replay-only
 python3 scripts/query-foundational-resources.py packs --field probability_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --expected-result unsat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --kind example-family --format json --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --kind curriculum-node --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --curriculum-node sets --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --curriculum-node sets --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --curriculum-node linear-algebra --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --curriculum-node linear-algebra --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --curriculum-node modular-arithmetic --route qf-bv --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --curriculum-node modular-arithmetic --route Diophantine --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --curriculum-node calculus --route lean-horizon-template --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field probability_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field probability_theory --text probability --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field probability_theory --text random --require-any >/dev/null

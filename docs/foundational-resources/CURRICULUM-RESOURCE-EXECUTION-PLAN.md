@@ -28,6 +28,9 @@ The invariant is:
 curriculum node -> concept row -> example pack -> learner path -> proof route -> dashboard -> consumer/API boundary
 ```
 
+The focused query guide for starting from curriculum nodes is
+[CURRICULUM-NODE-QUERIES.md](CURRICULUM-NODE-QUERIES.md).
+
 Every resource should reinforce Axeyum's identity: untrusted fast search,
 trusted small checking. Bounded examples are useful, but they must stay visibly
 bounded until a proof route or Lean reconstruction upgrades the claim.

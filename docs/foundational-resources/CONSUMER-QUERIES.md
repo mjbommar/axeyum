@@ -17,6 +17,8 @@ consumer would.
 For a compact all-field map of the current smoke-checked readiness routes,
 bridge lookups, checked-row drilldowns, and theorem boundaries, see
 [FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md).
+For curriculum-node-to-pack drilldowns, see
+[CURRICULUM-NODE-QUERIES.md](CURRICULUM-NODE-QUERIES.md).
 For proof-route summaries and route-specific boundaries, see
 [PROOF-ROUTE-QUERY-MATRIX.md](PROOF-ROUTE-QUERY-MATRIX.md).
 For promoted solver-reuse pack mining by route, field, and checked row, see

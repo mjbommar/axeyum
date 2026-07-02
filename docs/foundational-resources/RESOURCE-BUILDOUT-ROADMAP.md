@@ -34,6 +34,9 @@ curriculum node -> concept row -> example pack -> learner page -> proof route
 -> solver reuse -> consumer boundary
 ```
 
+For executable queries that begin at the curriculum-node layer, use
+[Curriculum Node Queries](CURRICULUM-NODE-QUERIES.md).
+
 The product is not a textbook and not a formal-library clone. It is a system of
 small resources that make Axeyum's identity concrete:
 
