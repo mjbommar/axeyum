@@ -100,6 +100,21 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Display finite Bayes update rows, then the checked malformed-posterior row:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-probability-v0 \
+  --text Bayes \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-probability-v0 \
+  --text Bayes \
+  --proof-status checked \
+  --require-any
+```
+
 Display checked finite measure rows:
 
 ```sh

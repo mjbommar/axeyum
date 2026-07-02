@@ -73,6 +73,8 @@ the final scalar contradictions.
 
 For a focused finite Markov-chain trace, read
 [End To End: Finite Markov Chains](finite-markov-chain-end-to-end.md).
+For a focused finite Bayes-update trace, read
+[End To End: Finite Bayes Update](finite-bayes-update-end-to-end.md).
 
 The exact-test pack checks finite binomial tails, hypergeometric point
 probabilities, one-sided and probability-ordered two-sided Fisher p-values as
@@ -104,6 +106,25 @@ requires `mu(A^c)=1/2` while preserving `mu(A)+mu(A^c)=mu(U)`.
 The finite-measure monotonicity pack replays `A subset B` by computing
 `B \ A`, checking `mu(B)=mu(A)+mu(B\A)`, and rejecting a false
 `mu({a})=2/3` row after replay computes `mu({a})=1/6`.
+For the diagnostic-test Bayes row, exact replay starts from:
+
+```text
+P(disease) = 1/100
+P(positive | disease) = 9/10
+P(positive | not disease) = 1/20
+```
+
+It recomputes `P(disease and positive)=9/1000`,
+`P(positive)=117/2000`, and therefore
+`P(disease | positive)=2/13`. The malformed Bayes row claims posterior `1/5`;
+the checked `QF_LRA` artifact refutes the division-free equation:
+
+```text
+evidence_probability * posterior = disease_and_positive_probability
+```
+
+with the replayed source values. The focused trace is
+[End To End: Finite Bayes Update](finite-bayes-update-end-to-end.md).
 For finite random variables, it checks
 pushforwards and expectations such as:
 
@@ -278,12 +299,16 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ex
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-d-separation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
+python3 scripts/query-foundational-resources.py checks --pack finite-probability-v0 --text Bayes --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-probability-v0 --text Bayes --proof-status checked --require-any
 ```
 
 For a fuller trace through atom-table replay, read
 [End To End: Conditional Probability, Random Variables, Kernels, Concentration, Martingales, And Product Measures](finite-probability-end-to-end.md).
 For the single-pack finite-probability table story, read
 [End To End: Finite Probability Mass Tables](finite-probability-mass-tables-end-to-end.md).
+For the diagnostic-test Bayes posterior and checked bad-posterior row, read
+[End To End: Finite Bayes Update](finite-bayes-update-end-to-end.md).
 For a focused finite random-variable trace, read
 [End To End: Finite Random Variables](finite-random-variables-end-to-end.md).
 For a focused finite conditional-expectation trace, read

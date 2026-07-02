@@ -1846,6 +1846,11 @@ Pick one row per commit unless the change is purely navigational.
      replaying a directed cycle obstruction, and records a topological-sort
      theorem horizon. The pack is intentionally `non-benchmark-horizon` until
      a source Boolean/LIA artifact and checked proof route exist.
+219. Landed: add a focused finite Bayes-update learner/query resource over the
+     existing promoted `finite-probability-v0` Bayes rows. The new page follows
+     the diagnostic-test posterior `2/13`, the malformed posterior `1/5`, and
+     the checked QF_LRA/Farkas bad-posterior row without adding a duplicate
+     pack or changing resource counts.
 
 ## Validation Checklist
 

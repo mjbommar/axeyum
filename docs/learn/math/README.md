@@ -436,6 +436,9 @@ Companion maps:
   replay, checked QF_LRA/Farkas bad normalization, checked bad conditional
   probability, checked bad-posterior rejection, finite independence replay,
   and checked bad-independence rejection.
+- [Finite Bayes Update](finite-bayes-update-end-to-end.md): follows one
+  diagnostic-test Bayes posterior from exact rational replay through checked
+  QF_LRA/Farkas rejection of a malformed posterior.
 - [Finite Measure](finite-measure-end-to-end.md): follows finite
   sigma-algebra replay, exact finite additivity, event-complement replay,
   exact bad-complement replay, checked QF_LRA/Farkas complement-additivity

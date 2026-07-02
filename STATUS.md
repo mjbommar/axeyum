@@ -234,6 +234,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Bayes learner/query resource landed.**
+  `finite-bayes-update-end-to-end.md` now follows the existing promoted
+  `finite-probability-v0` Bayes rows through exact rational posterior replay
+  (`2/13`), malformed posterior rejection (`1/5`), and the checked
+  QF_LRA/Farkas bad-posterior route. Probability query docs and the
+  foundational smoke gate now expose Bayes-specific row queries. This is a
+  learner/query-depth increment over an existing pack, so public resource
+  counts do not change.
+
 - **Finite DAG topological-order graph resource landed.**
   `finite-dag-topological-order-v0` adds finite DAG topological-order replay,
   independent-order witness replay, bad-order rejection by a concrete
