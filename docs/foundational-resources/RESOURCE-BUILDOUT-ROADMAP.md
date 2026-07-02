@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 684 expected checks.
+- 686 expected checks.
 - 322 checked proof/evidence rows.
-- 291 replay-only rows.
+- 293 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -674,8 +674,9 @@ Build next:
   `finite-recurrence-prefix-v0`'s bad finite-value and bad affine-step source
   rows replay-only with separate checked `qf-lra-*` proof rows tied to their
   source QF_LRA/Farkas artifacts; keep
-  `finite-root-finding-v0`'s bad Newton-step and bad bisection-width rows tied
-  to their source QF_LRA/Farkas artifacts; keep `finite-separation-v0`'s bad
+  `finite-root-finding-v0`'s bad Newton-step and bad bisection-width source
+  rows replay-only with separate checked `qf-lra-*` proof rows tied to their
+  source QF_LRA/Farkas artifacts; keep `finite-separation-v0`'s bad
   convex-combination and bad separator rows tied to their source QF_LRA/Farkas
   artifacts; keep `finite-kkt-v0`'s bad stationarity and bad
   complementarity rows tied to their source QF_LRA/Farkas artifacts; keep

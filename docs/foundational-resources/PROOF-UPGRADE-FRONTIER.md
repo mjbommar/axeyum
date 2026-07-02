@@ -23,15 +23,15 @@ Generated from the current math resource queue:
 - math example packs: 108
 - learner-linked packs: 108 focused links
 - packs with non-checked proof rows: 97
-- non-checked proof rows: 323
+- non-checked proof rows: 364
 
 Candidate route totals:
 
 | Route | Pack Count | Meaning |
 |---|---:|---|
-| [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 9 | Boolean refutations that should carry checked CNF proof objects. |
-| [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 5 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
-| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 11 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions, including finite graph traversal cost counters. |
+| [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 16 | Boolean refutations that should carry checked CNF proof objects. |
+| [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 7 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
+| [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 14 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions, including finite graph traversal cost counters. |
 | [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 58 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 19 | Equality-heavy finite structures and congruence conflicts. |
 | [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 78 | General theorem statements that remain outside bounded SMT replay. |
@@ -263,9 +263,10 @@ First targets:
   exact prefix replay computes `F_6 = 8` and affine replay computes
   `x_4 = 15`)
 - [finite-root-finding-v0](../../artifacts/examples/math/finite-root-finding-v0/)
-  (source-linked Farkas regressions landed for the bad Newton-step and bad
-  bisection-width rows after exact root-finding replay computes the next
-  iterate `17/12` and selected interval width `1/2`)
+  (source-linked Farkas regressions landed as separate `qf-lra-*` proof rows
+  for the bad Newton-step and bad bisection-width source rows after exact
+  root-finding replay computes the next iterate `17/12`, selected interval
+  width `1/2`, and width excess `1/6`)
 - [finite-separation-v0](../../artifacts/examples/math/finite-separation-v0/)
   (source-linked Farkas regressions landed for the bad convex-combination
   point and bad separator rows after exact convex-hull replay computes point

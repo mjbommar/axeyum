@@ -88,8 +88,8 @@ Fibonacci and affine recurrence replay plus a companion-matrix state trace,
 with replay-only bad finite-value and bad affine-step source rows plus
 separate checked `qf-lra-*` Farkas proof rows. The
 finite-root-finding slice adds exact bisection/Newton iteration replay,
-residual-decrease checking, and checked QF_LRA/Farkas bad Newton-step plus
-bad bisection-width certificates. The finite-separation slice adds exact convex-hull membership,
+residual-decrease checking, replay-only bad Newton-step and bad bisection-width
+source rows, and separate checked `qf-lra-*` Farkas proof rows. The finite-separation slice adds exact convex-hull membership,
 separating-hyperplane score replay, supporting-face checking, and checked
 QF_LRA/Farkas bad convex-combination plus bad-separator certificates. The finite-KKT slice adds exact
 constrained-quadratic grid replay, stationarity replay, complementary-slackness

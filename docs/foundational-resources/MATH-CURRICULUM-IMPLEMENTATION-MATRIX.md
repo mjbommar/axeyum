@@ -421,9 +421,12 @@ Build sequence:
     congruent-triangle distance replay, checked QF_LRA/Farkas bad-distance
     rejection, a focused learner page, and a bridge-row update under
     `bridge_coordinate_orientation_geometry`.
-28. `finite-root-finding-v0` now links `bad-newton-step-rejected` to
+28. `finite-root-finding-v0` now keeps `bad-newton-step-rejected` and
+    `bad-bisection-width-rejected` as replay-only source rows, with separate
+    checked `qf-lra-bad-newton-step` and `qf-lra-bad-bisection-width` rows
+    linking to
     `artifacts/examples/math/finite-root-finding-v0/smt2/bad-newton-step-farkas-conflict.smt2`
-    and `bad-bisection-width-rejected` to
+    and
     `artifacts/examples/math/finite-root-finding-v0/smt2/bad-bisection-width-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
 29. `finite-separation-v0` now links

@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 684 expected checks.
+- 686 expected checks.
 - 322 checked proof/evidence rows.
-- 291 replay-only rows.
+- 293 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -259,19 +259,19 @@ Exit criteria:
 | `naturals` | maintain | keep bounded prefix and LIA/BV width limits explicit |
 | `integers` | maintain | group common Diophantine obstructions |
 | `rationals` | maintain | exact rational order and Farkas conflicts are already the model |
-| `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding has source-linked bad-iterate and bad bisection-width rows, separation has source-linked bad convex-combination and bad-separator rows, KKT has source-linked bad-stationarity and bad-complementarity rows, active-set QP has source-linked bad-free-gradient, bad inactive-slack, and bad degenerate-multiplier rows, SDP has source-linked bad-objective and bad duality-gap rows, gradient descent has source-linked bad-decrease, bad step-coordinate, and bad descent-bound rows, finite line search has source-linked bad Armijo, bad descent-direction, and bad accepted-candidate rows, finite Wolfe line search has source-linked bad minimizer, bad sufficient-decrease, and bad curvature rows, finite projected-gradient has source-linked bad-projection and bad projected-decrease rows, finite proximal-gradient has source-linked bad-proximal-point, bad composite-decrease, and bad box-proximal-point rows, finite circle geometry has source-linked bad-radius and bad line-intersection rows, finite inversion geometry has source-linked bad inverse-coordinate and inverse-distance-product rows, and finite cyclic geometry has source-linked bad diagonal-intersection, bad opposite-angle, and bad Ptolemy rows; keep completeness, convergence, separation, KKT sufficiency, active-set method theory, SDP duality, descent-rate, general circle/inversion/cyclic geometry, and broad CAD/SOS/RCF claims horizon |
+| `reals` | deepen | RCF shadow now has a source-linked QF_LRA/Farkas negative-discriminant row, root-finding now keeps bad iterate and bad bisection-width source claims replay-only with separate `qf-lra-*` proof rows, separation has source-linked bad convex-combination and bad-separator rows, KKT has source-linked bad-stationarity and bad-complementarity rows, active-set QP has source-linked bad-free-gradient, bad inactive-slack, and bad degenerate-multiplier rows, SDP has source-linked bad-objective and bad duality-gap rows, gradient descent has source-linked bad-decrease, bad step-coordinate, and bad descent-bound rows, finite line search has source-linked bad Armijo, bad descent-direction, and bad accepted-candidate rows, finite Wolfe line search has source-linked bad minimizer, bad sufficient-decrease, and bad curvature rows, finite projected-gradient has source-linked bad-projection and bad projected-decrease rows, finite proximal-gradient has source-linked bad-proximal-point, bad composite-decrease, and bad box-proximal-point rows, finite circle geometry has source-linked bad-radius and bad line-intersection rows, finite inversion geometry has source-linked bad inverse-coordinate and inverse-distance-product rows, and finite cyclic geometry has source-linked bad diagonal-intersection, bad opposite-angle, and bad Ptolemy rows; keep completeness, convergence, separation, KKT sufficiency, active-set method theory, SDP duality, descent-rate, general circle/inversion/cyclic geometry, and broad CAD/SOS/RCF claims horizon |
 | `complex` | deepen | complex-plane bad conjugation-product imaginary-part and bad unit-square real-part rows now have source-linked QF_LRA/Farkas regressions; keep analytic theorems Lean-horizon |
 | `divisibility-and-euclid` | maintain | use gcd/Bezout rows as arithmetic-certificate examples |
 | `modular-arithmetic` | maintain | keep LIA nonunit/CRT and BV fixed-width nonunit-inverse/Fermat-unit residue routes distinct |
 | `groups` | maintain | table replay plus Alethe equality conflicts |
 | `rings` | maintain | BV fixed finite rings only when width is conceptually relevant |
 | `fields` | maintain | finite fields plus linear-algebra links; arbitrary-field facts horizon |
-| `polynomials` | deepen | generated `bridge_polynomial_coefficient_factor_replay` now groups fixed identities, factor/division witnesses, finite coefficient windows, root-finding steps, derivative shadows, and rational polynomial-geometry obligations; polynomial identities have a QF_LIA false-root regression, factorization has a QF_LRA/Farkas discriminant regression, and root-finding has exact polynomial evaluation plus QF_LRA/Farkas bad-step and bad-width regressions |
+| `polynomials` | deepen | generated `bridge_polynomial_coefficient_factor_replay` now groups fixed identities, factor/division witnesses, finite coefficient windows, root-finding steps, derivative shadows, and rational polynomial-geometry obligations; polynomial identities have a QF_LIA false-root regression, factorization has a QF_LRA/Farkas discriminant regression, and root-finding has exact polynomial evaluation plus replay-only bad source rows with separate QF_LRA/Farkas bad-step and bad-width proof rows |
 | `sequences-and-limits` | deepen | bounded Cauchy-tail, bad reciprocal-tail, and bounded monotone-prefix bad-bound rows now have QF_LRA/Farkas regressions; convergence theorems stay Lean horizon |
 | `counting` | maintain | finite-counting replay bridge now groups pigeonhole CNF/LRAT, coefficient-count, double-counting, finite orbit-count, and exact tail-count rows |
 | `number-theory` | maintain | bounded residue and Diophantine families |
 | `linear-algebra` | deepen | matrix corpus notes, dot-product/separator/KKT/active-set-QP/SDP/gradient-step/line-search/Wolfe/projected-gradient/proximal-gradient/circle-tangent/inversion rows, and route-specific regression back-links |
-| `calculus` | deepen | one-variable false derivative, Riemann-sum false integral, multivariable bad-gradient, finite root-finding bad-step and bad-width, finite KKT bad-stationarity and bad-complementarity, finite active-set QP bad-free-gradient, bad inactive-slack, and bad-degenerate-multiplier, finite gradient-descent bad-decrease, bad step-coordinate, and bad-descent-bound, finite line-search bad-Armijo, bad descent-direction, and bad accepted-candidate, finite Wolfe bad-minimizer, bad sufficient-decrease, and bad-curvature, finite projected-gradient bad-projection and bad projected-decrease, and finite proximal-gradient bad-proximal-point, bad composite-decrease, and bad box-proximal-point rows now have QF_LRA/Farkas regressions |
+| `calculus` | deepen | one-variable false derivative, Riemann-sum false integral, multivariable bad-gradient, finite root-finding replay-only bad-step and bad-width source rows plus separate `qf-lra-*` proof rows, finite KKT bad-stationarity and bad-complementarity, finite active-set QP bad-free-gradient, bad inactive-slack, and bad-degenerate-multiplier, finite gradient-descent bad-decrease, bad step-coordinate, and bad-descent-bound, finite line-search bad-Armijo, bad descent-direction, and bad accepted-candidate, finite Wolfe bad-minimizer, bad sufficient-decrease, and bad-curvature, finite projected-gradient bad-projection and bad projected-decrease, and finite proximal-gradient bad-proximal-point, bad composite-decrease, and bad box-proximal-point rows now have QF_LRA/Farkas regressions |
 
 ## Commit-Sized Queue
 
@@ -1629,6 +1629,15 @@ Pick one row per commit unless the change is purely navigational.
      `math_resource_lra_routes` regressions. The public query surface now
      reports 684 checks, 322 checked rows, 291 replay-only rows, and row-scoped
      Farkas lookup returns explicit bounded-monotone proof rows.
+188. Landed: split `finite-root-finding-v0` bad Newton-step and bad
+     bisection-width proof-object checking into explicit `qf-lra-*` rows. Exact
+     finite replay still owns the malformed source rows by computing
+     next iterate `17/12`, selected width `1/2`, and width excess `1/6`, while
+     the QF_LRA/Farkas rows separately reject the fixed equality and
+     nonpositive-excess conflicts through the existing
+     `math_resource_lra_routes` regressions. The public query surface now
+     reports 686 checks, 322 checked rows, 293 replay-only rows, and row-scoped
+     Farkas lookup returns explicit finite-root-finding proof rows.
 
 ## Validation Checklist
 

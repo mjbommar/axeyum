@@ -1162,9 +1162,9 @@ Recommended order:
     duplicate-node/bad-sample/bad-alternation rejection, and separate checked
     QF_LRA/Farkas proof rows.
 33. `finite-root-finding-v0`: exact bisection/Newton iteration replay,
-    residual-decrease checking, and checked QF_LRA/Farkas bad-step plus
-    bad-width rejection, while convergence and floating-point stability remain
-    horizon claims.
+    residual-decrease checking, replay-only bad-step and bad-width source
+    rows, and separate checked `qf-lra-*` Farkas proof rows, while convergence
+    and floating-point stability remain horizon claims.
 34. `finite-separation-v0`: exact convex-hull membership, separating
     hyperplane score replay, supporting-face checks, and checked QF_LRA/Farkas
     bad convex-combination plus bad-separator rejection, while general
@@ -2140,9 +2140,11 @@ contradictions through the same Farkas evidence path.
 affine-step source rows as replay-only rows after exact recurrence replay
 computes `F_6 = 8` and `x_4 = 15`; separate checked `qf-lra-*` rows route the
 fixed scalar contradictions through the same Farkas evidence path.
-`finite-root-finding-v0` now routes its bad Newton-step and bad
-bisection-width rows through the same checked Farkas evidence path after exact
-replay computes the next iterate `17/12` and the selected width `1/2`.
+`finite-root-finding-v0` now keeps its bad Newton-step and bad
+bisection-width source rows as replay-only rows after exact replay computes
+the next iterate `17/12`, selected width `1/2`, and width excess `1/6`;
+separate checked `qf-lra-*` rows route the fixed scalar contradictions through
+the same Farkas evidence path.
 `finite-separation-v0` now routes its bad convex-combination and bad separator
 rows through the same checked Farkas evidence path after exact convex-hull
 replay computes point `(1/3,1/3)` and separator replay computes the outside

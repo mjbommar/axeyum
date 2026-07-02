@@ -777,7 +777,7 @@
           "id": "finite-root-finding-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
-          "notes": "Finite bisection/Newton root-finding replay and checked bad-step plus bad-width rejections."
+          "notes": "Finite bisection/Newton root-finding replay with separate checked bad-step and bad-width proof rows."
         },
         {
           "id": "finite-separation-v0",
@@ -1761,7 +1761,7 @@
           "id": "finite-root-finding-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
-          "notes": "Exact rational root-finding iterations with bad Newton-step and bisection-width rejections."
+          "notes": "Exact rational root-finding iterations with replay-only bad source rows and separate checked bad-step/bad-width proof rows."
         },
         {
           "id": "finite-separation-v0",
@@ -1900,7 +1900,7 @@
           "id": "finite-root-finding-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
-          "notes": "Finite bisection/Newton root-finding replay, bad-width checks, and convergence-theorem horizon rows."
+          "notes": "Finite bisection/Newton root-finding replay, separate bad-width proof rows, and convergence-theorem horizon rows."
         },
         {
           "id": "finite-kkt-v0",
@@ -4781,7 +4781,7 @@
           "id": "finite-root-finding-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
-          "notes": "Finite bisection/Newton replay and bad bisection-width checks for root-finding theorem shadows."
+          "notes": "Finite bisection/Newton replay plus separate checked bad-step and bad-width proof rows for root-finding theorem shadows."
         },
         {
           "id": "real-analysis-rational-v0",
@@ -5089,7 +5089,7 @@
           "id": "finite-root-finding-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
-          "notes": "Bisection interval and width rows checked over exact rational endpoints."
+          "notes": "Bisection interval replay with separate checked width-conflict rows over exact rational endpoints."
         }
       ],
       "proof_routes": [

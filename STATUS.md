@@ -234,6 +234,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-root-finding Farkas rows split landed.**
+  `finite-root-finding-v0` now keeps `bad-newton-step-rejected` and
+  `bad-bisection-width-rejected` as exact replay rows: they compute the Newton
+  iterate `17/12`, selected bisection width `1/2`, and width excess `1/6`
+  before rejecting malformed claims. The checked proof-object paths are now
+  the explicit `qf-lra-bad-newton-step` and
+  `qf-lra-bad-bisection-width` rows linked to the QF_LRA/Farkas SMT-LIB
+  artifacts and regressions. Focused validation and the finite-root-finding
+  `math_resource_lra_routes` regressions pass; the public summary now reports
+  120 concept rows, 108 packs, 686 expected checks, 322 checked rows, 293
+  replay-only rows, and 71 Lean-horizon rows.
+
 - **Bounded-monotone Farkas rows split landed.**
   `bounded-monotone-sequence-v0` now keeps `bad-upper-bound-rejected` and
   `bad-tail-gap-rejected` as exact replay rows: they compute `a_6 = 6/7`,

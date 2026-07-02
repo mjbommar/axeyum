@@ -1,7 +1,8 @@
 # End To End: Finite Root Finding
 
 This lesson follows one numerical-analysis resource from exact iterate replay
-through checked bad-step and bad bisection-width rejections. It uses the
+through replayed bad source claims and separate checked bad-step and
+bad-bisection-width proof rows. It uses the
 [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
 pack.
 
@@ -21,8 +22,10 @@ Concept rows:
 | `bisection-bracket-replay` | `sat` | replay-only |
 | `newton-step-replay` | `sat` | replay-only |
 | `residual-decrease-witness` | `sat` | replay-only |
-| `bad-newton-step-rejected` | `unsat` | checked QF_LRA/Farkas |
-| `bad-bisection-width-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-newton-step-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-newton-step` | `unsat` | checked QF_LRA/Farkas |
+| `bad-bisection-width-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-bisection-width` | `unsat` | checked QF_LRA/Farkas |
 | `general-root-finding-convergence-lean-horizon` | `not-run` | Lean horizon |
 
 Every positive row is one finite exact-rational calculation. The pack does not
@@ -97,9 +100,9 @@ The pack checks only this fixed residual decrease:
 That is useful evidence for one exact step, but it is not a convergence-rate
 theorem.
 
-## Check The Newton Refutation
+## Replay The Bad Newton Source Row
 
-The promoted bad row claims:
+The malformed source row claims:
 
 ```text
 Newton step from 3/2 is 4/3
@@ -110,6 +113,11 @@ Exact replay computes:
 ```text
 Newton step from 3/2 is 17/12
 ```
+
+That replay row is not the proof object. It computes the source value and
+leaves the certificate route to `qf-lra-bad-newton-step`.
+
+## Check The Newton Refutation
 
 The committed SMT-LIB artifact
 [`bad-newton-step-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-root-finding-v0/smt2/bad-newton-step-farkas-conflict.smt2)
@@ -123,9 +131,9 @@ newton_next = 4/3
 Axeyum may search for the contradiction, but the accepted evidence is checked
 `UnsatFarkas` arithmetic over the original source artifact.
 
-## Check The Bisection-Width Refutation
+## Replay The Bad Bisection-Width Source Row
 
-The second promoted bad row claims:
+The second malformed source row claims:
 
 ```text
 selected interval width = 1/3
@@ -138,6 +146,11 @@ selected interval = [1, 3/2]
 width = 1/2
 1/2 - 1/3 = 1/6
 ```
+
+That replay row is also not the proof object. It computes the selected width
+and leaves the certificate route to `qf-lra-bad-bisection-width`.
+
+## Check The Bisection-Width Refutation
 
 The committed SMT-LIB artifact
 [`bad-bisection-width-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-root-finding-v0/smt2/bad-bisection-width-farkas-conflict.smt2)

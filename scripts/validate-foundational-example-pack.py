@@ -10282,8 +10282,10 @@ def validate_finite_root_finding(expected: dict[str, Any]) -> None:
         fail("residual-decrease-witness must strictly decrease the residual")
 
     bad = checks["bad-newton-step-rejected"]
-    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
-        fail("bad-newton-step-rejected must be a checked unsat row")
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "replay-only":
+        fail("bad-newton-step-rejected must be a replay-only unsat row")
+    if bad.get("validation") != "finite_bad_newton_step_refutation":
+        fail("bad-newton-step-rejected validation is incorrect")
     data = bad.get("data", {})
     if data.get("source_witness") != "sqrt-two-newton-step":
         fail("bad-newton-step-rejected must cite the sqrt-two-newton-step source witness")
@@ -10293,23 +10295,53 @@ def validate_finite_root_finding(expected: dict[str, Any]) -> None:
         fail("bad-newton-step-rejected computed_next does not match replay")
     if claimed == computed:
         fail("bad-newton-step-rejected claimed next unexpectedly matches replay")
+    for forbidden in ("smt2_artifact", "farkas_regression", "certificate"):
+        if forbidden in data:
+            fail("bad-newton-step-rejected must leave checked evidence to qf-lra-bad-newton-step")
+    notes = bad.get("notes")
+    require_string("bad Newton notes", notes)
+    if "qf-lra-bad-newton-step" not in notes:
+        fail("bad-newton-step-rejected notes must point to the checked qf-lra row")
+
+    bad_qf = checks["qf-lra-bad-newton-step"]
+    if bad_qf["expected_result"] != "unsat" or bad_qf.get("proof_status") != "checked":
+        fail("qf-lra-bad-newton-step must be a checked unsat row")
+    if bad_qf.get("validation") != "qf_lra_finite_root_finding_bad_newton_step_refutation":
+        fail("qf-lra-bad-newton-step validation is incorrect")
+    data = bad_qf.get("data", {})
+    if data.get("source_replay_row") != "bad-newton-step-rejected":
+        fail("qf-lra-bad-newton-step must cite bad-newton-step-rejected as source_replay_row")
+    qf_computed = require_fraction("qf-lra bad Newton computed_next", data.get("computed_next"))
+    qf_claimed = require_fraction("qf-lra bad Newton claimed_next", data.get("claimed_next"))
+    if qf_computed != computed:
+        fail("qf-lra-bad-newton-step computed_next must match replay")
+    if qf_claimed != claimed:
+        fail("qf-lra-bad-newton-step claimed_next must match replay")
+    if qf_computed == qf_claimed:
+        fail("qf-lra-bad-newton-step must be linearly contradictory")
+    farkas_conflict = data.get("farkas_conflict")
+    require_string("qf-lra bad Newton farkas_conflict", farkas_conflict)
+    if farkas_conflict != "newton_next = 17/12 and newton_next = 4/3":
+        fail("qf-lra-bad-newton-step must document the fixed equality conflict")
     smt2_artifact = data.get("smt2_artifact")
-    require_string("bad Newton smt2_artifact", smt2_artifact)
+    require_string("qf-lra bad Newton smt2_artifact", smt2_artifact)
     if smt2_artifact != "artifacts/examples/math/finite-root-finding-v0/smt2/bad-newton-step-farkas-conflict.smt2":
-        fail("bad-newton-step-rejected smt2_artifact must name the checked QF_LRA artifact")
-    check_source("bad Newton smt2_artifact", smt2_artifact)
+        fail("qf-lra-bad-newton-step smt2_artifact must name the checked QF_LRA artifact")
+    check_source("qf-lra bad Newton smt2_artifact", smt2_artifact)
     regression = data.get("farkas_regression")
-    require_string("bad Newton farkas_regression", regression)
+    require_string("qf-lra bad Newton farkas_regression", regression)
     if "finite_root_finding_bad_newton_step_artifact_emits_checked_farkas" not in regression:
-        fail("bad-newton-step-rejected must link the LRA route regression")
+        fail("qf-lra-bad-newton-step must link the LRA route regression")
     certificate = data.get("certificate")
-    require_string("bad Newton certificate", certificate)
+    require_string("qf-lra bad Newton certificate", certificate)
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
-        fail("bad-newton-step-rejected certificate must document checked Farkas evidence")
+        fail("qf-lra-bad-newton-step certificate must document checked Farkas evidence")
 
     bad_width = checks["bad-bisection-width-rejected"]
-    if bad_width["expected_result"] != "unsat" or bad_width.get("proof_status") != "checked":
-        fail("bad-bisection-width-rejected must be a checked unsat row")
+    if bad_width["expected_result"] != "unsat" or bad_width.get("proof_status") != "replay-only":
+        fail("bad-bisection-width-rejected must be a replay-only unsat row")
+    if bad_width.get("validation") != "finite_bad_bisection_width_refutation":
+        fail("bad-bisection-width-rejected validation is incorrect")
     data = bad_width.get("data", {})
     if data.get("source_witness") != "sqrt-two-bisection-step":
         fail("bad-bisection-width-rejected must cite the sqrt-two-bisection-step source witness")
@@ -10328,19 +10360,57 @@ def validate_finite_root_finding(expected: dict[str, Any]) -> None:
         fail("bad-bisection-width-rejected width_excess is incorrect")
     if width_excess <= 0:
         fail("bad-bisection-width-rejected must document a positive width excess")
+    for forbidden in ("smt2_artifact", "farkas_regression", "certificate"):
+        if forbidden in data:
+            fail("bad-bisection-width-rejected must leave checked evidence to qf-lra-bad-bisection-width")
+    notes = bad_width.get("notes")
+    require_string("bad bisection width notes", notes)
+    if "qf-lra-bad-bisection-width" not in notes:
+        fail("bad-bisection-width-rejected notes must point to the checked qf-lra row")
+
+    bad_width_qf = checks["qf-lra-bad-bisection-width"]
+    if bad_width_qf["expected_result"] != "unsat" or bad_width_qf.get("proof_status") != "checked":
+        fail("qf-lra-bad-bisection-width must be a checked unsat row")
+    if bad_width_qf.get("validation") != "qf_lra_finite_root_finding_bad_bisection_width_refutation":
+        fail("qf-lra-bad-bisection-width validation is incorrect")
+    data = bad_width_qf.get("data", {})
+    if data.get("source_replay_row") != "bad-bisection-width-rejected":
+        fail("qf-lra-bad-bisection-width must cite bad-bisection-width-rejected as source_replay_row")
+    qf_computed_width = require_fraction(
+        "qf-lra bad bisection computed_width",
+        data.get("computed_width"),
+    )
+    qf_claimed_width = require_fraction(
+        "qf-lra bad bisection claimed_width",
+        data.get("claimed_width"),
+    )
+    qf_width_excess = require_fraction(
+        "qf-lra bad bisection width_excess",
+        data.get("width_excess"),
+    )
+    if qf_computed_width != computed_width:
+        fail("qf-lra-bad-bisection-width computed_width must match replay")
+    if qf_claimed_width != claimed_width:
+        fail("qf-lra-bad-bisection-width claimed_width must match replay")
+    if qf_width_excess != width_excess:
+        fail("qf-lra-bad-bisection-width width_excess must match replay")
+    farkas_conflict = data.get("farkas_conflict")
+    require_string("qf-lra bad bisection width farkas_conflict", farkas_conflict)
+    if farkas_conflict != "width_excess = 1/6 and width_excess <= 0":
+        fail("qf-lra-bad-bisection-width must document the fixed width-excess conflict")
     smt2_artifact = data.get("smt2_artifact")
-    require_string("bad bisection width smt2_artifact", smt2_artifact)
+    require_string("qf-lra bad bisection width smt2_artifact", smt2_artifact)
     if smt2_artifact != "artifacts/examples/math/finite-root-finding-v0/smt2/bad-bisection-width-farkas-conflict.smt2":
-        fail("bad-bisection-width-rejected smt2_artifact must name the checked QF_LRA artifact")
-    check_source("bad bisection width smt2_artifact", smt2_artifact)
+        fail("qf-lra-bad-bisection-width smt2_artifact must name the checked QF_LRA artifact")
+    check_source("qf-lra bad bisection width smt2_artifact", smt2_artifact)
     regression = data.get("farkas_regression")
-    require_string("bad bisection width farkas_regression", regression)
+    require_string("qf-lra bad bisection width farkas_regression", regression)
     if "finite_root_finding_bad_bisection_width_artifact_emits_checked_farkas" not in regression:
-        fail("bad-bisection-width-rejected must link the LRA route regression")
+        fail("qf-lra-bad-bisection-width must link the LRA route regression")
     certificate = data.get("certificate")
-    require_string("bad bisection width certificate", certificate)
+    require_string("qf-lra bad bisection width certificate", certificate)
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
-        fail("bad-bisection-width-rejected certificate must document checked Farkas evidence")
+        fail("qf-lra-bad-bisection-width certificate must document checked Farkas evidence")
 
     horizon = checks["general-root-finding-convergence-lean-horizon"]
     if horizon["expected_result"] != "not-run":

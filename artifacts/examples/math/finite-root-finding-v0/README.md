@@ -21,8 +21,12 @@ remain proof or numerical-honesty horizons.
   the absolute residual.
 - `bad-newton-step-rejected`: rejects the malformed claim that the next Newton
   iterate is `4/3` when exact replay computes `17/12`.
+- `qf-lra-bad-newton-step`: checks the isolated exact-linear contradiction for
+  the bad Newton iterate.
 - `bad-bisection-width-rejected`: rejects the malformed claim that the selected
   bisection interval has width `1/3` when exact replay computes `1/2`.
+- `qf-lra-bad-bisection-width`: checks the isolated exact-linear contradiction
+  for the bad width excess.
 - `general-root-finding-convergence-lean-horizon`: names the future proof
   route for convergence and existence theorems.
 
@@ -37,4 +41,5 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_
 
 Untrusted search may propose an interval, iterate, or certificate. The trusted
 work is small: exact polynomial evaluation, exact Newton/bisection arithmetic,
-and checked `UnsatFarkas` evidence over the source SMT-LIB rows.
+replay-only rejection of malformed source claims, and checked `UnsatFarkas`
+evidence over separate source SMT-LIB proof rows.

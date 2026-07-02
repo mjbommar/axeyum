@@ -157,7 +157,7 @@ CURRICULUM_MAP = {
         "extra_packs": [
             (
                 "finite-root-finding-v0",
-                "Finite bisection/Newton root-finding replay and checked bad-step plus bad-width rejections.",
+                "Finite bisection/Newton root-finding replay with separate checked bad-step and bad-width proof rows.",
             ),
             (
                 "finite-separation-v0",
@@ -407,7 +407,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-root-finding-v0",
-                "Exact rational root-finding iterations with bad Newton-step and bisection-width rejections.",
+                "Exact rational root-finding iterations with replay-only bad source rows and separate checked bad-step/bad-width proof rows.",
             ),
             (
                 "finite-separation-v0",
@@ -463,7 +463,7 @@ CURRICULUM_MAP = {
             ),
             (
                 "finite-root-finding-v0",
-                "Finite bisection/Newton root-finding replay, bad-width checks, and convergence-theorem horizon rows.",
+                "Finite bisection/Newton root-finding replay, separate bad-width proof rows, and convergence-theorem horizon rows.",
             ),
             (
                 "finite-kkt-v0",
@@ -3115,7 +3115,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-root-finding-v0",
-                "Finite bisection/Newton replay and bad bisection-width checks for root-finding theorem shadows.",
+                "Finite bisection/Newton replay plus separate checked bad-step and bad-width proof rows for root-finding theorem shadows.",
             ),
             (
                 "real-analysis-rational-v0",
@@ -3387,7 +3387,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-root-finding-v0",
-                "Bisection interval and width rows checked over exact rational endpoints.",
+                "Bisection interval replay with separate checked width-conflict rows over exact rational endpoints.",
             ),
         ],
         "proof_routes": [

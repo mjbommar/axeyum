@@ -184,8 +184,8 @@ Companion maps:
   recurrence-theory Lean horizon.
 - [Finite Root Finding](finite-root-finding-end-to-end.md): follows one exact
   bisection bracket update, one Newton iterate, residual decrease replay,
-  checked QF_LRA/Farkas bad-step and bad bisection-width rejections, and the
-  convergence/stability Lean horizon.
+  replay-only bad-step and bad bisection-width source rows, separate checked
+  `qf-lra-*` Farkas proof rows, and the convergence/stability Lean horizon.
 - [Finite Hyperplane Separation](finite-separation-end-to-end.md): follows
   exact convex-combination replay, separating-hyperplane scores, supporting
   face replay, checked QF_LRA/Farkas bad convex-combination and bad-separator

@@ -208,11 +208,12 @@ f(x) = x^2 - 2
 
 The `finite-root-finding-v0` validator checks polynomial values, derivative
 values, the selected sign-changing interval, the Newton formula, and one fixed
-residual decrease. Its checked bad rows reject the false Newton iterate
-`4/3` after replay computes `17/12`, and reject the false selected-width claim
-`1/3` after bisection replay computes `1/2`. This is finite numerical
-evidence, not a bisection convergence theorem, Newton convergence theorem, or
-floating-point stability guarantee.
+residual decrease. Its replay-only bad source rows reject the false Newton
+iterate `4/3` after replay computes `17/12`, and reject the false
+selected-width claim `1/3` after bisection replay computes `1/2`; separate
+checked `qf-lra-*` rows own the fixed scalar Farkas contradictions. This is
+finite numerical evidence, not a bisection convergence theorem, Newton
+convergence theorem, or floating-point stability guarantee.
 
 For a finite generating-function shadow, encode a sequence prefix as a fixed
 coefficient list:

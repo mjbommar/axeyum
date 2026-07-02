@@ -67,34 +67,63 @@
       "claim": "The Newton step from x = 3/2 for x^2 - 2 is 4/3.",
       "expected_result": "unsat",
       "validation": "finite_bad_newton_step_refutation",
-      "proof_status": "checked",
+      "proof_status": "replay-only",
       "data": {
         "source_witness": "sqrt-two-newton-step",
         "computed_next": "17/12",
+        "claimed_next": "4/3"
+      },
+      "notes": "Exact replay computes the next iterate as 17/12. The separate qf-lra-bad-newton-step row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-newton-step",
+      "claim": "The fixed QF_LRA conflict newton_next = 17/12 and newton_next = 4/3 is unsatisfiable.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_finite_root_finding_bad_newton_step_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-newton-step-rejected",
+        "computed_next": "17/12",
         "claimed_next": "4/3",
+        "farkas_conflict": "newton_next = 17/12 and newton_next = 4/3",
         "smt2_artifact": "artifacts/examples/math/finite-root-finding-v0/smt2/bad-newton-step-farkas-conflict.smt2",
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas",
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "Exact replay computes the next iterate as 17/12; the source artifact checks that the same iterate cannot also be 4/3."
+      "notes": "This proof row isolates the false Newton iterate as a small QF_LRA/Farkas contradiction after the replay row has computed the next value."
     },
     {
       "id": "bad-bisection-width-rejected",
       "claim": "The selected bisection interval has width 1/3.",
       "expected_result": "unsat",
       "validation": "finite_bad_bisection_width_refutation",
-      "proof_status": "checked",
+      "proof_status": "replay-only",
       "data": {
         "source_witness": "sqrt-two-bisection-step",
         "selected_interval": ["1", "3/2"],
         "computed_width": "1/2",
         "claimed_width": "1/3",
+        "width_excess": "1/6"
+      },
+      "notes": "Exact bisection replay computes the selected interval [1, 3/2] with width 1/2, so the malformed claim width 1/3 leaves excess 1/6. The separate qf-lra-bad-bisection-width row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-bisection-width",
+      "claim": "The fixed QF_LRA conflict width_excess = 1/6 and width_excess <= 0 is unsatisfiable.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_finite_root_finding_bad_bisection_width_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-bisection-width-rejected",
+        "computed_width": "1/2",
+        "claimed_width": "1/3",
         "width_excess": "1/6",
+        "farkas_conflict": "width_excess = 1/6 and width_excess <= 0",
         "smt2_artifact": "artifacts/examples/math/finite-root-finding-v0/smt2/bad-bisection-width-farkas-conflict.smt2",
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_bisection_width_artifact_emits_checked_farkas",
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "Exact bisection replay computes the selected interval [1, 3/2] with width 1/2, so the malformed claim width 1/3 leaves excess 1/6; the source artifact checks the impossible nonpositive-excess claim through QF_LRA/Farkas evidence."
+      "notes": "This proof row isolates the false bisection-width excess as a small QF_LRA/Farkas contradiction after the replay row has computed the selected interval width."
     },
     {
       "id": "general-root-finding-convergence-lean-horizon",
