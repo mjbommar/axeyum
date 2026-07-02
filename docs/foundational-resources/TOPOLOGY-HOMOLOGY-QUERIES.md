@@ -93,6 +93,7 @@ python3 scripts/query-foundational-resources.py horizon-frontier \
 | Specialization preorder and finite T0 rows | `bridge_finite_specialization_order_replay` | `Alethe` | `checks --concept bridge_finite_specialization_order_replay --route Alethe --proof-status checked` |
 | Boundary operators and finite homology arithmetic | `bridge_finite_boundary_operator_replay`; `bridge_finite_chain_homology_replay` | `Diophantine` | `checks --concept bridge_finite_boundary_operator_replay --route Diophantine --proof-status checked`; `checks --concept bridge_finite_chain_homology_replay --route Diophantine --proof-status checked` |
 | Torsion homology shadows | `bridge_finite_torsion_homology_replay` | `Diophantine` | `checks --concept bridge_finite_torsion_homology_replay --route Diophantine --proof-status checked` |
+| Chain-complex torsion theorem boundary | pack `finite-chain-complex-torsion-v0` | `Lean horizon` | `horizon-frontier --pack finite-chain-complex-torsion-v0`; `checks --pack finite-chain-complex-torsion-v0 --proof-status lean-horizon` |
 | Cohomology, UCT shadows, and cup products | `bridge_finite_cohomology_replay`; `bridge_finite_universal_coefficient_shadow`; `bridge_finite_cup_product_replay` | `Alethe`; `qf-bv` | `checks --concept bridge_finite_cohomology_replay --route Alethe --proof-status checked`; `checks --concept bridge_finite_cup_product_replay --route qf-bv --proof-status checked` |
 
 ## Copyable Examples
@@ -210,6 +211,22 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --require-any
 
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-chain-complex-torsion-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-chain-complex-torsion-v0 \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-chain-complex-torsion-v0 \
+  --route Diophantine \
+  --proof-status checked \
+  --text torsion \
+  --require-any
+
 python3 scripts/query-foundational-resources.py checks \
   --concept bridge_finite_cohomology_replay \
   --route Alethe \
@@ -235,6 +252,10 @@ These queries prove discoverability of finite checked topology and
 homology/cohomology rows, not theorem coverage. They can support a catalog,
 learner page, solver-regression search, or sibling resource that needs examples
 by finite topological object family.
+For the finite chain-complex torsion boundary, read
+[Chain Complex Torsion Theorem Boundary](../learn/math/chain-complex-torsion-theorem-boundary.md)
+before treating Smith replay, torsion-generator replay, or Diophantine bad-row
+evidence as universal-coefficient or homology-invariance coverage.
 
 They do not prove:
 

@@ -203,6 +203,11 @@ incidence-geometry projective/configuration, orientation/area
 affine-volume/change-of-variables, circle-geometry tangent/chord,
 rigid-configuration graph-rigidity/classification, inversion-geometry
 circle-line, and cyclic-geometry Ptolemy theorem boundaries.
+The theorem-horizon lane now also has a focused finite chain-complex torsion
+boundary that keeps one-entry Smith replay and checked `2*k = 1`
+QF_LIA/Diophantine evidence separate from general Smith normal form,
+universal coefficient, Ext/Tor, exact-sequence, chain-homotopy, and
+topological-invariance theorem coverage.
 The solver-reuse query guide is
 [`docs/foundational-resources/SOLVER-REUSE-QUERIES.md`](docs/foundational-resources/SOLVER-REUSE-QUERIES.md);
 it records promoted-pack, proof-route, field, and checked-row queries for

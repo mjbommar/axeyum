@@ -4,6 +4,8 @@ This lesson follows one finite integer chain-complex resource from boundary
 matrix data to a torsion quotient and a checked Diophantine obstruction. It
 uses
 [finite-chain-complex-torsion-v0](../../../artifacts/examples/math/finite-chain-complex-torsion-v0/).
+For the focused finite-versus-theorem boundary, read
+[Chain Complex Torsion Theorem Boundary](chain-complex-torsion-theorem-boundary.md).
 
 Concept rows:
 
@@ -167,6 +169,8 @@ validated 1 foundational example pack(s)
 Start with
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md)
 for boundary matrices and Betti-rank replay. Continue to
+[Chain Complex Torsion Theorem Boundary](chain-complex-torsion-theorem-boundary.md)
+for the finite/general theorem boundary, to
 [End To End: Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md)
 for the degree-one Hom/Ext shadow built from the same `[2]` complex, and to
 [End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md)

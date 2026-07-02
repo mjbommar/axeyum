@@ -381,6 +381,9 @@ rejects the false claim that `v` is a boundary with checked
 QF_LIA/Diophantine evidence for `2*k = 1`. This is a finite quotient-module
 calculation, not a proof of universal coefficients, Ext/Tor laws, or homology
 invariance.
+For the focused boundary that keeps this torsion replay separate from general
+algebraic-topology theorem coverage, read
+[Chain Complex Torsion Theorem Boundary](chain-complex-torsion-theorem-boundary.md).
 
 For a finite universal-coefficient shadow, reuse that same two-term complex
 and dualize it:
@@ -647,6 +650,7 @@ replay, read
 [End To End: Finite Quotient Topology](finite-quotient-topology-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Finite Chain-Complex Torsion](finite-chain-complex-torsion-end-to-end.md),
+[Chain Complex Torsion Theorem Boundary](chain-complex-torsion-theorem-boundary.md),
 [End To End: Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md),
 [End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md),
 [End To End: Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md),

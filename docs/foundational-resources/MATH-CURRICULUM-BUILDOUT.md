@@ -3194,6 +3194,13 @@ torsion-generator QF_LIA/Diophantine evidence across
 exercises topology torsion lookup plus concept-scoped Diophantine route queries
 while keeping general Smith normal form, universal coefficients, Ext/Tor
 functor laws, exact sequences, and homology invariance in the horizon lane.
+The focused learner boundary is now
+[`chain-complex-torsion-theorem-boundary.md`](../learn/math/chain-complex-torsion-theorem-boundary.md);
+it ties the finite complex, one-entry Smith replay, `Z/2` torsion generator,
+checked bad-boundary divisibility replay, and QF_LIA/Diophantine evidence to
+the missing theorem-prover route for general Smith normal form, finitely
+generated abelian groups, universal coefficients, Ext/Tor, exact sequences,
+chain homotopy, and topological invariance.
 The topology concept layer now also has
 `bridge_finite_universal_coefficient_shadow`. It groups one dual integer
 cochain complex, `H^1 = Z/2`, degree-one Hom/Ext bookkeeping, and checked bad

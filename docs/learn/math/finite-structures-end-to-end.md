@@ -162,6 +162,8 @@ checks `d0*d1=0`, replays the one-entry Smith diagonal `[2]`, and rejects the
 false claim that `v` is a boundary through checked QF_LIA/Diophantine evidence
 for `2*k = 1`. For a fuller focused trace, read
 [End To End: Finite Chain-Complex Torsion](finite-chain-complex-torsion-end-to-end.md).
+For the finite/general theorem boundary, read
+[Chain Complex Torsion Theorem Boundary](chain-complex-torsion-theorem-boundary.md).
 
 For the finite universal-coefficient shadow, the checker dualizes the same
 `d1=[2]` complex, recomputes `delta0=d1^T`, checks `H^1 = Z/2`, and checks the
@@ -228,6 +230,8 @@ equality conflict.
 The finite-chain-complex-torsion UNSAT row trusts only the explicit integer
 boundary matrix, the replayed divisibility obstruction, and the independent
 Diophantine certificate for `2*k = 1`.
+The finite/general torsion theorem boundary is isolated in
+[Chain Complex Torsion Theorem Boundary](chain-complex-torsion-theorem-boundary.md).
 The finite-universal-coefficient-shadow UNSAT row trusts only the explicit
 integer cochain replay, the replayed `H^1 = Z/2` invariant, and the independent
 Alethe certificate for the final group-identity conflict.

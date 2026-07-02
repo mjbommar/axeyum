@@ -796,7 +796,16 @@ Build sequence:
     Radon-Nikodym, general conditional-expectation, regular conditional
     probability, martingale, stopping-time, and disintegration theorem routes,
     with pack-specific checked-row and horizon-frontier queries.
-79. Revisit crate/repo boundaries only after three real consumers or repeated
+79. Landed: add the chain-complex torsion theorem-boundary page.
+    `chain-complex-torsion-theorem-boundary.md` maps finite free abelian
+    chain-complex replay, one-entry Smith diagonal/torsion replay,
+    torsion-generator replay, checked bad-boundary divisibility replay, and
+    QF_LIA/Diophantine `2*k = 1` evidence to the missing general Smith normal
+    form, finitely-generated-abelian-group classification, quotient-module,
+    universal-coefficient, Ext/Tor, exact-sequence, chain-homotopy, and
+    topological-invariance theorem routes, with pack-specific checked-row and
+    horizon-frontier queries.
+80. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

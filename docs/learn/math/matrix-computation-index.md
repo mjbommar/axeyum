@@ -93,6 +93,8 @@ numerical-honesty work until there is a kernel-checked or explicitly
 experimental artifact. The vector-space, duality, module, and tensor part of
 that boundary is expanded in
 [Linear Algebra Structure Theorem Boundary](linear-algebra-structure-theorem-boundary.md).
+The torsion and universal-coefficient part is expanded in
+[Chain Complex Torsion Theorem Boundary](chain-complex-torsion-theorem-boundary.md).
 
 ## Focused Lessons
 
@@ -109,6 +111,7 @@ that boundary is expanded in
 - [Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md)
 - [Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md)
 - [Finite Chain-Complex Torsion](finite-chain-complex-torsion-end-to-end.md)
+- [Chain Complex Torsion Theorem Boundary](chain-complex-torsion-theorem-boundary.md)
 - [Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md)
 - [Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md)
 - [Matrix Invariants](matrix-invariants-end-to-end.md)

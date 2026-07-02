@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Chain-complex torsion theorem-boundary resource landed.**
+  `chain-complex-torsion-theorem-boundary.md` now separates
+  `finite-chain-complex-torsion-v0` finite free abelian chain-complex replay,
+  one-entry Smith diagonal/torsion replay, torsion-generator replay, checked
+  bad-boundary divisibility replay, and checked QF_LIA/Diophantine `2*k = 1`
+  evidence from general Smith normal form, finitely-generated-abelian-group
+  classification, quotient-module, universal-coefficient, Ext/Tor,
+  exact-sequence, chain-homotopy, and topological-invariance claims. The
+  theorem-horizon, topology/homology, consumer, learner, matrix, and
+  smoke-query docs now expose the boundary through pack-specific
+  horizon-frontier and checked-row queries.
 - **Conditional-expectation theorem-boundary resource landed.**
   `conditional-expectation-theorem-boundary.md` now separates
   `finite-conditional-expectation-v0` finite partition averages,

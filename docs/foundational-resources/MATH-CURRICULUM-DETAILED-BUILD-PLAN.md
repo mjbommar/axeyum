@@ -2288,6 +2288,17 @@ Pick one row per commit unless the change is purely navigational.
      disintegration layers, and adds pack-specific checked-row and
      horizon-frontier queries to the public smoke gate without promoting
      finite atom partitions into theorem coverage.
+267. Landed: add `chain-complex-torsion-theorem-boundary.md` as the focused
+     finite/general chain-complex torsion theorem-boundary page for
+     `finite-chain-complex-torsion-v0`. It maps exact finite free abelian
+     chain-complex replay, one-entry Smith diagonal/torsion replay,
+     torsion-generator replay, checked bad-boundary divisibility replay, and
+     scoped QF_LIA/Diophantine `2*k = 1` evidence to the missing general Smith
+     normal form, finitely-generated-abelian-group classification, quotient
+     module, universal-coefficient, Ext/Tor, exact-sequence, chain-homotopy,
+     and topological-invariance theorem layers, and adds pack-specific
+     checked-row and horizon-frontier queries to the public smoke gate without
+     promoting finite quotient arithmetic into theorem coverage.
 
 ## Validation Checklist
 

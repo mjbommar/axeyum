@@ -344,6 +344,8 @@ H0 = Z/2
 The checker verifies `d0*d1 = 0`, replays the Smith diagonal `[2]`, checks that
 `2v` is a boundary, and rejects the false claim that `v` is a boundary through
 checked QF_LIA/Diophantine evidence for `2*k = 1`.
+For the focused finite/general boundary, read
+[Chain Complex Torsion Theorem Boundary](chain-complex-torsion-theorem-boundary.md).
 
 For finite cohomology, use F2 cochains on the same three-edge circle:
 
@@ -438,6 +440,7 @@ and measure replay, read
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Finite Chain-Complex Torsion](finite-chain-complex-torsion-end-to-end.md),
+[Chain Complex Torsion Theorem Boundary](chain-complex-torsion-theorem-boundary.md),
 [End To End: Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md),
 [End To End: Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md),
 [End To End: Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md),

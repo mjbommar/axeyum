@@ -805,6 +805,12 @@ Companion maps:
   follows an integer chain complex with boundary matrix `[2]`, Smith diagonal
   replay, a `Z/2` torsion generator, checked QF_LIA/Diophantine rejection of
   `2*k = 1`, and the universal-coefficient Lean horizon.
+- [Chain Complex Torsion Theorem Boundary](chain-complex-torsion-theorem-boundary.md):
+  maps the finite chain-complex, Smith diagonal, torsion generator, divisibility
+  replay, and checked QF_LIA/Diophantine bad-generator evidence to the missing
+  general Smith normal form, finitely-generated-abelian-group classification,
+  UCT, Ext/Tor, exact-sequence, chain-homotopy, and topological-invariance
+  theorem routes.
 - [Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md):
   follows the dual cochain complex for the same `[2]` boundary, `H^1 = Z/2`,
   degree-one Hom/Ext bookkeeping, checked QF_UF/Alethe rejection of
