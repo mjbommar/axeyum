@@ -1056,14 +1056,12 @@ pub(crate) fn euf_unsat(arena: &TermArena, euf_assertions: &[TermId]) -> bool {
             op: Op::BoolNot,
             args,
         } = arena.node(assertion)
-        {
-            if let TermNode::App {
+            && let TermNode::App {
                 op: Op::Eq,
                 args: eq_args,
             } = arena.node(args[0])
-            {
-                diseq_pairs.push((eq_args[0], eq_args[1]));
-            }
+        {
+            diseq_pairs.push((eq_args[0], eq_args[1]));
         }
     }
     if diseq_pairs.is_empty() {
@@ -2455,13 +2453,13 @@ mod tests {
                 CheckResult::Unsat => Some(0u8),
                 CheckResult::Unknown(_) => None,
             };
-            if let Some(off) = off {
-                if diag.verdict != 2 {
-                    assert_eq!(
-                        diag.verdict, off,
-                        "real-CDCL(T) diag verdict disagrees with offline Ackermann"
-                    );
-                }
+            if let Some(off) = off
+                && diag.verdict != 2
+            {
+                assert_eq!(
+                    diag.verdict, off,
+                    "real-CDCL(T) diag verdict disagrees with offline Ackermann"
+                );
             }
         }
         assert!(

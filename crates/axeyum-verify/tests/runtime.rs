@@ -50,10 +50,9 @@ fn int_witness(inputs: &[Witness], name: &str) -> (u32, bool, u128) {
             signed,
             bits,
         } = w
+            && n == name
         {
-            if n == name {
-                return (*width, *signed, *bits);
-            }
+            return (*width, *signed, *bits);
         }
     }
     panic!("no integer witness for `{name}` in {inputs:?}");

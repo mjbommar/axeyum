@@ -248,18 +248,18 @@ impl Instance {
             // If this is the chosen div/mod atom, decorate the first monomial
             // that has at least one variable factor (a purely-constant monomial
             // under div/mod is uninteresting and would fold away).
-            if Some(atom_idx) == divmod_atom {
-                if let Some(m) = monomials.iter_mut().find(|m| !m.factors.is_empty()) {
-                    let op = if rng.below(2) == 0 {
-                        DivMod::Div
-                    } else {
-                        DivMod::Mod
-                    };
-                    // Nonzero divisor magnitude in 2..=4, random sign.
-                    let mag = rng.in_range(2, 4);
-                    let d = if rng.below(2) == 0 { mag } else { -mag };
-                    m.divmod = Some((op, d));
-                }
+            if Some(atom_idx) == divmod_atom
+                && let Some(m) = monomials.iter_mut().find(|m| !m.factors.is_empty())
+            {
+                let op = if rng.below(2) == 0 {
+                    DivMod::Div
+                } else {
+                    DivMod::Mod
+                };
+                // Nonzero divisor magnitude in 2..=4, random sign.
+                let mag = rng.in_range(2, 4);
+                let d = if rng.below(2) == 0 { mag } else { -mag };
+                m.divmod = Some((op, d));
             }
             atoms.push(Atom {
                 monomials,

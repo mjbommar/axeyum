@@ -60,10 +60,10 @@ fn bool_const(value: bool) -> AletheTerm {
 /// returned directly; otherwise the `i`-th bit is the projection
 /// `((_ @bit_of i) term)`.
 fn build_term_vec(term: &AletheTerm, size: usize) -> Vec<AletheTerm> {
-    if let AletheTerm::App(head, args) = term {
-        if head == "@bbterm" {
-            return args.clone();
-        }
+    if let AletheTerm::App(head, args) = term
+        && head == "@bbterm"
+    {
+        return args.clone();
     }
     (0..size).map(|i| bit_of(i, term)).collect()
 }

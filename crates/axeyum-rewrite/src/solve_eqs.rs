@@ -124,10 +124,11 @@ fn detect_solvable(
     let (l, r) = (args[0], args[1]);
     let mut memo = HashMap::new();
     // Prefer orienting on the left symbol, then the right.
-    if let TermNode::Symbol(s) = arena.node(l) {
-        if !defined.contains(s) && !occurs(arena, r, *s, &mut memo) {
-            return Some((*s, r));
-        }
+    if let TermNode::Symbol(s) = arena.node(l)
+        && !defined.contains(s)
+        && !occurs(arena, r, *s, &mut memo)
+    {
+        return Some((*s, r));
     }
     if let TermNode::Symbol(s) = arena.node(r) {
         memo.clear();

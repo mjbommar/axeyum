@@ -253,14 +253,13 @@ fn splice_ground_tail(
     for cmd in tail {
         match cmd {
             AletheCommand::Assume { id, clause } => {
-                if let [l] = clause.as_slice() {
-                    if !l.negated {
-                        if let Some(res_id) = inst_keys.get(&l.atom.key()) {
-                            // A re-assumption of a derived instance: redirect, drop.
-                            remap.insert(id.clone(), res_id.clone());
-                            continue;
-                        }
-                    }
+                if let [l] = clause.as_slice()
+                    && !l.negated
+                    && let Some(res_id) = inst_keys.get(&l.atom.key())
+                {
+                    // A re-assumption of a derived instance: redirect, drop.
+                    remap.insert(id.clone(), res_id.clone());
+                    continue;
                 }
                 let new_id = format!("g_{id}");
                 remap.insert(id.clone(), new_id.clone());

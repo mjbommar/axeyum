@@ -95,15 +95,15 @@ fn detect_fact(
             // `(= x c)` / `(= c x)` with one side a variable and the other a constant.
             Op::Eq if args.len() == 2 => {
                 let (l, r) = (args[0], args[1]);
-                if let TermNode::Symbol(s) = arena.node(l) {
-                    if is_constant(arena.node(r)) {
-                        return Some((*s, r));
-                    }
+                if let TermNode::Symbol(s) = arena.node(l)
+                    && is_constant(arena.node(r))
+                {
+                    return Some((*s, r));
                 }
-                if let TermNode::Symbol(s) = arena.node(r) {
-                    if is_constant(arena.node(l)) {
-                        return Some((*s, l));
-                    }
+                if let TermNode::Symbol(s) = arena.node(r)
+                    && is_constant(arena.node(l))
+                {
+                    return Some((*s, l));
                 }
                 None
             }

@@ -410,15 +410,15 @@ fn const_array_definition(e: &SExpr) -> Option<(&str, &SExpr)> {
         return None;
     }
     // `(= s ca)` or `(= ca s)`.
-    if let Some(s) = eq[1].atom() {
-        if is_const_array_expr(&eq[2]) {
-            return Some((s, &eq[2]));
-        }
+    if let Some(s) = eq[1].atom()
+        && is_const_array_expr(&eq[2])
+    {
+        return Some((s, &eq[2]));
     }
-    if let Some(s) = eq[2].atom() {
-        if is_const_array_expr(&eq[1]) {
-            return Some((s, &eq[1]));
-        }
+    if let Some(s) = eq[2].atom()
+        && is_const_array_expr(&eq[1])
+    {
+        return Some((s, &eq[1]));
     }
     None
 }
@@ -5516,12 +5516,12 @@ fn is_ff_prime(p: u128) -> bool {
     if p < 2 {
         return false;
     }
-    if p % 2 == 0 {
+    if p.is_multiple_of(2) {
         return p == 2;
     }
     let mut d: u128 = 3;
     while d * d <= p {
-        if p % d == 0 {
+        if p.is_multiple_of(d) {
             return false;
         }
         d += 2;

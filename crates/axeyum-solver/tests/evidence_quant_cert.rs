@@ -166,18 +166,18 @@ fn tamper_rejects_guarded_quant_certificate() {
     let mut tampered = proof.clone();
     let mut mutated = false;
     for cmd in &mut tampered {
-        if let AletheCommand::Step { rule, clause, .. } = cmd {
-            if rule == "forall_inst_guarded" {
-                // literal 1 is the instance; bump its in-range witness out of range.
-                if let Some(l) = clause.get_mut(1) {
-                    *l = AletheLit {
-                        atom: bump_consts(&l.atom),
-                        negated: l.negated,
-                    };
-                    mutated = true;
-                }
-                break;
+        if let AletheCommand::Step { rule, clause, .. } = cmd
+            && rule == "forall_inst_guarded"
+        {
+            // literal 1 is the instance; bump its in-range witness out of range.
+            if let Some(l) = clause.get_mut(1) {
+                *l = AletheLit {
+                    atom: bump_consts(&l.atom),
+                    negated: l.negated,
+                };
+                mutated = true;
             }
+            break;
         }
     }
     assert!(mutated, "test must have mutated a forall_inst_guarded step");
@@ -193,21 +193,21 @@ fn tamper_rejects_guarded_quant_certificate() {
     let mut tampered2 = proof.clone();
     let mut mutated2 = false;
     for cmd in &mut tampered2 {
-        if let AletheCommand::Step { rule, clause, .. } = cmd {
-            if rule == "forall_inst_guarded" {
-                if let Some(l) = clause.get_mut(1) {
-                    // `(>= x 5)`[x:=v] replaced by an unrelated `(<= 0 0)`.
-                    l.atom = AletheTerm::App(
-                        "<=".to_owned(),
-                        vec![
-                            AletheTerm::Const("0".to_owned()),
-                            AletheTerm::Const("0".to_owned()),
-                        ],
-                    );
-                    mutated2 = true;
-                }
-                break;
+        if let AletheCommand::Step { rule, clause, .. } = cmd
+            && rule == "forall_inst_guarded"
+        {
+            if let Some(l) = clause.get_mut(1) {
+                // `(>= x 5)`[x:=v] replaced by an unrelated `(<= 0 0)`.
+                l.atom = AletheTerm::App(
+                    "<=".to_owned(),
+                    vec![
+                        AletheTerm::Const("0".to_owned()),
+                        AletheTerm::Const("0".to_owned()),
+                    ],
+                );
+                mutated2 = true;
             }
+            break;
         }
     }
     assert!(

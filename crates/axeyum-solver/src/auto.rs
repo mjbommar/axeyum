@@ -1373,24 +1373,24 @@ fn dispatch_uf_fast_paths(
     // would-be hang with a decided verdict or a sound `Unknown`; no verdict changes
     // (a query with no applied arith function has zero congruence pairs, so the eager
     // bound never fired for it anyway).
-    if features.has_function && has_arithmetic_function(arena) {
-        if let Some(result) =
+    if features.has_function
+        && has_arithmetic_function(arena)
+        && let Some(result) =
             crate::euf::try_lazy_arith_for_overbound(arena, assertions, config, "UF+arithmetic")?
-        {
-            let array_unknown = features.has_array && matches!(result, CheckResult::Unknown(_));
-            with_recorder(rec, |t| match &result {
-                CheckResult::Sat(_) => t.record_decided("uf-arith-lazy-overbound", Verdict::Sat),
-                CheckResult::Unsat => {
-                    t.record_decided("uf-arith-lazy-overbound", Verdict::Unsat);
-                }
-                CheckResult::Unknown(reason) => t.record_declined(
-                    "uf-arith-lazy-overbound",
-                    DeclineReason::from_unknown(reason),
-                ),
-            });
-            if !array_unknown {
-                return Ok(Some(result));
+    {
+        let array_unknown = features.has_array && matches!(result, CheckResult::Unknown(_));
+        with_recorder(rec, |t| match &result {
+            CheckResult::Sat(_) => t.record_decided("uf-arith-lazy-overbound", Verdict::Sat),
+            CheckResult::Unsat => {
+                t.record_decided("uf-arith-lazy-overbound", Verdict::Unsat);
             }
+            CheckResult::Unknown(reason) => t.record_declined(
+                "uf-arith-lazy-overbound",
+                DeclineReason::from_unknown(reason),
+            ),
+        });
+        if !array_unknown {
+            return Ok(Some(result));
         }
     }
 
@@ -4503,16 +4503,17 @@ fn relax_coercions(
         } = arena.node(t)
         {
             let operand = args[0];
-            if let (Some(lo), Some(hi)) = int_bounds(arena, assertions, operand) {
-                if hi >= lo && hi - lo <= MAX_COERCION_LINK {
-                    for v in lo..=hi {
-                        let iv = arena.int_const(v);
-                        let rv = arena.real_const(axeyum_ir::Rational::integer(v));
-                        let i_eq = arena.eq(operand, iv).map_err(err)?;
-                        let r_eq = arena.eq(fresh, rv).map_err(err)?;
-                        let n = arena.not(i_eq).map_err(err)?;
-                        links.push(arena.or(n, r_eq).map_err(err)?); // (i=v) → (r=v)
-                    }
+            if let (Some(lo), Some(hi)) = int_bounds(arena, assertions, operand)
+                && hi >= lo
+                && hi - lo <= MAX_COERCION_LINK
+            {
+                for v in lo..=hi {
+                    let iv = arena.int_const(v);
+                    let rv = arena.real_const(axeyum_ir::Rational::integer(v));
+                    let i_eq = arena.eq(operand, iv).map_err(err)?;
+                    let r_eq = arena.eq(fresh, rv).map_err(err)?;
+                    let n = arena.not(i_eq).map_err(err)?;
+                    links.push(arena.or(n, r_eq).map_err(err)?); // (i=v) → (r=v)
                 }
             }
         }

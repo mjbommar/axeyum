@@ -750,7 +750,7 @@ fn nra_degree_self_check(n: u32) -> bool {
 /// check REJECTS it. Used with an even degree in the real path.
 fn nra_degree_self_check_with_degree(deg: u32) -> bool {
     // (1) The exponent must be a positive even number for the positivity argument.
-    if deg < 2 || deg % 2 != 0 {
+    if deg < 2 || !deg.is_multiple_of(2) {
         return false;
     }
     // (2) Bounded rational grid in steps of 1/4 over [-3, 5] in both x and y,

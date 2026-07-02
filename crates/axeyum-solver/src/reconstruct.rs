@@ -3562,12 +3562,11 @@ fn collect_normalized_lean_assertion(arena: &TermArena, term: TermId, out: &mut 
         op: IrOp::BoolAnd,
         args,
     } = arena.node(term)
+        && let [left, right] = &**args
     {
-        if let [left, right] = &**args {
-            collect_normalized_lean_assertion(arena, *left, out);
-            collect_normalized_lean_assertion(arena, *right, out);
-            return;
-        }
+        collect_normalized_lean_assertion(arena, *left, out);
+        collect_normalized_lean_assertion(arena, *right, out);
+        return;
     }
     out.push(term);
 }
@@ -6937,24 +6936,23 @@ pub fn reconstruct_quant_unsat_proof(
         match cmd {
             AletheCommand::Assume { id, clause } => {
                 // A universal `(cl (forall (x) body))`, or an ordinary EUF unit.
-                if let [l] = clause.as_slice() {
-                    if !l.negated {
-                        if let Some(fa) = as_forall_atom(&l.atom) {
-                            let var_names: Vec<String> =
-                                fa.var_names.iter().map(|&s| s.to_owned()).collect();
-                            let body = fa.body.clone();
-                            let proof = declare_forall_axiom(ctx, &fa.var_names, &body)?;
-                            env.insert(
-                                id.clone(),
-                                QuantProof::ForallAxiom {
-                                    var_names,
-                                    body,
-                                    proof,
-                                },
-                            );
-                            continue;
-                        }
-                    }
+                if let [l] = clause.as_slice()
+                    && !l.negated
+                    && let Some(fa) = as_forall_atom(&l.atom)
+                {
+                    let var_names: Vec<String> =
+                        fa.var_names.iter().map(|&s| s.to_owned()).collect();
+                    let body = fa.body.clone();
+                    let proof = declare_forall_axiom(ctx, &fa.var_names, &body)?;
+                    env.insert(
+                        id.clone(),
+                        QuantProof::ForallAxiom {
+                            var_names,
+                            body,
+                            proof,
+                        },
+                    );
+                    continue;
                 }
                 let cp = reconstruct_assume(ctx, clause)?;
                 env.insert(id.clone(), QuantProof::Ground(cp));
@@ -8347,11 +8345,11 @@ impl ReconstructCtx {
     }
 
     fn gate_term_to_prop_inner(&mut self, term: &AletheTerm) -> ExprId {
-        if let Some(bridge) = &self.bridge {
-            if let Some(b_form) = bridge.get(&term.key()) {
-                let b_form = b_form.clone();
-                return self.gate_term_to_prop(&b_form);
-            }
+        if let Some(bridge) = &self.bridge
+            && let Some(b_form) = bridge.get(&term.key())
+        {
+            let b_form = b_form.clone();
+            return self.gate_term_to_prop(&b_form);
         }
         match term {
             AletheTerm::App(head, args) if head == "not" && args.len() == 1 => {
@@ -8844,11 +8842,12 @@ fn try_equiv_xor(
 ) -> Result<Option<ExprId>, ReconstructError> {
     let mut operands: Option<(AletheTerm, AletheTerm)> = None;
     for lit in conclusion {
-        if let AletheTerm::App(head, args) = &lit.atom {
-            if (head == "=" || head == "xor") && args.len() == 2 {
-                operands = Some((args[0].clone(), args[1].clone()));
-                break;
-            }
+        if let AletheTerm::App(head, args) = &lit.atom
+            && (head == "=" || head == "xor")
+            && args.len() == 2
+        {
+            operands = Some((args[0].clone(), args[1].clone()));
+            break;
         }
     }
     let Some((a, b)) = operands else {
@@ -8923,25 +8922,25 @@ pub fn reconstruct_cnf_intro_rule(
 
     // Rule-specific polynomial proofs (replacing the `2^atoms` truth-table) where
     // available; fall back to `prove_clause_by_cases` for the rest.
-    if rule_name == "and_pos" {
-        if let Some(proof) = try_and_pos(ctx, conclusion)? {
-            return Ok(proof);
-        }
+    if rule_name == "and_pos"
+        && let Some(proof) = try_and_pos(ctx, conclusion)?
+    {
+        return Ok(proof);
     }
-    if rule_name == "and_neg" {
-        if let Some(proof) = try_and_neg(ctx, conclusion)? {
-            return Ok(proof);
-        }
+    if rule_name == "and_neg"
+        && let Some(proof) = try_and_neg(ctx, conclusion)?
+    {
+        return Ok(proof);
     }
-    if rule_name == "or_pos" {
-        if let Some(proof) = try_or_pos(ctx, conclusion)? {
-            return Ok(proof);
-        }
+    if rule_name == "or_pos"
+        && let Some(proof) = try_or_pos(ctx, conclusion)?
+    {
+        return Ok(proof);
     }
-    if rule_name == "or_neg" {
-        if let Some(proof) = try_or_neg(ctx, conclusion)? {
-            return Ok(proof);
-        }
+    if rule_name == "or_neg"
+        && let Some(proof) = try_or_neg(ctx, conclusion)?
+    {
+        return Ok(proof);
     }
     if matches!(
         rule_name,
@@ -8953,10 +8952,9 @@ pub fn reconstruct_cnf_intro_rule(
             | "xor_pos2"
             | "xor_neg1"
             | "xor_neg2"
-    ) {
-        if let Some(proof) = try_equiv_xor(ctx, rule_name, conclusion)? {
-            return Ok(proof);
-        }
+    ) && let Some(proof) = try_equiv_xor(ctx, rule_name, conclusion)?
+    {
+        return Ok(proof);
     }
 
     // Ensure `em` is available for the classical case-split.
@@ -10068,23 +10066,22 @@ fn bit_of_atom(name: &str, i: usize) -> AletheTerm {
 /// `build_term_vec`: a `(@bbterm b…)` exposes its `j`-th bit directly, anything
 /// else is the projection `((_ @bit_of j) operand)`.
 fn operand_bit_term(operand: &AletheTerm, j: usize) -> AletheTerm {
-    if let AletheTerm::App(head, args) = operand {
-        if head == "@bbterm" {
-            if let Some(bit) = args.get(j) {
-                return bit.clone();
-            }
-        }
+    if let AletheTerm::App(head, args) = operand
+        && head == "@bbterm"
+        && let Some(bit) = args.get(j)
+    {
+        return bit.clone();
     }
     // A binary-literal constant `#b<MSB…LSB>`: bit `j` (LSB-first) is its actual
     // Boolean value, matching how the emitter bit-blasts a constant operand (bool
     // literals in the `@bbterm`), NOT an opaque `@bit_of` projection.
-    if let AletheTerm::Const(lit) = operand {
-        if let Some(bits) = lit.strip_prefix("#b") {
-            let n = bits.len();
-            if j < n {
-                let is_one = bits.as_bytes()[n - 1 - j] == b'1';
-                return AletheTerm::Const(if is_one { "true" } else { "false" }.to_owned());
-            }
+    if let AletheTerm::Const(lit) = operand
+        && let Some(bits) = lit.strip_prefix("#b")
+    {
+        let n = bits.len();
+        if j < n {
+            let is_one = bits.as_bytes()[n - 1 - j] == b'1';
+            return AletheTerm::Const(if is_one { "true" } else { "false" }.to_owned());
         }
     }
     AletheTerm::Indexed {
@@ -10435,10 +10432,10 @@ pub fn reconstruct_bitblast_step(
         // Record a freshly bit-blasted leaf's width so structural consumers
         // (`concat`) can recover operand widths (bottom-up order: the leaf step
         // precedes its consumer's step).
-        if matches!(rule, "bitblast_var" | "bitblast_const") {
-            if let AletheTerm::Const(name) = lhs {
-                ctx.bv_widths.insert(name.clone(), bits.len());
-            }
+        if matches!(rule, "bitblast_var" | "bitblast_const")
+            && let AletheTerm::Const(name) = lhs
+        {
+            ctx.bv_widths.insert(name.clone(), bits.len());
         }
         // Build, per bit, `Iff (bv_bit lhs i) ⟦b_i⟧` and its reflexive proof; the
         // two sides coincide as Props, so the reflexive `Iff` type-checks. Fold
@@ -10513,10 +10510,10 @@ pub fn reconstruct_const_shift_lowering(
             term: format!("not a constant `bvshl`/`bvlshr`/`bvashr` `{}`", shift.key()),
         });
     };
-    if let AletheTerm::Const(name) = a {
-        if parse_bv_literal(name).is_none() {
-            ctx.bv_widths.insert(name.clone(), operand_width);
-        }
+    if let AletheTerm::Const(name) = a
+        && parse_bv_literal(name).is_none()
+    {
+        ctx.bv_widths.insert(name.clone(), operand_width);
     }
 
     // Build `⋀_i ( bv_bit(shift, i) ↔ bv_bit(rhs, i) )` and its reflexive proof,
@@ -10601,42 +10598,42 @@ fn lhs_bit_prop(
     i: usize,
     result_width: usize,
 ) -> Result<ExprId, ReconstructError> {
-    if let AletheTerm::Indexed { op, indices, args } = lhs {
-        if op == "sign_extend" {
-            // `((_ sign_extend by) x)`: result width = width(x) + by, so
-            // width(x) = result_width - by. Bit `i` is `x_i` for `i < width(x)`,
-            // else the sign bit `x_{width(x)-1}`. Matches the emitter
-            // (`build_term_vec(x, width)` then `by` copies of the last bit).
-            let [by] = indices.as_slice() else {
-                return Err(ReconstructError::UnsupportedTerm {
-                    term: format!("sign_extend needs one index `{}`", lhs.key()),
-                });
-            };
-            let [x] = args.as_slice() else {
-                return Err(ReconstructError::UnsupportedTerm {
-                    term: format!("sign_extend needs one operand `{}`", lhs.key()),
-                });
-            };
-            let by = usize::try_from(*by).map_err(|_| ReconstructError::UnsupportedTerm {
-                term: format!("sign_extend amount out of range `{}`", lhs.key()),
-            })?;
-            let width_x =
-                result_width
-                    .checked_sub(by)
-                    .ok_or_else(|| ReconstructError::MalformedStep {
-                        rule: "bitblast_sign_extend".to_owned(),
-                        detail: "sign_extend amount exceeds result width".to_owned(),
-                    })?;
-            if width_x == 0 {
-                return Err(ReconstructError::MalformedStep {
+    if let AletheTerm::Indexed { op, indices, args } = lhs
+        && op == "sign_extend"
+    {
+        // `((_ sign_extend by) x)`: result width = width(x) + by, so
+        // width(x) = result_width - by. Bit `i` is `x_i` for `i < width(x)`,
+        // else the sign bit `x_{width(x)-1}`. Matches the emitter
+        // (`build_term_vec(x, width)` then `by` copies of the last bit).
+        let [by] = indices.as_slice() else {
+            return Err(ReconstructError::UnsupportedTerm {
+                term: format!("sign_extend needs one index `{}`", lhs.key()),
+            });
+        };
+        let [x] = args.as_slice() else {
+            return Err(ReconstructError::UnsupportedTerm {
+                term: format!("sign_extend needs one operand `{}`", lhs.key()),
+            });
+        };
+        let by = usize::try_from(*by).map_err(|_| ReconstructError::UnsupportedTerm {
+            term: format!("sign_extend amount out of range `{}`", lhs.key()),
+        })?;
+        let width_x =
+            result_width
+                .checked_sub(by)
+                .ok_or_else(|| ReconstructError::MalformedStep {
                     rule: "bitblast_sign_extend".to_owned(),
-                    detail: "zero-width sign_extend operand".to_owned(),
-                });
-            }
-            let src = if i < width_x { i } else { width_x - 1 };
-            let bit_term = operand_bit_term(x, src);
-            return Ok(ctx.gate_term_to_prop(&bit_term));
+                    detail: "sign_extend amount exceeds result width".to_owned(),
+                })?;
+        if width_x == 0 {
+            return Err(ReconstructError::MalformedStep {
+                rule: "bitblast_sign_extend".to_owned(),
+                detail: "zero-width sign_extend operand".to_owned(),
+            });
         }
+        let src = if i < width_x { i } else { width_x - 1 };
+        let bit_term = operand_bit_term(x, src);
+        return Ok(ctx.gate_term_to_prop(&bit_term));
     }
     if let AletheTerm::App(head, args) = lhs {
         if head == "concat" {
@@ -10833,11 +10830,11 @@ pub fn reconstruct_qf_bv_proof(
     // `bitblast_*` rule (carry chain, shift, structural) is rejected here. This is
     // also where a non-bitwise `QF_BV` proof is cleanly rejected.
     for cmd in commands {
-        if let AletheCommand::Step { rule, clause, .. } = cmd {
-            if rule.starts_with("bitblast_") {
-                // Reconstruct-and-check; bitwise rules pass, others error out.
-                reconstruct_bitblast_step(ctx, rule, clause)?;
-            }
+        if let AletheCommand::Step { rule, clause, .. } = cmd
+            && rule.starts_with("bitblast_")
+        {
+            // Reconstruct-and-check; bitwise rules pass, others error out.
+            reconstruct_bitblast_step(ctx, rule, clause)?;
         }
     }
 
@@ -11188,10 +11185,10 @@ fn reconstruct_bitwise_step(
             // definition `B_t = (and (= ((_ @bit_of i) t) g_i) …)` is a conjunction of
             // *reflexive* iffs (`((_ @bit_of i) t)` resolves structurally to the same
             // Prop as `g_i`), hence a tautology proved directly — no premise needed.
-            if premises.iter().any(|p| !env.contains_key(p)) {
-                if let Some(def) = try_reconstruct_bit_definition(ctx, clause)? {
-                    return Ok(Some(def));
-                }
+            if premises.iter().any(|p| !env.contains_key(p))
+                && let Some(def) = try_reconstruct_bit_definition(ctx, clause)?
+            {
+                return Ok(Some(def));
             }
             Ok(Some(reconstruct_resolution_step(
                 ctx, clause, premises, env,
@@ -11431,10 +11428,10 @@ impl ReconstructCtx {
     /// otherwise return the term unchanged. Used to expose the bit-level structure
     /// to the (non-bridge-aware) tautology case-split engine.
     fn bridge_substitute(&self, term: &AletheTerm) -> AletheTerm {
-        if let Some(bridge) = &self.bridge {
-            if let Some(b_form) = bridge.get(&term.key()) {
-                return b_form.clone();
-            }
+        if let Some(bridge) = &self.bridge
+            && let Some(b_form) = bridge.get(&term.key())
+        {
+            return b_form.clone();
         }
         term.clone()
     }
@@ -16211,11 +16208,11 @@ fn register_real_vars(
         if !seen.insert(t) {
             continue;
         }
-        if let IrTermNode::Symbol(s) = arena.node(t) {
-            if arena.sort_of(t) == IrSort::Real {
-                let next = syms.len();
-                syms.entry(*s).or_insert(next);
-            }
+        if let IrTermNode::Symbol(s) = arena.node(t)
+            && arena.sort_of(t) == IrSort::Real
+        {
+            let next = syms.len();
+            syms.entry(*s).or_insert(next);
         }
         if let IrTermNode::App { args, .. } = arena.node(t) {
             stack.extend(args.iter().copied());
@@ -16375,15 +16372,15 @@ fn match_transitivity_pair(c0: &(LinR, LinR), c1: &(LinR, LinR)) -> Option<(LinR
     // bare var).
     let classify = |c: &(LinR, LinR)| -> Option<(usize, Bound)> {
         let (l, r) = c;
-        if let Some(v) = l.as_bare_var() {
-            if r.is_constant_eq(Rational::zero()) {
-                return Some((v, Bound::Upper)); // v ≤ 0
-            }
+        if let Some(v) = l.as_bare_var()
+            && r.is_constant_eq(Rational::zero())
+        {
+            return Some((v, Bound::Upper)); // v ≤ 0
         }
-        if let Some(v) = r.as_bare_var() {
-            if l.is_constant_eq(Rational::integer(1)) {
-                return Some((v, Bound::Lower)); // 1 ≤ v
-            }
+        if let Some(v) = r.as_bare_var()
+            && l.is_constant_eq(Rational::integer(1))
+        {
+            return Some((v, Bound::Lower)); // 1 ≤ v
         }
         None
     };

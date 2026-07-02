@@ -1435,19 +1435,19 @@ fn fold_word_writes(
 /// when `key` is a syntactic constant present in the concrete map, else 0 (the
 /// EVM cold-slot default). Symbolic writes are layered on top by the caller.
 fn storage_base(arena: &mut TermArena, state: &State, key: TermId) -> Result<TermId, SolverError> {
-    if let Some(k) = concrete_bytes(arena, key) {
-        if let Some(&t) = state.storage.get(&k) {
-            // A concrete write is also on the symbolic list (SSTORE records both);
-            // returning 0 here and letting the fold pick it up keeps a single
-            // source of truth. But constant-folding the common pure-concrete path
-            // is cheaper, so prefer the map value when no symbolic key exists.
-            if state
-                .sym_storage
-                .iter()
-                .all(|w| concrete_bytes(arena, w.key).is_some())
-            {
-                return Ok(t);
-            }
+    if let Some(k) = concrete_bytes(arena, key)
+        && let Some(&t) = state.storage.get(&k)
+    {
+        // A concrete write is also on the symbolic list (SSTORE records both);
+        // returning 0 here and letting the fold pick it up keeps a single
+        // source of truth. But constant-folding the common pure-concrete path
+        // is cheaper, so prefer the map value when no symbolic key exists.
+        if state
+            .sym_storage
+            .iter()
+            .all(|w| concrete_bytes(arena, w.key).is_some())
+        {
+            return Ok(t);
         }
     }
     Ok(arena.bv_const(W, 0)?)
@@ -1486,12 +1486,13 @@ fn byte_at(arena: &mut TermArena, state: &State, b: usize) -> Result<TermId, Sol
     let base = arena.bv_const(8, 0)?;
     let mut acc = base;
     for w in &state.sym_memory {
-        if let Some(off) = concrete_usize(arena, w.key) {
-            if b >= off && b < off + 32 {
-                let bit_hi = 255 - u32::try_from((b - off) * 8).unwrap_or(0);
-                let lo = bit_hi.saturating_sub(7);
-                acc = arena.extract(bit_hi, lo, w.value)?;
-            }
+        if let Some(off) = concrete_usize(arena, w.key)
+            && b >= off
+            && b < off + 32
+        {
+            let bit_hi = 255 - u32::try_from((b - off) * 8).unwrap_or(0);
+            let lo = bit_hi.saturating_sub(7);
+            acc = arena.extract(bit_hi, lo, w.value)?;
         }
     }
     Ok(acc)

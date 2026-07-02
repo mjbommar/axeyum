@@ -1120,10 +1120,10 @@ fn fixed_int_assignment_from_top_level_assertions(
 
     let mut assignment = Assignment::new();
     for (symbol, bound) in bounds {
-        if let (Some(lower), Some(upper)) = (bound.lower, bound.upper) {
-            if lower == upper {
-                assignment.set(symbol, Value::Int(lower));
-            }
+        if let (Some(lower), Some(upper)) = (bound.lower, bound.upper)
+            && lower == upper
+        {
+            assignment.set(symbol, Value::Int(lower));
         }
     }
     close_fixed_assignment_with_affine_equalities(&mut assignment, &affine_equalities);
@@ -1329,10 +1329,9 @@ fn collect_top_level_int_bound(
                     tighten_upper(bounds, symbol, upper);
                 }
             } else if let Some((symbol, value)) = ordered_int_symbol_const_pair(arena, right, left)
+                && let Some(lower) = value.checked_add(1)
             {
-                if let Some(lower) = value.checked_add(1) {
-                    tighten_lower(bounds, symbol, lower);
-                }
+                tighten_lower(bounds, symbol, lower);
             }
         }
         Op::IntGt => {
@@ -1341,10 +1340,9 @@ fn collect_top_level_int_bound(
                     tighten_lower(bounds, symbol, lower);
                 }
             } else if let Some((symbol, value)) = ordered_int_symbol_const_pair(arena, right, left)
+                && let Some(upper) = value.checked_sub(1)
             {
-                if let Some(upper) = value.checked_sub(1) {
-                    tighten_upper(bounds, symbol, upper);
-                }
+                tighten_upper(bounds, symbol, upper);
             }
         }
         _ => {}
@@ -2325,7 +2323,7 @@ mod tests {
             let lhs = pool[(next_rand(state) as usize) % pool.len()];
             let rhs = pool[(next_rand(state) as usize) % pool.len()];
             let eq = arena.eq(lhs, rhs).unwrap();
-            let atom = if next_rand(state) % 2 == 0 {
+            let atom = if next_rand(state).is_multiple_of(2) {
                 eq
             } else {
                 arena.not(eq).unwrap()
@@ -2336,13 +2334,13 @@ mod tests {
         // Combine atoms into one formula with and/or, then maybe negate.
         let mut formula = atoms[0];
         for &atom in &atoms[1..] {
-            formula = if next_rand(state) % 2 == 0 {
+            formula = if next_rand(state).is_multiple_of(2) {
                 arena.and(formula, atom).unwrap()
             } else {
                 arena.or(formula, atom).unwrap()
             };
         }
-        if next_rand(state) % 4 == 0 {
+        if next_rand(state).is_multiple_of(4) {
             formula = arena.not(formula).unwrap();
         }
         formula

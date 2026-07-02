@@ -645,10 +645,10 @@ impl Abstractor {
             BoolExpr::Top => Some(arena.bool_const(true)),
             BoolExpr::Bot => Some(arena.bool_const(false)),
             BoolExpr::Var(var) => {
-                if let Some(binding) = self.atoms.get(var.index()) {
-                    if binding.var == *var {
-                        return Some(binding.term);
-                    }
+                if let Some(binding) = self.atoms.get(var.index())
+                    && binding.var == *var
+                {
+                    return Some(binding.term);
                 }
                 // A synthetic Farkas atom: lift to its partial-interpolant term.
                 self.synthetic.get(var).copied()

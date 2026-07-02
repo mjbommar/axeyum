@@ -1275,11 +1275,11 @@ fn collect_clause_vars(arena: &TermArena, term: TermId, vars: &[Var], out: &mut 
         }
         match arena.node(t) {
             TermNode::Symbol(s) => {
-                if let Some(&i) = index.get(s) {
-                    if !present[i] {
-                        present[i] = true;
-                        out.push(i);
-                    }
+                if let Some(&i) = index.get(s)
+                    && !present[i]
+                {
+                    present[i] = true;
+                    out.push(i);
                 }
             }
             TermNode::App { args, .. } => {

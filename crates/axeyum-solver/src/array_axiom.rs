@@ -334,10 +334,9 @@ fn add_derived_equality_facts(arena: &TermArena, facts: &mut EqFacts, lhs: TermI
 
 fn add_bvnot_injectivity_fact(arena: &TermArena, facts: &mut EqFacts, lhs: TermId, rhs: TermId) {
     if let (Some(lhs_inner), Some(rhs_inner)) = (match_bv_not(arena, lhs), match_bv_not(arena, rhs))
+        && arena.sort_of(lhs_inner) == arena.sort_of(rhs_inner)
     {
-        if arena.sort_of(lhs_inner) == arena.sort_of(rhs_inner) {
-            facts.add(lhs_inner, rhs_inner);
-        }
+        facts.add(lhs_inner, rhs_inner);
     }
 }
 
@@ -348,10 +347,9 @@ fn add_bvnot_injectivity_disequality(
     rhs: TermId,
 ) {
     if let (Some(lhs_inner), Some(rhs_inner)) = (match_bv_not(arena, lhs), match_bv_not(arena, rhs))
+        && arena.sort_of(lhs_inner) == arena.sort_of(rhs_inner)
     {
-        if arena.sort_of(lhs_inner) == arena.sort_of(rhs_inner) {
-            disequalities.push((lhs_inner, rhs_inner));
-        }
+        disequalities.push((lhs_inner, rhs_inner));
     }
 }
 
@@ -1149,15 +1147,15 @@ fn match_bv_add_const(arena: &TermArena, term: TermId) -> Option<(TermId, u32, u
     let [lhs, rhs] = &**args else {
         return None;
     };
-    if let Some((width, value)) = const_bv_value(arena, *lhs) {
-        if arena.sort_of(*rhs) == Sort::BitVec(width) {
-            return Some((*rhs, width, value));
-        }
+    if let Some((width, value)) = const_bv_value(arena, *lhs)
+        && arena.sort_of(*rhs) == Sort::BitVec(width)
+    {
+        return Some((*rhs, width, value));
     }
-    if let Some((width, value)) = const_bv_value(arena, *rhs) {
-        if arena.sort_of(*lhs) == Sort::BitVec(width) {
-            return Some((*lhs, width, value));
-        }
+    if let Some((width, value)) = const_bv_value(arena, *rhs)
+        && arena.sort_of(*lhs) == Sort::BitVec(width)
+    {
+        return Some((*lhs, width, value));
     }
     None
 }
@@ -1665,14 +1663,12 @@ fn simplify_contextual_term(
     if let Some(inner) = match_identity_extract(arena, term) {
         return facts.find(inner);
     }
-    if let TermNode::App { op: Op::Ite, args } = arena.node(term) {
-        if let [cond, then_term, else_term] = &**args {
-            if let Some(branch) =
-                contextual_ite_branch(arena, facts, distinct, *cond, *then_term, *else_term, memo)
-            {
-                return facts.find(branch);
-            }
-        }
+    if let TermNode::App { op: Op::Ite, args } = arena.node(term)
+        && let [cond, then_term, else_term] = &**args
+        && let Some(branch) =
+            contextual_ite_branch(arena, facts, distinct, *cond, *then_term, *else_term, memo)
+    {
+        return facts.find(branch);
     }
     simplify_idempotent_bitop(arena, facts, distinct, term, memo)
 }
@@ -1767,14 +1763,13 @@ fn normalize_read_over_writes_in_context(
     };
     let mut changed = false;
     loop {
-        if let Some((cond, then_array, else_array)) = match_ite(arena, array) {
-            if let Some(branch) =
+        if let Some((cond, then_array, else_array)) = match_ite(arena, array)
+            && let Some(branch) =
                 contextual_ite_branch(arena, facts, distinct, cond, then_array, else_array, memo)
-            {
-                array = branch;
-                changed = true;
-                continue;
-            }
+        {
+            array = branch;
+            changed = true;
+            continue;
         }
         let Some((base, write_idx, value)) = match_store(arena, array) else {
             break;
@@ -1855,10 +1850,9 @@ fn terms_definitely_distinct_in_context(
     if let (Some(lhs_value), Some(rhs_value)) = (
         known_bv1_value_in_context(arena, facts, distinct, lhs, memo),
         known_bv1_value_in_context(arena, facts, distinct, rhs, memo),
-    ) {
-        if lhs_value != rhs_value {
-            return true;
-        }
+    ) && lhs_value != rhs_value
+    {
+        return true;
     }
     distinct.iter().any(|&(a, b)| {
         let mut lhs_a_memo = BTreeMap::new();
@@ -3456,12 +3450,11 @@ fn known_bv1_value_in_context(
     }
 
     let row = normalize_read_over_writes_in_context(arena, facts, distinct, term, memo);
-    if row.changed {
-        if let RowExpr::Term(simplified) = row.expr {
-            if simplified != term {
-                return known_bv1_value_in_context(arena, facts, distinct, simplified, memo);
-            }
-        }
+    if row.changed
+        && let RowExpr::Term(simplified) = row.expr
+        && simplified != term
+    {
+        return known_bv1_value_in_context(arena, facts, distinct, simplified, memo);
     }
     if let Some(value) = known_bv1_value(arena, facts, term) {
         return Some(value);
@@ -3488,12 +3481,13 @@ fn bv1_bitop_has_negation_pair_in_context(
 }
 
 fn collect_bv1_bitop_leaves(arena: &TermArena, term: TermId, op: Op, leaves: &mut Vec<TermId>) {
-    if let TermNode::App { op: term_op, args } = arena.node(term) {
-        if *term_op == op && args.len() == 2 {
-            collect_bv1_bitop_leaves(arena, args[0], op, leaves);
-            collect_bv1_bitop_leaves(arena, args[1], op, leaves);
-            return;
-        }
+    if let TermNode::App { op: term_op, args } = arena.node(term)
+        && *term_op == op
+        && args.len() == 2
+    {
+        collect_bv1_bitop_leaves(arena, args[0], op, leaves);
+        collect_bv1_bitop_leaves(arena, args[1], op, leaves);
+        return;
     }
     leaves.push(term);
 }

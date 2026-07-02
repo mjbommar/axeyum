@@ -2354,11 +2354,11 @@ impl RowCtx {
         arena: &mut TermArena,
         term: TermId,
     ) -> Result<Option<TermId>, SolverError> {
-        if let TermNode::App { op: Op::Eq, args } = arena.node(term).clone() {
-            if matches!(arena.sort_of(args[0]), Sort::Array { .. }) {
-                let flag = self.array_eq_flag(arena, args[0], args[1])?;
-                return Ok(Some(arena.var(flag)));
-            }
+        if let TermNode::App { op: Op::Eq, args } = arena.node(term).clone()
+            && matches!(arena.sort_of(args[0]), Sort::Array { .. })
+        {
+            let flag = self.array_eq_flag(arena, args[0], args[1])?;
+            return Ok(Some(arena.var(flag)));
         }
         let node = arena.node(term).clone();
         match node {
@@ -2563,10 +2563,10 @@ fn check_row_cegar<B: SolverBackend>(
             if added_row.contains(&idx) {
                 continue;
             }
-            if let RowKind::Store { .. } = site.kind {
-                if row_violated(arena, &ctx, idx, &assignment)? {
-                    new_row.push(idx);
-                }
+            if let RowKind::Store { .. } = site.kind
+                && row_violated(arena, &ctx, idx, &assignment)?
+            {
+                new_row.push(idx);
             }
         }
         // Read-over-read congruence for selects on the same array variable.
@@ -2578,18 +2578,11 @@ fn check_row_cegar<B: SolverBackend>(
                 }
                 if let (RowKind::Var { array: va }, RowKind::Var { array: vb }) =
                     (&ctx.sites[a].kind, &ctx.sites[b].kind)
+                    && va == vb
+                    && indices_equal(arena, ctx.sites[a].index, ctx.sites[b].index, &assignment)?
+                    && results_differ(&assignment, ctx.sites[a].fresh, ctx.sites[b].fresh)
                 {
-                    if va == vb
-                        && indices_equal(
-                            arena,
-                            ctx.sites[a].index,
-                            ctx.sites[b].index,
-                            &assignment,
-                        )?
-                        && results_differ(&assignment, ctx.sites[a].fresh, ctx.sites[b].fresh)
-                    {
-                        new_cong.push((a, b));
-                    }
+                    new_cong.push((a, b));
                 }
             }
         }
@@ -2688,10 +2681,10 @@ fn row_axiom_lemma(arena: &mut TermArena, ctx: &RowCtx, idx: usize) -> Result<Te
 fn complete_assignment(arena: &TermArena, assignment: &Assignment) -> Assignment {
     let mut out = assignment.clone();
     for (symbol, _name, sort) in arena.symbols() {
-        if out.get(symbol).is_none() {
-            if let Some(value) = well_founded_default(arena, sort) {
-                out.set(symbol, value);
-            }
+        if out.get(symbol).is_none()
+            && let Some(value) = well_founded_default(arena, sort)
+        {
+            out.set(symbol, value);
         }
     }
     for (func, _name, params, result) in arena.functions() {
@@ -5489,21 +5482,20 @@ fn repair_projected_branch_disjunctions(
             let Some(false_literal) = or_failure.best_branch_first_false_term else {
                 continue;
             };
-            if let Some(target) = store_base_repair_target(arena, false_literal) {
-                if repair_projected_store_base_literal(
+            if let Some(target) = store_base_repair_target(arena, false_literal)
+                && repair_projected_store_base_literal(
                     arena, originals, projected, target, false, &mut stats,
-                )? {
-                    continue;
-                }
+                )?
+            {
+                continue;
             }
             if let Some((lhs_symbol, rhs_symbol)) =
                 direct_array_equality_repair_target(arena, false_literal)
-            {
-                if repair_projected_array_equality_literal(
+                && repair_projected_array_equality_literal(
                     arena, originals, projected, lhs_symbol, rhs_symbol, &mut stats,
-                )? {
-                    continue;
-                }
+                )?
+            {
+                continue;
             }
             let Some((symbol, value_term)) =
                 direct_symbol_equality_repair_target(arena, false_literal)
@@ -5552,11 +5544,12 @@ fn project_replay_row(
     for _ in 0..=replay.defs.len() {
         let mut changed = false;
         for (&sym, &body) in replay.defs {
-            if let Ok(value) = eval(arena, body, &projected) {
-                if is_array_value(&value) && projected.get(sym).as_ref() != Some(&value) {
-                    projected.set(sym, value);
-                    changed = true;
-                }
+            if let Ok(value) = eval(arena, body, &projected)
+                && is_array_value(&value)
+                && projected.get(sym).as_ref() != Some(&value)
+            {
+                projected.set(sym, value);
+                changed = true;
             }
         }
         if !changed {
@@ -5923,10 +5916,10 @@ fn refine_row_and_congruence(
         if added_row.contains(&idx) {
             continue;
         }
-        if let RowKind::Store { .. } = site.kind {
-            if row_violated(arena, ctx, idx, assignment)? {
-                new_row.push(idx);
-            }
+        if let RowKind::Store { .. } = site.kind
+            && row_violated(arena, ctx, idx, assignment)?
+        {
+            new_row.push(idx);
         }
     }
     let mut new_cong: Vec<(usize, usize)> = Vec::new();
@@ -5937,13 +5930,11 @@ fn refine_row_and_congruence(
             }
             if let (RowKind::Var { array: va }, RowKind::Var { array: vb }) =
                 (&ctx.sites[a].kind, &ctx.sites[b].kind)
+                && va == vb
+                && indices_equal(arena, ctx.sites[a].index, ctx.sites[b].index, assignment)?
+                && results_differ(assignment, ctx.sites[a].fresh, ctx.sites[b].fresh)
             {
-                if va == vb
-                    && indices_equal(arena, ctx.sites[a].index, ctx.sites[b].index, assignment)?
-                    && results_differ(assignment, ctx.sites[a].fresh, ctx.sites[b].fresh)
-                {
-                    new_cong.push((a, b));
-                }
+                new_cong.push((a, b));
             }
         }
     }
@@ -9708,13 +9699,12 @@ fn repair_projected_replay_failure(
     }
 
     let current_false = positive_replay_false_count(arena, originals, projected)?;
-    if mixed_replay_beam_admits_or_failure(arena, originals, current_false) {
-        if let Some((mixed_stats, trial)) =
+    if mixed_replay_beam_admits_or_failure(arena, originals, current_false)
+        && let Some((mixed_stats, trial)) =
             repair_projected_replay_mixed_beam(arena, originals, projected, current_false)?
-        {
-            *projected = trial;
-            return Ok(Some(mixed_stats));
-        }
+    {
+        *projected = trial;
+        return Ok(Some(mixed_stats));
     }
 
     if let Some(choice_stats) =
@@ -14300,7 +14290,7 @@ mod tests {
             let lhs = elem_pool[(next_rand(state) as usize) % elem_pool.len()];
             let rhs = elem_pool[(next_rand(state) as usize) % elem_pool.len()];
             let eq = arena.eq(lhs, rhs).unwrap();
-            let atom = if next_rand(state) % 2 == 0 {
+            let atom = if next_rand(state).is_multiple_of(2) {
                 eq
             } else {
                 arena.not(eq).unwrap()
@@ -14311,13 +14301,13 @@ mod tests {
         // Combine atoms into one formula with and/or, then maybe negate.
         let mut formula = atoms[0];
         for &atom in &atoms[1..] {
-            formula = if next_rand(state) % 2 == 0 {
+            formula = if next_rand(state).is_multiple_of(2) {
                 arena.and(formula, atom).unwrap()
             } else {
                 arena.or(formula, atom).unwrap()
             };
         }
-        if next_rand(state) % 4 == 0 {
+        if next_rand(state).is_multiple_of(4) {
             formula = arena.not(formula).unwrap();
         }
         formula

@@ -218,11 +218,10 @@ fn flatten_conjuncts(arena: &TermArena, assertions: &[TermId]) -> Vec<TermId> {
                     op: Op::BoolNot,
                     args: inner,
                 } = arena.node(args[0])
+                    && inner.len() == 1
                 {
-                    if inner.len() == 1 {
-                        stack.push(inner[0]);
-                        continue;
-                    }
+                    stack.push(inner[0]);
+                    continue;
                 }
                 out.push(t);
             }

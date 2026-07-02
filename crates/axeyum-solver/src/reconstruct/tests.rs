@@ -910,18 +910,17 @@ fn end_to_end_corrupted_proof_rejected() {
     // Corrupt the assumed disequality `(not (= a c))` into `(not (= a d))`, so the
     // closing resolution no longer has a complementary equality unit.
     for cmd in &mut proof {
-        if let AletheCommand::Assume { clause, .. } = cmd {
-            if let [lit] = clause.as_mut_slice() {
-                if lit.negated {
-                    lit.atom = AletheTerm::App(
-                        "=".to_owned(),
-                        vec![
-                            AletheTerm::Const("a".to_owned()),
-                            AletheTerm::Const("d".to_owned()),
-                        ],
-                    );
-                }
-            }
+        if let AletheCommand::Assume { clause, .. } = cmd
+            && let [lit] = clause.as_mut_slice()
+            && lit.negated
+        {
+            lit.atom = AletheTerm::App(
+                "=".to_owned(),
+                vec![
+                    AletheTerm::Const("a".to_owned()),
+                    AletheTerm::Const("d".to_owned()),
+                ],
+            );
         }
     }
 
@@ -963,18 +962,17 @@ fn end_to_end_corrupted_theory_clause_rejected() {
     // Corrupt the eq_transitive step's positive conclusion `(= a c)` into `(= a b)`
     // so the chain endpoints no longer match.
     for cmd in &mut proof {
-        if let AletheCommand::Step { rule, clause, .. } = cmd {
-            if rule == "eq_transitive" {
-                if let Some(last) = clause.last_mut() {
-                    last.atom = AletheTerm::App(
-                        "=".to_owned(),
-                        vec![
-                            AletheTerm::Const("a".to_owned()),
-                            AletheTerm::Const("b".to_owned()),
-                        ],
-                    );
-                }
-            }
+        if let AletheCommand::Step { rule, clause, .. } = cmd
+            && rule == "eq_transitive"
+            && let Some(last) = clause.last_mut()
+        {
+            last.atom = AletheTerm::App(
+                "=".to_owned(),
+                vec![
+                    AletheTerm::Const("a".to_owned()),
+                    AletheTerm::Const("b".to_owned()),
+                ],
+            );
         }
     }
 
@@ -2590,10 +2588,10 @@ fn end_to_end_bitwise_corrupted_close_rejected() {
     if let Some(AletheCommand::Step {
         clause, premises, ..
     }) = proof.last_mut()
+        && clause.is_empty()
+        && premises.len() >= 2
     {
-        if clause.is_empty() && premises.len() >= 2 {
-            premises.truncate(1);
-        }
+        premises.truncate(1);
     }
 
     let mut ctx = ReconstructCtx::new();

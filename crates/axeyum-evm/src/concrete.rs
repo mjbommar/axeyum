@@ -566,18 +566,20 @@ fn run_core(
                 // model (same region condition, same env-order consumption).
                 let rl = ret_len.and_then(|w| w.to_usize());
                 let ro = ret_off.and_then(|w| w.to_usize());
-                if let (Some(len), Some(off)) = (rl, ro) {
-                    if len != 0 && len % 32 == 0 && len / 32 <= crate::symbolic::MAX_RETURN_WORDS {
-                        for k in 0..(len / 32) {
-                            let word = env_inputs
-                                .get(*env_cursor)
-                                .cloned()
-                                .unwrap_or_else(Word::zero);
-                            *env_cursor += 1;
-                            let bytes = word.to_be_bytes();
-                            for (i, &byte) in bytes.iter().enumerate() {
-                                memory.insert(off + 32 * k + i, byte);
-                            }
+                if let (Some(len), Some(off)) = (rl, ro)
+                    && len != 0
+                    && len % 32 == 0
+                    && len / 32 <= crate::symbolic::MAX_RETURN_WORDS
+                {
+                    for k in 0..(len / 32) {
+                        let word = env_inputs
+                            .get(*env_cursor)
+                            .cloned()
+                            .unwrap_or_else(Word::zero);
+                        *env_cursor += 1;
+                        let bytes = word.to_be_bytes();
+                        for (i, &byte) in bytes.iter().enumerate() {
+                            memory.insert(off + 32 * k + i, byte);
                         }
                     }
                 }

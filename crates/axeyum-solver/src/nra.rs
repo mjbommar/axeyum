@@ -943,41 +943,41 @@ fn extract_bounds(
         let (lc, rc) = (as_real_const(arena, l), as_real_const(arena, r));
         match op {
             Op::RealLe | Op::RealLt => {
-                if l == t {
-                    if let Some(c) = rc {
-                        see_hi(c); // t ≤ c
-                    }
+                if l == t
+                    && let Some(c) = rc
+                {
+                    see_hi(c); // t ≤ c
                 }
-                if r == t {
-                    if let Some(c) = lc {
-                        see_lo(c); // c ≤ t
-                    }
+                if r == t
+                    && let Some(c) = lc
+                {
+                    see_lo(c); // c ≤ t
                 }
             }
             Op::RealGe | Op::RealGt => {
-                if l == t {
-                    if let Some(c) = rc {
-                        see_lo(c); // t ≥ c
-                    }
+                if l == t
+                    && let Some(c) = rc
+                {
+                    see_lo(c); // t ≥ c
                 }
-                if r == t {
-                    if let Some(c) = lc {
-                        see_hi(c); // c ≥ t
-                    }
+                if r == t
+                    && let Some(c) = lc
+                {
+                    see_hi(c); // c ≥ t
                 }
             }
             Op::Eq => {
-                if l == t {
-                    if let Some(c) = rc {
-                        see_lo(c);
-                        see_hi(c);
-                    }
+                if l == t
+                    && let Some(c) = rc
+                {
+                    see_lo(c);
+                    see_hi(c);
                 }
-                if r == t {
-                    if let Some(c) = lc {
-                        see_lo(c);
-                        see_hi(c);
-                    }
+                if r == t
+                    && let Some(c) = lc
+                {
+                    see_lo(c);
+                    see_hi(c);
                 }
             }
             _ => {}

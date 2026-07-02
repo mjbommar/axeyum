@@ -38,13 +38,12 @@ use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode};
 #[must_use]
 pub fn prove_lia_unsat_by_gcd(arena: &TermArena, assertions: &[TermId]) -> bool {
     for &assertion in assertions {
-        if let TermNode::App { op: Op::Eq, args } = arena.node(assertion) {
-            if args.len() == 2
-                && arena.sort_of(args[0]) == Sort::Int
-                && equation_is_infeasible(arena, args[0], args[1])
-            {
-                return true;
-            }
+        if let TermNode::App { op: Op::Eq, args } = arena.node(assertion)
+            && args.len() == 2
+            && arena.sort_of(args[0]) == Sort::Int
+            && equation_is_infeasible(arena, args[0], args[1])
+        {
+            return true;
         }
     }
     false

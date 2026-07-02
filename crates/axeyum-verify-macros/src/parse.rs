@@ -634,11 +634,11 @@ impl Lowerer {
                     return Ok(());
                 }
                 // compound assignment `name op= expr;` → `name = name op expr;`
-                if let Expr::Binary(b) = expr {
-                    if let Some(s) = self.try_lower_compound_assign(b)? {
-                        out.push(s);
-                        return Ok(());
-                    }
+                if let Expr::Binary(b) = expr
+                    && let Some(s) = self.try_lower_compound_assign(b)?
+                {
+                    out.push(s);
+                    return Ok(());
                 }
                 // a bare/tail expression: evaluate for side effects.
                 let _ = (semi, is_tail);
@@ -1458,17 +1458,18 @@ impl Lowerer {
     fn lower_method_call(&mut self, mc: &syn::ExprMethodCall) -> syn::Result<(TokenStream, Ty)> {
         let method = mc.method.to_string();
         // A method on a virtual `Option` binding (`let x = a.checked_*(b)`).
-        if let Expr::Path(p) = &*mc.receiver {
-            if let Ok(name) = path_ident(p) {
-                if let Some(b) = self.lookup_option(&name) {
-                    return self.lower_option_method(&method, mc, &b);
-                }
-            }
+        if let Expr::Path(p) = &*mc.receiver
+            && let Ok(name) = path_ident(p)
+            && let Some(b) = self.lookup_option(&name)
+        {
+            return self.lower_option_method(&method, mc, &b);
         }
         if method == "unwrap" || method == "expect" {
             // Receiver must be `opt(is_some, value)` — our recognized Option ctor.
-            if let Expr::Call(call) = &*mc.receiver {
-                if let Expr::Path(p) = &*call.func {
+            if let Expr::Call(call) = &*mc.receiver
+                && let Expr::Path(p) = &*call.func
+            {
+                {
                     let fname = p.path.segments.last().map(|s| s.ident.to_string());
                     if fname.as_deref() == Some("opt") && call.args.len() == 2 {
                         let mut it = call.args.iter();
@@ -1491,13 +1492,15 @@ impl Lowerer {
             // `recv.checked_{add,sub,mul}(arg).unwrap()` (or `.expect(..)`) is
             // exactly the plain panicking op: checked-then-unwrap panics iff the
             // op overflows, which is what `BinOp::{Add,Sub,Mul}` already records.
-            if let Expr::MethodCall(inner) = &*mc.receiver {
-                if let Some(op) = match inner.method.to_string().as_str() {
+            if let Expr::MethodCall(inner) = &*mc.receiver
+                && let Some(op) = match inner.method.to_string().as_str() {
                     "checked_add" => Some("Add"),
                     "checked_sub" => Some("Sub"),
                     "checked_mul" => Some("Mul"),
                     _ => None,
-                } {
+                }
+            {
+                {
                     if inner.args.len() != 1 {
                         return Err(syn::Error::new(
                             inner.span(),
@@ -1590,13 +1593,15 @@ impl Lowerer {
                     "axeyum::verify: `.unwrap_or()` takes exactly one argument",
                 ));
             }
-            if let Expr::MethodCall(inner) = &*mc.receiver {
-                if let Some((ovf_op, wrap_op)) = match inner.method.to_string().as_str() {
+            if let Expr::MethodCall(inner) = &*mc.receiver
+                && let Some((ovf_op, wrap_op)) = match inner.method.to_string().as_str() {
                     "checked_add" => Some(("Add", "WrappingAdd")),
                     "checked_sub" => Some(("Sub", "WrappingSub")),
                     "checked_mul" => Some(("Mul", "WrappingMul")),
                     _ => None,
-                } {
+                }
+            {
+                {
                     if inner.args.len() != 1 {
                         return Err(syn::Error::new(
                             inner.span(),
@@ -1778,18 +1783,20 @@ impl Lowerer {
         // integer type (Rust's literal-inference, restricted to the direct
         // operand). This makes `r <= 15` type-check when `r: u8`.
         if lty != rty {
-            if is_untyped_int_lit(&b.right) && lty.width.is_some() {
-                if let Expr::Lit(el) = &*b.right {
-                    let (nr, nrty) = lower_lit_as(&el.lit, lty, el.span())?;
-                    r = nr;
-                    rty = nrty;
-                }
-            } else if is_untyped_int_lit(&b.left) && rty.width.is_some() {
-                if let Expr::Lit(el) = &*b.left {
-                    let (nl, nlty) = lower_lit_as(&el.lit, rty, el.span())?;
-                    l = nl;
-                    lty = nlty;
-                }
+            if is_untyped_int_lit(&b.right)
+                && lty.width.is_some()
+                && let Expr::Lit(el) = &*b.right
+            {
+                let (nr, nrty) = lower_lit_as(&el.lit, lty, el.span())?;
+                r = nr;
+                rty = nrty;
+            } else if is_untyped_int_lit(&b.left)
+                && rty.width.is_some()
+                && let Expr::Lit(el) = &*b.left
+            {
+                let (nl, nlty) = lower_lit_as(&el.lit, rty, el.span())?;
+                l = nl;
+                lty = nlty;
             }
         }
         let (op_tok, result_ty) =

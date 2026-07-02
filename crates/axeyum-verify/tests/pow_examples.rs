@@ -16,7 +16,7 @@ fn pow_in_range(x: u8) -> u8 {
 fn pow_in_range_verifies() {
     match pow_in_range__axeyum_verdict() {
         Verdict::Verified { certified, .. } => {
-            assert!(certified, "pow_in_range proof must re-check")
+            assert!(certified, "pow_in_range proof must re-check");
         }
         other => panic!("pow_in_range must verify, got {other:?}"),
     }

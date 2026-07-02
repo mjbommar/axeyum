@@ -2606,10 +2606,10 @@ fn pivot_and_update(
         if i == b {
             continue;
         }
-        if let Some(&a_in) = row[&i].get(&n) {
-            if !a_in.is_zero() {
-                value[i] = value[i].add(theta.scale(a_in)?)?;
-            }
+        if let Some(&a_in) = row[&i].get(&n)
+            && !a_in.is_zero()
+        {
+            value[i] = value[i].add(theta.scale(a_in)?)?;
         }
     }
 
@@ -2625,19 +2625,19 @@ fn pivot_and_update(
     // Substitute the new n-row into every other basic row mentioning n.
     let others: Vec<usize> = basic.iter().copied().filter(|&i| i != b).collect();
     for i in others {
-        if let Some(a_in) = row.get_mut(&i).and_then(|r| r.remove(&n)) {
-            if !a_in.is_zero() {
-                let additions: Vec<(usize, Rational)> = row_n
-                    .iter()
-                    .map(|(&k, &c)| a_in.checked_mul(c).map(|p| (k, p)))
-                    .collect::<Option<_>>()?;
-                let r = row.get_mut(&i).expect("basic row exists");
-                for (k, delta) in additions {
-                    let entry = r.entry(k).or_insert_with(Rational::zero);
-                    *entry = (*entry).checked_add(delta)?;
-                }
-                r.retain(|_, c| !c.is_zero());
+        if let Some(a_in) = row.get_mut(&i).and_then(|r| r.remove(&n))
+            && !a_in.is_zero()
+        {
+            let additions: Vec<(usize, Rational)> = row_n
+                .iter()
+                .map(|(&k, &c)| a_in.checked_mul(c).map(|p| (k, p)))
+                .collect::<Option<_>>()?;
+            let r = row.get_mut(&i).expect("basic row exists");
+            for (k, delta) in additions {
+                let entry = r.entry(k).or_insert_with(Rational::zero);
+                *entry = (*entry).checked_add(delta)?;
             }
+            r.retain(|_, c| !c.is_zero());
         }
     }
     row.insert(n, row_n);

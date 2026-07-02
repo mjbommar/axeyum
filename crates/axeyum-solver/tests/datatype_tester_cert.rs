@@ -241,11 +241,12 @@ fn tester_tampered_fold_is_rejected_by_carcara() {
 /// then unjustified). Used by the tamper test to confirm Carcara catches it.
 fn tamper_first_eq_transitive(proof: &mut [AletheCommand]) {
     for cmd in proof.iter_mut() {
-        if let AletheCommand::Step { rule, clause, .. } = cmd {
-            if rule == "eq_transitive" && clause.len() >= 2 {
-                clause.remove(0);
-                return;
-            }
+        if let AletheCommand::Step { rule, clause, .. } = cmd
+            && rule == "eq_transitive"
+            && clause.len() >= 2
+        {
+            clause.remove(0);
+            return;
         }
     }
     panic!("no eq_transitive step found to tamper");

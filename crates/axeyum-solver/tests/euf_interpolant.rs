@@ -538,22 +538,22 @@ fn tampered_certified_euf_refutation_is_rejected() {
     let mut tampered = cert.a_refutation.clone();
     let mut patched = false;
     for cmd in &mut tampered {
-        if let AletheCommand::Step { clause, .. } = cmd {
-            if !clause.is_empty() {
-                let bogus = AletheTerm::App(
-                    "=".to_owned(),
-                    vec![
-                        AletheTerm::Const("a".to_owned()),
-                        AletheTerm::Const("a".to_owned()),
-                    ],
-                );
-                *clause = vec![AletheLit {
-                    atom: bogus,
-                    negated: false,
-                }];
-                patched = true;
-                break;
-            }
+        if let AletheCommand::Step { clause, .. } = cmd
+            && !clause.is_empty()
+        {
+            let bogus = AletheTerm::App(
+                "=".to_owned(),
+                vec![
+                    AletheTerm::Const("a".to_owned()),
+                    AletheTerm::Const("a".to_owned()),
+                ],
+            );
+            *clause = vec![AletheLit {
+                atom: bogus,
+                negated: false,
+            }];
+            patched = true;
+            break;
         }
     }
     assert!(patched, "expected a derivable step to tamper");

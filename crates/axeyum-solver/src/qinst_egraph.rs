@@ -208,13 +208,14 @@ pub fn witness_tuples_via_egraph(
         bridge.add_term(arena, g);
         // A top-level ground equality `(= s t)` asserts s = t — merge it so matching
         // is genuinely modulo the ground congruence.
-        if let TermNode::App { op, args } = arena.node(g) {
-            if matches!(op, Op::Eq) && args.len() == 2 {
-                let (s, t) = (args[0], args[1]);
-                let ns = bridge.add_term(arena, s);
-                let nt = bridge.add_term(arena, t);
-                bridge.egraph.merge(ns, nt, 0);
-            }
+        if let TermNode::App { op, args } = arena.node(g)
+            && matches!(op, Op::Eq)
+            && args.len() == 2
+        {
+            let (s, t) = (args[0], args[1]);
+            let ns = bridge.add_term(arena, s);
+            let nt = bridge.add_term(arena, t);
+            bridge.egraph.merge(ns, nt, 0);
         }
     }
 

@@ -97,10 +97,10 @@ fn reachable_arithmetic_panic_is_never_verified() {
         let mut a = u128::from(rng.next()) & mask;
         let mut b = u128::from(rng.next()) & mask;
         // Occasionally force the ÷0 / underflow edges so they are exercised.
-        if rng.next() % 4 == 0 {
+        if rng.next().is_multiple_of(4) {
             b = 0;
         }
-        if rng.next() % 4 == 0 {
+        if rng.next().is_multiple_of(4) {
             a = a.min(b);
         }
         if !panics(op, w, a, b) {
@@ -154,11 +154,11 @@ fn reachable_signed_arithmetic_panic_is_never_verified() {
         let mut a = min + ((u128::from(rng.next()) % span) as i128);
         let mut b = min + ((u128::from(rng.next()) % span) as i128);
         // Force the MIN/-1 and ÷0 edges occasionally.
-        if rng.next() % 5 == 0 {
+        if rng.next().is_multiple_of(5) {
             a = min;
             b = -1;
         }
-        if rng.next() % 5 == 0 {
+        if rng.next().is_multiple_of(5) {
             b = 0;
         }
         if !panics_signed(op, w, a, b) {
@@ -290,10 +290,10 @@ fn reachable_panic_in_dispatch_arm_is_never_verified() {
             let op = OPS[(rng.next() as usize) % OPS.len()];
             let mut a = u128::from(rng.next()) & mask;
             let mut b = u128::from(rng.next()) & mask;
-            if rng.next() % 3 == 0 {
+            if rng.next().is_multiple_of(3) {
                 b = 0; // force ÷0 / underflow edges
             }
-            if rng.next() % 3 == 0 {
+            if rng.next().is_multiple_of(3) {
                 a = a.min(b);
             }
             (k, op, a, b)
@@ -306,7 +306,7 @@ fn reachable_panic_in_dispatch_arm_is_never_verified() {
             (op, a, b)
         };
         // Scrutinee: sometimes hit a key, sometimes fall through to the wildcard.
-        let scrut = if rng.next() % 2 == 0 {
+        let scrut = if rng.next().is_multiple_of(2) {
             arms[(rng.next() as usize) % arms.len()].0
         } else {
             (n_arms as u128) + 5 // distinct from all keys → wildcard
@@ -443,7 +443,7 @@ fn saturating_value_matches_concrete_clamp() {
     for _ in 0..600 {
         let op = sops[(rng.next() as usize) % sops.len()];
         let w = WIDTHS[(rng.next() as usize) % WIDTHS.len()];
-        let signed = rng.next() % 2 == 0;
+        let signed = rng.next().is_multiple_of(2);
         let (val, expect, ty) = if signed {
             let min = -(1i128 << (w - 1));
             let max = (1i128 << (w - 1)) - 1;
@@ -524,9 +524,9 @@ fn min_max_value_matches_concrete() {
     let mut checked_u = 0u32;
     let mut checked_s = 0u32;
     for _ in 0..600 {
-        let is_max = rng.next() % 2 == 0;
+        let is_max = rng.next().is_multiple_of(2);
         let w = WIDTHS[(rng.next() as usize) % WIDTHS.len()];
-        let signed = rng.next() % 2 == 0;
+        let signed = rng.next().is_multiple_of(2);
         let (a_pat, b_pat, expect, ty) = if signed {
             let min = -(1i128 << (w - 1));
             let max = (1i128 << (w - 1)) - 1;
@@ -609,7 +609,7 @@ fn abs_desugar_min_overflow_and_value() {
         let min = -(1i128 << (w - 1));
         let max = (1i128 << (w - 1)) - 1;
         let span = (max - min + 1) as u128;
-        let a = if rng.next() % 4 == 0 {
+        let a = if rng.next().is_multiple_of(4) {
             min // force the overflow edge
         } else {
             min + ((u128::from(rng.next()) % span) as i128)
@@ -696,7 +696,7 @@ fn overflows_node_and_unwrap_or_value() {
     for _ in 0..800 {
         let (ovf_op, wrap_op) = ops[(rng.next() as usize) % ops.len()];
         let w = WIDTHS[(rng.next() as usize) % WIDTHS.len()];
-        let signed = rng.next() % 2 == 0;
+        let signed = rng.next().is_multiple_of(2);
         let (a_pat, b_pat, expect, ty) = if signed {
             let min = -(1i128 << (w - 1));
             let max = (1i128 << (w - 1)) - 1;
@@ -822,7 +822,7 @@ fn rotate_value_matches_concrete() {
     let mut rng = Rng(0x_7012_a7e0_0000_0001);
     let mut checked = 0u32;
     for _ in 0..400 {
-        let left = rng.next() % 2 == 0;
+        let left = rng.next().is_multiple_of(2);
         let w = WIDTHS[(rng.next() as usize) % WIDTHS.len()];
         let mask: u128 = (1u128 << w) - 1;
         let x = u128::from(rng.next()) & mask;

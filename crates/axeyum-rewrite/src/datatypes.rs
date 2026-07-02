@@ -74,11 +74,11 @@ fn simplify(
 fn fold_datatype_op(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermId, IrError> {
     match op {
         Op::DtSelect { constructor, index } => {
-            if let Some((built, fields)) = as_construct(arena, args[0]) {
-                if built == constructor {
-                    // select_c(construct_c(a0, …)) = a_index.
-                    return Ok(fields[index as usize]);
-                }
+            if let Some((built, fields)) = as_construct(arena, args[0])
+                && built == constructor
+            {
+                // select_c(construct_c(a0, …)) = a_index.
+                return Ok(fields[index as usize]);
             }
             build_app(arena, op, args)
         }

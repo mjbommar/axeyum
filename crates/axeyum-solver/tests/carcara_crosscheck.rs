@@ -2442,13 +2442,13 @@ fn tampered_certified_lra_interpolant_cert_is_rejected_by_carcara() {
     let mut tampered = cert.a_refutation.clone();
     let mut patched = false;
     for cmd in &mut tampered {
-        if let AletheCommand::Step { rule, args, .. } = cmd {
-            if rule == "la_generic" {
-                for a in args.iter_mut() {
-                    *a = AletheTerm::Const("0".to_owned());
-                }
-                patched = true;
+        if let AletheCommand::Step { rule, args, .. } = cmd
+            && rule == "la_generic"
+        {
+            for a in args.iter_mut() {
+                *a = AletheTerm::Const("0".to_owned());
             }
+            patched = true;
         }
     }
     assert!(patched, "expected a la_generic step to tamper");
@@ -2593,22 +2593,22 @@ fn tampered_certified_euf_interpolant_cert_is_rejected_by_carcara() {
     let mut tampered = cert.a_refutation.clone();
     let mut patched = false;
     for cmd in &mut tampered {
-        if let AletheCommand::Step { clause, .. } = cmd {
-            if !clause.is_empty() {
-                let bogus = AletheTerm::App(
-                    "=".to_owned(),
-                    vec![
-                        AletheTerm::Const("a".to_owned()),
-                        AletheTerm::Const("a".to_owned()),
-                    ],
-                );
-                *clause = vec![AletheLit {
-                    atom: bogus,
-                    negated: false,
-                }];
-                patched = true;
-                break;
-            }
+        if let AletheCommand::Step { clause, .. } = cmd
+            && !clause.is_empty()
+        {
+            let bogus = AletheTerm::App(
+                "=".to_owned(),
+                vec![
+                    AletheTerm::Const("a".to_owned()),
+                    AletheTerm::Const("a".to_owned()),
+                ],
+            );
+            *clause = vec![AletheLit {
+                atom: bogus,
+                negated: false,
+            }];
+            patched = true;
+            break;
         }
     }
     assert!(patched, "expected a derivable step to tamper");
@@ -2893,13 +2893,13 @@ fn tampered_certified_uflra_interpolant_cert_is_rejected_by_carcara() {
     let mut tampered = cert.a_refutation.clone();
     let mut patched = false;
     for cmd in &mut tampered {
-        if let AletheCommand::Step { rule, args, .. } = cmd {
-            if rule == "la_generic" {
-                for a in args.iter_mut() {
-                    *a = AletheTerm::Const("0".to_owned());
-                }
-                patched = true;
+        if let AletheCommand::Step { rule, args, .. } = cmd
+            && rule == "la_generic"
+        {
+            for a in args.iter_mut() {
+                *a = AletheTerm::Const("0".to_owned());
             }
+            patched = true;
         }
     }
     assert!(patched, "expected a la_generic step to tamper");

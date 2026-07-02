@@ -221,7 +221,7 @@ fn build_small_case(arena: &mut TermArena, state: &mut u64) -> TermId {
         let lhs = elem_pool[(next_rand(state) as usize) % elem_pool.len()];
         let rhs = elem_pool[(next_rand(state) as usize) % elem_pool.len()];
         let eq = arena.eq(lhs, rhs).unwrap();
-        let atom = if next_rand(state) % 2 == 0 {
+        let atom = if next_rand(state).is_multiple_of(2) {
             eq
         } else {
             arena.not(eq).unwrap()
@@ -231,13 +231,13 @@ fn build_small_case(arena: &mut TermArena, state: &mut u64) -> TermId {
 
     let mut formula = atoms[0];
     for &atom in &atoms[1..] {
-        formula = if next_rand(state) % 2 == 0 {
+        formula = if next_rand(state).is_multiple_of(2) {
             arena.and(formula, atom).unwrap()
         } else {
             arena.or(formula, atom).unwrap()
         };
     }
-    if next_rand(state) % 4 == 0 {
+    if next_rand(state).is_multiple_of(4) {
         formula = arena.not(formula).unwrap();
     }
     formula
@@ -325,7 +325,7 @@ fn lazy_row_agrees_with_eager_on_small_array_defs() {
         let read = arena.select(b, i).unwrap();
         // Randomly assert select(b,i) == v (SAT) or != v (UNSAT).
         let eqv = arena.eq(read, v).unwrap();
-        let constraint = if next_rand(&mut state) % 2 == 0 {
+        let constraint = if next_rand(&mut state).is_multiple_of(2) {
             eqv
         } else {
             arena.not(eqv).unwrap()

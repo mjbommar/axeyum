@@ -694,17 +694,17 @@ fn conflict_core(
     theory_lits: &[TermId],
     assignment: &[(SymbolId, bool)],
 ) -> Result<Vec<(SymbolId, bool)>, SolverError> {
-    if let Some(certificate) = lra_farkas_certificate(arena, theory_lits)? {
-        if certificate.multipliers.len() == assignment.len() {
-            let core: Vec<(SymbolId, bool)> = assignment
-                .iter()
-                .zip(&certificate.multipliers)
-                .filter(|(_, multiplier)| !multiplier.is_zero())
-                .map(|(entry, _)| *entry)
-                .collect();
-            if !core.is_empty() {
-                return Ok(core);
-            }
+    if let Some(certificate) = lra_farkas_certificate(arena, theory_lits)?
+        && certificate.multipliers.len() == assignment.len()
+    {
+        let core: Vec<(SymbolId, bool)> = assignment
+            .iter()
+            .zip(&certificate.multipliers)
+            .filter(|(_, multiplier)| !multiplier.is_zero())
+            .map(|(entry, _)| *entry)
+            .collect();
+        if !core.is_empty() {
+            return Ok(core);
         }
     }
     Ok(assignment.to_vec())

@@ -2146,13 +2146,13 @@ fn parse_tiny_bv_assembly(text: &str) -> Result<TinyBvAssembly, SolverError> {
             continue;
         };
         let (label, instruction) = split_assembly_label(line_no, line)?;
-        if let Some(label) = label {
-            if let Some((_, first_line)) = labels.insert(label.to_owned(), (lines.len(), line_no)) {
-                return Err(tiny_bv_parse_error(
-                    line_no,
-                    format!("duplicate label `{label}` first declared on line {first_line}"),
-                ));
-            }
+        if let Some(label) = label
+            && let Some((_, first_line)) = labels.insert(label.to_owned(), (lines.len(), line_no))
+        {
+            return Err(tiny_bv_parse_error(
+                line_no,
+                format!("duplicate label `{label}` first declared on line {first_line}"),
+            ));
         }
         if let Some(instruction) = instruction {
             lines.push((line_no, instruction));

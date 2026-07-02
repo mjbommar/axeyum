@@ -317,10 +317,9 @@ fn negate_interpolant(arena: &mut TermArena, interpolant: TermId) -> Option<Term
         op: Op::BoolNot,
         args,
     } = arena.node(interpolant)
+        && args.len() == 1
     {
-        if args.len() == 1 {
-            return Some(args[0]);
-        }
+        return Some(args[0]);
     }
     arena.not(interpolant).ok()
 }

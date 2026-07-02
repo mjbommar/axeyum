@@ -512,7 +512,7 @@ fn build_atom_pool(arena: &mut TermArena, state: &mut u64) -> Vec<TermId> {
 
 /// Builds a random `and`/`or`/`not` tree (depth-bounded) over the atom pool.
 fn build_bool_tree(arena: &mut TermArena, pool: &[TermId], state: &mut u64, depth: u32) -> TermId {
-    if depth == 0 || next_rand(state) % 3 == 0 {
+    if depth == 0 || next_rand(state).is_multiple_of(3) {
         return pool[(next_rand(state) as usize) % pool.len()];
     }
     match next_rand(state) % 3 {
@@ -766,7 +766,7 @@ fn combined_theory_propagation_is_sound_and_fires() {
         // Assert a random subset of the pool, all true (the combination's conjunction).
         let mut asserted: Vec<(TermId, bool)> = Vec::new();
         for &atom in &pool {
-            if next_rand(&mut state) % 2 == 0 {
+            if next_rand(&mut state).is_multiple_of(2) {
                 asserted.push((atom, true));
             }
         }

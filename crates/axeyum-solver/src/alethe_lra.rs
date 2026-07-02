@@ -758,10 +758,10 @@ fn app_arg_to_alethe(
     arg: TermId,
     fresh_to_app: &BTreeMap<axeyum_ir::SymbolId, (axeyum_ir::FuncId, Vec<TermId>)>,
 ) -> Option<AletheTerm> {
-    if let TermNode::Symbol(symbol) = arena.node(arg) {
-        if fresh_to_app.contains_key(symbol) {
-            return fresh_symbol_to_alethe(arena, *symbol, fresh_to_app);
-        }
+    if let TermNode::Symbol(symbol) = arena.node(arg)
+        && fresh_to_app.contains_key(symbol)
+    {
+        return fresh_symbol_to_alethe(arena, *symbol, fresh_to_app);
     }
     real_subterm_to_alethe(arena, arg)
 }
@@ -772,10 +772,10 @@ fn app_arg_to_int_alethe(
     arg: TermId,
     fresh_to_app: &BTreeMap<axeyum_ir::SymbolId, (axeyum_ir::FuncId, Vec<TermId>)>,
 ) -> Option<AletheTerm> {
-    if let TermNode::Symbol(symbol) = arena.node(arg) {
-        if fresh_to_app.contains_key(symbol) {
-            return fresh_symbol_to_int_alethe(arena, *symbol, fresh_to_app);
-        }
+    if let TermNode::Symbol(symbol) = arena.node(arg)
+        && fresh_to_app.contains_key(symbol)
+    {
+        return fresh_symbol_to_int_alethe(arena, *symbol, fresh_to_app);
     }
     int_subterm_to_alethe(arena, arg)
 }

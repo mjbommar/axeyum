@@ -389,10 +389,10 @@ fn rebinds_var(arena: &TermArena, term: TermId, var: SymbolId) -> bool {
             continue;
         }
         if let TermNode::App { op, args } = arena.node(t) {
-            if let Op::Forall(bound) | Op::Exists(bound) = op {
-                if *bound == var {
-                    return true;
-                }
+            if let Op::Forall(bound) | Op::Exists(bound) = op
+                && *bound == var
+            {
+                return true;
             }
             stack.extend(args.iter().copied());
         }

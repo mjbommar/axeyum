@@ -308,17 +308,17 @@ fn evaluate(case: &Case, cfg: &SolverConfig) -> Outcome {
     let unroll_safe = matches!(verdict, Verdict::Verified { .. });
 
     // For loop programs in the warm fragment, the warm route must agree.
-    if case.class == "loop" {
-        if let Some(res) = check_program_loop(&case.program, 10, cfg) {
-            match res {
-                Ok(LoopSafety::BugReachable { .. }) if !unroll_bug => {
-                    return Outcome::Disagree("warm found a bug the unroll route did not".into());
-                }
-                Ok(LoopSafety::SafeWithinBound { .. }) if !unroll_safe => {
-                    return Outcome::Disagree("warm proved safe but unroll did not".into());
-                }
-                _ => {}
+    if case.class == "loop"
+        && let Some(res) = check_program_loop(&case.program, 10, cfg)
+    {
+        match res {
+            Ok(LoopSafety::BugReachable { .. }) if !unroll_bug => {
+                return Outcome::Disagree("warm found a bug the unroll route did not".into());
             }
+            Ok(LoopSafety::SafeWithinBound { .. }) if !unroll_safe => {
+                return Outcome::Disagree("warm proved safe but unroll did not".into());
+            }
+            _ => {}
         }
     }
 

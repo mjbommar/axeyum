@@ -190,8 +190,7 @@ fn axeyum_decide(inst: Instance) -> Option<(Verdict, bool)> {
                 (Verdict::Sat, ok)
             }
             Ok(CheckResult::Unsat) => (Verdict::Unsat, true),
-            Ok(CheckResult::Unknown(_)) => (Verdict::Unknown, true),
-            Err(_) => (Verdict::Unknown, true),
+            Ok(CheckResult::Unknown(_)) | Err(_) => (Verdict::Unknown, true),
         };
         let _ = tx.send(out);
     });

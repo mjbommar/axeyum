@@ -2078,14 +2078,12 @@ mod run {
         // / disagreement gate needs.
         let mut z3_binary: Option<Z3BinaryResult> = None;
         let mut oracle_outcome = oracle_solve.outcome;
-        if !compared {
-            if let Some(result) = run_z3_binary(file, config.timeout) {
-                if let Some(verdict) = result.verdict {
-                    oracle_outcome = verdict;
-                    compared = true;
-                }
-                z3_binary = Some(result);
+        if !compared && let Some(result) = run_z3_binary(file, config.timeout) {
+            if let Some(verdict) = result.verdict {
+                oracle_outcome = verdict;
+                compared = true;
             }
+            z3_binary = Some(result);
         }
 
         let agrees = compared && oracle_outcome == primary.outcome;

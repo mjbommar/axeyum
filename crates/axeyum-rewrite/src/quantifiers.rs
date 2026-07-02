@@ -532,10 +532,10 @@ fn trigger_per_var_bindings(
             let sort = arena.symbol(v).1;
             let mut candidates = leaves.get(&sort).cloned().unwrap_or_default();
             for binding in &matches {
-                if let Some(&term) = binding.get(&v) {
-                    if !candidates.contains(&term) {
-                        candidates.push(term);
-                    }
+                if let Some(&term) = binding.get(&v)
+                    && !candidates.contains(&term)
+                {
+                    candidates.push(term);
                 }
             }
             candidates
@@ -695,15 +695,15 @@ fn ematch(
     var_set: &std::collections::BTreeSet<SymbolId>,
     egraph: &EGraph,
 ) -> Vec<HashMap<SymbolId, TermId>> {
-    if let TermNode::Symbol(symbol) = arena.node(pattern) {
-        if var_set.contains(symbol) {
-            // Bind the variable to the class's representative ground term (sorts
-            // must agree).
-            if arena.sort_of(class_rep) == arena.sort_of(pattern) {
-                return vec![HashMap::from([(*symbol, class_rep)])];
-            }
-            return Vec::new();
+    if let TermNode::Symbol(symbol) = arena.node(pattern)
+        && var_set.contains(symbol)
+    {
+        // Bind the variable to the class's representative ground term (sorts
+        // must agree).
+        if arena.sort_of(class_rep) == arena.sort_of(pattern) {
+            return vec![HashMap::from([(*symbol, class_rep)])];
         }
+        return Vec::new();
     }
     match arena.node(pattern) {
         TermNode::App {
@@ -720,21 +720,21 @@ fn ematch(
                     op: gop,
                     args: gargs,
                 } = arena.node(g)
+                    && gop == pop
+                    && gargs.len() == pargs.len()
                 {
-                    if gop == pop && gargs.len() == pargs.len() {
-                        let gargs = gargs.clone();
-                        // Combine, by consistent merge, the substitutions from
-                        // matching each argument against the class of g's argument.
-                        let mut combos: Vec<HashMap<SymbolId, TermId>> = vec![HashMap::new()];
-                        for (p_arg, g_arg) in pargs.iter().zip(gargs.iter()) {
-                            let sub = ematch(arena, *p_arg, egraph.rep_of(*g_arg), var_set, egraph);
-                            combos = merge_substitutions(&combos, &sub);
-                            if combos.is_empty() {
-                                break;
-                            }
+                    let gargs = gargs.clone();
+                    // Combine, by consistent merge, the substitutions from
+                    // matching each argument against the class of g's argument.
+                    let mut combos: Vec<HashMap<SymbolId, TermId>> = vec![HashMap::new()];
+                    for (p_arg, g_arg) in pargs.iter().zip(gargs.iter()) {
+                        let sub = ematch(arena, *p_arg, egraph.rep_of(*g_arg), var_set, egraph);
+                        combos = merge_substitutions(&combos, &sub);
+                        if combos.is_empty() {
+                            break;
                         }
-                        results.extend(combos);
                     }
+                    results.extend(combos);
                 }
             }
             results

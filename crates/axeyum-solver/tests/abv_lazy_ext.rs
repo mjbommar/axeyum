@@ -299,7 +299,7 @@ fn build_ext_case(arena: &mut TermArena, state: &mut u64) -> TermId {
 
     // Build two array terms, each either a variable or a store over a variable.
     let make_arr = |arena: &mut TermArena, state: &mut u64, base: TermId| -> TermId {
-        if next_rand(state) % 2 == 0 {
+        if next_rand(state).is_multiple_of(2) {
             base
         } else {
             let idx = idx_pool[(next_rand(state) as usize) % idx_pool.len()];
@@ -312,7 +312,7 @@ fn build_ext_case(arena: &mut TermArena, state: &mut u64) -> TermId {
 
     // The mandatory array (dis)equality atom.
     let arr_eq = arena.eq(arr1, arr2).unwrap();
-    let arr_atom = if next_rand(state) % 2 == 0 {
+    let arr_atom = if next_rand(state).is_multiple_of(2) {
         arr_eq
     } else {
         arena.not(arr_eq).unwrap()
@@ -328,14 +328,14 @@ fn build_ext_case(arena: &mut TermArena, state: &mut u64) -> TermId {
         arena.select(arr2, idx).unwrap()
     };
     let scalar_eq = arena.eq(r1, r2).unwrap();
-    let scalar_atom = if next_rand(state) % 2 == 0 {
+    let scalar_atom = if next_rand(state).is_multiple_of(2) {
         scalar_eq
     } else {
         arena.not(scalar_eq).unwrap()
     };
 
     // Combine: arr_atom AND/OR scalar_atom.
-    if next_rand(state) % 2 == 0 {
+    if next_rand(state).is_multiple_of(2) {
         arena.and(arr_atom, scalar_atom).unwrap()
     } else {
         arena.or(arr_atom, scalar_atom).unwrap()

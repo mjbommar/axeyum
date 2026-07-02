@@ -294,8 +294,8 @@ fn fuzz_tree(
     depth: u32,
     rng: &mut Lcg,
 ) -> TermId {
-    if depth == 0 || rng.next_u32() % 3 == 0 {
-        let var = if rng.next_u32() % 2 == 0 {
+    if depth == 0 || rng.next_u32().is_multiple_of(3) {
+        let var = if rng.next_u32().is_multiple_of(2) {
             shared
         } else {
             local
