@@ -542,7 +542,12 @@ group-homomorphism replay, kernel/image recomputation, quotient and induced-map
 checks, ring-homomorphism replay, a QF_UF/Alethe homomorphism-preservation row,
 checked bad-homomorphism rejection, a concrete QF_UF/Alethe bad-map
 refutation after table replay identifies `phi(1+1)=1` versus
-`phi(1)+phi(1)=0`, and a general isomorphism-theorem Lean-horizon row.
+`phi(1)+phi(1)=0`, and a general isomorphism-theorem Lean-horizon row. The
+focused `algebra-homomorphism-quotient-theorem-boundary.md` learner page now
+maps that finite homomorphism/kernel/image/quotient replay and
+`finite-ideals-v0` quotient-ring replay to the missing isomorphism,
+correspondence, quotient, localization, Noetherian, and ideal-theory theorem
+layers without promoting finite table replay into theorem coverage.
 `finite-vector-spaces-v0` now
 bridges finite fields into linear algebra with `F2^2` vector-space table
 replay, subspace/span checks, linear-map kernel/image replay, rank-nullity
@@ -1801,6 +1806,8 @@ ideal laws, principal ideal generation, modulo-2 ring-homomorphism
 kernel/image replay, quotient-ring tables, replayed non-ideal rejection,
 explicit QF_UF/Alethe additive-closure membership evidence, checked quotient
 representative congruence, and an ideal-theory Lean-horizon row.
+`algebra-homomorphism-quotient-theorem-boundary.md` now gives the
+homomorphism and ideal packs a focused finite/general quotient-theory trust map.
 `finite-order-lattices-v0` now adds the exact finite order-theory bridge:
 Boolean-lattice partial-order replay, meet/join table checks, distributivity,
 monotone-map fixed-point replay, checked bad-order replay, explicit

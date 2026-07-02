@@ -593,6 +593,10 @@ Companion maps:
   follows `Z/6Z` ideal closure, principal generation, parity-map kernel/image,
   quotient-ring table replay, replayed bad non-ideal rejection, and a separate
   checked QF_UF/Alethe bad additive-closure row.
+- [Algebra Homomorphism And Quotient Theorem Boundary](algebra-homomorphism-quotient-theorem-boundary.md):
+  maps finite homomorphism, kernel/image, ideal, and quotient-ring replay to
+  the missing isomorphism, correspondence, quotient, localization, and
+  ideal-theory theorem layers.
 - [Conditional Probability, Random Variables, Kernels, Concentration, Martingales, And Product Measures](finite-probability-end-to-end.md):
   follows finite atom tables through exact conditional-probability,
   checked Bayes-posterior and bad-independence refutations, random-variable,

@@ -181,8 +181,9 @@ it records route, pack, field, and text queries for `lean-horizon` rows so
 consumers can find theorem boundaries without treating them as checked SMT
 evidence; the public query script also exposes
 `horizon-frontier` for theorem-boundary rows with finite-shadow contrast,
-including finite/infinite cardinality, vector-space/duality/module/tensor
-structure, finite random-variable, recurrence/asymptotic, stochastic-kernel, and
+including finite/infinite cardinality, algebra homomorphism/quotient structure,
+vector-space/duality/module/tensor structure, finite random-variable,
+recurrence/asymptotic, stochastic-kernel, and
 martingale/stopping theory, root-finding convergence/stability, and
 hyperplane-separation/duality, KKT sufficiency, active-set method theory, and
 SDP duality/Slater-condition theory, and gradient-descent convergence/rate
@@ -567,7 +568,10 @@ graph-family/runtime lookups, checked finite
 coloring/reachability/matching/cut/d-separation rows, and checked finite
 BFS/DFS cost-counter rows. These are smoke-checked through the committed JSON contract without
 promoting arbitrary algebraic-structure theorems, unbounded number-theory
-claims, asymptotic graph algorithms, or general graph theorems.
+claims, asymptotic graph algorithms, or general graph theorems. The focused
+[`algebra-homomorphism-quotient-theorem-boundary.md`](docs/learn/math/algebra-homomorphism-quotient-theorem-boundary.md)
+page now records the finite map/kernel/image/ideal/quotient split from general
+isomorphism and ideal-theory theorem claims.
 The public foundational-resource consumer query layer now also exercises the
 analysis/numerical/complex lanes: real-analysis Farkas readiness,
 epsilon/gradient bridge lookups, and checked bounded-analysis rows;

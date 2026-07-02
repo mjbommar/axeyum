@@ -2139,6 +2139,16 @@ Pick one row per commit unless the change is purely navigational.
      homological-algebra theorem layers, and adds pack-specific
      horizon-frontier queries to the public smoke gate without promoting
      finite algebraic tables into theorem coverage.
+253. Landed: add `algebra-homomorphism-quotient-theorem-boundary.md` as the
+     focused homomorphism/quotient theorem-boundary page for
+     `finite-algebra-homomorphisms-v0` and `finite-ideals-v0`. It maps finite
+     homomorphism preservation, kernel/image replay, quotient/induced-map
+     replay, ideal closure, principal ideal generation, quotient-ring replay,
+     and scoped QF_UF/Alethe preservation/representative/closure evidence to
+     the missing isomorphism, correspondence, quotient, localization,
+     Noetherian, and ideal-theory theorem layers, and adds pack-specific
+     quotient and horizon-frontier queries to the public smoke gate without
+     promoting finite quotient tables into theorem coverage.
 
 ## Validation Checklist
 

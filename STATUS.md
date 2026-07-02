@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Algebra homomorphism/quotient theorem-boundary resource landed.**
+  `algebra-homomorphism-quotient-theorem-boundary.md` now separates
+  `finite-algebra-homomorphisms-v0` and `finite-ideals-v0` finite map,
+  kernel/image, ideal, quotient, representative-independence, and scoped
+  QF_UF/Alethe evidence from general isomorphism, correspondence, quotient,
+  localization, Noetherian, and ideal-theory theorem claims. The algebra,
+  equality-certificate, theorem-horizon, learner-index, and smoke-query docs
+  now expose the boundary through pack-specific checked-row, Alethe-route,
+  quotient drilldown, and horizon-frontier queries.
+
 - **Linear-algebra structure theorem-boundary resource landed.**
   `linear-algebra-structure-theorem-boundary.md` now separates
   `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-modules-v0`,
