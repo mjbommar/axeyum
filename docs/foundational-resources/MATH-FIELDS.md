@@ -206,7 +206,7 @@ one of:
       `set_theory_and_foundations`.
     - Checks: finite first-hit distributions, survival probabilities,
       absorption-probability equations, expected hitting-time equations, and
-      bad survival-mass and expected-time rejection.
+      bad survival-mass/expected-time replay with separate checked QF_LRA rows.
 16. `artifacts/examples/math/finite-concentration-v0/`
     - Fields: `probability_theory`, `statistics`, `measure_theory`,
       `real_analysis`, `set_theory_and_foundations`.

@@ -44,11 +44,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite hitting-time bad survival-mass and expected-time QF_LRA/Farkas regression seeds",
-    "pressure": "Malformed finite hitting-time rows where exact replay computes survival mass 5/16 instead of 1/4 and reduces the start-state expected-time equation to 2*h_start = 2 + h_start + h_middle, conflicting with h_start = 3 and h_middle = 2.",
+    "target": "finite hitting-time separate bad survival-mass and expected-time QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed finite hitting-time rows where exact replay computes survival mass 5/16 and the expected-time start-state right-hand side 7/2, while separate QF_LRA rows reject the fixed false claims 1/4 and h_start = 3 with h_middle = 2.",
     "evidence": [
-      "bad-survival-mass-rejected",
-      "bad-expected-time-rejected"
+      "qf-lra-bad-survival-mass",
+      "qf-lra-bad-expected-time"
     ],
     "next_step": "Promote additional absorption-probability or finite-horizon rows only when they add distinct exact-linear solver pressure; keep recurrence, transience, optional stopping, mixing, and infinite-horizon potential theory in the Lean-horizon lane."
   },
@@ -72,13 +72,15 @@
     "absorption-probability-equations",
     "expected-hitting-time-equations",
     "bad-survival-mass-rejected",
+    "qf-lra-bad-survival-mass",
     "bad-expected-time-rejected",
+    "qf-lra-bad-expected-time",
     "general-hitting-theory-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite hitting events and absorbing targets over explicit finite transition matrices.",
     "Replay first-hit distributions, survival probabilities, absorption probabilities, and expected hitting-time equations by exact rational arithmetic.",
-    "Keep malformed survival-mass and potential/hitting-time table rejections on Axeyum's checked Farkas evidence path when they reduce to linear equations.",
+    "Keep malformed survival-mass and potential/hitting-time replay separate from checked QF_LRA/Farkas rows for isolated exact-linear contradictions.",
     "Keep recurrence, transience, stopping theorems, and infinite-horizon convergence marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

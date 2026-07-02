@@ -934,8 +934,9 @@ malformed kernel row with QF_LRA/Farkas evidence, and a
 regular-conditional-probability Lean-horizon row.
 `artifacts/examples/math/finite-hitting-times-v0/` now validates exact finite
 first-hit distributions, survival probabilities, absorption-probability
-fixed-point equations, expected hitting-time equations, checked QF_LRA/Farkas
-rejection of false survival-mass and expected-time tables, and a
+fixed-point equations, expected hitting-time equations, replay-only rejection
+of false survival-mass and expected-time tables, separate checked QF_LRA/Farkas
+rows for the isolated linear conflicts, and a
 recurrence/transience Lean-horizon row.
 `artifacts/examples/math/finite-concentration-v0/` now validates exact finite
 Markov, Chebyshev, and union-bound replays over rational atom tables, checked
@@ -1146,7 +1147,8 @@ Recommended order:
     rejections.
 30. `finite-hitting-times-v0`: finite first-hit distributions, survival
     probabilities, absorption-probability equations, expected hitting-time
-    equations, and bad survival-mass/expected-time rejection.
+    equations, bad survival-mass/expected-time replay, and separate
+    QF_LRA/Farkas proof rows.
 31. `finite-concentration-v0`: finite Markov, Chebyshev, and union-bound
     tail checks, plus rejection of a false concentration bound.
 32. `finite-chebyshev-systems-v0`: finite Vandermonde unisolvence,
@@ -2099,10 +2101,11 @@ path after exact replay computes the row sum and the next distribution.
 composition-entry rejections through the same checked Farkas evidence path
 after exact replay computes the malformed row sum `3/5 + 3/5 = 6/5` and the
 composed transition `(K;L)(rainy, early) = 22/75`.
-`finite-hitting-times-v0` now routes its bad survival-mass and bad expected-time
-rows through source-linked checked Farkas evidence paths after exact first-hit
-replay computes `P(T > 4)=5/16` and clearing denominators in the finite
-expected-time equation, and its metadata promotes those rows for solver reuse.
+`finite-hitting-times-v0` now keeps its bad survival-mass and bad expected-time
+rows as exact finite replay, while `qf-lra-bad-survival-mass` and
+`qf-lra-bad-expected-time` carry source-linked checked Farkas evidence after
+exact first-hit replay computes `P(T > 4)=5/16` and the expected-time replay
+computes the start-equation right-hand side `7/2`.
 `least-squares-regression-v0` now routes its bad coefficient and bad
 RSS-improvement rows through the same checked Farkas evidence path using the
 first failed normal equation and exact mean-baseline RSS replay.

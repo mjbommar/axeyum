@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 660 expected checks.
+- 662 expected checks.
 - 322 checked proof/evidence rows.
-- 267 replay-only rows.
+- 269 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1112,13 +1112,15 @@ Pick one row per commit unless the change is purely navigational.
      normalization and kernel-composition contradictions without claiming
      regular conditional probabilities, general disintegration, Markov kernels
      on arbitrary measurable spaces, or stochastic-process convergence.
-127. Landed: extend `finite-hitting-times-v0` with a checked bad survival-mass
-     row. Exact finite first-hit replay computes `P(T > 4)=5/16`, while the
-     malformed source SMT-LIB artifact claims `1/4`; the shared QF_LRA/Farkas
-     route now checks both finite-horizon survival-mass and expected-time
-     contradictions without claiming recurrence/transience, optional stopping,
-     mixing bounds, Markov-chain potential theory, or infinite-horizon
-     convergence.
+127. Landed: split `finite-hitting-times-v0` so exact bad survival-mass and
+     bad expected-time rows remain replay-only, while
+     `qf-lra-bad-survival-mass` and `qf-lra-bad-expected-time` own the checked
+     Farkas proof-object contradictions. Exact finite first-hit replay computes
+     `P(T > 4)=5/16`, and exact expected-time replay computes the malformed
+     start-equation right-hand side `7/2`; the shared QF_LRA/Farkas route
+     checks the isolated false claims `1/4` and `h_start = 3` without claiming
+     recurrence/transience, optional stopping, mixing bounds, Markov-chain
+     potential theory, or infinite-horizon convergence.
 128. Landed: split `finite-martingales-v0` so exact bounded-stopping and bad
      martingale rows remain replay-only, while `qf-lra-bad-stopped-expectation`
      and `qf-lra-bad-martingale` own the checked Farkas proof-object

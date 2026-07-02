@@ -29,6 +29,12 @@ Expected result: `unsat`.
 
 The validator carries only not-yet-hit mass through four steps and recomputes
 `P(T > 4) = 5/16`, so the claimed survival mass `1/4` is false.
+This row is replay-only; the separate `qf-lra-bad-survival-mass` row owns the
+proof-object refutation.
+
+## `qf-lra-bad-survival-mass`
+
+Expected result: `unsat`.
 
 The resource-backed Axeyum regression checks the final exact-rational
 contradiction as `QF_LRA`: `16 * survival_mass = 5` and
@@ -40,6 +46,12 @@ Expected result: `unsat`.
 
 The validator rejects the malformed expected-time table because the equation at
 `start` evaluates to `7/2`, not the claimed `3`.
+This row is replay-only; the separate `qf-lra-bad-expected-time` row owns the
+proof-object refutation.
+
+## `qf-lra-bad-expected-time`
+
+Expected result: `unsat`.
 
 The resource-backed Axeyum regression checks the denominator-cleared linear
 obligation as `QF_LRA`: `h_start = 3`, `h_middle = 2`, and

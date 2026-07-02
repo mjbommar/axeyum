@@ -45,7 +45,8 @@ Concept rows:
 | `first-hit-distribution-witness` | `sat` | replay-only |
 | `absorption-probability-equations` | `sat` | replay-only |
 | `expected-hitting-time-equations` | `sat` | replay-only |
-| `bad-expected-time-rejected` | `unsat` | checked |
+| `bad-expected-time-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-expected-time` | `unsat` | checked |
 | `matrix-operator-bound` | `sat` | replay-only |
 | `bad-l1-sum-norm-rejected` | `unsat` | checked |
 | `bad-operator-bound-rejected` | `unsat` | checked |

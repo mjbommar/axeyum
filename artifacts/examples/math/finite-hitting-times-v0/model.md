@@ -45,8 +45,8 @@ The malformed survival row keeps the same finite trace but claims:
 P(T > 4) = 1/4
 ```
 
-Exact replay computes `5/16`, so the final equality conflict is checked through
-QF_LRA/Farkas evidence.
+Exact replay computes `5/16`. The separate `qf-lra-bad-survival-mass` row
+checks the final equality conflict through QF_LRA/Farkas evidence.
 
 ## Absorption Probability
 
@@ -99,4 +99,5 @@ Clearing denominators gives the linear equation:
 ```
 
 With `h(start) = 3` and `h(middle) = 2`, that equation reduces to `6 = 7`.
-The pack keeps this final contradiction on the checked `UnsatFarkas` route.
+The separate `qf-lra-bad-expected-time` row keeps this final contradiction on
+the checked `UnsatFarkas` route.

@@ -319,6 +319,9 @@ const FINITE_STOCHASTIC_KERNEL_BAD_COMPOSITION: &str = include_str!(
 const FINITE_HITTING_TIMES_BAD_SURVIVAL_MASS: &str = include_str!(
     "../../../artifacts/examples/math/finite-hitting-times-v0/smt2/bad-survival-mass-farkas-conflict.smt2"
 );
+const FINITE_HITTING_TIMES_BAD_EXPECTED_TIME: &str = include_str!(
+    "../../../artifacts/examples/math/finite-hitting-times-v0/smt2/bad-expected-time-farkas-conflict.smt2"
+);
 const FINITE_PROBABILITY_BAD_CONDITIONAL_PROBABILITY: &str = include_str!(
     "../../../artifacts/examples/math/finite-probability-v0/smt2/bad-conditional-probability-farkas-conflict.smt2"
 );
@@ -1404,32 +1407,16 @@ fn finite_markov_chain_bad_stationary_distribution_artifact_emits_checked_farkas
 #[test]
 fn finite_hitting_times_bad_survival_mass_artifact_emits_checked_farkas() {
     assert_resource_farkas(
-        "finite-hitting-times-v0 bad-survival-mass SMT-LIB artifact",
+        "finite-hitting-times-v0 qf-lra-bad-survival-mass SMT-LIB artifact",
         FINITE_HITTING_TIMES_BAD_SURVIVAL_MASS,
     );
 }
 
 #[test]
 fn finite_hitting_times_bad_expected_time_emits_checked_farkas() {
-    let mut arena = TermArena::new();
-    let h_start = real(&mut arena, "h_start");
-    let h_middle = real(&mut arena, "h_middle");
-    let h_start_is_three = eq_ratio(&mut arena, h_start, 3, 1);
-    let h_middle_is_two = eq_ratio(&mut arena, h_middle, 2, 1);
-
-    // Clear denominators from h_start = 1 + (1/2)h_start + (1/2)h_middle:
-    // 2*h_start = 2 + h_start + h_middle. With the malformed table this says
-    // 6 = 7, an exact-rational Farkas contradiction.
-    let two = arena.real_ratio(2, 1);
-    let two_h_start = arena.real_mul(two, h_start).unwrap();
-    let two_plus_h_start = arena.real_add(two, h_start).unwrap();
-    let rhs = arena.real_add(two_plus_h_start, h_middle).unwrap();
-    let cleared_equation = arena.eq(two_h_start, rhs).unwrap();
-
-    assert_farkas_checked(
-        "finite-hitting-times-v0 bad-expected-time-rejected",
-        &arena,
-        &[h_start_is_three, h_middle_is_two, cleared_equation],
+    assert_resource_farkas(
+        "finite-hitting-times-v0 qf-lra-bad-expected-time SMT-LIB artifact",
+        FINITE_HITTING_TIMES_BAD_EXPECTED_TIME,
     );
 }
 

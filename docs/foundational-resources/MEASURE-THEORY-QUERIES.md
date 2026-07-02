@@ -62,7 +62,7 @@ needs concrete checked rows to display.
 | Stochastic kernels, Markov rows, and finite hitting-time equations | `bridge_stochastic_kernel` | `Farkas` | `checks --concept bridge_stochastic_kernel --route Farkas --proof-status checked` |
 | Tail and concentration rows | `bridge_tail_count_obstruction` | `Farkas` | `checks --concept bridge_tail_count_obstruction --route Farkas --proof-status checked` |
 | Finite measure display rows | packs `finite-measure-v0`, `finite-measure-monotonicity-v0` | `Farkas` | `checks --pack finite-measure-v0 --route Farkas --proof-status checked`; `checks --pack finite-measure-monotonicity-v0 --route Farkas --proof-status checked` |
-| Integration, martingale, and hitting-time display rows | packs `finite-integration-v0`, `finite-martingales-v0`, `finite-hitting-times-v0` | `Farkas` | `checks --pack finite-integration-v0 --route Farkas --proof-status checked --text qf-lra-bad-expectation`; `checks --pack finite-martingales-v0 --route Farkas --proof-status checked --text qf-lra-bad-stopped-expectation`; `checks --pack finite-hitting-times-v0 --route Farkas --proof-status checked` |
+| Integration, martingale, and hitting-time display rows | packs `finite-integration-v0`, `finite-martingales-v0`, `finite-hitting-times-v0` | `Farkas` | `checks --pack finite-integration-v0 --route Farkas --proof-status checked --text qf-lra-bad-expectation`; `checks --pack finite-martingales-v0 --route Farkas --proof-status checked --text qf-lra-bad-stopped-expectation`; `checks --pack finite-hitting-times-v0 --route Farkas --proof-status checked --text qf-lra-bad-survival-mass` |
 
 ## Copyable Examples
 
@@ -167,6 +167,7 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-hitting-times-v0 \
   --route Farkas \
   --proof-status checked \
+  --text qf-lra-bad-survival-mass \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \

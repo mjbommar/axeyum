@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite hitting-time Farkas rows split landed.**
+  `finite-hitting-times-v0` now keeps `bad-survival-mass-rejected` and
+  `bad-expected-time-rejected` as exact finite replay: they recompute
+  `P(T > 4)=5/16` instead of `1/4` and the malformed start-state
+  expected-time equation right-hand side `7/2` instead of `3`. The checked
+  proof-object paths are now the explicit `qf-lra-bad-survival-mass` and
+  `qf-lra-bad-expected-time` rows linked to the existing QF_LRA/Farkas
+  SMT-LIB artifacts and regressions. Focused validation passes; the public
+  summary now reports 120 concept rows, 108 packs, 662 expected checks, 322
+  checked rows, 269 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite martingale Farkas rows split landed.**
   `finite-martingales-v0` now keeps `bad-stopped-expectation-rejected` and
   `bad-martingale-rejected` as exact finite replay: they recompute

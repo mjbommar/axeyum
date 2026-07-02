@@ -613,8 +613,9 @@ schemas, examples, and validation workflows.
   regular-conditional-probability Lean-horizon row.
 - [`artifacts/examples/math/finite-hitting-times-v0/`](../../artifacts/examples/math/finite-hitting-times-v0/)
   validates exact finite first-hit distributions, survival probabilities,
-  absorption-probability equations, expected hitting-time equations, checked
-  rejection of malformed survival-mass and expected-time tables, and a
+  absorption-probability equations, expected hitting-time equations,
+  replay-only rejection of malformed survival-mass and expected-time tables,
+  separate checked QF_LRA/Farkas rows for the isolated linear conflicts, and a
   recurrence/transience Lean-horizon row.
 - [`artifacts/examples/math/finite-concentration-v0/`](../../artifacts/examples/math/finite-concentration-v0/)
   validates exact finite Markov, Chebyshev, and union-bound replays over

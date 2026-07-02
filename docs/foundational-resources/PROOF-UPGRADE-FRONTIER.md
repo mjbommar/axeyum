@@ -327,8 +327,9 @@ First targets:
   (resource-backed Farkas regressions landed for the bad stochastic row and
   bad stationary-distribution row)
 - [finite-hitting-times-v0](../../artifacts/examples/math/finite-hitting-times-v0/)
-  (source-linked solver-reuse promotions landed for the bad survival-mass and
-  bad expected-time rows)
+  (exact survival-mass and expected-time replay stays in the bad rows;
+  source-linked Farkas regressions now live in `qf-lra-bad-survival-mass` and
+  `qf-lra-bad-expected-time`)
 - [least-squares-regression-v0](../../artifacts/examples/math/least-squares-regression-v0/)
   (resource-backed Farkas regressions landed for the bad coefficient and bad
   RSS-improvement rows)

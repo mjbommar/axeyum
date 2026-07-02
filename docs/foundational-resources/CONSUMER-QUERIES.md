@@ -501,7 +501,7 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-hitting-times-v0 \
   --route Farkas \
   --proof-status checked \
-  --text survival \
+  --text qf-lra-bad-survival-mass \
   --require-any
 ```
 

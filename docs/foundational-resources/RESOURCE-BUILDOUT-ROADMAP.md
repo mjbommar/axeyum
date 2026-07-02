@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 660 expected checks.
+- 662 expected checks.
 - 322 checked proof/evidence rows.
-- 267 replay-only rows.
+- 269 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1375,9 +1375,11 @@ Pick one item per commit unless the change is purely navigational.
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_total_expectation_artifact_emits_checked_farkas`, and
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_tower_property_artifact_emits_checked_farkas`, and
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_conditional_expectation_bad_variance_decomposition_artifact_emits_checked_farkas`.
-27. Landed: promote `finite-hitting-times-v0` through source-linked
-    QF_LRA/Farkas regressions for `bad-survival-mass-rejected` and
-    `bad-expected-time-rejected`. The artifacts
+27. Landed: split and promote `finite-hitting-times-v0` through source-linked
+    QF_LRA/Farkas regressions: `bad-survival-mass-rejected` and
+    `bad-expected-time-rejected` stay exact finite replay, while
+    `qf-lra-bad-survival-mass` and `qf-lra-bad-expected-time` own the checked
+    proof-object refutations. The artifacts
     `artifacts/examples/math/finite-hitting-times-v0/smt2/bad-survival-mass-farkas-conflict.smt2`
     and
     `artifacts/examples/math/finite-hitting-times-v0/smt2/bad-expected-time-farkas-conflict.smt2`

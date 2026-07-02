@@ -23660,6 +23660,10 @@ def validate_finite_hitting_times(expected: dict[str, Any]) -> None:
     bad_survival = checks["bad-survival-mass-rejected"]
     if bad_survival["expected_result"] != "unsat":
         fail("bad-survival-mass-rejected must expect unsat")
+    if bad_survival["proof_status"] != "replay-only":
+        fail("bad-survival-mass-rejected must be replay-only")
+    if bad_survival["validation"] != "finite_bad_hitting_survival_replay":
+        fail("bad-survival-mass-rejected must use finite_bad_hitting_survival_replay validation")
     data = bad_survival.get("data", {})
     states = require_string_list("bad survival states", data.get("states"))
     matrix = require_state_transition_matrix("bad survival transition_matrix", data.get("transition_matrix"), states)
@@ -23693,18 +23697,57 @@ def validate_finite_hitting_times(expected: dict[str, Any]) -> None:
         fail("bad-survival-mass-rejected actual survival is incorrect")
     if actual_survival == claimed_survival:
         fail("bad-survival-mass-rejected must document a false survival mass")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad survival smt2_artifact", smt2_artifact)
-    if not (ROOT / smt2_artifact).is_file():
-        fail("bad-survival-mass-rejected smt2_artifact is missing")
-    regression = data.get("farkas_regression")
-    require_string("bad survival farkas_regression", regression)
+    notes = bad_survival.get("notes", "")
+    if "separate qf-lra-bad-survival-mass" not in notes:
+        fail("bad-survival-mass-rejected notes must name the separate qf-lra-bad-survival-mass row")
+
+    qf_bad_survival = checks["qf-lra-bad-survival-mass"]
+    if qf_bad_survival["expected_result"] != "unsat":
+        fail("qf-lra-bad-survival-mass must expect unsat")
+    if qf_bad_survival["proof_status"] != "checked":
+        fail("qf-lra-bad-survival-mass must be checked")
+    if qf_bad_survival["validation"] != "qf_lra_bad_hitting_survival_refutation":
+        fail("qf-lra-bad-survival-mass must use qf_lra_bad_hitting_survival_refutation validation")
+    qf_data = qf_bad_survival.get("data", {})
+    if qf_data.get("source_witness") != "three-state-hitting-chain":
+        fail("qf-lra-bad-survival-mass must cite three-state-hitting-chain")
+    if qf_data.get("source_replay_row") != "bad-survival-mass-rejected":
+        fail("qf-lra-bad-survival-mass must cite bad-survival-mass-rejected")
+    qf_actual_survival = require_probability(
+        "qf-lra bad survival actual_survival_after_horizon",
+        qf_data.get("actual_survival_after_horizon"),
+    )
+    qf_claimed_survival = require_probability(
+        "qf-lra bad survival claimed_survival_after_horizon",
+        qf_data.get("claimed_survival_after_horizon"),
+    )
+    if qf_actual_survival != actual_survival:
+        fail("qf-lra-bad-survival-mass actual_survival_after_horizon must match replay")
+    if qf_claimed_survival != claimed_survival:
+        fail("qf-lra-bad-survival-mass claimed_survival_after_horizon must match replay")
+    equation = qf_data.get("farkas_survival_equation")
+    require_string("qf-lra bad survival farkas_survival_equation", equation)
+    if equation != "survival_mass = actual_survival_after_horizon":
+        fail("qf-lra-bad-survival-mass must document the Farkas survival equation")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad survival smt2_artifact", smt2_artifact)
+    check_source("qf-lra bad survival smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad survival farkas_regression", regression)
     if "finite_hitting_times_bad_survival_mass_artifact_emits_checked_farkas" not in regression:
-        fail("bad-survival-mass-rejected must link the Farkas regression")
+        fail("qf-lra-bad-survival-mass must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad survival certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-survival-mass certificate must document checked UnsatFarkas evidence")
 
     bad = checks["bad-expected-time-rejected"]
     if bad["expected_result"] != "unsat":
         fail("bad-expected-time-rejected must expect unsat")
+    if bad["proof_status"] != "replay-only":
+        fail("bad-expected-time-rejected must be replay-only")
+    if bad["validation"] != "finite_bad_expected_hitting_time_replay":
+        fail("bad-expected-time-rejected must use finite_bad_expected_hitting_time_replay validation")
     data = bad.get("data", {})
     states = require_string_list("bad expected time states", data.get("states"))
     matrix = require_state_transition_matrix("bad expected time transition_matrix", data.get("transition_matrix"), states)
@@ -23728,14 +23771,46 @@ def validate_finite_hitting_times(expected: dict[str, Any]) -> None:
     require_string("bad expected time cleared_denominator_equation", equation)
     if equation != "2*h_start = 2 + h_start + h_middle":
         fail("bad-expected-time-rejected must document the cleared linear equation")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad expected time smt2_artifact", smt2_artifact)
-    if not (ROOT / smt2_artifact).is_file():
-        fail("bad-expected-time-rejected smt2_artifact is missing")
-    regression = data.get("farkas_regression")
-    require_string("bad expected time farkas_regression", regression)
+    notes = bad.get("notes", "")
+    if "separate qf-lra-bad-expected-time" not in notes:
+        fail("bad-expected-time-rejected notes must name the separate qf-lra-bad-expected-time row")
+
+    qf_bad = checks["qf-lra-bad-expected-time"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-expected-time must expect unsat")
+    if qf_bad["proof_status"] != "checked":
+        fail("qf-lra-bad-expected-time must be checked")
+    if qf_bad["validation"] != "qf_lra_bad_expected_hitting_time_refutation":
+        fail("qf-lra-bad-expected-time must use qf_lra_bad_expected_hitting_time_refutation validation")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-expected-time-rejected":
+        fail("qf-lra-bad-expected-time must cite bad-expected-time-rejected")
+    if qf_data.get("failing_state") != failing_state:
+        fail("qf-lra-bad-expected-time failing_state must match replay")
+    qf_h_start = require_fraction("qf-lra bad expected claimed_h_start", qf_data.get("claimed_h_start"))
+    qf_h_middle = require_fraction("qf-lra bad expected claimed_h_middle", qf_data.get("claimed_h_middle"))
+    qf_actual_rhs = require_fraction("qf-lra bad expected actual_rhs", qf_data.get("actual_rhs"))
+    if qf_h_start != claimed_times["start"]:
+        fail("qf-lra-bad-expected-time claimed_h_start must match replay")
+    if qf_h_middle != claimed_times["middle"]:
+        fail("qf-lra-bad-expected-time claimed_h_middle must match replay")
+    if qf_actual_rhs != actual_rhs:
+        fail("qf-lra-bad-expected-time actual_rhs must match replay")
+    qf_equation = qf_data.get("cleared_denominator_equation")
+    require_string("qf-lra bad expected cleared_denominator_equation", qf_equation)
+    if qf_equation != equation:
+        fail("qf-lra-bad-expected-time cleared_denominator_equation must match replay")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad expected smt2_artifact", smt2_artifact)
+    check_source("qf-lra bad expected smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad expected farkas_regression", regression)
     if "finite_hitting_times_bad_expected_time_emits_checked_farkas" not in regression:
-        fail("bad-expected-time-rejected must link the Farkas regression")
+        fail("qf-lra-bad-expected-time must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad expected certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-expected-time certificate must document checked UnsatFarkas evidence")
 
     horizon = checks["general-hitting-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

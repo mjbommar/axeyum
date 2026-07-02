@@ -24,14 +24,17 @@ Concept rows:
 | `first-hit-distribution-witness` | `sat` | replay-only |
 | `absorption-probability-equations` | `sat` | replay-only |
 | `expected-hitting-time-equations` | `sat` | replay-only |
-| `bad-survival-mass-rejected` | `unsat` | checked |
-| `bad-expected-time-rejected` | `unsat` | checked |
+| `bad-survival-mass-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-survival-mass` | `unsat` | checked |
+| `bad-expected-time-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-expected-time` | `unsat` | checked |
 | `general-hitting-theory-lean-horizon` | `not-run` | lean-horizon |
 
-Every checked row is exact finite rational arithmetic over a finite transition
-matrix. The pack does not prove recurrence or transience classifications,
-infinite-horizon convergence, mixing bounds, optional stopping, or potential
-theory for general Markov chains.
+Every replay row is exact finite rational arithmetic over a finite transition
+matrix. The checked `qf-lra-*` rows isolate the final scalar contradictions and
+require Farkas evidence. The pack does not prove recurrence or transience
+classifications, infinite-horizon convergence, mixing bounds, optional
+stopping, or potential theory for general Markov chains.
 
 ## Replay The Absorbing Chain
 
@@ -184,7 +187,8 @@ The checker recomputes the finite survival mass as:
 P(T > 4) = 5/16
 ```
 
-The resource regression checks the final contradiction as `QF_LRA`:
+That replay row is not the proof object. The separate checked row
+`qf-lra-bad-survival-mass` checks the final contradiction as `QF_LRA`:
 
 ```text
 16*survival_mass = 5
@@ -219,8 +223,9 @@ and rejects the table because:
 The candidate expected-time table is untrusted; the small checker rebuilds the
 finite linear equation from the transition row and target set.
 
-The resource regression clears denominators and checks the final contradiction
-as `QF_LRA`:
+The replay row is not the proof object. The separate checked row
+`qf-lra-bad-expected-time` clears denominators and checks the final
+contradiction as `QF_LRA`:
 
 ```text
 h_start = 3
@@ -242,7 +247,8 @@ bounded first-hit distributions
 survival mass after a finite horizon
 absorption-probability fixed-point equations
 expected hitting-time linear equations
-bad survival-mass and expected-time-table refutations
+bad survival-mass and expected-time-table replay refutations
+separate QF_LRA/Farkas proof rows for the isolated scalar conflicts
 ```
 
 The following remain proof-assistant targets:
@@ -265,6 +271,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-hitting-times-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_hitting_times_bad_survival_mass_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_hitting_times_bad_expected_time_emits_checked_farkas
 ```
 
 Expected output:
@@ -286,5 +293,5 @@ remaining horizon -> general hitting-time and Markov-chain potential theory
 The graduation target is to encode finite hitting events and absorbing targets
 over explicit finite transition matrices, replay first-hit distributions,
 survival probabilities, absorption probabilities, and expected hitting-time
-equations by exact rational arithmetic, and emit checked counterexample
-evidence for malformed survival-mass, potential, or hitting-time tables.
+equations by exact rational arithmetic, and keep malformed-table replay
+separate from checked proof-object evidence for isolated scalar conflicts.
