@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Inversion-geometry theorem-boundary resource landed.**
+  `inversion-geometry-theorem-boundary.md` now separates
+  `finite-inversion-geometry-v0` exact inverse-image replay,
+  inverse-distance-product replay, collinearity replay, and checked bad
+  inverse-coordinate/bad inverse-distance-product QF_LRA/Farkas rows from
+  inversion involution, circle-line correspondence, angle-preservation,
+  power-of-a-point, generalized circle-inversion, synthetic-geometry,
+  projective-geometry, and numerical-geometry theorem claims. The theorem
+  horizon, geometry, learner-map, and smoke query docs now expose the inversion
+  boundary directly.
+
 - **Circle-geometry theorem-boundary resource landed.**
   `circle-geometry-theorem-boundary.md` now separates
   `finite-circle-geometry-v0` exact point-on-circle replay,

@@ -433,6 +433,11 @@ Companion maps:
   checking, collinearity replay, checked QF_LRA/Farkas bad inverse-coordinate
   and bad inverse-distance-product rejection, and the general inversion-geometry
   Lean horizon.
+- [Inversion Geometry Theorem Boundary](inversion-geometry-theorem-boundary.md):
+  maps those finite inverse-image, distance-product, collinearity,
+  bad-coordinate, and bad-product shadows to the missing inversion involution,
+  circle-line correspondence, angle-preservation, power-of-a-point, generalized
+  circle-inversion, synthetic-geometry, and numerical-geometry theorem routes.
 - [Finite Cyclic Geometry](finite-cyclic-geometry-end-to-end.md): follows
   exact cyclic quadrilateral replay, diagonal-intersection checking, opposite
   right-angle replay, rational Ptolemy replay, checked QF_LRA/Farkas bad

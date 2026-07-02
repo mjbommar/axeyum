@@ -179,7 +179,8 @@ theorem boundary is
 The finite inversion-geometry slice checks unit-circle inversion as scalar
 vector replay, inverse-distance products, and collinearity determinants, then
 rejects bad inverse-coordinate and inverse-distance-product rows through
-QF_LRA/Farkas evidence.
+QF_LRA/Farkas evidence; its theorem boundary is
+[Inversion Geometry Theorem Boundary](inversion-geometry-theorem-boundary.md).
 The finite cyclic-geometry slice checks an inscribed square as exact vector
 data: radius-squared rows, diagonal midpoints, diagonal dot products, and
 opposite-angle dot products, then rejects bad diagonal-intersection and
@@ -437,6 +438,11 @@ collinearity with the center. Its bad row claims inverse x-coordinate `1/2`;
 exact replay computes `2/5`, and the final conflict is checked through
 QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Inversion Geometry](finite-inversion-geometry-end-to-end.md).
+For the theorem boundary that keeps those finite inversion rows separate from
+involution, circle-line correspondence, angle-preservation, power-of-a-point,
+generalized circle-inversion, synthetic-geometry, and numerical-geometry
+theorems, read
+[Inversion Geometry Theorem Boundary](inversion-geometry-theorem-boundary.md).
 
 For a finite cyclic-geometry example, encode a square on the unit circle and a
 `4 x 3` cyclic rectangle:
@@ -742,6 +748,7 @@ replay, read
 [End To End: Finite Circle Geometry](finite-circle-geometry-end-to-end.md),
 [Circle Geometry Theorem Boundary](circle-geometry-theorem-boundary.md),
 [End To End: Finite Inversion Geometry](finite-inversion-geometry-end-to-end.md),
+[Inversion Geometry Theorem Boundary](inversion-geometry-theorem-boundary.md),
 [End To End: Finite Cyclic Geometry](finite-cyclic-geometry-end-to-end.md),
 [End To End: Rational Inner Product Spaces](inner-product-spaces-end-to-end.md),
 [End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md),

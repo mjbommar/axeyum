@@ -2023,6 +2023,16 @@ Pick one row per commit unless the change is purely navigational.
      synthetic-geometry, projective-geometry, and numerical-geometry theorem
      routes, and adds circle-specific horizon queries to the public smoke gate
      without adding a duplicate pack or changing resource counts.
+240. Landed: add `inversion-geometry-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-inversion-geometry-v0`. It maps exact
+     inverse-image replay, inverse-distance-product replay, collinearity
+     replay, and checked QF_LRA/Farkas bad inverse-coordinate and bad
+     inverse-distance-product rows to the missing inversion involution,
+     circle-line correspondence, angle-preservation, power-of-a-point,
+     generalized circle-inversion, synthetic-geometry, projective-geometry,
+     and numerical-geometry theorem routes, and adds inversion-specific
+     horizon queries to the public smoke gate without adding a duplicate pack
+     or changing resource counts.
 
 ## Validation Checklist
 

@@ -55,7 +55,7 @@ needs concrete checked rows to display.
 | Circle, inversion, and cyclic-configuration replay | `bridge_finite_circle_inversion_cyclic_replay` | `Farkas` | `checks --concept bridge_finite_circle_inversion_cyclic_replay --route Farkas --proof-status checked` |
 | All finite geometry checks | field `geometry` | `Farkas` | `checks --field geometry --route Farkas --proof-status checked` |
 | Circle-specific display rows | pack `finite-circle-geometry-v0` | `Farkas` | `checks --pack finite-circle-geometry-v0 --route Farkas --proof-status checked`; `horizon-frontier --text "circle geometry"` |
-| Inversion-specific display rows | pack `finite-inversion-geometry-v0` | `Farkas` | `checks --pack finite-inversion-geometry-v0 --route Farkas --proof-status checked` |
+| Inversion-specific display rows | pack `finite-inversion-geometry-v0` | `Farkas` | `checks --pack finite-inversion-geometry-v0 --route Farkas --proof-status checked`; `horizon-frontier --text "inversion geometry"` |
 | Cyclic/Ptolemy display rows | pack `finite-cyclic-geometry-v0` | `Farkas` | `checks --pack finite-cyclic-geometry-v0 --route Farkas --proof-status checked` |
 
 ## Copyable Examples
@@ -154,6 +154,29 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-inversion-geometry-v0 \
   --route Farkas \
   --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text "inversion geometry" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-inversion-geometry-v0 \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-inversion-geometry-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text "x-coordinate" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-inversion-geometry-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text product \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \

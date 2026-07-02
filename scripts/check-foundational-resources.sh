@@ -494,6 +494,10 @@ python3 scripts/query-foundational-resources.py horizon-frontier --text "circle 
 python3 scripts/query-foundational-resources.py checks --pack finite-circle-geometry-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-circle-geometry-v0 --route Farkas --proof-status checked --text radius --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-circle-geometry-v0 --route Farkas --proof-status checked --text intersection --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text "inversion geometry" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-inversion-geometry-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-inversion-geometry-v0 --route Farkas --proof-status checked --text "x-coordinate" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-inversion-geometry-v0 --route Farkas --proof-status checked --text product --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field functional_analysis_and_operator_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field functional_analysis_and_operator_theory --text operator --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field functional_analysis_and_operator_theory --text Chebyshev --require-any >/dev/null

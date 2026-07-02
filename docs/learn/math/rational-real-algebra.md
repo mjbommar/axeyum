@@ -512,6 +512,11 @@ radius squared `1/5`, the product `5 * 1/5 = 1`, and the determinant proving
 the center, point, and inverse point are collinear. The bad row claims inverse
 x-coordinate `1/2`; exact replay computes `2/5`, and the source QF_LRA artifact
 checks that final conflict with `UnsatFarkas` evidence.
+For the theorem boundary that keeps those finite inversion rows separate from
+involution, circle-line correspondence, angle-preservation, power-of-a-point,
+generalized circle-inversion, synthetic-geometry, and numerical-geometry
+theorems, read
+[Inversion Geometry Theorem Boundary](inversion-geometry-theorem-boundary.md).
 
 For a finite cyclic-geometry check, encode one square on the unit circle:
 
@@ -649,7 +654,8 @@ For finite circle point, tangent, and chord replay, read
 [End To End: Finite Circle Geometry](finite-circle-geometry-end-to-end.md) and
 [Circle Geometry Theorem Boundary](circle-geometry-theorem-boundary.md).
 For finite inversion replay, read
-[End To End: Finite Inversion Geometry](finite-inversion-geometry-end-to-end.md).
+[End To End: Finite Inversion Geometry](finite-inversion-geometry-end-to-end.md)
+and [Inversion Geometry Theorem Boundary](inversion-geometry-theorem-boundary.md).
 For finite cyclic quadrilateral replay, read
 [End To End: Finite Cyclic Geometry](finite-cyclic-geometry-end-to-end.md).
 
