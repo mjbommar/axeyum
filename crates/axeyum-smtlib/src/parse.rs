@@ -3353,6 +3353,22 @@ impl LenAbs {
         Ok(())
     }
 
+    /// Hooks a string atom that is **exactly equivalent** to `predicate` in the
+    /// unbounded theory (not merely *implied* by it): `atom → predicate`, with
+    /// **no** fresh Boolean. Used for equality against the empty string, where
+    /// `s = "" ⟺ len(s) = 0` — the empty string is the *unique* length-zero
+    /// string, so the length predicate captures the atom's full content. This
+    /// lets step 1 refute e.g. `len(s) = 0 ∧ s ≠ ""` that the weaker
+    /// `fresh_bool ∧ (len = 0)` relaxation leaves satisfiable (pick the Boolean
+    /// false). Sound because the replacement has the *same truth value* as the
+    /// atom in every real model, so it is faithful under any Boolean structure.
+    fn note_atom_exact(&self, arena: &TermArena, atom: TermId, predicate: TermId) {
+        if matches!(arena.node(atom), TermNode::BoolConst(_)) {
+            return;
+        }
+        self.note_repl(atom, predicate);
+    }
+
     /// Hooks a string atom: `atom → fresh_bool ∧ fact`.
     fn note_atom_fact(
         &self,
@@ -4583,6 +4599,44 @@ fn string_aware_eq(
         return Ok(Some(string_equal(arena, a, b)?));
     }
     Ok(None) // genuinely differing BV widths: let `arena.eq` raise its sort error
+}
+
+/// Whether `t` is (statically) the **empty** packed string — a length-zero
+/// constant. The empty string is the unique string of length 0, so an equality
+/// against it is length-determined (`s = "" ⟺ len(s) = 0`).
+fn string_len_is_zero(arena: &TermArena, t: TermId) -> bool {
+    packed_string_len(arena, t) == Some(0)
+}
+
+/// Records the length abstraction fact for a **string** equality atom `atom`
+/// over operands `p`, `q`. `p = q` implies `len(p) = len(q)` (the general,
+/// relaxation fact via `fresh_bool ∧ fact`); when one operand is the empty
+/// string the atom is *exactly* `len(other) = 0` (the empty string is the
+/// unique length-0 string — recorded with [`LenAbs::note_atom_exact`], no fresh
+/// Boolean, so step 1 can refute `s = "" ∧ len(s) = 0`-style conflicts).
+fn string_eq_len_hook(
+    arena: &mut TermArena,
+    lenabs: &LenAbs,
+    atom: TermId,
+    p: TermId,
+    q: TermId,
+) -> Result<(), SmtError> {
+    let lp = lenabs.len_expr_string(arena, p)?;
+    let lq = lenabs.len_expr_string(arena, q)?;
+    if string_len_is_zero(arena, p) {
+        let zero = arena.int_const(0);
+        let pred = arena.eq(lq, zero)?;
+        lenabs.note_atom_exact(arena, atom, pred);
+        Ok(())
+    } else if string_len_is_zero(arena, q) {
+        let zero = arena.int_const(0);
+        let pred = arena.eq(lp, zero)?;
+        lenabs.note_atom_exact(arena, atom, pred);
+        Ok(())
+    } else {
+        let fact = arena.eq(lp, lq)?;
+        lenabs.note_atom_fact(arena, atom, fact)
+    }
 }
 
 fn parse_atom(
@@ -7778,10 +7832,7 @@ fn apply_op(
                         return Ok(e);
                     }
                     if let Some(e) = string_aware_eq(arena, p, q)? {
-                        let lp = lenabs.len_expr_string(arena, p)?;
-                        let lq = lenabs.len_expr_string(arena, q)?;
-                        let fact = arena.eq(lp, lq)?;
-                        lenabs.note_atom_fact(arena, e, fact)?;
+                        string_eq_len_hook(arena, lenabs, e, p, q)?;
                         return Ok(e);
                     }
                     if let Some(e) = self_store_array_equality(arena, p, q)? {
@@ -7789,10 +7840,7 @@ fn apply_op(
                     }
                     let e = arena.eq(p, q).map_err(SmtError::Ir)?;
                     if string_shaped(arena, p) && string_shaped(arena, q) {
-                        let lp = lenabs.len_expr_string(arena, p)?;
-                        let lq = lenabs.len_expr_string(arena, q)?;
-                        let fact = arena.eq(lp, lq)?;
-                        lenabs.note_atom_fact(arena, e, fact)?;
+                        string_eq_len_hook(arena, lenabs, e, p, q)?;
                     }
                     Ok(e)
                 };
@@ -7823,18 +7871,12 @@ fn apply_op(
                         lenabs.note_atom_fact(arena, e, fact)?;
                         e
                     } else if let Some(e) = string_aware_eq(arena, args[i], args[j])? {
-                        let lp = lenabs.len_expr_string(arena, args[i])?;
-                        let lq = lenabs.len_expr_string(arena, args[j])?;
-                        let fact = arena.eq(lp, lq)?;
-                        lenabs.note_atom_fact(arena, e, fact)?;
+                        string_eq_len_hook(arena, lenabs, e, args[i], args[j])?;
                         e
                     } else {
                         let e = arena.eq(args[i], args[j])?;
                         if string_shaped(arena, args[i]) && string_shaped(arena, args[j]) {
-                            let lp = lenabs.len_expr_string(arena, args[i])?;
-                            let lq = lenabs.len_expr_string(arena, args[j])?;
-                            let fact = arena.eq(lp, lq)?;
-                            lenabs.note_atom_fact(arena, e, fact)?;
+                            string_eq_len_hook(arena, lenabs, e, args[i], args[j])?;
                         }
                         e
                     };

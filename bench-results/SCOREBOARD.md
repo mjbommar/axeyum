@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 611 oracle-compared instances (992 files total, 663 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 612 oracle-compared instances (992 files total, 665 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -45,9 +45,9 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_NIA | `qf-nia-curated-iand` | 3 | 1 | 33% | 2 | 0 | 0 | 0 | :status | 13.333 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
 | QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 21 | 55% | 16 | 1 | 21 | 0 | z3-binary | 8.660 |
-| QF_S | `qf-s-cvc5-regress-clean` | 134 | 48 | 36% | 24 | 62 | 48 | 0 | z3-library+binary | 6.676 |
-| QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | 6 | 1 | 26 | 0 | z3-library+binary | 3.751 |
-| QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 11 | 22% | 10 | 29 | 11 | 0 | z3-library+binary | 9.537 |
+| QF_S | `qf-s-cvc5-regress-clean` | 134 | 52 | 39% | 20 | 62 | 49 | 0 | z3-library+binary | 5.564 |
+| QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | 6 | 1 | 15 | 0 | z3-library+binary | 3.752 |
+| QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 12 | 24% | 9 | 29 | 11 | 0 | z3-library+binary | 8.584 |
 | QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts` | 6 | 4 | 67% | 2 | 0 | 4 | 0 | z3-binary | 7.489 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded` | 82 | 44 | 54% | 13 | 24 | 37 | 0 | z3-library+binary | 4.845 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts` | 82 | 44 | 54% | 13 | 24 | 37 | 0 | z3-library+binary | 4.845 |
@@ -60,7 +60,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 0 | 0% | 2 | 0 | 0 | 0 | :status | 20.000 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 675 decided, 623 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 665 decided, 612 oracle-compared, **0 disagreements.**
 
 ### QF_NRA row re-measured 2026-07-02 (free-division `/0` witnesses + prior landings)
 
@@ -95,6 +95,23 @@ unknowns count as double-timeout). The 9-hour scoreboard hang met en route was
 an exponential (per-path) DAG walk in the new blast's skeleton scan — fixed
 (`f403991b`) with a regression test; the three divisions now measure in ~10
 minutes total.
+
+### String residual recoveries re-measured 2026-07-02 (ADR-0052 follow-up)
+
+Three sound, bound-independent strengthenings of the abstraction/gate recover
+**5 of the 21** gate-downgraded `unsat` files (**QF_S 48 → 52, QF_SLIA 11 → 12,
+QF_SEQ 26 unchanged**; DISAGREE = 0; PAR-2 QF_S 6.676 → 5.564, QF_SLIA
+9.537 → 8.584): a **step-1a LIA projection** (drop the pure-BV well-formedness
+assertions — a sound weakening — so the mixed BV+Int abstraction refutes
+`xx = xx ++ yy ∧ len yy > len xx`: `str004`); an **empty-string exact equality**
+(`s = "" ⟺ len s = 0`, so `len s = 0 ∧ s ≠ ""` refutes: `str005`); and an
+**empty-language regex fold** (`str.in_re s R` with `L(R) = ∅` → constant
+`false`, a non-coarse ground atom: `re-comp/comp-all-is-empty`, `re-in-rewrite`
+×2). Recoveries + soundness pairs are pinned by 8 new tests in
+`bv2nat_blast_bounds.rs`. The remaining 16 are regex-*content*
+(inclusion/intersection emptiness across separate `in_re` atoms) and
+lexicographic (`str.<=`) refutations — **Phase B / A.3**, not length facts (see
+[ADR-0052](../docs/research/09-decisions/adr-0052-string-len-lia-link-and-bounded-unsat-gate.md)).
 
 ## Progress frontiers (lever depth)
 

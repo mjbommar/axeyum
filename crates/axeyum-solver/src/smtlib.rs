@@ -149,16 +149,45 @@ impl StringGate {
         // Step 1 — the unbounded length abstraction refutes?
         if !has_quantifier && !self.map.is_empty() {
             let mut memo: HashMap<TermId, TermId> = HashMap::new();
-            let mut abstracted = Vec::with_capacity(assertions.len() + self.facts.len());
+            let mut abstracted_assertions = Vec::with_capacity(assertions.len());
             for &a in assertions {
-                abstracted.push(
+                abstracted_assertions.push(
                     axeyum_rewrite::replace_subterms(arena, a, &self.map, &mut memo)
                         .map_err(|e| SolverError::Backend(e.to_string()))?,
                 );
             }
+            let mut abstracted = Vec::with_capacity(abstracted_assertions.len() + self.facts.len());
+            abstracted.extend(abstracted_assertions.iter().copied());
             abstracted.extend(self.facts.iter().copied());
-            if matches!(solve(arena, &abstracted, config)?, CheckResult::Unsat) {
+            let full = solve(arena, &abstracted, config)?;
+            if matches!(full, CheckResult::Unsat) {
                 return Ok(CheckResult::Unsat);
+            }
+            // Step 1a — the LIA length **projection**. The bounded encoding emits
+            // per-string-variable well-formedness constraints (padding above the
+            // length field is zero) that pass through the abstraction as pure
+            // bit-vectors; mixed with the length facts' `Int` atoms they defeat the
+            // exact refuters (a free `BitVec` forces the sat-only bounded-integer
+            // path, which returns `unknown` rather than the true `unsat` — e.g.
+            // `xx = xx ++ yy ∧ len(yy) > len(xx)`). Dropping every abstracted
+            // assertion that carries no `Int` subterm is a **sound weakening**:
+            // removing constraints only *adds* models, so an `unsat` of the subset
+            // still implies the full abstraction (hence the real theory) is
+            // `unsat`. The kept subset is pure Bool+LIA, which the length refuters
+            // decide. Only worth trying when the full solve was undecided (a `sat`
+            // full abstraction can never yield an `unsat` subset).
+            if matches!(full, CheckResult::Unknown(_)) {
+                let mut projected: Vec<TermId> = abstracted_assertions
+                    .iter()
+                    .copied()
+                    .filter(|&a| mentions_int_sort(arena, a))
+                    .collect();
+                if projected.len() < abstracted_assertions.len() {
+                    projected.extend(self.facts.iter().copied());
+                    if matches!(solve(arena, &projected, config)?, CheckResult::Unsat) {
+                        return Ok(CheckResult::Unsat);
+                    }
+                }
             }
             // Step 1.5 — bound-bite detector: the same length system WITH the
             // encoding bounds (`len(v) ≤ max_len`) being unsatisfiable — while
@@ -229,6 +258,29 @@ pub fn confirm_bounded_string_verdict(
 ) -> Result<CheckResult, SolverError> {
     let gate = StringGate::from_script(script);
     gate.confirm(&mut script.arena, assertions, config, result)
+}
+
+/// Whether `t` has any `Int`-sorted subterm — used by the step-1a LIA
+/// projection to keep only length-relevant abstracted assertions (the pure
+/// bit-vector well-formedness constraints, which carry no `Int`, are dropped;
+/// see the projection comment for the soundness argument).
+fn mentions_int_sort(arena: &TermArena, t: TermId) -> bool {
+    fn go(arena: &TermArena, t: TermId, memo: &mut HashMap<TermId, bool>) -> bool {
+        if let Some(&b) = memo.get(&t) {
+            return b;
+        }
+        let b = arena.sort_of(t) == Sort::Int
+            || match arena.node(t) {
+                TermNode::App { args, .. } => {
+                    let args = args.clone();
+                    args.iter().any(|&a| go(arena, a, memo))
+                }
+                _ => false,
+            };
+        memo.insert(t, b);
+        b
+    }
+    go(arena, t, &mut HashMap::new())
 }
 
 /// Replaces every Boolean atom whose subtree crosses the BV→Int bridge

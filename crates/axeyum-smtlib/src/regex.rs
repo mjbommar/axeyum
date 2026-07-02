@@ -913,8 +913,42 @@ pub(crate) fn encode_in_re(
     let view = from_sexpr(re);
     let regex = parse_regex(&view)?;
     let nfa = build_nfa(&regex)?;
+    // Empty-language short-circuit (P2.7 A.2): when **no** accepting state is
+    // reachable from the start through *any* path (see [`nfa_language_empty`]),
+    // `L(R) = ∅`, so `s ∈ R` is `false` for every string of *any* length — not
+    // merely for the ≤`m`-byte ones. Returning the constant `false` is therefore
+    // exact (and, unlike the structurally-`false` bounded `encode_match` term,
+    // recognised by the bounded-`unsat` gate as a non-coarse ground atom, so a
+    // genuinely-empty regex — e.g. `re.comp re.all`, `re.inter` of disjoint
+    // languages — no longer blocks the gate's content-`unsat` pass-through).
+    if nfa_language_empty(&nfa) {
+        return Ok(arena.bool_const(false));
+    }
     let m = packed_string_max_len(arena, s)?;
     encode_match(arena, s, &nfa, m)
+}
+
+/// Whether the NFA accepts **no** word of any length: no accepting state is
+/// reachable from `start` following char/ε edges (unbounded graph reachability).
+/// Sound emptiness test — if some accepting state is graph-reachable there is a
+/// path, hence a word (of that path's length) in the language, so we never
+/// declare a non-empty language empty.
+fn nfa_language_empty(nfa: &Nfa) -> bool {
+    let mut seen = vec![false; nfa.out.len()];
+    let mut stack = vec![nfa.start];
+    seen[nfa.start] = true;
+    while let Some(q) = stack.pop() {
+        if nfa.accepting.contains(&q) {
+            return false;
+        }
+        for t in &nfa.out[q] {
+            if !seen[t.to] {
+                seen[t.to] = true;
+                stack.push(t.to);
+            }
+        }
+    }
+    true
 }
 
 /// A compiled regex over the byte alphabet, ready for **concrete** simulation on

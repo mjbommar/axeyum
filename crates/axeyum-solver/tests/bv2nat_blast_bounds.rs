@@ -236,3 +236,137 @@ fn re_comp_with_len_atom_decides_promptly() {
         start.elapsed()
     );
 }
+
+// ---------------------------------------------------------------------------
+// P2.7 A.2 residual recoveries (2026-07-02): the gate's step-1 LIA projection,
+// the empty-string exact-equality fact, and empty-language regex folding. Each
+// recovered *unsat* is paired with a soundness probe that must still NOT be
+// wrongly refuted.
+// ---------------------------------------------------------------------------
+
+/// Length homomorphism refutation: `xx = xx ++ yy` forces `len(yy) = 0`, which
+/// contradicts `len(yy) > len(xx)` (with `len ≥ 0`). Bound-independent (holds
+/// for strings of any length). The full abstraction mixes packed-BV
+/// well-formedness with the LIA facts and returns `unknown`; the step-1a LIA
+/// **projection** (drop the pure-BV assertions) decides it `unsat`.
+#[test]
+fn concat_len_fixpoint_decides_unsat() {
+    let out = run("\
+(declare-const xx String)
+(declare-const yy String)
+(assert (> (str.len yy) (str.len xx)))
+(assert (= xx (str.++ xx yy)))
+(check-sat)
+");
+    assert!(
+        matches!(out.result, CheckResult::Unsat),
+        "len(xx) = len(xx) + len(yy) ∧ len(yy) > len(xx) is unsat; got {:?}",
+        out.result
+    );
+}
+
+/// Soundness pair for the projection: dropping the well-formedness constraints
+/// only *weakens* the length system, so a genuinely satisfiable shape must stay
+/// non-`unsat`. `xx = xx ++ yy` is `sat` (yy = "").
+#[test]
+fn concat_len_fixpoint_sat_stays_sat() {
+    let out = run("\
+(declare-const xx String)
+(declare-const yy String)
+(assert (= xx (str.++ xx yy)))
+(check-sat)
+");
+    assert!(
+        !matches!(out.result, CheckResult::Unsat),
+        "yy = \"\" satisfies xx = xx ++ yy; got {:?}",
+        out.result
+    );
+}
+
+/// Empty-string exact equality: `s = "" ⟺ len(s) = 0`, so `len(s) = 0 ∧ s ≠ ""`
+/// is `unsat`. The weaker `fresh_bool ∧ (len = 0)` relaxation left this
+/// satisfiable; the exact fact refutes it in step 1. Bound-independent.
+#[test]
+fn empty_string_len_zero_decides_unsat() {
+    let out = run("\
+(declare-const yy String)
+(assert (= (str.len yy) 0))
+(assert (not (= yy \"\")))
+(check-sat)
+");
+    assert!(
+        matches!(out.result, CheckResult::Unsat),
+        "len(yy) = 0 ∧ yy ≠ \"\" is unsat; got {:?}",
+        out.result
+    );
+}
+
+/// Soundness pair for the exact empty-string fact: a non-empty length is
+/// consistent with a non-empty string, so this must stay non-`unsat`.
+#[test]
+fn empty_string_nonzero_len_stays_sat() {
+    let out = run("\
+(declare-const yy String)
+(assert (= (str.len yy) 1))
+(assert (not (= yy \"\")))
+(check-sat)
+");
+    assert!(
+        matches!(out.result, CheckResult::Sat(_)),
+        "a 1-char string is non-empty; got {:?}",
+        out.result
+    );
+}
+
+/// Empty-language regex fold: `re.comp re.all` = `Σ* \\ Σ*` = `∅`, so
+/// `s ∈ re.comp re.all` is `false` for a string of *any* length — the atom
+/// folds to the constant `false` (a non-coarse ground atom), and the bounded
+/// `unsat` passes the gate. Bound-independent.
+#[test]
+fn comp_all_empty_language_decides_unsat() {
+    let out = run("\
+(declare-const s String)
+(assert (str.in_re s (re.comp re.all)))
+(check-sat)
+");
+    assert!(
+        matches!(out.result, CheckResult::Unsat),
+        "L(comp(re.all)) = ∅ so the atom is false; got {:?}",
+        out.result
+    );
+}
+
+/// Empty-language via `re.inter` of disjoint languages: `comp(Σ Σ*)` = `{ε}`
+/// and `a Σ*` needs length ≥ 1, so the product accepts nothing → `unsat`.
+#[test]
+fn inter_disjoint_empty_language_decides_unsat() {
+    let out = run("\
+(declare-const x String)
+(assert (str.in_re x (re.inter (re.comp (re.++ re.allchar (re.* re.allchar))) (re.++ (str.to_re \"a\") (re.* re.allchar)))))
+(check-sat)
+");
+    assert!(
+        matches!(out.result, CheckResult::Unsat),
+        "the intersection language is empty; got {:?}",
+        out.result
+    );
+}
+
+/// Soundness pair for the empty-language fold: a **non-empty** regex whose
+/// shortest word exceeds the encoder bound must NOT fold to `false` (its
+/// language is not empty — there is a word, just a long one). The unbounded
+/// reachability test sees the accepting state, so the atom keeps its bounded
+/// encoding and the bounded `unsat` is honestly downgraded (real theory `sat`).
+#[test]
+fn long_but_nonempty_regex_is_never_unsat() {
+    let out = run("\
+(declare-const s String)
+(assert (str.in_re s (re.++ (str.to_re \"aaaaaaaaa\") (re.* re.allchar))))
+(check-sat)
+");
+    assert!(
+        !matches!(out.result, CheckResult::Unsat),
+        "a 9-char-prefixed word exists in the real theory; got {:?}",
+        out.result
+    );
+}

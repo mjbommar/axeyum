@@ -161,9 +161,72 @@ exactly the residual ADR-0029 should have declared `Unsupported`.
   facts are sound for arbitrary BVs — equal BVs have equal decoded fields — and
   it never activates the gate.)
 
+## Follow-up (2026-07-02): three residual recoveries
+
+Measured against the committed `cvc5-regress-clean` baselines, 21 declared-`unsat`
+instances downgraded to honest `unknown` at the gate. Three sound, bound-independent
+recoveries were landed (5 of the 21 files: `str004`, `str005`, `re-comp/comp-all`,
+`re-in-rewrite` ×2). Each is a strengthening of the abstraction or the gate that
+adds confirmations without touching the pass-through invariant ("`unsat`
+pass-through requires step-1 confirmation **or** (non-coarse ∧ no-bite ∧
+content-only-`unsat`)"):
+
+1. **Step-1a LIA projection (`StringGate`).** The bounded encoder emits
+   per-string-variable well-formedness constraints (padding above the length field
+   is zero) as pure `BitVec` assertions. Carried into the length abstraction they
+   mix with the `Int` length facts, and the exact refuters decline the mixed
+   `BitVec`+unbounded-`Int` combination (the free `BitVec` forces the sat-only
+   bounded-integer path → `unknown` instead of the true `unsat`, e.g.
+   `xx = xx ++ yy ∧ len(yy) > len(xx)`). When the **full** abstraction solve is
+   `unknown`, the gate now retries a **projection** that drops every abstracted
+   assertion carrying no `Int` subterm. Dropping constraints is a **sound
+   weakening** (fewer constraints ⇒ *more* models), so an `unsat` of the subset
+   still implies the full abstraction — hence the real theory — is `unsat`. The
+   kept subset is pure `Bool`+`LIA`, which the length refuters decide. Only tried
+   on an `unknown` full solve (a `sat` full abstraction can never yield an `unsat`
+   subset).
+
+2. **Empty-string exact equality (`LenAbs`).** `s = "" ⟺ len(s) = 0` — the empty
+   string is the *unique* length-zero string — so an equality against `""` maps to
+   the **exact** predicate `len(other) = 0` (no fresh Boolean), via
+   `note_atom_exact`. Unlike the general `fresh_bool ∧ (len = 0)` relaxation (which
+   `len(s) = 0 ∧ s ≠ ""` satisfies by picking the Boolean false), the exact form
+   is truth-equivalent to the atom in every real model, so it is faithful under any
+   Boolean structure and lets step 1 refute the conflict. (Only length 0 is
+   length-determined; every longer length has multiple strings, so no other
+   equality is strengthened.)
+
+3. **Empty-language regex fold (`regex.rs`).** When no accepting state is reachable
+   from the start through *any* path (unbounded graph reachability), `L(R) = ∅`, so
+   `str.in_re s R` is `false` for a string of **any** length — `encode_in_re`
+   returns the constant `false`. This is exact (not merely bounded-`false` like the
+   structural `encode_match` term), and a `BoolConst` atom is a non-coarse ground
+   atom, so a genuinely-empty regex (`re.comp re.all`, an `re.inter` of disjoint
+   languages) no longer sets the coarse flag and no longer blocks the gate's
+   content-`unsat` pass-through. **Soundness rests on *unbounded* reachability**: a
+   non-empty regex whose shortest word merely exceeds the encoding bound still has a
+   reachable accepting state, so it is *not* folded (it keeps its bounded encoding
+   and downgrades honestly — the real theory is `sat`).
+
+**Still `unknown` (Phase B / A.3, not length facts):** the remaining 16 files are
+regex-*content* refutations (language inclusion/intersection emptiness across
+*separate* `in_re` atoms — `re-include-union`, `regexp-strat-fix`, `re-agg-total1`,
+`re-mod-eq`, `norn-31`, `re-neg-unfold-rev-a`, `username_checker_min`,
+`a-in-comp-a`, `re.all`) and lexicographic (`str.<=`) reasoning
+(`leq`, `strings-leq-trans-unsat`). These need the word-level / regex decision
+procedure (a sound length fact cannot confirm them, and relaxing `in_re`/`str.<=`
+coarseness is unsound — a fixed-prefix regex intersected with a fixed-suffix regex
+can force a word longer than the bound with a contiguous length interval that the
+bite detector cannot see). `unsat__update__distinct-elems` (seq `update` with
+distinct values under a bound-safe `len = 1`) is content-driven but relaxed away by
+step 2's blanket `bv2nat` relaxation; recovering it needs bound-safe-length-atom
+handling in step 2 and is deferred with the rest.
+
 ## Revisited when
 
 - P2.7 Phase B lands the word-level solver (the gate's `unknown`s become its
   routing signal; the fork ADR's routing predicate is written then).
 - The residual fact-less bound-bite class is closed (regex Parikh intervals,
   `substr`-family length implications) — then ADR-0029's contract holds in full.
+- The regex-content residual (inclusion/intersection emptiness across separate
+  `in_re` atoms) is closed by a regex-automata decision (Phase A.3 / Phase B).

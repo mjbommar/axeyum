@@ -143,11 +143,28 @@ interval, `min ≤ len(s) ≤ max`, computed from the AST), and the
 tests in `bv2nat_blast_bounds.rs`. The `axeyum-bench` harness applies the same
 gate (`confirm_bounded_string_verdict`) so QF_S measurements match the shipped
 front door. **Residual** (small): fact-less opaque results (`replace_all`,
-`seq.extract`/`update`/`rev`), `distinct` atoms (no facts recorded — sound,
-just unconfirmable), and packed *sequence* constants (not decoded; string
-constants are). Next slice: those facts + width widening to recover the `sat`
-side of the downgraded instances. The fuzz generator now draws length constants
-past the bound (0..=11) to keep the class probed.
+`seq.extract`/`update`/`rev`) and packed *sequence* constants (not decoded;
+string constants are). Next slice: those facts + width widening to recover the
+`sat` side of the downgraded instances. The fuzz generator now draws length
+constants past the bound (0..=11) to keep the class probed.
+
+**Residual recoveries LANDED (2026-07-02, ADR-0052 follow-up).** Of the 21
+declared-`unsat` `cvc5-regress-clean` instances the gate downgraded, three sound
+bound-independent recoveries land 5 files (`str004`, `str005`, `re-comp/comp-all`,
+`re-in-rewrite` ×2): (a) a **step-1a LIA projection** in `StringGate` — drop the
+pure-BV well-formedness assertions (a sound weakening; the mixed BV+unbounded-Int
+combination made the exact refuters decline, e.g. `xx = xx ++ yy ∧ len yy >
+len xx`); (b) an **empty-string exact equality** fact (`s = "" ⟺ len(s) = 0`, no
+fresh Boolean, so `len(s) = 0 ∧ s ≠ ""` refutes); (c) an **empty-language regex
+fold** — `str.in_re s R` with `L(R) = ∅` (unbounded-reachability emptiness of the
+NFA) returns constant `false`, a non-coarse ground atom (`re.comp re.all`,
+`re.inter` of disjoint languages). 8 new regression tests in
+`bv2nat_blast_bounds.rs` (each recovery + its soundness pair). The remaining 16 are
+regex-*content* (inclusion/intersection emptiness across separate `in_re` atoms)
+and lexicographic (`str.<=`) refutations — **Phase B / A.3**, not length facts;
+relaxing `in_re`/`str.<=` coarseness is unsound (a fixed-prefix ∩ fixed-suffix
+regex forces an over-bound word with a contiguous interval the bite detector
+misses).
 
 The ADR-0029↔`Sort::Seq` representation fork is resolved in ADR-0052: the
 bounded encoder stays the default decision path *behind the gate*; `Sort::Seq`
