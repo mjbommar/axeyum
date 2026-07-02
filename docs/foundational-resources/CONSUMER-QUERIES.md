@@ -151,6 +151,11 @@ python3 scripts/query-foundational-resources.py coverage-frontier \
   --by field \
   --max-checked-ratio 0.35 \
   --require-any
+
+python3 scripts/query-foundational-resources.py coverage-frontier \
+  --by field \
+  --action proof-review \
+  --require-any
 ```
 
 Use [COVERAGE-FRONTIER-QUERIES.md](COVERAGE-FRONTIER-QUERIES.md) before turning

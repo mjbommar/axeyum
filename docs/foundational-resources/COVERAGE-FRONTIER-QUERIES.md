@@ -89,6 +89,19 @@ any horizon row as future proof work, read
 Use [Pack Frontier Queries](PACK-FRONTIER-QUERIES.md) to see which concrete
 packs caused `proof-upgrade` or `proof-review`.
 
+Filter directly by a group-level action when choosing the next worklist:
+
+```sh
+python3 scripts/query-foundational-resources.py coverage-frontier \
+  --by field \
+  --action proof-review \
+  --require-any
+```
+
+Use `--action proof-review` when same-pack route contrast already exists and
+needs human review; use `--action proof-upgrade` only for groups with absent or
+partial route contrast.
+
 ## Useful Filters
 
 Replay-only refutation pressure:

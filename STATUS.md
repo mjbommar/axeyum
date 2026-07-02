@@ -234,6 +234,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Coverage-frontier action filter landed.**
+  `coverage-frontier --action ...` now filters group-level field, fragment,
+  curriculum-node, or decidability worklists by `seed-pack`,
+  `add-checked-evidence`, `proof-upgrade`, `proof-review`,
+  `theorem-horizon`, or `maintain`. The coverage-frontier guide, consumer
+  query docs, public data contract, detailed build ledger, and foundational
+  smoke gate now expose the proof-review path so builders can query already
+  contrast-covered groups without manually scanning action columns.
+
 - **Coverage-frontier proof-review triage landed.**
   `coverage-frontier` now reuses the pack-level promotion-state logic before
   emitting action labels, so field/fragment/curriculum groups with replay-only

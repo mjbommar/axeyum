@@ -1812,6 +1812,13 @@ Pick one row per commit unless the change is purely navigational.
      contrast; otherwise replay-only refutations with same-pack checked route
      contrast emit `proof-review`, with JSON samples in `proof_upgrade_packs`
      and `proof_review_packs`.
+214. Landed: add `--action` filtering to
+     `query-foundational-resources.py coverage-frontier`. Resource builders can
+     now ask for group-level `seed-pack`, `add-checked-evidence`,
+     `proof-upgrade`, `proof-review`, `theorem-horizon`, or `maintain`
+     worklists directly before drilling into `pack-frontier`; the public data
+     contract, consumer query guide, coverage-frontier guide, and foundational
+     smoke gate exercise the proof-review path.
 
 ## Validation Checklist
 

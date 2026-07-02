@@ -137,7 +137,9 @@ replay-only refutations, and theorem horizons for work selection. It does not
 define corpus totals, benchmark claims, or parity claims.
 Its action labels distinguish `proof-upgrade` from `proof-review`: the latter
 means replay-only refutations exist but current same-pack route contrast already
-covers the proof shape.
+covers the proof shape. Consumers can filter those labels directly with
+`--action proof-review`, `--action proof-upgrade`, `--action theorem-horizon`,
+or the other documented action values.
 
 Pack-frontier discovery drills from those group-level rankings to concrete
 pack-level worklists:
@@ -200,6 +202,7 @@ python3 scripts/query-foundational-resources.py summary
 python3 scripts/query-foundational-resources.py coverage --by field --require-any
 python3 scripts/query-foundational-resources.py coverage --by proof-status --require-any
 python3 scripts/query-foundational-resources.py coverage-frontier --by field --require-any
+python3 scripts/query-foundational-resources.py coverage-frontier --by field --action proof-review --require-any
 python3 scripts/query-foundational-resources.py coverage-frontier --by fragment --min-replay-unsat 1 --format json --require-any
 python3 scripts/query-foundational-resources.py coverage-frontier --by curriculum-node --field topology --min-horizon 1 --require-any
 python3 scripts/query-foundational-resources.py pack-frontier --field real_analysis --require-any

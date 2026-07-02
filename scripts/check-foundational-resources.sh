@@ -18,6 +18,7 @@ python3 scripts/query-foundational-resources.py coverage --by expected-result --
 python3 scripts/query-foundational-resources.py coverage --by decidability --require-any >/dev/null
 python3 scripts/query-foundational-resources.py coverage --by curriculum-node --field topology --require-any >/dev/null
 python3 scripts/query-foundational-resources.py coverage-frontier --by field --require-any >/dev/null
+python3 scripts/query-foundational-resources.py coverage-frontier --by field --action proof-review --require-any >/dev/null
 python3 scripts/query-foundational-resources.py coverage-frontier --by fragment --min-replay-unsat 1 --format json --require-any >/dev/null
 python3 scripts/query-foundational-resources.py coverage-frontier --by curriculum-node --field topology --min-horizon 1 --require-any >/dev/null
 python3 scripts/query-foundational-resources.py pack-frontier --field real_analysis --require-any >/dev/null

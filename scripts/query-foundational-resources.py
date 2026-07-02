@@ -557,6 +557,14 @@ class ResourceStore:
 
 
 FRONTIER_GROUPS = ["field", "fragment", "curriculum-node", "decidability"]
+FRONTIER_ACTIONS = [
+    "seed-pack",
+    "add-checked-evidence",
+    "proof-upgrade",
+    "proof-review",
+    "theorem-horizon",
+    "maintain",
+]
 PACK_ACTIONS = [
     "proof-upgrade",
     "proof-review",
@@ -1144,6 +1152,8 @@ def command_coverage_frontier(args: argparse.Namespace) -> int:
             actions.append("theorem-horizon")
         if not actions and pack_ids:
             actions.append("maintain")
+        if args.action and args.action not in actions:
+            continue
 
         action_score = (
             group["replay_unsat"] * 4
@@ -1715,6 +1725,11 @@ def build_parser() -> argparse.ArgumentParser:
     coverage_frontier.add_argument("--proof-status", help="exact proof_status")
     coverage_frontier.add_argument("--expected-result", help="exact expected_result")
     coverage_frontier.add_argument("--decidability", help="exact decidability class")
+    coverage_frontier.add_argument(
+        "--action",
+        choices=FRONTIER_ACTIONS,
+        help="filter by suggested group-level action",
+    )
     coverage_frontier.add_argument(
         "--solver-reuse",
         choices=["candidate", "promoted", "non-benchmark-horizon", "unclassified"],
