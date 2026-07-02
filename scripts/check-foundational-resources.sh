@@ -369,6 +369,10 @@ python3 scripts/query-foundational-resources.py concepts --field graph_theory --
 python3 scripts/query-foundational-resources.py packs --field graph_theory --text flow --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-flow-cut-v0 --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-flow-cut-v0 --expected-result not-run --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text "max-flow" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-flow-cut-v0 --proof-status checked --text "respects every edge" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-flow-cut-v0 --proof-status checked --text saturates --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-flow-cut-v0 --proof-status checked --text "value 4" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --field graph_theory --text shortest --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --expected-result not-run --proof-status lean-horizon --require-any >/dev/null

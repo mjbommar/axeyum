@@ -380,6 +380,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Max-flow/min-cut, integrality, residual-network, and algorithm-correctness
+horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text "max-flow" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-flow-cut-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Circle-geometry tangent, chord, power-of-a-point, cyclic, and inversion
 horizons:
 
@@ -497,6 +511,7 @@ The main learner maps that explain these boundaries are:
 - [Wolfe Line Search Theorem Boundary](../learn/math/wolfe-line-search-theorem-boundary.md)
 - [Projected Gradient Convergence Theorem Boundary](../learn/math/projected-gradient-convergence-theorem-boundary.md)
 - [Proximal Gradient Convergence Theorem Boundary](../learn/math/proximal-gradient-convergence-theorem-boundary.md)
+- [Max-Flow Min-Cut Theorem Boundary](../learn/math/max-flow-min-cut-theorem-boundary.md)
 - [Circle Geometry Theorem Boundary](../learn/math/circle-geometry-theorem-boundary.md)
 - [Inversion Geometry Theorem Boundary](../learn/math/inversion-geometry-theorem-boundary.md)
 - [Cyclic Geometry Theorem Boundary](../learn/math/cyclic-geometry-theorem-boundary.md)

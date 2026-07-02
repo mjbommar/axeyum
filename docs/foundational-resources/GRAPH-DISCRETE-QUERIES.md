@@ -67,7 +67,7 @@ needs concrete checked rows to display.
 | Fixed-width graph-coloring encodings | `bridge_finite_graph_replay_obstruction` | `qf-bv` | `checks --concept bridge_finite_graph_replay_obstruction --route qf-bv --proof-status checked` |
 | BFS/DFS finite traversal cost counters | `bridge_finite_graph_replay_obstruction` | `LIA` | `checks --concept bridge_finite_graph_replay_obstruction --route LIA --proof-status checked` |
 | Finite directed flow and cut certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay`; exact rational | `checks --pack finite-flow-cut-v0 --proof-status checked` |
-| Max-flow/min-cut theorem boundary | pack `finite-flow-cut-v0` | `lean-horizon` | `checks --pack finite-flow-cut-v0 --expected-result not-run --proof-status lean-horizon` |
+| Max-flow/min-cut theorem boundary | pack `finite-flow-cut-v0` | `lean-horizon` | `horizon-frontier --text "max-flow"`; `checks --pack finite-flow-cut-v0 --expected-result not-run --proof-status lean-horizon` |
 | Finite shortest-path certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay`; exact rational | `checks --pack finite-shortest-path-v0 --proof-status checked` |
 | Shortest-path theorem boundary | pack `finite-shortest-path-v0` | `lean-horizon` | `checks --pack finite-shortest-path-v0 --expected-result not-run --proof-status lean-horizon` |
 | Finite DAG topological-order certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay` | `checks --pack finite-dag-topological-order-v0 --proof-status checked` |
@@ -166,6 +166,28 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-flow-cut-v0 \
   --expected-result not-run \
   --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text "max-flow" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-flow-cut-v0 \
+  --proof-status checked \
+  --text "respects every edge" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-flow-cut-v0 \
+  --proof-status checked \
+  --text saturates \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-flow-cut-v0 \
+  --proof-status checked \
+  --text "value 4" \
   --require-any
 ```
 

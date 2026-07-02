@@ -2043,6 +2043,14 @@ Pick one row per commit unless the change is purely navigational.
      numerical-geometry theorem routes, and adds cyclic-specific horizon
      queries to the public smoke gate without adding a duplicate pack or
      changing resource counts.
+242. Landed: add `max-flow-min-cut-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-flow-cut-v0`. It maps checked finite
+     flow-feasibility replay, saturated-cut optimality replay, bad-capacity
+     rejection, and bad-flow-value rejection to the missing arbitrary-network
+     max-flow/min-cut, integrality, residual-network, algorithm-correctness,
+     min-cost-flow, and asymptotic-runtime theorem routes, and adds
+     max-flow-specific horizon and checked-row queries to the public smoke gate
+     without adding a duplicate pack or changing resource counts.
 
 ## Validation Checklist
 

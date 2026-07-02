@@ -67,7 +67,9 @@ minimum edge and vertex cut certificates by replaying separation and
 enumerating smaller candidate cuts. The finite flow/cut pack checks one
 directed capacitated network by replaying feasibility, recomputing a
 source-side cut capacity, rejecting a capacity violation, and rejecting a
-claimed flow value above that cut bound. The finite shortest-path pack checks
+claimed flow value above that cut bound. Its focused theorem boundary is
+[Max-Flow Min-Cut Theorem Boundary](max-flow-min-cut-theorem-boundary.md).
+The finite shortest-path pack checks
 one directed weighted graph by replaying a path length, verifying a potential
 lower-bound certificate, rejecting a malformed path length, and rejecting a
 claimed shorter distance below the potential lower bound. The finite DAG
@@ -302,6 +304,7 @@ For a fuller trace from data row to replay result and evidence status, read
 [End To End: Graph Matching And Augmenting Paths](graph-matching-end-to-end.md),
 [End To End: Graph Cut Certificates](graph-cut-end-to-end.md),
 [End To End: Finite Flow And Cut Certificates](finite-flow-cut-end-to-end.md),
+[Max-Flow Min-Cut Theorem Boundary](max-flow-min-cut-theorem-boundary.md),
 [End To End: DAG D-Separation Checks](graph-d-separation-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md), and
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md).

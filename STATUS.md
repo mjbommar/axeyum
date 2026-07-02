@@ -234,6 +234,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Max-flow/min-cut theorem-boundary resource landed.**
+  `max-flow-min-cut-theorem-boundary.md` now separates `finite-flow-cut-v0`
+  checked finite flow-feasibility replay, saturated-cut optimality replay,
+  bad-capacity rejection, and bad-flow-value rejection from arbitrary-network
+  max-flow/min-cut, integrality, residual-network, algorithm-correctness,
+  min-cost-flow, multi-commodity-flow, LP-duality, and asymptotic-runtime
+  theorem claims. The theorem horizon, graph/discrete query guide, learner map,
+  and smoke query docs now expose the flow/cut boundary directly.
+
 - **Cyclic-geometry theorem-boundary resource landed.**
   `cyclic-geometry-theorem-boundary.md` now separates
   `finite-cyclic-geometry-v0` exact cyclic-quadrilateral replay,

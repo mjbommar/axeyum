@@ -173,6 +173,11 @@ Companion maps:
 - [Finite Flow And Cut Certificates](finite-flow-cut-end-to-end.md): follows
   exact directed-flow feasibility, cut-capacity optimality replay, malformed
   capacity and flow-value rejections, and the max-flow/min-cut theorem horizon.
+- [Max-Flow Min-Cut Theorem Boundary](max-flow-min-cut-theorem-boundary.md):
+  maps those finite flow-feasibility, saturated-cut, bad-capacity, and
+  bad-flow-value rows to the missing arbitrary-network max-flow/min-cut,
+  integrality, residual-network, algorithm-correctness, min-cost-flow, and
+  asymptotic-runtime theorem routes.
 - [Finite Shortest Path Certificates](finite-shortest-path-end-to-end.md):
   follows exact directed weighted path replay, potential optimality
   certificates, malformed path-length rejection, and the shortest-path theorem

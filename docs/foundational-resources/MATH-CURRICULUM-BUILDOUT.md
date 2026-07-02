@@ -2083,6 +2083,11 @@ horizon.
 directed-flow feasibility, cut-capacity optimality replay, malformed
 capacity/flow-value rejections, and the general max-flow/min-cut theorem
 horizon.
+It also has a focused max-flow/min-cut theorem-boundary page that keeps this
+one checked finite flow, cut, bad-capacity, and bad-flow-value replay separate
+from arbitrary-network theorem, integrality, residual-network,
+algorithm-correctness, min-cost-flow, and asymptotic-runtime claims while
+linking the public max-flow horizon query to the finite checked rows.
 `graph-d-separation-v0` now has a learner-facing end-to-end lesson for finite
 active-chain replay, conditioned chain/fork blocking, unconditioned-collider
 blocking, descendant-opened collider replay, and the causal-identification
