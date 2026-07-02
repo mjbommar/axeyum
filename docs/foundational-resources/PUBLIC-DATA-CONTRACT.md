@@ -38,13 +38,13 @@ The consumer smoke currently reports:
 concept_rows=121
 curriculum_rows=23
 field_rows=18
-non_template_packs=108
-packs_with_checked_evidence=108
+non_template_packs=109
+packs_with_checked_evidence=109
 schema_versions=atlas:1,metadata:1,expected:1
-expected_result_counts=not-run:71,sat:336,unsat:281
-proof_status_counts=checked:322,lean-horizon:71,replay-only:295
-row_label_counts=checked_refutation:238,checked_witness:84,finite_rejection_replay:43,finite_witness_replay:252,theorem_horizon:71
-pack_label_counts=checked_evidence_pack:108,mixed_trust_story:97,theorem_boundary_included:71
+expected_result_counts=not-run:72,sat:338,unsat:283
+proof_status_counts=checked:326,lean-horizon:72,replay-only:295
+row_label_counts=checked_refutation:240,checked_witness:86,finite_rejection_replay:43,finite_witness_replay:252,theorem_horizon:72
+pack_label_counts=checked_evidence_pack:109,mixed_trust_story:98,theorem_boundary_included:72
 ```
 
 Regenerate this snapshot with:
@@ -96,12 +96,11 @@ fixed order beyond the query script's sorted table output.
 |---|---|---|
 | `expected_result` | `sat`, `unsat`, `not-run` | The expected outcome for the finite row or theorem boundary. |
 | `proof_status` | `checked`, `replay-only`, `lean-horizon` | The trust story for that row. |
-| `solver_reuse.status` | `promoted` | The pack has a deliberate solver/proof feedback disposition. |
+| `solver_reuse.status` | `promoted`, `non-benchmark-horizon` | The pack has a deliberate solver/proof feedback disposition. |
 
 The schemas also reserve values such as `unknown`, `template`, `proof-gap`,
-`not-required`, `candidate`, and `non-benchmark-horizon`. If one appears in the
-non-template public corpus, update this contract and the query guides in the
-same commit.
+`not-required`, and `candidate`. If one appears in the non-template public
+corpus, update this contract and the query guides in the same commit.
 
 Use [CLAIM-LABEL-MATRIX.md](CLAIM-LABEL-MATRIX.md) for display wording. The
 executable audit is:

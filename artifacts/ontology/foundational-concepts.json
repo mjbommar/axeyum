@@ -4505,7 +4505,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "Finite graph rows state the vertex set, edge relation, ordering, witness object, and bounded search space being checked. The trusted object is replay of coloring, reachability, traversal, matching, cut, or d-separation data, or a checked Boolean/CNF, QF_BV, or QF_LIA certificate for a fixed malformed graph claim.",
+      "summary": "Finite graph rows state the vertex set, edge relation, ordering, witness object, and bounded search space being checked. The trusted object is replay of coloring, reachability, traversal, matching, cut, finite network-flow/cut, or d-separation data, or a checked Boolean/CNF, QF_BV, or QF_LIA certificate for a fixed malformed graph claim.",
       "prerequisites": [
         "bridge_finite_model_replay",
         "bridge_finite_counting_replay",
@@ -4528,6 +4528,7 @@
         "DRAT / LRAT",
         "QF_BV fixed-width encodings",
         "QF_LIA counters",
+        "exact rational flow/cut replay",
         "finite enumeration"
       ],
       "example_packs": [
@@ -4562,6 +4563,12 @@
           "notes": "Finite edge/vertex cut certificates, non-cut rejection, and bounded post-removal reachability CNF proof route."
         },
         {
+          "id": "finite-flow-cut-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-flow-cut-v0",
+          "notes": "Finite directed flow feasibility, cut-capacity optimality replay, malformed capacity rejection, and max-flow/min-cut theorem horizon."
+        },
+        {
           "id": "graph-d-separation-v0",
           "status": "validated",
           "path": "artifacts/examples/math/graph-d-separation-v0",
@@ -4570,9 +4577,9 @@
       ],
       "proof_routes": [
         {
-          "name": "finite graph replay plus Boolean, QF_BV, and QF_LIA certificates",
+          "name": "finite graph replay plus Boolean, QF_BV, QF_LIA, and exact-rational certificates",
           "status": "checked",
-          "checker": "scripts/validate-foundational-example-pack.py plus math_resource_boolean_routes, math_resource_bv_routes, and math_resource_lia_routes",
+          "checker": "scripts/validate-foundational-example-pack.py for finite graph/flow replay plus math_resource_boolean_routes, math_resource_bv_routes, and math_resource_lia_routes for promoted proof-route rows",
           "lean_status": "partial",
           "sources": [
             "docs/proof-cookbook/recipes/finite-model-replay.md",
@@ -4586,6 +4593,7 @@
             "docs/learn/math/graph-search-runtime-end-to-end.md",
             "docs/learn/math/graph-matching-end-to-end.md",
             "docs/learn/math/graph-cut-end-to-end.md",
+            "docs/learn/math/finite-flow-cut-end-to-end.md",
             "docs/learn/math/graph-d-separation-end-to-end.md",
             "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
             "crates/axeyum-solver/tests/math_resource_bv_routes.rs",
@@ -4601,13 +4609,14 @@
         "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
         "docs/learn/math/graph-and-discrete-reasoning.md",
         "docs/learn/math/graph-traversal-runtime-index.md",
+        "docs/learn/math/finite-flow-cut-end-to-end.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
         "crates/axeyum-solver/tests/math_resource_bv_routes.rs",
         "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
       ],
       "open_gaps": [
-        "Finite graph rows do not prove chromatic-number theorems, max-flow/min-cut, matching duality, graph minors, extremal graph theory, or unbounded graph-family claims.",
+        "Finite graph rows do not prove chromatic-number theorems, general max-flow/min-cut, matching duality, graph minors, extremal graph theory, or unbounded graph-family claims.",
         "Traversal-cost rows are fixed finite counterexamples; asymptotic BFS/DFS complexity and average-case runtime remain Lean-horizon.",
         "D-separation rows are finite graph-theoretic checks and do not claim causal identification, do-calculus, or probabilistic graphical-model semantics."
       ],
@@ -11070,6 +11079,12 @@
           "notes": "Finite Cardinality And Bijection Checks"
         },
         {
+          "id": "finite-flow-cut-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-flow-cut-v0",
+          "notes": "Finite Network Flow And Cut Certificates"
+        },
+        {
           "id": "finite-group-actions-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-group-actions-v0",
@@ -11407,19 +11422,25 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "seeded",
-      "summary": "Core undergraduate / graduate combinatorics. First Axeyum slice: Coloring, reachability, traversal cost counters, matching, cuts, small counterexample graphs, causal d-separation",
+      "summary": "Core undergraduate / graduate combinatorics. First Axeyum slice: Coloring, reachability, traversal cost counters, matching, cuts, finite flow/cut certificates, small counterexample graphs, causal d-separation",
       "prerequisites": [],
       "unlocks": [],
       "decidability": "bounded",
       "axeyum_fragments": [
-        "Coloring, reachability, traversal cost counters, matching, cuts, small counterexample graphs, causal d-separation"
+        "Coloring, reachability, traversal cost counters, matching, cuts, finite flow/cut certificates, small counterexample graphs, causal d-separation"
       ],
       "example_packs": [
         {
           "id": "graph-coloring-v0",
           "status": "validated",
           "path": "artifacts/examples/math/graph-coloring-v0",
-          "notes": "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, and d-separation."
+          "notes": "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, and d-separation."
+        },
+        {
+          "id": "finite-flow-cut-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-flow-cut-v0",
+          "notes": "Finite Network Flow And Cut Certificates"
         },
         {
           "id": "graph-cut-v0",
@@ -11454,7 +11475,7 @@
       ],
       "proof_routes": [
         {
-          "name": "Graph minors, extremal graph theory, and asymptotic families are mostly proof-horizon.",
+          "name": "Graph minors, extremal graph theory, max-flow/min-cut theorem families, and asymptotic families are mostly proof-horizon.",
           "status": "planned",
           "checker": "planned foundational example-pack validator",
           "lean_status": "planned",
@@ -11591,6 +11612,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-dual-spaces-v0",
           "notes": "Exact Finite Dual Space Checks"
+        },
+        {
+          "id": "finite-flow-cut-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-flow-cut-v0",
+          "notes": "Finite Network Flow And Cut Certificates"
         },
         {
           "id": "finite-gradient-descent-v0",
@@ -12440,6 +12467,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-proximal-gradient-v0",
           "notes": "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."
+        },
+        {
+          "id": "finite-flow-cut-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-flow-cut-v0",
+          "notes": "Finite Network Flow And Cut Certificates"
         },
         {
           "id": "finite-root-finding-v0",

@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "finite-flow-cut-v0",
+  "title": "Finite Network Flow And Cut Certificates",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_graph_theory",
+    "field_discrete_math",
+    "field_optimization_and_convexity",
+    "field_linear_algebra",
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "curriculum_counting",
+    "curriculum_linear_algebra",
+    "bridge_finite_graph_replay_obstruction"
+  ],
+  "field_ids": [
+    "graph_theory",
+    "discrete_math",
+    "optimization_and_convexity",
+    "linear_algebra"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "relations-and-functions",
+    "counting",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite directed graphs",
+    "finite network flow replay",
+    "finite cut certificates",
+    "exact rational arithmetic",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-flow-cut-v0",
+  "solver_reuse": {
+    "status": "non-benchmark-horizon",
+    "target": "finite network-flow replay and max-flow/min-cut theorem boundary",
+    "pressure": "Exact replay checks one feasible flow, one cut certificate, one capacity violation, and one cut-capacity upper-bound violation; no source solver artifact is committed yet, so this is not a solver regression or benchmark claim.",
+    "evidence": [
+      "feasible-flow-witness",
+      "flow-cut-optimality-witness",
+      "bad-capacity-bound-rejected",
+      "bad-flow-value-rejected"
+    ],
+    "next_step": "Promote only after adding a source exact-arithmetic artifact and checked proof route for capacity, conservation, or cut-bound conflicts; keep the general max-flow/min-cut theorem in the Lean-horizon lane."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/finite-flow-cut-end-to-end.md"
+  ],
+  "expected_results": [
+    "feasible-flow-witness",
+    "flow-cut-optimality-witness",
+    "bad-capacity-bound-rejected",
+    "bad-flow-value-rejected",
+    "max-flow-min-cut-theorem-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Replay finite directed capacities, flows, conservation equations, and source/sink balance over exact rationals.",
+    "Replay finite cut partitions and cut capacities before using a cut as an optimality certificate.",
+    "Reject malformed rows by recomputing the violating capacity bound or cut-capacity upper bound.",
+    "Add a source exact-arithmetic artifact and checked certificate route before promoting the pack as a solver regression.",
+    "Keep arbitrary-network max-flow/min-cut, integrality, algorithm correctness, min-cost flow, and asymptotic complexity as Lean/theorem horizons until proof artifacts exist."
+  ]
+}

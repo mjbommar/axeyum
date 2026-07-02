@@ -2496,6 +2496,226 @@ def validate_graph_cut(expected: dict[str, Any]) -> None:
         fail("one-vertex-cut-rejected unexpectedly separates source and target")
 
 
+FlowEdge = tuple[str, str, Fraction, Fraction]
+
+
+def require_directed_flow_network(
+    context: str,
+    values: dict[str, Any],
+    *,
+    enforce_capacity: bool = True,
+) -> tuple[list[str], list[FlowEdge], str, str, Fraction]:
+    vertices = require_string_list(f"{context}.vertices", values.get("vertices"))
+    edge_values = values.get("directed_edges")
+    if not isinstance(edge_values, list) or not edge_values:
+        fail(f"{context}.directed_edges must be a non-empty list")
+    vertex_set = set(vertices)
+    edges: list[FlowEdge] = []
+    seen_edges: set[tuple[str, str]] = set()
+    for index, edge in enumerate(edge_values):
+        if not isinstance(edge, dict):
+            fail(f"{context}.directed_edges[{index}] must be an object")
+        tail = edge.get("from")
+        head = edge.get("to")
+        require_string(f"{context}.directed_edges[{index}].from", tail)
+        require_string(f"{context}.directed_edges[{index}].to", head)
+        if tail == head:
+            fail(f"{context}.directed_edges[{index}] must not be a self-loop")
+        if tail not in vertex_set or head not in vertex_set:
+            fail(f"{context}.directed_edges[{index}] references a missing vertex")
+        directed_edge = (tail, head)
+        if directed_edge in seen_edges:
+            fail(f"{context}.directed_edges repeats directed edge {directed_edge}")
+        seen_edges.add(directed_edge)
+        capacity = require_fraction(f"{context}.directed_edges[{index}].capacity", edge.get("capacity"))
+        flow = require_fraction(f"{context}.directed_edges[{index}].flow", edge.get("flow"))
+        if capacity < 0:
+            fail(f"{context}.directed_edges[{index}].capacity must be nonnegative")
+        if flow < 0:
+            fail(f"{context}.directed_edges[{index}].flow must be nonnegative")
+        if enforce_capacity and flow > capacity:
+            fail(f"{context}.directed_edges[{index}].flow exceeds capacity")
+        edges.append((tail, head, capacity, flow))
+    source = require_graph_vertex(f"{context}.source", values.get("source"), vertices)
+    sink = require_graph_vertex(f"{context}.sink", values.get("sink"), vertices)
+    if source == sink:
+        fail(f"{context}.source and sink must be distinct")
+    flow_value = require_fraction(f"{context}.flow_value", values.get("flow_value"))
+    if flow_value < 0:
+        fail(f"{context}.flow_value must be nonnegative")
+    return vertices, edges, source, sink, flow_value
+
+
+def require_directed_edge_ref(
+    context: str,
+    value: Any,
+    edges: list[FlowEdge],
+) -> tuple[str, str, Fraction, Fraction]:
+    if not isinstance(value, list) or len(value) != 2:
+        fail(f"{context} must be a two-element list")
+    tail, head = value
+    require_string(f"{context}[0]", tail)
+    require_string(f"{context}[1]", head)
+    for edge_tail, edge_head, capacity, flow in edges:
+        if edge_tail == tail and edge_head == head:
+            return edge_tail, edge_head, capacity, flow
+    fail(f"{context} references a missing directed edge")
+
+
+def validate_flow_conservation(
+    context: str,
+    vertices: list[str],
+    edges: list[FlowEdge],
+    source: str,
+    sink: str,
+    flow_value: Fraction,
+) -> None:
+    net_out = {vertex: Fraction(0) for vertex in vertices}
+    for tail, head, _capacity, flow in edges:
+        net_out[tail] += flow
+        net_out[head] -= flow
+    if net_out[source] != flow_value:
+        fail(f"{context} source net outflow does not match flow_value")
+    if net_out[sink] != -flow_value:
+        fail(f"{context} sink net inflow does not match flow_value")
+    for vertex in vertices:
+        if vertex not in {source, sink} and net_out[vertex] != 0:
+            fail(f"{context} violates conservation at {vertex}")
+
+
+def require_flow_cut_partition(
+    context: str,
+    values: dict[str, Any],
+    vertices: list[str],
+    source: str,
+    sink: str,
+) -> tuple[set[str], set[str]]:
+    source_side = require_vertex_set(
+        f"{context}.source_side",
+        values.get("source_side"),
+        vertices,
+        nonempty=True,
+    )
+    target_side_value = values.get("target_side")
+    if target_side_value is None:
+        target_side = set(vertices) - source_side
+    else:
+        target_side = require_vertex_set(
+            f"{context}.target_side",
+            target_side_value,
+            vertices,
+            nonempty=True,
+        )
+    if source_side & target_side:
+        fail(f"{context} cut partition sides must be disjoint")
+    if source_side | target_side != set(vertices):
+        fail(f"{context} cut partition sides must cover every vertex")
+    if source not in source_side:
+        fail(f"{context} source must be in source_side")
+    if sink not in target_side:
+        fail(f"{context} sink must be in target_side")
+    return source_side, target_side
+
+
+def directed_cut_capacity(edges: list[FlowEdge], source_side: set[str], target_side: set[str]) -> Fraction:
+    return sum(
+        (
+            capacity
+            for tail, head, capacity, _flow in edges
+            if tail in source_side and head in target_side
+        ),
+        Fraction(0),
+    )
+
+
+def directed_cut_net_flow(edges: list[FlowEdge], source_side: set[str], target_side: set[str]) -> Fraction:
+    forward = sum(
+        (
+            flow
+            for tail, head, _capacity, flow in edges
+            if tail in source_side and head in target_side
+        ),
+        Fraction(0),
+    )
+    backward = sum(
+        (
+            flow
+            for tail, head, _capacity, flow in edges
+            if tail in target_side and head in source_side
+        ),
+        Fraction(0),
+    )
+    return forward - backward
+
+
+def validate_finite_flow_cut(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    feasible = checks["feasible-flow-witness"]
+    if feasible["expected_result"] != "sat" or feasible.get("proof_status") != "checked":
+        fail("feasible-flow-witness must be a checked sat row")
+    values = single_witness_values(feasible, witnesses)
+    vertices, edges, source, sink, flow_value = require_directed_flow_network("feasible flow", values)
+    validate_flow_conservation("feasible-flow-witness", vertices, edges, source, sink, flow_value)
+
+    optimal = checks["flow-cut-optimality-witness"]
+    if optimal["expected_result"] != "sat" or optimal.get("proof_status") != "checked":
+        fail("flow-cut-optimality-witness must be a checked sat row")
+    values = single_witness_values(optimal, witnesses)
+    vertices, edges, source, sink, flow_value = require_directed_flow_network("flow cut optimality", values)
+    validate_flow_conservation("flow-cut-optimality-witness", vertices, edges, source, sink, flow_value)
+    source_side, target_side = require_flow_cut_partition("flow-cut-optimality-witness", values, vertices, source, sink)
+    cut_capacity = directed_cut_capacity(edges, source_side, target_side)
+    listed_cut_capacity = require_fraction("flow-cut-optimality-witness.cut_capacity", values.get("cut_capacity"))
+    if listed_cut_capacity != cut_capacity:
+        fail("flow-cut-optimality-witness cut_capacity does not match the directed cut")
+    if directed_cut_net_flow(edges, source_side, target_side) != flow_value:
+        fail("flow-cut-optimality-witness net flow across the cut does not match flow_value")
+    if flow_value != cut_capacity:
+        fail("flow-cut-optimality-witness must saturate the listed cut")
+
+    bad_capacity = checks["bad-capacity-bound-rejected"]
+    if bad_capacity["expected_result"] != "unsat" or bad_capacity.get("proof_status") != "checked":
+        fail("bad-capacity-bound-rejected must be a checked unsat row")
+    values = single_witness_values(bad_capacity, witnesses)
+    _vertices, edges, _source, _sink, _flow_value = require_directed_flow_network(
+        "bad capacity flow",
+        values,
+        enforce_capacity=False,
+    )
+    tail, head, capacity, flow = require_directed_edge_ref(
+        "bad-capacity-bound-rejected.violating_edge",
+        values.get("violating_edge"),
+        edges,
+    )
+    if flow <= capacity:
+        fail(f"bad-capacity-bound-rejected edge {(tail, head)} does not violate capacity")
+    listed_capacity = require_fraction("bad-capacity-bound-rejected.capacity", values.get("capacity"))
+    listed_claimed_flow = require_fraction("bad-capacity-bound-rejected.claimed_flow", values.get("claimed_flow"))
+    if listed_capacity != capacity or listed_claimed_flow != flow:
+        fail("bad-capacity-bound-rejected listed capacity/claimed_flow do not match the violating edge")
+
+    bad_value = checks["bad-flow-value-rejected"]
+    if bad_value["expected_result"] != "unsat" or bad_value.get("proof_status") != "checked":
+        fail("bad-flow-value-rejected must be a checked unsat row")
+    data = bad_value.get("data", {})
+    vertices, edges, source, sink, flow_value = require_directed_flow_network("bad flow value", data)
+    validate_flow_conservation("bad-flow-value-rejected", vertices, edges, source, sink, flow_value)
+    source_side, target_side = require_flow_cut_partition("bad-flow-value-rejected", data, vertices, source, sink)
+    cut_capacity = directed_cut_capacity(edges, source_side, target_side)
+    listed_cut_capacity = require_fraction("bad-flow-value-rejected.cut_capacity", data.get("cut_capacity"))
+    claimed_flow_value = require_fraction("bad-flow-value-rejected.claimed_flow_value", data.get("claimed_flow_value"))
+    if listed_cut_capacity != cut_capacity:
+        fail("bad-flow-value-rejected cut_capacity does not match the directed cut")
+    if claimed_flow_value <= cut_capacity:
+        fail("bad-flow-value-rejected claimed flow must exceed the listed cut capacity")
+
+    horizon = checks["max-flow-min-cut-theorem-lean-horizon"]
+    if horizon["expected_result"] != "not-run" or horizon.get("proof_status") != "lean-horizon":
+        fail("max-flow-min-cut-theorem-lean-horizon must be a Lean-horizon not-run row")
+
+
 def has_mod_inverse(a: int, modulus: int) -> bool:
     return any((a * candidate) % modulus == 1 for candidate in range(modulus))
 
@@ -26611,6 +26831,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_sets(expected)
     if metadata["id"] == "finite-fields-v0":
         validate_finite_fields(expected)
+    if metadata["id"] == "finite-flow-cut-v0":
+        validate_finite_flow_cut(expected)
     if metadata["id"] == "finite-algebra-homomorphisms-v0":
         validate_finite_algebra_homomorphisms(expected)
     if metadata["id"] == "finite-active-set-qp-v0":

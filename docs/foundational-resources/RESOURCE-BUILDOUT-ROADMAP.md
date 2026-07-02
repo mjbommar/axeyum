@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 75 bridge-concept rows.
 - 5 example-family rows.
-- 108 non-template math example packs.
-- 688 expected checks.
-- 322 checked proof/evidence rows.
+- 109 non-template math example packs.
+- 693 expected checks.
+- 326 checked proof/evidence rows.
 - 295 replay-only rows.
-- 71 Lean-horizon rows.
+- 72 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
-- 0 non-benchmark-horizon solver-reuse packs.
+- 1 non-benchmark-horizon solver-reuse pack.
 - 0 unclassified solver-reuse packs.
-- 108 focused learner-linked packs, with no path-only, index-only, or missing
+- 109 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -543,17 +543,19 @@ Current packs:
 - `graph-search-runtime-v0`
 - `graph-matching-v0`
 - `graph-cut-v0`
+- `finite-flow-cut-v0`
 - `graph-d-separation-v0`
 
 Build next:
 
 - Maintain the landed `bridge_finite_graph_replay_obstruction` row for
-  coloring, reachability, BFS/DFS traversal, matching, cut, separation,
-  d-separation, and graph-counterexample replay.
+  coloring, reachability, BFS/DFS traversal, matching, cut, finite flow/cut,
+  separation, d-separation, and graph-counterexample replay.
 - Promote one representative bad row per graph family into a small regression
   artifact if it produces a compact CNF/LIA/BV check.
 - Add proof-route notes for when graph claims are Boolean SAT, finite replay,
-  LIA cost counters, or Lean-horizon asymptotics.
+  exact rational flow/cut replay, LIA cost counters, or Lean-horizon
+  asymptotics.
 
 Graduation:
 
@@ -2307,6 +2309,13 @@ Pick one item per commit unless the change is purely navigational.
      `qf-lra-bad-variance` row owns the source SMT-LIB artifact and gives
      consumers a direct pack/route/text query for the checked variance
      equation conflict.
+155. Landed: add `finite-flow-cut-v0` as a graph/optimization bridge pack.
+     The pack replays one exact directed feasible flow, checks a saturated
+     source-side cut certificate, rejects a malformed edge-capacity claim,
+     rejects a claimed flow value above the finite cut capacity, and records
+     the general max-flow/min-cut theorem as Lean-horizon work. Its
+     `solver_reuse` disposition is deliberately `non-benchmark-horizon` until
+     a source exact-arithmetic artifact and checked proof route are committed.
 
 ## Validation Checklist
 

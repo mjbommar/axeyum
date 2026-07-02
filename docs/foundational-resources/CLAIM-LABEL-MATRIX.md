@@ -16,11 +16,11 @@ The current public summary is:
 
 ```text
 concept_rows=121
-non_template_packs=108
-checks=688
-expected_results=not-run:71,sat:336,unsat:281
-proof_statuses=checked:322,lean-horizon:71,replay-only:295
-solver_reuse=promoted:108
+non_template_packs=109
+checks=693
+expected_results=not-run:72,sat:338,unsat:283
+proof_statuses=checked:326,lean-horizon:72,replay-only:295
+solver_reuse=non-benchmark-horizon:1,promoted:108
 ```
 
 ## Row Labels
@@ -56,7 +56,9 @@ collapsing a mixed pack into a single over-strong badge.
 | Mixed checked/replay/horizon rows | mixed trust story | show every chip needed for the rows being displayed |
 
 Pack-level `solver_reuse=promoted` means the pack has a deliberate solver or
-proof feedback disposition. It does not mean the pack is a benchmark, theorem
+proof feedback disposition. Pack-level `solver_reuse=non-benchmark-horizon`
+means the pack has a deliberate non-benchmark disposition until another proof
+or solver artifact exists. Neither means the pack is a benchmark, theorem
 proof, or parity result.
 
 ## Route Labels

@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite flow/cut graph resource landed.**
+  `finite-flow-cut-v0` adds exact directed-flow feasibility replay, saturated
+  cut-capacity optimality replay, malformed capacity rejection, malformed
+  flow-value rejection by finite cut bound, and a max-flow/min-cut theorem
+  horizon. It is deliberately `non-benchmark-horizon` until a source
+  exact-arithmetic artifact and checked proof route exist. The public summary
+  now reports 121 concept rows, 109 packs, 693 expected checks, 326 checked
+  rows, 295 replay-only rows, 72 Lean-horizon rows, 108 promoted solver-reuse
+  packs, and 1 non-benchmark-horizon pack.
+
 - **Proof-upgrade curriculum/R5 filters landed.**
   `upgrade-frontier` now accepts `--curriculum-node` and `--solver-reuse`, so
   proof contributors can start from the formal curriculum DAG or the R5

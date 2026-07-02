@@ -32,11 +32,11 @@ schemas, examples, and validation workflows.
   is the commit-sized build matrix for every curriculum node, math field,
   resource gate, and proof route.
 - [MATH-CURRICULUM-DETAILED-BUILD-PLAN.md](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
-  is the current execution ledger for stabilizing the existing 108 math packs,
+  is the current execution ledger for stabilizing the existing 109 math packs,
   resolving unclassified solver-reuse rows, completing learner paths, and
   deepening proof routes field by field.
 - [LEARNER-COVERAGE-AUDIT.md](LEARNER-COVERAGE-AUDIT.md) records the current
-  learner-spine audit: all 108 non-template math packs are focused-lesson
+  learner-spine audit: all 109 non-template math packs are focused-lesson
   linked, with no path-only, index-only, or missing learner buckets.
 - [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md) is the detailed
   operating roadmap for building the curriculum-driven resource system across
@@ -475,6 +475,10 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/graph-cut-v0/`](../../artifacts/examples/math/graph-cut-v0/)
   validates finite minimum edge-cut and vertex-cut certificates, plus checked
   rejection of non-separating one-edge and one-vertex cuts.
+- [`artifacts/examples/math/finite-flow-cut-v0/`](../../artifacts/examples/math/finite-flow-cut-v0/)
+  validates finite directed-flow feasibility, cut-capacity optimality replay,
+  checked rejection of malformed capacity and flow-value claims, and the
+  max-flow/min-cut theorem horizon.
 - [`artifacts/examples/math/finite-probability-v0/`](../../artifacts/examples/math/finite-probability-v0/)
   validates exact finite probability mass tables, conditional probability,
   Bayes posterior replay, finite independence replay, and total variation
@@ -721,6 +725,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-matching-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-d-separation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-cut-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-flow-cut-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0

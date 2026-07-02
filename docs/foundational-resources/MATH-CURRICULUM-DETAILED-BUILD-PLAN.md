@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 75 bridge-concept rows.
 - 5 example-family rows.
-- 108 non-template math packs.
-- 688 expected checks.
-- 322 checked proof/evidence rows.
+- 109 non-template math packs.
+- 693 expected checks.
+- 326 checked proof/evidence rows.
 - 295 replay-only rows.
-- 71 Lean-horizon rows.
+- 72 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
-- 0 non-benchmark-horizon solver-reuse packs.
+- 1 non-benchmark-horizon solver-reuse pack.
 - 0 unclassified solver-reuse packs.
-- 108 focused learner-linked packs, with no path-only, index-only, or missing
+- 109 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 108 current non-template packs satisfy the focused-lesson side of this
+all 109 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -1826,6 +1826,13 @@ Pick one row per commit unless the change is purely navigational.
      learner wording, route documentation, or a genuinely new certificate; the
      proof-upgrade guide, public data contract, consumer query guide, and
      foundational smoke gate exercise both filters.
+216. Landed: add `finite-flow-cut-v0` as a graph/optimization bridge pack. It
+     checks exact directed-flow feasibility, saturated cut-capacity optimality
+     for one finite network, malformed capacity rejection, malformed
+     flow-value rejection by a finite cut bound, and a max-flow/min-cut
+     Lean-horizon row. The pack is intentionally
+     `non-benchmark-horizon` until a source exact-arithmetic artifact and
+     checked proof route exist.
 
 ## Validation Checklist
 

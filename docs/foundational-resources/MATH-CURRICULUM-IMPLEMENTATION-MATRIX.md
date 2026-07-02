@@ -333,6 +333,11 @@ Build sequence:
     `graph-search-runtime-v0` now links `bad-dfs-cost-bound-rejected` to
     `artifacts/examples/math/graph-search-runtime-v0/smt2/bad-dfs-cost-bound-lia-conflict.smt2`,
     checked by the `math_resource_lia_routes` arithmetic-DPLL regression.
+    `finite-flow-cut-v0` adds exact finite directed-flow feasibility,
+    cut-capacity optimality replay, malformed capacity rejection, malformed
+    flow-value rejection, and a max-flow/min-cut theorem horizon, but remains
+    `non-benchmark-horizon` until a source exact-arithmetic artifact and
+    checked proof route are committed.
     `integer-lia-v0` now links `diophantine-gcd-obstruction` to
     `artifacts/examples/math/integer-lia-v0/smt2/diophantine-gcd-obstruction-conflict.smt2`,
     checked by the `math_resource_lia_routes` Diophantine regression.

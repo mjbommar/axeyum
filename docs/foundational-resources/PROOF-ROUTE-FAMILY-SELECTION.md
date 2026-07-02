@@ -37,12 +37,13 @@ The public query surface reports:
 python3 scripts/query-foundational-resources.py summary
 ```
 
-- 108 non-template math packs.
-- 688 expected checks.
-- 322 checked proof/evidence rows.
+- 109 non-template math packs.
+- 693 expected checks.
+- 326 checked proof/evidence rows.
 - 295 replay-only rows.
-- 71 Lean-horizon rows.
+- 72 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
+- 1 non-benchmark-horizon solver-reuse pack.
 
 Route summaries from `scripts/query-foundational-resources.py routes`:
 

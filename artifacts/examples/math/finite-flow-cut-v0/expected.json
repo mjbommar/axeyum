@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-flow-cut-v0",
+  "witnesses": [
+    {
+      "id": "four-node-feasible-flow",
+      "description": "A feasible s-t flow of value 3 on a four-node directed network.",
+      "values": {
+        "vertices": ["s", "a", "b", "t"],
+        "directed_edges": [
+          {"from": "s", "to": "a", "capacity": "2", "flow": "2"},
+          {"from": "s", "to": "b", "capacity": "1", "flow": "1"},
+          {"from": "a", "to": "b", "capacity": "1", "flow": "1"},
+          {"from": "a", "to": "t", "capacity": "1", "flow": "1"},
+          {"from": "b", "to": "t", "capacity": "2", "flow": "2"}
+        ],
+        "source": "s",
+        "sink": "t",
+        "flow_value": "3"
+      }
+    },
+    {
+      "id": "four-node-cut-certificate",
+      "description": "The source-side cut {s} has capacity 3 and is saturated by the feasible flow.",
+      "values": {
+        "vertices": ["s", "a", "b", "t"],
+        "directed_edges": [
+          {"from": "s", "to": "a", "capacity": "2", "flow": "2"},
+          {"from": "s", "to": "b", "capacity": "1", "flow": "1"},
+          {"from": "a", "to": "b", "capacity": "1", "flow": "1"},
+          {"from": "a", "to": "t", "capacity": "1", "flow": "1"},
+          {"from": "b", "to": "t", "capacity": "2", "flow": "2"}
+        ],
+        "source": "s",
+        "sink": "t",
+        "flow_value": "3",
+        "source_side": ["s"],
+        "target_side": ["a", "b", "t"],
+        "cut_capacity": "3"
+      }
+    },
+    {
+      "id": "over-capacity-flow",
+      "description": "A malformed flow sends 3 units on an edge whose capacity is 2.",
+      "values": {
+        "vertices": ["s", "a", "b", "t"],
+        "directed_edges": [
+          {"from": "s", "to": "a", "capacity": "2", "flow": "3"},
+          {"from": "s", "to": "b", "capacity": "1", "flow": "1"},
+          {"from": "a", "to": "b", "capacity": "1", "flow": "1"},
+          {"from": "a", "to": "t", "capacity": "1", "flow": "1"},
+          {"from": "b", "to": "t", "capacity": "2", "flow": "2"}
+        ],
+        "source": "s",
+        "sink": "t",
+        "flow_value": "4",
+        "violating_edge": ["s", "a"],
+        "capacity": "2",
+        "claimed_flow": "3"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "feasible-flow-witness",
+      "claim": "The listed directed flow is feasible and has value 3.",
+      "expected_result": "sat",
+      "validation": "finite_network_flow_replay",
+      "proof_status": "checked",
+      "witnesses": ["four-node-feasible-flow"],
+      "notes": "The validator checks nonnegative capacities and flows, every flow <= capacity, conservation at internal vertices, and source/sink balance."
+    },
+    {
+      "id": "flow-cut-optimality-witness",
+      "claim": "The listed feasible flow saturates an s-t cut of capacity 3.",
+      "expected_result": "sat",
+      "validation": "finite_flow_cut_certificate_replay",
+      "proof_status": "checked",
+      "witnesses": ["four-node-cut-certificate"],
+      "notes": "The validator recomputes the directed cut capacity and net cut flow. Equality between flow value and cut capacity certifies optimality for this finite instance only."
+    },
+    {
+      "id": "bad-capacity-bound-rejected",
+      "claim": "The malformed flow respects every edge capacity.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_flow_capacity_refutation",
+      "proof_status": "checked",
+      "witnesses": ["over-capacity-flow"],
+      "notes": "The validator locates the listed edge s->a and rejects the row because the claimed flow 3 exceeds capacity 2."
+    },
+    {
+      "id": "bad-flow-value-rejected",
+      "claim": "The same network has a feasible s-t flow of value 4.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_flow_value_cut_bound_refutation",
+      "proof_status": "checked",
+      "data": {
+        "vertices": ["s", "a", "b", "t"],
+        "directed_edges": [
+          {"from": "s", "to": "a", "capacity": "2", "flow": "2"},
+          {"from": "s", "to": "b", "capacity": "1", "flow": "1"},
+          {"from": "a", "to": "b", "capacity": "1", "flow": "1"},
+          {"from": "a", "to": "t", "capacity": "1", "flow": "1"},
+          {"from": "b", "to": "t", "capacity": "2", "flow": "2"}
+        ],
+        "source": "s",
+        "sink": "t",
+        "flow_value": "3",
+        "source_side": ["s"],
+        "target_side": ["a", "b", "t"],
+        "cut_capacity": "3",
+        "claimed_flow_value": "4"
+      },
+      "notes": "Exact cut replay computes capacity 3 for the source-side cut, so a claimed feasible flow value 4 violates the finite cut upper bound."
+    },
+    {
+      "id": "max-flow-min-cut-theorem-lean-horizon",
+      "claim": "The general max-flow/min-cut theorem for arbitrary finite networks requires future theorem-prover reconstruction.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For every finite capacitated s-t network, the maximum feasible flow value equals the minimum s-t cut capacity.",
+        "future_checker": "Lean proof of the theorem plus a certificate bridge for algorithm output, integrality, and optional min-cost-flow extensions."
+      },
+      "notes": "The checked rows cover one explicit network and one explicit cut certificate. They do not prove the general theorem or algorithm correctness."
+    }
+  ]
+}

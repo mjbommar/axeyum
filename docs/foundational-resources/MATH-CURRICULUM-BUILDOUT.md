@@ -841,6 +841,9 @@ conditioned-chain and unconditioned-collider blocker rows.
 `artifacts/examples/math/graph-cut-v0/` now validates finite minimum edge-cut
 and vertex-cut certificates, plus checked rejection of non-separating one-edge
 and one-vertex cuts.
+`artifacts/examples/math/finite-flow-cut-v0/` now validates exact directed-flow
+feasibility, cut-capacity optimality replay, checked rejection of malformed
+capacity and flow-value claims, and the max-flow/min-cut theorem horizon.
 `artifacts/examples/math/finite-probability-v0/` now validates finite
 probability mass tables, conditional probability, Bayes posterior replay,
 finite independence replay, total variation replay, and checked QF_LRA/Farkas
@@ -1081,11 +1084,12 @@ Recommended order:
 
 1. Graph resources landed: `graph-coloring-v0`, `graph-reachability-v0`,
    `graph-search-runtime-v0`, `graph-matching-v0`,
-   `graph-d-separation-v0`, and `graph-cut-v0` validate SAT colorings,
-   non-colorability, finite reachability, traversal traces, finite search
-   cost counters, cut separation, matching witnesses, augmenting paths, finite
-   DAG d-separation including checked conditioned-chain and
-   unconditioned-collider CNF blockers, and minimum cut certificates.
+   `graph-d-separation-v0`, `graph-cut-v0`, and `finite-flow-cut-v0` validate
+   SAT colorings, non-colorability, finite reachability, traversal traces,
+   finite search cost counters, cut separation, matching witnesses, augmenting
+   paths, finite DAG d-separation including checked conditioned-chain and
+   unconditioned-collider CNF blockers, minimum cut certificates, finite
+   directed-flow feasibility, and cut-capacity optimality replay.
 2. `finite-probability-v0`: probability mass, conditioning, Bayes rule,
    finite independence, total variation, and checked bad normalization/
    Bayes-posterior/independence/total-variation certificates.
@@ -1502,9 +1506,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 108 non-template math example packs validate.
+  Status: 109 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 108 non-template packs have at least one `checked` expected-result row.
+  Status: 109 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -2038,6 +2042,10 @@ theory horizon.
 `graph-cut-v0` now has a learner-facing end-to-end lesson for finite
 minimum-edge-cut and minimum-vertex-cut certificates, rejected one-cut claims,
 checked smaller-cut enumeration, and the general max-flow/min-cut theorem
+horizon.
+`finite-flow-cut-v0` now has a learner-facing end-to-end lesson for exact
+directed-flow feasibility, cut-capacity optimality replay, malformed
+capacity/flow-value rejections, and the general max-flow/min-cut theorem
 horizon.
 `graph-d-separation-v0` now has a learner-facing end-to-end lesson for finite
 active-chain replay, conditioned chain/fork blocking, unconditioned-collider
@@ -2764,6 +2772,12 @@ state-machine resource: finite transition replay, generated two-step
 reachability rows, terminal-state rows, and source-linked checked Bool/QF_LIA
 artifacts for no-skip, terminal-state, and implementation-equivalence
 obligations.
+The graph curriculum layer now also has `finite-flow-cut-v0`. It adds exact
+finite directed-flow feasibility replay, a saturated source-side cut
+certificate, checked rejection of malformed capacity and flow-value claims, and
+a Lean-horizon row for the general max-flow/min-cut theorem. The pack is
+deliberately marked `non-benchmark-horizon` until a source exact-arithmetic
+artifact and checked proof route are committed.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

@@ -121,6 +121,7 @@ artifacts/examples/math/
   graph-matching-v0/
   graph-d-separation-v0/
   graph-cut-v0/
+  finite-flow-cut-v0/
   finite-probability-v0/
   descriptive-statistics-v0/
   least-squares-regression-v0/
@@ -584,6 +585,10 @@ descendant-opened colliders.
 [`graph-cut-v0`](../../artifacts/examples/math/graph-cut-v0/)
 validates finite minimum edge-cut and vertex-cut certificates, plus checked
 rejection of non-separating one-edge and one-vertex cuts.
+[`finite-flow-cut-v0`](../../artifacts/examples/math/finite-flow-cut-v0/)
+validates finite directed-flow feasibility, cut-capacity optimality replay,
+malformed capacity and flow-value rejections, and the max-flow/min-cut theorem
+horizon.
 [`finite-probability-v0`](../../artifacts/examples/math/finite-probability-v0/)
 validates exact finite probability mass tables, conditional probability, Bayes
 posterior replay, finite independence replay, and total variation replay.

@@ -24,6 +24,7 @@ Example packs:
 - [graph-matching-v0](../../../artifacts/examples/math/graph-matching-v0/)
 - [graph-d-separation-v0](../../../artifacts/examples/math/graph-d-separation-v0/)
 - [graph-cut-v0](../../../artifacts/examples/math/graph-cut-v0/)
+- [finite-flow-cut-v0](../../../artifacts/examples/math/finite-flow-cut-v0/)
 - [proof-methods-refutation-v0](../../../artifacts/examples/math/proof-methods-refutation-v0/)
 
 Companion map:
@@ -60,7 +61,10 @@ d-separation pack checks chains, forks, colliders, and descendant-opened
 colliders by enumerating finite skeleton paths, with CNF/DRAT/LRAT artifacts for
 conditioned-chain and unconditioned-collider blockers. The graph cut pack checks
 minimum edge and vertex cut certificates by replaying separation and
-enumerating smaller candidate cuts.
+enumerating smaller candidate cuts. The finite flow/cut pack checks one
+directed capacitated network by replaying feasibility, recomputing a
+source-side cut capacity, rejecting a capacity violation, and rejecting a
+claimed flow value above that cut bound.
 
 This gives a direct model of "untrusted fast search, trusted small checking":
 the search can propose colors, but the checker only needs the graph and the
@@ -74,12 +78,16 @@ maximum or obstruction is claimed. For d-separation, the search can propose an
 active path, but the checker recomputes every simple path and applies the
 collider/non-collider blocking rules. For cuts, the search can propose a cut
 set and a partition; the checker removes edges or vertices, recomputes
-reachability, and enumerates smaller cuts.
+reachability, and enumerates smaller cuts. For network flows, the search can
+propose edge flows and a cut; the checker recomputes capacities,
+conservation, source/sink balance, and the cut upper bound over exact
+rationals.
 The shared `bridge_finite_graph_replay_obstruction` row is the atlas vocabulary
 for this finite graph pattern across coloring, reachability, traversal,
-matching, cut, and d-separation resources. It is deliberately finite: graph
-minors, max-flow/min-cut theorems, matching duality, causal identification,
-and asymptotic traversal complexity stay in proof-horizon resources.
+matching, cut, finite flow/cut, and d-separation resources. It is deliberately
+finite: graph minors, max-flow/min-cut theorems, matching duality, causal
+identification, and asymptotic traversal complexity stay in proof-horizon
+resources.
 
 ## Encode / Check Walkthrough
 
@@ -264,6 +272,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-matching-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-d-separation-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-cut-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-flow-cut-v0
 ```
 
 For a fuller trace from data row to replay result and evidence status, read
@@ -273,6 +282,7 @@ For a fuller trace from data row to replay result and evidence status, read
 [End To End: Graph Search Runtime Counters](graph-search-runtime-end-to-end.md),
 [End To End: Graph Matching And Augmenting Paths](graph-matching-end-to-end.md),
 [End To End: Graph Cut Certificates](graph-cut-end-to-end.md),
+[End To End: Finite Flow And Cut Certificates](finite-flow-cut-end-to-end.md),
 [End To End: DAG D-Separation Checks](graph-d-separation-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md), and
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md).

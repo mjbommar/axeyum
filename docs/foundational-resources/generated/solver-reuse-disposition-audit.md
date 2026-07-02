@@ -13,7 +13,7 @@ or only educational boundary examples.
 
 | Metric | Count |
 |---|---:|
-| Non-template math packs | 108 |
+| Non-template math packs | 109 |
 | Promoted evidence row links | 195 |
 | Unclassified packs | 0 |
 
@@ -22,7 +22,7 @@ or only educational boundary examples.
 | Status | Packs |
 |---|---:|
 | `unclassified` | 0 |
-| `non-benchmark-horizon` | 0 |
+| `non-benchmark-horizon` | 1 |
 | `promoted` | 108 |
 
 ## Unclassified Queue
@@ -33,6 +33,7 @@ No unclassified solver-reuse packs.
 
 | Status | Pack | Gate | Next Gate | Fields | Fragments | Proof Statuses | Pressure Buckets | Solver Target | Evidence Rows | Next Step | Validator |
 |---|---|---|---|---|---|---|---|---|---|---|---|
+| `non-benchmark-horizon` | `finite-flow-cut-v0` | `R4 checked evidence` | `R5 solver reuse` | `graph_theory`, `discrete_math`, `optimization_and_convexity`, `linear_algebra` | `finite directed graphs`, `finite network flow replay`, `finite cut certificates`, `exact rational arithmetic`, `Lean horizon` | `checked`: 4, `lean-horizon`: 1 | `QF_LRA / Farkas`, `Finite Replay / Computable Witness`, `Lean Horizon` | finite network-flow replay and max-flow/min-cut theorem boundary | `feasible-flow-witness`, `flow-cut-optimality-witness`, `bad-capacity-bound-rejected`, `bad-flow-value-rejected` | Promote only after adding a source exact-arithmetic artifact and checked proof route for capacity, conservation, or cut-bound conflicts; keep the general max-flow/min-cut theorem in the Lean-horizon lane. | `python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-flow-cut-v0` |
 | `promoted` | `affine-geometry-v0` | `R6 consumer boundary` | `no later gate` | `geometry`, `linear_algebra`, `real_analysis` | `LRA (exact rationals)`, `QF_LRA`, `finite coordinate replay`, `Lean horizon` | `checked`: 3, `lean-horizon`: 1, `replay-only`: 3 | `QF_LRA / Farkas`, `Finite Replay / Computable Witness`, `Lean Horizon` | affine geometry bad midpoint-coordinate, bad collinearity determinant, and bad distance-preservation QF_LRA/Farkas regression seeds | `bad-midpoint-image-y-rejected`, `bad-collinearity-determinant-rejected`, `bad-distance-preservation-rejected` | Promote additional affine-coordinate rows only when they add distinct exact-linear solver pressure beyond midpoint, collinearity, and distance counterclaims; keep general affine-combination, incidence, ratio, and synthetic-geometry theorems in the Lean-horizon lane. | `python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0` |
 | `promoted` | `bounded-dynamics-v0` | `R6 consumer boundary` | `no later gate` | `differential_equations_and_dynamical_systems`, `numerical_analysis`, `linear_algebra` | `finite transition systems`, `bounded model checking`, `LRA (exact rationals)`, `QF_LRA` | `checked`: 3, `replay-only`: 6 | `QF_LRA / Farkas`, `Finite Replay / Computable Witness`, `Lean Horizon` | bounded recurrence bad-transition, bad-threshold, and bad-invariant QF_LRA/Farkas regression seeds | `qf-lra-bad-transition-step`, `qf-lra-bad-threshold-step`, `qf-lra-bad-invariant-bound` | Promote additional dynamics rows only when they add distinct transition, reachability, invariant, or finite-error pressure; keep continuous-time existence, uniqueness, stability, chaos, and PDE theory in the Lean-horizon lane. | `python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0` |
 | `promoted` | `bounded-monotone-sequence-v0` | `R6 consumer boundary` | `no later gate` | `real_analysis`, `topology` | `bounded epsilon-N templates`, `LRA (exact rationals)`, `QF_LRA`, `finite replay`, `Lean horizon` | `checked`: 2, `lean-horizon`: 1, `replay-only`: 5 | `QF_LRA / Farkas`, `Finite Replay / Computable Witness`, `Lean Horizon` | bounded monotone-sequence replay rows plus explicit bad upper-bound and bad tail-gap QF_LRA/Farkas regression seeds | `qf-lra-bad-upper-bound`, `qf-lra-bad-tail-gap` | Promote additional sequence rows only when they add distinct bounded-tail variants beyond the current epsilon row, recurrence-prefix, supremum, or exact-sum solver pressure; keep monotone convergence, completeness, compactness, and all quantified infinite-tail theorems in the Lean-horizon lane. | `python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-monotone-sequence-v0` |

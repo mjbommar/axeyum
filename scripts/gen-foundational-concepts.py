@@ -501,7 +501,7 @@ FIELD_PACKS = {
     "logic_and_proof": ("proof-methods-refutation-v0", "Negation-as-query, finite CNF checks, finite order counterexamples, and proof-object lessons."),
     "set_theory_and_foundations": ("finite-sets-v0", "Finite set, relation, function, monoid/function-composition, permutation-group, group-action, order, lattice, and cardinality checks."),
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
-    "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, and d-separation."),
+    "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU replay, rank, inverse, Jacobians, Hessians, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, and Cayley-table validation."),
@@ -2866,8 +2866,9 @@ BRIDGE_CONCEPTS = [
             "Finite graph rows state the vertex set, edge relation, ordering, "
             "witness object, and bounded search space being checked. The "
             "trusted object is replay of coloring, reachability, traversal, "
-            "matching, cut, or d-separation data, or a checked Boolean/CNF, "
-            "QF_BV, or QF_LIA certificate for a fixed malformed graph claim."
+            "matching, cut, finite network-flow/cut, or d-separation data, "
+            "or a checked Boolean/CNF, QF_BV, or QF_LIA certificate for a "
+            "fixed malformed graph claim."
         ),
         "prerequisites": [
             "bridge_finite_model_replay",
@@ -2891,6 +2892,7 @@ BRIDGE_CONCEPTS = [
             "DRAT / LRAT",
             "QF_BV fixed-width encodings",
             "QF_LIA counters",
+            "exact rational flow/cut replay",
             "finite enumeration",
         ],
         "example_packs": [
@@ -2915,15 +2917,19 @@ BRIDGE_CONCEPTS = [
                 "Finite edge/vertex cut certificates, non-cut rejection, and bounded post-removal reachability CNF proof route.",
             ),
             (
+                "finite-flow-cut-v0",
+                "Finite directed flow feasibility, cut-capacity optimality replay, malformed capacity rejection, and max-flow/min-cut theorem horizon.",
+            ),
+            (
                 "graph-d-separation-v0",
                 "Finite DAG d-separation path enumeration with conditioned-chain and unconditioned-collider CNF proof routes.",
             ),
         ],
         "proof_routes": [
             {
-                "name": "finite graph replay plus Boolean, QF_BV, and QF_LIA certificates",
+                "name": "finite graph replay plus Boolean, QF_BV, QF_LIA, and exact-rational certificates",
                 "status": "checked",
-                "checker": "scripts/validate-foundational-example-pack.py plus math_resource_boolean_routes, math_resource_bv_routes, and math_resource_lia_routes",
+                "checker": "scripts/validate-foundational-example-pack.py for finite graph/flow replay plus math_resource_boolean_routes, math_resource_bv_routes, and math_resource_lia_routes for promoted proof-route rows",
                 "lean_status": "partial",
                 "sources": [
                     "docs/proof-cookbook/recipes/finite-model-replay.md",
@@ -2937,6 +2943,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/graph-search-runtime-end-to-end.md",
                     "docs/learn/math/graph-matching-end-to-end.md",
                     "docs/learn/math/graph-cut-end-to-end.md",
+                    "docs/learn/math/finite-flow-cut-end-to-end.md",
                     "docs/learn/math/graph-d-separation-end-to-end.md",
                     "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
                     "crates/axeyum-solver/tests/math_resource_bv_routes.rs",
@@ -2957,13 +2964,14 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
             "docs/learn/math/graph-and-discrete-reasoning.md",
             "docs/learn/math/graph-traversal-runtime-index.md",
+            "docs/learn/math/finite-flow-cut-end-to-end.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
             "crates/axeyum-solver/tests/math_resource_bv_routes.rs",
             "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
         ],
         "open_gaps": [
-            "Finite graph rows do not prove chromatic-number theorems, max-flow/min-cut, matching duality, graph minors, extremal graph theory, or unbounded graph-family claims.",
+            "Finite graph rows do not prove chromatic-number theorems, general max-flow/min-cut, matching duality, graph minors, extremal graph theory, or unbounded graph-family claims.",
             "Traversal-cost rows are fixed finite counterexamples; asymptotic BFS/DFS complexity and average-case runtime remain Lean-horizon.",
             "D-separation rows are finite graph-theoretic checks and do not claim causal identification, do-calculus, or probabilistic graphical-model semantics.",
         ],

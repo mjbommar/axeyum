@@ -36,7 +36,7 @@ These rows live in the
 | What does deterministic DFS do? | `graph-reachability-v0`, `graph-search-runtime-v0` | ordered adjacency and DFS preorder replay | average-case or heuristic DFS behavior |
 | How many vertices are visited before the target? | `graph-search-runtime-v0` | finite BFS queue pop count and DFS preorder count | asymptotic BFS/DFS runtime |
 | Is a proposed traversal bound false? | `graph-search-runtime-v0` | exact counter replay plus checked QF_LIA arithmetic-DPLL evidence | graph-family lower bounds |
-| Does another graph obstruction reuse the same shape? | `graph-coloring-v0`, `graph-matching-v0`, `graph-cut-v0`, `graph-d-separation-v0` | finite witness replay plus Boolean/CNF or BV proof rows | broad graph theory |
+| Does another graph obstruction reuse the same shape? | `graph-coloring-v0`, `graph-matching-v0`, `graph-cut-v0`, `finite-flow-cut-v0`, `graph-d-separation-v0` | finite witness replay plus Boolean/CNF, BV, LIA, or exact-rational proof/replay rows | broad graph theory |
 
 ## Checkable Shapes
 
