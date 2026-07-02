@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "finite-newton-step-v0",
+  "title": "Finite Newton Step Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_reals",
+    "curriculum_calculus",
+    "curriculum_linear_algebra",
+    "field_real_analysis",
+    "field_linear_algebra",
+    "field_optimization_and_convexity",
+    "field_numerical_analysis",
+    "bridge_derivative_identity_shadow",
+    "bridge_rational_convexity_shadow",
+    "bridge_residual_bound"
+  ],
+  "field_ids": [
+    "real_analysis",
+    "linear_algebra",
+    "optimization_and_convexity",
+    "numerical_analysis"
+  ],
+  "curriculum_nodes": [
+    "reals",
+    "calculus",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite optimization replay",
+    "finite numerical replay",
+    "finite rational matrices",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "symbolic derivative replay",
+    "Farkas",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-newton-step-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Newton-step bad coordinate QF_LRA/Farkas regression seed",
+    "pressure": "Exact Newton linear-solve replay computes next_x = 10/7 for a two-variable quadratic while the malformed row claims next_x = 3/2.",
+    "evidence": [
+      "qf-lra-bad-newton-coordinate"
+    ],
+    "next_step": "Promote additional Newton or second-order rows only when they add distinct Hessian solve, trust-region, line-search, conditioning, or theorem-reconstruction pressure; keep convergence, globalization, and floating-point stability in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/03-destinations/calculus.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/newton-step-end-to-end.md",
+    "artifacts/examples/math/finite-newton-step-v0/smt2/bad-newton-coordinate-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "quadratic-gradient-hessian-replay",
+    "newton-linear-solve-replay",
+    "newton-step-stationarity-replay",
+    "newton-objective-decrease-replay",
+    "bad-newton-coordinate-rejected",
+    "qf-lra-bad-newton-coordinate",
+    "general-newton-method-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode finite Newton-step witnesses as deterministic exact-rational replay rows.",
+    "Replay the fixed polynomial value, gradient, Hessian, positive-definite minors, Newton right-hand side, linear solve, next point, stationarity, and objective decrease.",
+    "Route false finite Newton-coordinate claims through checked QF_LRA/Farkas evidence after replay computes the exact coordinate.",
+    "Keep Newton convergence, globalization, trust-region methods, conditioning, and floating-point stability marked Lean-horizon or numerical-honesty until formal routes exist."
+  ]
+}

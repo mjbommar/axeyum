@@ -22,6 +22,7 @@ Example packs:
 - [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
+- [finite-newton-step-v0](../../../artifacts/examples/math/finite-newton-step-v0/)
 - [finite-separation-v0](../../../artifacts/examples/math/finite-separation-v0/)
 - [finite-kkt-v0](../../../artifacts/examples/math/finite-kkt-v0/)
 - [finite-active-set-qp-v0](../../../artifacts/examples/math/finite-active-set-qp-v0/)
@@ -112,7 +113,10 @@ with replay-only bad finite-value and bad affine-step source rows plus
 separate checked `qf-lra-*` Farkas proof rows. The
 finite-root-finding slice adds exact bisection/Newton iteration replay,
 residual-decrease checking, replay-only bad Newton-step and bad bisection-width
-source rows, and separate checked `qf-lra-*` Farkas proof rows. The finite-separation slice adds exact convex-hull membership,
+source rows, and separate checked `qf-lra-*` Farkas proof rows. The finite
+Newton-step slice adds exact two-variable gradient/Hessian replay, a Hessian
+linear solve, stationary next-point checking, objective-decrease replay, and a
+checked QF_LRA/Farkas bad-coordinate certificate. The finite-separation slice adds exact convex-hull membership,
 separating-hyperplane score replay, supporting-face checking, replay-only bad
 convex-combination and bad-separator source rows, and separate checked
 `qf-lra-*` Farkas proof rows; its theorem boundary is
@@ -370,6 +374,24 @@ It recomputes the polynomial values, derivative, iterate, and residual
 decrease. The bad row rejects `17/12 = 4/3` through checked QF_LRA/Farkas
 evidence, making it useful for numerical-analysis lessons without claiming a
 general convergence theorem.
+
+For a finite multivariable Newton-step example, encode a fixed quadratic,
+start point, gradient, and Hessian:
+
+```text
+f(x,y) = x^2 + x*y + 2*y^2 - 4*x - 6*y
+start = (0,0)
+grad f(start) = (-4,-6)
+H = [[2,1],[1,4]]
+```
+
+The `finite-newton-step-v0` validator recomputes the positive Hessian minors
+`2` and `7`, solves `H*d = -grad f(start)` exactly, checks
+`d = (10/7,8/7)`, verifies `grad f(start+d) = (0,0)`, and recomputes the
+objective decrease `44/7`. Its checked row rejects the malformed coordinate
+claim `next_x = 3/2` because exact replay computes `next_x = 10/7`; the final
+scalar conflict is checked through QF_LRA/Farkas evidence. For a focused trace,
+read [End To End: Finite Newton Step](newton-step-end-to-end.md).
 
 For a finite separation example, encode a convex hull and a separating normal:
 
@@ -688,6 +710,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-newton-step-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_newton_step_bad_coordinate_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-separation-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
@@ -763,6 +787,7 @@ replay, read
 [End To End: Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md),
 [End To End: Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md),
 [End To End: Finite Root Finding](finite-root-finding-end-to-end.md),
+[End To End: Finite Newton Step](newton-step-end-to-end.md),
 [End To End: Finite Hyperplane Separation](finite-separation-end-to-end.md),
 [End To End: Finite KKT Checks](finite-kkt-end-to-end.md),
 [End To End: Finite Active-Set QP Checks](finite-active-set-qp-end-to-end.md),
@@ -817,7 +842,7 @@ eigenpairs, bad Rayleigh-quotient rows, bad characteristic-polynomial rows,
 bad operator-bound and bad Chebyshev-prefix rows, bad Walsh-Hadamard
 transform coefficients, bad QR/Cholesky product entries, bad covariance
 entries, bad KKT stationarity and complementarity rows,
-bad proximal residual rows, negative-norm rows, and projection-orthogonality
+bad Newton-coordinate rows, bad proximal residual rows, negative-norm rows, and projection-orthogonality
 examples graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
 Finite vector-space, dual-space, module, ideal, and tensor-product equality
@@ -827,7 +852,8 @@ when the key step is functional consistency or congruence. Integer boundary
 matrix coefficient conflicts use
 [QF_LIA / Diophantine Evidence](../../proof-cookbook/recipes/qf-lia-diophantine.md).
 Rank-nullity, spectral theorems, Hilbert-space projection, Riesz
-representation, conditioning, and convergence of numerical algorithms remain
+representation, Newton convergence/globalization, conditioning, and
+convergence of numerical algorithms remain
 [Lean Horizon](../../proof-cookbook/recipes/lean-horizon-template.md) or
 explicit numerical-honesty work, not consequences of these finite rows. The
 finite vector/dual/module/tensor split is expanded in

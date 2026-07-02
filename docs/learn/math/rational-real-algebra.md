@@ -20,6 +20,7 @@ Example packs:
 - [generating-functions-v0](../../../artifacts/examples/math/generating-functions-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
+- [finite-newton-step-v0](../../../artifacts/examples/math/finite-newton-step-v0/)
 - [finite-separation-v0](../../../artifacts/examples/math/finite-separation-v0/)
 - [finite-kkt-v0](../../../artifacts/examples/math/finite-kkt-v0/)
 - [finite-active-set-qp-v0](../../../artifacts/examples/math/finite-active-set-qp-v0/)
@@ -62,6 +63,7 @@ fixed-degree polynomial identities and roots, rational polynomial
 factorization/division/GCD/square-free replay, finite generating-function
 coefficient extraction and Cauchy-product replay, finite recurrence-prefix and
 companion-matrix replay, finite bisection/Newton root-finding replay, finite
+multivariable Newton-step Hessian-solve replay, finite
 convex-hull/separating-hyperplane replay, finite KKT stationarity and
 complementary-slackness replay, finite active-set QP replay including
 degenerate-bound replay, finite SDP primal/dual slack replay, finite
@@ -574,6 +576,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-newton-step-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_newton_step_bad_coordinate_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-separation-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
@@ -646,15 +650,18 @@ finite eigenpair and spectral-decomposition replay, read
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md).
 For exact multivariable derivative replay, read
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md)
-and [Calculus Theorem Boundary](calculus-theorem-boundary.md).
+and [Calculus Theorem Boundary](calculus-theorem-boundary.md). For exact
+multivariable Newton-step replay, read
+[End To End: Finite Newton Step](newton-step-end-to-end.md).
 For exact LP feasibility and Farkas threshold evidence, read
 [End To End: Linear Optimization](linear-optimization-end-to-end.md).
 For exact finite convexity and KKT replay, read
 [End To End: Rational Convexity](convexity-rational-end-to-end.md),
 [Convexity Theorem Boundary](convexity-theorem-boundary.md), and
 [End To End: Finite KKT Checks](finite-kkt-end-to-end.md). For exact finite
-active-set QP, gradient descent, line search, projected gradient, and proximal gradient, read
+active-set QP, Newton steps, gradient descent, line search, projected gradient, and proximal gradient, read
 [End To End: Finite Active-Set QP Checks](finite-active-set-qp-end-to-end.md),
+[End To End: Finite Newton Step](newton-step-end-to-end.md),
 [End To End: Finite Gradient Descent Checks](finite-gradient-descent-end-to-end.md)
 and [End To End: Finite Line Search Checks](finite-line-search-end-to-end.md),
 and [End To End: Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md),
@@ -683,7 +690,8 @@ For finite cyclic quadrilateral replay, read
 ## Horizon
 
 Completeness, arbitrary limits, continuity, compactness, integration, general
-KKT sufficiency, constraint qualifications, Wolfe line-search convergence,
+KKT sufficiency, constraint qualifications, Newton convergence/globalization,
+Wolfe line-search convergence,
 projected-gradient convergence, proximal-gradient convergence, and general
 real-analysis theorems remain Lean-horizon. Nonlinear real arithmetic
 closed-form generating-function extraction, asymptotics, and SOS/RCF

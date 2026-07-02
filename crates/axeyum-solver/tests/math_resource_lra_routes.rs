@@ -196,6 +196,9 @@ const FINITE_PROXIMAL_GRADIENT_BAD_BOX_PROXIMAL_POINT: &str = include_str!(
 const MULTIVARIABLE_CALCULUS_BAD_GRADIENT: &str = include_str!(
     "../../../artifacts/examples/math/multivariable-calculus-rational-v0/smt2/bad-gradient-farkas-conflict.smt2"
 );
+const FINITE_NEWTON_STEP_BAD_COORDINATE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-newton-step-v0/smt2/bad-newton-coordinate-farkas-conflict.smt2"
+);
 const FINITE_MEASURE_BAD_COMPLEMENT: &str = include_str!(
     "../../../artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2"
 );
@@ -1083,6 +1086,14 @@ fn multivariable_calculus_bad_gradient_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "multivariable-calculus-rational-v0 bad-gradient SMT-LIB artifact",
         MULTIVARIABLE_CALCULUS_BAD_GRADIENT,
+    );
+}
+
+#[test]
+fn finite_newton_step_bad_coordinate_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-newton-step-v0 bad-coordinate SMT-LIB artifact",
+        FINITE_NEWTON_STEP_BAD_COORDINATE,
     );
 }
 

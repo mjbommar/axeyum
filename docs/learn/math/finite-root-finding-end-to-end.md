@@ -189,5 +189,6 @@ remaining horizon -> root existence, uniqueness, convergence rates, floating-poi
 
 Use this page after
 [End To End: Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md)
-or before numerical-method examples that need exact finite iteration traces
-without pretending they prove general convergence theory.
+or before [End To End: Finite Newton Step](newton-step-end-to-end.md), which
+uses the same exact-iteration trust pattern for a multivariable Hessian solve
+without pretending it proves general convergence theory.

@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-newton-step-v0",
+  "witnesses": [
+    {
+      "id": "two-variable-quadratic-newton-step",
+      "description": "One exact Newton step for f(x,y)=x^2 + xy + 2y^2 - 4x - 6y from (0,0).",
+      "values": {
+        "polynomial": [
+          {"coeff": "1", "x_power": 2, "y_power": 0},
+          {"coeff": "1", "x_power": 1, "y_power": 1},
+          {"coeff": "2", "x_power": 0, "y_power": 2},
+          {"coeff": "-4", "x_power": 1, "y_power": 0},
+          {"coeff": "-6", "x_power": 0, "y_power": 1}
+        ],
+        "start_point": ["0", "0"],
+        "start_value": "0",
+        "gradient": ["-4", "-6"],
+        "hessian": [
+          ["2", "1"],
+          ["1", "4"]
+        ],
+        "leading_minor": "2",
+        "determinant": "7",
+        "newton_rhs": ["4", "6"],
+        "hessian_inverse": [
+          ["4/7", "-1/7"],
+          ["-1/7", "2/7"]
+        ],
+        "direction": ["10/7", "8/7"],
+        "next_point": ["10/7", "8/7"],
+        "next_gradient": ["0", "0"],
+        "next_value": "-44/7",
+        "decrease": "44/7"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "quadratic-gradient-hessian-replay",
+      "claim": "The listed value, gradient, Hessian, and positive-definite minors at (0,0) are exact for the fixed quadratic.",
+      "expected_result": "sat",
+      "validation": "finite_newton_quadratic_gradient_hessian_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-variable-quadratic-newton-step"],
+      "notes": "The validator differentiates the bivariate polynomial, evaluates the gradient and Hessian, and checks the two-by-two Sylvester minors."
+    },
+    {
+      "id": "newton-linear-solve-replay",
+      "claim": "The listed Newton direction solves Hessian * direction = -gradient exactly.",
+      "expected_result": "sat",
+      "validation": "finite_newton_linear_solve_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-variable-quadratic-newton-step"],
+      "notes": "The validator recomputes the right-hand side and matrix-vector product over rationals."
+    },
+    {
+      "id": "newton-step-stationarity-replay",
+      "claim": "The listed Newton step reaches a stationary point of the fixed quadratic.",
+      "expected_result": "sat",
+      "validation": "finite_newton_step_stationarity_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-variable-quadratic-newton-step"],
+      "notes": "The validator checks next = start + direction and recomputes the gradient at the next point."
+    },
+    {
+      "id": "newton-objective-decrease-replay",
+      "claim": "The listed Newton step decreases the quadratic objective by 44/7.",
+      "expected_result": "sat",
+      "validation": "finite_newton_objective_decrease_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-variable-quadratic-newton-step"],
+      "notes": "The validator recomputes start value, next value, and exact objective decrease."
+    },
+    {
+      "id": "bad-newton-coordinate-rejected",
+      "claim": "The Newton step from (0,0) has next x-coordinate 3/2.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_newton_coordinate_refutation",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "two-variable-quadratic-newton-step",
+        "computed_next_point": ["10/7", "8/7"],
+        "claimed_next_x": "3/2"
+      },
+      "notes": "Exact replay computes the next x-coordinate as 10/7. The separate qf-lra-bad-newton-coordinate row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-newton-coordinate",
+      "claim": "The fixed QF_LRA conflict newton_next_x = 10/7 and newton_next_x = 3/2 is unsatisfiable.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_finite_newton_bad_coordinate_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-newton-coordinate-rejected",
+        "computed_next_x": "10/7",
+        "claimed_next_x": "3/2",
+        "farkas_conflict": "newton_next_x = 10/7 and newton_next_x = 3/2",
+        "smt2_artifact": "artifacts/examples/math/finite-newton-step-v0/smt2/bad-newton-coordinate-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_newton_step_bad_coordinate_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "This row isolates the false Newton coordinate as a small QF_LRA/Farkas contradiction after finite replay computes the step."
+    },
+    {
+      "id": "general-newton-method-lean-horizon",
+      "claim": "General Newton convergence, globalization, trust-region methods, conditioning, and floating-point stability require future Lean or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Newton convergence for strongly convex smooth functions, damped Newton globalization, trust-region methods, conditioning, and floating-point stability",
+        "future_checker": "Lean modules for finite-dimensional optimization plus numerical-honesty metadata for floating-point implementations"
+      },
+      "notes": "The finite rows check only one exact rational Newton step for one quadratic objective."
+    }
+  ]
+}

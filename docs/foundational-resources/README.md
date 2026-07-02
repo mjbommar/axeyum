@@ -36,7 +36,7 @@ schemas, examples, and validation workflows.
   resolving unclassified solver-reuse rows, completing learner paths, and
   deepening proof routes field by field.
 - [LEARNER-COVERAGE-AUDIT.md](LEARNER-COVERAGE-AUDIT.md) records the current
-  learner-spine audit: all 115 non-template math packs are focused-lesson
+  learner-spine audit: all 116 non-template math packs are focused-lesson
   linked, with no path-only, index-only, or missing learner buckets.
 - [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md) is the detailed
   operating roadmap for building the curriculum-driven resource system across

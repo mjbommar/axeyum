@@ -160,6 +160,10 @@ CURRICULUM_MAP = {
                 "Finite bisection/Newton root-finding replay with separate checked bad-step and bad-width proof rows.",
             ),
             (
+                "finite-newton-step-v0",
+                "Finite multivariable Newton-step replay with exact Hessian solve, stationarity, objective decrease, and checked bad-coordinate proof rows.",
+            ),
+            (
                 "finite-separation-v0",
                 "Finite convex-hull and separating-hyperplane replay with separate checked bad convex-combination and bad-separator proof rows.",
             ),
@@ -414,6 +418,10 @@ CURRICULUM_MAP = {
                 "Exact Jacobian and Hessian matrix replay for fixed polynomial calculus rows.",
             ),
             (
+                "finite-newton-step-v0",
+                "Exact Hessian linear solve, Newton direction, stationary next point, objective decrease, and checked bad-coordinate evidence.",
+            ),
+            (
                 "finite-recurrence-prefix-v0",
                 "Finite recurrence prefixes, companion-matrix state replay, and checked affine-step refutations.",
             ),
@@ -478,6 +486,10 @@ CURRICULUM_MAP = {
                 "Exact rational gradient, directional derivative, Jacobian chain-rule, and Hessian-minor replay.",
             ),
             (
+                "finite-newton-step-v0",
+                "Exact multivariable Newton-step replay from gradient and Hessian data with checked bad-coordinate evidence.",
+            ),
+            (
                 "finite-root-finding-v0",
                 "Finite bisection/Newton root-finding replay, separate bad-width proof rows, and convergence-theorem horizon rows.",
             ),
@@ -519,9 +531,9 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, Jacobians, Hessians, projections, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, and Cayley-table validation."),
-    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization and multivariable-calculus shadows, and proof horizons."),
+    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, multivariable-calculus and Newton-step shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
@@ -531,6 +543,7 @@ FIELD_PACKS = {
         ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
         ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and checked bad midpoint-convexity plus affine-threshold rejection."),
         ("multivariable-calculus-rational-v0", "Exact gradients, directional derivatives, Hessian minors, and local convexity shadows."),
+        ("finite-newton-step-v0", "Finite Newton-step Hessian solve replay with stationarity, objective decrease, and checked bad-coordinate rejection."),
         ("inner-product-spaces-rational-v0", "Exact rational projections, Gram matrices, and orthogonal residual checks."),
         ("finite-separation-v0", "Finite convex-hull and hyperplane-separation replay with replay-only bad source rows and separate checked proof rows."),
         ("finite-kkt-v0", "Finite KKT stationarity, complementary slackness, and bad-stationarity rejection."),
@@ -542,7 +555,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "LU/QR/Cholesky replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "LU/QR/Cholesky replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -1613,7 +1626,8 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "A rational convexity-shadow row checks fixed midpoint/Jensen "
             "instances, finite second differences, affine monotonicity, exact "
-            "gradient replay, Hessian-minor witnesses, finite gradient-descent, "
+            "gradient replay, Hessian-minor witnesses, finite Newton-step "
+            "Hessian solves, finite gradient-descent, "
             "Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT "
             "stationarity/complementarity, and finite SDP primal/dual slack/gap "
             "rows over rational data while keeping "
@@ -1637,6 +1651,7 @@ BRIDGE_CONCEPTS = [
             "NRA / polynomial constraints",
             "exact rational derivatives",
             "finite grid replay",
+            "finite Newton-step replay",
             "finite gradient descent replay",
             "finite line search replay",
             "finite Wolfe line search replay",
@@ -1655,6 +1670,10 @@ BRIDGE_CONCEPTS = [
             (
                 "multivariable-calculus-rational-v0",
                 "Exact gradient, directional derivative, Jacobian, Hessian-minor, and bad-gradient rows.",
+            ),
+            (
+                "finite-newton-step-v0",
+                "Finite exact Hessian solve, Newton direction, stationarity, objective-decrease, and bad-coordinate rows over exact rationals.",
             ),
             (
                 "least-squares-regression-v0",
@@ -1717,6 +1736,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
                     "docs/learn/math/convexity-rational-end-to-end.md",
                     "docs/learn/math/multivariable-calculus-end-to-end.md",
+                    "docs/learn/math/newton-step-end-to-end.md",
                     "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
                     "docs/learn/math/linear-algebra-and-optimization.md",
                     "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
@@ -1725,7 +1745,8 @@ BRIDGE_CONCEPTS = [
                 "notes": (
                     "The finite checker recomputes midpoint values, grid "
                     "differences, gradients, Jacobians, Hessian minors, and "
-                    "normal-equation residuals, finite gradient, Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT residuals, and "
+                    "normal-equation residuals, finite Newton-step Hessian "
+                    "solves, finite gradient, Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT residuals, and "
                     "two-by-two SDP slack/objective/gap arithmetic exactly; false linearized "
                     "claims use checked Farkas evidence when promoted."
                 ),
@@ -1737,6 +1758,7 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/convexity-rational-end-to-end.md",
             "docs/learn/math/multivariable-calculus-end-to-end.md",
+            "docs/learn/math/newton-step-end-to-end.md",
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
@@ -3859,8 +3881,9 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "A derivative-identity shadow differentiates a fixed polynomial or "
             "rational expression symbolically, evaluates exact rational sample "
-            "points, and isolates bad derivative or gradient claims as small "
-            "linear contradictions when possible."
+            "points, reuses gradient/Hessian data for finite Newton steps, and "
+            "isolates bad derivative, gradient, or Newton-coordinate claims as "
+            "small linear contradictions when possible."
         ),
         "prerequisites": [
             "bridge_rational_interval_replay",
@@ -3897,6 +3920,10 @@ BRIDGE_CONCEPTS = [
                 "finite-root-finding-v0",
                 "Newton-step rows that reuse exact derivative evaluation.",
             ),
+            (
+                "finite-newton-step-v0",
+                "Multivariable Newton-step rows that reuse exact gradient and Hessian evaluation.",
+            ),
         ],
         "proof_routes": [
             {
@@ -3911,11 +3938,14 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/calculus-shadows-end-to-end.md",
                     "docs/learn/math/multivariable-calculus-end-to-end.md",
                     "docs/learn/math/finite-root-finding-end-to-end.md",
+                    "docs/learn/math/newton-step-end-to-end.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
                     "The validator recomputes the derivative formula and exact "
-                    "sample values. Bad finite derivative or gradient claims "
+                    "sample values, including gradient/Hessian data for the "
+                    "finite Newton-step pack. Bad finite derivative, gradient, "
+                    "or Newton-coordinate claims "
                     "use checked Farkas evidence; differentiability theorems "
                     "remain Lean horizons."
                 ),
@@ -3928,6 +3958,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/calculus-shadows-end-to-end.md",
             "docs/learn/math/multivariable-calculus-end-to-end.md",
             "docs/learn/math/finite-root-finding-end-to-end.md",
+            "docs/learn/math/newton-step-end-to-end.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
@@ -5411,7 +5442,8 @@ BRIDGE_CONCEPTS = [
         "resource_status": "validated",
         "summary": (
             "A residual-bound row checks exact rational residuals, norms, "
-            "solution boxes, Jacobi-step error bounds, or normal-equation side "
+            "solution boxes, Jacobi-step error bounds, Hessian linear solves, "
+            "or normal-equation side "
             "conditions for a fixed matrix problem, and separates exact "
             "infeasibility from floating error analysis."
         ),
@@ -5431,6 +5463,7 @@ BRIDGE_CONCEPTS = [
             "Farkas certificate",
             "exact rational residuals",
             "finite matrices",
+            "exact Hessian solves",
             "bounded recurrence replay",
         ],
         "example_packs": [
@@ -5450,6 +5483,10 @@ BRIDGE_CONCEPTS = [
                 "linear-algebra-rational-v0",
                 "Inconsistent rational linear-system row that reuses the Farkas route.",
             ),
+            (
+                "finite-newton-step-v0",
+                "Two-by-two Hessian solve, inverse replay, Newton direction, and checked bad-coordinate row over exact rationals.",
+            ),
         ],
         "proof_routes": [
             {
@@ -5463,12 +5500,14 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/matrix-computation-index.md",
                     "docs/learn/math/matrix-corpus-benchmark-boundary.md",
                     "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+                    "docs/learn/math/newton-step-end-to-end.md",
                     "docs/learn/math/linear-algebra-and-optimization.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
                     "Exact residual witnesses replay directly; false bound or "
-                    "coefficient claims graduate only when the final rational "
+                    "coefficient claims, including false Newton coordinates, "
+                    "graduate only when the final rational "
                     "linear conflict has rechecked Farkas evidence."
                 ),
             }
@@ -5479,6 +5518,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/matrix-computation-index.md",
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+            "docs/learn/math/newton-step-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",

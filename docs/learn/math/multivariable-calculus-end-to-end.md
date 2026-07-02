@@ -171,3 +171,7 @@ remaining horizon -> analytic differentiability and manifold proof routes
 
 The graduation route is deterministic exact-rational polynomial obligations
 plus checked Farkas certificates for exact-linear bad derivative rows.
+
+For a second-order optimization trace that reuses exact gradient and Hessian
+replay in a finite Newton linear solve, read
+[End To End: Finite Newton Step](newton-step-end-to-end.md).

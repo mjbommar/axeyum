@@ -240,6 +240,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Newton step resource landed.**
+  `finite-newton-step-v0` now gives the calculus, linear-algebra,
+  optimization, and numerical-analysis lanes an exact two-variable Newton-step
+  replay: it checks the fixed quadratic's gradient, Hessian, positive leading
+  minors, Hessian inverse, Newton direction, stationary next point, and
+  objective decrease, then isolates the malformed next-coordinate claim as a
+  source-linked QF_LRA/Farkas row. The focused learner page keeps Newton
+  convergence, globalization, trust-region methods, conditioning, and
+  floating-point Newton algorithms in theorem or numerical-honesty lanes. The
+  public summary now reports 121 concept rows, 116 packs, 740 expected checks,
+  342 checked rows, 319 replay-only rows, 79 Lean-horizon rows, and 116
+  promoted solver-reuse packs.
 - **Finite covariance matrix resource landed.**
   `finite-covariance-matrix-v0` now gives the statistics, probability, and
   linear-algebra lanes an exact finite-sample covariance replay: it checks the
@@ -249,9 +261,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   QF_LRA/Farkas row. The focused learner page keeps statistical inference,
   covariance-estimator consistency, PCA theorem claims, random-matrix
   asymptotics, and floating-point covariance algorithms in theorem or
-  numerical-honesty lanes. The public summary now reports 121 concept rows,
-  115 packs, 733 expected checks, 341 checked rows, 314 replay-only rows, 78
-  Lean-horizon rows, and 115 promoted solver-reuse packs.
+  numerical-honesty lanes.
 - **Finite Cholesky decomposition resource landed.**
   `finite-cholesky-decomposition-v0` now gives the matrix-computation,
   numerical-linear-algebra, and optimization lanes an exact rational Cholesky

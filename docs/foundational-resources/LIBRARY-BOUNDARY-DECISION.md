@@ -57,10 +57,10 @@ The Phase M8 threshold is met for size and repeated structure:
 | Requirement | Current Evidence |
 |---|---|
 | At least 40 validated concept rows | 121 atlas rows: 23 curriculum rows, 18 field rows, 75 bridge-concept rows, and 5 example-family rows. |
-| At least 12 validated example packs | 115 non-template math packs are listed through the atlas data contract. |
-| At least 6 packs with checked proof/evidence routes | 115 non-template packs contain at least one `checked` expected-result row. |
+| At least 12 validated example packs | 116 non-template math packs are listed through the atlas data contract. |
+| At least 6 packs with checked proof/evidence routes | 116 non-template packs contain at least one `checked` expected-result row. |
 | At least one consumer can read the data without repository-internal knowledge | `scripts/consume-foundational-resources.py` reads the atlas and example-pack JSON directly, checks schema versions, cross-checks pack coverage, and reports result/proof/label counts in text or JSON; `scripts/query-foundational-resources.py` answers summary, coverage, pack, check, concept, route, field-readiness, and display-label queries without importing validators or generators. |
-| At least one consumer can read promoted solver-reuse rows | `scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any` is part of `scripts/check-foundational-resources.sh` and currently finds 115 promoted packs. |
+| At least one consumer can read promoted solver-reuse rows | `scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any` is part of `scripts/check-foundational-resources.sh` and currently finds 116 promoted packs. |
 | At least one consumer can derive display labels without prose parsing | `scripts/query-foundational-resources.py labels --require-any` reports row and pack labels from JSON, and `check-foundational-resources.sh` requires representative checked, replay-only, theorem-horizon, checked-pack, and mixed-trust labels. |
 | At least one documentation surface maps consumer queries by field | `FIELD-READINESS-QUERY-MATRIX.md` records the smoke-checked route, bridge lookup, checked-row drilldown, and theorem boundary for all 18 math fields without adding a typed API. |
 | At least one documentation surface maps consumer queries by proof route | `PROOF-ROUTE-QUERY-MATRIX.md` records route-summary, pack-drilldown, and checked-row queries for the active proof/evidence routes, and `check-foundational-resources.sh` smoke-checks representative `routes --route ...` commands. |
@@ -69,16 +69,16 @@ The Phase M8 threshold is met for size and repeated structure:
 
 The current pack-level evidence mix is still intentionally conservative:
 
-- `checked`: 341 expected-result rows
-- `replay-only`: 314 expected-result rows
-- `lean-horizon`: 78 expected-result rows
-- `not-run`: 78 expected-result rows
-- `expected_result`: 357 `sat`, 298 `unsat`, 78 `not-run`
-- row labels: 90 checked witnesses, 251 checked refutations, 267 finite
-  witness replays, 47 finite rejection replays, and 78 theorem horizons
-- pack labels: 115 checked evidence packs, 104 mixed-trust packs, and 78 packs
+- `checked`: 342 expected-result rows
+- `replay-only`: 319 expected-result rows
+- `lean-horizon`: 79 expected-result rows
+- `not-run`: 79 expected-result rows
+- `expected_result`: 361 `sat`, 300 `unsat`, 79 `not-run`
+- row labels: 90 checked witnesses, 252 checked refutations, 271 finite
+  witness replays, 48 finite rejection replays, and 79 theorem horizons
+- pack labels: 116 checked evidence packs, 105 mixed-trust packs, and 79 packs
   with theorem boundaries
-- `solver_reuse`: 115 promoted packs and 0 unclassified packs
+- `solver_reuse`: 116 promoted packs and 0 unclassified packs
 
 That distribution argues for keeping the resource lane close to the proof
 cookbook, validators, and solver evidence work. A premature crate would mostly

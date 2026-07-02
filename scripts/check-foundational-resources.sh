@@ -531,11 +531,15 @@ python3 scripts/query-foundational-resources.py checks --pack finite-root-findin
 python3 scripts/query-foundational-resources.py checks --pack finite-root-finding-v0 --proof-status replay-only --text rejected --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text root-finding --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-root-finding-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-newton-step-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-newton-step-v0 --proof-status replay-only --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-newton-step-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field numerical_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text residual --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text operator --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text polynomial --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text Newton --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text floating --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field numerical_analysis --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked --text solution --require-any >/dev/null
@@ -561,6 +565,7 @@ python3 scripts/query-foundational-resources.py checks --field optimization_and_
 python3 scripts/query-foundational-resources.py packs --concept bridge_lp_objective_farkas --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_lp_objective_farkas --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_rational_convexity_shadow --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_rational_convexity_shadow --route Farkas --proof-status checked --text Newton --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack convexity-rational-v0 --route Farkas --proof-status checked --text threshold --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text convex-analysis --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack convexity-rational-v0 --proof-status lean-horizon --require-any >/dev/null
@@ -571,6 +576,7 @@ python3 scripts/query-foundational-resources.py horizon-frontier --text separati
 python3 scripts/query-foundational-resources.py checks --pack finite-separation-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --route Farkas --proof-status checked --text Newton --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-kkt-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text KKT --require-any >/dev/null

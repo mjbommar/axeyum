@@ -849,7 +849,16 @@ Build sequence:
     `4/9 = 1/2`. The reused finite-moment and inner-product bridges keep exact
     finite replay separate from covariance-estimator consistency, PCA,
     random-matrix asymptotics, and floating-point covariance algorithms.
-86. Revisit crate/repo boundaries only after three real consumers or repeated
+86. Landed: add the finite Newton-step resource.
+    `finite-newton-step-v0` now records one exact two-variable quadratic
+    Newton step, including gradient/Hessian replay, positive leading minors,
+    Hessian inverse, Newton direction, stationary next point, objective
+    decrease, and a checked QF_LRA/Farkas artifact for the malformed
+    next-coordinate claim `10/7 = 3/2`. The reused derivative, convexity, and
+    residual bridges keep exact finite replay separate from Newton
+    convergence, globalization, trust-region, conditioning, and floating-point
+    stability claims.
+87. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

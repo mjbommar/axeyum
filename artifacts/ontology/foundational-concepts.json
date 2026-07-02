@@ -780,6 +780,12 @@
           "notes": "Finite bisection/Newton root-finding replay with separate checked bad-step and bad-width proof rows."
         },
         {
+          "id": "finite-newton-step-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-newton-step-v0",
+          "notes": "Finite multivariable Newton-step replay with exact Hessian solve, stationarity, objective decrease, and checked bad-coordinate proof rows."
+        },
+        {
           "id": "finite-separation-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-separation-v0",
@@ -1770,6 +1776,12 @@
           "notes": "Exact Jacobian and Hessian matrix replay for fixed polynomial calculus rows."
         },
         {
+          "id": "finite-newton-step-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-newton-step-v0",
+          "notes": "Exact Hessian linear solve, Newton direction, stationary next point, objective decrease, and checked bad-coordinate evidence."
+        },
+        {
           "id": "finite-recurrence-prefix-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
@@ -1919,6 +1931,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
           "notes": "Exact rational gradient, directional derivative, Jacobian chain-rule, and Hessian-minor replay."
+        },
+        {
+          "id": "finite-newton-step-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-newton-step-v0",
+          "notes": "Exact multivariable Newton-step replay from gradient and Hessian data with checked bad-coordinate evidence."
         },
         {
           "id": "finite-root-finding-v0",
@@ -3143,7 +3161,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A rational convexity-shadow row checks fixed midpoint/Jensen instances, finite second differences, affine monotonicity, exact gradient replay, Hessian-minor witnesses, finite gradient-descent, Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT stationarity/complementarity, and finite SDP primal/dual slack/gap rows over rational data while keeping general convex-analysis theorems separate.",
+      "summary": "A rational convexity-shadow row checks fixed midpoint/Jensen instances, finite second differences, affine monotonicity, exact gradient replay, Hessian-minor witnesses, finite Newton-step Hessian solves, finite gradient-descent, Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT stationarity/complementarity, and finite SDP primal/dual slack/gap rows over rational data while keeping general convex-analysis theorems separate.",
       "prerequisites": [
         "bridge_lp_objective_farkas",
         "bridge_bounded_epsilon_delta_shadow",
@@ -3162,6 +3180,7 @@
         "NRA / polynomial constraints",
         "exact rational derivatives",
         "finite grid replay",
+        "finite Newton-step replay",
         "finite gradient descent replay",
         "finite line search replay",
         "finite Wolfe line search replay",
@@ -3184,6 +3203,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
           "notes": "Exact gradient, directional derivative, Jacobian, Hessian-minor, and bad-gradient rows."
+        },
+        {
+          "id": "finite-newton-step-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-newton-step-v0",
+          "notes": "Finite exact Hessian solve, Newton direction, stationarity, objective-decrease, and bad-coordinate rows over exact rationals."
         },
         {
           "id": "least-squares-regression-v0",
@@ -3270,12 +3295,13 @@
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
             "docs/learn/math/convexity-rational-end-to-end.md",
             "docs/learn/math/multivariable-calculus-end-to-end.md",
+            "docs/learn/math/newton-step-end-to-end.md",
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "The finite checker recomputes midpoint values, grid differences, gradients, Jacobians, Hessian minors, and normal-equation residuals, finite gradient, Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT residuals, and two-by-two SDP slack/objective/gap arithmetic exactly; false linearized claims use checked Farkas evidence when promoted."
+          "notes": "The finite checker recomputes midpoint values, grid differences, gradients, Jacobians, Hessian minors, and normal-equation residuals, finite Newton-step Hessian solves, finite gradient, Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT residuals, and two-by-two SDP slack/objective/gap arithmetic exactly; false linearized claims use checked Farkas evidence when promoted."
         }
       ],
       "source_refs": [
@@ -3284,6 +3310,7 @@
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
         "docs/learn/math/convexity-rational-end-to-end.md",
         "docs/learn/math/multivariable-calculus-end-to-end.md",
+        "docs/learn/math/newton-step-end-to-end.md",
         "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
         "docs/learn/math/linear-algebra-and-optimization.md",
         "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
@@ -5612,7 +5639,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A derivative-identity shadow differentiates a fixed polynomial or rational expression symbolically, evaluates exact rational sample points, and isolates bad derivative or gradient claims as small linear contradictions when possible.",
+      "summary": "A derivative-identity shadow differentiates a fixed polynomial or rational expression symbolically, evaluates exact rational sample points, reuses gradient/Hessian data for finite Newton steps, and isolates bad derivative, gradient, or Newton-coordinate claims as small linear contradictions when possible.",
       "prerequisites": [
         "bridge_rational_interval_replay",
         "bridge_squeeze_shadow",
@@ -5655,6 +5682,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
           "notes": "Newton-step rows that reuse exact derivative evaluation."
+        },
+        {
+          "id": "finite-newton-step-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-newton-step-v0",
+          "notes": "Multivariable Newton-step rows that reuse exact gradient and Hessian evaluation."
         }
       ],
       "proof_routes": [
@@ -5670,9 +5703,10 @@
             "docs/learn/math/calculus-shadows-end-to-end.md",
             "docs/learn/math/multivariable-calculus-end-to-end.md",
             "docs/learn/math/finite-root-finding-end-to-end.md",
+            "docs/learn/math/newton-step-end-to-end.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "The validator recomputes the derivative formula and exact sample values. Bad finite derivative or gradient claims use checked Farkas evidence; differentiability theorems remain Lean horizons."
+          "notes": "The validator recomputes the derivative formula and exact sample values, including gradient/Hessian data for the finite Newton-step pack. Bad finite derivative, gradient, or Newton-coordinate claims use checked Farkas evidence; differentiability theorems remain Lean horizons."
         }
       ],
       "source_refs": [
@@ -5682,6 +5716,7 @@
         "docs/learn/math/calculus-shadows-end-to-end.md",
         "docs/learn/math/multivariable-calculus-end-to-end.md",
         "docs/learn/math/finite-root-finding-end-to-end.md",
+        "docs/learn/math/newton-step-end-to-end.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
@@ -7210,7 +7245,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A residual-bound row checks exact rational residuals, norms, solution boxes, Jacobi-step error bounds, or normal-equation side conditions for a fixed matrix problem, and separates exact infeasibility from floating error analysis.",
+      "summary": "A residual-bound row checks exact rational residuals, norms, solution boxes, Jacobi-step error bounds, Hessian linear solves, or normal-equation side conditions for a fixed matrix problem, and separates exact infeasibility from floating error analysis.",
       "prerequisites": [
         "bridge_lu_replay",
         "bridge_counterexample_proof",
@@ -7227,6 +7262,7 @@
         "Farkas certificate",
         "exact rational residuals",
         "finite matrices",
+        "exact Hessian solves",
         "bounded recurrence replay"
       ],
       "example_packs": [
@@ -7253,6 +7289,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
           "notes": "Inconsistent rational linear-system row that reuses the Farkas route."
+        },
+        {
+          "id": "finite-newton-step-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-newton-step-v0",
+          "notes": "Two-by-two Hessian solve, inverse replay, Newton direction, and checked bad-coordinate row over exact rationals."
         }
       ],
       "proof_routes": [
@@ -7267,10 +7309,11 @@
             "docs/learn/math/matrix-computation-index.md",
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+            "docs/learn/math/newton-step-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "Exact residual witnesses replay directly; false bound or coefficient claims graduate only when the final rational linear conflict has rechecked Farkas evidence."
+          "notes": "Exact residual witnesses replay directly; false bound or coefficient claims, including false Newton coordinates, graduate only when the final rational linear conflict has rechecked Farkas evidence."
         }
       ],
       "source_refs": [
@@ -7279,6 +7322,7 @@
         "docs/learn/math/matrix-computation-index.md",
         "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+        "docs/learn/math/newton-step-end-to-end.md",
         "docs/learn/math/linear-algebra-and-optimization.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
@@ -11654,7 +11698,7 @@
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, Jacobians, Hessians, projections, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -11787,6 +11831,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-modules-v0",
           "notes": "Exact Finite Module Checks"
+        },
+        {
+          "id": "finite-newton-step-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-newton-step-v0",
+          "notes": "Finite Newton Step Checks"
         },
         {
           "id": "finite-operator-v0",
@@ -12357,7 +12407,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "LU/QR/Cholesky replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
+          "notes": "LU/QR/Cholesky replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -12412,6 +12462,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-line-search-v0",
           "notes": "Finite Line Search Checks"
+        },
+        {
+          "id": "finite-newton-step-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-newton-step-v0",
+          "notes": "Finite Newton Step Checks"
         },
         {
           "id": "finite-operator-v0",
@@ -12570,6 +12626,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/multivariable-calculus-rational-v0",
           "notes": "Exact gradients, directional derivatives, Hessian minors, and local convexity shadows."
+        },
+        {
+          "id": "finite-newton-step-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-newton-step-v0",
+          "notes": "Finite Newton-step Hessian solve replay with stationarity, objective decrease, and checked bad-coordinate rejection."
         },
         {
           "id": "inner-product-spaces-rational-v0",
@@ -12923,7 +12985,7 @@
           "id": "real-analysis-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/real-analysis-rational-v0",
-          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization and multivariable-calculus shadows, and proof horizons."
+          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, multivariable-calculus and Newton-step shadows, and proof horizons."
         },
         {
           "id": "affine-geometry-v0",
@@ -13068,6 +13130,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-martingales-v0",
           "notes": "Finite Martingale Checks"
+        },
+        {
+          "id": "finite-newton-step-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-newton-step-v0",
+          "notes": "Finite Newton Step Checks"
         },
         {
           "id": "finite-operator-v0",

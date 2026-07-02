@@ -9368,6 +9368,131 @@ def validate_multivariable_calculus_rational(expected: dict[str, Any]) -> None:
     require_string("general multivariable future_checker", data.get("future_checker"))
 
 
+def validate_finite_newton_step(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    gradient = checks["quadratic-gradient-hessian-replay"]
+    if gradient["expected_result"] != "sat":
+        fail("quadratic-gradient-hessian-replay must expect sat")
+    values = single_witness_values(gradient, witnesses)
+    polynomial = require_bivariate_polynomial("Newton polynomial", values.get("polynomial"))
+    start_point = require_bivariate_point("Newton start_point", values.get("start_point"))
+    start_vector = [start_point[0], start_point[1]]
+    start_value = require_fraction("Newton start_value", values.get("start_value"))
+    listed_gradient = require_fraction_vector("Newton gradient", values.get("gradient"))
+    require_vector_length("Newton gradient", listed_gradient, 2)
+    listed_hessian = require_fraction_matrix("Newton hessian", values.get("hessian"))
+    require_matrix_shape("Newton hessian", listed_hessian, 2, 2)
+    leading_minor = require_fraction("Newton leading_minor", values.get("leading_minor"))
+    determinant = require_fraction("Newton determinant", values.get("determinant"))
+    if bivariate_eval(polynomial, start_point) != start_value:
+        fail("quadratic-gradient-hessian-replay start_value is incorrect")
+    if bivariate_gradient(polynomial, start_point) != listed_gradient:
+        fail("quadratic-gradient-hessian-replay gradient is incorrect")
+    if bivariate_hessian(polynomial, start_point) != listed_hessian:
+        fail("quadratic-gradient-hessian-replay Hessian is incorrect")
+    if leading_minor != listed_hessian[0][0]:
+        fail("quadratic-gradient-hessian-replay leading minor is incorrect")
+    if determinant != matrix_det_2(listed_hessian):
+        fail("quadratic-gradient-hessian-replay determinant is incorrect")
+    if leading_minor <= 0 or determinant <= 0:
+        fail("quadratic-gradient-hessian-replay minors must be positive")
+
+    solve = checks["newton-linear-solve-replay"]
+    if solve["expected_result"] != "sat":
+        fail("newton-linear-solve-replay must expect sat")
+    values = single_witness_values(solve, witnesses)
+    rhs = require_fraction_vector("Newton rhs", values.get("newton_rhs"))
+    require_vector_length("Newton rhs", rhs, 2)
+    hessian_inverse = require_fraction_matrix("Newton hessian_inverse", values.get("hessian_inverse"))
+    require_matrix_shape("Newton hessian_inverse", hessian_inverse, 2, 2)
+    direction = require_fraction_vector("Newton direction", values.get("direction"))
+    require_vector_length("Newton direction", direction, 2)
+    if rhs != scalar_vec(Fraction(-1), listed_gradient):
+        fail("newton-linear-solve-replay rhs must be -gradient")
+    if mat_vec(listed_hessian, direction) != rhs:
+        fail("newton-linear-solve-replay direction does not solve Hessian * direction = rhs")
+    identity = [[Fraction(1), Fraction(0)], [Fraction(0), Fraction(1)]]
+    if mat_mul(hessian_inverse, listed_hessian) != identity:
+        fail("newton-linear-solve-replay hessian_inverse is incorrect")
+    if mat_vec(hessian_inverse, rhs) != direction:
+        fail("newton-linear-solve-replay inverse * rhs is not the listed direction")
+
+    step = checks["newton-step-stationarity-replay"]
+    if step["expected_result"] != "sat":
+        fail("newton-step-stationarity-replay must expect sat")
+    values = single_witness_values(step, witnesses)
+    next_point = require_fraction_vector("Newton next_point", values.get("next_point"))
+    require_vector_length("Newton next_point", next_point, 2)
+    next_gradient = require_fraction_vector("Newton next_gradient", values.get("next_gradient"))
+    require_vector_length("Newton next_gradient", next_gradient, 2)
+    if vector_add_fraction(start_vector, direction) != next_point:
+        fail("newton-step-stationarity-replay next_point must equal start + direction")
+    if bivariate_gradient(polynomial, (next_point[0], next_point[1])) != next_gradient:
+        fail("newton-step-stationarity-replay next_gradient is incorrect")
+    if any(component != 0 for component in next_gradient):
+        fail("newton-step-stationarity-replay expected zero gradient at the Newton point")
+
+    decrease = checks["newton-objective-decrease-replay"]
+    if decrease["expected_result"] != "sat":
+        fail("newton-objective-decrease-replay must expect sat")
+    values = single_witness_values(decrease, witnesses)
+    next_value = require_fraction("Newton next_value", values.get("next_value"))
+    listed_decrease = require_fraction("Newton decrease", values.get("decrease"))
+    if bivariate_eval(polynomial, (next_point[0], next_point[1])) != next_value:
+        fail("newton-objective-decrease-replay next_value is incorrect")
+    if start_value - next_value != listed_decrease:
+        fail("newton-objective-decrease-replay decrease is incorrect")
+    if listed_decrease <= 0:
+        fail("newton-objective-decrease-replay expected positive decrease")
+
+    bad = checks["bad-newton-coordinate-rejected"]
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "replay-only":
+        fail("bad-newton-coordinate-rejected must be a replay-only unsat row")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-variable-quadratic-newton-step":
+        fail("bad-newton-coordinate-rejected must cite the Newton witness")
+    computed_next = require_fraction_vector("bad Newton computed_next_point", data.get("computed_next_point"))
+    require_vector_length("bad Newton computed_next_point", computed_next, 2)
+    claimed_next_x = require_fraction("bad Newton claimed_next_x", data.get("claimed_next_x"))
+    if computed_next != next_point:
+        fail("bad-newton-coordinate-rejected computed_next_point does not match replay")
+    if claimed_next_x == next_point[0]:
+        fail("bad-newton-coordinate-rejected malformed x-coordinate unexpectedly matches")
+
+    checked = checks["qf-lra-bad-newton-coordinate"]
+    if checked["expected_result"] != "unsat" or checked.get("proof_status") != "checked":
+        fail("qf-lra-bad-newton-coordinate must be a checked unsat row")
+    data = checked.get("data", {})
+    if data.get("source_replay_row") != "bad-newton-coordinate-rejected":
+        fail("qf-lra-bad-newton-coordinate must point back to the replay rejection row")
+    computed_next_x = require_fraction("checked Newton computed_next_x", data.get("computed_next_x"))
+    checked_claimed_next_x = require_fraction("checked Newton claimed_next_x", data.get("claimed_next_x"))
+    if computed_next_x != next_point[0] or checked_claimed_next_x != claimed_next_x:
+        fail("qf-lra-bad-newton-coordinate must reuse the replayed and claimed coordinates")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("checked Newton smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-newton-step-v0/smt2/bad-newton-coordinate-farkas-conflict.smt2":
+        fail("qf-lra-bad-newton-coordinate smt2_artifact must name the checked QF_LRA artifact")
+    check_source("checked Newton smt2_artifact", smt2_artifact)
+    regression = data.get("farkas_regression")
+    require_string("checked Newton farkas_regression", regression)
+    if "finite_newton_step_bad_coordinate_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-newton-coordinate must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("checked Newton certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("qf-lra-bad-newton-coordinate certificate must document checked Farkas evidence")
+
+    horizon = checks["general-newton-method-lean-horizon"]
+    if horizon["expected_result"] != "not-run" or horizon["proof_status"] != "lean-horizon":
+        fail("general-newton-method-lean-horizon must remain a not-run Lean horizon")
+    data = horizon.get("data", {})
+    require_string("Newton horizon target_theorem_shape", data.get("target_theorem_shape"))
+    require_string("Newton horizon future_checker", data.get("future_checker"))
+
+
 def validate_polynomial_identities(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -27722,6 +27847,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_measure(expected)
     if metadata["id"] == "finite-measure-monotonicity-v0":
         validate_finite_measure_monotonicity(expected)
+    if metadata["id"] == "finite-newton-step-v0":
+        validate_finite_newton_step(expected)
     if metadata["id"] == "metric-continuity-v0":
         validate_metric_continuity(expected)
     if metadata["id"] == "finite-predicate-v0":

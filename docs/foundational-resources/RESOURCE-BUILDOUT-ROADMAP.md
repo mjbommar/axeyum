@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 75 bridge-concept rows.
 - 5 example-family rows.
-- 115 non-template math example packs.
-- 733 expected checks.
-- 341 checked proof/evidence rows.
-- 314 replay-only rows.
-- 78 Lean-horizon rows.
-- 115 promoted solver-reuse packs.
+- 116 non-template math example packs.
+- 740 expected checks.
+- 342 checked proof/evidence rows.
+- 319 replay-only rows.
+- 79 Lean-horizon rows.
+- 116 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 115 focused learner-linked packs, with no path-only, index-only, or missing
+- 116 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2369,6 +2369,13 @@ Pick one item per commit unless the change is purely navigational.
      covariance claim through a source-linked QF_LRA/Farkas regression without
      claiming covariance-estimator consistency, PCA, random-matrix asymptotics,
      or floating-point covariance algorithms.
+163. Landed: add `finite-newton-step-v0` as an exact finite Newton-step
+     resource. The pack computes one two-variable quadratic's gradient,
+     Hessian, positive leading minors, Hessian inverse, Newton direction,
+     stationary next point, and objective decrease, then promotes the
+     malformed next-coordinate claim through a source-linked QF_LRA/Farkas
+     regression without claiming Newton convergence, globalization,
+     trust-region methods, conditioning, or floating-point Newton algorithms.
 
 ## Validation Checklist
 
