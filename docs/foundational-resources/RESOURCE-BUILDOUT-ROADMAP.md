@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 75 bridge-concept rows.
 - 5 example-family rows.
-- 112 non-template math example packs.
-- 713 expected checks.
-- 338 checked proof/evidence rows.
-- 300 replay-only rows.
-- 75 Lean-horizon rows.
-- 112 promoted solver-reuse packs.
+- 113 non-template math example packs.
+- 719 expected checks.
+- 339 checked proof/evidence rows.
+- 304 replay-only rows.
+- 76 Lean-horizon rows.
+- 113 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 112 focused learner-linked packs, with no path-only, index-only, or missing
+- 113 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2349,6 +2349,12 @@ Pick one item per commit unless the change is purely navigational.
      malformed second coefficient claim through a source-linked QF_LRA/Farkas
      regression without claiming fast-transform, Fourier-analysis, or
      infinite-dimensional orthogonal-basis theorems.
+160. Landed: add `finite-qr-decomposition-v0` as an exact rational QR
+     factorization resource. The pack computes `Q^T Q`, upper-triangular
+     shape, and `Q*R`, then promotes the malformed bottom-right product-entry
+     claim through a source-linked QF_LRA/Farkas regression without claiming
+     QR existence, Gram-Schmidt/Householder correctness, conditioning, or
+     floating-point stability.
 
 ## Validation Checklist
 

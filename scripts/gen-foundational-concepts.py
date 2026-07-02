@@ -390,6 +390,10 @@ CURRICULUM_MAP = {
                 "Exact rational Gram matrices, Cauchy-Schwarz replay, orthogonal projections, and Gram-Schmidt checks.",
             ),
             (
+                "finite-qr-decomposition-v0",
+                "Exact rational QR replay, orthogonality checks, upper-triangular factor checks, and checked bad product-entry evidence.",
+            ),
+            (
                 "finite-modules-v0",
                 "Finite Z/4Z-module replay, submodules, homomorphisms, kernels, images, and quotient modules.",
             ),
@@ -507,7 +511,7 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU replay, orthogonal transforms, rank, inverse, Jacobians, Hessians, projections, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU and QR replay, orthogonal transforms, rank, inverse, Jacobians, Hessians, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization and multivariable-calculus shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
@@ -530,7 +534,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "LU/QR replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -5192,16 +5196,16 @@ BRIDGE_CONCEPTS = [
     },
     {
         "id": "bridge_lu_replay",
-        "title": "LU Factorization Replay",
+        "title": "Finite Matrix Factorization Replay",
         "field_ids": ["linear_algebra", "numerical_analysis"],
         "resource_status": "validated",
         "summary": (
-            "A claimed LU factorization and nullspace vector are checked by "
+            "Claimed LU and QR factorizations and nullspace vectors are checked by "
             "exact matrix multiplication over fixed rational matrices; "
             "malformed product-entry and nullspace-component rows now route "
             "through checked QF_LRA/Farkas evidence, while pivoting, "
-            "singularity, and stability claims stay separate from the replayed "
-            "equalities."
+            "singularity, QR existence, algorithm correctness, and stability "
+            "claims stay separate from the replayed equalities."
         ),
         "prerequisites": [
             "bridge_finite_model_replay",
@@ -5219,12 +5223,17 @@ BRIDGE_CONCEPTS = [
             "exact rational arithmetic",
             "LRA (exact rationals)",
             "matrix multiplication replay",
+            "orthogonal factorization replay",
             "QF_LRA",
         ],
         "example_packs": [
             (
                 "linear-algebra-rational-v0",
                 "Exact matrix-vector solution, LU factorization, and nullspace witnesses over rational matrices.",
+            ),
+            (
+                "finite-qr-decomposition-v0",
+                "Exact rational QR factorization, orthogonality, triangularity, product replay, and checked bad product-entry evidence.",
             ),
             (
                 "numerical-linear-algebra-v0",
@@ -5247,12 +5256,13 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/matrix-computation-index.md",
                     "docs/learn/math/matrix-corpus-benchmark-boundary.md",
                     "docs/learn/math/linear-system-end-to-end.md",
+                    "docs/learn/math/qr-decomposition-end-to-end.md",
                     "docs/learn/math/numerical-linear-algebra-end-to-end.md",
                 ],
                 "notes": (
-                    "The pack validator recomputes L*U, A*x, and A*v exactly "
-                    "over rationals; a separate qf-lra-bad-lu-product-entry "
-                    "row, the bad nullspace-component row, and bad infeasible "
+                    "The pack validator recomputes L*U, Q*R, Q^T*Q, A*x, and "
+                    "A*v exactly over rationals; separate qf-lra product-entry "
+                    "rows, the bad nullspace-component row, and bad infeasible "
                     "linear-system rows use the QF_LRA/Farkas route."
                 ),
             }
@@ -5263,21 +5273,23 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/matrix-computation-index.md",
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/linear-system-end-to-end.md",
+            "docs/learn/math/qr-decomposition-end-to-end.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
             "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-lu-product-entry-farkas-conflict.smt2",
             "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-nullspace-component-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-qr-decomposition-v0/smt2/bad-qr-product-entry-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
-            "LU replay checks a fixed factorization; it does not prove existence, pivoting strategy correctness, or numerical stability.",
+            "LU and QR replay check fixed factorizations; they do not prove existence, pivoting strategy correctness, QR algorithm correctness, conditioning, or numerical stability.",
             "Ill-conditioned and floating-point claims need separate numerical-honesty metadata before they become solver or learner claims.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state the exact matrix entries, lower/upper factors, and rational arithmetic domain.",
-                "The validator recomputes L*U, and the separate qf-lra-bad-lu-product-entry row rejects the corrupted equality through checked QF_LRA/Farkas evidence.",
-                "Singularity, pivoting, and stability claims remain separate proof-horizon or numerical-analysis rows.",
+                "Rows state the exact matrix entries, lower/upper or orthogonal/upper-triangular factors, and rational arithmetic domain.",
+                "The validator recomputes L*U, Q^T*Q, and Q*R, and separate qf-lra product-entry rows reject corrupted equalities through checked QF_LRA/Farkas evidence.",
+                "Singularity, factorization existence, algorithm correctness, pivoting, conditioning, and stability claims remain separate proof-horizon or numerical-analysis rows.",
             ],
         },
     },

@@ -11,6 +11,7 @@ Concept rows:
 Example packs:
 
 - [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/)
+- [finite-qr-decomposition-v0](../../../artifacts/examples/math/finite-qr-decomposition-v0/)
 - [finite-vector-spaces-v0](../../../artifacts/examples/math/finite-vector-spaces-v0/)
 - [finite-dual-spaces-v0](../../../artifacts/examples/math/finite-dual-spaces-v0/)
 - [inner-product-spaces-rational-v0](../../../artifacts/examples/math/inner-product-spaces-rational-v0/)
@@ -85,7 +86,10 @@ QF_LRA/Farkas rejection of an indefinite bilinear form. The finite
 Walsh-Hadamard slice adds exact order-4 orthogonality replay, transform
 coefficients, inverse reconstruction, Parseval energy scaling, and checked
 QF_LRA/Farkas rejection of a false transform coefficient without claiming fast
-transform algorithms or numerical stability. The finite-module
+transform algorithms or numerical stability. The QR slice adds exact rational
+orthogonality replay, upper-triangular factor checking, `Q*R` product replay,
+and checked QF_LRA/Farkas rejection of a bad product entry without claiming QR
+existence, algorithm correctness, conditioning, or numerical stability. The finite-module
 slice adds ring actions on finite additive groups,
 generated submodules, module homomorphisms, kernel/image replay, quotient-module
 tables, and checked QF_UF/Alethe non-submodule rejection. The finite-tensor-product
@@ -778,6 +782,7 @@ replay, read
 [Cyclic Geometry Theorem Boundary](cyclic-geometry-theorem-boundary.md),
 [End To End: Rational Inner Product Spaces](inner-product-spaces-end-to-end.md),
 [End To End: Finite Walsh-Hadamard Transform Checks](walsh-hadamard-transform-end-to-end.md),
+[End To End: Finite QR Decomposition Checks](qr-decomposition-end-to-end.md),
 [End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md),
 [End To End: Finite Dual Spaces](finite-dual-spaces-end-to-end.md), and
 [End To End: Finite Modules](finite-modules-end-to-end.md). For finite
@@ -798,7 +803,7 @@ moments, and satisfiable finite-dimensional operator rows start as
 Infeasible rational systems, LP thresholds, bad residual and solution-box bounds, malformed
 eigenpairs, bad Rayleigh-quotient rows, bad characteristic-polynomial rows,
 bad operator-bound and bad Chebyshev-prefix rows, bad Walsh-Hadamard
-transform coefficients, bad KKT stationarity and complementarity rows,
+transform coefficients, bad QR product entries, bad KKT stationarity and complementarity rows,
 bad proximal residual rows, negative-norm rows, and projection-orthogonality
 examples graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
@@ -824,6 +829,6 @@ module theory, universal coefficient theorem schemas, exact sequences,
 Ext/Tor laws,
 Chebyshev-system/Haar-space theorems, minimax approximation, conditioning,
 Walsh-Hadamard/Fourier transform theorems, fast transform algorithms,
-numerical stability, SDP, general convex analysis, KKT sufficiency, constraint
+QR existence/algorithm/stability theorems, numerical stability, SDP, general convex analysis, KKT sufficiency, constraint
 qualifications, and algorithm convergence need proof routes or carefully
 bounded numerical-experiment metadata.

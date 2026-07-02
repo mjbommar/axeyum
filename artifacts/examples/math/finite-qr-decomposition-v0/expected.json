@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-qr-decomposition-v0",
+  "witnesses": [
+    {
+      "id": "two-by-two-qr-factorization",
+      "description": "Exact rational QR factorization data for a fixed 2x2 matrix.",
+      "values": {
+        "matrix": [
+          ["3", "11/5"],
+          ["-4", "2/5"]
+        ],
+        "q": [
+          ["3/5", "4/5"],
+          ["-4/5", "3/5"]
+        ],
+        "r": [
+          ["5", "1"],
+          ["0", "2"]
+        ],
+        "identity": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "product": [
+          ["3", "11/5"],
+          ["-4", "2/5"]
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "qr-orthogonality-witness",
+      "claim": "The fixed rational Q matrix satisfies Q^T Q = I.",
+      "expected_result": "sat",
+      "validation": "exact_rational_qr_orthogonality_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-qr-factorization"],
+      "notes": "The validator recomputes Q^T Q exactly over rationals."
+    },
+    {
+      "id": "qr-upper-triangular-witness",
+      "claim": "The fixed rational R matrix is upper triangular.",
+      "expected_result": "sat",
+      "validation": "exact_rational_qr_upper_triangular_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-qr-factorization"],
+      "notes": "The validator checks every below-diagonal entry of R exactly."
+    },
+    {
+      "id": "qr-product-witness",
+      "claim": "The fixed rational matrices satisfy Q*R = A.",
+      "expected_result": "sat",
+      "validation": "exact_rational_qr_product_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-qr-factorization"],
+      "notes": "The validator recomputes the matrix product exactly over rationals."
+    },
+    {
+      "id": "bad-qr-product-entry-rejected",
+      "claim": "The bottom-right entry of Q*R is 1/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_qr_product_entry_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "two-by-two-qr-factorization",
+        "entry": [1, 1],
+        "computed_entry": "2/5",
+        "claimed_entry": "1/2"
+      },
+      "notes": "The validator recomputes Q*R and rejects the malformed product-entry claim; the separate qf-lra-bad-qr-product-entry row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-qr-product-entry",
+      "claim": "The fixed malformed QR product-entry claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "two-by-two-qr-factorization",
+        "source_replay_row": "bad-qr-product-entry-rejected",
+        "entry": [1, 1],
+        "computed_entry": "2/5",
+        "claimed_entry": "1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-qr-decomposition-v0/smt2/bad-qr-product-entry-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_qr_decomposition_bad_product_entry_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the QR product entry as 2/5, while the malformed row claims 1/2; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
+      "id": "general-qr-decomposition-theory-lean-horizon",
+      "claim": "QR existence, uniqueness conventions, algorithm correctness, conditioning, and floating-point stability are theorem/numerical-honesty work.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For suitable matrices over real or complex inner-product spaces, a QR factorization exists under stated rank/sign conventions, and algorithms such as Gram-Schmidt or Householder compute one under explicit assumptions.",
+        "future_checker": "Lean theorem statements for exact QR existence and algorithm invariants plus separate numerical-honesty artifacts for floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource, not a theorem about arbitrary matrices or a stability/performance claim for QR algorithms."
+    }
+  ]
+}

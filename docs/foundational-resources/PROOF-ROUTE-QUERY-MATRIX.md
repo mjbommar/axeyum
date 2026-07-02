@@ -41,13 +41,13 @@ public substring filter, so use canonical recipe names such as
 
 | Route | Current Pack Count | Start Query | Drilldown Query | Do Not Claim |
 |---|---:|---|---|---|
-| `finite-model-replay` | 112 | `routes --route finite-replay` | `packs --route finite-model-replay --solver-reuse promoted` | Certificate checking, theorem proof, performance, or solver parity. This route proves exact replay of finite source data. |
+| `finite-model-replay` | 113 | `routes --route finite-replay` | `packs --route finite-model-replay --solver-reuse promoted` | Certificate checking, theorem proof, performance, or solver parity. This route proves exact replay of finite source data. |
 | `boolean-cnf-lrat` | 16 | `routes --route boolean` | `checks --route boolean --proof-status checked` | General graph/set/proof theorems or trust in the encoder. The trusted claim is the checked finite CNF proof object. |
 | `qf-bv-bitblast` | 7 | `routes --route qf-bv` | `checks --route qf-bv --proof-status checked` | Unbounded arithmetic, arbitrary finite algebra, or width-independent claims. Width must be part of the source claim. |
 | `qf-lia-diophantine` | 15 | `routes --route Diophantine` | `checks --route Diophantine --proof-status checked` | General number theory, arbitrary integer theorem schemas, universal coefficient theorems, or asymptotic combinatorics. The row is a concrete integer obstruction. |
-| `qf-lra-farkas` | 61 | `routes --route Farkas` | `checks --route Farkas --proof-status checked` | Real completeness, calculus/optimization convergence, floating-point stability, duality theorems, or performance claims. |
+| `qf-lra-farkas` | 62 | `routes --route Farkas` | `checks --route Farkas --proof-status checked` | Real completeness, calculus/optimization convergence, floating-point stability, duality theorems, or performance claims. |
 | `qf-uf-congruence-alethe` | 19 | `routes --route Alethe` | `checks --route Alethe --proof-status checked` | Arbitrary algebraic/topological structure theorems or full first-order reasoning. This route checks equality/congruence conflicts after finite replay exposes them. |
-| `lean-horizon-template` | 82 | `routes --route lean` | `packs --route lean-horizon-template --proof-status lean-horizon` | That the theorem is proved. A Lean-horizon row records theorem shape and missing reconstruction dependency. |
+| `lean-horizon-template` | 83 | `routes --route lean` | `packs --route lean-horizon-template --proof-status lean-horizon` | That the theorem is proved. A Lean-horizon row records theorem shape and missing reconstruction dependency. |
 
 ## Field-Scoped Route Queries
 

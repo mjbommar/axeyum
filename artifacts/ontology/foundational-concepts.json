@@ -1734,6 +1734,12 @@
           "notes": "Exact rational Gram matrices, Cauchy-Schwarz replay, orthogonal projections, and Gram-Schmidt checks."
         },
         {
+          "id": "finite-qr-decomposition-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-qr-decomposition-v0",
+          "notes": "Exact rational QR replay, orthogonality checks, upper-triangular factor checks, and checked bad product-entry evidence."
+        },
+        {
           "id": "finite-modules-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-modules-v0",
@@ -6958,7 +6964,7 @@
     {
       "id": "bridge_lu_replay",
       "kind": "bridge-concept",
-      "title": "LU Factorization Replay",
+      "title": "Finite Matrix Factorization Replay",
       "domain": "mathematics",
       "field_ids": [
         "linear_algebra",
@@ -6970,7 +6976,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A claimed LU factorization and nullspace vector are checked by exact matrix multiplication over fixed rational matrices; malformed product-entry and nullspace-component rows now route through checked QF_LRA/Farkas evidence, while pivoting, singularity, and stability claims stay separate from the replayed equalities.",
+      "summary": "Claimed LU and QR factorizations and nullspace vectors are checked by exact matrix multiplication over fixed rational matrices; malformed product-entry and nullspace-component rows now route through checked QF_LRA/Farkas evidence, while pivoting, singularity, QR existence, algorithm correctness, and stability claims stay separate from the replayed equalities.",
       "prerequisites": [
         "bridge_finite_model_replay",
         "curriculum_linear_algebra",
@@ -6987,6 +6993,7 @@
         "exact rational arithmetic",
         "LRA (exact rationals)",
         "matrix multiplication replay",
+        "orthogonal factorization replay",
         "QF_LRA"
       ],
       "example_packs": [
@@ -6995,6 +7002,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
           "notes": "Exact matrix-vector solution, LU factorization, and nullspace witnesses over rational matrices."
+        },
+        {
+          "id": "finite-qr-decomposition-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-qr-decomposition-v0",
+          "notes": "Exact rational QR factorization, orthogonality, triangularity, product replay, and checked bad product-entry evidence."
         },
         {
           "id": "numerical-linear-algebra-v0",
@@ -7021,9 +7034,10 @@
             "docs/learn/math/matrix-computation-index.md",
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/linear-system-end-to-end.md",
+            "docs/learn/math/qr-decomposition-end-to-end.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md"
           ],
-          "notes": "The pack validator recomputes L*U, A*x, and A*v exactly over rationals; a separate qf-lra-bad-lu-product-entry row, the bad nullspace-component row, and bad infeasible linear-system rows use the QF_LRA/Farkas route."
+          "notes": "The pack validator recomputes L*U, Q*R, Q^T*Q, A*x, and A*v exactly over rationals; separate qf-lra product-entry rows, the bad nullspace-component row, and bad infeasible linear-system rows use the QF_LRA/Farkas route."
         }
       ],
       "source_refs": [
@@ -7032,21 +7046,23 @@
         "docs/learn/math/matrix-computation-index.md",
         "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/linear-system-end-to-end.md",
+        "docs/learn/math/qr-decomposition-end-to-end.md",
         "docs/learn/math/numerical-linear-algebra-end-to-end.md",
         "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-lu-product-entry-farkas-conflict.smt2",
         "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-nullspace-component-farkas-conflict.smt2",
+        "artifacts/examples/math/finite-qr-decomposition-v0/smt2/bad-qr-product-entry-farkas-conflict.smt2",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md"
       ],
       "open_gaps": [
-        "LU replay checks a fixed factorization; it does not prove existence, pivoting strategy correctness, or numerical stability.",
+        "LU and QR replay check fixed factorizations; they do not prove existence, pivoting strategy correctness, QR algorithm correctness, conditioning, or numerical stability.",
         "Ill-conditioned and floating-point claims need separate numerical-honesty metadata before they become solver or learner claims."
       ],
       "graduation": {
         "status": "validated",
         "criteria": [
-          "Rows state the exact matrix entries, lower/upper factors, and rational arithmetic domain.",
-          "The validator recomputes L*U, and the separate qf-lra-bad-lu-product-entry row rejects the corrupted equality through checked QF_LRA/Farkas evidence.",
-          "Singularity, pivoting, and stability claims remain separate proof-horizon or numerical-analysis rows."
+          "Rows state the exact matrix entries, lower/upper or orthogonal/upper-triangular factors, and rational arithmetic domain.",
+          "The validator recomputes L*U, Q^T*Q, and Q*R, and separate qf-lra product-entry rows reject corrupted equalities through checked QF_LRA/Farkas evidence.",
+          "Singularity, factorization existence, algorithm correctness, pivoting, conditioning, and stability claims remain separate proof-horizon or numerical-analysis rows."
         ]
       }
     },
@@ -11594,7 +11610,7 @@
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU replay, orthogonal transforms, rank, inverse, Jacobians, Hessians, projections, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU and QR replay, orthogonal transforms, rank, inverse, Jacobians, Hessians, projections, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -11721,6 +11737,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-operator-v0",
           "notes": "Finite-Dimensional Operator And Chebyshev Checks"
+        },
+        {
+          "id": "finite-qr-decomposition-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-qr-decomposition-v0",
+          "notes": "Finite QR Decomposition Checks"
         },
         {
           "id": "finite-recurrence-prefix-v0",
@@ -12279,7 +12301,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "LU replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
+          "notes": "LU/QR replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -12346,6 +12368,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-proximal-gradient-v0",
           "notes": "Finite Proximal Gradient Checks"
+        },
+        {
+          "id": "finite-qr-decomposition-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-qr-decomposition-v0",
+          "notes": "Finite QR Decomposition Checks"
         },
         {
           "id": "finite-recurrence-prefix-v0",
@@ -12546,6 +12574,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-flow-cut-v0",
           "notes": "Finite Network Flow And Cut Certificates"
+        },
+        {
+          "id": "finite-qr-decomposition-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-qr-decomposition-v0",
+          "notes": "Finite QR Decomposition Checks"
         },
         {
           "id": "finite-root-finding-v0",

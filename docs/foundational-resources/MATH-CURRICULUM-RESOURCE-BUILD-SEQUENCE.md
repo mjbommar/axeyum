@@ -32,14 +32,14 @@ The committed public query boundary currently reports:
 
 - 121 concept rows: 23 curriculum nodes, 18 field rows, 75 bridge concepts, and
   5 example-family rows.
-- 112 non-template math example packs.
-- 713 expected checks: 346 `sat`, 292 `unsat`, and 75 `not-run`.
-- 338 checked proof/evidence rows, 300 replay-only rows, and 75 Lean-horizon
+- 113 non-template math example packs.
+- 719 expected checks: 349 `sat`, 294 `unsat`, and 76 `not-run`.
+- 339 checked proof/evidence rows, 304 replay-only rows, and 76 Lean-horizon
   rows.
-- 112 promoted solver-reuse packs.
+- 113 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 112 focused learner-linked packs, with no path-only, index-only, or missing
+- 113 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The seed phase is complete. The build problem is now depth, navigation, proof
@@ -91,7 +91,7 @@ pack metadata.
 
 ## Stage 1: Normalize Navigation
 
-Goal: make the existing 112 packs easy to discover by curriculum layer, field,
+Goal: make the existing 113 packs easy to discover by curriculum layer, field,
 concept, proof route, and solver pressure.
 
 Work:
@@ -373,7 +373,7 @@ Pick one item per commit unless the change is purely navigational.
 
 1. Refresh stale planning counts and link this sequence from the resource
    indexes.
-2. Audit learner coverage for the current 112 packs and record any remaining
+2. Audit learner coverage for the current 113 packs and record any remaining
    combined-page-only rows.
 3. Landed: add the finite quotient-topology pack and bridge as the next
    distinct topology/set-theory gap, with quotient-map fibers, quotient-open

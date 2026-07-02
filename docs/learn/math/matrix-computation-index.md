@@ -42,7 +42,7 @@ Concept rows:
 
 | Theme | Packs | What Is Checked | Route |
 |---|---|---|---|
-| Linear systems, nullspaces, and LU | [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/), [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/) | Fixed `A*x = b`, `L*U = A`, exact bad LU product-entry replay, separate checked bad LU product-entry proof row, bad nullspace component rejection, singular-row inconsistency, LP objective thresholds | finite replay plus QF_LRA/Farkas |
+| Linear systems, nullspaces, LU, and QR | [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/), [finite-qr-decomposition-v0](../../../artifacts/examples/math/finite-qr-decomposition-v0/), [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/) | Fixed `A*x = b`, `L*U = A`, `Q^T Q = I`, `Q*R = A`, exact bad LU/QR product-entry replay, separate checked bad product-entry proof rows, bad nullspace component rejection, singular-row inconsistency, LP objective thresholds | finite replay plus QF_LRA/Farkas |
 | Residuals and numerical shadows | [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/), [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/) | Exact residual norms, solution boxes, one Jacobi step, normal equations, residual orthogonality, RSS improvement, and bad RSS rejection | finite replay plus QF_LRA/Farkas |
 | Inner products, projections, and orthogonal transforms | [inner-product-spaces-rational-v0](../../../artifacts/examples/math/inner-product-spaces-rational-v0/), [finite-walsh-hadamard-transform-v0](../../../artifacts/examples/math/finite-walsh-hadamard-transform-v0/) | Gram matrices, fixed Cauchy-Schwarz, orthogonal projection, Gram-Schmidt, order-4 Walsh-Hadamard transform replay, inverse reconstruction, Parseval energy scaling, bad negative norm, bad projection orthogonality, and bad transform coefficient | finite replay plus QF_LRA/Farkas |
 | Kernel, image, rank, and duals | [finite-vector-spaces-v0](../../../artifacts/examples/math/finite-vector-spaces-v0/), [finite-dual-spaces-v0](../../../artifacts/examples/math/finite-dual-spaces-v0/) | Finite `F2` vector-space tables, subspaces, linear maps, kernel/image, rank-nullity, covectors, annihilators, transpose maps | finite table replay plus QF_UF/Alethe |
@@ -100,6 +100,7 @@ The torsion and universal-coefficient part is expanded in
 
 - [Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md)
 - [Linear System And LP Replay](linear-system-end-to-end.md)
+- [Finite QR Decomposition Checks](qr-decomposition-end-to-end.md)
 - [Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md)
 - [Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md)
 - [Rational Inner Product Spaces](inner-product-spaces-end-to-end.md)
@@ -127,6 +128,7 @@ Run the route-level checks from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-qr-decomposition-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/inner-product-spaces-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-walsh-hadamard-transform-v0

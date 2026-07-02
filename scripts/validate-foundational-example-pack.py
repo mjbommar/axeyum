@@ -15743,6 +15743,124 @@ def validate_finite_walsh_hadamard_transform(expected: dict[str, Any]) -> None:
     require_string("Walsh horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_qr_decomposition(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    orthogonality = checks["qr-orthogonality-witness"]
+    if orthogonality["expected_result"] != "sat":
+        fail("qr-orthogonality-witness must expect sat")
+    values = single_witness_values(orthogonality, witnesses)
+    matrix = require_fraction_matrix("QR matrix A", values.get("matrix"))
+    q_matrix = require_fraction_matrix("QR Q matrix", values.get("q"))
+    r_matrix = require_fraction_matrix("QR R matrix", values.get("r"))
+    identity = require_fraction_matrix("QR identity", values.get("identity"))
+    product = require_fraction_matrix("QR product", values.get("product"))
+    require_square_matrix("QR Q matrix", q_matrix)
+    require_square_matrix("QR R matrix", r_matrix)
+    if len(q_matrix) != len(r_matrix):
+        fail("QR Q and R matrices must have the same dimension")
+    expected_identity = [
+        [Fraction(1) if row == column else Fraction(0) for column in range(len(q_matrix))]
+        for row in range(len(q_matrix))
+    ]
+    if identity != expected_identity:
+        fail("qr-orthogonality-witness identity must be the exact identity matrix")
+    if mat_mul(matrix_transpose(q_matrix), q_matrix) != identity:
+        fail("qr-orthogonality-witness Q^T*Q does not equal identity")
+
+    triangular = checks["qr-upper-triangular-witness"]
+    if triangular["expected_result"] != "sat":
+        fail("qr-upper-triangular-witness must expect sat")
+    if triangular.get("proof_status") != "replay-only":
+        fail("qr-upper-triangular-witness must be replay-only")
+    for row_index, row in enumerate(r_matrix):
+        for column_index in range(row_index):
+            if row[column_index] != 0:
+                fail("qr-upper-triangular-witness R has a nonzero below-diagonal entry")
+
+    product_check = checks["qr-product-witness"]
+    if product_check["expected_result"] != "sat":
+        fail("qr-product-witness must expect sat")
+    require_mat_mul_shape("QR product", q_matrix, r_matrix)
+    if mat_mul(q_matrix, r_matrix) != product:
+        fail("qr-product-witness product does not equal Q*R")
+    if product != matrix:
+        fail("qr-product-witness product must equal the listed matrix A")
+
+    bad = checks["bad-qr-product-entry-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-qr-product-entry-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-qr-product-entry-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_qr_product_entry_replay":
+        fail("bad-qr-product-entry-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-by-two-qr-factorization":
+        fail("bad-qr-product-entry-rejected must cite two-by-two-qr-factorization")
+    entry = data.get("entry")
+    if not isinstance(entry, list) or len(entry) != 2:
+        fail("bad-qr-product-entry-rejected entry must be a row/column pair")
+    row_index = require_nonnegative_int("bad QR entry row", entry[0])
+    column_index = require_nonnegative_int("bad QR entry column", entry[1])
+    if row_index >= len(product) or column_index >= len(product[row_index]):
+        fail("bad-qr-product-entry-rejected entry is out of range")
+    computed_entry = require_fraction("bad QR computed_entry", data.get("computed_entry"))
+    claimed_entry = require_fraction("bad QR claimed_entry", data.get("claimed_entry"))
+    if product[row_index][column_index] != computed_entry:
+        fail("bad-qr-product-entry-rejected computed entry does not match replay")
+    if computed_entry == claimed_entry:
+        fail("bad-qr-product-entry-rejected must document a false entry claim")
+    if "separate qf-lra-bad-qr-product-entry" not in bad.get("notes", ""):
+        fail("bad-qr-product-entry-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-qr-product-entry"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-qr-product-entry must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-qr-product-entry must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-qr-product-entry must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-by-two-qr-factorization":
+        fail("qf-lra-bad-qr-product-entry must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-qr-product-entry-rejected":
+        fail("qf-lra-bad-qr-product-entry must cite the replay row")
+    qf_entry = qf_data.get("entry")
+    if qf_entry != entry:
+        fail("qf-lra-bad-qr-product-entry entry must match the replay row")
+    qf_computed = require_fraction("qf QR computed_entry", qf_data.get("computed_entry"))
+    qf_claimed = require_fraction("qf QR claimed_entry", qf_data.get("claimed_entry"))
+    if qf_computed != computed_entry or qf_claimed != claimed_entry:
+        fail("qf-lra-bad-qr-product-entry data must match the replay row")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf QR smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-qr-decomposition-v0/smt2/"
+        "bad-qr-product-entry-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-qr-product-entry smt2_artifact must name the checked source artifact")
+    check_source("qf QR smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf QR farkas_regression", regression)
+    if "finite_qr_decomposition_bad_product_entry_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-qr-product-entry must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf QR certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-qr-product-entry certificate must document checked Farkas evidence")
+
+    horizon = checks["general-qr-decomposition-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-qr-decomposition-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-qr-decomposition-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("QR horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("QR horizon future_checker", horizon_data.get("future_checker"))
+
+
 def require_complex_pair(context: str, value: Any) -> tuple[Fraction, Fraction]:
     pair = require_fraction_vector(context, value)
     if len(pair) != 2:
@@ -27249,6 +27367,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_wolfe_line_search(expected)
     if metadata["id"] == "finite-walsh-hadamard-transform-v0":
         validate_finite_walsh_hadamard_transform(expected)
+    if metadata["id"] == "finite-qr-decomposition-v0":
+        validate_finite_qr_decomposition(expected)
     if metadata["id"] == "finite-projected-gradient-v0":
         validate_finite_projected_gradient(expected)
     if metadata["id"] == "finite-proximal-gradient-v0":

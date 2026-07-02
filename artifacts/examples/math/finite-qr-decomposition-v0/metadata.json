@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "id": "finite-qr-decomposition-v0",
+  "title": "Finite QR Decomposition Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_optimization_and_convexity",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_lu_replay",
+    "bridge_inner_product_projection"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "optimization_and_convexity"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite matrices",
+    "finite orthogonal factorization",
+    "exact rational matrix replay",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-qr-decomposition-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite QR bad product-entry QF_LRA/Farkas regression seed",
+    "pressure": "Exact QR replay computes the bottom-right entry of Q*R as 2/5 while a malformed row claims 1/2, isolating a compact equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-qr-product-entry"
+    ],
+    "next_step": "Promote additional exact factorization rows only when they add distinct matrix-product, orthogonality, least-squares, or residual solver pressure; keep QR existence, algorithm correctness, conditioning, and floating-point stability in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/qr-decomposition-end-to-end.md",
+    "artifacts/examples/math/finite-qr-decomposition-v0/smt2/bad-qr-product-entry-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "qr-orthogonality-witness",
+    "qr-upper-triangular-witness",
+    "qr-product-witness",
+    "bad-qr-product-entry-rejected",
+    "qf-lra-bad-qr-product-entry",
+    "general-qr-decomposition-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational Q matrix, R matrix, product matrix, orthogonality identity, and triangularity fact as deterministic exact-rational replay obligations.",
+    "Route the false product-entry row through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting entry.",
+    "Expose the pack through the matrix computation learner and consumer query surfaces.",
+    "Keep QR existence, QR algorithm correctness, least-squares theorem use, floating-point conditioning, and stability claims marked Lean or numerical-honesty horizon."
+  ]
+}
