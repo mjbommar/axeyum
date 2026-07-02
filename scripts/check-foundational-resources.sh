@@ -211,6 +211,8 @@ python3 scripts/query-foundational-resources.py checks --pack finite-euler-metho
 python3 scripts/query-foundational-resources.py checks --pack finite-euler-method-v0 --route Farkas --proof-status checked --text qf-lra-bad-terminal-error --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-euler-method-v0 --route Farkas --proof-status checked --text qf-lra-bad-euler-step --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-euler-method-v0 --proof-status replay-only --text rejected --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text ODE --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-euler-method-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-markov-chain-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-stochastic-kernels-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-hitting-times-v0 --route Farkas --proof-status checked --require-any >/dev/null

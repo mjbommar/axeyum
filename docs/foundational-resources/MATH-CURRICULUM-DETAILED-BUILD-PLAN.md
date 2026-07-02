@@ -1864,6 +1864,13 @@ Pick one row per commit unless the change is purely navigational.
      limit-theorem, and asymptotic-statistics routes, and adds
      concentration-specific horizon queries to the public smoke gate without
      adding a duplicate pack or changing resource counts.
+222. Landed: add `euler-method-theorem-boundary.md` as the focused
+     theorem-boundary page for the finite Euler-method cluster. It maps exact
+     finite transition replay, finite error tables, finite invariants, and
+     checked QF_LRA/Farkas bad-step/error rows to the missing continuous ODE,
+     convergence, stability, stiffness, floating-point, and PDE routes, and
+     adds ODE-specific horizon queries to the public smoke gate without adding
+     a duplicate pack or changing resource counts.
 
 ## Validation Checklist
 

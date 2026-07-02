@@ -1912,6 +1912,11 @@ for exact explicit-Euler transition replay, finite polynomial-solution error
 tables, monotone invariant checking, replay-only bad max-error,
 bad terminal-error, and bad-step rejection, separate checked QF_LRA/Farkas
 proof rows, and the ODE/numerical-analysis Lean horizon.
+It also has a focused Euler-method theorem-boundary page that keeps those
+finite transition/error/invariant rows separate from continuous ODE
+existence/uniqueness, convergence, stability, stiffness, floating-point, and
+PDE targets, and links the public ODE horizon query to the existing checked
+finite QF_LRA/Farkas shadows.
 `finite-operator-v0` now also has a standalone finite-dimensional operator
 lesson for exact `l1` norm replay, row-sum operator-bound replay, finite
 Chebyshev recurrence replay, checked QF_LRA/Farkas bad `l1` norm,

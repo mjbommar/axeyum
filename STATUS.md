@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Euler-method theorem-boundary resource landed.**
+  `euler-method-theorem-boundary.md` now separates finite explicit-Euler
+  transition replay, exact finite error tables, finite invariants, and checked
+  QF_LRA/Farkas bad-step/error rows from continuous ODE existence/uniqueness,
+  convergence, stability, stiffness, floating-point, and PDE theorem targets.
+  The analysis/topology learner path, dynamics query guide, analysis/numerical
+  query guide, theorem-horizon query guide, and foundational smoke gate now
+  expose the ODE horizon row next to the checked finite Euler shadows. This is
+  a learner/query-depth increment over an existing promoted pack; public
+  resource counts do not change.
+
 - **Concentration theorem-boundary resource landed.**
   `concentration-theorem-boundary.md` now separates finite Markov,
   Chebyshev, union-bound, bad-tail, and bad-union replay from Chernoff,

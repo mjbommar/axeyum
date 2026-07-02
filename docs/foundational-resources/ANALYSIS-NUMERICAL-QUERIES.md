@@ -201,6 +201,10 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text ODE \
+  --require-any
 ```
 
 Display checked numerical linear algebra rows:
@@ -306,6 +310,11 @@ These queries prove discoverability of finite checked analysis, numerical, and
 complex rows, not theorem coverage. They can support a catalog, learner page,
 route-specific regression search, or sibling resource that wants examples by
 finite analytic object family.
+
+For the finite Euler boundary, read
+[Euler Method Theorem Boundary](../learn/math/euler-method-theorem-boundary.md)
+before displaying ODE convergence, stability, stiffness, PDE, or
+floating-point method claims next to exact rational finite-step rows.
 
 They do not prove:
 

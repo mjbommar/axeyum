@@ -155,6 +155,10 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --require-any
 
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text ODE \
+  --require-any
+
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-markov-chain-v0 \
   --route Farkas \
@@ -197,6 +201,11 @@ These queries prove discoverability of finite checked dynamics rows, not
 theorem coverage. They can support a catalog, learner page, route-specific
 regression search, or sibling resource that wants examples by finite dynamics
 object family.
+
+For the finite Euler boundary in particular, read
+[Euler Method Theorem Boundary](../learn/math/euler-method-theorem-boundary.md)
+before displaying ODE convergence, stability, stiffness, floating-point, or
+PDE theorem language next to finite transition/error rows.
 
 They do not prove:
 

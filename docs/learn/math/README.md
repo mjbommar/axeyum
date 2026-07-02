@@ -58,6 +58,9 @@ Companion maps:
   separates finite Markov, Chebyshev, union-bound, and bad-tail replay from
   Chernoff, Hoeffding, martingale concentration, limit-theorem, and
   asymptotic-statistics targets.
+- [Euler Method Theorem Boundary](euler-method-theorem-boundary.md):
+  separates finite explicit-Euler transition/error replay from continuous ODE,
+  convergence, stability, stiffness, floating-point, and PDE theorem targets.
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md):
   maps finite analysis, calculus, optimization, measure, dynamics, and operator
   shadows to their missing Lean/theorem reconstruction routes.
@@ -574,6 +577,10 @@ Companion maps:
   finite monotone invariant checking, replay-only bad error-bound,
   bad terminal-error, and bad-step rejection, plus separate checked
   QF_LRA/Farkas proof rows.
+- [Euler Method Theorem Boundary](euler-method-theorem-boundary.md): maps those
+  finite transition, error-table, and invariant shadows to the missing
+  continuous ODE, convergence, stability, stiffness, floating-point, and PDE
+  proof routes.
 - [Finite-Dimensional Operators](finite-operator-end-to-end.md): follows exact
   `l1` norm replay, matrix row-sum operator-bound replay, finite Chebyshev
   recurrence replay, and checked QF_LRA/Farkas bad `l1` norm, bad

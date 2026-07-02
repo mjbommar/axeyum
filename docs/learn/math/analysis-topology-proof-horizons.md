@@ -495,6 +495,10 @@ The `finite-euler-method-v0` validator checks every update
 `y' = 2t` with solution `y = t^2`, checks a nonnegative monotone invariant,
 and rejects bad one-step, terminal-error, and error-bound claims by replay
 before separate `qf-lra-*` rows check the isolated `UnsatFarkas` conflicts.
+For the theorem boundary that keeps those rows separate from ODE
+existence/uniqueness, convergence, stability, stiffness, floating-point, and
+PDE claims, read
+[Euler Method Theorem Boundary](euler-method-theorem-boundary.md).
 
 For a finite stochastic transition system, encode a row-stochastic matrix and
 an initial distribution. The `finite-markov-chain-v0` validator applies exact
