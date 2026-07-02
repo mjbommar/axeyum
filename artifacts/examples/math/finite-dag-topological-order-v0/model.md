@@ -37,6 +37,15 @@ That violates the edge:
 algebra -> topology
 ```
 
+The `qf-lia-bad-topological-edge-order` row keeps the same violating-edge
+replay and checks the final integer contradiction:
+
+```text
+algebra_position = 2
+topology_position = 1
+algebra_position < topology_position
+```
+
 The cycle-obstruction row uses:
 
 ```text

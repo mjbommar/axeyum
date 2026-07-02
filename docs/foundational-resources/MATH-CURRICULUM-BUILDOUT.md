@@ -3282,6 +3282,15 @@ artifact isolates the malformed shorter-distance claim as the final
 checked artifact while arbitrary-graph shortest-path correctness,
 negative-cycle theory, all-pairs variants, and asymptotic algorithm claims
 remain Lean-horizon work.
+The graph curriculum layer now also promotes `finite-dag-topological-order-v0`
+with `qf-lia-bad-topological-edge-order`. Exact topological-order replay still
+owns vertex coverage, edge-position checking, and cycle-obstruction replay,
+while the source-linked QF_LIA artifact isolates the malformed order as the
+final `2 < 1` edge-position contradiction. This closes the current
+non-benchmark-horizon math pack queue: all 111 non-template math packs now have
+promoted solver-reuse metadata, while topological-sort algorithm correctness,
+finite linear-extension existence, and cycle-obstruction completeness remain
+Lean-horizon work.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

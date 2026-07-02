@@ -65,12 +65,12 @@ The current committed data boundary reports:
 - 75 bridge-concept rows.
 - 5 example-family rows.
 - 111 non-template math example packs.
-- 703 expected checks.
-- 334 checked proof/evidence rows.
+- 706 expected checks.
+- 337 checked proof/evidence rows.
 - 295 replay-only rows.
 - 74 Lean-horizon rows.
-- 108 promoted solver-reuse packs.
-- 3 non-benchmark-horizon solver-reuse packs.
+- 111 promoted solver-reuse packs.
+- 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 - 111 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
@@ -554,8 +554,9 @@ Build next:
   coloring, reachability, BFS/DFS traversal, matching, cut, finite flow/cut,
   shortest paths, DAG topological orders, separation, d-separation, and
   graph-counterexample replay.
-- Promote one representative bad row per graph family into a small regression
-  artifact if it produces a compact CNF/LIA/BV check.
+- Preserve the landed source-linked graph-family proof rows for coloring,
+  reachability, matching, cut, flow/cut, shortest-path, topological-order,
+  d-separation, and BFS/DFS runtime shapes before adding duplicate examples.
 - Add proof-route notes for when graph claims are Boolean SAT, finite replay,
   exact rational flow/cut or shortest-path replay, DAG order/cycle replay, LIA
   cost counters, or Lean-horizon asymptotics.
@@ -2335,6 +2336,13 @@ Pick one item per commit unless the change is purely navigational.
      boundary keeps arbitrary shortest-path correctness, negative-cycle
      reasoning, all-pairs algorithms, and asymptotic runtime in the
      Lean-horizon lane.
+158. Landed: promote `finite-dag-topological-order-v0` with
+     `qf-lia-bad-topological-edge-order` as the source-linked checked QF_LIA
+     row for the finite topological edge-order conflict. The committed SMT-LIB
+     artifact isolates `algebra_position = 2`, `topology_position = 1`, and
+     `algebra_position < topology_position`, while the theorem boundary keeps
+     topological-sort algorithm correctness, finite linear-extension
+     existence, and cycle-obstruction completeness in the Lean-horizon lane.
 
 ## Validation Checklist
 

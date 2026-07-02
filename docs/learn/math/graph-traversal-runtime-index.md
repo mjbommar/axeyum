@@ -37,7 +37,7 @@ These rows live in the
 | How many vertices are visited before the target? | `graph-search-runtime-v0` | finite BFS queue pop count and DFS preorder count | asymptotic BFS/DFS runtime |
 | Is a proposed traversal bound false? | `graph-search-runtime-v0` | exact counter replay plus checked QF_LIA arithmetic evidence | graph-family lower bounds |
 | Is a weighted path shortest? | `finite-shortest-path-v0` | exact path-length replay plus potential lower-bound certificate | shortest-path algorithm correctness |
-| Is a DAG order valid? | `finite-dag-topological-order-v0` | vertex-coverage, edge-position, and cycle-obstruction replay | topological-sort algorithm correctness |
+| Is a DAG order valid? | `finite-dag-topological-order-v0` | vertex-coverage, edge-position, cycle-obstruction replay, and the checked `2 < 1` QF_LIA edge-order contradiction | topological-sort algorithm correctness |
 | Does another graph obstruction reuse the same shape? | `graph-coloring-v0`, `graph-matching-v0`, `graph-cut-v0`, `finite-flow-cut-v0`, `finite-shortest-path-v0`, `finite-dag-topological-order-v0`, `graph-d-separation-v0` | finite witness replay plus Boolean/CNF, BV, LIA, or exact-rational proof/replay rows | broad graph theory |
 
 ## Checkable Shapes
@@ -129,7 +129,8 @@ coverage and flow-duality claims.
 Use [Finite DAG Topological Order Certificates](finite-dag-topological-order-end-to-end.md)
 when the question is order feasibility on a directed acyclic graph. That page
 shows how edge positions and a cycle witness are replayed without trusting a
-topological-sort implementation.
+topological-sort implementation, and how the malformed edge-order row reduces
+to a checked `2 < 1` QF_LIA contradiction.
 
 ## Query It
 
@@ -147,6 +148,7 @@ python3 scripts/query-foundational-resources.py checks --pack graph-search-runti
 python3 scripts/query-foundational-resources.py checks --pack graph-search-runtime-v0 --expected-result not-run --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --route LIA --proof-status checked --text qf-lia-bad-topological-edge-order --require-any
 ```
 
 ## Replay It

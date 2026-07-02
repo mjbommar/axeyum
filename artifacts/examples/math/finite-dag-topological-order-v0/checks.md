@@ -38,6 +38,23 @@ algebra -> topology
 
 The claimed order puts `topology` before `algebra`.
 
+## `qf-lia-bad-topological-edge-order`
+
+Expected: `unsat`.
+
+Validation: `qf_lia_arithmetic_evidence`.
+
+The source SMT-LIB artifact records the final integer conflict:
+
+```text
+algebra_position = 2
+topology_position = 1
+algebra_position < topology_position
+```
+
+Axeyum emits and independently checks arithmetic evidence for that
+edge-position contradiction.
+
 ## `cycle-obstruction-rejected`
 
 Rejects a topological-order claim for:

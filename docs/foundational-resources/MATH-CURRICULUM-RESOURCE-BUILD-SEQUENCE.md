@@ -33,11 +33,11 @@ The committed public query boundary currently reports:
 - 121 concept rows: 23 curriculum nodes, 18 field rows, 75 bridge concepts, and
   5 example-family rows.
 - 111 non-template math example packs.
-- 703 expected checks: 342 `sat`, 287 `unsat`, and 74 `not-run`.
-- 334 checked proof/evidence rows, 295 replay-only rows, and 74 Lean-horizon
+- 706 expected checks: 342 `sat`, 290 `unsat`, and 74 `not-run`.
+- 337 checked proof/evidence rows, 295 replay-only rows, and 74 Lean-horizon
   rows.
-- 108 promoted solver-reuse packs.
-- 3 non-benchmark-horizon solver-reuse packs.
+- 111 promoted solver-reuse packs.
+- 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 - 111 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).

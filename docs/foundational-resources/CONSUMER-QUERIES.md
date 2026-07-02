@@ -1703,6 +1703,13 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --text qf-lra-bad-shorter-distance-potential-bound \
   --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-dag-topological-order-v0 \
+  --route LIA \
+  --proof-status checked \
+  --text qf-lia-bad-topological-edge-order \
+  --require-any
 ```
 
 For real analysis, query the Farkas route to keep bounded epsilon-delta
@@ -2427,6 +2434,7 @@ python3 scripts/query-foundational-resources.py checks --pack finite-flow-cut-v0
 python3 scripts/query-foundational-resources.py checks --pack finite-flow-cut-v0 --route Farkas --proof-status checked --text qf-lra-bad-flow-value-cut-bound --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-flow-cut-v0 --expected-result not-run --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --route Farkas --proof-status checked --text qf-lra-bad-shorter-distance-potential-bound --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --route LIA --proof-status checked --text qf-lia-bad-topological-edge-order --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route LIA --proof-status checked --require-any >/dev/null

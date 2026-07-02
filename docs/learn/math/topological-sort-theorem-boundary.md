@@ -65,13 +65,15 @@ algorithm.
 | `topological-order-witness` | `sat` | checked | The listed prerequisite order covers every vertex once and respects every edge. |
 | `independent-swap-order-witness` | `sat` | checked | The swapped `algebra`/`analysis` order checks because those vertices are incomparable. |
 | `bad-order-rejected` | `unsat` | checked | The malformed order puts `topology` before `algebra`, violating `algebra -> topology`. |
+| `qf-lia-bad-topological-edge-order` | `unsat` | checked | The source-linked QF_LIA artifact fixes `algebra_position = 2`, `topology_position = 1`, and the required edge inequality, yielding `2 < 1`. |
 | `cycle-obstruction-rejected` | `unsat` | checked | The directed cycle `a -> b -> c -> a` obstructs a topological order for that finite graph. |
 | `topological-sort-theorem-lean-horizon` | `not-run` | lean-horizon | General topological-sort correctness and linear-extension existence remain future proof-assistant work. |
 
-The checked rows are deterministic exact finite replay. The pack is currently a
-`non-benchmark-horizon` resource, not a promoted solver-regression route: no
-source Boolean/LIA artifact or route-specific certificate has been committed
-for the malformed rows.
+The checked finite rows are deterministic exact replay. The bad edge-order row
+also has a committed QF_LIA artifact and route regression, so the pack is now a
+promoted solver-reuse resource. That promotion is narrow: it covers the listed
+`2 < 1` edge-order contradiction while the general theorem row remains
+`lean-horizon`.
 
 ## What Is Not Proved Yet
 
@@ -121,6 +123,17 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Find the source-linked QF_LIA edge-order contradiction:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-dag-topological-order-v0 \
+  --route LIA \
+  --proof-status checked \
+  --text qf-lia-bad-topological-edge-order \
+  --require-any
+```
+
 Drill into the checked finite order, alternate order, bad-order, and cycle rows:
 
 ```sh
@@ -159,8 +172,9 @@ General topological-sort resources graduate only when they add:
 2. explicit hypotheses for finite directed graphs, vertex coverage,
    acyclicity, cycles, total orders, and algorithm state;
 3. no-`sorry` proofs with an axiom audit;
-4. a source Boolean/LIA artifact plus checked certificate route before
-   promoting malformed order or cycle rows as solver regressions;
+4. source Boolean/LIA artifacts plus checked certificate routes before
+   promoting additional malformed-order, cycle, or algorithm rows as solver
+   regressions;
 5. display labels that keep finite replay, route certificates, theorem rows,
    and benchmark claims separate.
 
@@ -178,11 +192,14 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dag-topological-order-v0
+cargo test -p axeyum-solver --test math_resource_lia_routes finite_dag_topological_bad_edge_order_emits_checked_lia_evidence
 python3 scripts/query-foundational-resources.py horizon-frontier --text "topological-sort" --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --route LIA --proof-status checked --text qf-lia-bad-topological-edge-order --require-any
 ```
 
 Expected resource boundary: the finite pack validates, the
 `horizon-frontier` query shows `checked-finite-shadow`, and the
-topological-sort theorem row remains `lean-horizon`.
+topological-sort theorem row remains `lean-horizon`; the promoted QF_LIA row is
+only the checked finite edge-order contradiction.

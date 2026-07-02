@@ -247,13 +247,13 @@ Companion maps:
   algorithm-correctness, data-structure, and asymptotic-runtime theorem routes.
 - [Finite DAG Topological Order Certificates](finite-dag-topological-order-end-to-end.md):
   follows finite topological-order replay, alternate linear-extension replay,
-  bad-order rejection, cycle-obstruction replay, and the topological-sort
-  theorem horizon.
+  bad-order rejection, cycle-obstruction replay, a source-linked QF_LIA
+  edge-order conflict, and the topological-sort theorem horizon.
 - [Topological Sort Theorem Boundary](topological-sort-theorem-boundary.md):
   maps those finite order, alternate-order, bad-order, and cycle-obstruction
-  rows to the missing finite DAG linear-extension, cycle-completeness,
-  Kahn/DFS algorithm-correctness, partial-order, and asymptotic-runtime theorem
-  routes.
+  rows plus the checked `2 < 1` edge-order artifact to the missing finite DAG
+  linear-extension, cycle-completeness, Kahn/DFS algorithm-correctness,
+  partial-order, and asymptotic-runtime theorem routes.
 - [DAG D-Separation Checks](graph-d-separation-end-to-end.md): follows finite
   active chains, conditioned chain/fork blocking, collider blocking, and
   descendant-opened collider replay.

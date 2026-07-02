@@ -69,17 +69,16 @@ The Phase M8 threshold is met for size and repeated structure:
 
 The current pack-level evidence mix is still intentionally conservative:
 
-- `checked`: 334 expected-result rows
+- `checked`: 337 expected-result rows
 - `replay-only`: 295 expected-result rows
 - `lean-horizon`: 74 expected-result rows
 - `not-run`: 74 expected-result rows
-- `expected_result`: 342 `sat`, 287 `unsat`, 74 `not-run`
-- row labels: 90 checked witnesses, 244 checked refutations, 252 finite
+- `expected_result`: 342 `sat`, 290 `unsat`, 74 `not-run`
+- row labels: 90 checked witnesses, 247 checked refutations, 252 finite
   witness replays, 43 finite rejection replays, and 74 theorem horizons
 - pack labels: 111 checked evidence packs, 100 mixed-trust packs, and 74 packs
   with theorem boundaries
-- `solver_reuse`: 108 promoted packs, 3 non-benchmark-horizon packs, and 0
-  unclassified packs
+- `solver_reuse`: 111 promoted packs and 0 unclassified packs
 
 That distribution argues for keeping the resource lane close to the proof
 cookbook, validators, and solver evidence work. A premature crate would mostly

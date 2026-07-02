@@ -48,6 +48,19 @@ algebra -> topology
 
 points backward in that order.
 
+The promoted QF_LIA row records the same obstruction as a tiny arithmetic
+certificate:
+
+```text
+algebra_position = 2
+topology_position = 1
+edge requires algebra_position < topology_position
+therefore the row asks Axeyum to check 2 < 1
+```
+
+That source-linked artifact is a checked solver/proof route for the malformed
+edge-order claim, not a proof of the general topological-sort theorem.
+
 ## The Cycle Obstruction
 
 The cyclic graph is:
@@ -71,7 +84,7 @@ This is the DAG version of Axeyum's resource pattern:
 
 ```text
 untrusted fast search -> candidate order or cycle
-trusted small checking -> vertex coverage, edge positions, and cycle replay
+trusted small checking -> vertex coverage, edge positions, cycle replay, and the 2 < 1 LIA contradiction
 ```
 
 The checker does not trust a traversal trace, Kahn queue order, DFS finish
@@ -84,6 +97,8 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dag-topological-order-v0
+cargo test -p axeyum-solver --test math_resource_lia_routes finite_dag_topological_bad_edge_order_emits_checked_lia_evidence
+python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --route LIA --proof-status checked --text qf-lia-bad-topological-edge-order --require-any
 ```
 
 Expected shape:

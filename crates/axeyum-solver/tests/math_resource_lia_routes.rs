@@ -60,6 +60,9 @@ const NATURAL_ARITHMETIC_BOUNDED_NEGATIVE: &str = include_str!(
 const GRAPH_SEARCH_BAD_DFS_COST_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/graph-search-runtime-v0/smt2/bad-dfs-cost-bound-lia-conflict.smt2"
 );
+const FINITE_DAG_TOPOLOGICAL_BAD_EDGE_ORDER: &str = include_str!(
+    "../../../artifacts/examples/math/finite-dag-topological-order-v0/smt2/bad-topological-edge-order-lia-conflict.smt2"
+);
 
 #[test]
 fn modular_nonunit_inverse_emits_checked_diophantine_evidence() {
@@ -194,6 +197,14 @@ fn graph_search_bad_dfs_cost_bound_emits_checked_lia_evidence() {
     assert_resource_lia_checked(
         "graph-search-runtime-v0 bad DFS cost-bound obstruction",
         GRAPH_SEARCH_BAD_DFS_COST_BOUND,
+    );
+}
+
+#[test]
+fn finite_dag_topological_bad_edge_order_emits_checked_lia_evidence() {
+    assert_resource_lia_checked(
+        "finite-dag-topological-order-v0 bad edge-order obstruction",
+        FINITE_DAG_TOPOLOGICAL_BAD_EDGE_ORDER,
     );
 }
 

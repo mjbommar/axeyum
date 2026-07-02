@@ -17,10 +17,10 @@ The current public summary is:
 ```text
 concept_rows=121
 non_template_packs=111
-checks=703
-expected_results=not-run:74,sat:342,unsat:287
-proof_statuses=checked:334,lean-horizon:74,replay-only:295
-solver_reuse=non-benchmark-horizon:3,promoted:108
+checks=706
+expected_results=not-run:74,sat:342,unsat:290
+proof_statuses=checked:337,lean-horizon:74,replay-only:295
+solver_reuse=promoted:111
 ```
 
 ## Row Labels

@@ -63,12 +63,12 @@ The committed resource query currently reports:
 - 75 bridge-concept rows.
 - 5 example-family rows.
 - 111 non-template math packs.
-- 703 expected checks.
-- 334 checked proof/evidence rows.
+- 706 expected checks.
+- 337 checked proof/evidence rows.
 - 295 replay-only rows.
 - 74 Lean-horizon rows.
-- 108 promoted solver-reuse packs.
-- 3 non-benchmark-horizon solver-reuse packs.
+- 111 promoted solver-reuse packs.
+- 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 - 111 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
@@ -1844,8 +1844,8 @@ Pick one row per commit unless the change is purely navigational.
      pack. It checks two finite topological-order witnesses, rejects a bad
      order by a concrete edge-position violation, rejects a cyclic graph by
      replaying a directed cycle obstruction, and records a topological-sort
-     theorem horizon. The pack is intentionally `non-benchmark-horizon` until
-     a source Boolean/LIA artifact and checked proof route exist.
+     theorem horizon. It was introduced as `non-benchmark-horizon`; a later
+     promotion adds the source-linked QF_LIA edge-order artifact.
 219. Landed: add a focused finite Bayes-update learner/query resource over the
      existing promoted `finite-probability-v0` Bayes rows. The new page follows
      the diagnostic-test posterior `2/13`, the malformed posterior `1/5`, and

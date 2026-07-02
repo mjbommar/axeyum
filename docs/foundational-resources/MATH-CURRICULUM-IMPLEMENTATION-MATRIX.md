@@ -335,9 +335,9 @@ Build sequence:
     checked by the `math_resource_lia_routes` arithmetic-DPLL regression.
     `finite-flow-cut-v0` adds exact finite directed-flow feasibility,
     cut-capacity optimality replay, malformed capacity rejection, malformed
-    flow-value rejection, and a max-flow/min-cut theorem horizon, but remains
-    `non-benchmark-horizon` until a source exact-arithmetic artifact and
-    checked proof route are committed.
+    flow-value rejection, and a max-flow/min-cut theorem horizon; its later
+    `qf-lra-bad-flow-value-cut-bound` promotion adds the source Farkas artifact
+    and checked proof route.
     `integer-lia-v0` now links `diophantine-gcd-obstruction` to
     `artifacts/examples/math/integer-lia-v0/smt2/diophantine-gcd-obstruction-conflict.smt2`,
     checked by the `math_resource_lia_routes` Diophantine regression.
@@ -818,7 +818,13 @@ Build sequence:
     `5 <= 4`. The finite replay rows still compute path length, edge
     relaxations, and the potential lower bound; only the isolated
     potential-bound conflict is promoted as solver-reuse evidence.
-82. Revisit crate/repo boundaries only after three real consumers or repeated
+82. Landed: promote the finite DAG topological edge-order row.
+    `finite-dag-topological-order-v0` now has
+    `qf-lia-bad-topological-edge-order`, a source-linked QF_LIA artifact for
+    the final exact-integer contradiction `2 < 1`. The finite replay rows still
+    compute vertex coverage, edge positions, and cycle obstructions; only the
+    isolated edge-order conflict is promoted as solver-reuse evidence.
+83. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

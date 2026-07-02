@@ -55,12 +55,12 @@ As of 2026-07-02, the committed resource query reports:
 - 75 bridge-concept rows.
 - 5 example-family rows.
 - 111 non-template math packs.
-- 703 expected checks.
-- 334 checked proof/evidence rows.
+- 706 expected checks.
+- 337 checked proof/evidence rows.
 - 295 replay-only rows.
 - 74 Lean-horizon rows.
-- 108 promoted solver-reuse packs.
-- 3 non-benchmark-horizon solver-reuse packs.
+- 111 promoted solver-reuse packs.
+- 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
 This means the seed phase is over. The next work is systematic depth:

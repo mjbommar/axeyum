@@ -27,20 +27,19 @@
     "finite DAG replay",
     "finite topological-order replay",
     "finite cycle obstruction replay",
+    "QF_LIA / Diophantine",
+    "checked arithmetic evidence",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dag-topological-order-v0",
   "solver_reuse": {
-    "status": "non-benchmark-horizon",
-    "target": "finite DAG topological-order replay and theorem boundary",
-    "pressure": "Replay checks two valid topological orders, one malformed order rejected by an edge-position violation, and one cyclic graph rejected by a directed-cycle obstruction; no source CNF/SMT artifact is committed yet, so this is not a solver regression or benchmark claim.",
+    "status": "promoted",
+    "target": "finite DAG topological edge-order QF_LIA regression seed",
+    "pressure": "Replay checks two valid topological orders and one cyclic obstruction, then the source-linked QF_LIA artifact isolates the malformed order as the impossible edge-position obligation 2 < 1.",
     "evidence": [
-      "topological-order-witness",
-      "independent-swap-order-witness",
-      "bad-order-rejected",
-      "cycle-obstruction-rejected"
+      "qf-lia-bad-topological-edge-order"
     ],
-    "next_step": "Promote only after adding a source Boolean/LIA artifact and checked proof route for acyclicity, topological-order existence, or cycle obstruction; keep Kahn/DFS algorithm correctness and linear-extension theorems in the Lean-horizon lane."
+    "next_step": "Promote additional DAG rows only when they add distinct vertex-coverage, edge-order, cycle-obstruction, acyclicity, or proof-reconstruction pressure; keep Kahn/DFS algorithm correctness and linear-extension theorems in the Lean-horizon lane."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -49,13 +48,17 @@
     "docs/curriculum/00-foundations/relations-and-functions.md",
     "docs/curriculum/02-structures/counting.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lia-diophantine.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
-    "docs/learn/math/finite-dag-topological-order-end-to-end.md"
+    "docs/learn/math/finite-dag-topological-order-end-to-end.md",
+    "artifacts/examples/math/finite-dag-topological-order-v0/smt2/bad-topological-edge-order-lia-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
   ],
   "expected_results": [
     "topological-order-witness",
     "independent-swap-order-witness",
     "bad-order-rejected",
+    "qf-lia-bad-topological-edge-order",
     "cycle-obstruction-rejected",
     "topological-sort-theorem-lean-horizon"
   ],
@@ -64,7 +67,7 @@
     "Check every directed edge against the listed order position.",
     "Reject malformed rows by naming a concrete edge whose order is violated.",
     "Reject cyclic ordering claims by replaying a directed cycle witness.",
-    "Add a source Boolean/LIA artifact and checked certificate route before promoting the pack as a solver regression.",
+    "Keep the promoted edge-order row tied to a committed SMT-LIB artifact and checked QF_LIA arithmetic evidence.",
     "Keep general topological-sort algorithm correctness, linear-extension existence, and asymptotic complexity as Lean/theorem horizons until proof artifacts exist."
   ]
 }

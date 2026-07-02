@@ -73,6 +73,23 @@
       "notes": "The listed order puts topology before algebra even though algebra must precede topology."
     },
     {
+      "id": "qf-lia-bad-topological-edge-order",
+      "claim": "The order places algebra at position 2 and topology at position 1 while the edge algebra -> topology requires algebra before topology.",
+      "expected_result": "unsat",
+      "validation": "qf_lia_arithmetic_evidence",
+      "proof_status": "checked",
+      "data": {
+        "edge": ["algebra", "topology"],
+        "algebra_position": 2,
+        "topology_position": 1,
+        "edge_order": "algebra_position < topology_position",
+        "smt2_artifact": "artifacts/examples/math/finite-dag-topological-order-v0/smt2/bad-topological-edge-order-lia-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_lia_routes finite_dag_topological_bad_edge_order_emits_checked_lia_evidence",
+        "certificate": "produce_evidence emits checked QF_LIA arithmetic evidence for the exact integer contradiction 2 < 1"
+      },
+      "notes": "The SMT-LIB artifact isolates the edge-position contradiction after replay identifies the violating edge."
+    },
+    {
       "id": "cycle-obstruction-rejected",
       "claim": "The directed cycle a -> b -> c -> a has a topological order.",
       "expected_result": "unsat",
