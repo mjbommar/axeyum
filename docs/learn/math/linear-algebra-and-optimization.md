@@ -13,6 +13,7 @@ Example packs:
 - [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/)
 - [finite-gaussian-elimination-v0](../../../artifacts/examples/math/finite-gaussian-elimination-v0/)
 - [finite-qr-decomposition-v0](../../../artifacts/examples/math/finite-qr-decomposition-v0/)
+- [finite-gram-schmidt-v0](../../../artifacts/examples/math/finite-gram-schmidt-v0/)
 - [finite-givens-rotation-v0](../../../artifacts/examples/math/finite-givens-rotation-v0/)
 - [finite-householder-reflection-v0](../../../artifacts/examples/math/finite-householder-reflection-v0/)
 - [finite-cholesky-decomposition-v0](../../../artifacts/examples/math/finite-cholesky-decomposition-v0/)
@@ -112,6 +113,11 @@ floating-point stability. The QR slice adds exact rational
 orthogonality replay, upper-triangular factor checking, `Q*R` product replay,
 and checked QF_LRA/Farkas rejection of a bad product entry without claiming QR
 existence, algorithm correctness, conditioning, or numerical stability. The
+Gram-Schmidt slice adds exact rational projection coefficients,
+normalization, residual orthogonality, orthonormality, upper-triangular factor
+checking, `Q*R` replay, and checked QF_LRA/Farkas rejection of a bad
+projection coefficient without claiming general Gram-Schmidt/QR correctness,
+rank-deficient variants, conditioning, or floating-point stability. The
 Givens slice adds exact rational rotation coefficients, coordinate zeroing,
 inverse reconstruction, determinant/norm preservation, and checked
 QF_LRA/Farkas rejection of a bad sine coefficient without claiming Givens/QR
@@ -1014,6 +1020,7 @@ replay, read
 [End To End: Rational Inner Product Spaces](inner-product-spaces-end-to-end.md),
 [End To End: Finite Walsh-Hadamard Transform Checks](walsh-hadamard-transform-end-to-end.md),
 [End To End: Finite QR Decomposition Checks](qr-decomposition-end-to-end.md),
+[End To End: Finite Gram-Schmidt](gram-schmidt-end-to-end.md),
 [End To End: Finite Givens Rotation](givens-rotation-end-to-end.md),
 [End To End: Finite Householder Reflection](householder-reflection-end-to-end.md),
 [End To End: Finite Cholesky Decomposition Checks](cholesky-decomposition-end-to-end.md),
@@ -1038,7 +1045,7 @@ finite-dimensional operator rows start as
 Infeasible rational systems, LP thresholds, bad residual and solution-box bounds, malformed
 eigenpairs, bad Rayleigh-quotient rows, bad characteristic-polynomial rows,
 bad Jordan-chain components, bad operator-bound and bad Chebyshev-prefix rows, bad Walsh-Hadamard
-transform coefficients, bad Givens coefficients, bad Householder entries, bad QR/Cholesky product entries, bad covariance
+transform coefficients, bad Gram-Schmidt projection coefficients, bad Givens coefficients, bad Householder entries, bad QR/Cholesky product entries, bad covariance
 entries, bad KKT stationarity and complementarity rows,
 bad condition-number bounds, bad Schur-complement scalar rows, bad Newton-coordinate rows, bad proximal residual rows, negative-norm rows, and projection-orthogonality
 examples graduate through
@@ -1067,6 +1074,6 @@ module theory, universal coefficient theorem schemas, exact sequences,
 Ext/Tor laws,
 Chebyshev-system/Haar-space theorems, minimax approximation, conditioning,
 Walsh-Hadamard/Fourier transform theorems, fast transform algorithms,
-Givens/Householder/QR/Cholesky existence/algorithm/stability theorems, Schur-complement and block-inverse theorems, Gaussian-elimination pivoting/stability, numerical stability, SDP, general convex analysis, KKT sufficiency, constraint
+Gram-Schmidt/Givens/Householder/QR/Cholesky existence/algorithm/stability theorems, Schur-complement and block-inverse theorems, Gaussian-elimination pivoting/stability, numerical stability, SDP, general convex analysis, KKT sufficiency, constraint
 qualifications, and algorithm convergence need proof routes or carefully
 bounded numerical-experiment metadata.

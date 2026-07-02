@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 127 non-template math example packs.
-- 826 expected checks.
-- 353 checked proof/evidence rows.
-- 383 replay-only rows.
-- 90 Lean-horizon rows.
-- 127 promoted solver-reuse packs.
+- 128 non-template math example packs.
+- 834 expected checks.
+- 354 checked proof/evidence rows.
+- 389 replay-only rows.
+- 91 Lean-horizon rows.
+- 128 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 127 focused learner-linked packs, with no path-only, index-only, or missing
+- 128 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2456,6 +2456,16 @@ Pick one item per commit unless the change is purely navigational.
      `H[0,0] = -4/5` versus exact `-3/5` through a source-linked
      QF_LRA/Farkas regression without claiming general Householder/QR
      algorithms, pivoting, conditioning, or floating-point stability.
+174. Landed: add `finite-gram-schmidt-v0` as an exact finite
+     Gram-Schmidt resource. The pack computes one rational two-column
+     orthogonalization transcript with `a1 = [3,4]`, `a2 = [1,0]`,
+     `q1 = [3/5,4/5]`, projection coefficient `r12 = 3/5`, residual
+     `[16/25,-12/25]`, `q2 = [4/5,-3/5]`, an upper-triangular `R`,
+     orthonormality, and `Q*R = A`, then promotes the malformed
+     projection-coefficient claim `r12 = 4/5` versus exact `3/5` through a
+     source-linked QF_LRA/Farkas regression without claiming general
+     Gram-Schmidt/QR correctness, rank-deficient variants, conditioning, or
+     floating-point stability.
 
 ## Validation Checklist
 

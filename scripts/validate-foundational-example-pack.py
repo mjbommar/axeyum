@@ -18191,6 +18191,197 @@ def validate_finite_householder_reflection(expected: dict[str, Any]) -> None:
     require_string("Householder horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_gram_schmidt(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    first = checks["gram-schmidt-first-vector-witness"]
+    if first["expected_result"] != "sat":
+        fail("gram-schmidt-first-vector-witness must expect sat")
+    if first.get("proof_status") != "replay-only":
+        fail("gram-schmidt-first-vector-witness must be replay-only")
+    values = single_witness_values(first, witnesses)
+    input_matrix = require_fraction_matrix("Gram-Schmidt input_matrix", values.get("input_matrix"))
+    a1 = require_fraction_vector("Gram-Schmidt a1", values.get("a1"))
+    a2 = require_fraction_vector("Gram-Schmidt a2", values.get("a2"))
+    q1 = require_fraction_vector("Gram-Schmidt q1", values.get("q1"))
+    r11 = require_fraction("Gram-Schmidt r11", values.get("r11"))
+    r12 = require_fraction("Gram-Schmidt r12", values.get("r12"))
+    u2 = require_fraction_vector("Gram-Schmidt u2", values.get("u2"))
+    r22 = require_fraction("Gram-Schmidt r22", values.get("r22"))
+    q2 = require_fraction_vector("Gram-Schmidt q2", values.get("q2"))
+    q_matrix = require_fraction_matrix("Gram-Schmidt Q matrix", values.get("q_matrix"))
+    r_matrix = require_fraction_matrix("Gram-Schmidt R matrix", values.get("r_matrix"))
+    identity = require_fraction_matrix("Gram-Schmidt identity", values.get("identity"))
+    product = require_fraction_matrix("Gram-Schmidt product", values.get("product"))
+
+    require_square_matrix("Gram-Schmidt Q matrix", q_matrix)
+    require_square_matrix("Gram-Schmidt R matrix", r_matrix)
+    if len(q_matrix) != 2 or len(r_matrix) != 2:
+        fail("finite Gram-Schmidt replay expects one 2x2 transcript")
+    require_same_vector_length("Gram-Schmidt a1/a2", a1, a2)
+    require_same_vector_length("Gram-Schmidt a1/q1", a1, q1)
+    require_same_vector_length("Gram-Schmidt a1/q2", a1, q2)
+    require_same_vector_length("Gram-Schmidt a1/u2", a1, u2)
+    columns = [list(column) for column in zip(*input_matrix)]
+    if columns != [a1, a2]:
+        fail("Gram-Schmidt input_matrix columns must match a1 and a2")
+    q_columns = [list(column) for column in zip(*q_matrix)]
+    if q_columns != [q1, q2]:
+        fail("Gram-Schmidt Q matrix columns must match q1 and q2")
+    expected_identity = [
+        [Fraction(1) if row == column else Fraction(0) for column in range(len(q_matrix))]
+        for row in range(len(q_matrix))
+    ]
+    if identity != expected_identity:
+        fail("Gram-Schmidt identity must be the exact identity matrix")
+
+    if r11 <= 0:
+        fail("gram-schmidt-first-vector-witness expects positive r11")
+    if scalar_vec(r11, q1) != a1:
+        fail("gram-schmidt-first-vector-witness r11*q1 does not equal a1")
+    if dot_product(q1, q1) != 1:
+        fail("gram-schmidt-first-vector-witness q1 must have squared norm 1")
+    if dot_product(a1, a1) != r11 * r11:
+        fail("gram-schmidt-first-vector-witness r11^2 must equal a1 dot a1")
+
+    projection = checks["gram-schmidt-projection-witness"]
+    if projection["expected_result"] != "sat":
+        fail("gram-schmidt-projection-witness must expect sat")
+    if projection.get("proof_status") != "replay-only":
+        fail("gram-schmidt-projection-witness must be replay-only")
+    if single_witness_values(projection, witnesses) != values:
+        fail("gram-schmidt-projection-witness must cite the Gram-Schmidt witness")
+    if dot_product(q1, a2) != r12:
+        fail("gram-schmidt-projection-witness r12 must equal q1 dot a2")
+    if vector_sub(a2, scalar_vec(r12, q1)) != u2:
+        fail("gram-schmidt-projection-witness u2 must equal a2 - r12*q1")
+    if dot_product(q1, u2) != 0:
+        fail("gram-schmidt-projection-witness u2 must be orthogonal to q1")
+    if r22 <= 0:
+        fail("gram-schmidt-projection-witness expects positive r22")
+    if dot_product(u2, u2) != r22 * r22:
+        fail("gram-schmidt-projection-witness r22^2 must equal u2 dot u2")
+    if scalar_vec(r22, q2) != u2:
+        fail("gram-schmidt-projection-witness r22*q2 does not equal u2")
+    if dot_product(q2, q2) != 1:
+        fail("gram-schmidt-projection-witness q2 must have squared norm 1")
+
+    orthonormality = checks["gram-schmidt-orthonormality-witness"]
+    if orthonormality["expected_result"] != "sat":
+        fail("gram-schmidt-orthonormality-witness must expect sat")
+    if orthonormality.get("proof_status") != "replay-only":
+        fail("gram-schmidt-orthonormality-witness must be replay-only")
+    if single_witness_values(orthonormality, witnesses) != values:
+        fail("gram-schmidt-orthonormality-witness must cite the Gram-Schmidt witness")
+    if mat_mul(matrix_transpose(q_matrix), q_matrix) != identity:
+        fail("gram-schmidt-orthonormality-witness Q^T*Q does not equal identity")
+    if dot_product(q1, q2) != 0:
+        fail("gram-schmidt-orthonormality-witness q1 and q2 must be orthogonal")
+
+    triangular = checks["gram-schmidt-upper-triangular-witness"]
+    if triangular["expected_result"] != "sat":
+        fail("gram-schmidt-upper-triangular-witness must expect sat")
+    if triangular.get("proof_status") != "replay-only":
+        fail("gram-schmidt-upper-triangular-witness must be replay-only")
+    if single_witness_values(triangular, witnesses) != values:
+        fail("gram-schmidt-upper-triangular-witness must cite the Gram-Schmidt witness")
+    for row_index, row in enumerate(r_matrix):
+        if row[row_index] <= 0:
+            fail("gram-schmidt-upper-triangular-witness expects positive diagonal entries")
+        for column_index in range(row_index):
+            if row[column_index] != 0:
+                fail("gram-schmidt-upper-triangular-witness R has a nonzero below-diagonal entry")
+    if r_matrix != [[r11, r12], [Fraction(0), r22]]:
+        fail("gram-schmidt-upper-triangular-witness R entries must match r11/r12/r22")
+
+    product_check = checks["gram-schmidt-qr-product-witness"]
+    if product_check["expected_result"] != "sat":
+        fail("gram-schmidt-qr-product-witness must expect sat")
+    if product_check.get("proof_status") != "replay-only":
+        fail("gram-schmidt-qr-product-witness must be replay-only")
+    if single_witness_values(product_check, witnesses) != values:
+        fail("gram-schmidt-qr-product-witness must cite the Gram-Schmidt witness")
+    require_mat_mul_shape("Gram-Schmidt QR product", q_matrix, r_matrix)
+    if mat_mul(q_matrix, r_matrix) != product:
+        fail("gram-schmidt-qr-product-witness product does not equal Q*R")
+    if product != input_matrix:
+        fail("gram-schmidt-qr-product-witness product must equal the listed input matrix")
+
+    bad = checks["bad-gram-schmidt-r12-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-gram-schmidt-r12-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-gram-schmidt-r12-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_gram_schmidt_r12_replay":
+        fail("bad-gram-schmidt-r12-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-vector-gram-schmidt":
+        fail("bad-gram-schmidt-r12-rejected must cite two-vector-gram-schmidt")
+    computed_r12 = require_fraction("bad Gram-Schmidt computed_r12", data.get("computed_r12"))
+    claimed_r12 = require_fraction("bad Gram-Schmidt claimed_r12", data.get("claimed_r12"))
+    if computed_r12 != r12:
+        fail("bad-gram-schmidt-r12-rejected computed_r12 does not match replay")
+    if computed_r12 == claimed_r12:
+        fail("bad-gram-schmidt-r12-rejected must document a false r12 claim")
+    if "separate qf-lra-bad-gram-schmidt-r12" not in bad.get("notes", ""):
+        fail("bad-gram-schmidt-r12-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-gram-schmidt-r12"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-gram-schmidt-r12 must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-gram-schmidt-r12 must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-gram-schmidt-r12 must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-vector-gram-schmidt":
+        fail("qf-lra-bad-gram-schmidt-r12 must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-gram-schmidt-r12-rejected":
+        fail("qf-lra-bad-gram-schmidt-r12 must cite the replay row")
+    qf_computed = require_fraction(
+        "qf Gram-Schmidt computed_r12",
+        qf_data.get("computed_r12"),
+    )
+    qf_claimed = require_fraction(
+        "qf Gram-Schmidt claimed_r12",
+        qf_data.get("claimed_r12"),
+    )
+    if qf_computed != computed_r12 or qf_claimed != claimed_r12:
+        fail("qf-lra-bad-gram-schmidt-r12 data must match the replay row")
+    if qf_data.get("farkas_conflict") != "gram_schmidt_r12 = 3/5 and gram_schmidt_r12 = 4/5":
+        fail("qf-lra-bad-gram-schmidt-r12 must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Gram-Schmidt smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-gram-schmidt-v0/smt2/"
+        "bad-gram-schmidt-r12-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-gram-schmidt-r12 smt2_artifact must name the checked source artifact")
+    check_source("qf Gram-Schmidt smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Gram-Schmidt farkas_regression", regression)
+    if "finite_gram_schmidt_bad_r12_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-gram-schmidt-r12 must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Gram-Schmidt certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-gram-schmidt-r12 certificate must document checked Farkas evidence")
+
+    horizon = checks["general-gram-schmidt-qr-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-gram-schmidt-qr-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-gram-schmidt-qr-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "Gram-Schmidt horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string("Gram-Schmidt horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_finite_qr_decomposition(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -30130,6 +30321,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_walsh_hadamard_transform(expected)
     if metadata["id"] == "finite-givens-rotation-v0":
         validate_finite_givens_rotation(expected)
+    if metadata["id"] == "finite-gram-schmidt-v0":
+        validate_finite_gram_schmidt(expected)
     if metadata["id"] == "finite-householder-reflection-v0":
         validate_finite_householder_reflection(expected)
     if metadata["id"] == "finite-qr-decomposition-v0":

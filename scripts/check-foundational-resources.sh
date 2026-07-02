@@ -692,6 +692,9 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpai
 python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --pack finite-lanczos-iteration-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-walsh-hadamard-transform-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-gram-schmidt-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --pack finite-gram-schmidt-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-gram-schmidt-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-givens-rotation-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --pack finite-givens-rotation-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-householder-reflection-v0 --route Farkas --proof-status checked --require-any >/dev/null
@@ -699,6 +702,7 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_inner_pr
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-householder-reflection-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --route Farkas --proof-status checked --text transform --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-qr-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_lu_replay --pack finite-gram-schmidt-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_lu_replay --pack finite-givens-rotation-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_lu_replay --pack finite-householder-reflection-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-cholesky-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null

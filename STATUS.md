@@ -240,6 +240,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Gram-Schmidt resource landed.**
+  `finite-gram-schmidt-v0` now gives the linear-algebra,
+  numerical-analysis, and operator-theory lanes an exact rational
+  orthogonalization transcript: it checks `a1 = [3,4]`, `a2 = [1,0]`,
+  `q1 = [3/5,4/5]`, `r12 = 3/5`, residual `[16/25,-12/25]`,
+  `q2 = [4/5,-3/5]`, upper-triangular `R`, orthonormality, and
+  `Q*R = A`, then isolates the malformed projection coefficient claim
+  `r12 = 4/5` versus exact `3/5` as a source-linked QF_LRA/Farkas row. The
+  focused learner page, matrix/operator query guides, concept bridges,
+  validator, and `math_resource_lra_routes` regression keep fixed finite
+  Gram-Schmidt replay separate from general Gram-Schmidt/QR correctness,
+  rank-deficient variants, conditioning, and floating-point stability. The
+  public summary now reports 122 concept rows, 128 packs, 834 expected checks,
+  354 checked rows, 389 replay-only rows, 91 Lean-horizon rows, and 128
+  promoted solver-reuse packs.
 - **Finite Householder-reflection resource landed.**
   `finite-householder-reflection-v0` now gives the linear-algebra,
   numerical-analysis, and operator-theory lanes an exact rational reflection
@@ -251,9 +266,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   matrix/operator query guides, concept bridges, validator, and
   `math_resource_lra_routes` regression keep fixed finite Householder replay
   separate from general Householder/QR algorithms, pivoting, conditioning, and
-  floating-point stability. The public summary now reports 122 concept rows,
-  127 packs, 826 expected checks, 353 checked rows, 383 replay-only rows, 90
-  Lean-horizon rows, and 127 promoted solver-reuse packs.
+  floating-point stability.
 - **Finite Givens-rotation resource landed.**
   `finite-givens-rotation-v0` now gives the linear-algebra,
   numerical-analysis, and operator-theory lanes an exact rational orthogonal

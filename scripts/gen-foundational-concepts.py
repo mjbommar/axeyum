@@ -406,6 +406,10 @@ CURRICULUM_MAP = {
                 "Exact rational QR replay, orthogonality checks, upper-triangular factor checks, and checked bad product-entry evidence.",
             ),
             (
+                "finite-gram-schmidt-v0",
+                "Exact rational Gram-Schmidt projection, normalization, orthonormality, QR product replay, and checked bad projection-coefficient evidence.",
+            ),
+            (
                 "finite-givens-rotation-v0",
                 "Exact rational Givens rotation replay, coordinate zeroing, inverse reconstruction, determinant/norm preservation, and checked bad sine-coefficient evidence.",
             ),
@@ -514,6 +518,10 @@ CURRICULUM_MAP = {
                 "Exact rational Walsh-Hadamard transform replay, inverse reconstruction, Parseval energy scaling, and checked bad coefficient evidence.",
             ),
             (
+                "finite-gram-schmidt-v0",
+                "Exact rational Gram-Schmidt projection, normalization, orthonormality, QR product replay, and checked bad projection-coefficient evidence.",
+            ),
+            (
                 "finite-givens-rotation-v0",
                 "Exact rational Givens rotation replay, coordinate zeroing, inverse reconstruction, determinant/norm preservation, and checked bad sine-coefficient evidence.",
             ),
@@ -583,7 +591,7 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU/QR/Cholesky/Schur replay, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU/QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, multivariable-calculus and Newton-step shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
@@ -609,7 +617,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU/QR/Cholesky/Schur replay, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, residual, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU/QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, residual, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -629,7 +637,7 @@ FIELD_PACKS = {
             "Finite cyclic quadrilateral, diagonal-intersection, opposite-angle, and bad-intersection replay.",
         ),
     ],
-    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact orthogonal transforms, Givens rotations, Householder reflections, condition-number, singular-value, power-iteration, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan/nilpotent shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
+    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact orthogonal transforms, Gram-Schmidt transcripts, Givens rotations, Householder reflections, condition-number, singular-value, power-iteration, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan/nilpotent shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
 }
 
 FIELD_DECIDABILITY = {
@@ -1537,6 +1545,10 @@ BRIDGE_CONCEPTS = [
                 "Two-step Lanczos rows checked as exact rational symmetric-matrix and tridiagonal arithmetic, not floating-point Krylov stability evidence.",
             ),
             (
+                "finite-gram-schmidt-v0",
+                "Two-vector Gram-Schmidt rows checked as exact rational projection, normalization, and QR arithmetic, not floating-point orthogonalization stability evidence.",
+            ),
+            (
                 "finite-givens-rotation-v0",
                 "Givens zeroing rows checked as exact rational rotation arithmetic, not floating-point QR stability evidence.",
             ),
@@ -1572,6 +1584,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/conjugate-gradient-end-to-end.md",
                     "docs/learn/math/arnoldi-iteration-end-to-end.md",
                     "docs/learn/math/lanczos-iteration-end-to-end.md",
+                    "docs/learn/math/gram-schmidt-end-to-end.md",
                     "docs/learn/math/givens-rotation-end-to-end.md",
                     "docs/learn/math/householder-reflection-end-to-end.md",
                     "docs/learn/math/exact-statistical-tests-end-to-end.md",
@@ -1594,6 +1607,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/conjugate-gradient-end-to-end.md",
             "docs/learn/math/arnoldi-iteration-end-to-end.md",
             "docs/learn/math/lanczos-iteration-end-to-end.md",
+            "docs/learn/math/gram-schmidt-end-to-end.md",
             "docs/learn/math/givens-rotation-end-to-end.md",
             "docs/learn/math/householder-reflection-end-to-end.md",
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
@@ -1602,7 +1616,7 @@ BRIDGE_CONCEPTS = [
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
-            "Exact rational replay does not prove floating-point roundoff, conditioning, singular-value perturbation, Givens/Householder/QR stability, Krylov/preconditioner stability, Lanczos breakdown behavior, loss of orthogonality, or convergence guarantees.",
+            "Exact rational replay does not prove floating-point roundoff, conditioning, singular-value perturbation, Gram-Schmidt/Givens/Householder/QR stability, Krylov/preconditioner stability, Lanczos breakdown behavior, loss of orthogonality, or convergence guarantees.",
             "QF_FP and numerical experiment metadata need their own trust boundary before floating-point resources can graduate.",
             "Learner pages must label exact rational shadows when a topic is normally taught numerically.",
         ],
@@ -5347,7 +5361,7 @@ BRIDGE_CONCEPTS = [
         "field_ids": ["linear_algebra", "numerical_analysis"],
         "resource_status": "validated",
         "summary": (
-            "Claimed Gaussian-elimination transcripts, LU, QR, Givens, Householder, and "
+            "Claimed Gaussian-elimination transcripts, LU, QR, Gram-Schmidt, Givens, Householder, and "
             "Cholesky factorizations, Schur block identities, and nullspace vectors "
             "are checked by exact matrix arithmetic over fixed rational "
             "matrices; malformed row-operation, product-entry, scalar, and "
@@ -5373,6 +5387,7 @@ BRIDGE_CONCEPTS = [
             "row-operation replay",
             "LRA (exact rationals)",
             "matrix multiplication replay",
+            "Gram-Schmidt projection replay",
             "orthogonal factorization replay",
             "Givens rotation replay",
             "Householder reflection replay",
@@ -5391,6 +5406,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-qr-decomposition-v0",
                 "Exact rational QR factorization, orthogonality, triangularity, product replay, and checked bad product-entry evidence.",
+            ),
+            (
+                "finite-gram-schmidt-v0",
+                "Exact rational Gram-Schmidt projection, normalization, orthonormality, upper-triangular factor, QR product replay, and checked bad projection-coefficient evidence.",
             ),
             (
                 "finite-givens-rotation-v0",
@@ -5431,6 +5450,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/linear-system-end-to-end.md",
                     "docs/learn/math/gaussian-elimination-end-to-end.md",
                     "docs/learn/math/qr-decomposition-end-to-end.md",
+                    "docs/learn/math/gram-schmidt-end-to-end.md",
                     "docs/learn/math/givens-rotation-end-to-end.md",
                     "docs/learn/math/householder-reflection-end-to-end.md",
                     "docs/learn/math/cholesky-decomposition-end-to-end.md",
@@ -5439,7 +5459,7 @@ BRIDGE_CONCEPTS = [
                 ],
                 "notes": (
                     "The pack validator recomputes row operations, pivots, "
-                    "back-substitution, L*U, Q*R, Q^T*Q, G^T*G, G*x, H^T*H, H*x, L*L^T, Schur "
+                    "back-substitution, L*U, Q*R, Q^T*Q, Gram-Schmidt projection coefficients, G^T*G, G*x, H^T*H, H*x, L*L^T, Schur "
                     "complements, determinant factors, leading principal "
                     "minors, A*x, and A*v exactly over rationals; separate "
                     "qf-lra row-operation, product-entry, coefficient, scalar, "
@@ -5456,6 +5476,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/linear-system-end-to-end.md",
             "docs/learn/math/gaussian-elimination-end-to-end.md",
             "docs/learn/math/qr-decomposition-end-to-end.md",
+            "docs/learn/math/gram-schmidt-end-to-end.md",
             "docs/learn/math/givens-rotation-end-to-end.md",
             "docs/learn/math/householder-reflection-end-to-end.md",
             "docs/learn/math/cholesky-decomposition-end-to-end.md",
@@ -5465,6 +5486,7 @@ BRIDGE_CONCEPTS = [
             "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-nullspace-component-farkas-conflict.smt2",
             "artifacts/examples/math/finite-gaussian-elimination-v0/smt2/bad-eliminated-rhs-farkas-conflict.smt2",
             "artifacts/examples/math/finite-qr-decomposition-v0/smt2/bad-qr-product-entry-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-gram-schmidt-v0/smt2/bad-gram-schmidt-r12-farkas-conflict.smt2",
             "artifacts/examples/math/finite-givens-rotation-v0/smt2/bad-givens-sine-farkas-conflict.smt2",
             "artifacts/examples/math/finite-householder-reflection-v0/smt2/bad-householder-entry-farkas-conflict.smt2",
             "artifacts/examples/math/finite-cholesky-decomposition-v0/smt2/bad-cholesky-product-entry-farkas-conflict.smt2",
@@ -5472,14 +5494,14 @@ BRIDGE_CONCEPTS = [
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
-            "Gaussian elimination, LU, QR, Givens, Householder, Cholesky, and Schur replay check fixed transcripts, factorizations, rotations, reflections, or block identities; they do not prove existence, pivoting strategy correctness, QR/Givens/Householder/Cholesky algorithm correctness, conditioning, or numerical stability.",
+            "Gaussian elimination, LU, QR, Gram-Schmidt, Givens, Householder, Cholesky, and Schur replay check fixed transcripts, factorizations, projection coefficients, rotations, reflections, or block identities; they do not prove existence, pivoting strategy correctness, QR/Gram-Schmidt/Givens/Householder/Cholesky algorithm correctness, conditioning, or numerical stability.",
             "Ill-conditioned and floating-point claims need separate numerical-honesty metadata before they become solver or learner claims.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state the exact matrix entries, elimination row operations, lower/upper or orthogonal/upper-triangular factors, Givens rotation coefficients, Householder reflector data, and rational arithmetic domain.",
-                "The validator recomputes row operations, pivot products, back-substitution, L*U, Q^T*Q, Q*R, G^T*G, G*x, H^T*H, H*x, L*L^T, Schur complements, determinant factors, inverses, and positive leading principal minors, and separate qf-lra row-operation, product-entry, coefficient, or scalar rows reject corrupted equalities through checked QF_LRA/Farkas evidence.",
+                "Rows state the exact matrix entries, elimination row operations, lower/upper or orthogonal/upper-triangular factors, Gram-Schmidt projection coefficients, Givens rotation coefficients, Householder reflector data, and rational arithmetic domain.",
+                "The validator recomputes row operations, pivot products, back-substitution, L*U, Q^T*Q, Q*R, Gram-Schmidt projections, G^T*G, G*x, H^T*H, H*x, L*L^T, Schur complements, determinant factors, inverses, and positive leading principal minors, and separate qf-lra row-operation, product-entry, coefficient, or scalar rows reject corrupted equalities through checked QF_LRA/Farkas evidence.",
                 "Singularity, factorization existence, algorithm correctness, pivoting, conditioning, and stability claims remain separate proof-horizon or numerical-analysis rows.",
             ],
         },
@@ -8110,6 +8132,10 @@ BRIDGE_CONCEPTS = [
                 "Exact order-4 Walsh-Hadamard transform, inverse reconstruction, Parseval energy scaling, and bad transform-coefficient evidence.",
             ),
             (
+                "finite-gram-schmidt-v0",
+                "Exact two-vector Gram-Schmidt projection, residual, orthonormality, QR product replay, and bad projection-coefficient evidence.",
+            ),
+            (
                 "finite-givens-rotation-v0",
                 "Exact two-dimensional Givens rotation, coordinate zeroing, inverse reconstruction, determinant/norm preservation, and bad sine-coefficient evidence.",
             ),
@@ -8144,6 +8170,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/matrix-corpus-benchmark-boundary.md",
                     "docs/learn/math/inner-product-spaces-end-to-end.md",
                     "docs/learn/math/covariance-matrix-end-to-end.md",
+                    "docs/learn/math/gram-schmidt-end-to-end.md",
                     "docs/learn/math/givens-rotation-end-to-end.md",
                     "docs/learn/math/householder-reflection-end-to-end.md",
                     "docs/learn/math/arnoldi-iteration-end-to-end.md",
@@ -8170,6 +8197,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/inner-product-spaces-end-to-end.md",
             "docs/learn/math/covariance-matrix-end-to-end.md",
+            "docs/learn/math/gram-schmidt-end-to-end.md",
             "docs/learn/math/givens-rotation-end-to-end.md",
             "docs/learn/math/householder-reflection-end-to-end.md",
             "docs/learn/math/arnoldi-iteration-end-to-end.md",
@@ -8180,7 +8208,7 @@ BRIDGE_CONCEPTS = [
         ],
         "open_gaps": [
             "Finite rational projection replay does not prove the Hilbert projection theorem, Riesz representation, Hahn-Banach, or completeness results.",
-            "Rows involving floating-point orthogonality, Givens rotations, Householder reflections, Arnoldi/Lanczos loss of orthogonality, conditioning, singular-value perturbation, or numerical stability require separate numerical-honesty metadata.",
+            "Rows involving floating-point orthogonality, Gram-Schmidt, Givens rotations, Householder reflections, Arnoldi/Lanczos loss of orthogonality, conditioning, singular-value perturbation, or numerical stability require separate numerical-honesty metadata.",
             "General inner-product, duality, SVD, and Hilbert-space theorem statements remain Lean-horizon until no-sorry Lean artifacts exist.",
         ],
         "graduation": {

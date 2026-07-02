@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 127 non-template math example packs validate.
+  Status: 128 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 127 non-template packs have at least one `checked` expected-result row.
+  Status: 128 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3435,6 +3435,16 @@ malformed top-left entry claim `H[0,0] = -4/5` against the exact value
 `-3/5`. General Householder/QR algorithms, pivoting, conditioning,
 finite-precision orthogonality, and floating-point stability claims stay in
 theorem or numerical-honesty lanes.
+The linear-algebra/numerical-analysis/operator layer now adds
+`finite-gram-schmidt-v0` as the 128th non-template math pack. Exact rational
+replay checks `a1 = [3,4]`, `a2 = [1,0]`, `q1 = [3/5,4/5]`,
+projection coefficient `r12 = 3/5`, residual `[16/25,-12/25]`,
+`q2 = [4/5,-3/5]`, orthonormality, upper-triangular `R`, and `Q*R = A`,
+while a source-linked QF_LRA/Farkas artifact rejects the malformed projection
+coefficient claim `r12 = 4/5` against the exact value `3/5`. General
+Gram-Schmidt/QR correctness, rank-deficient variants, conditioning,
+finite-precision loss of orthogonality, and floating-point stability claims
+stay in theorem or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 127 non-template math packs.
-- 826 expected checks.
-- 353 checked proof/evidence rows.
-- 383 replay-only rows.
-- 90 Lean-horizon rows.
-- 127 promoted solver-reuse packs.
+- 128 non-template math packs.
+- 834 expected checks.
+- 354 checked proof/evidence rows.
+- 389 replay-only rows.
+- 91 Lean-horizon rows.
+- 128 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 127 focused learner-linked packs, with no path-only, index-only, or missing
+- 128 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 127 current non-template packs satisfy the focused-lesson side of this
+all 128 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2464,6 +2464,17 @@ Pick one row per commit unless the change is purely navigational.
      `H[0,0] = -4/5` versus exact `-3/5`. The learner and query pages keep
      exact finite Householder replay separate from general Householder/QR
      algorithms, pivoting, conditioning, and floating-point stability.
+286. Landed: add `finite-gram-schmidt-v0` as an exact finite Gram-Schmidt
+     resource. The pack replays `a1 = [3,4]`, `a2 = [1,0]`,
+     `q1 = [3/5,4/5]`, `r11 = 5`, projection coefficient `r12 = 3/5`,
+     residual `u2 = [16/25,-12/25]`, `r22 = 4/5`,
+     `q2 = [4/5,-3/5]`, orthonormality, upper-triangular `R`, and
+     `Q*R = A`, then adds `qf-lra-bad-gram-schmidt-r12` as the
+     source-linked Farkas row for the false projection coefficient claim
+     `r12 = 4/5` versus exact `3/5`. The learner and query pages keep exact
+     finite Gram-Schmidt replay separate from general Gram-Schmidt/QR
+     correctness, rank-deficient variants, conditioning, and floating-point
+     stability.
 
 ## Validation Checklist
 

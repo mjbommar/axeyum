@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "finite-gram-schmidt-v0",
+  "title": "Finite Gram-Schmidt Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_functional_analysis_and_operator_theory",
+    "field_optimization_and_convexity",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_lu_replay",
+    "bridge_inner_product_projection",
+    "bridge_exact_vs_floating_arithmetic"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "functional_analysis_and_operator_theory",
+    "optimization_and_convexity"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite matrices",
+    "finite inner-product replay",
+    "exact rational Gram-Schmidt",
+    "exact rational QR replay",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gram-schmidt-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Gram-Schmidt bad projection coefficient QF_LRA/Farkas regression seed",
+    "pressure": "Exact Gram-Schmidt replay computes r12 = q1 dot a2 = 3/5 while a malformed row claims 4/5, isolating a compact equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-gram-schmidt-r12"
+    ],
+    "next_step": "Promote additional orthogonalization rows only when they add distinct projection, normalization, QR-product, least-squares, residual, or numerical-honesty pressure; keep general Gram-Schmidt/QR correctness, rank-deficient variants, conditioning, and floating-point stability in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/gram-schmidt-end-to-end.md",
+    "artifacts/examples/math/finite-gram-schmidt-v0/smt2/bad-gram-schmidt-r12-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "gram-schmidt-first-vector-witness",
+    "gram-schmidt-projection-witness",
+    "gram-schmidt-orthonormality-witness",
+    "gram-schmidt-upper-triangular-witness",
+    "gram-schmidt-qr-product-witness",
+    "bad-gram-schmidt-r12-rejected",
+    "qf-lra-bad-gram-schmidt-r12",
+    "general-gram-schmidt-qr-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational input vectors, normalized first vector, projection coefficient, residual vector, normalized second vector, Q matrix, R matrix, and product matrix as deterministic exact-rational replay obligations.",
+    "Route the false projection coefficient row through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes r12 = 3/5.",
+    "Expose the pack through matrix computation, QR/factorization, inner-product/projection, and exact-vs-floating learner and consumer query surfaces.",
+    "Keep general Gram-Schmidt/QR correctness, rank-deficient variants, conditioning, and floating-point stability marked Lean or numerical-honesty horizon."
+  ]
+}

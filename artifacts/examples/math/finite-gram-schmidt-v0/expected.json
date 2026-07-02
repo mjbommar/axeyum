@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-gram-schmidt-v0",
+  "witnesses": [
+    {
+      "id": "two-vector-gram-schmidt",
+      "description": "Exact rational Gram-Schmidt transcript for columns a1=[3,4] and a2=[1,0].",
+      "values": {
+        "input_matrix": [
+          ["3", "1"],
+          ["4", "0"]
+        ],
+        "a1": ["3", "4"],
+        "a2": ["1", "0"],
+        "q1": ["3/5", "4/5"],
+        "r11": "5",
+        "r12": "3/5",
+        "u2": ["16/25", "-12/25"],
+        "r22": "4/5",
+        "q2": ["4/5", "-3/5"],
+        "q_matrix": [
+          ["3/5", "4/5"],
+          ["4/5", "-3/5"]
+        ],
+        "r_matrix": [
+          ["5", "3/5"],
+          ["0", "4/5"]
+        ],
+        "identity": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "product": [
+          ["3", "1"],
+          ["4", "0"]
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "gram-schmidt-first-vector-witness",
+      "claim": "The first normalized Gram-Schmidt vector satisfies r11*q1 = a1 and ||q1||^2 = 1.",
+      "expected_result": "sat",
+      "validation": "exact_rational_gram_schmidt_first_vector_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-vector-gram-schmidt"],
+      "notes": "The validator recomputes r11*q1, q1 dot q1, and a1 dot a1 exactly over rationals."
+    },
+    {
+      "id": "gram-schmidt-projection-witness",
+      "claim": "The projection coefficient r12 equals q1 dot a2 and u2 = a2 - r12*q1.",
+      "expected_result": "sat",
+      "validation": "exact_rational_gram_schmidt_projection_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-vector-gram-schmidt"],
+      "notes": "The validator recomputes the projection coefficient, residual vector, second normalization, and q2 exactly."
+    },
+    {
+      "id": "gram-schmidt-orthonormality-witness",
+      "claim": "The fixed Gram-Schmidt Q matrix satisfies Q^T*Q = I.",
+      "expected_result": "sat",
+      "validation": "exact_rational_gram_schmidt_orthonormality_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-vector-gram-schmidt"],
+      "notes": "The validator recomputes Q^T*Q and q1 dot q2 exactly."
+    },
+    {
+      "id": "gram-schmidt-upper-triangular-witness",
+      "claim": "The fixed Gram-Schmidt R matrix is upper triangular with positive diagonal entries.",
+      "expected_result": "sat",
+      "validation": "exact_rational_gram_schmidt_upper_triangular_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-vector-gram-schmidt"],
+      "notes": "The validator checks every below-diagonal entry and the listed diagonal entries exactly."
+    },
+    {
+      "id": "gram-schmidt-qr-product-witness",
+      "claim": "The fixed rational matrices satisfy Q*R = A.",
+      "expected_result": "sat",
+      "validation": "exact_rational_gram_schmidt_qr_product_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-vector-gram-schmidt"],
+      "notes": "The validator recomputes the matrix product exactly over rationals."
+    },
+    {
+      "id": "bad-gram-schmidt-r12-rejected",
+      "claim": "The Gram-Schmidt projection coefficient r12 is 4/5.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_gram_schmidt_r12_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "two-vector-gram-schmidt",
+        "computed_r12": "3/5",
+        "claimed_r12": "4/5"
+      },
+      "notes": "The validator recomputes r12 and rejects the malformed projection coefficient; the separate qf-lra-bad-gram-schmidt-r12 row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-gram-schmidt-r12",
+      "claim": "The fixed malformed Gram-Schmidt projection coefficient claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "two-vector-gram-schmidt",
+        "source_replay_row": "bad-gram-schmidt-r12-rejected",
+        "computed_r12": "3/5",
+        "claimed_r12": "4/5",
+        "farkas_conflict": "gram_schmidt_r12 = 3/5 and gram_schmidt_r12 = 4/5",
+        "smt2_artifact": "artifacts/examples/math/finite-gram-schmidt-v0/smt2/bad-gram-schmidt-r12-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_gram_schmidt_bad_r12_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes r12 as 3/5, while the malformed row claims 4/5; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
+      "id": "general-gram-schmidt-qr-theory-lean-horizon",
+      "claim": "General Gram-Schmidt and QR correctness, rank-deficient variants, conditioning, and floating-point stability require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For linearly independent finite families over real inner-product spaces, prove that exact Gram-Schmidt produces an orthonormal family and upper-triangular QR factorization; separately state modified Gram-Schmidt, rank-deficient, least-squares, and floating-point variants with explicit hypotheses.",
+        "future_checker": "Lean theorem statements for exact Gram-Schmidt/QR construction plus separate numerical-honesty or QF_FP artifacts for floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one two-vector rational transcript, not a theorem about arbitrary QR algorithms, rank-deficient inputs, least-squares solves, or finite-precision stability."
+    }
+  ]
+}

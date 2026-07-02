@@ -958,7 +958,17 @@ Build sequence:
     inner-product, finite-operator/Chebyshev, and exact-vs-floating bridges
     keep exact finite Householder replay separate from QR algorithms,
     pivoting, conditioning, and floating-point stability.
-98. Revisit crate/repo boundaries only after three real consumers or repeated
+98. Landed: add the finite Gram-Schmidt resource.
+    `finite-gram-schmidt-v0` now records one exact rational orthogonalization
+    transcript: `a1 = [3,4]`, `a2 = [1,0]`, `q1 = [3/5,4/5]`,
+    `r12 = 3/5`, residual `[16/25,-12/25]`, `q2 = [4/5,-3/5]`,
+    orthonormality, upper-triangular `R`, and `Q*R = A`. It includes a
+    checked QF_LRA/Farkas artifact for the malformed projection coefficient
+    claim `r12 = 4/5`. The reused matrix, inner-product,
+    finite-operator/Chebyshev, and exact-vs-floating bridges keep exact finite
+    Gram-Schmidt replay separate from QR correctness, rank-deficient variants,
+    conditioning, and floating-point stability.
+99. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

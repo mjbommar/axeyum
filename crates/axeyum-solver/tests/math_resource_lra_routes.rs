@@ -28,6 +28,9 @@ const FINITE_QR_DECOMPOSITION_BAD_PRODUCT_ENTRY: &str = include_str!(
 const FINITE_GIVENS_ROTATION_BAD_SINE: &str = include_str!(
     "../../../artifacts/examples/math/finite-givens-rotation-v0/smt2/bad-givens-sine-farkas-conflict.smt2"
 );
+const FINITE_GRAM_SCHMIDT_BAD_R12: &str = include_str!(
+    "../../../artifacts/examples/math/finite-gram-schmidt-v0/smt2/bad-gram-schmidt-r12-farkas-conflict.smt2"
+);
 const FINITE_HOUSEHOLDER_REFLECTION_BAD_ENTRY: &str = include_str!(
     "../../../artifacts/examples/math/finite-householder-reflection-v0/smt2/bad-householder-entry-farkas-conflict.smt2"
 );
@@ -665,6 +668,14 @@ fn finite_givens_rotation_bad_sine_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-givens-rotation-v0 bad-givens-sine SMT-LIB artifact",
         FINITE_GIVENS_ROTATION_BAD_SINE,
+    );
+}
+
+#[test]
+fn finite_gram_schmidt_bad_r12_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-gram-schmidt-v0 bad-r12 SMT-LIB artifact",
+        FINITE_GRAM_SCHMIDT_BAD_R12,
     );
 }
 
