@@ -1469,8 +1469,33 @@ fn contains_arithmetic_content(arena: &TermArena, assertions: &[TermId]) -> bool
     false
 }
 
+/// Node budget for the pre-solve zero-trust Alethe attempt: generous for the
+/// small structural rows it exists to upgrade, small enough that a BMC-scale
+/// instance never pays for speculative proof emission before its fast
+/// structural certificate fires.
+const PRE_SOLVE_ALETHE_MAX_NODES: usize = 2_000;
+
+/// Whether the assertions' term DAG has at most `cap` distinct nodes (early
+/// exit past the cap; O(min(dag, cap))).
+fn assertion_dag_within(arena: &TermArena, assertions: &[TermId], cap: usize) -> bool {
+    let mut seen: std::collections::HashSet<TermId> = std::collections::HashSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        if seen.len() > cap {
+            return false;
+        }
+        if let TermNode::App { args, .. } = arena.node(t) {
+            stack.extend(args.iter().copied());
+        }
+    }
+    true
+}
+
 fn direct_pre_solve_structural_report(
-    arena: &TermArena,
+    arena: &mut TermArena,
     assertions: &[TermId],
     provenance: &Provenance,
 ) -> Option<EvidenceReport> {
@@ -1491,6 +1516,27 @@ fn direct_pre_solve_structural_report(
     if let Some(cert) = crate::ufbv_finite::bool_uf_exhaustive_refutation(arena, assertions) {
         return Some(EvidenceReport {
             evidence: Evidence::UnsatBoolUfExhaustive(cert),
+            provenance: provenance.clone(),
+            trusted_steps: Vec::new(),
+        });
+    }
+    // Prefer the ZERO-trust Alethe refutations over the structural certificates
+    // below whenever the same instance supports both: an Alethe proof is
+    // externally re-checkable (`check_alethe` / Carcara) — strictly stronger
+    // evidence for the Lean-parity ledger. The structural pre-solve hooks had
+    // shadowed these routes since they landed (e7bfed4c and successors),
+    // silently downgrading `produce_evidence`'s certificate strength on EUF,
+    // Ackermann-UFBV, and array read-consistency rows. Each emitter
+    // self-validates and declines outside its fragment — but the attempts are
+    // not free on LARGE instances (the elimination/Ackermann emitters expand
+    // the query), so this pre-solve upgrade is size-gated: big instances (e.g.
+    // the FIFO BC04 BMC rows) keep their fast structural certificates here,
+    // and still get an Alethe upgrade attempt on the post-solve `Unsat` path.
+    if assertion_dag_within(arena, assertions, PRE_SOLVE_ALETHE_MAX_NODES)
+        && let Some(proof) = zero_trust_alethe_certificate(arena, assertions)
+    {
+        return Some(EvidenceReport {
+            evidence: Evidence::UnsatAletheProof(proof),
             provenance: provenance.clone(),
             trusted_steps: Vec::new(),
         });
