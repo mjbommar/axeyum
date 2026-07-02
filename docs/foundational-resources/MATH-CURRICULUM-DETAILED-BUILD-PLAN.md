@@ -1959,6 +1959,15 @@ Pick one row per commit unless the change is purely navigational.
      and numerical-stability theorem routes, and adds active-set-specific
      horizon queries to the public smoke gate without adding a duplicate pack
      or changing resource counts.
+233. Landed: add `sdp-duality-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-sdp-v0`. It maps finite two-by-two PSD
+     replay, trace/objective replay, dual-slack replay, zero duality-gap
+     replay, and checked QF_LRA/Farkas bad objective, bad duality-gap, and bad
+     slack-entry rows to the missing SDP weak/strong duality, Slater
+     conditions, cone-KKT/complementary-slackness theory, convergence, and
+     numerical-stability routes, and adds SDP-specific horizon queries to the
+     public smoke gate without adding a duplicate pack or changing resource
+     counts.
 
 ## Validation Checklist
 

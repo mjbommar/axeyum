@@ -298,6 +298,19 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+SDP duality, Slater-condition, and cone-KKT horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text SDP \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-sdp-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Hitting-time, recurrence/transience, and stochastic-process horizons:
 
 ```sh

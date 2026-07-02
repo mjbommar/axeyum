@@ -291,6 +291,10 @@ rows change the objective to `0`, the gap to `1/2`, and the bottom-right slack
 entry to `1/2`, compute exact errors `1`, `1/2`, and `1/2`, and check the
 resulting exact-linear contradictions through QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite SDP Checks](finite-sdp-end-to-end.md).
+For the theorem boundary that keeps those finite primal/dual rows separate
+from SDP weak duality, strong duality, Slater conditions, cone KKT, convergence,
+and numerical-stability claims, read
+[SDP Duality Theorem Boundary](sdp-duality-theorem-boundary.md).
 
 For a finite gradient-descent check, encode a fixed quadratic step:
 

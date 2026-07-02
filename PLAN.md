@@ -166,7 +166,8 @@ evidence; the public query script also exposes
 `horizon-frontier` for theorem-boundary rows with finite-shadow contrast,
 including finite random-variable, recurrence/asymptotic, stochastic-kernel, and
 martingale/stopping theory, root-finding convergence/stability, and
-hyperplane-separation/duality, KKT sufficiency, and active-set method theory.
+hyperplane-separation/duality, KKT sufficiency, active-set method theory, and
+SDP duality/Slater-condition theory.
 The solver-reuse query guide is
 [`docs/foundational-resources/SOLVER-REUSE-QUERIES.md`](docs/foundational-resources/SOLVER-REUSE-QUERIES.md);
 it records promoted-pack, proof-route, field, and checked-row queries for
@@ -847,8 +848,8 @@ pack-specific KKT, active-set QP, SDP, gradient-descent, Armijo/Wolfe
 line-search, projected-gradient, and soft-threshold/composite-decrease/box-plus-L1
 proximal-gradient rows, so downstream
 consumers can discover finite optimization resources without promoting
-duality, KKT sufficiency, SDP strong duality, method convergence, stability, or
-benchmark claims.
+duality, KKT sufficiency, SDP strong duality, Slater conditions, method
+convergence, stability, or benchmark claims.
 The functional-analysis/operator lane now has
 [`FUNCTIONAL-OPERATOR-QUERIES.md`](docs/foundational-resources/FUNCTIONAL-OPERATOR-QUERIES.md),
 and the foundational smoke checks finite operator/Chebyshev, eigenpair,

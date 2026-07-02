@@ -107,7 +107,9 @@ certificates; its theorem boundary is
 The finite
 SDP slice adds two-by-two PSD replay, trace/objective arithmetic, dual-slack
 matrix replay, zero duality-gap checking, and checked QF_LRA/Farkas
-bad-objective, bad-duality-gap, and bad-slack-entry certificates. The finite-gradient-descent slice adds exact
+bad-objective, bad-duality-gap, and bad-slack-entry certificates; its theorem
+boundary is
+[SDP Duality Theorem Boundary](sdp-duality-theorem-boundary.md). The finite-gradient-descent slice adds exact
 quadratic gradient replay, step-update replay, objective-decrease checking,
 finite descent-bound replay, and a checked QF_LRA/Farkas bad-decrease
 certificate. The finite line-search slice adds exact Armijo trial rejection,
@@ -458,6 +460,10 @@ zero primal-dual gap. Its bad rows change the objective to `0` and the gap to
 `1/2`, and slack-entry gap `1/2`; the final contradictions are checked through
 QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite SDP Checks](finite-sdp-end-to-end.md).
+For the theorem boundary that keeps those finite SDP rows separate from weak
+duality, strong duality, Slater conditions, cone KKT, convergence, and
+floating-point PSD claims, read
+[SDP Duality Theorem Boundary](sdp-duality-theorem-boundary.md).
 
 For a finite gradient-descent example, encode a quadratic, start point, step
 size, and gradient:

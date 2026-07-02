@@ -234,6 +234,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **SDP duality theorem-boundary resource landed.**
+  `sdp-duality-theorem-boundary.md` now separates `finite-sdp-v0` finite
+  two-by-two PSD replay, trace/objective replay, dual-slack replay, zero
+  duality-gap replay, and checked bad objective/bad duality-gap/bad
+  slack-entry QF_LRA/Farkas rows from SDP weak duality, strong duality, Slater
+  conditions, cone KKT/complementary slackness, convergence, and numerical
+  stability theorem claims. The theorem horizon, optimization/convexity,
+  learner-map, and smoke query docs now expose the SDP boundary directly.
+
 - **Active-set method theorem-boundary resource landed.**
   `active-set-method-theorem-boundary.md` now separates
   `finite-active-set-qp-v0` finite unconstrained minimizer replay,

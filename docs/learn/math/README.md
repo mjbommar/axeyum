@@ -276,6 +276,10 @@ Companion maps:
   objective, dual-slack, and gap replay, checked QF_LRA/Farkas bad-objective
   bad-duality-gap, and bad-slack-entry rejections, and the general SDP duality
   Lean horizon.
+- [SDP Duality Theorem Boundary](sdp-duality-theorem-boundary.md):
+  maps those finite primal/dual matrix shadows to the missing SDP weak/strong
+  duality, Slater-condition, cone-KKT, convergence, and numerical-stability
+  routes.
 - [Finite Gradient Descent Checks](finite-gradient-descent-end-to-end.md):
   follows exact quadratic gradient replay, one descent step, a finite descent
   bound, checked QF_LRA/Farkas bad-decrease and bad step-coordinate

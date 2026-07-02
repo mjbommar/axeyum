@@ -215,6 +215,10 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --require-any
 
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text SDP \
+  --require-any
+
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-gradient-descent-v0 \
   --route Farkas \

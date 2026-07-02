@@ -2566,7 +2566,13 @@ pack-specific KKT, active-set QP, SDP, gradient-descent, Armijo/Wolfe
 line-search, projected-gradient, and proximal-gradient rows through
 concept-scoped or pack-scoped Farkas queries, making finite optimization
 resources discoverable while keeping duality, KKT sufficiency, SDP strong
-duality, convergence, stability, and benchmark claims in the horizon lanes.
+duality, Slater conditions, convergence, stability, and benchmark claims in
+the horizon lanes. The learner/planning layer now also has
+[`sdp-duality-theorem-boundary.md`](../learn/math/sdp-duality-theorem-boundary.md)
+as the focused page that keeps finite two-by-two PSD/objective/slack/gap replay
+and checked Farkas bad-row evidence separate from SDP weak/strong duality,
+Slater conditions, cone-KKT/complementary-slackness, convergence, and numerical
+stability theorem claims.
 The functional-analysis/operator consumer layer now also has
 [`FUNCTIONAL-OPERATOR-QUERIES.md`](FUNCTIONAL-OPERATOR-QUERIES.md). The guide
 and resource smoke expose finite operator/Chebyshev rows, eigenpair and
@@ -2623,8 +2629,9 @@ line-search replay, residual bounds, finite Wolfe line-search replay, finite
 projected-gradient replay, finite proximal-gradient replay, and
 matrix witnesses stay visible through the public JSON boundary without
 promoting duality, KKT sufficiency, SDP strong duality, gradient-descent,
-line-search, active-set method theory, Wolfe line-search, projected-gradient
-convergence, proximal-gradient convergence, or convergence-theorem claims.
+Slater conditions, gradient-descent, line-search, active-set method theory,
+Wolfe line-search, projected-gradient convergence, proximal-gradient
+convergence, or convergence-theorem claims.
 The consumer query layer now also exposes functional-analysis/operator
 readiness: `CONSUMER-QUERIES.md` shows the Farkas field summary,
 operator/Chebyshev bridge lookup, concept-scoped

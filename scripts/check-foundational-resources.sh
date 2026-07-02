@@ -455,6 +455,8 @@ python3 scripts/query-foundational-resources.py horizon-frontier --text active-s
 python3 scripts/query-foundational-resources.py checks --pack finite-active-set-qp-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-sdp-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-sdp-v0 --route Farkas --proof-status checked --text gap --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text SDP --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-sdp-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-gradient-descent-v0 --route Farkas --proof-status checked --text coordinate --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-gradient-descent-v0 --route Farkas --proof-status checked --text bound --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-line-search-v0 --route Farkas --proof-status checked --text direction --require-any >/dev/null
