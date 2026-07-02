@@ -105,6 +105,19 @@ python3 scripts/query-foundational-resources.py routes --field topology
 Use `--format json` when a downstream consumer needs machine-readable route
 rows.
 
+Replay-only `unsat` rows grouped by certificate route:
+
+```sh
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Alethe
+python3 scripts/query-foundational-resources.py upgrade-frontier --route qf-bv
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Diophantine
+```
+
+This frontier query is a selection aid, not an automatic promotion queue. A
+row should still be promoted only when it teaches a new proof shape, trust
+boundary, solver pressure, or downstream query shape.
+
 ## Validation
 
 For a docs-only selection update:

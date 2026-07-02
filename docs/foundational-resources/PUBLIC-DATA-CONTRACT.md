@@ -110,6 +110,17 @@ executable audit is:
 python3 scripts/query-foundational-resources.py labels
 ```
 
+Certificate-upgrade candidate discovery is also queryable without importing
+validators or solver crates:
+
+```sh
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas
+```
+
+This command is advisory. It lists replay-only `unsat` rows in packs that
+already advertise a certificate route, plus checked-row contrast in the same
+pack. It does not assert that every replay row needs promotion.
+
 ## Compatibility Rules
 
 A compatible additive change may:
@@ -145,6 +156,7 @@ python3 scripts/consume-foundational-resources.py
 python3 scripts/consume-foundational-resources.py --format json
 python3 scripts/query-foundational-resources.py summary
 python3 scripts/query-foundational-resources.py labels
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --require-any
 ```
 
 For command examples and drilldowns, use

@@ -210,6 +210,32 @@ The route filter uses normalized route aliases for active recipes. For example,
 `lean` matches `lean-horizon-template` but does not match
 `boolean-cnf-lrat`.
 
+## Proof Upgrade Frontier Discovery
+
+```sh
+python3 scripts/query-foundational-resources.py upgrade-frontier \
+  --route Farkas \
+  --require-any
+```
+
+This answers: "Which replay-only `unsat` rows live in packs that already
+advertise a certificate route, and what checked rows already exist nearby?"
+Rows include the proof-cookbook route, pack, fields, replay-only row ids,
+checked-row contrast, solver-reuse status, and pack path.
+
+For machine consumers:
+
+```sh
+python3 scripts/query-foundational-resources.py upgrade-frontier \
+  --route Alethe \
+  --format json \
+  --require-any
+```
+
+Use this as a selection aid, not as a claim that every returned row should be
+promoted. Some replay rows are the right final trust story, and an empty route
+result only means this narrow frontier has no current candidate rows.
+
 ## Concept And Proof-Route Discovery
 
 ```sh

@@ -31,6 +31,13 @@ ROUTE_ALIASES = {
     "qf-lra-farkas": {"qf-lra", "lra", "farkas"},
     "qf-uf-congruence-alethe": {"qf-uf", "uf", "euf", "alethe", "congruence"},
 }
+UPGRADE_ROUTE_ORDER = [
+    "boolean-cnf-lrat",
+    "qf-bv-bitblast",
+    "qf-lia-diophantine",
+    "qf-lra-farkas",
+    "qf-uf-congruence-alethe",
+]
 ROW_LABELS = {
     ("sat", "checked"): "checked witness",
     ("sat", "replay-only"): "finite witness replay",
@@ -164,6 +171,19 @@ def route_name_matches(route: str, needle: str | None) -> bool:
         or normalized in aliases
         or route_name.startswith(f"{normalized}-")
     )
+
+
+def route_text_matches(route: str, values: list[str]) -> bool:
+    if contains_text(values, route):
+        return True
+    return any(contains_text(values, alias) for alias in ROUTE_ALIASES.get(route, set()))
+
+
+def route_order(route: str) -> int:
+    try:
+        return UPGRADE_ROUTE_ORDER.index(route)
+    except ValueError:
+        return len(UPGRADE_ROUTE_ORDER)
 
 
 def shorten(value: str, width: int = 90) -> str:
@@ -703,6 +723,90 @@ def command_routes(args: argparse.Namespace) -> int:
     )
 
 
+def command_upgrade_frontier(args: argparse.Namespace) -> int:
+    store = ResourceStore()
+    rows = []
+    for pack in store.packs:
+        metadata = pack["metadata"]
+        if args.pack and pack["id"] != args.pack:
+            continue
+        if args.field and args.field not in metadata.get("field_ids", []):
+            continue
+
+        routes = [
+            route
+            for route in recipe_names(metadata)
+            if route in UPGRADE_ROUTE_ORDER
+            and route_name_matches(route, args.route)
+        ]
+        if not routes:
+            continue
+
+        replay_unsat_checks = [
+            check
+            for check in pack["checks"]
+            if check.get("proof_status") == "replay-only"
+            and check.get("expected_result") == "unsat"
+        ]
+        if args.text:
+            replay_unsat_checks = [
+                check
+                for check in replay_unsat_checks
+                if contains_text(check_route_text(check), args.text)
+            ]
+        if not replay_unsat_checks:
+            continue
+
+        checked_unsat_checks = [
+            check
+            for check in pack["checks"]
+            if check.get("proof_status") == "checked"
+            and check.get("expected_result") == "unsat"
+        ]
+        solver_reuse = metadata.get("solver_reuse") or {}
+        for route in routes:
+            route_checked_checks = [
+                check
+                for check in checked_unsat_checks
+                if route_text_matches(route, check_route_text(check))
+            ]
+            rows.append(
+                {
+                    "route": route,
+                    "pack": pack["id"],
+                    "fields": metadata["field_ids"],
+                    "replay_unsat": len(replay_unsat_checks),
+                    "checked_unsat": len(route_checked_checks),
+                    "replay_checks": [check["id"] for check in replay_unsat_checks[:5]],
+                    "checked_checks": [check["id"] for check in route_checked_checks[:5]],
+                    "solver_reuse": solver_reuse.get("status", "unclassified"),
+                    "path": pack["path"],
+                    "_sort": (
+                        route_order(route),
+                        -len(replay_unsat_checks),
+                        pack["id"],
+                    ),
+                }
+            )
+
+    rows = [clean_row(row) for row in sorted(rows, key=lambda row: row["_sort"])]
+    return emit(
+        rows,
+        [
+            "route",
+            "pack",
+            "fields",
+            "replay_unsat",
+            "checked_unsat",
+            "replay_checks",
+            "checked_checks",
+            "solver_reuse",
+            "path",
+        ],
+        args,
+    )
+
+
 def command_labels(args: argparse.Namespace) -> int:
     store = ResourceStore()
 
@@ -852,6 +956,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_output_args(routes, default_limit=DEFAULT_LIMIT)
     routes.set_defaults(func=command_routes)
+
+    upgrade_frontier = subparsers.add_parser(
+        "upgrade-frontier",
+        help="list replay-only UNSAT rows grouped by certificate route",
+    )
+    upgrade_frontier.add_argument(
+        "--route",
+        help="case-insensitive proof/evidence route, such as Farkas or Alethe",
+    )
+    upgrade_frontier.add_argument("--field", help="exact field id, such as topology")
+    upgrade_frontier.add_argument("--pack", help="exact example-pack id")
+    upgrade_frontier.add_argument(
+        "--text",
+        help="case-insensitive search over replay-only UNSAT row text",
+    )
+    add_output_args(upgrade_frontier, default_limit=DEFAULT_LIMIT)
+    upgrade_frontier.set_defaults(func=command_upgrade_frontier)
 
     labels = subparsers.add_parser("labels", help="audit row and pack display labels")
     labels.add_argument(

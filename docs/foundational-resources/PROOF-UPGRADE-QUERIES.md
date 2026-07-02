@@ -62,6 +62,39 @@ These route summaries count packs, checks, proof statuses, result statuses,
 fields, and sample packs. Use them before choosing another proof-upgrade
 increment.
 
+## Direct Upgrade Frontier
+
+List replay-only `unsat` rows in packs that already advertise a certificate
+route:
+
+```sh
+python3 scripts/query-foundational-resources.py upgrade-frontier \
+  --route Farkas \
+  --require-any
+
+python3 scripts/query-foundational-resources.py upgrade-frontier \
+  --route Alethe \
+  --require-any
+```
+
+The output groups candidate replay rows by proof-cookbook route and includes
+the existing checked `unsat` rows in the same pack for contrast. Use this before
+adding a new certificate row: if the checked-row contrast already teaches the
+same proof shape, improve learner text instead of duplicating the route.
+
+Machine-readable output is available for tooling:
+
+```sh
+python3 scripts/query-foundational-resources.py upgrade-frontier \
+  --route Farkas \
+  --format json \
+  --require-any
+```
+
+An empty route result is not automatically a gap. It can mean the current
+corpus has no replay-only `unsat` row under that certificate route, or that the
+remaining rows should stay finite replay.
+
 ## Replay-Only Row Discovery
 
 Find all replay-only UNSAT rows:

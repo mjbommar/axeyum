@@ -84,6 +84,11 @@ python3 scripts/query-foundational-resources.py packs --proof-status replay-only
 python3 scripts/query-foundational-resources.py packs --proof-status replay-only --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --proof-status replay-only --route qf-bv --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --proof-status replay-only --route boolean --require-any >/dev/null
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --format json --require-any >/dev/null
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Diophantine --require-any >/dev/null
+python3 scripts/query-foundational-resources.py upgrade-frontier --route qf-bv --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --field probability_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --expected-result unsat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --kind example-family --format json --require-any >/dev/null

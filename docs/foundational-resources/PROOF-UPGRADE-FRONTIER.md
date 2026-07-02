@@ -9,6 +9,9 @@ and how a pack graduates.
 For executable query commands over replay-only rows, route-relevant packs, and
 checked evidence contrasts, use
 [Proof Upgrade Queries](PROOF-UPGRADE-QUERIES.md).
+The direct public query for the replay-only `unsat` candidate frontier is
+`python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas`
+with the route changed as needed.
 For the compact route-by-route family selector, use
 [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md).
 For reusable learner-facing route snippets, use

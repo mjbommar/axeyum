@@ -234,6 +234,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Proof-upgrade frontier query landed.**
+  `scripts/query-foundational-resources.py upgrade-frontier` now exposes
+  replay-only `unsat` rows grouped by existing certificate routes directly from
+  the public JSON contract. It reports route, pack, field, replay-row ids,
+  checked-row contrast, solver-reuse status, and pack path, with JSON output
+  for downstream tools. The foundational resource gate now smoke-checks the
+  Farkas, Alethe, Diophantine, and QF_BV frontier queries while keeping empty
+  Boolean frontier results as a valid "no current candidate" state.
+
 - **Consumer smoke JSON output landed.**
   `scripts/consume-foundational-resources.py --format json` now emits the same
   R6 contract snapshot as the text smoke: schema versions, concept and pack

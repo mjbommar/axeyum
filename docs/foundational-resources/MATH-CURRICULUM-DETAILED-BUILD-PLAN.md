@@ -1740,6 +1740,12 @@ Pick one row per commit unless the change is purely navigational.
      emits schema versions, concept and pack counts, expected-result counts,
      proof-status counts, row-label counts, and pack-label counts as JSON, and
      the foundational resource gate checks both text and JSON modes.
+205. Landed: add `query-foundational-resources.py upgrade-frontier` for
+     route-scoped proof-upgrade selection. The public JSON consumer can now
+     list replay-only `unsat` rows in packs that already advertise Farkas,
+     Alethe, Diophantine, or QF_BV certificate routes, show checked-row
+     contrast in the same pack, emit JSON for downstream tooling, and keep
+     empty route frontiers distinct from proof gaps.
 
 ## Validation Checklist
 
