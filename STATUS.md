@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Fragment-demand query guide landed.**
+  `FRAGMENT-DEMAND-QUERIES.md` now documents how solver, proof, benchmark, and
+  curriculum contributors query the math-resource corpus by public fragment
+  metadata: Bool, QF_BV, QF_LIA, QF_LRA, QF_UF, finite replay, promoted
+  solver-reuse packs, and Lean-horizon reconstruction targets. The
+  foundational resource smoke script now checks representative fragment-plus-
+  field pack and row drilldowns while keeping QF_NRA/NIA as explicit future
+  pressure lanes until stable resource rows expose them. The public summary
+  remains 121 concept rows, 75 bridge concepts, 108 packs, 688 expected checks,
+  322 checked rows, 295 replay-only rows, and 71 Lean-horizon rows.
+
 - **Trust-boundary query guide landed.**
   `TRUST-BOUNDARY-QUERIES.md` now documents status-first consumer queries for
   checked evidence, replay-only finite rows, and Lean-horizon theorem

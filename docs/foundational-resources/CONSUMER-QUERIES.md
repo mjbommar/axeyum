@@ -27,6 +27,8 @@ For replay-only queues and certificate-upgrade candidate queries, see
 [PROOF-UPGRADE-QUERIES.md](PROOF-UPGRADE-QUERIES.md).
 For status-first checked, replay-only, and Lean-horizon trust-boundary
 drilldowns, see [TRUST-BOUNDARY-QUERIES.md](TRUST-BOUNDARY-QUERIES.md).
+For SMT-fragment demand queries across packs and rows, see
+[FRAGMENT-DEMAND-QUERIES.md](FRAGMENT-DEMAND-QUERIES.md).
 For concept-plus-route matrix discovery, see
 [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md).
 For concept-plus-route probability/statistics discovery, see

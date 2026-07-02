@@ -178,6 +178,12 @@ The trust-boundary query guide is
 it records proof-status and result-status drilldowns for checked evidence,
 replay-only finite rows, and Lean-horizon boundaries before consumers display
 or promote resource claims.
+The fragment-demand query guide is
+[`docs/foundational-resources/FRAGMENT-DEMAND-QUERIES.md`](docs/foundational-resources/FRAGMENT-DEMAND-QUERIES.md);
+it records fragment-scoped pack and row queries for Bool, QF_BV, QF_LIA,
+QF_LRA, QF_UF, finite replay, and Lean-horizon resources so solver and proof
+contributors can mine curriculum pressure without turning it into parity
+evidence.
 The curriculum-node query guide is
 [`docs/foundational-resources/CURRICULUM-NODE-QUERIES.md`](docs/foundational-resources/CURRICULUM-NODE-QUERIES.md);
 it records concept, pack, field, route, checked-row, and horizon drilldowns for

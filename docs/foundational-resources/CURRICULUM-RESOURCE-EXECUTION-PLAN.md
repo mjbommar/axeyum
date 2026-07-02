@@ -32,6 +32,8 @@ The focused query guide for starting from curriculum nodes is
 [CURRICULUM-NODE-QUERIES.md](CURRICULUM-NODE-QUERIES.md).
 The focused guide for status-first trust-boundary queries is
 [TRUST-BOUNDARY-QUERIES.md](TRUST-BOUNDARY-QUERIES.md).
+The focused guide for SMT-fragment demand queries is
+[FRAGMENT-DEMAND-QUERIES.md](FRAGMENT-DEMAND-QUERIES.md).
 
 Every resource should reinforce Axeyum's identity: untrusted fast search,
 trusted small checking. Bounded examples are useful, but they must stay visibly
@@ -366,6 +368,9 @@ Near-term boundary:
 - [TRUST-BOUNDARY-QUERIES.md](TRUST-BOUNDARY-QUERIES.md) is the status-first
   guide for consumers that need to separate checked evidence, replay-only rows,
   and Lean-horizon boundaries before display or promotion.
+- [FRAGMENT-DEMAND-QUERIES.md](FRAGMENT-DEMAND-QUERIES.md) is the fragment
+  demand guide for contributors mining Bool, QF_BV, QF_LIA, QF_LRA, QF_UF,
+  finite replay, and Lean-horizon pressure through public JSON rows.
 - No Rust crate or separate repository until at least one real consumer needs
   typed APIs, release cadence, or large external corpora.
 

@@ -35,6 +35,12 @@ The first artifact is live:
 - [smt-fragments.schema.json](../../artifacts/ontology/smt-fragments.schema.json)
 - [validate-smt-fragment-atlas.py](../../scripts/validate-smt-fragment-atlas.py)
 
+The math-resource demand side is documented in
+[Fragment Demand Queries](../foundational-resources/FRAGMENT-DEMAND-QUERIES.md).
+It shows how current curriculum resources expose Bool, QF_BV, QF_LIA, QF_LRA,
+QF_UF, finite replay, and Lean-horizon pressure through the public JSON query
+boundary.
+
 ## Roadmap
 
 The detailed implementation plan lives in [ROADMAP.md](ROADMAP.md).

@@ -38,6 +38,8 @@ For executable queries that begin at the curriculum-node layer, use
 [Curriculum Node Queries](CURRICULUM-NODE-QUERIES.md).
 For executable queries that begin at the proof-status/result-status trust
 boundary, use [Trust Boundary Queries](TRUST-BOUNDARY-QUERIES.md).
+For executable queries that begin at the SMT-fragment demand layer, use
+[Fragment Demand Queries](FRAGMENT-DEMAND-QUERIES.md).
 
 The product is not a textbook and not a formal-library clone. It is a system of
 small resources that make Axeyum's identity concrete:
@@ -1109,7 +1111,8 @@ Use the math curriculum as a source of fragment demand:
 
 Next work:
 
-- Add fragment-demand back-links from field dashboards to atlas rows.
+- Keep fragment-demand back-links from field dashboards and query guides tied
+  to atlas rows.
 - Keep the generated
   [curriculum-pressure-by-fragment](generated/curriculum-pressure-by-fragment.md)
   view fresh as new route metadata and proof statuses land.

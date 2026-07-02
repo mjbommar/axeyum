@@ -1689,6 +1689,11 @@ Pick one row per commit unless the change is purely navigational.
      replay-only, `not-run`/Lean-horizon, pack-level, field-scoped, and JSON
      drilldowns so consumers keep proof status separate from result status
      before displaying or promoting resource claims.
+197. Landed: add `FRAGMENT-DEMAND-QUERIES.md` as the focused SMT-fragment
+     demand guide for downstream contributors. It records executable Bool,
+     QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, promoted solver-reuse, and
+     Lean-horizon pack/row drilldowns while keeping QF_NRA/NIA as future
+     pressure lanes until stable resource rows expose them.
 
 ## Validation Checklist
 

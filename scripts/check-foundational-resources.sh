@@ -18,6 +18,22 @@ python3 scripts/query-foundational-resources.py routes --route Alethe --field ab
 python3 scripts/query-foundational-resources.py routes --route lean --field topology --require-any >/dev/null
 python3 scripts/query-foundational-resources.py routes --route lean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --route lean-horizon-template --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --fragment Bool --field logic_and_proof --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --fragment Bool --field logic_and_proof --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --fragment QF_BV --field number_theory --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --fragment QF_BV --field number_theory --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --fragment QF_LIA --field statistics --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --fragment QF_LIA --field statistics --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --fragment QF_LRA --field probability_theory --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --fragment QF_LRA --field probability_theory --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --fragment QF_UF --field abstract_algebra --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --fragment QF_UF --field abstract_algebra --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --fragment finite --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --fragment finite --proof-status replay-only --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --fragment Lean --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --fragment Lean --proof-status lean-horizon --expected-result not-run --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --fragment QF_LRA --solver-reuse promoted --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --fragment QF_UF --solver-reuse promoted --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --proof-status checked --expected-result unsat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --proof-status checked --expected-result sat --require-any >/dev/null

@@ -60,6 +60,8 @@ For proof contributors choosing certificate-upgrade candidates, use the
 [Proof Upgrade Queries](PROOF-UPGRADE-QUERIES.md).
 For proof-status and result-status trust-boundary drilldowns, use the
 [Trust Boundary Queries](TRUST-BOUNDARY-QUERIES.md).
+For SMT-fragment demand discovery across the curriculum resources, use the
+[Fragment Demand Queries](FRAGMENT-DEMAND-QUERIES.md).
 For the compact execution selector that picks one replay-heavy family per proof
 route and states when another negative row should be promoted, use the
 [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md).

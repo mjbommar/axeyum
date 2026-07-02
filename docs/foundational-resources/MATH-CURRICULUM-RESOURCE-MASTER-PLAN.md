@@ -92,6 +92,9 @@ For each `not-run` row, say what proof horizon blocks graduation.
 Use [Trust Boundary Queries](TRUST-BOUNDARY-QUERIES.md) when a consumer needs
 proof-status and result-status drilldowns before displaying or promoting a
 claim.
+Use [Fragment Demand Queries](FRAGMENT-DEMAND-QUERIES.md) when a contributor
+needs SMT-fragment drilldowns before mining resources for solver, proof, or
+benchmark pressure.
 
 ## Build Waves
 
