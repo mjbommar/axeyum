@@ -40,6 +40,30 @@ start:
 }
 ";
 
+// ---- `scale(x) = x*4 + 1` : MIR `Mul` ~ LLVM strength-reduced `shl` -------------
+
+/// Release/optimized MIR keeps the multiply.
+const SCALE_MIR: &str = r"
+fn scale(_1: u32) -> u32 {
+    bb0: {
+        _2 = Mul(copy _1, const 4_u32);
+        _0 = Add(move _2, const 1_u32);
+        return;
+    }
+}
+";
+
+/// `-O` LLVM strength-reduces `* 4` to `<< 2`. Proving this equals the MIR
+/// `Mul`-form validates LLVM's strength reduction (mod 2^32).
+const SCALE_LL: &str = r"
+define i32 @scale(i32 %x) unnamed_addr {
+start:
+  %m = shl i32 %x, 2
+  %_0 = add i32 %m, 1
+  ret i32 %_0
+}
+";
+
 // ---- `lut(x) = match x { 0=>5, 1=>7, _=>0 }` : switchInt ~ icmp+select -----------
 
 const LUT_MIR: &str = r"
@@ -122,6 +146,19 @@ fn masked_mir_equals_llvm() {
         MASKED_MIR,
         MASKED_LL,
         &[0, 1, 0xff, 0x100, 0xdead_beef, u128::from(u32::MAX)],
+    );
+}
+
+/// `scale`: MIR `Mul(x, 4)` == LLVM strength-reduced `x << 2` (then `+1`), for all
+/// `u32` — the solver *validates LLVM's strength reduction* through the shared
+/// arithmetic vocabulary (`Mul`/`Add` vs `shl`/`add` land in one BV algebra).
+#[test]
+fn scale_mir_equals_llvm() {
+    assert_equivalent(
+        32,
+        SCALE_MIR,
+        SCALE_LL,
+        &[0, 1, 2, 0x4000_0000, 0x8000_0000, u128::from(u32::MAX)],
     );
 }
 

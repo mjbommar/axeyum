@@ -1,10 +1,17 @@
 # DRY across MIR & LLVM — the shared reflection core
 
-> **Status:** design (2026-07-02). Two front ends now reflect *real compiled code*
+> **Status:** landed (2026-07-02). Two front ends reflect *real compiled code*
 > into `axeyum-ir` terms — MIR (`mir_reflection.rs`) and LLVM IR
-> (`llvm_reflection.rs`). They duplicate a real core; this note factors out the
-> IR-agnostic part so a property/proof/fuzz harness is written **once** and works
-> for either platform, and unlocks a **cross-platform equivalence** proof.
+> (`llvm_reflection.rs`). They duplicated a real core; this note's plan factored
+> out the IR-agnostic part so a property/proof/fuzz harness is written **once** and
+> works for either platform — and it unlocked a **cross-platform equivalence**
+> proof (`cross_ir_equivalence.rs`): the same source function reflected from *both*
+> its MIR and its LLVM and proved equal for every input.
+>
+> Realized surface: `reflect_common/mod.rs` (op vocabulary + proof/eval harness),
+> `reflect_common/llvm.rs` (the single-block LLVM reflector), `reflect_common/mir.rs`
+> (`reflect_mir_unary`: switchInt + straight-line `BinaryOp`). Gates green:
+> cross-IR 3/3, llvm 20/20, mir 5/5, clippy `-D warnings` clean.
 
 ## What's genuinely shared vs. front-end-specific
 
@@ -53,15 +60,28 @@ algebra:
   **shared `binop`** — the DRY point made concrete), prove `mir_masked ==
   llvm_masked` for all `u32`.
 
-## Plan
+## Plan — landed
 
-- Q2: create `reflect_common` (extract the op vocabulary + harness from the LLVM
-  reflector); refactor `llvm_reflection.rs` to use it; gates green (all LLVM tests
-  unchanged).
-- Q3: refactor `mir_reflection.rs` onto the shared harness; extend it with
-  straight-line `BinaryOp` rvalues via the shared `binop`; add the cross-platform
-  equivalence tests (`lut`, `masked`: MIR ≡ LLVM).
-- Q4: gates, scoreboard, plan.
+- **Q2 (done, `7b9c9244`):** created `reflect_common` (op vocabulary + proof/eval
+  harness, `binop` keyed by *both* LLVM and MIR op spellings); refactored
+  `llvm_reflection.rs` onto it — all 20 LLVM tests unchanged and green.
+- **Q3 (done, `c659efae`):** moved the LLVM reflector into `reflect_common::llvm`
+  (one parser shared by the LLVM suite, the loop/buffer reflectors, and the
+  cross-IR suite); added `reflect_common::mir::reflect_mir_unary` handling
+  switchInt *and* straight-line `BinaryOp` via the shared `binop`; added
+  `cross_ir_equivalence.rs` proving `masked` and `lut` equal across MIR and LLVM,
+  plus a negative control (a `|0x200` variant is *refuted* against `|0x100`).
+- **Q4 (this note):** gates green (cross-IR 3/3, llvm 20/20, mir 5/5, clippy
+  clean); status + plan recorded here.
+
+### Next (follow-ups, not blocking)
+
+- Migrate `mir_reflection.rs`'s own `reflect_mir` onto `reflect_common::mir` so the
+  MIR side has a single reflector too (it currently keeps its switchInt-only
+  version; the shared one is a superset).
+- Grow the cross-IR corpus: multi-statement arithmetic (`add`/`mul`/shifts),
+  signed `Shr`→`ashr`, and a `select`/`ite`-bearing function whose MIR keeps the
+  branch (not if-converted) — exercising MIR CFG, not just `bb0`.
 
 **Honest scope:** the shared module is source-level DRY across integration tests
 (each test crate compiles its own copy — fine; it is not a public API). Promoting
