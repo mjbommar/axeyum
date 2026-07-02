@@ -357,6 +357,9 @@ python3 scripts/query-foundational-resources.py concepts --field graph_theory --
 python3 scripts/query-foundational-resources.py packs --field graph_theory --text flow --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-flow-cut-v0 --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-flow-cut-v0 --expected-result not-run --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --field graph_theory --text shortest --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --expected-result not-run --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route LIA --proof-status checked --require-any >/dev/null

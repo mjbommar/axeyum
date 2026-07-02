@@ -8,9 +8,9 @@ theorem.
 The trust pattern is:
 
 ```text
-untrusted fast search -> candidate path, traversal trace, cost counter, or bound
-trusted small checking -> graph replay, queue/stack replay, and checked LIA evidence
-remaining horizon -> asymptotic BFS/DFS complexity and graph-family lower bounds
+untrusted fast search -> candidate path, traversal trace, cost counter, potential, or bound
+trusted small checking -> graph replay, queue/stack replay, potential replay, and checked LIA evidence
+remaining horizon -> asymptotic BFS/DFS complexity, shortest-path algorithms, and graph-family lower bounds
 ```
 
 ## Concept Rows
@@ -36,7 +36,8 @@ These rows live in the
 | What does deterministic DFS do? | `graph-reachability-v0`, `graph-search-runtime-v0` | ordered adjacency and DFS preorder replay | average-case or heuristic DFS behavior |
 | How many vertices are visited before the target? | `graph-search-runtime-v0` | finite BFS queue pop count and DFS preorder count | asymptotic BFS/DFS runtime |
 | Is a proposed traversal bound false? | `graph-search-runtime-v0` | exact counter replay plus checked QF_LIA arithmetic-DPLL evidence | graph-family lower bounds |
-| Does another graph obstruction reuse the same shape? | `graph-coloring-v0`, `graph-matching-v0`, `graph-cut-v0`, `finite-flow-cut-v0`, `graph-d-separation-v0` | finite witness replay plus Boolean/CNF, BV, LIA, or exact-rational proof/replay rows | broad graph theory |
+| Is a weighted path shortest? | `finite-shortest-path-v0` | exact path-length replay plus potential lower-bound certificate | shortest-path algorithm correctness |
+| Does another graph obstruction reuse the same shape? | `graph-coloring-v0`, `graph-matching-v0`, `graph-cut-v0`, `finite-flow-cut-v0`, `finite-shortest-path-v0`, `graph-d-separation-v0` | finite witness replay plus Boolean/CNF, BV, LIA, or exact-rational proof/replay rows | broad graph theory |
 
 ## Checkable Shapes
 
@@ -92,6 +93,11 @@ Use [Graph And Discrete Reasoning](graph-and-discrete-reasoning.md) when you
 want the surrounding graph-resource cluster: coloring, matching, cuts,
 d-separation, counting, and proof-by-refutation.
 
+Use [Finite Shortest Path Certificates](finite-shortest-path-end-to-end.md)
+when the question is path optimality rather than traversal order. That page
+shows how exact path replay and potential inequalities certify one finite
+shortest-path instance.
+
 ## Query It
 
 From the repository root:
@@ -101,6 +107,7 @@ python3 scripts/query-foundational-resources.py concepts --field graph_theory --
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_graph_replay_obstruction --route LIA --require-any
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route LIA --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_graph_replay_obstruction --route LIA --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --proof-status checked --require-any
 ```
 
 ## Replay It
@@ -108,6 +115,7 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_finite_g
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-reachability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-search-runtime-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-shortest-path-v0
 ```
 
 Expected shape:
@@ -122,6 +130,7 @@ for each command.
 
 The checked rows prove only facts about the listed finite graphs and listed
 finite shortcut-tail family rows. They do not prove `O(|V| + |E|)` bounds,
-lower bounds for graph families, average-case search claims, or guarantees for
-heuristic and parallel search. Those remain theorem-horizon work until there
-are kernel-checked proof artifacts.
+shortest-path algorithm invariants, negative-cycle handling, lower bounds for
+graph families, average-case search claims, or guarantees for heuristic and
+parallel search. Those remain theorem-horizon work until there are
+kernel-checked proof artifacts.

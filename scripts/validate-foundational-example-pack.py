@@ -2716,6 +2716,186 @@ def validate_finite_flow_cut(expected: dict[str, Any]) -> None:
         fail("max-flow-min-cut-theorem-lean-horizon must be a Lean-horizon not-run row")
 
 
+WeightedEdge = tuple[str, str, Fraction]
+
+
+def require_directed_weighted_graph(
+    context: str,
+    values: dict[str, Any],
+) -> tuple[list[str], list[WeightedEdge], str, str]:
+    vertices = require_string_list(f"{context}.vertices", values.get("vertices"))
+    edge_values = values.get("directed_edges")
+    if not isinstance(edge_values, list) or not edge_values:
+        fail(f"{context}.directed_edges must be a non-empty list")
+    vertex_set = set(vertices)
+    edges: list[WeightedEdge] = []
+    seen_edges: set[tuple[str, str]] = set()
+    for index, edge in enumerate(edge_values):
+        if not isinstance(edge, dict):
+            fail(f"{context}.directed_edges[{index}] must be an object")
+        tail = edge.get("from")
+        head = edge.get("to")
+        require_string(f"{context}.directed_edges[{index}].from", tail)
+        require_string(f"{context}.directed_edges[{index}].to", head)
+        if tail == head:
+            fail(f"{context}.directed_edges[{index}] must not be a self-loop")
+        if tail not in vertex_set or head not in vertex_set:
+            fail(f"{context}.directed_edges[{index}] references a missing vertex")
+        directed_edge = (tail, head)
+        if directed_edge in seen_edges:
+            fail(f"{context}.directed_edges repeats directed edge {directed_edge}")
+        seen_edges.add(directed_edge)
+        weight = require_fraction(f"{context}.directed_edges[{index}].weight", edge.get("weight"))
+        if weight < 0:
+            fail(f"{context}.directed_edges[{index}].weight must be nonnegative")
+        edges.append((tail, head, weight))
+    source = require_graph_vertex(f"{context}.source", values.get("source"), vertices)
+    target = require_graph_vertex(f"{context}.target", values.get("target"), vertices)
+    if source == target:
+        fail(f"{context}.source and target must be distinct")
+    return vertices, edges, source, target
+
+
+def weighted_edge_map(edges: list[WeightedEdge]) -> dict[tuple[str, str], Fraction]:
+    return {(tail, head): weight for tail, head, weight in edges}
+
+
+def require_directed_path(
+    context: str,
+    values: dict[str, Any],
+    vertices: list[str],
+    source: str,
+    target: str,
+) -> list[str]:
+    path = require_string_list(f"{context}.path", values.get("path"))
+    if len(path) < 2:
+        fail(f"{context}.path must have at least two vertices")
+    vertex_set = set(vertices)
+    for index, vertex in enumerate(path):
+        if vertex not in vertex_set:
+            fail(f"{context}.path[{index}] references a missing vertex")
+    if path[0] != source:
+        fail(f"{context}.path must start at source")
+    if path[-1] != target:
+        fail(f"{context}.path must end at target")
+    return path
+
+
+def directed_path_length(context: str, path: list[str], edges: list[WeightedEdge]) -> Fraction:
+    by_edge = weighted_edge_map(edges)
+    total = Fraction(0)
+    for tail, head in zip(path, path[1:]):
+        weight = by_edge.get((tail, head))
+        if weight is None:
+            fail(f"{context}.path uses missing directed edge {(tail, head)}")
+        total += weight
+    return total
+
+
+def require_potentials(context: str, values: dict[str, Any], vertices: list[str]) -> dict[str, Fraction]:
+    potential_values = values.get("potentials")
+    if not isinstance(potential_values, dict) or not potential_values:
+        fail(f"{context}.potentials must be a non-empty object")
+    vertex_set = set(vertices)
+    potential_vertices = set(potential_values)
+    if potential_vertices != vertex_set:
+        missing = sorted(vertex_set - potential_vertices)
+        extra = sorted(potential_vertices - vertex_set)
+        detail = []
+        if missing:
+            detail.append("missing " + ", ".join(missing))
+        if extra:
+            detail.append("extra " + ", ".join(extra))
+        fail(f"{context}.potentials must cover exactly the vertices ({'; '.join(detail)})")
+    return {
+        vertex: require_fraction(f"{context}.potentials.{vertex}", potential_values[vertex])
+        for vertex in vertices
+    }
+
+
+def validate_shortest_path_potentials(
+    context: str,
+    edges: list[WeightedEdge],
+    potentials: dict[str, Fraction],
+) -> None:
+    for tail, head, weight in edges:
+        if potentials[head] > potentials[tail] + weight:
+            fail(f"{context} violates edge relaxation on {(tail, head)}")
+
+
+def validate_finite_shortest_path(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    path_check = checks["path-distance-witness"]
+    if path_check["expected_result"] != "sat" or path_check.get("proof_status") != "checked":
+        fail("path-distance-witness must be a checked sat row")
+    values = single_witness_values(path_check, witnesses)
+    vertices, edges, source, target = require_directed_weighted_graph("path-distance-witness", values)
+    path = require_directed_path("path-distance-witness", values, vertices, source, target)
+    path_length = directed_path_length("path-distance-witness", path, edges)
+    listed_path_length = require_fraction("path-distance-witness.path_length", values.get("path_length"))
+    if listed_path_length != path_length:
+        fail("path-distance-witness path_length does not match the path")
+
+    optimal = checks["potential-optimality-witness"]
+    if optimal["expected_result"] != "sat" or optimal.get("proof_status") != "checked":
+        fail("potential-optimality-witness must be a checked sat row")
+    values = single_witness_values(optimal, witnesses)
+    vertices, edges, source, target = require_directed_weighted_graph("potential-optimality-witness", values)
+    path = require_directed_path("potential-optimality-witness", values, vertices, source, target)
+    path_length = directed_path_length("potential-optimality-witness", path, edges)
+    listed_path_length = require_fraction("potential-optimality-witness.path_length", values.get("path_length"))
+    if listed_path_length != path_length:
+        fail("potential-optimality-witness path_length does not match the path")
+    potentials = require_potentials("potential-optimality-witness", values, vertices)
+    if potentials[source] != 0:
+        fail("potential-optimality-witness source potential must be 0")
+    validate_shortest_path_potentials("potential-optimality-witness", edges, potentials)
+    target_distance = require_fraction("potential-optimality-witness.target_distance", values.get("target_distance"))
+    if potentials[target] != target_distance:
+        fail("potential-optimality-witness target_distance must equal target potential")
+    if path_length != target_distance:
+        fail("potential-optimality-witness path must meet the potential lower bound")
+
+    bad_path = checks["bad-path-distance-rejected"]
+    if bad_path["expected_result"] != "unsat" or bad_path.get("proof_status") != "checked":
+        fail("bad-path-distance-rejected must be a checked unsat row")
+    values = single_witness_values(bad_path, witnesses)
+    vertices, edges, source, target = require_directed_weighted_graph("bad-path-distance-rejected", values)
+    path = require_directed_path("bad-path-distance-rejected", values, vertices, source, target)
+    path_length = directed_path_length("bad-path-distance-rejected", path, edges)
+    claimed_path_length = require_fraction("bad-path-distance-rejected.path_length", values.get("path_length"))
+    actual_path_length = require_fraction("bad-path-distance-rejected.actual_path_length", values.get("actual_path_length"))
+    if actual_path_length != path_length:
+        fail("bad-path-distance-rejected actual_path_length does not match the path")
+    if claimed_path_length == path_length:
+        fail("bad-path-distance-rejected must disagree with the recomputed path length")
+
+    bad_bound = checks["bad-shorter-distance-rejected"]
+    if bad_bound["expected_result"] != "unsat" or bad_bound.get("proof_status") != "checked":
+        fail("bad-shorter-distance-rejected must be a checked unsat row")
+    data = bad_bound.get("data", {})
+    vertices, edges, source, target = require_directed_weighted_graph("bad-shorter-distance-rejected", data)
+    potentials = require_potentials("bad-shorter-distance-rejected", data, vertices)
+    if potentials[source] != 0:
+        fail("bad-shorter-distance-rejected source potential must be 0")
+    validate_shortest_path_potentials("bad-shorter-distance-rejected", edges, potentials)
+    target_distance = require_fraction("bad-shorter-distance-rejected.target_distance", data.get("target_distance"))
+    claimed_upper_bound = require_fraction(
+        "bad-shorter-distance-rejected.claimed_upper_bound",
+        data.get("claimed_upper_bound"),
+    )
+    if potentials[target] != target_distance:
+        fail("bad-shorter-distance-rejected target_distance must equal target potential")
+    if claimed_upper_bound >= target_distance:
+        fail("bad-shorter-distance-rejected claimed upper bound must be below the potential lower bound")
+
+    horizon = checks["shortest-path-theorem-lean-horizon"]
+    if horizon["expected_result"] != "not-run" or horizon.get("proof_status") != "lean-horizon":
+        fail("shortest-path-theorem-lean-horizon must be a Lean-horizon not-run row")
+
+
 def has_mod_inverse(a: int, modulus: int) -> bool:
     return any((a * candidate) % modulus == 1 for candidate in range(modulus))
 
@@ -26833,6 +27013,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_fields(expected)
     if metadata["id"] == "finite-flow-cut-v0":
         validate_finite_flow_cut(expected)
+    if metadata["id"] == "finite-shortest-path-v0":
+        validate_finite_shortest_path(expected)
     if metadata["id"] == "finite-algebra-homomorphisms-v0":
         validate_finite_algebra_homomorphisms(expected)
     if metadata["id"] == "finite-active-set-qp-v0":

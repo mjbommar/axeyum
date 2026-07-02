@@ -25,6 +25,7 @@ Example packs:
 - [graph-d-separation-v0](../../../artifacts/examples/math/graph-d-separation-v0/)
 - [graph-cut-v0](../../../artifacts/examples/math/graph-cut-v0/)
 - [finite-flow-cut-v0](../../../artifacts/examples/math/finite-flow-cut-v0/)
+- [finite-shortest-path-v0](../../../artifacts/examples/math/finite-shortest-path-v0/)
 - [proof-methods-refutation-v0](../../../artifacts/examples/math/proof-methods-refutation-v0/)
 
 Companion map:
@@ -64,7 +65,10 @@ minimum edge and vertex cut certificates by replaying separation and
 enumerating smaller candidate cuts. The finite flow/cut pack checks one
 directed capacitated network by replaying feasibility, recomputing a
 source-side cut capacity, rejecting a capacity violation, and rejecting a
-claimed flow value above that cut bound.
+claimed flow value above that cut bound. The finite shortest-path pack checks
+one directed weighted graph by replaying a path length, verifying a potential
+lower-bound certificate, rejecting a malformed path length, and rejecting a
+claimed shorter distance below the potential lower bound.
 
 This gives a direct model of "untrusted fast search, trusted small checking":
 the search can propose colors, but the checker only needs the graph and the
@@ -81,13 +85,15 @@ set and a partition; the checker removes edges or vertices, recomputes
 reachability, and enumerates smaller cuts. For network flows, the search can
 propose edge flows and a cut; the checker recomputes capacities,
 conservation, source/sink balance, and the cut upper bound over exact
-rationals.
+rationals. For shortest paths, the search can propose a path and potentials;
+the checker recomputes edge weights and every edge-relaxation inequality over
+exact rationals.
 The shared `bridge_finite_graph_replay_obstruction` row is the atlas vocabulary
 for this finite graph pattern across coloring, reachability, traversal,
-matching, cut, finite flow/cut, and d-separation resources. It is deliberately
-finite: graph minors, max-flow/min-cut theorems, matching duality, causal
-identification, and asymptotic traversal complexity stay in proof-horizon
-resources.
+matching, cut, finite flow/cut, finite shortest-path, and d-separation
+resources. It is deliberately finite: graph minors, max-flow/min-cut theorems,
+shortest-path algorithm correctness, matching duality, causal identification,
+and asymptotic traversal complexity stay in proof-horizon resources.
 
 ## Encode / Check Walkthrough
 

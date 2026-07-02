@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-shortest-path-v0",
+  "witnesses": [
+    {
+      "id": "four-node-shortest-path",
+      "description": "A shortest s-t path of length 5 on a four-node directed weighted graph.",
+      "values": {
+        "vertices": ["s", "a", "b", "t"],
+        "directed_edges": [
+          {"from": "s", "to": "a", "weight": "2"},
+          {"from": "s", "to": "b", "weight": "5"},
+          {"from": "s", "to": "t", "weight": "9"},
+          {"from": "a", "to": "b", "weight": "1"},
+          {"from": "a", "to": "t", "weight": "6"},
+          {"from": "b", "to": "t", "weight": "2"}
+        ],
+        "source": "s",
+        "target": "t",
+        "path": ["s", "a", "b", "t"],
+        "path_length": "5"
+      }
+    },
+    {
+      "id": "four-node-potential-certificate",
+      "description": "Distance potentials prove that no s-t path is shorter than 5.",
+      "values": {
+        "vertices": ["s", "a", "b", "t"],
+        "directed_edges": [
+          {"from": "s", "to": "a", "weight": "2"},
+          {"from": "s", "to": "b", "weight": "5"},
+          {"from": "s", "to": "t", "weight": "9"},
+          {"from": "a", "to": "b", "weight": "1"},
+          {"from": "a", "to": "t", "weight": "6"},
+          {"from": "b", "to": "t", "weight": "2"}
+        ],
+        "source": "s",
+        "target": "t",
+        "path": ["s", "a", "b", "t"],
+        "path_length": "5",
+        "potentials": {
+          "s": "0",
+          "a": "2",
+          "b": "3",
+          "t": "5"
+        },
+        "target_distance": "5"
+      }
+    },
+    {
+      "id": "bad-path-distance",
+      "description": "A malformed row undercounts the length of the listed path.",
+      "values": {
+        "vertices": ["s", "a", "b", "t"],
+        "directed_edges": [
+          {"from": "s", "to": "a", "weight": "2"},
+          {"from": "s", "to": "b", "weight": "5"},
+          {"from": "s", "to": "t", "weight": "9"},
+          {"from": "a", "to": "b", "weight": "1"},
+          {"from": "a", "to": "t", "weight": "6"},
+          {"from": "b", "to": "t", "weight": "2"}
+        ],
+        "source": "s",
+        "target": "t",
+        "path": ["s", "a", "b", "t"],
+        "path_length": "4",
+        "actual_path_length": "5"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "path-distance-witness",
+      "claim": "The listed path from s to t has exact length 5.",
+      "expected_result": "sat",
+      "validation": "finite_shortest_path_length_replay",
+      "proof_status": "checked",
+      "witnesses": ["four-node-shortest-path"],
+      "notes": "The validator checks that every consecutive vertex pair is a directed edge and sums the edge weights over exact rationals."
+    },
+    {
+      "id": "potential-optimality-witness",
+      "claim": "The listed path has length 5 and the listed potentials prove no shorter s-t path exists.",
+      "expected_result": "sat",
+      "validation": "finite_shortest_path_potential_certificate_replay",
+      "proof_status": "checked",
+      "witnesses": ["four-node-potential-certificate"],
+      "notes": "The validator recomputes the path length, checks p(s)=0, p(t)=5, and checks p(v) <= p(u)+w(u,v) for every directed edge."
+    },
+    {
+      "id": "bad-path-distance-rejected",
+      "claim": "The listed path s-a-b-t has length 4.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_shortest_path_length_refutation",
+      "proof_status": "checked",
+      "witnesses": ["bad-path-distance"],
+      "notes": "Exact path replay recomputes length 5, so the claimed length 4 is rejected."
+    },
+    {
+      "id": "bad-shorter-distance-rejected",
+      "claim": "The same graph has an s-t path of length at most 4.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_shorter_distance_potential_refutation",
+      "proof_status": "checked",
+      "data": {
+        "vertices": ["s", "a", "b", "t"],
+        "directed_edges": [
+          {"from": "s", "to": "a", "weight": "2"},
+          {"from": "s", "to": "b", "weight": "5"},
+          {"from": "s", "to": "t", "weight": "9"},
+          {"from": "a", "to": "b", "weight": "1"},
+          {"from": "a", "to": "t", "weight": "6"},
+          {"from": "b", "to": "t", "weight": "2"}
+        ],
+        "source": "s",
+        "target": "t",
+        "potentials": {
+          "s": "0",
+          "a": "2",
+          "b": "3",
+          "t": "5"
+        },
+        "target_distance": "5",
+        "claimed_upper_bound": "4"
+      },
+      "notes": "The potential certificate lower-bounds every s-t path by 5, so a claimed upper bound of 4 is impossible for this finite graph."
+    },
+    {
+      "id": "shortest-path-theorem-lean-horizon",
+      "claim": "General shortest-path algorithm correctness and negative-cycle theory require future theorem-prover reconstruction.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For every finite weighted directed graph with no negative s-t improvement cycle, a path plus feasible distance potentials can certify optimality.",
+        "future_checker": "Lean proof of shortest-path optimality, Bellman-Ford/Dijkstra invariants under their hypotheses, and optional all-pairs extensions."
+      },
+      "notes": "The checked rows cover one explicit graph, one explicit path, and one explicit potential certificate. They do not prove algorithm correctness or asymptotic runtime."
+    }
+  ]
+}

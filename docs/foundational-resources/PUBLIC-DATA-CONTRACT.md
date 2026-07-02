@@ -38,13 +38,13 @@ The consumer smoke currently reports:
 concept_rows=121
 curriculum_rows=23
 field_rows=18
-non_template_packs=109
-packs_with_checked_evidence=109
+non_template_packs=110
+packs_with_checked_evidence=110
 schema_versions=atlas:1,metadata:1,expected:1
-expected_result_counts=not-run:72,sat:338,unsat:283
-proof_status_counts=checked:326,lean-horizon:72,replay-only:295
-row_label_counts=checked_refutation:240,checked_witness:86,finite_rejection_replay:43,finite_witness_replay:252,theorem_horizon:72
-pack_label_counts=checked_evidence_pack:109,mixed_trust_story:98,theorem_boundary_included:72
+expected_result_counts=not-run:73,sat:340,unsat:285
+proof_status_counts=checked:330,lean-horizon:73,replay-only:295
+row_label_counts=checked_refutation:242,checked_witness:88,finite_rejection_replay:43,finite_witness_replay:252,theorem_horizon:73
+pack_label_counts=checked_evidence_pack:110,mixed_trust_story:99,theorem_boundary_included:73
 ```
 
 Regenerate this snapshot with:

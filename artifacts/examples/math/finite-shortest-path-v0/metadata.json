@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "finite-shortest-path-v0",
+  "title": "Finite Shortest Path Certificates",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_graph_theory",
+    "field_discrete_math",
+    "field_optimization_and_convexity",
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "curriculum_counting",
+    "curriculum_rationals",
+    "bridge_finite_graph_replay_obstruction"
+  ],
+  "field_ids": [
+    "graph_theory",
+    "discrete_math",
+    "optimization_and_convexity"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "relations-and-functions",
+    "counting",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite directed weighted graphs",
+    "finite shortest-path replay",
+    "finite potential certificates",
+    "exact rational arithmetic",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-shortest-path-v0",
+  "solver_reuse": {
+    "status": "non-benchmark-horizon",
+    "target": "finite shortest-path replay and potential-certificate theorem boundary",
+    "pressure": "Exact replay checks one path length, one feasible shortest-path potential certificate, one malformed path-distance row, and one claimed-shorter-distance violation; no source solver artifact is committed yet, so this is not a solver regression or benchmark claim.",
+    "evidence": [
+      "path-distance-witness",
+      "potential-optimality-witness",
+      "bad-path-distance-rejected",
+      "bad-shorter-distance-rejected"
+    ],
+    "next_step": "Promote only after adding a source exact-arithmetic artifact and checked proof route for path length, edge relaxation, or dual potential conflicts; keep general shortest-path algorithms, negative-cycle theory, and asymptotic runtime in the Lean-horizon lane."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/finite-shortest-path-end-to-end.md"
+  ],
+  "expected_results": [
+    "path-distance-witness",
+    "potential-optimality-witness",
+    "bad-path-distance-rejected",
+    "bad-shorter-distance-rejected",
+    "shortest-path-theorem-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Replay finite directed weighted graphs, path adjacency, and path length over exact rationals.",
+    "Replay finite potential certificates by checking every edge relaxation inequality.",
+    "Reject malformed rows by recomputing a path length or by comparing a claimed shorter distance against the potential lower bound.",
+    "Add a source exact-arithmetic artifact and checked certificate route before promoting the pack as a solver regression.",
+    "Keep arbitrary-graph shortest-path correctness, negative-cycle reasoning, all-pairs algorithms, and asymptotic complexity as Lean/theorem horizons until proof artifacts exist."
+  ]
+}
