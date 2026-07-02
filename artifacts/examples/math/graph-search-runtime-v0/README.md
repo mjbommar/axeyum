@@ -35,7 +35,7 @@ The bad-bound row is also a solver-backed resource. Its SMT-LIB artifact is
 it encodes `dfs_visits = 6`, `claimed_upper_bound = 3`, and
 `dfs_visits <= claimed_upper_bound` as a tiny `QF_LIA` contradiction. The
 `math_resource_lia_routes` regression requires Axeyum to emit checked
-arithmetic-DPLL evidence and independently re-check the proof object.
+QF_LIA arithmetic evidence and independently re-check the proof object.
 
 This pack is finite checked evidence. It is not a proof of asymptotic graph
 search complexity, average-case behavior, heuristic search, parallel search, or

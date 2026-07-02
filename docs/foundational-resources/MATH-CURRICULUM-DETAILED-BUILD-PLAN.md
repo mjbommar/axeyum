@@ -272,7 +272,7 @@ Exit criteria:
 | `propositional-logic` | maintain | keep tiny CNF and tamper tests as the smallest trust story |
 | `predicate-logic` | maintain | finite expansion now has a Bool/CNF proof-route regression; keep arbitrary-domain validity horizon explicit |
 | `proof-methods` | promote | PHP/refutation CNF artifact and proof-object lesson |
-| `induction` | deepen | bounded step-count row now has a source-linked QF_LIA arithmetic-DPLL regression; keep the universal schema Lean-horizon |
+| `induction` | deepen | bounded step-count row now has a source-linked checked QF_LIA arithmetic regression; keep the universal schema Lean-horizon |
 | `sets` | maintain | keep finite set/lattice false claims checked and linked |
 | `relations-and-functions` | maintain | add image/preimage rows only when reused by several packs |
 | `cardinality` | deepen | cardinality-principles overlap-additivity now has source-linked QF_LIA/Diophantine evidence; keep infinite cardinality Lean-horizon |
@@ -331,7 +331,7 @@ Pick one row per commit unless the change is purely navigational.
    bad unit-square real-part and bad conjugation-product imaginary-part
    QF_LRA/Farkas artifacts and route regressions.
 13. Landed: promote `induction-obligations-v0` through a source-linked bounded
-   bad-step count QF_LIA arithmetic-DPLL artifact and route regression.
+   bad-step count checked QF_LIA arithmetic artifact and route regression.
 14. Landed: promote `cardinality-principles-v0` through a source-linked
    overlap-additivity count QF_LIA/Diophantine artifact and route regression.
 15. Landed: promote `polynomial-factorization-rational-v0` through a
@@ -2112,6 +2112,15 @@ Pick one row per commit unless the change is purely navigational.
      layers, and adds coloring-specific replay/certificate queries to the
      public smoke gate without adding a duplicate pack or inventing a theorem
      horizon row for this pack.
+250. Landed: add `graph-search-runtime-theorem-boundary.md` as the focused
+     graph-search runtime theorem-boundary page for
+     `graph-search-runtime-v0`. It maps checked finite BFS and DFS
+     visited-counter replay, shortcut-tail family replay, the checked QF_LIA
+     arithmetic bad-bound refutation, and the explicit Lean-horizon row
+     to the missing asymptotic BFS/DFS runtime, graph-family lower-bound,
+     average-case, heuristic, and parallel-search layers, and adds
+     runtime-specific checked-row and horizon-frontier queries to the public
+     smoke gate without adding a duplicate pack.
 
 ## Validation Checklist
 

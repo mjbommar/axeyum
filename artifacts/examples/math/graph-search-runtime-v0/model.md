@@ -48,7 +48,7 @@ dfs_visits <= claimed_upper_bound
 ```
 
 The graph replay justifies the constants. The SMT-LIB artifact then exercises
-Axeyum's `QF_LIA` arithmetic-DPLL evidence route for the false cost bound.
+Axeyum's checked `QF_LIA` arithmetic evidence route for the false cost bound.
 
 ## Family Rows
 

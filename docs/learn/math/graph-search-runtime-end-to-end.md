@@ -3,6 +3,8 @@
 This lesson follows one finite graph resource from ordered edge lists to BFS
 and DFS visited-node counters. It uses
 [graph-search-runtime-v0](../../../artifacts/examples/math/graph-search-runtime-v0/).
+For the focused theorem boundary around asymptotic runtime claims, see
+[Graph Search Runtime Theorem Boundary](graph-search-runtime-theorem-boundary.md).
 
 Concept rows:
 
@@ -24,7 +26,7 @@ Concept rows:
 
 Every checked row is a finite cost replay over ordered finite graphs. The pack
 also promotes the bad DFS-bound row into a tiny `QF_LIA` artifact checked by
-Axeyum's arithmetic-DPLL evidence route. It does not prove asymptotic BFS or
+Axeyum's QF_LIA arithmetic evidence route. It does not prove asymptotic BFS or
 DFS runtime, average-case search behavior, heuristic-search guarantees,
 parallel-search properties, or graph lower bounds.
 
@@ -118,8 +120,8 @@ dfs_visits <= claimed_upper_bound
 ```
 
 The `math_resource_lia_routes` regression requires Axeyum to emit checked
-`UnsatArithDpll` evidence for this `QF_LIA` row and independently re-check the
-proof object.
+arithmetic evidence for this `QF_LIA` row and independently re-check the proof
+object.
 
 This is a small but useful trust pattern:
 
@@ -158,6 +160,6 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gr
 The validator rebuilds the ordered graph, recomputes deterministic adjacency,
 replays BFS pop order until the target is reached, replays DFS preorder until
 the target is reached, and checks the visited-node counters. The solver
-regression separately checks arithmetic-DPLL evidence for the extracted
+regression separately checks QF_LIA arithmetic evidence for the extracted
 integer contradiction. The finite rows are checked evidence. The asymptotic
 runtime row is metadata for future Lean work.

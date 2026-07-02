@@ -139,7 +139,7 @@ Companion maps:
   counterexample, and the natural-deduction Lean horizon.
 - [Induction Obligations](induction-obligations-end-to-end.md): follows
   prefix-sum base, bounded step and conclusion checks, a bad-step
-  counterexample, a QF_LIA arithmetic-DPLL bad step-count certificate, and the
+  counterexample, a QF_LIA arithmetic-evidence bad step-count certificate, and the
   induction-schema Lean horizon.
 - [Induction Patterns](induction-patterns-end-to-end.md): follows finite weak
   induction, a QF_LIA/Diophantine even-product certificate, strong induction,
@@ -182,8 +182,12 @@ Companion maps:
   layers without promoting them to theorem claims.
 - [Graph Search Runtime Counters](graph-search-runtime-end-to-end.md):
   follows finite BFS and DFS visited-node counter replay, shortcut-tail family
-  checks, checked QF_LIA arithmetic-DPLL bad DFS-bound rejection, and the
+  checks, checked QF_LIA arithmetic bad DFS-bound rejection, and the
   asymptotic runtime Lean horizon.
+- [Graph Search Runtime Theorem Boundary](graph-search-runtime-theorem-boundary.md):
+  maps finite BFS/DFS visited-counter rows and checked QF_LIA bad-bound
+  evidence to the missing asymptotic runtime, graph-family lower-bound,
+  average-case, heuristic, and parallel-search theorem layers.
 - [Graph Traversal Runtime Index](graph-traversal-runtime-index.md): groups
   reachability, deterministic traversal traces, shortcut-tail runtime
   counters, checked LIA cost rows, and asymptotic graph-search theorem

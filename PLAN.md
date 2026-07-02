@@ -717,7 +717,7 @@ refutations under `family_boolean_cnf_lrat`, backed by the shared
 `math_resource_boolean_routes` regression across logic, counting, graph,
 finite-set, and finite-topology packs.
 The fourth example-family row now groups recurring integer/count QF_LIA
-Diophantine and arithmetic-DPLL obstructions under
+Diophantine and checked arithmetic-evidence obstructions under
 `family_integer_diophantine`, backed by the shared `math_resource_lia_routes`
 regression across number-theory, induction, counting, statistics, graph-search,
 polynomial, and homology packs.
@@ -774,14 +774,18 @@ It also exposes a focused coloring trust boundary that keeps replay-only finite
 coloring witnesses, checked same-color rejection, Boolean CNF/LRAT evidence,
 and QF_BV/DRAT evidence separate from chromatic-number, planar-coloring,
 algorithm, graph-minor, and asymptotic claims.
+It also exposes a focused graph-search runtime theorem boundary that keeps
+finite BFS/DFS visited-counter replay and QF_LIA bad-bound evidence separate
+from asymptotic runtime, graph-family lower-bound, average-case, heuristic,
+parallel-search, and benchmark claims.
 `bad-dfs-cost-bound-rejected` now has a source-linked
-QF_LIA artifact checked by the `math_resource_lia_routes` arithmetic-DPLL
+QF_LIA artifact checked by the `math_resource_lia_routes` arithmetic-evidence
 regression and `diophantine-gcd-obstruction` now has a source-linked QF_LIA
 artifact checked by the `math_resource_lia_routes` Diophantine regression,
 `diophantine-gcd-obstruction-qf-lia` now adds the same checked route for
 `number-theory-v0`, and
 `bounded-natural-negative-rejected` now has a source-linked QF_LIA artifact
-checked by the `math_resource_lia_routes` arithmetic-DPLL regression, while
+checked by the `math_resource_lia_routes` arithmetic-evidence regression, while
 `quadratic-nonresidue-qf-bv-drat` and `bad-square-witness-qf-bv-drat` now have
 source-linked QF_BV artifacts checked by the `math_resource_bv_routes` DRAT
 regression.
@@ -986,7 +990,7 @@ QF_LIA/Diophantine first-target set is now covered;
 the first secondary statistics margin/count row is now promoted in
 descriptive statistics, integer LIA is now promoted for its gcd divisibility
 obstruction, bounded induction obligations are now promoted for a bounded
-bad-step count arithmetic-DPLL row, bounded natural arithmetic is now promoted
+bad-step count checked arithmetic-evidence row, bounded natural arithmetic is now promoted
 for its bad negative domain row, and the finite-probability
 bad-normalization row now has a checked
 QF_LRA/Farkas regression, with finite Markov chains now split so the bad
@@ -1057,9 +1061,10 @@ square-root witness row; finite
 compactness now contributes checked DRAT/LRAT evidence for a bad open-cover row,
 finite connectedness now contributes checked DRAT/LRAT evidence for a bad
 connectedness row, finite topology now contributes checked DRAT/LRAT evidence
-for a missing-empty-set axiom row, and induction obligations, graph search
-runtime, and natural arithmetic now contribute checked arithmetic-DPLL regressions for bounded bad
-step counts, bad finite DFS cost, and bounded-natural negativity, while
+for a missing-empty-set axiom row, induction obligations and natural arithmetic
+now contribute checked arithmetic-evidence regressions for bounded bad step
+counts and bounded-natural negativity, and graph search runtime contributes checked
+QF_LIA arithmetic evidence for a bad finite DFS cost bound, while
 cardinality principles now contributes a checked QF_LIA/Diophantine regression
 for the overlapping-set false-additivity count conflict. The five active resource proof-certificate routes
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
@@ -1123,7 +1128,7 @@ real-algebra RCF-shadow negative-discriminant QF_LRA/Farkas
 promotion, polynomial-factorization discriminant QF_LRA/Farkas promotion,
 cardinality-principles overlap-additivity count QF_LIA/Diophantine
 promotion,
-induction-obligations bounded bad-step count QF_LIA arithmetic-DPLL promotion,
+induction-obligations bounded bad-step count checked QF_LIA arithmetic promotion,
 complex-plane bad conjugation-product imaginary-part and bad unit-square
 real-part QF_LRA/Farkas promotions,
 calculus-algebraic false-derivative QF_LRA/Farkas promotion,

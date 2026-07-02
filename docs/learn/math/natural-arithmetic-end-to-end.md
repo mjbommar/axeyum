@@ -25,7 +25,7 @@ Concept rows:
 
 The `sat` rows are exact witness replays. The `unsat` rows are bounded
 enumerations over the finite natural domain `0..7`. The negative-domain row is
-also promoted into a checked `QF_LIA` arithmetic-DPLL regression. None of these
+also promoted into a checked `QF_LIA` arithmetic-evidence regression. None of these
 rows claims a universal theorem over all natural numbers.
 
 ## Replay Successor Addition
@@ -99,9 +99,8 @@ n <= 7
 n < 0
 ```
 
-The `math_resource_lia_routes` regression requires checked
-`Evidence::UnsatArithDpll` evidence and rechecks the proof object against the
-original assertion.
+The `math_resource_lia_routes` regression requires checked QF_LIA arithmetic
+evidence and rechecks the proof object against the original assertion.
 
 ## Name The Lean Horizon
 
@@ -141,7 +140,7 @@ trusted small checking -> exact integer replay and finite-domain enumeration
 ```
 
 The negative-domain obstruction has graduated to deterministic QF_LIA plus
-checked arithmetic-DPLL evidence. The successor-injectivity and
+checked arithmetic evidence. The successor-injectivity and
 zero-not-successor rows remain bounded finite replay until a BV/CNF encoding
 adds distinct proof pressure, while universal Nat facts remain under the
 theorem-prover horizon.

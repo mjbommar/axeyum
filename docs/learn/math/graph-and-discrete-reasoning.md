@@ -34,6 +34,7 @@ Companion map:
 - [Graph Traversal Runtime Index](graph-traversal-runtime-index.md)
 - [Graph Coloring Certificate Trust Boundary](graph-coloring-certificate-trust-boundary.md)
 - [Graph Reachability Certificate Trust Boundary](graph-reachability-certificate-trust-boundary.md)
+- [Graph Search Runtime Theorem Boundary](graph-search-runtime-theorem-boundary.md)
 - [Graph Matching Certificate Trust Boundary](graph-matching-certificate-trust-boundary.md)
 - [Graph Cut Certificate Trust Boundary](graph-cut-certificate-trust-boundary.md)
 - [D-Separation Causal Trust Boundary](d-separation-causal-trust-boundary.md)
@@ -71,7 +72,11 @@ row separate from BFS/DFS correctness, graph-search theorem, graph-family, and
 asymptotic claims. The graph search runtime pack adds finite visited-node
 counters for BFS and DFS target discovery,
 checks a shortcut-tail family, and rejects a false DFS cost bound with a
-checked QF_LIA arithmetic-DPLL regression. The graph
+checked QF_LIA arithmetic evidence. Its focused theorem boundary is
+[Graph Search Runtime Theorem Boundary](graph-search-runtime-theorem-boundary.md),
+which keeps finite cost-counter replay and QF_LIA bad-bound evidence separate
+from asymptotic runtime, graph-family lower-bound, average-case, heuristic, and
+parallel-search claims. The graph
 matching pack checks finite matching witnesses, invalid overlapping edges,
 augmenting path flips, and a perfect-matching obstruction. Its focused trust
 boundary is
@@ -332,6 +337,7 @@ For a fuller trace from data row to replay result and evidence status, read
 [End To End: Graph Reachability And Traversal](graph-reachability-end-to-end.md),
 [Graph Reachability Certificate Trust Boundary](graph-reachability-certificate-trust-boundary.md),
 [End To End: Graph Search Runtime Counters](graph-search-runtime-end-to-end.md),
+[Graph Search Runtime Theorem Boundary](graph-search-runtime-theorem-boundary.md),
 [End To End: Graph Matching And Augmenting Paths](graph-matching-end-to-end.md),
 [Graph Matching Certificate Trust Boundary](graph-matching-certificate-trust-boundary.md),
 [End To End: Graph Cut Certificates](graph-cut-end-to-end.md),
@@ -366,7 +372,7 @@ finite counting equalities can graduate through checked LIA evidence. Pure
 integer-equality obstructions use
 [QF_LIA / Diophantine Evidence](../../proof-cookbook/recipes/qf-lia-diophantine.md)
 while Boolean-structured LIA rows, such as the bad DFS cost bound, are pinned by
-resource regressions that independently recheck arithmetic-DPLL evidence.
+resource regressions that independently recheck QF_LIA arithmetic evidence.
 Asymptotic runtime, extremal graph theory, and closed-form combinatorics remain
 [Lean Horizon](../../proof-cookbook/recipes/lean-horizon-template.md) targets.
 

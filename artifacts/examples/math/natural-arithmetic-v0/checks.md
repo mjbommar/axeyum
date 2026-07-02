@@ -63,5 +63,5 @@ The promoted solver artifact is
 `artifacts/examples/math/natural-arithmetic-v0/smt2/bounded-natural-negative-lia-conflict.smt2`.
 It encodes the domain as `0 <= n <= 7`, adds the bad claim `n < 0`, and checks
 that `crates/axeyum-solver/tests/math_resource_lia_routes.rs` emits and
-independently verifies arithmetic-DPLL evidence for the resulting `QF_LIA`
+independently verifies checked arithmetic evidence for the resulting `QF_LIA`
 contradiction.

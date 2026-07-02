@@ -33,7 +33,7 @@ The promoted solver artifact is
 It fixes `tail_length = 4`, `actual_dfs_visited_until_target = 6`,
 `actual_bfs_visited_until_target = 3`, and `claimed_upper_bound = 3`, then
 checks that `crates/axeyum-solver/tests/math_resource_lia_routes.rs` emits and
-independently verifies arithmetic-DPLL evidence for the resulting `QF_LIA`
+independently verifies checked arithmetic evidence for the resulting `QF_LIA`
 contradiction.
 
 ## `asymptotic-search-runtime-lean-horizon`

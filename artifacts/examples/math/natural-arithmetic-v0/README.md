@@ -33,7 +33,7 @@ is
 [`smt2/bounded-natural-negative-lia-conflict.smt2`](smt2/bounded-natural-negative-lia-conflict.smt2):
 it encodes `0 <= n <= 7` and `n < 0` as a tiny `QF_LIA` contradiction. The
 `math_resource_lia_routes` regression requires Axeyum to emit checked
-arithmetic-DPLL evidence and independently re-check the proof object. The
+QF_LIA arithmetic evidence and independently re-check the proof object. The
 successor-injectivity and zero-not-successor rows remain finite replay until a
 bounded BV/CNF encoding adds distinct proof pressure.
 

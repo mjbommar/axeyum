@@ -35,5 +35,5 @@ n < 0
 ```
 
 The finite replay justifies the bounded natural-domain constants. The SMT-LIB
-artifact then exercises Axeyum's arithmetic-DPLL evidence route for the
+artifact then exercises Axeyum's checked QF_LIA arithmetic evidence route for the
 extracted integer contradiction.

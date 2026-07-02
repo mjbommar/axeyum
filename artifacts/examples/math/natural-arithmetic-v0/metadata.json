@@ -27,8 +27,8 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/natural-arithmetic-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "bounded natural QF_LIA arithmetic-DPLL regression seed",
-    "pressure": "Rejected negative element in the fixed natural domain 0..7 with checked arithmetic-DPLL evidence.",
+    "target": "bounded natural checked QF_LIA arithmetic regression seed",
+    "pressure": "Rejected negative element in the fixed natural domain 0..7 with checked QF_LIA arithmetic evidence.",
     "evidence": [
       "bounded-natural-negative-rejected"
     ],

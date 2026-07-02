@@ -1770,12 +1770,12 @@ def validate_graph_search_runtime(expected: dict[str, Any]) -> None:
         fail("bad-dfs-cost-bound-rejected smt2_artifact must name the checked LIA conflict artifact")
     proof_regression = data.get("proof_regression")
     require_string("bad DFS proof_regression", proof_regression)
-    if "math_resource_lia_routes.rs::graph_search_bad_dfs_cost_bound_emits_checked_lia_dpll_evidence" not in proof_regression:
+    if "math_resource_lia_routes.rs::graph_search_bad_dfs_cost_bound_emits_checked_lia_evidence" not in proof_regression:
         fail("bad-dfs-cost-bound-rejected proof_regression must name the LIA resource test")
     certificate = data.get("certificate")
     require_string("bad DFS certificate", certificate)
-    if "arithmetic-DPLL" not in certificate or "independently" not in certificate:
-        fail("bad-dfs-cost-bound-rejected certificate must document independent arithmetic-DPLL checking")
+    if "QF_LIA arithmetic evidence" not in certificate or "independently" not in certificate:
+        fail("bad-dfs-cost-bound-rejected certificate must document independent checked LIA arithmetic evidence")
 
     horizon = checks["asymptotic-search-runtime-lean-horizon"]
     if horizon["expected_result"] != "not-run":
@@ -8222,12 +8222,12 @@ def validate_natural_arithmetic(expected: dict[str, Any]) -> None:
         fail("bounded-natural-negative-rejected smt2_artifact must name the checked QF_LIA artifact")
     proof_regression = data.get("proof_regression")
     require_string("bounded natural negative proof_regression", proof_regression)
-    if "natural_arithmetic_bounded_negative_emits_checked_lia_dpll_evidence" not in proof_regression:
+    if "natural_arithmetic_bounded_negative_emits_checked_lia_evidence" not in proof_regression:
         fail("bounded-natural-negative-rejected proof_regression must name the LIA resource test")
     certificate = data.get("certificate")
     require_string("bounded natural negative certificate", certificate)
-    if "UnsatArithDpll" not in certificate or "Evidence::check" not in certificate:
-        fail("bounded-natural-negative-rejected certificate must document checked arithmetic-DPLL evidence")
+    if "QF_LIA arithmetic evidence" not in certificate or "Evidence::check" not in certificate:
+        fail("bounded-natural-negative-rejected certificate must document checked QF_LIA arithmetic evidence")
 
 
 def require_bool(context: str, value: Any) -> bool:
@@ -8299,7 +8299,7 @@ def validate_induction_obligations(expected: dict[str, Any]) -> None:
     check_source("sum-formula-step-bounded smt2_artifact", smt2_artifact)
     lia_regression = step_data.get("lia_regression")
     require_string("sum-formula-step-bounded lia_regression", lia_regression)
-    if "induction_obligations_bounded_step_count_emits_checked_lia_dpll_evidence" not in lia_regression:
+    if "induction_obligations_bounded_step_count_emits_checked_lia_evidence" not in lia_regression:
         fail("sum-formula-step-bounded must link the LIA route regression")
 
     conclusion = checks["sum-formula-conclusion-bounded"]

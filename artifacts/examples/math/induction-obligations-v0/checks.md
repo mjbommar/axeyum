@@ -22,7 +22,7 @@ bad_step_count >= 1
 
 The `math_resource_lia_routes` regression parses
 `smt2/bounded-step-counterexample-count-lia-conflict.smt2`, emits
-`UnsatArithDpll` evidence, and independently checks the certificate.
+checked QF_LIA arithmetic evidence, and independently checks the certificate.
 
 ## `sum-formula-conclusion-bounded`
 

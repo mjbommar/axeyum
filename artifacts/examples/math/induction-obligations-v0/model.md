@@ -23,7 +23,7 @@ bad_step_count = 0
 ```
 
 The rejected solver artifact asks for `bad_step_count >= 1`, so Axeyum can
-check the final bounded-step obstruction as a tiny QF_LIA arithmetic-DPLL
+check the final bounded-step obstruction as a tiny checked QF_LIA arithmetic
 certificate without pretending to prove the universal induction theorem.
 
 The general induction schema is not encoded as a solver claim. It is metadata

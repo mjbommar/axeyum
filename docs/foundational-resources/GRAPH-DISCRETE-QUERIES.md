@@ -66,6 +66,7 @@ needs concrete checked rows to display.
 | Coloring, reachability, matching, cut, and d-separation refutations | `bridge_finite_graph_replay_obstruction` | `boolean` | `checks --concept bridge_finite_graph_replay_obstruction --route boolean --proof-status checked` |
 | Fixed-width graph-coloring encodings | `bridge_finite_graph_replay_obstruction` | `qf-bv` | `checks --concept bridge_finite_graph_replay_obstruction --route qf-bv --proof-status checked` |
 | BFS/DFS finite traversal cost counters | `bridge_finite_graph_replay_obstruction` | `LIA` | `checks --concept bridge_finite_graph_replay_obstruction --route LIA --proof-status checked` |
+| BFS/DFS runtime theorem boundary | pack `graph-search-runtime-v0` | `lean-horizon` | `horizon-frontier --text BFS`; `checks --pack graph-search-runtime-v0 --proof-status lean-horizon` |
 | Finite directed flow and cut certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay`; exact rational | `checks --pack finite-flow-cut-v0 --proof-status checked` |
 | Max-flow/min-cut theorem boundary | pack `finite-flow-cut-v0` | `lean-horizon` | `horizon-frontier --text "max-flow"`; `checks --pack finite-flow-cut-v0 --expected-result not-run --proof-status lean-horizon` |
 | Finite shortest-path certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay`; exact rational | `checks --pack finite-shortest-path-v0 --proof-status checked` |
@@ -398,6 +399,72 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --require-any
 ```
+
+Display finite graph-search runtime counters and the theorem horizon:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-search-runtime-v0 \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-search-runtime-v0 \
+  --expected-result sat \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-search-runtime-v0 \
+  --expected-result unsat \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-search-runtime-v0 \
+  --route LIA \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text BFS \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-search-runtime-v0 \
+  --expected-result not-run \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-search-runtime-v0 \
+  --text BFS \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-search-runtime-v0 \
+  --text DFS \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-search-runtime-v0 \
+  --text shortcut \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-search-runtime-v0 \
+  --text "at most three" \
+  --require-any
+```
+
+Use
+[Graph Search Runtime Theorem Boundary](../learn/math/graph-search-runtime-theorem-boundary.md)
+when a consumer needs display wording that keeps finite BFS/DFS visited-counter
+replay and QF_LIA bad-bound evidence separate from asymptotic BFS/DFS runtime,
+graph-family lower bounds, average-case search, heuristic search, parallel
+search, and benchmark claims.
 
 Display finite network-flow and cut-certificate rows:
 

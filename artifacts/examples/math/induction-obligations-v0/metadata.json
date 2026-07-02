@@ -22,14 +22,14 @@
   "axeyum_fragments": [
     "bounded induction obligations",
     "LIA / BV",
-    "QF_LIA / arithmetic-DPLL",
+    "QF_LIA arithmetic evidence",
     "finite-domain enumeration",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "bounded induction step-count QF_LIA/arithmetic-DPLL regression seed",
+    "target": "bounded induction step-count checked QF_LIA arithmetic regression seed",
     "pressure": "Exact finite replay over k = 0..8 computes zero prefix-sum step counterexamples, while the malformed row asks for at least one bounded bad step.",
     "evidence": [
       "sum-formula-step-bounded"
@@ -56,7 +56,7 @@
   "graduation_criteria": [
     "Encode bounded base and step obligations as deterministic QF_LIA or QF_BV formulas.",
     "Replay finite SAT witnesses through Axeyum model evaluation.",
-    "Keep the bounded step no-counterexample row tied to source-linked QF_LIA arithmetic-DPLL evidence after finite replay computes the bad-step count.",
+    "Keep the bounded step no-counterexample row tied to source-linked checked QF_LIA arithmetic evidence after finite replay computes the bad-step count.",
     "Emit checked evidence for the bounded conclusion no-counterexample row only when it adds distinct solver pressure.",
     "Keep the full induction schema marked Lean-horizon until a no-sorry Lean route assembles the obligations into a universal theorem."
   ]

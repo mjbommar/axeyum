@@ -17,7 +17,7 @@ Concept rows:
 | Check | Expected | Evidence Status |
 |---|---|---|
 | `sum-formula-base-case` | `sat` | checked |
-| `sum-formula-step-bounded` | `unsat` | checked QF_LIA arithmetic-DPLL |
+| `sum-formula-step-bounded` | `unsat` | checked QF_LIA arithmetic evidence |
 | `sum-formula-conclusion-bounded` | `unsat` | checked |
 | `bad-step-counterexample-witness` | `sat` | checked |
 | `induction-schema-lean-horizon` | `not-run` | lean-horizon |
@@ -86,7 +86,7 @@ bad_step_count >= 1
 
 That final contradiction is parsed from
 `artifacts/examples/math/induction-obligations-v0/smt2/bounded-step-counterexample-count-lia-conflict.smt2`
-and checked by Axeyum's arithmetic-DPLL evidence route. This is deliberately
+and checked by Axeyum's QF_LIA arithmetic evidence route. This is deliberately
 still a bounded step-count check, not the full induction schema.
 
 ## Check The Bounded Conclusion
@@ -142,7 +142,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0
-cargo test -p axeyum-solver --test math_resource_lia_routes induction_obligations_bounded_step_count_emits_checked_lia_dpll_evidence
+cargo test -p axeyum-solver --test math_resource_lia_routes induction_obligations_bounded_step_count_emits_checked_lia_evidence
 ```
 
 Expected output:

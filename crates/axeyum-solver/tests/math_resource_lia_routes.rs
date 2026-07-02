@@ -118,8 +118,8 @@ fn induction_even_product_odd_emits_checked_diophantine_evidence() {
 }
 
 #[test]
-fn induction_obligations_bounded_step_count_emits_checked_lia_dpll_evidence() {
-    assert_resource_lia_dpll(
+fn induction_obligations_bounded_step_count_emits_checked_lia_evidence() {
+    assert_resource_lia_checked(
         "induction-obligations-v0 bounded step-count obstruction",
         INDUCTION_OBLIGATIONS_BOUNDED_STEP_COUNT,
     );
@@ -182,16 +182,16 @@ fn number_theory_diophantine_gcd_obstruction_emits_checked_diophantine_evidence(
 }
 
 #[test]
-fn natural_arithmetic_bounded_negative_emits_checked_lia_dpll_evidence() {
-    assert_resource_lia_dpll(
+fn natural_arithmetic_bounded_negative_emits_checked_lia_evidence() {
+    assert_resource_lia_checked(
         "natural-arithmetic-v0 bounded negative obstruction",
         NATURAL_ARITHMETIC_BOUNDED_NEGATIVE,
     );
 }
 
 #[test]
-fn graph_search_bad_dfs_cost_bound_emits_checked_lia_dpll_evidence() {
-    assert_resource_lia_dpll(
+fn graph_search_bad_dfs_cost_bound_emits_checked_lia_evidence() {
+    assert_resource_lia_checked(
         "graph-search-runtime-v0 bad DFS cost-bound obstruction",
         GRAPH_SEARCH_BAD_DFS_COST_BOUND,
     );
@@ -251,7 +251,7 @@ fn assert_resource_diophantine(label: &str, smt2: &str) {
     );
 }
 
-fn assert_resource_lia_dpll(label: &str, smt2: &str) {
+fn assert_resource_lia_checked(label: &str, smt2: &str) {
     let mut script = parse_script(smt2)
         .unwrap_or_else(|error| panic!("{label}: resource SMT-LIB artifact parses: {error}"));
     let assertions = script.assertions.clone();
@@ -265,13 +265,16 @@ fn assert_resource_lia_dpll(label: &str, smt2: &str) {
     let report = produce_evidence(&mut script.arena, &assertions, &SolverConfig::default())
         .unwrap_or_else(|error| panic!("{label}: evidence production failed: {error}"));
     assert!(
-        matches!(report.evidence, Evidence::UnsatArithDpll(_)),
-        "{label}: expected certified arithmetic-DPLL evidence, got {:?}",
+        matches!(
+            report.evidence,
+            Evidence::UnsatArithDpll(_) | Evidence::UnsatArithAletheProof(_)
+        ),
+        "{label}: expected certified QF_LIA arithmetic evidence, got {:?}",
         report.evidence
     );
     assert!(report.evidence.is_certified());
     assert!(
         report.evidence.check(&script.arena, &assertions).unwrap(),
-        "{label}: arithmetic-DPLL refutation must independently re-check"
+        "{label}: QF_LIA arithmetic refutation must independently re-check"
     );
 }

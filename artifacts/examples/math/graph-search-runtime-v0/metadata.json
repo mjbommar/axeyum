@@ -33,8 +33,8 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-search-runtime-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite graph search LIA arithmetic-DPLL regression seed",
-    "pressure": "False DFS cost bound on a length-four shortcut-tail graph with checked LIA arithmetic-DPLL rechecking.",
+    "target": "finite graph search checked LIA arithmetic regression seed",
+    "pressure": "False DFS cost bound on a length-four shortcut-tail graph with checked LIA arithmetic rechecking.",
     "evidence": [
       "bad-dfs-cost-bound-rejected"
     ],

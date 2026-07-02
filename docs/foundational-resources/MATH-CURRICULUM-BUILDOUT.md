@@ -591,7 +591,7 @@ counting, powerset cardinality, checked false disjoint-additivity rejection,
 a source-linked QF_LIA/Diophantine overlap-additivity count contradiction, and
 an arbitrary-cardinality Lean-horizon row. `induction-obligations-v0` now
 validates exact prefix-sum base-case replay, bounded step-obligation
-enumeration with a source-linked QF_LIA arithmetic-DPLL bad-step count
+enumeration with a source-linked checked QF_LIA arithmetic bad-step count
 regression, bounded conclusion checking, a bad-step counterexample witness,
 and a full-schema Lean-horizon row. `induction-patterns-v0` now validates finite weak-induction evenness
 prefixes, a checked QF_LIA finite even-product parity obstruction,
@@ -767,7 +767,7 @@ Recommended order:
     infinite-cardinality Lean-horizon metadata.
 14. `induction-obligations-v0` (landed) and `induction-patterns-v0` (landed):
     bounded base/step obligations, finite weak and strong induction patterns,
-    a checked QF_LIA arithmetic-DPLL bad-step count obstruction, a checked
+    a checked QF_LIA arithmetic bad-step count obstruction, a checked
     QF_LIA finite even-product parity obstruction, loop-invariant replay,
     bad-step witnesses, and full-schema Lean-horizon metadata.
 15. `logic-basics-v0` (landed): SAT witness replay, tautology and
@@ -2074,12 +2074,16 @@ BFS/DFS correctness, all-pairs/dynamic reachability, graph-family, graph-minor,
 and asymptotic claims.
 `graph-search-runtime-v0` now has a learner-facing end-to-end lesson for
 finite BFS/DFS visited-node counter replay, shortcut-tail family checks,
-checked bad DFS-bound rejection, a source-linked QF_LIA arithmetic-DPLL
+checked bad DFS-bound rejection, a source-linked checked QF_LIA arithmetic
 regression for the bad finite cost bound, and the asymptotic graph-search
 runtime Lean horizon. `graph-traversal-runtime-index.md` now ties finite
 reachability, deterministic BFS/DFS traces, shortcut-tail visited-node
 counters, checked QF_LIA cost refutations, and asymptotic runtime horizons
 into one graph learner path.
+It also has a focused graph-search runtime theorem-boundary page that keeps
+finite BFS/DFS visited-counter replay and QF_LIA bad-bound evidence separate
+from asymptotic runtime, graph-family lower-bound, average-case, heuristic,
+parallel-search, and benchmark claims.
 `graph-matching-v0` now has a learner-facing end-to-end lesson for finite
 matching witness replay, overlapping-edge rejection, augmenting-path flip
 replay, checked `K3` perfect-matching refutation, and the general matching
@@ -2171,7 +2175,7 @@ The QF_LIA/Diophantine proof-upgrade lane now also has
 total rows, with
 `integer-lia-v0` and `number-theory-v0` now promoted for gcd divisibility
 obstructions. The
-related LIA arithmetic-DPLL solver-reuse lane also has
+related LIA arithmetic-evidence solver-reuse lane also has
 `induction-obligations-v0` promoted for its bounded bad-step count row,
 `graph-search-runtime-v0` promoted for its bad finite DFS cost-bound row, and
 `natural-arithmetic-v0` promoted for its bad bounded negative-domain row.

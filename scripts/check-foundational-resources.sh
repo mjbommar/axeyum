@@ -432,6 +432,16 @@ python3 scripts/query-foundational-resources.py packs --concept bridge_finite_gr
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_graph_replay_obstruction --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_graph_replay_obstruction --route LIA --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_graph_replay_obstruction --route LIA --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-search-runtime-v0 --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-search-runtime-v0 --proof-status checked --expected-result sat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-search-runtime-v0 --proof-status checked --expected-result unsat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-search-runtime-v0 --route LIA --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-search-runtime-v0 --proof-status lean-horizon --expected-result not-run --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text BFS --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-search-runtime-v0 --proof-status checked --text BFS --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-search-runtime-v0 --proof-status checked --text DFS --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-search-runtime-v0 --text shortcut --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-search-runtime-v0 --text "at most three" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field real_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text epsilon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text metric --require-any >/dev/null

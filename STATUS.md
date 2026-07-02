@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Graph-search runtime theorem-boundary resource landed.**
+  `graph-search-runtime-theorem-boundary.md` now separates
+  `graph-search-runtime-v0` checked finite BFS/DFS visited-counter replay,
+  shortcut-tail family replay, and checked QF_LIA arithmetic bad-bound evidence
+  from asymptotic BFS/DFS runtime, graph-family lower bounds, average-case
+  search, heuristic search, parallel search, and benchmark claims. The
+  graph/discrete query guide, theorem-horizon guide, learner map, traversal
+  index, and smoke query docs now expose the runtime theorem boundary through
+  both checked-row and horizon-frontier queries.
+
 - **Graph-coloring certificate trust-boundary resource landed.**
   `graph-coloring-certificate-trust-boundary.md` now separates
   `graph-coloring-v0` replay-only triangle 3-coloring witness, checked
@@ -2424,7 +2434,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   source refs, and resource smoke now expose
   `bridge_finite_graph_replay_obstruction` through LIA route queries alongside
   the existing Boolean graph rows. The boundary stays finite: queue/stack
-  replay and checked arithmetic-DPLL evidence are current evidence; asymptotic
+  replay and checked QF_LIA arithmetic evidence are current evidence; asymptotic
   BFS/DFS complexity, graph-family lower bounds, average-case traversal, and
   heuristic/parallel search guarantees remain Lean-horizon.
 
@@ -3266,14 +3276,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   checks the emitted `UnsatFarkas` certificate. Generated dashboards now report
   74 promoted, 6 non-benchmark-horizon, and 4 unclassified solver-reuse packs.
 
-- **Induction-obligations QF_LIA arithmetic-DPLL promotion landed.**
+- **Induction-obligations QF_LIA arithmetic-evidence promotion landed.**
   `induction-obligations-v0` now carries promoted `solver_reuse` metadata for
   its bounded step no-counterexample row. The new source-level artifact
   `bounded-step-counterexample-count-lia-conflict.smt2` isolates finite
   replay's computed `bad_step_count = 0` against the malformed claim
   `bad_step_count >= 1`, and
-  `math_resource_lia_routes::induction_obligations_bounded_step_count_emits_checked_lia_dpll_evidence`
-  checks the emitted `UnsatArithDpll` certificate. Generated dashboards now
+  `math_resource_lia_routes::induction_obligations_bounded_step_count_emits_checked_lia_evidence`
+  checks emitted QF_LIA arithmetic evidence. Generated dashboards now
   report 75 promoted, 6 non-benchmark-horizon, and 3 unclassified
   solver-reuse packs.
 
@@ -4199,13 +4209,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`foundational-concepts.json`](artifacts/ontology/foundational-concepts.json)
   now includes `family_integer_diophantine`, a generated `example-family` row
   for recurring integer equalities, count contradictions, coefficient
-  obstructions, bounded arithmetic claims, and arithmetic-DPLL rows across
+  obstructions, bounded arithmetic claims, and checked arithmetic-evidence rows across
   modular arithmetic, gcd/Bezout, integer and natural arithmetic, induction,
   cardinality, generating functions, polynomial identities, statistics,
   finite homology, and graph-search runtime packs. The row is tied to
   [`math_resource_lia_routes`](crates/axeyum-solver/tests/math_resource_lia_routes.rs),
   which parses committed SMT-LIB artifacts and requires either
-  `UnsatDiophantine` or checked arithmetic-DPLL evidence before accepting the
+  `UnsatDiophantine` or checked QF_LIA arithmetic evidence before accepting the
   row.
 
 - **Fixed-width QF_BV/DRAT example-family row landed.**
@@ -4307,11 +4317,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   now has a source-linked SMT-LIB artifact for `bad-dfs-cost-bound-rejected`:
   [`bad-dfs-cost-bound-lia-conflict.smt2`](artifacts/examples/math/graph-search-runtime-v0/smt2/bad-dfs-cost-bound-lia-conflict.smt2).
   The shared LIA resource regression parses the fixed length-four
-  shortcut-tail DFS cost conflict, requires checked `UnsatArithDpll` evidence,
+  shortcut-tail DFS cost conflict, requires checked QF_LIA arithmetic evidence,
   and independently rechecks the proof object. The pack metadata now marks
   `solver_reuse.status` as `promoted` for that row only; the validator enforces
   the fixed tail length, traversal counts, SMT-LIB artifact path, regression
-  name, and arithmetic-DPLL trust-boundary note.
+  name, and checked-arithmetic trust-boundary note.
 
 - **Eighth solver-reuse candidate promoted: integer LIA.**
   [`integer-lia-v0`](artifacts/examples/math/integer-lia-v0/) now has a
@@ -4330,10 +4340,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `bounded-natural-negative-rejected`:
   [`bounded-natural-negative-lia-conflict.smt2`](artifacts/examples/math/natural-arithmetic-v0/smt2/bounded-natural-negative-lia-conflict.smt2).
   The shared LIA resource regression parses the fixed `0 <= n <= 7` plus
-  `n < 0` contradiction, requires checked `UnsatArithDpll` evidence, and
+  `n < 0` contradiction, requires checked QF_LIA arithmetic evidence, and
   independently rechecks the proof object. The pack metadata now marks
   `solver_reuse.status` as `promoted` for that row only; the validator enforces
-  the fixed bound, SMT-LIB artifact path, regression name, and arithmetic-DPLL
+  the fixed bound, SMT-LIB artifact path, regression name, and checked-arithmetic
   trust-boundary note.
 
 - **Tenth solver-reuse candidate promoted: number theory.**
@@ -15323,7 +15333,7 @@ plan is built and committed on the current branch:
 - **2026-06-30** — **Integer Diophantine example-family row landed.**
   Added generated `family_integer_diophantine` atlas row grouping recurring
   integer equalities, count contradictions, coefficient obstructions, bounded
-  arithmetic claims, and arithmetic-DPLL rows. The family is backed by
+  arithmetic claims, and checked arithmetic-evidence rows. The family is backed by
   `cargo test -p axeyum-solver --test math_resource_lia_routes` across modular
   arithmetic, gcd/Bezout, integer/natural arithmetic, induction, cardinality,
   generating functions, polynomial identities, statistics, finite homology,
@@ -15457,7 +15467,7 @@ plan is built and committed on the current branch:
   for the bounded bad-step count row and wired it into
   `math_resource_lia_routes`. The pack metadata now marks
   `solver_reuse.status` as `promoted`, the expected row records the checked
-  `UnsatArithDpll` certificate path, and generated dashboards report 75
+  arithmetic-evidence path, and generated dashboards report 75
   promoted, 6 non-benchmark-horizon, and 3 unclassified packs.
 
 - **2026-06-30** — **Cardinality-principles QF_LIA promotion landed.**

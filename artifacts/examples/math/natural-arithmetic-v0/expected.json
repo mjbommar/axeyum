@@ -94,10 +94,10 @@
       "data": {
         "max": 7,
         "smt2_artifact": "artifacts/examples/math/natural-arithmetic-v0/smt2/bounded-natural-negative-lia-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test math_resource_lia_routes natural_arithmetic_bounded_negative_emits_checked_lia_dpll_evidence",
-        "certificate": "produce_evidence emits Evidence::UnsatArithDpll checked by Evidence::check for the bounded natural contradiction 0 <= n <= 7 and n < 0"
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_lia_routes natural_arithmetic_bounded_negative_emits_checked_lia_evidence",
+        "certificate": "produce_evidence emits checked QF_LIA arithmetic evidence checked by Evidence::check for the bounded natural contradiction 0 <= n <= 7 and n < 0"
       },
-      "notes": "The validator enumerates the fixed natural domain and confirms every element is nonnegative. The SMT-LIB artifact encodes the same obstruction as a QF_LIA contradiction, and Axeyum emits a checked arithmetic-DPLL refutation."
+      "notes": "The validator enumerates the fixed natural domain and confirms every element is nonnegative. The SMT-LIB artifact encodes the same obstruction as a QF_LIA contradiction, and Axeyum emits checked arithmetic evidence."
     }
   ]
 }
