@@ -120,6 +120,41 @@ step. The `axeyum-strings` crate boundary is deferred to when the word-level sol
 
 | exit | the `str.len` **unsat** test that is `unknown` today **decides** (the gap-analysis Gap 10 marker) |
 
+**LANDED (2026-07-01, ADR-0052).** Three cooperating pieces:
+`bv2nat_blast.rs` (solver) rewrites linear-over-`bv2nat` integer atoms to
+*equivalent* pure-BV comparisons at an overflow-safe width — both directions
+decide, `unsat` carries DRAT; `LenAbs` (parser) builds the **unbounded length
+abstraction** as terms lower (`len(x++y)=len(x)+len(y)`, literals decode,
+`=`/`prefixof`/`suffixof`/`contains` atoms → `fresh_bool ∧ length-fact`
+relaxation, content bridges → free ints); `StringGate` (solver front door)
+confirms every bounded-string `unsat` bound-independent (abstraction refutes /
+bound-bite detector / content-only relax) or downgrades to honest `unknown`.
+**The Gap-10 marker now asserts `Unsat`** (`str_len_sat_direction_decides`).
+
+⚠ **The A.2 build surfaced a pre-existing wrong-unsat class on HEAD** (violating
+ADR-0029's "longer ones are `Unsupported`, never wrong"): e.g. `(= s "abcde") ∧
+(= t "fghij") ∧ (str.prefixof (str.++ s t) u)` answered `unsat` while Z3 says
+`sat` (`u` may exceed the 8-byte bound). The class is **fixed** by the ADR-0052
+bite detector for every channel with recorded length facts — length atoms,
+cross-width comparisons, **regex** (`in_re` atoms carry the regex's match-length
+interval, `min ≤ len(s) ≤ max`, computed from the AST), and the
+**`substr`-family** (`len(substr) ≤ len(s)`, `len(at) ≤ 1`,
+`len(replace(s,a,b)) ≤ len(s)+len(b)`, `len(from_code) ≤ 1`) — 8 regression
+tests in `bv2nat_blast_bounds.rs`. The `axeyum-bench` harness applies the same
+gate (`confirm_bounded_string_verdict`) so QF_S measurements match the shipped
+front door. **Residual** (small): fact-less opaque results (`replace_all`,
+`seq.extract`/`update`/`rev`), `distinct` atoms (no facts recorded — sound,
+just unconfirmable), and packed *sequence* constants (not decoded; string
+constants are). Next slice: those facts + width widening to recover the `sat`
+side of the downgraded instances. The fuzz generator now draws length constants
+past the bound (0..=11) to keep the class probed.
+
+The ADR-0029↔`Sort::Seq` representation fork is resolved in ADR-0052: the
+bounded encoder stays the default decision path *behind the gate*; `Sort::Seq`
+is the unbounded representation grown behind it; `parse_sort` re-routes only
+when Phase B's word-level solver can decide what the bounded pre-check declines
+(the gate's `unknown`s are exactly that routing signal).
+
 ## Task A.3 — Parikh / semilinear length over-approximation (cheap UNSAT)
 
 - For regex and bounded fragments, compute the **Parikh image** (letter-count
