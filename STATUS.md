@@ -28,18 +28,43 @@ exit-criteria'd tracks we advance one increment at a time.
 - **Dominance:** **23 fragments** with audited `dominant%` — the real, defensible
   claim.
 
-**Where to continue (toward the mission) — next focus = the two theory
-frontiers:** **Track 2 strings (P2.7) and nonlinear (P2.5)** are the largest
-remaining decide-rate gaps and now have full top-down build programs
-([`docs/plan/track-2-theories/P2.7-strings/`](docs/plan/track-2-theories/P2.7-strings/),
-[`docs/plan/track-2-theories/P2.5-nra/`](docs/plan/track-2-theories/P2.5-nra/));
-the first increments are **P2.5 Phase A** (the pure-Rust `axeyum-poly` algebraic
-core) and **P2.7 Phase A** (first-class `Seq`/`String` IR sort + String+LIA over
-`len`, which also closes `str.len`-unsat). In parallel: Track 1 decide-rate +
-*committed* head-to-head PAR-2; Track 3 reduction certs → Lean (ledger → 0) + the
-e-graph and Alethe-emitter keystones. The consumer track (below) is mature +
-fuzz-hardened; its role is demand-pull (filed U6/U7/U8) and certifying
-user-facing value, not core decide-rate.
+**Where to continue (toward the mission) — updated 2026-07-01/02 after a heavy
+landing wave.** The two theory frontiers **advanced from planning into landed
+increments**:
+- **Strings (P2.7): Phase A is essentially DONE** — A.1a/b landed (first-class
+  `Sort::Seq` + seq ops), and **A.2 landed (ADR-0052)**: the `bv2nat`-linear→BV
+  equivalence blast + a parser-built **unbounded length abstraction** + the
+  bounded-string `unsat` gate at every `solve_smtlib` entry point (and the bench
+  harness). The Gap-10 `str.len`-unsat marker **decides**, and a **measured
+  pre-existing wrong-unsat class vs Z3** (bound-bite via length atoms,
+  cross-width `prefixof`, long-forcing regex, symbolic over-bound `substr`, the
+  lexicographic gap) was found and repaired — string fuzz DISAGREE=0 with an
+  extended over-bound generator. Next: Phase B (word-level solver; the gate's
+  `unknown`s are its routing signal) + re-run the QF_S scoreboard (verdicts
+  changed; no decide-rate claim without the re-run).
+- **Nonlinear (P2.5): there is NO new `axeyum-poly` crate** (ADR-0044 keeps the
+  primitives in `axeyum-ir`); the FM→simplex keystone (P1.9) is complete, the
+  Boolean case-split + sign-refutation landed, and **coprime-split CAD
+  projection landed (98719094): curated QF_NRA 13→20 decided**, DISAGREE=0 on
+  both z3 fuzzes. Next levers: the free-division `/0` witness route and
+  threshold-1 monotonicity (`ones`).
+In parallel: Track 1 decide-rate + *committed* head-to-head PAR-2; Track 3
+reduction certs → Lean (ledger → 0) + the e-graph and Alethe-emitter keystones.
+The consumer track (below) is mature + fuzz-hardened; its role is demand-pull
+(filed U6/U7/U8) and certifying user-facing value, not core decide-rate.
+
+**Infrastructure honesty (2026-07-02):** main's CI had been **red for 198
+consecutive runs** — repaired in `0d10aeba` (MSRV 1.85→1.88 for let-chains,
+rustdoc links, `ir.rs` clippy, 11 unformatted files, a flaky timeout budget,
+cargo-deny path-dep wildcards). The full-suite sweep discipline had been
+silently blocked by an **exponential (per-path) DAG walk** in
+`set_cardinality`'s BV-term collector (evidence binaries observed running 8+
+hours; fixed in `0bc133c2`, FP evidence tests now ~3 s) — behind it, five stale
+evidence reds had rotted unseen (un-rotted in `459ffc41`; the zero-trust Alethe
+emitters again outrank the structural pre-solve certs, size-gated). Two honest
+`#[ignore]`s remain, each with a tracked follow-up: the uninterpreted-sort
+`ite` SAT row (needs the P1.4/P1.5 e-graph keystone) and the `fifo_bc04` perf
+regression (pre-existing, root-cause pending).
 
 ## Consumer-track integration lane (2026-06-27) — `WIP`
 
@@ -195,15 +220,30 @@ rounds w/o a sat candidate) + a `build_model` sub-cause; NAS QF_LRA −1 = MIP/L
 efficiency (`miplib-*`); QF_ABV −1 = lazy-ext replay/budget; QF_AUFLIA −2 = the
 pre-existing `bug330` deadline-hang (#63) + a UFLIA budget case; `issue5836-2` =
 UF+**NRA**. The next decide-rate work is genuine multi-week *engine* depth
-(LP/simplex, LIA+UF CEGAR, `build_model` completeness, NRA/CAD, the unbounded-
-string DP) — where Z3/cvc5 parity is actually won — not more bounded triage. All
-gains DISAGREE=0, fuzz-validated.
+(LIA+UF CEGAR, `build_model` completeness, CAD depth, the unbounded-string DP) —
+where Z3/cvc5 parity is actually won — not more bounded triage. All gains
+DISAGREE=0, fuzz-validated. *(Update 2026-07-01/02: two of the named engine
+levers have since landed — the **FM→simplex LRA core** (P1.9 complete,
+soundness-validated on 1199/1200 FM-blowup systems; large-corpus decide-rate
+payoff still unmeasured) and **CAD coprime-split projection** (QF_NRA 13→20
+curated). The remaining engine list stands.)*
 
 **Discipline.** New-crate-only + one additive root `Cargo.toml` member line; no
 core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 **DISAGREE = 0**; build/test via `scripts/mem-run.sh` (64 GB cap).
 
 ## Process/documentation lane (2026-06-27) — `WIP`
+
+- **Finite operator Farkas rows split landed.**
+  `finite-operator-v0` now keeps `bad-l1-sum-norm-rejected`,
+  `bad-operator-bound-rejected`, and `bad-chebyshev-t3-rejected` as exact
+  finite replay rows: they recompute `||u+v||_1 = 5`, `||A*x||_infty = 3`,
+  and `T3(1/2) = -1` before rejecting the malformed fixed claims. The checked
+  proof-object paths are now the explicit `qf-lra-bad-l1-sum-norm`,
+  `qf-lra-bad-operator-bound`, and `qf-lra-bad-chebyshev-t3` rows linked to the
+  QF_LRA/Farkas SMT-LIB artifacts and regressions. Focused validation passes;
+  the public summary now reports 120 concept rows, 108 packs, 671 expected
+  checks, 322 checked rows, 278 replay-only rows, and 71 Lean-horizon rows.
 
 - **Finite Markov-chain Farkas rows split landed.**
   `finite-markov-chain-v0` now keeps `bad-stochastic-row-rejected` and
@@ -2037,8 +2077,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [CONSUMER-QUERIES.md](docs/foundational-resources/CONSUMER-QUERIES.md)
   now shows public JSON queries for the
   `functional_analysis_and_operator_theory` Farkas field summary, the shared
-  operator bridge lookup, and checked finite-operator norm/bound,
-  inner-product, Chebyshev, and spectral Farkas rows.
+  operator bridge lookup, split finite-operator replay plus checked `qf-lra-*`
+  norm/bound/Chebyshev rows, and checked inner-product, Chebyshev, and spectral
+  Farkas rows.
   `check-foundational-resources.sh` now
   smoke-checks those queries so this field stays visible without promoting
   Banach/Hilbert or infinite-dimensional theorem claims.
@@ -14237,6 +14278,43 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-02** — **Evidence dispatch un-rotted + zero-trust Alethe outranks
+  structural certs** (`459ffc41`): hoisted the `zero_trust_alethe_certificate`
+  chain above the structural pre-solve hooks (size-gated at 2000 DAG nodes) —
+  three shadowed Alethe-evidence tests green again; the stale integer-route
+  label updated; two honest `#[ignore]`s with tracked follow-ups
+  (uninterpreted-sort `ite` SAT → P1.4/P1.5 keystone; `fifo_bc04` perf
+  regression). Evidence suite: 66/0/2-ignored in ~14 s.
+- **2026-07-02** — **Exponential evidence walk fixed** (`0bc133c2`):
+  `set_cardinality`'s `collect_bitvec_terms` walked the term DAG per-path (no
+  visited set) — FP rows ground for 8+ hours in `produce_evidence` while plain
+  `solve` took 2 ms; introduced 2026-06-26 with the module, it had been
+  stalling every full-suite run and CI test job since. Visited-set fix; the
+  qf_fp/qf_bvfp evidence tests drop to ~3 s.
+- **2026-07-02** — **CI repaired after 198 consecutive red runs** (`0d10aeba`):
+  MSRV 1.85→1.88 (let-chains, verified `cargo +1.88.0 check --workspace`
+  clean), axeyum-ir rustdoc links + test clippy, 11 files formatted,
+  `euf_egraph` generous-budget flake 60 s→600 s, cargo-deny
+  `allow-wildcard-paths` (path deps flagged by newer cargo-deny).
+- **2026-07-01** — **NRA coprime-split CAD projection** (`98719094`): the
+  measured dominant CAD decline was a shared-factor `Res ≡ 0`, not a cap;
+  McCallum-style coprime splitting at every projection level. **Curated QF_NRA
+  13→20 decided** (sat 6→9, unsat 7→11), all matching declared `:status`;
+  `nra`+`nia` differential fuzzes DISAGREE=0.
+- **2026-07-01** — **P2.7 A.2 landed: the `len`↔LIA link + bounded-string
+  `unsat` gate** (`50a9fb8b`, ADR-0052): `bv2nat`-linear→BV equivalence blast
+  (both directions decide, DRAT-carrying); parser-built unbounded length
+  abstraction (`len(x++y)=len(x)+len(y)`, atom→`fresh_bool ∧ fact` relaxation,
+  regex match-length intervals, `substr`-family facts); every front-door
+  `unsat` on a bounded-string script confirmed bound-independent or downgraded
+  to honest `unknown` (`solve_smtlib` family, `get-proof`, `unsat-core`, and
+  the bench harness). **Gap-10 (`str.len`-unsat) decides**, and a **measured
+  pre-existing wrong-unsat class vs Z3 was repaired** (`len(s)=9`/`=100`,
+  pinned cross-width `prefixof`, long-forcing regex, symbolic over-bound
+  `substr`, the lexicographic gap `"aaaaaaaa" < s < "aaaaaaab"`) — 10
+  regression tests; `string_differential_fuzz` DISAGREE=0 over 900 instances
+  with the generator extended past the bound. QF_S scoreboard re-run pending
+  (verdicts changed).
 - **2026-07-01** — **Finite-gradient-descent descent-bound row landed.**
   Added a source-linked checked QF_LRA/Farkas refutation for the malformed
   descent-bound slack row in
