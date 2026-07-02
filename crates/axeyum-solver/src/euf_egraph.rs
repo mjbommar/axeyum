@@ -458,8 +458,37 @@ pub fn solve_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) -> Check
     // The search ended on a theory-consistent total assignment: the theory's e-graph
     // holds that satisfying state. Build a model and replay it against the originals.
     match theory.model(arena) {
-        Some(model) if replays(arena, assertions, &model) => CheckResult::Sat(model),
-        _ => CheckResult::Unknown(unknown(
+        Some(mut model) => {
+            // The e-graph model only carries symbols that surfaced as equality-atom
+            // sides. A genuine Bool symbol used purely as a Boolean-skeleton leaf
+            // (e.g. an uninterpreted-sort `ite` condition) never enters the e-graph,
+            // so `build_model` omits it and the replay of `(¬a ∨ …)` fails on the
+            // unassigned `a`. Inject each such skeleton-only Bool symbol from its
+            // solver variable. Iterating a sorted `(TermId, var)` snapshot keeps the
+            // injection order deterministic (`term_var` is a `HashMap`). The final
+            // `replays` gate against the ORIGINAL assertions is still the acceptance
+            // check, so this is additive and cannot manufacture a wrong `sat`.
+            let mut term_vars: Vec<(TermId, usize)> =
+                enc.term_var.iter().map(|(&t, &v)| (t, v)).collect();
+            term_vars.sort_by_key(|(term, _)| *term);
+            for (term, var) in term_vars {
+                if let TermNode::Symbol(sym) = arena.node(term)
+                    && arena.sort_of(term) == Sort::Bool
+                    && model.get(*sym).is_none()
+                    && let Some(value) = solver.value[var]
+                {
+                    model.set(*sym, Value::Bool(value));
+                }
+            }
+            if replays(arena, assertions, &model) {
+                CheckResult::Sat(model)
+            } else {
+                CheckResult::Unknown(unknown(
+                    "online e-graph model did not replay (base-sort semantics outside congruence)",
+                ))
+            }
+        }
+        None => CheckResult::Unknown(unknown(
             "online e-graph model did not replay (base-sort semantics outside congruence)",
         )),
     }
@@ -557,8 +586,26 @@ pub fn check_qf_uf_with_config(
                 }
                 // Theory-consistent: build a candidate model and replay it.
                 return match build_model(arena, &bridge) {
-                    Some(model) if replays(arena, assertions, &model) => CheckResult::Sat(model),
-                    _ => CheckResult::Unknown(unknown(
+                    Some(mut model) => {
+                        // Equality atoms were substituted to fresh `!euf_atom_i`
+                        // vars, but a genuine Bool symbol used purely as a
+                        // Boolean-skeleton leaf (e.g. an uninterpreted-sort `ite`
+                        // condition) survives verbatim in the skeleton — so it never
+                        // enters the e-graph bridge and `build_model` omits it, which
+                        // makes the replay of `(¬a ∨ …)` fail on the unassigned `a`.
+                        // Inject each such skeleton-only Bool symbol from the inner
+                        // SAT solver's `bool_model`. Additive + replay-gated below,
+                        // so it cannot manufacture a wrong `sat`.
+                        inject_skeleton_bool_symbols(arena, assertions, &bool_model, &mut model);
+                        if replays(arena, assertions, &model) {
+                            CheckResult::Sat(model)
+                        } else {
+                            CheckResult::Unknown(unknown(
+                                "e-graph model did not replay (base-sort semantics outside congruence)",
+                            ))
+                        }
+                    }
+                    None => CheckResult::Unknown(unknown(
                         "e-graph model did not replay (base-sort semantics outside congruence)",
                     )),
                 };
@@ -760,6 +807,54 @@ fn collect_eq_atoms(
         for a in args {
             collect_eq_atoms(arena, a, out, seen);
         }
+    }
+}
+
+/// Injects into `model` each genuine Bool symbol of `assertions` that `build_model`
+/// omitted (because it never surfaced as an equality-atom side), reading its truth
+/// value from the skeleton solver's `bool_model`. Symbols are visited in a sorted,
+/// deduplicated order so the result is independent of hash iteration order.
+fn inject_skeleton_bool_symbols(
+    arena: &TermArena,
+    assertions: &[TermId],
+    bool_model: &Model,
+    model: &mut Model,
+) {
+    let mut bool_syms: Vec<SymbolId> = Vec::new();
+    let mut seen: HashSet<TermId> = HashSet::new();
+    for &a in assertions {
+        collect_bool_symbols(arena, a, &mut bool_syms, &mut seen);
+    }
+    bool_syms.sort();
+    bool_syms.dedup();
+    for sym in bool_syms {
+        if model.get(sym).is_none()
+            && let Some(value) = bool_model.get(sym)
+        {
+            model.set(sym, value);
+        }
+    }
+}
+
+/// Collects the distinct Bool-sorted leaf symbols of `term`.
+fn collect_bool_symbols(
+    arena: &TermArena,
+    term: TermId,
+    out: &mut Vec<SymbolId>,
+    seen: &mut HashSet<TermId>,
+) {
+    if !seen.insert(term) {
+        return;
+    }
+    match arena.node(term) {
+        TermNode::Symbol(s) if arena.sort_of(term) == Sort::Bool => out.push(*s),
+        TermNode::App { args, .. } => {
+            let args = args.clone();
+            for a in args {
+                collect_bool_symbols(arena, a, out, seen);
+            }
+        }
+        _ => {}
     }
 }
 

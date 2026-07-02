@@ -230,10 +230,6 @@ fn qf_uf_parser_as_sat_evidence_replays_declared_sort_model() {
 }
 
 #[test]
-#[ignore = "pre-existing capability gap: an uninterpreted-sort `ite` needs the \
-            e-graph/CDCL(T) uninterpreted-sort keystone (Track 1 P1.4/P1.5; see \
-            docs/plan/decide-rate-measured-2026-06-29.md). check_auto returns a \
-            graceful `unknown` (bcd72c3c) — re-enable when the keystone lands"]
 fn qf_uf_declared_sort_ite_sat_evidence_replays_model() {
     let mut script = parse_script(
         r"
