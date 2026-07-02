@@ -540,8 +540,9 @@ probabilities, and checked rejection of false trace-square and expected-rank
 claims.
 [`finite-markov-chain-v0`](../../artifacts/examples/math/finite-markov-chain-v0/)
 validates exact stochastic matrices, finite-horizon distribution evolution,
-stationary distributions, and checked rejection of a malformed transition row
-plus a false stationary-distribution row.
+stationary distributions, replayed rejection of a malformed transition row
+plus a false stationary-distribution row, and separate checked QF_LRA/Farkas
+scalar refutations.
 [`finite-hitting-times-v0`](../../artifacts/examples/math/finite-hitting-times-v0/)
 validates exact finite first-hit distributions, survival probabilities,
 absorption-probability equations, expected hitting-time equations, and checked

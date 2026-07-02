@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 666 expected checks.
+- 668 expected checks.
 - 322 checked proof/evidence rows.
-- 273 replay-only rows.
+- 275 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1340,14 +1340,17 @@ Pick one item per commit unless the change is purely navigational.
     are checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_martingales_bad_stopped_expectation_artifact_emits_checked_farkas` and
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_martingales_bad_conditional_expectation_emits_checked_farkas`.
-23. Landed: promote `finite-markov-chain-v0` at the solver-reuse metadata layer
-    for `bad-stochastic-row-rejected` and
-    `bad-stationary-distribution-rejected`. The source artifacts
+23. Landed: split `finite-markov-chain-v0` at the solver-reuse metadata layer
+    so `bad-stochastic-row-rejected` and
+    `bad-stationary-distribution-rejected` remain exact replay, while
+    `qf-lra-bad-stochastic-row` and
+    `qf-lra-bad-stationary-distribution` own checked QF_LRA/Farkas evidence.
+    The source artifacts
     `artifacts/examples/math/finite-markov-chain-v0/smt2/bad-stochastic-row-farkas-conflict.smt2`
     and
     `artifacts/examples/math/finite-markov-chain-v0/smt2/bad-stationary-distribution-farkas-conflict.smt2`
     are checked by
-    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_markov_chain_bad_stochastic_row_emits_checked_farkas` and
+    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_markov_chain_bad_stochastic_row_artifact_emits_checked_farkas` and
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_markov_chain_bad_stationary_distribution_artifact_emits_checked_farkas`.
 24. Landed: revisited the library boundary decision after promoted solver-reuse
     rows reached the consumer query layer. The decision remains JSON-first and

@@ -22,11 +22,14 @@ Concept rows:
 | `stochastic-matrix-witness` | `sat` | replay-only |
 | `finite-horizon-distribution-replay` | `sat` | replay-only |
 | `stationary-distribution-witness` | `sat` | replay-only |
-| `bad-stochastic-row-rejected` | `unsat` | checked |
-| `bad-stationary-distribution-rejected` | `unsat` | checked |
+| `bad-stochastic-row-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-stochastic-row` | `unsat` | checked |
+| `bad-stationary-distribution-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-stationary-distribution` | `unsat` | checked |
 
-Every checked row is exact rational arithmetic over finite matrices and finite
-distributions. The pack does not prove countably infinite Markov-chain theory,
+Every finite replay row is exact rational arithmetic over finite matrices and
+finite distributions. The checked `qf-lra-*` rows isolate the final scalar
+contradictions. The pack does not prove countably infinite Markov-chain theory,
 mixing-time bounds, convergence theorems, or stochastic-process limit theorems.
 
 ## Replay A Row-Stochastic Matrix
@@ -166,7 +169,8 @@ and rejects the matrix because:
 
 The candidate transition matrix is untrusted; the small checker rebuilds row
 sums and finite matrix products directly from the rational entries. The
-resource regression also checks the final row-sum contradiction as `QF_LRA`:
+separate checked `qf-lra-bad-stochastic-row` row isolates the final row-sum
+contradiction as `QF_LRA`:
 
 ```text
 p10 = 1/3
@@ -204,7 +208,8 @@ So:
 pi_bad * P = [3/8, 5/8] != [1/2, 1/2]
 ```
 
-The resource regression checks the first-coordinate contradiction as `QF_LRA`:
+The separate checked `qf-lra-bad-stationary-distribution` row isolates the
+first-coordinate contradiction as `QF_LRA`:
 
 ```text
 8 * pi_next_a = 3
@@ -226,8 +231,8 @@ finite distributions
 fixed-horizon distribution replay
 fixed-horizon absorption probability
 stationary distribution replay
-bad transition-row refutations
-bad stationary-distribution refutations
+replayed bad transition-row and stationary-distribution rejections
+separate checked QF_LRA/Farkas scalar refutations
 ```
 
 The following remain proof-assistant targets:
@@ -248,6 +253,8 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_markov_chain_bad_stochastic_row_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_markov_chain_bad_stationary_distribution_artifact_emits_checked_farkas
 ```
 
 Expected output:

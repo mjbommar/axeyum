@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Markov-chain Farkas rows split landed.**
+  `finite-markov-chain-v0` now keeps `bad-stochastic-row-rejected` and
+  `bad-stationary-distribution-rejected` as exact finite replay: they recompute
+  the malformed transition row sum as `2/3` instead of accepting `1`, and
+  `[1/2,1/2] * P` as `[3/8,5/8]` instead of accepting the claimed first
+  coordinate `1/2`. The checked proof-object paths are now the explicit
+  `qf-lra-bad-stochastic-row` and
+  `qf-lra-bad-stationary-distribution` rows linked to the QF_LRA/Farkas
+  SMT-LIB artifacts and regressions. Focused validation passes; the public
+  summary now reports 120 concept rows, 108 packs, 668 expected checks,
+  322 checked rows, 275 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite stochastic-kernel Farkas rows split landed.**
   `finite-stochastic-kernels-v0` now keeps `bad-kernel-row-rejected` and
   `bad-kernel-composition-rejected` as exact finite replay: they recompute the
@@ -213,8 +225,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   proof-object paths are now the explicit `qf-lra-bad-kernel-row` and
   `qf-lra-bad-kernel-composition` rows linked to the QF_LRA/Farkas SMT-LIB
   artifacts and regressions. Focused validation passes; the public summary now
-  reports 120 concept rows, 108 packs, 666 expected checks, 322 checked rows,
-  273 replay-only rows, and 71 Lean-horizon rows.
+  reports 120 concept rows, 108 packs, 668 expected checks, 322 checked rows,
+  275 replay-only rows, and 71 Lean-horizon rows.
 
 - **Finite concentration Farkas rows split landed.**
   `finite-concentration-v0` now keeps `bad-concentration-bound-rejected` and
@@ -3739,8 +3751,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`finite-markov-chain-end-to-end.md`](docs/learn/math/finite-markov-chain-end-to-end.md)
   as the learner-facing trace for the finite-Markov-chain pack: exact
   row-stochastic transition matrices, finite-horizon distribution replay,
-  stationary distributions, checked bad transition-row and bad stationary
-  distribution rejection, and the
+  stationary distributions, replayed bad transition-row and stationary
+  distribution rejections, separate checked QF_LRA/Farkas scalar refutations,
+  and the
   Markov-chain convergence Lean horizon. The lesson is linked from the math
   learning index plus the probability/statistics and analysis/dynamics paths.
 

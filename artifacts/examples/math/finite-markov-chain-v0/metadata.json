@@ -34,11 +34,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite Markov-chain bad stochastic-row/stationary-distribution QF_LRA/Farkas regression seeds",
-    "pressure": "Malformed transition row where exact replay computes row sum 2/3 but row-stochasticity claims 1, plus a false stationary-distribution row where pi*P has first coordinate 3/8 but the row claims 1/2.",
+    "target": "finite Markov-chain separate bad stochastic-row/stationary-distribution QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed transition row where exact replay computes row sum 2/3 and false stationary-distribution row where pi*P has first coordinate 3/8; separate QF_LRA rows reject the fixed false claims row_sum = 1 and pi_next_a = 1/2.",
     "evidence": [
-      "bad-stochastic-row-rejected",
-      "bad-stationary-distribution-rejected"
+      "qf-lra-bad-stochastic-row",
+      "qf-lra-bad-stationary-distribution"
     ],
     "next_step": "Promote additional stationary-distribution, finite-horizon, or absorbing-chain rows only when they add distinct exact-linear solver pressure; keep countably infinite chains, mixing times, and convergence theorems in the future theorem-prover backlog."
   },
@@ -59,12 +59,14 @@
     "finite-horizon-distribution-replay",
     "stationary-distribution-witness",
     "bad-stochastic-row-rejected",
-    "bad-stationary-distribution-rejected"
+    "qf-lra-bad-stochastic-row",
+    "bad-stationary-distribution-rejected",
+    "qf-lra-bad-stationary-distribution"
   ],
   "graduation_criteria": [
     "Encode stochastic-matrix and finite-horizon distribution checks as deterministic QF_LRA obligations.",
     "Replay transition matrices, distributions, and stationary witnesses through exact rational matrix evaluation.",
-    "Keep the malformed stochastic-row and false stationary-distribution rejections on Axeyum's checked Farkas evidence path.",
+    "Keep malformed stochastic-row and false stationary-distribution replay separate from the explicit checked QF_LRA/Farkas rows.",
     "Add finite hitting-time and absorbing-probability certificates before claiming broader stochastic-process coverage.",
     "Keep countably infinite chains, convergence theorems, and mixing-time bounds under Lean/proof-horizon metadata."
   ]

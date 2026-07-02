@@ -23470,6 +23470,10 @@ def validate_finite_markov_chain(expected: dict[str, Any]) -> None:
     bad_row = checks["bad-stochastic-row-rejected"]
     if bad_row["expected_result"] != "unsat":
         fail("bad-stochastic-row-rejected must expect unsat")
+    if bad_row["proof_status"] != "replay-only":
+        fail("bad-stochastic-row-rejected must be replay-only")
+    if bad_row["validation"] != "finite_bad_markov_stochastic_row_replay":
+        fail("bad-stochastic-row-rejected must use finite_bad_markov_stochastic_row_replay validation")
     data = bad_row.get("data", {})
     matrix = require_fraction_matrix("bad stochastic transition matrix", data.get("transition_matrix"))
     require_square_matrix("bad stochastic transition matrix", matrix)
@@ -23487,18 +23491,54 @@ def validate_finite_markov_chain(expected: dict[str, Any]) -> None:
     )
     if claimed_row_sum != 1:
         fail("bad-stochastic-row-rejected claimed_row_sum must be 1")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad stochastic smt2_artifact", smt2_artifact)
-    if not (ROOT / smt2_artifact).is_file():
-        fail("bad-stochastic-row-rejected smt2_artifact is missing")
-    regression = data.get("farkas_regression")
-    require_string("bad stochastic farkas_regression", regression)
-    if "finite_markov_chain_bad_stochastic_row_emits_checked_farkas" not in regression:
-        fail("bad-stochastic-row-rejected must link the Farkas regression")
+    notes = bad_row.get("notes", "")
+    if "separate qf-lra-bad-stochastic-row" not in notes:
+        fail("bad-stochastic-row-rejected notes must name the separate qf-lra-bad-stochastic-row row")
+
+    qf_bad_row = checks["qf-lra-bad-stochastic-row"]
+    if qf_bad_row["expected_result"] != "unsat":
+        fail("qf-lra-bad-stochastic-row must expect unsat")
+    if qf_bad_row["proof_status"] != "checked":
+        fail("qf-lra-bad-stochastic-row must be checked")
+    if qf_bad_row["validation"] != "qf_lra_bad_markov_stochastic_row_refutation":
+        fail("qf-lra-bad-stochastic-row must use qf_lra_bad_markov_stochastic_row_refutation validation")
+    qf_data = qf_bad_row.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-stochastic-row-rejected":
+        fail("qf-lra-bad-stochastic-row must cite bad-stochastic-row-rejected")
+    if qf_data.get("bad_row_index") != bad_row_index:
+        fail("qf-lra-bad-stochastic-row bad_row_index must match replay")
+    actual_row_sum = require_fraction("qf-lra bad Markov actual_row_sum", qf_data.get("actual_row_sum"))
+    qf_claimed_row_sum = require_fraction(
+        "qf-lra bad Markov claimed_row_sum",
+        qf_data.get("claimed_row_sum"),
+    )
+    if actual_row_sum != row_sums[bad_row_index]:
+        fail("qf-lra-bad-stochastic-row actual_row_sum must match replay")
+    if qf_claimed_row_sum != claimed_row_sum:
+        fail("qf-lra-bad-stochastic-row claimed_row_sum must match replay")
+    equation = qf_data.get("farkas_row_sum_equation")
+    require_string("qf-lra bad Markov farkas_row_sum_equation", equation)
+    if equation != "row_sum = p10 + p11":
+        fail("qf-lra-bad-stochastic-row must document the Farkas row-sum equation")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad Markov smt2_artifact", smt2_artifact)
+    check_source("qf-lra bad Markov smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad Markov farkas_regression", regression)
+    if "finite_markov_chain_bad_stochastic_row_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-stochastic-row must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad Markov certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-stochastic-row certificate must document checked UnsatFarkas evidence")
 
     bad_stationary = checks["bad-stationary-distribution-rejected"]
     if bad_stationary["expected_result"] != "unsat":
         fail("bad-stationary-distribution-rejected must expect unsat")
+    if bad_stationary["proof_status"] != "replay-only":
+        fail("bad-stationary-distribution-rejected must be replay-only")
+    if bad_stationary["validation"] != "finite_bad_markov_stationary_distribution_replay":
+        fail("bad-stationary-distribution-rejected must use finite_bad_markov_stationary_distribution_replay validation")
     data = bad_stationary.get("data", {})
     matrix = require_stochastic_matrix(
         "bad stationary transition matrix",
@@ -23534,14 +23574,49 @@ def validate_finite_markov_chain(expected: dict[str, Any]) -> None:
         fail("bad-stationary-distribution-rejected claimed_next_value must match the claimed distribution")
     if actual_next_value == claimed_next_value:
         fail("bad-stationary-distribution-rejected mismatch unexpectedly satisfies stationarity")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad stationary smt2_artifact", smt2_artifact)
-    if not (ROOT / smt2_artifact).is_file():
-        fail("bad-stationary-distribution-rejected smt2_artifact is missing")
-    regression = data.get("farkas_regression")
-    require_string("bad stationary farkas_regression", regression)
+    notes = bad_stationary.get("notes", "")
+    if "separate qf-lra-bad-stationary-distribution" not in notes:
+        fail("bad-stationary-distribution-rejected notes must name the separate qf-lra-bad-stationary-distribution row")
+
+    qf_bad_stationary = checks["qf-lra-bad-stationary-distribution"]
+    if qf_bad_stationary["expected_result"] != "unsat":
+        fail("qf-lra-bad-stationary-distribution must expect unsat")
+    if qf_bad_stationary["proof_status"] != "checked":
+        fail("qf-lra-bad-stationary-distribution must be checked")
+    if qf_bad_stationary["validation"] != "qf_lra_bad_markov_stationary_distribution_refutation":
+        fail("qf-lra-bad-stationary-distribution must use qf_lra_bad_markov_stationary_distribution_refutation validation")
+    qf_data = qf_bad_stationary.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-stationary-distribution-rejected":
+        fail("qf-lra-bad-stationary-distribution must cite bad-stationary-distribution-rejected")
+    if qf_data.get("mismatch_index") != mismatch_index:
+        fail("qf-lra-bad-stationary-distribution mismatch_index must match replay")
+    qf_actual_next_value = require_fraction(
+        "qf-lra bad Markov stationary actual_next_value",
+        qf_data.get("actual_next_value"),
+    )
+    qf_claimed_next_value = require_fraction(
+        "qf-lra bad Markov stationary claimed_next_value",
+        qf_data.get("claimed_next_value"),
+    )
+    if qf_actual_next_value != actual_next_value:
+        fail("qf-lra-bad-stationary-distribution actual_next_value must match replay")
+    if qf_claimed_next_value != claimed_next_value:
+        fail("qf-lra-bad-stationary-distribution claimed_next_value must match replay")
+    equation = qf_data.get("farkas_stationary_equation")
+    require_string("qf-lra bad Markov stationary farkas_stationary_equation", equation)
+    if equation != "8 * pi_next_a = 3":
+        fail("qf-lra-bad-stationary-distribution must document the Farkas stationary equation")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad Markov stationary smt2_artifact", smt2_artifact)
+    check_source("qf-lra bad Markov stationary smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad Markov stationary farkas_regression", regression)
     if "finite_markov_chain_bad_stationary_distribution_artifact_emits_checked_farkas" not in regression:
-        fail("bad-stationary-distribution-rejected must link the Farkas regression")
+        fail("qf-lra-bad-stationary-distribution must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad Markov stationary certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-stationary-distribution certificate must document checked UnsatFarkas evidence")
 
 
 def require_state_transition_matrix(

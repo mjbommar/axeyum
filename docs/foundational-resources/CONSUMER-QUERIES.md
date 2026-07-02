@@ -476,7 +476,7 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-markov-chain-v0 \
   --route Farkas \
   --proof-status checked \
-  --text stationary \
+  --text qf-lra-bad-stationary-distribution \
   --require-any
 ```
 

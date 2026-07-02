@@ -473,8 +473,9 @@ Companion maps:
   horizon.
 - [Finite Markov Chains](finite-markov-chain-end-to-end.md): follows exact
   row-stochastic transition matrices, finite-horizon distribution replay,
-  stationary distributions, checked bad transition-row and bad stationary
-  distribution rejection, and the
+  stationary distributions, replayed bad transition-row and stationary
+  distribution rejections, separate checked QF_LRA/Farkas scalar refutations,
+  and the
   Markov-chain convergence Lean horizon.
 - [Finite Topology, Maps, Connectedness, And Measure](finite-structures-end-to-end.md):
   follows finite set-family, closure/interior, continuous-map, compactness,

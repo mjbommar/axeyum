@@ -253,8 +253,8 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-120 concept rows, 108 non-template packs, 666 expected checks (336 `sat`,
-259 `unsat`, 71 `not-run`), 322 checked rows, 273 replay-only rows, and 71
+120 concept rows, 108 non-template packs, 668 expected checks (336 `sat`,
+261 `unsat`, 71 `not-run`), 322 checked rows, 275 replay-only rows, and 71
 Lean-horizon rows. The rules/law JSON layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
@@ -336,7 +336,9 @@ measures and the union bound `mu(A)+mu(B)=4/3`, finite-martingales'
 bad stopped-expectation and conditional-expectation rows after bounded stopping
 replay computes `E[M_tau] = 0` and finite filtration replay computes the
 up-block expectation, finite Markov-chain's bad stochastic-row and false
-stationary-distribution rows now explicitly promoted in solver-reuse metadata,
+stationary-distribution rows now kept as exact replay while
+`qf-lra-bad-stochastic-row` and `qf-lra-bad-stationary-distribution` own the
+checked Farkas proof-object regressions in solver-reuse metadata,
 finite concentration's bad tail-bound and bad union-bound rows after exact
 finite replay computes `P(X >= 2) = 1/4` and `P(A union B) = 3/4`, and finite
 hitting-times' bad survival-mass and bad expected-time rows after replay
@@ -861,8 +863,9 @@ obstruction, bounded induction obligations are now promoted for a bounded
 bad-step count arithmetic-DPLL row, bounded natural arithmetic is now promoted
 for its bad negative domain row, and the finite-probability
 bad-normalization row now has a checked
-QF_LRA/Farkas regression, with finite Markov chains now promoted for the bad
-stochastic-row obstruction and false stationary-distribution row, and finite concentration now promoted for the bad
+QF_LRA/Farkas regression, with finite Markov chains now split so the bad
+stochastic-row and false stationary-distribution replay rows feed explicit
+`qf-lra-*` Farkas rows, and finite concentration now promoted for the bad
 tail-bound and bad union-bound obstructions, with finite hitting times now source-linked and
 promoted for the bad survival-mass and bad expected-time equations; least-squares regression is now
 promoted for the bad coefficient and bad RSS-improvement rows, and bounded rational real analysis for
@@ -901,7 +904,9 @@ promoted for the bad expectation conflict, and finite
 martingales now promoted for the bad stopped-expectation and
 conditional-expectation conflicts, with
 finite Markov chains carrying explicit promoted solver-reuse metadata for the
-bad stochastic-row and false stationary-distribution conflicts and finite concentration carrying
+separate `qf-lra-bad-stochastic-row` and
+`qf-lra-bad-stationary-distribution` conflicts after replay isolates the bad
+source rows, and finite concentration carrying
 source-linked promoted bad tail-bound and bad union-bound conflicts, while sequence-limit shadows
 now promote a bounded Cauchy-tail max-distance threshold conflict, and
 multivariable calculus now promotes a bad exact gradient-component conflict,

@@ -295,6 +295,9 @@ const NUMERICAL_LINEAR_ALGEBRA_BAD_RESIDUAL_BOUND: &str = include_str!(
 const NUMERICAL_LINEAR_ALGEBRA_BAD_SOLUTION_BOX_UPPER_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-solution-box-upper-bound-farkas-conflict.smt2"
 );
+const FINITE_MARKOV_CHAIN_BAD_STOCHASTIC_ROW: &str = include_str!(
+    "../../../artifacts/examples/math/finite-markov-chain-v0/smt2/bad-stochastic-row-farkas-conflict.smt2"
+);
 const FINITE_MARKOV_CHAIN_BAD_STATIONARY_DISTRIBUTION: &str = include_str!(
     "../../../artifacts/examples/math/finite-markov-chain-v0/smt2/bad-stationary-distribution-farkas-conflict.smt2"
 );
@@ -1372,26 +1375,10 @@ fn finite_martingales_bad_conditional_expectation_emits_checked_farkas() {
 }
 
 #[test]
-fn finite_markov_chain_bad_stochastic_row_emits_checked_farkas() {
-    let mut arena = TermArena::new();
-    let p10 = real(&mut arena, "p10");
-    let p11 = real(&mut arena, "p11");
-    let row_sum = real(&mut arena, "row_sum");
-    let p10_is_third = eq_ratio(&mut arena, p10, 1, 3);
-    let p11_is_third = eq_ratio(&mut arena, p11, 1, 3);
-    let row_entries_sum = arena.real_add(p10, p11).unwrap();
-    let row_sum_matches_entries = arena.eq(row_sum, row_entries_sum).unwrap();
-    let row_sum_is_one = eq_ratio(&mut arena, row_sum, 1, 1);
-
-    assert_farkas_checked(
-        "finite-markov-chain-v0 bad-stochastic-row-rejected",
-        &arena,
-        &[
-            p10_is_third,
-            p11_is_third,
-            row_sum_matches_entries,
-            row_sum_is_one,
-        ],
+fn finite_markov_chain_bad_stochastic_row_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-markov-chain-v0 bad-stochastic-row SMT-LIB artifact",
+        FINITE_MARKOV_CHAIN_BAD_STOCHASTIC_ROW,
     );
 }
 

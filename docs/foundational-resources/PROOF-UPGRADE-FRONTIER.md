@@ -325,8 +325,10 @@ First targets:
   `qf-lra-bad-stopped-expectation` and `qf-lra-bad-martingale` after replay
   computes the stopped expectation and up-block conditional expectation)
 - [finite-markov-chain-v0](../../artifacts/examples/math/finite-markov-chain-v0/)
-  (resource-backed Farkas regressions landed for the bad stochastic row and
-  bad stationary-distribution row)
+  (exact bad stochastic-row and bad stationary-distribution replay remains in
+  the bad rows; resource-backed Farkas regressions now live in
+  `qf-lra-bad-stochastic-row` and
+  `qf-lra-bad-stationary-distribution`)
 - [finite-hitting-times-v0](../../artifacts/examples/math/finite-hitting-times-v0/)
   (exact survival-mass and expected-time replay stays in the bad rows;
   source-linked Farkas regressions now live in `qf-lra-bad-survival-mass` and

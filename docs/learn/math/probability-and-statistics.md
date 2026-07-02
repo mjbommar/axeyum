@@ -67,9 +67,9 @@ causal-graph-shaped examples. The random-matrix pack checks
 finite matrix-valued probability tables, exact moments, expected Gram matrices,
 rank probabilities, and checked QF_LRA/Farkas rejections of bad trace-square
 and expected-rank claims. The Markov-chain pack checks exact stochastic matrices,
-finite-horizon distribution evolution, stationary distributions, and a checked
-`UnsatFarkas` certificate for a malformed transition row plus a false
-stationary-distribution row.
+finite-horizon distribution evolution, stationary distributions, replayed bad
+transition/stationary rows, and separate checked `UnsatFarkas` certificates for
+the final scalar contradictions.
 
 For a focused finite Markov-chain trace, read
 [End To End: Finite Markov Chains](finite-markov-chain-end-to-end.md).

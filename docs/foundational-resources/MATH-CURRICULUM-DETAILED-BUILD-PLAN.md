@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 666 expected checks.
+- 668 expected checks.
 - 322 checked proof/evidence rows.
-- 273 replay-only rows.
+- 275 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1091,14 +1091,15 @@ Pick one row per commit unless the change is purely navigational.
      checks both residual-bound and iteration-error contradictions without
      claiming floating-point accuracy, conditioning, backward stability, or
      general Jacobi convergence.
-124. Landed: extend `finite-markov-chain-v0` with a checked bad stationary
-     distribution row. Exact row-vector transition replay computes
-     `[1/2,1/2] * P = [3/8,5/8]` for the fixed two-state chain, while the
-     malformed source SMT-LIB artifact claims the first next-coordinate is
-     `1/2`; the shared QF_LRA/Farkas route now checks both malformed
-     stochastic-row and false stationary-distribution contradictions without
-     claiming countably infinite chains, mixing times, convergence theorems,
-     recurrence/transience, or stochastic-process limit laws.
+124. Landed: split `finite-markov-chain-v0` so bad stochastic-row and false
+     stationary-distribution rows remain exact finite replay, while
+     `qf-lra-bad-stochastic-row` and
+     `qf-lra-bad-stationary-distribution` own the checked proof-object
+     refutations. Exact replay computes row sum `2/3` and
+     `[1/2,1/2] * P = [3/8,5/8]`; the shared QF_LRA/Farkas route checks the
+     fixed false scalar claims without claiming countably infinite chains,
+     mixing times, convergence theorems, recurrence/transience, or
+     stochastic-process limit laws.
 125. Landed: split `finite-concentration-v0` so bad finite tail-bound and
      union-bound rows remain exact replay, while
      `qf-lra-bad-concentration-bound` and `qf-lra-bad-union-bound` own the

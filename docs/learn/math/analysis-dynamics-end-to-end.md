@@ -41,7 +41,10 @@ Concept rows:
 | `bad-invariant-bound-rejected` | `unsat` | checked |
 | `finite-horizon-distribution-replay` | `sat` | replay-only |
 | `stationary-distribution-witness` | `sat` | replay-only |
-| `bad-stationary-distribution-rejected` | `unsat` | checked |
+| `bad-stochastic-row-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-stochastic-row` | `unsat` | checked |
+| `bad-stationary-distribution-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-stationary-distribution` | `unsat` | checked |
 | `first-hit-distribution-witness` | `sat` | replay-only |
 | `absorption-probability-equations` | `sat` | replay-only |
 | `expected-hitting-time-equations` | `sat` | replay-only |
@@ -165,6 +168,10 @@ For the Markov-chain row, it checks exact stochastic evolution:
 [1,0,0] * P = [1/2,1/2,0]
 [1/2,1/2,0] * P = [1/4,1/2,1/4]
 ```
+
+The malformed transition and stationary rows are replayed first, then separate
+`qf-lra-*` rows check the row-sum and stationary-coordinate contradictions
+through Farkas evidence.
 
 For a fuller trace of the Markov-chain rows, read
 [End To End: Finite Markov Chains](finite-markov-chain-end-to-end.md).
