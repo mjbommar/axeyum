@@ -21,7 +21,7 @@
 //! This is the congruence core that the full lazy CDCL(T) loop (boolean search +
 //! theory propagation, the rest of P1.5) and theory combination (P1.6) build on.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::time::Instant;
 
 use axeyum_egraph::{EGraph, ENodeId, check_congruence};
@@ -574,8 +574,18 @@ pub fn check_qf_uf_with_config(
 /// Returns `None` for sorts outside `Bool`/`BitVec(≤128)`/uninterpreted carriers
 /// (the caller treats that as `Unknown`).
 fn build_model(arena: &TermArena, bridge: &Bridge) -> Option<Model> {
+    // Iterate the bridge in a deterministic term order. `term_to_node` is a
+    // `HashMap` whose iteration order is per-process randomized; assigning
+    // uninterpreted class codes (below) in that order would relabel the model
+    // run-to-run, and downstream array projection/repair (abv.rs) is sensitive
+    // to which concrete code each class receives. Sorting by `TermId` ties the
+    // whole construction to input/insertion order instead.
+    let mut term_nodes: Vec<(TermId, ENodeId)> =
+        bridge.term_to_node.iter().map(|(&t, &n)| (t, n)).collect();
+    term_nodes.sort_by_key(|(term, _)| *term);
+
     let mut class_sort: HashMap<ENodeId, Sort> = HashMap::new();
-    for (&term, &node) in &bridge.term_to_node {
+    for &(term, node) in &term_nodes {
         let root = bridge.egraph.root(node);
         let sort = match arena.sort_of(term) {
             sort @ (Sort::Bool | Sort::Uninterpreted(_)) => sort,
@@ -592,7 +602,7 @@ fn build_model(arena: &TermArena, bridge: &Bridge) -> Option<Model> {
     // Class codes: constants pin their class, the rest get fresh distinct codes.
     let mut class_code: HashMap<ENodeId, u128> = HashMap::new();
     let mut used: HashMap<Sort, HashSet<u128>> = HashMap::new();
-    for (&term, &node) in &bridge.term_to_node {
+    for &(term, node) in &term_nodes {
         if is_constant(arena.node(term)) {
             let root = bridge.egraph.root(node);
             let value = eval(arena, term, &Assignment::new()).ok()?;
@@ -601,10 +611,15 @@ fn build_model(arena: &TermArena, bridge: &Bridge) -> Option<Model> {
             used.entry(class_sort[&root]).or_default().insert(code);
         }
     }
-    for (&root, &sort) in &class_sort {
+    // Assign fresh distinct codes to the remaining classes in term order (the
+    // first term that maps to an as-yet-uncoded root fixes that root's code), so
+    // the value each uninterpreted class receives is deterministic.
+    for &(_, node) in &term_nodes {
+        let root = bridge.egraph.root(node);
         if class_code.contains_key(&root) {
             continue;
         }
+        let sort = class_sort[&root];
         let set = used.entry(sort).or_default();
         let max = match sort {
             Sort::Bool => 1,
@@ -625,8 +640,10 @@ fn build_model(arena: &TermArena, bridge: &Bridge) -> Option<Model> {
     }
 
     let mut model = Model::new();
-    let mut tables: HashMap<FuncId, Vec<(Vec<u128>, u128)>> = HashMap::new();
-    for (&term, &node) in &bridge.term_to_node {
+    // `BTreeMap` + term-ordered pushes keep function-table construction (and
+    // thus the emitted model) independent of hash iteration order.
+    let mut tables: BTreeMap<FuncId, Vec<(Vec<u128>, u128)>> = BTreeMap::new();
+    for &(term, node) in &term_nodes {
         let code = class_code[&bridge.egraph.root(node)];
         match arena.node(term) {
             TermNode::Symbol(s) => {

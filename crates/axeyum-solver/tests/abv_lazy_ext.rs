@@ -438,3 +438,40 @@ fn soundness_negative_distinct_diff_skolems() {
         CheckResult::Unsat => panic!("a != b, a != c, b = c is SATISFIABLE — wrong UNSAT"),
     }
 }
+
+/// Regression guard for verdict nondeterminism in the lazy-extensionality
+/// scalar (declared-sort EUF) route. The `QF_AX` `arrays3` instance is SAT and
+/// replayable; before the fix, the EUF model assigned uninterpreted class codes
+/// in `HashMap` iteration order (per-process randomized), so successive runs
+/// relabelled the model differently and the downstream array projection/repair
+/// declined to `Unknown` on a subset of runs (~12% flake rate). Running the
+/// route many times in-process exercises distinct `HashMap` seeds (each
+/// `HashMap::new()` advances the thread-local key), so a hash-order-dependent
+/// verdict shows up here as a mix of `Sat` and `Unknown`.
+#[test]
+fn qf_ax_arrays3_lazy_ext_verdict_is_deterministic() {
+    use axeyum_solver::check_qf_ax_declared_sort_lazy_row;
+
+    let input = include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__arrays3.smt2"
+    );
+    for _ in 0..64 {
+        let mut script = parse_script(input).unwrap();
+        let result = check_qf_ax_declared_sort_lazy_row(
+            &mut script.arena,
+            &script.assertions,
+            &SolverConfig::default(),
+        )
+        .unwrap();
+        let CheckResult::Sat(model) = result else {
+            panic!("arrays3 must decide SAT on every run; got {result:?}");
+        };
+        let assignment = model.to_assignment();
+        for &assertion in &script.assertions {
+            assert_eq!(
+                eval(&script.arena, assertion, &assignment),
+                Ok(Value::Bool(true))
+            );
+        }
+    }
+}
