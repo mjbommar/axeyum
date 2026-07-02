@@ -22,6 +22,9 @@ use axeyum_solver::{
     bounded_model_check, prove, prove_safety_k_induction,
 };
 
+mod reflect_common;
+use reflect_common::{binop, compare, width_of};
+
 // ---- committed `.ll` fixtures (rustc 1.96 -O --emit=llvm-ir) --------------------
 
 const CLAMP_RS_LL: &str = r"
@@ -72,10 +75,6 @@ struct Reflected {
     result: TermId,
 }
 
-fn width_of(ty: &str) -> u32 {
-    ty.trim_start_matches('i').parse().expect("iN type")
-}
-
 fn is_reg(tok: &str) -> bool {
     tok.starts_with('%')
 }
@@ -98,42 +97,6 @@ fn resolve(
             .bv_const(width, tok.parse::<u128>().expect("integer constant"))
             .unwrap()
     }
-}
-
-fn binop(arena: &mut TermArena, op: &str, a: TermId, b: TermId) -> TermId {
-    match op {
-        "and" => arena.bv_and(a, b),
-        "or" => arena.bv_or(a, b),
-        "xor" => arena.bv_xor(a, b),
-        "add" => arena.bv_add(a, b),
-        "sub" => arena.bv_sub(a, b),
-        "mul" => arena.bv_mul(a, b),
-        "shl" => arena.bv_shl(a, b),
-        "lshr" => arena.bv_lshr(a, b),
-        "ashr" => arena.bv_ashr(a, b),
-        other => panic!("unsupported binop {other}"),
-    }
-    .unwrap()
-}
-
-fn compare(arena: &mut TermArena, pred: &str, a: TermId, b: TermId) -> TermId {
-    match pred {
-        "eq" => arena.eq(a, b),
-        "ne" => {
-            let e = arena.eq(a, b).unwrap();
-            return arena.not(e).unwrap();
-        }
-        "ult" => arena.bv_ult(a, b),
-        "ule" => arena.bv_ule(a, b),
-        "ugt" => arena.bv_ugt(a, b),
-        "uge" => arena.bv_uge(a, b),
-        "slt" => arena.bv_slt(a, b),
-        "sle" => arena.bv_sle(a, b),
-        "sgt" => arena.bv_sgt(a, b),
-        "sge" => arena.bv_sge(a, b),
-        other => panic!("unsupported icmp predicate {other}"),
-    }
-    .unwrap()
 }
 
 /// Lower one instruction's right-hand side to `(term, width)`.
