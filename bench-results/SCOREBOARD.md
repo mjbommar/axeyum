@@ -45,9 +45,9 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_NIA | `qf-nia-curated-iand` | 3 | 1 | 33% | 2 | 0 | 0 | 0 | :status | 13.333 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
 | QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 9 | 24% | 27 | 1 | 9 | 0 | z3-binary | 15.166 |
-| QF_S | `qf-s-cvc5-regress-clean` | 134 | 59 | 44% | 13 | 62 | 57 | 0 | z3-library+binary | 3.618 |
-| QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | 6 | 1 | 15 | 0 | z3-library+binary | 3.751 |
-| QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 15 | 30% | 6 | 29 | 14 | 0 | z3-library+binary | 5.721 |
+| QF_S | `qf-s-cvc5-regress-clean` | 134 | 48 | 36% | 24 | 62 | 48 | 0 | z3-library+binary | 6.676 |
+| QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | 6 | 1 | 26 | 0 | z3-library+binary | 3.751 |
+| QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 11 | 22% | 10 | 29 | 11 | 0 | z3-library+binary | 9.537 |
 | QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts` | 6 | 4 | 67% | 2 | 0 | 4 | 0 | z3-binary | 7.489 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded` | 82 | 44 | 54% | 13 | 24 | 37 | 0 | z3-library+binary | 4.845 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts` | 82 | 44 | 54% | 13 | 24 | 37 | 0 | z3-library+binary | 4.845 |
@@ -61,6 +61,26 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
 **Totals:** 992 files, 663 decided, 611 oracle-compared, **0 disagreements.**
+
+### String rows re-measured 2026-07-02 (ADR-0052 gate — soundness over decide-rate)
+
+The P2.7 A.2 landing re-measured QF_S/QF_SEQ/QF_SLIA under the bounded-string
+`unsat` gate: a bounded `unsat` is reported only when confirmed
+bound-independent; otherwise an honest `unknown`. Net: **QF_S 59→48 decided,
+QF_SLIA 15→11, QF_SEQ 26 (unchanged)** — 23 prior `unsat` verdicts downgraded.
+Of those, **two were on instances whose declared `:status` is `sat`**
+(`r1_QF_SLIA_re-inter-stack-ovf.smt2`, `sat__regress0__seq__seq-nemp.smt2`):
+the old rows were silently carrying real wrong verdicts the oracle path never
+compared (it skips `unknown`s and the old runs' library oracle rejected the
+logic on part of the slice). The other 21 are declared-`unsat` instances the
+gate cannot yet confirm — recoverable via richer length facts / width widening
+/ the Phase B word-level solver, tracked in
+[P2.7 Phase A](../docs/plan/track-2-theories/P2.7-strings/03-phaseA-ir-sort-and-combination.md).
+DISAGREE=0 holds on all compared instances; PAR-2 rose accordingly (honest
+unknowns count as double-timeout). The 9-hour scoreboard hang met en route was
+an exponential (per-path) DAG walk in the new blast's skeleton scan — fixed
+(`f403991b`) with a regression test; the three divisions now measure in ~10
+minutes total.
 
 ## Progress frontiers (lever depth)
 

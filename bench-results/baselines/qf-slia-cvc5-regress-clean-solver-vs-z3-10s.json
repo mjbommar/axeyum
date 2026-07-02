@@ -46,7 +46,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.219256
+        "solve_ms": 0.304622
       },
       "dag_nodes": 80,
       "distinct_symbols": 0,
@@ -57,9 +57,9 @@
       "oracle": {
         "backend_kind": "z3",
         "backend_stats": {
-          "max memory": 115.11,
-          "memory": 107.15,
-          "num allocs": 40649.0,
+          "max memory": 66.27,
+          "memory": 49.94,
+          "num allocs": 49496.0,
           "rlimit count": 334.0
         },
         "decision_agrees": true,
@@ -133,7 +133,7 @@
     {
       "assertions": 6,
       "backend_stats": {
-        "solve_ms": 33.073738999999996
+        "solve_ms": 41.265163
       },
       "dag_nodes": 262,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -153,7 +153,7 @@
           "assertions": 6,
           "assumptions": 0,
           "dag_nodes": 262,
-          "digest": "6c07b69dee2661fb",
+          "digest": "5cbd0c561cd845fd",
           "tree_nodes": 1342
         },
         "submitted": {
@@ -164,7 +164,7 @@
             "assertions": 6,
             "assumptions": 0,
             "dag_nodes": 262,
-            "digest": "6c07b69dee2661fb",
+            "digest": "5cbd0c561cd845fd",
             "tree_nodes": 1342
           },
           "strategy": "full",
@@ -188,7 +188,7 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 33,
+      "solve_ms": 41,
       "translate_ms": 0,
       "tree_nodes": 1342
     },
@@ -200,7 +200,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 4.05795
+        "solve_ms": 4.654223
       },
       "dag_nodes": 381,
       "distinct_symbols": 3,
@@ -214,14 +214,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -273,7 +273,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 29.753063
+        "solve_ms": 36.710629000000004
       },
       "dag_nodes": 2516,
       "distinct_symbols": 1,
@@ -287,14 +287,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 8,
+          "solve_ms": 9,
           "verdict": "sat"
         }
       },
@@ -339,7 +339,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 29,
+      "solve_ms": 36,
       "translate_ms": 0,
       "tree_nodes": 181418
     },
@@ -351,7 +351,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 18.630765
+        "solve_ms": 20.986985999999998
       },
       "dag_nodes": 646,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -406,7 +406,7 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 18,
+      "solve_ms": 20,
       "translate_ms": 0,
       "tree_nodes": 327093
     },
@@ -418,7 +418,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 21.040962999999998
+        "solve_ms": 101.10818400000001
       },
       "dag_nodes": 4303,
       "distinct_symbols": 2,
@@ -432,14 +432,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -484,16 +484,17 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 21,
+      "solve_ms": 101,
       "translate_ms": 0,
       "tree_nodes": 2512030108
     },
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 6.296703
+        "solve_ms": 8.65244
       },
       "dag_nodes": 1058,
+      "detail": "bounded-string unsat not confirmed bound-independent (P2.7 A.2 gate); reported unknown",
       "distinct_symbols": 2,
       "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__strings__leq.smt2",
@@ -501,29 +502,10 @@
       "model_lift_ms": 0,
       "oracle": {
         "backend_kind": "z3",
-        "backend_stats": {
-          "max memory": 115.11,
-          "memory": 91.61,
-          "num allocs": 192215.0,
-          "rlimit count": 11709.0,
-          "sat backjumps": 1.0,
-          "sat conflicts": 2.0,
-          "sat decisions": 3.0,
-          "sat mk clause 2ary": 301.0,
-          "sat mk clause nary": 360.0,
-          "sat mk var": 275.0,
-          "sat propagations 2ary": 20.0,
-          "time": 0.005
-        },
-        "decision_agrees": true,
-        "decision_compared": true,
         "enabled": true,
-        "model_lift_ms": 0,
-        "outcome": "unsat",
-        "solve_ms": 5,
-        "translate_ms": 1
+        "skipped": "primary-outcome-unknown"
       },
-      "outcome": "unsat",
+      "outcome": "unknown",
       "query_plan": {
         "cache_key": {
           "assertions": 3,
@@ -561,10 +543,10 @@
         "output_distinct_symbols": 2,
         "output_max_depth": 45,
         "output_tree_nodes": 199477,
-        "rewritten_outcome": "unsat",
+        "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 6,
+      "solve_ms": 8,
       "translate_ms": 0,
       "tree_nodes": 199477
     },
@@ -581,9 +563,10 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 0.33934200000000003
+        "solve_ms": 1.3546630000000002
       },
       "dag_nodes": 80,
+      "detail": "bounded-string unsat not confirmed bound-independent (P2.7 A.2 gate); reported unknown",
       "distinct_symbols": 1,
       "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__strings__re-in-rewrite.smt2",
@@ -591,21 +574,10 @@
       "model_lift_ms": 0,
       "oracle": {
         "backend_kind": "z3",
-        "backend_stats": {
-          "max memory": 115.11,
-          "memory": 91.05,
-          "num allocs": 445636.0,
-          "rlimit count": 469.0
-        },
-        "decision_agrees": true,
-        "decision_compared": true,
         "enabled": true,
-        "model_lift_ms": 0,
-        "outcome": "unsat",
-        "solve_ms": 0,
-        "translate_ms": 0
+        "skipped": "primary-outcome-unknown"
       },
-      "outcome": "unsat",
+      "outcome": "unknown",
       "query_plan": {
         "cache_key": {
           "assertions": 2,
@@ -643,10 +615,10 @@
         "output_distinct_symbols": 1,
         "output_max_depth": 12,
         "output_tree_nodes": 146,
-        "rewritten_outcome": "unsat",
+        "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 0,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 146
     },
@@ -663,7 +635,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 0.784236
+        "solve_ms": 0.6537099999999999
       },
       "dag_nodes": 135,
       "distinct_symbols": 1,
@@ -684,7 +656,7 @@
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 11,
           "verdict": "sat"
         }
       },
@@ -736,7 +708,7 @@
     {
       "assertions": 5,
       "backend_stats": {
-        "solve_ms": 1.614031
+        "solve_ms": 1.189606
       },
       "dag_nodes": 185,
       "distinct_symbols": 2,
@@ -750,14 +722,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 20,
           "verdict": "sat"
         }
       },
@@ -814,7 +786,7 @@
     {
       "assertions": 8,
       "backend_stats": {
-        "solve_ms": 44.727164
+        "solve_ms": 102.860663
       },
       "dag_nodes": 4213,
       "distinct_symbols": 4,
@@ -828,14 +800,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 11,
+          "solve_ms": 17,
           "verdict": "sat"
         }
       },
@@ -880,7 +852,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 44,
+      "solve_ms": 102,
       "translate_ms": 0,
       "tree_nodes": 9127878
     },
@@ -907,7 +879,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 1.647857
+        "solve_ms": 1.080031
       },
       "dag_nodes": 131,
       "distinct_symbols": 1,
@@ -921,14 +893,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 18,
           "verdict": "sat"
         }
       },
@@ -980,7 +952,7 @@
     {
       "assertions": 17,
       "backend_stats": {
-        "solve_ms": 4.461935
+        "solve_ms": 7.471861
       },
       "dag_nodes": 1030,
       "distinct_symbols": 13,
@@ -989,11 +961,11 @@
       "max_depth": 44,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
         "backend_stats": {
-          "max memory": 115.11,
-          "memory": 83.7,
-          "num allocs": 1069681.0,
+          "max memory": 82.66,
+          "memory": 67.2,
+          "num allocs": 506648.0,
           "rlimit count": 28674.0,
           "sat backjumps": 1.0,
           "sat conflicts": 1.0,
@@ -1005,15 +977,21 @@
           "sat mk var": 1266.0,
           "sat propagations 2ary": 1296.0,
           "sat propagations nary": 105.0,
-          "time": 0.007
+          "time": 0.009
         },
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
+        "in_repo_z3_detail": "z3 oracle does not lift integer models yet (ADR-0014)",
         "model_lift_ms": 0,
         "outcome": "sat",
-        "solve_ms": 7,
-        "translate_ms": 1
+        "solve_ms": 9,
+        "translate_ms": 1,
+        "z3_binary": {
+          "raw": "sat",
+          "solve_ms": 24,
+          "verdict": "sat"
+        }
       },
       "outcome": "sat",
       "query_plan": {
@@ -1056,17 +1034,17 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 4,
+      "solve_ms": 7,
       "translate_ms": 0,
       "tree_nodes": 44719
     },
     {
       "assertions": 6,
       "backend_stats": {
-        "solve_ms": 7.540146
+        "solve_ms": 1.0605829999999998
       },
       "dag_nodes": 354,
-      "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
+      "detail": "bounded-string unsat not confirmed bound-independent (P2.7 A.2 gate); reported unknown",
       "distinct_symbols": 2,
       "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress1__strings__re-agg-total1.smt2",
@@ -1118,16 +1096,17 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 7,
+      "solve_ms": 1,
       "translate_ms": 0,
       "tree_nodes": 1739
     },
     {
       "assertions": 7,
       "backend_stats": {
-        "solve_ms": 1.403405
+        "solve_ms": 1.6112819999999999
       },
       "dag_nodes": 588,
+      "detail": "bounded-string unsat not confirmed bound-independent (P2.7 A.2 gate); reported unknown",
       "distinct_symbols": 3,
       "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress1__strings__re-mod-eq.smt2",
@@ -1135,34 +1114,10 @@
       "model_lift_ms": 0,
       "oracle": {
         "backend_kind": "z3",
-        "backend_stats": {
-          "max memory": 115.11,
-          "memory": 83.41,
-          "num allocs": 1762939.0,
-          "rlimit count": 11295.0,
-          "sat backjumps": 7.0,
-          "sat conflicts": 8.0,
-          "sat decisions": 9.0,
-          "sat del clause": 274.0,
-          "sat elim clauses": 138.0,
-          "sat elim literals": 206.0,
-          "sat mk clause 2ary": 774.0,
-          "sat mk clause nary": 633.0,
-          "sat mk var": 421.0,
-          "sat propagations 2ary": 1029.0,
-          "sat propagations nary": 570.0,
-          "sat units": 70.0,
-          "time": 0.004
-        },
-        "decision_agrees": true,
-        "decision_compared": true,
         "enabled": true,
-        "model_lift_ms": 0,
-        "outcome": "unsat",
-        "solve_ms": 4,
-        "translate_ms": 0
+        "skipped": "primary-outcome-unknown"
       },
-      "outcome": "unsat",
+      "outcome": "unknown",
       "query_plan": {
         "cache_key": {
           "assertions": 7,
@@ -1200,7 +1155,7 @@
         "output_distinct_symbols": 3,
         "output_max_depth": 32,
         "output_tree_nodes": 2499,
-        "rewritten_outcome": "unsat",
+        "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
       "solve_ms": 1,
@@ -1215,7 +1170,7 @@
     {
       "assertions": 12,
       "backend_stats": {
-        "solve_ms": 18.191554
+        "solve_ms": 18.504911999999997
       },
       "dag_nodes": 233,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -1277,7 +1232,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 189.133663
+        "solve_ms": 286.531349
       },
       "dag_nodes": 5174,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -1332,16 +1287,17 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 189,
+      "solve_ms": 286,
       "translate_ms": 0,
       "tree_nodes": 2224977052
     },
     {
       "assertions": 9,
       "backend_stats": {
-        "solve_ms": 2.787798
+        "solve_ms": 3.1957299999999997
       },
       "dag_nodes": 624,
+      "detail": "bounded-string unsat not confirmed bound-independent (P2.7 A.2 gate); reported unknown",
       "distinct_symbols": 5,
       "expected": "unsat",
       "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress1__strings__strings-leq-trans-unsat.smt2",
@@ -1349,37 +1305,10 @@
       "model_lift_ms": 0,
       "oracle": {
         "backend_kind": "z3",
-        "backend_stats": {
-          "max memory": 115.11,
-          "memory": 83.45,
-          "num allocs": 3395836.0,
-          "rlimit count": 28447.0,
-          "sat backjumps": 11.0,
-          "sat conflicts": 12.0,
-          "sat decisions": 30.0,
-          "sat del clause": 18.0,
-          "sat elim clauses": 7.0,
-          "sat elim literals": 15.0,
-          "sat minimized lits": 8.0,
-          "sat mk clause 2ary": 1221.0,
-          "sat mk clause nary": 900.0,
-          "sat mk var": 771.0,
-          "sat propagations 2ary": 1225.0,
-          "sat propagations nary": 300.0,
-          "sat units": 32.0,
-          "solve-eqs-elim-vars": 2.0,
-          "solve-eqs-steps": 14.0,
-          "time": 0.006
-        },
-        "decision_agrees": true,
-        "decision_compared": true,
         "enabled": true,
-        "model_lift_ms": 0,
-        "outcome": "unsat",
-        "solve_ms": 6,
-        "translate_ms": 0
+        "skipped": "primary-outcome-unknown"
       },
-      "outcome": "unsat",
+      "outcome": "unknown",
       "query_plan": {
         "cache_key": {
           "assertions": 9,
@@ -1417,10 +1346,10 @@
         "output_distinct_symbols": 5,
         "output_max_depth": 38,
         "output_tree_nodes": 5306,
-        "rewritten_outcome": "unsat",
+        "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 2,
+      "solve_ms": 3,
       "translate_ms": 0,
       "tree_nodes": 5306
     },
@@ -1437,7 +1366,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 10.741265
+        "solve_ms": 7.773487
       },
       "dag_nodes": 457,
       "distinct_symbols": 1,
@@ -1503,7 +1432,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 10,
+      "solve_ms": 7,
       "translate_ms": 0,
       "tree_nodes": 3753
     },
@@ -1550,7 +1479,7 @@
     {
       "assertions": 7,
       "backend_stats": {
-        "solve_ms": 165.756192
+        "solve_ms": 206.722292
       },
       "dag_nodes": 2528,
       "detail": "Incomplete: no model within the bounded integer width 32; widen the bound",
@@ -1605,7 +1534,7 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 165,
+      "solve_ms": 206,
       "translate_ms": 0,
       "tree_nodes": 887766597
     },
@@ -1617,7 +1546,7 @@
     {
       "assertions": 3,
       "backend_stats": {
-        "solve_ms": 3.403326
+        "solve_ms": 4.138689
       },
       "dag_nodes": 316,
       "distinct_symbols": 2,
@@ -1631,14 +1560,14 @@
         "decision_agrees": null,
         "decision_compared": false,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "unsupported",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "(error \"line 9 column 46: unknown constant seq.update ((Seq Int) Int (Seq Int)) \")",
-          "solve_ms": 8,
+          "solve_ms": 11,
           "verdict": null
         }
       },
@@ -1683,7 +1612,7 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 3,
+      "solve_ms": 4,
       "translate_ms": 0,
       "tree_nodes": 5691330
     },
@@ -1699,9 +1628,10 @@
     }
   ],
   "summary": {
-    "agree": 15,
+    "agree": 11,
     "blocker_buckets": {
-      "unknown:Incomplete": 6
+      "unknown:Incomplete": 5,
+      "unknown:bounded-string unsat not confirmed bound-independent (P2.7 A.2 gate); reported unknown": 5
     },
     "disagree": 0,
     "errors": 0,
@@ -1709,14 +1639,14 @@
     "layer_attribution": null,
     "model_replay_failures": 0,
     "oracle": {
-      "agree": 14,
+      "agree": 10,
       "backend": "z3 4.13.3.0",
-      "compared": 14,
+      "compared": 10,
       "disagree": 0,
       "enabled": true,
-      "skipped": 7
+      "skipped": 11
     },
-    "par2_mean_s": 5.7206322997142856,
+    "par2_mean_s": 9.536568843095237,
     "query_plan": {
       "original_dag_nodes": 25294,
       "original_tree_nodes": 5640401438,
@@ -1738,8 +1668,8 @@
       "sat_unsat_conflicts": 0
     },
     "sat": 10,
-    "unknown": 6,
-    "unsat": 5,
+    "unknown": 10,
+    "unsat": 1,
     "unsupported": 29
   },
   "triage": {
