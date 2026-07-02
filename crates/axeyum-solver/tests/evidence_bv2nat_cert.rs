@@ -162,10 +162,14 @@ fn sat_bv2nat_query_is_not_reported_unsat() {
     }
 }
 
-/// Regression: a plain `QF_LIA` unsat (`x > 0 ∧ x < 0`, no `bv2nat`) still gets its
-/// existing arithmetic cert — the `bv2nat`-bound helper declines (no abstractable
-/// `bv2nat`) and the plain `arith_alethe_certificate` runs ahead of it, so the
-/// trust steps record ONLY the certified Farkas step (no `IntBlast`).
+/// Regression: a plain `QF_LIA` unsat (`x > 0 ∧ x < 0`, no `bv2nat`) still gets a
+/// **checked** arithmetic certificate with no `IntBlast` (bv2nat-range) trust
+/// hole. The exact route has since upgraded: the arith-DPLL theory-enumeration
+/// cert (`d3b0d2e1`, "close QF_LIA dominance") now decides this instance ahead
+/// of the older Farkas Alethe path — both are internally re-checkable (Carcara
+/// has no `lia_generic`, so neither was externally checkable for integers), so
+/// the intent of this regression (checked cert, no `IntBlast` hole) is
+/// unchanged.
 #[test]
 fn plain_qf_lia_unsat_evidence_unchanged() {
     let mut arena = TermArena::new();
@@ -176,20 +180,15 @@ fn plain_qf_lia_unsat_evidence_unchanged() {
     let assertions = [gt0, lt0];
 
     let report = produce_evidence(&mut arena, &assertions, &config()).unwrap();
-    let Evidence::UnsatArithAletheProof(_) = &report.evidence else {
-        panic!(
-            "expected the plain QF_LIA arith cert, got {:?}",
-            report.evidence
-        );
-    };
-    assert!(report.evidence.check(&arena, &assertions).unwrap());
-    // The plain LIA path records only the certified Farkas step — no IntBlast hole.
     assert!(
-        report
-            .trusted_steps
-            .iter()
-            .any(|s| s.id == TrustId::Farkas && s.certified)
+        matches!(
+            report.evidence,
+            Evidence::UnsatArithDpll(_) | Evidence::UnsatArithAletheProof(_)
+        ),
+        "expected a checked QF_LIA arith cert, got {:?}",
+        report.evidence
     );
+    assert!(report.evidence.check(&arena, &assertions).unwrap());
     assert!(
         !report
             .trusted_steps
