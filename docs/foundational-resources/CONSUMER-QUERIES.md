@@ -19,6 +19,8 @@ bridge lookups, checked-row drilldowns, and theorem boundaries, see
 [FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md).
 For proof-route summaries and route-specific boundaries, see
 [PROOF-ROUTE-QUERY-MATRIX.md](PROOF-ROUTE-QUERY-MATRIX.md).
+For promoted solver-reuse pack mining by route, field, and checked row, see
+[SOLVER-REUSE-QUERIES.md](SOLVER-REUSE-QUERIES.md).
 For concept-plus-route matrix discovery, see
 [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md).
 For concept-plus-route probability/statistics discovery, see

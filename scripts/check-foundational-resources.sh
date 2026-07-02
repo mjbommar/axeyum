@@ -22,6 +22,12 @@ python3 scripts/query-foundational-resources.py checks --field topology --proof-
 python3 scripts/query-foundational-resources.py checks --field graph_theory --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --text convergence --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --route Alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --route qf-bv --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --field graph_theory --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --route Farkas --expected-result unsat --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --route Alethe --expected-result unsat --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --field probability_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --expected-result unsat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --kind example-family --format json --require-any >/dev/null

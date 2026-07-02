@@ -52,6 +52,8 @@ For proof-route coverage queries, use the
 [Proof Route Query Matrix](PROOF-ROUTE-QUERY-MATRIX.md).
 For Lean/theorem-boundary discovery, use the
 [Theorem Horizon Queries](THEOREM-HORIZON-QUERIES.md).
+For solver/proof contributors mining promoted resource packs, use the
+[Solver Reuse Queries](SOLVER-REUSE-QUERIES.md).
 For the compact execution selector that picks one replay-heavy family per proof
 route and states when another negative row should be promoted, use the
 [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md).

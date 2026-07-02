@@ -1669,6 +1669,11 @@ Pick one row per commit unless the change is purely navigational.
      field, and topic queries for `lean-horizon` rows and makes explicit that
      horizon rows are boundary markers, not checked SMT evidence, replay
      evidence, benchmark claims, or theorem proofs.
+193. Landed: add `SOLVER-REUSE-QUERIES.md` as the focused R5 query guide for
+     solver/proof contributors. It records executable promoted-pack, route,
+     field, and checked-row queries for mining solver-reuse resources while
+     making explicit that educational rows are not theorem, benchmark, or
+     parity claims until the appropriate evidence and measurement gates exist.
 
 ## Validation Checklist
 

@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Solver-reuse query guide landed.**
+  `SOLVER-REUSE-QUERIES.md` now documents how solver, proof, benchmark, and
+  fuzzing contributors find promoted packs by solver-reuse status, proof route,
+  field, and checked row while keeping educational resources separate from
+  theorem, benchmark, and parity claims. The foundational resource smoke script
+  now checks promoted-pack lookups for Farkas, Alethe, QF_BV, graph, and
+  checked-row drilldowns. The public summary remains 121 concept rows, 75
+  bridge concepts, 108 packs, 688 expected checks, 322 checked rows, 295
+  replay-only rows, and 71 Lean-horizon rows.
+
 - **Theorem-horizon query guide landed.**
   `THEOREM-HORIZON-QUERIES.md` now documents how consumers find Lean/theorem
   boundary rows by route summary, pack route, field, and topic text without

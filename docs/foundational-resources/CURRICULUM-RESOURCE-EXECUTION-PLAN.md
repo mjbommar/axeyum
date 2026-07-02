@@ -351,6 +351,10 @@ Near-term boundary:
   query layer for summary counts, pack discovery, field-plus-proof-route
   discovery, checked-row mining, solver-reuse candidates, atlas concept
   lookup, and field-level curriculum readiness.
+- [SOLVER-REUSE-QUERIES.md](SOLVER-REUSE-QUERIES.md) is the focused R5 guide
+  for solver, proof, benchmark, and fuzzing contributors mining promoted packs
+  by route, field, and checked row without treating them as theorem or parity
+  claims.
 - No Rust crate or separate repository until at least one real consumer needs
   typed APIs, release cadence, or large external corpora.
 

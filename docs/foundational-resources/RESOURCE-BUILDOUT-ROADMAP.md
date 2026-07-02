@@ -220,6 +220,11 @@ Audience: solver contributors and benchmark maintainers.
 The educational resources become solver assets only after their mathematical
 meaning is stable.
 
+The focused consumer guide for this layer is
+[Solver Reuse Queries](SOLVER-REUSE-QUERIES.md). It records executable
+promoted-pack, route, field, and checked-row queries for solver/proof
+contributors.
+
 Build plan:
 
 - Add `solver_reuse.status = candidate` only when a row pressures a real solver
