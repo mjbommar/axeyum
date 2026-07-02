@@ -115,8 +115,11 @@ replay, objective-decrease checking, finite descent-bound replay, and a checked
 QF_LRA/Farkas bad-decrease certificate; its theorem boundary is
 [Gradient Descent Convergence Theorem Boundary](gradient-descent-convergence-theorem-boundary.md).
 The finite line-search slice adds exact Armijo trial rejection, one accepted
-backtracked step, and a checked QF_LRA/Farkas bad-acceptance certificate. The
-finite Wolfe line-search slice adds exact Wolfe
+backtracked step, and checked QF_LRA/Farkas bad-acceptance,
+bad-descent-direction, and bad-accepted-candidate certificates; its theorem
+boundary is
+[Line Search Convergence Theorem Boundary](line-search-convergence-theorem-boundary.md).
+The finite Wolfe line-search slice adds exact Wolfe
 sufficient-decrease and curvature replay plus checked bad-minimizer and
 bad-curvature certificates. The finite projected-gradient slice adds exact
 interval projection after a trial step, projected objective decrease, and
@@ -505,11 +508,16 @@ accepted alpha = 1/2
 The `finite-line-search-v0` validator recomputes the derivative, directional
 derivative, rejected candidate, accepted candidate, Armijo right-hand sides,
 positive rejection violation, and accepted-step slack. Its bad rows claim the
-rejected trial step satisfies Armijo and claim the accepted candidate is
-`1/4`; exact replay computes violation `1` and accepted candidate `0`, and
-the final contradictions are checked through QF_LRA/Farkas evidence. For a
-focused trace, read
+rejected trial step satisfies Armijo, claim the descent direction is
+nonnegative, and claim the accepted candidate is `1/4`; exact replay computes
+violation `1`, directional derivative `-4`, and accepted candidate `0`, and the
+final contradictions are checked through QF_LRA/Farkas evidence. For a focused
+trace, read
 [End To End: Finite Line Search Checks](finite-line-search-end-to-end.md).
+For the theorem boundary that keeps those finite line-search rows separate
+from termination, sufficient-decrease, Wolfe-condition, convergence-rate,
+variant, and numerical-stability claims, read
+[Line Search Convergence Theorem Boundary](line-search-convergence-theorem-boundary.md).
 
 For a finite Wolfe line-search example, encode a one-dimensional quadratic and
 one exact Wolfe step:

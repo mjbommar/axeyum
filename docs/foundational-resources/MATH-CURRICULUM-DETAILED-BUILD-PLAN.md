@@ -1977,6 +1977,15 @@ Pick one row per commit unless the change is purely navigational.
      rate, variant, and numerical-stability theorem routes, and adds
      gradient-specific horizon queries to the public smoke gate without adding
      a duplicate pack or changing resource counts.
+235. Landed: add `line-search-convergence-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-line-search-v0`. It maps exact
+     descent-direction replay, Armijo trial rejection replay, accepted
+     backtracked-step replay, and checked QF_LRA/Farkas bad Armijo,
+     bad descent-direction, and bad accepted-candidate rows to the missing
+     Armijo termination, sufficient-decrease, Wolfe-condition, convergence,
+     rate, variant, and numerical-stability theorem routes, and adds
+     line-search-specific horizon queries to the public smoke gate without
+     adding a duplicate pack or changing resource counts.
 
 ## Validation Checklist
 

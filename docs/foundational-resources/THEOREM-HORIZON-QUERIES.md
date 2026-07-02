@@ -324,6 +324,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Line-search termination, sufficient-decrease, Wolfe-condition, and convergence
+horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text line-search \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-line-search-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Hitting-time, recurrence/transience, and stochastic-process horizons:
 
 ```sh

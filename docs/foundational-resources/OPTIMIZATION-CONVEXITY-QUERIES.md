@@ -235,6 +235,10 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --require-any
 
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text line-search \
+  --require-any
+
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-line-search-v0 \
   --route Farkas \

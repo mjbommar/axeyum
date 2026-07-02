@@ -2577,7 +2577,13 @@ stability theorem claims; and
 as the focused page that keeps finite gradient/step/objective/descent-bound
 replay and checked Farkas bad-row evidence separate from descent lemmas,
 smooth-convex convergence, rates, stopping criteria, variants, and numerical
-stability theorem claims.
+stability theorem claims; and
+[`line-search-convergence-theorem-boundary.md`](../learn/math/line-search-convergence-theorem-boundary.md)
+as the focused page that keeps finite descent-direction, Armijo
+rejection/acceptance, and accepted-candidate replay plus checked Farkas bad-row
+evidence separate from line-search termination, sufficient-decrease,
+Wolfe-condition, convergence-rate, variant, and numerical-stability theorem
+claims.
 The functional-analysis/operator consumer layer now also has
 [`FUNCTIONAL-OPERATOR-QUERIES.md`](FUNCTIONAL-OPERATOR-QUERIES.md). The guide
 and resource smoke expose finite operator/Chebyshev rows, eigenpair and
@@ -2719,6 +2725,15 @@ bad-free-gradient, and bad-degenerate-multiplier QF_LRA/Farkas rows are linked
 to copyable queries and graduation criteria while keeping active-set
 correctness, finite termination, anti-cycling, degeneracy handling,
 convergence, warm-start, and numerical-stability claims in
+Lean/theorem-horizon lanes.
+The learner/planning layer now also has
+[`line-search-convergence-theorem-boundary.md`](../learn/math/line-search-convergence-theorem-boundary.md),
+which expands the finite Armijo line-search row into a concrete boundary
+ledger: descent-direction replay, trial-step rejection replay, accepted
+backtracked-step replay, and bad Armijo/bad direction/bad accepted-candidate
+QF_LRA/Farkas rows are linked to copyable queries and graduation criteria while
+keeping line-search termination, sufficient-decrease, Wolfe-condition variants,
+convergence rates, stochastic variants, and numerical-stability claims in
 Lean/theorem-horizon lanes.
 The learner/planning layer now also has
 [`real-completeness-theorem-boundary.md`](../learn/math/real-completeness-theorem-boundary.md),

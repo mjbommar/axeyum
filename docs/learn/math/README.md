@@ -290,8 +290,13 @@ Companion maps:
   variant, and numerical-stability routes.
 - [Finite Line Search Checks](finite-line-search-end-to-end.md): follows exact
   descent-direction replay, Armijo trial rejection, one accepted backtracked
-  step, checked QF_LRA/Farkas bad-acceptance and bad accepted-candidate
-  rejections, and the general line-search convergence Lean horizon.
+  step, checked QF_LRA/Farkas bad-acceptance, bad descent-direction, and bad
+  accepted-candidate rejections, and the general line-search convergence Lean
+  horizon.
+- [Line Search Convergence Theorem Boundary](line-search-convergence-theorem-boundary.md):
+  maps those finite descent-direction, Armijo rejection/acceptance, and
+  accepted-candidate shadows to the missing termination, sufficient-decrease,
+  Wolfe-condition, convergence-rate, variant, and numerical-stability routes.
 - [Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md):
   follows exact descent-direction replay, exact line-minimizer replay, Wolfe
   sufficient-decrease and curvature checks, checked QF_LRA/Farkas

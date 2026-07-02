@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Line-search convergence theorem-boundary resource landed.**
+  `line-search-convergence-theorem-boundary.md` now separates
+  `finite-line-search-v0` exact descent-direction replay, Armijo trial
+  rejection replay, accepted backtracked-step replay, and checked bad Armijo,
+  bad descent-direction, and bad accepted-candidate QF_LRA/Farkas rows from
+  line-search termination, sufficient-decrease, Wolfe-condition variants,
+  convergence rates, stochastic/projected/proximal variants, and numerical
+  stability theorem claims. The theorem horizon, optimization/convexity,
+  learner-map, and smoke query docs now expose the line-search boundary
+  directly.
+
 - **Gradient-descent convergence theorem-boundary resource landed.**
   `gradient-descent-convergence-theorem-boundary.md` now separates
   `finite-gradient-descent-v0` exact quadratic gradient replay, one-step update
