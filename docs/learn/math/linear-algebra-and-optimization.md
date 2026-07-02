@@ -31,6 +31,7 @@ Example packs:
 - [finite-condition-number-v0](../../../artifacts/examples/math/finite-condition-number-v0/)
 - [finite-singular-value-shadow-v0](../../../artifacts/examples/math/finite-singular-value-shadow-v0/)
 - [finite-orthogonal-diagonalization-v0](../../../artifacts/examples/math/finite-orthogonal-diagonalization-v0/)
+- [finite-real-schur-decomposition-v0](../../../artifacts/examples/math/finite-real-schur-decomposition-v0/)
 - [finite-power-iteration-v0](../../../artifacts/examples/math/finite-power-iteration-v0/)
 - [finite-conjugate-gradient-v0](../../../artifacts/examples/math/finite-conjugate-gradient-v0/)
 - [finite-arnoldi-iteration-v0](../../../artifacts/examples/math/finite-arnoldi-iteration-v0/)
@@ -214,6 +215,11 @@ relation, and checked QF_LRA/Farkas bad-subdiagonal-coefficient evidence; its
 general Arnoldi decomposition, Ritz convergence, GMRES minimization, restart,
 reorthogonalization, and floating-point stability claims stay as Lean or
 numerical-honesty horizons.
+The finite real-Schur slice adds exact rational orthogonal `Q`, upper
+triangular `T`, reconstruction `Q*T*Q^T = A`, triangular coupling `A*Q = Q*T`,
+trace/determinant replay, and checked QF_LRA/Farkas bad-superdiagonal evidence;
+its general real/complex Schur theorem, QR-iteration convergence, perturbation,
+and floating-point stability claims stay as Lean or numerical-honesty horizons.
 The finite Lanczos slice adds the symmetric-matrix specialization: exact
 alpha/beta coefficient replay, orthonormal-basis checking, a full
 two-dimensional tridiagonal relation, and checked QF_LRA/Farkas bad
@@ -490,6 +496,22 @@ spectral theorem, diagonalization criteria, eigensolver convergence,
 perturbation theory, and floating-point stability stay in the horizon lane.
 For a focused trace, read
 [End To End: Finite Orthogonal Diagonalization](orthogonal-diagonalization-end-to-end.md).
+
+For exact real Schur decomposition, `finite-real-schur-decomposition-v0` uses
+the same rational orthogonal matrix shape with an upper-triangular factor:
+
+```text
+Q = [[3/5,4/5],[-4/5,3/5]]
+T = [[1,2],[0,4]]
+A = Q*T*Q^T
+```
+
+The validator recomputes `Q^T*Q = I`, `Q*T*Q^T = A`, `A*Q = Q*T`,
+`trace(A) = 5`, and `det(A) = 4`. Its checked bad row rejects the claim that
+`T[0,1] = 3` after exact replay reads `2`; the general Schur theorem,
+QR-iteration convergence, perturbation theory, and floating-point stability
+stay in the horizon lane. For a focused trace, read
+[End To End: Finite Real Schur Decomposition](real-schur-decomposition-end-to-end.md).
 
 For a Jordan-chain shadow, `finite-jordan-chain-v0` uses one non-diagonal
 rational matrix:
@@ -930,6 +952,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_schur_complement_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-singular-value-shadow-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_singular_value_shadow_bad_bound_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-real-schur-decomposition-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_real_schur_decomposition_bad_superdiagonal_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-jordan-chain-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_jordan_chain_bad_component_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
@@ -1016,6 +1040,7 @@ replay, read
 [End To End: Matrix Invariants](matrix-invariants-end-to-end.md),
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md),
 [End To End: Finite Orthogonal Diagonalization](orthogonal-diagonalization-end-to-end.md),
+[End To End: Finite Real Schur Decomposition](real-schur-decomposition-end-to-end.md),
 [End To End: Finite Power Iteration](power-iteration-end-to-end.md),
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md),
 [End To End: Finite Covariance Matrix](covariance-matrix-end-to-end.md),

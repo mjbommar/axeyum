@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-real-schur-decomposition-v0",
+  "witnesses": [
+    {
+      "id": "rational-real-schur-decomposition",
+      "description": "Exact rational real Schur decomposition for a fixed non-symmetric 2x2 matrix.",
+      "values": {
+        "matrix": [
+          ["97/25", "54/25"],
+          ["4/25", "28/25"]
+        ],
+        "q_matrix": [
+          ["3/5", "4/5"],
+          ["-4/5", "3/5"]
+        ],
+        "q_transpose": [
+          ["3/5", "-4/5"],
+          ["4/5", "3/5"]
+        ],
+        "triangular": [
+          ["1", "2"],
+          ["0", "4"]
+        ],
+        "identity": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "product": [
+          ["97/25", "54/25"],
+          ["4/25", "28/25"]
+        ],
+        "schur_values": ["1", "4"],
+        "schur_vectors": [
+          ["3/5", "-4/5"],
+          ["4/5", "3/5"]
+        ],
+        "images": [
+          ["3/5", "-4/5"],
+          ["22/5", "4/5"]
+        ],
+        "trace": "5",
+        "diagonal_sum": "5",
+        "determinant": "4",
+        "diagonal_product": "4",
+        "superdiagonal": "2"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "schur-shape-witness",
+      "claim": "The fixed rational matrix Q is orthogonal and T is upper triangular.",
+      "expected_result": "sat",
+      "validation": "exact_rational_schur_shape_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-real-schur-decomposition"],
+      "notes": "The validator recomputes Q^T, Q^T*Q, Q*Q^T, and upper-triangular shape for T exactly."
+    },
+    {
+      "id": "schur-reconstruction-witness",
+      "claim": "The fixed rational matrices satisfy Q*T*Q^T = A.",
+      "expected_result": "sat",
+      "validation": "exact_rational_schur_reconstruction_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-real-schur-decomposition"],
+      "notes": "The validator recomputes the matrix product exactly over rationals."
+    },
+    {
+      "id": "schur-vector-relation-witness",
+      "claim": "The fixed rational matrices satisfy A*Q = Q*T.",
+      "expected_result": "sat",
+      "validation": "exact_rational_schur_vector_relation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-real-schur-decomposition"],
+      "notes": "The validator checks the first eigenvector relation and the second triangular-coupling relation exactly."
+    },
+    {
+      "id": "schur-invariant-witness",
+      "claim": "The fixed matrix trace and determinant match the diagonal sum and product of T.",
+      "expected_result": "sat",
+      "validation": "exact_rational_schur_invariant_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-real-schur-decomposition"],
+      "notes": "The validator recomputes trace(A), det(A), sum(diag(T)), and product(diag(T)) exactly."
+    },
+    {
+      "id": "bad-schur-superdiagonal-rejected",
+      "claim": "The superdiagonal entry T[0,1] in the fixed Schur form is 3.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_schur_superdiagonal_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "rational-real-schur-decomposition",
+        "entry": [0, 1],
+        "computed_superdiagonal": "2",
+        "claimed_superdiagonal": "3"
+      },
+      "notes": "Exact replay reads T[0,1] as 2, so the claimed value 3 is rejected; the separate qf-lra-bad-schur-superdiagonal row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-schur-superdiagonal",
+      "claim": "The fixed malformed Schur superdiagonal claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "rational-real-schur-decomposition",
+        "source_replay_row": "bad-schur-superdiagonal-rejected",
+        "entry": [0, 1],
+        "computed_superdiagonal": "2",
+        "claimed_superdiagonal": "3",
+        "farkas_conflict": "schur_t01 = 2 and schur_t01 = 3",
+        "smt2_artifact": "artifacts/examples/math/finite-real-schur-decomposition-v0/smt2/bad-schur-superdiagonal-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_real_schur_decomposition_bad_superdiagonal_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the listed superdiagonal entry as 2, while the malformed row claims 3; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-real-schur-theory-lean-horizon",
+      "claim": "General real/complex Schur decomposition, eigenvalue ordering, multiplicity theory, QR-iteration convergence, perturbation bounds, and floating-point stability require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For arbitrary finite-dimensional real or complex inner-product spaces, prove Schur triangularization under explicit field/eigenvalue side conditions, trace/determinant spectral identities, and ordered diagonal or block-diagonal forms.",
+        "future_checker": "Lean theorem statements for real and complex Schur forms plus separate numerical-honesty artifacts for QR iteration, perturbation bounds, and floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational Schur decomposition, not a theorem about arbitrary matrices or a numerical eigensolver claim."
+    }
+  ]
+}

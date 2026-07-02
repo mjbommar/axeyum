@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 132 non-template math example packs validate.
+  Status: 133 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 132 non-template packs have at least one `checked` expected-result row.
+  Status: 133 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3488,6 +3488,16 @@ QF_LRA/Farkas artifact rejects the malformed eigenvalue claim
 diagonalization criteria, multiplicity theory, perturbation bounds,
 eigensolver convergence, and floating-point stability claims stay in theorem
 or numerical-honesty lanes.
+The linear-algebra/numerical-analysis/operator layer now adds
+`finite-real-schur-decomposition-v0` as the 133rd non-template math pack.
+Exact rational replay checks `Q = [[3/5,4/5],[-4/5,3/5]]`,
+`T = [[1,2],[0,4]]`, `A = [[97/25,54/25],[4/25,28/25]]`,
+`Q^T*Q = I`, `Q*T*Q^T = A`, triangular coupling `A*Q = Q*T`,
+`trace(A) = 1 + 4 = 5`, and `det(A) = 1*4 = 4`, while a source-linked
+QF_LRA/Farkas artifact rejects the malformed superdiagonal claim
+`T[0,1] = 3` against the exact value `2`. General real/complex Schur theorem,
+eigenvalue ordering, QR-iteration convergence, perturbation bounds, and
+floating-point stability claims stay in theorem or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

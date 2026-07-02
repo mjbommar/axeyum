@@ -14193,6 +14193,213 @@ def validate_finite_orthogonal_diagonalization(expected: dict[str, Any]) -> None
     )
 
 
+def validate_finite_real_schur_decomposition(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    shape = checks["schur-shape-witness"]
+    if shape["expected_result"] != "sat":
+        fail("schur-shape-witness must expect sat")
+    if shape.get("proof_status") != "replay-only":
+        fail("schur-shape-witness must be replay-only")
+    values = single_witness_values(shape, witnesses)
+    matrix = require_fraction_matrix("Schur matrix A", values.get("matrix"))
+    q_matrix = require_fraction_matrix("Schur Q matrix", values.get("q_matrix"))
+    q_transpose = require_fraction_matrix("Schur Q transpose", values.get("q_transpose"))
+    triangular = require_fraction_matrix("Schur T matrix", values.get("triangular"))
+    identity = require_fraction_matrix("Schur identity", values.get("identity"))
+    product = require_fraction_matrix("Schur product", values.get("product"))
+    schur_values = require_fraction_vector("Schur diagonal values", values.get("schur_values"))
+    schur_vectors = require_fraction_vector_list("Schur vectors", values.get("schur_vectors"))
+    images = require_fraction_vector_list("Schur images", values.get("images"))
+    trace = require_fraction("Schur trace", values.get("trace"))
+    diagonal_sum = require_fraction("Schur diagonal_sum", values.get("diagonal_sum"))
+    determinant = require_fraction("Schur determinant", values.get("determinant"))
+    diagonal_product = require_fraction("Schur diagonal_product", values.get("diagonal_product"))
+    superdiagonal = require_fraction("Schur superdiagonal", values.get("superdiagonal"))
+
+    require_square_matrix("Schur matrix A", matrix)
+    require_square_matrix("Schur Q matrix", q_matrix)
+    require_square_matrix("Schur Q transpose", q_transpose)
+    require_square_matrix("Schur T matrix", triangular)
+    require_square_matrix("Schur identity", identity)
+    if len(matrix) != 2:
+        fail("finite real Schur replay expects one 2x2 matrix")
+    if len(q_matrix) != len(matrix) or len(triangular) != len(matrix):
+        fail("Schur matrices must have matching dimensions")
+    expected_identity = [
+        [Fraction(1) if row == column else Fraction(0) for column in range(len(matrix))]
+        for row in range(len(matrix))
+    ]
+    if identity != expected_identity:
+        fail("schur-shape-witness identity must be the exact identity matrix")
+    if q_transpose != matrix_transpose(q_matrix):
+        fail("schur-shape-witness q_transpose is incorrect")
+    if mat_mul(q_transpose, q_matrix) != identity:
+        fail("schur-shape-witness Q^T*Q does not equal identity")
+    if mat_mul(q_matrix, q_transpose) != identity:
+        fail("schur-shape-witness Q*Q^T does not equal identity")
+    for row_index, row in enumerate(triangular):
+        for column_index, entry in enumerate(row):
+            if column_index < row_index and entry != 0:
+                fail("schur-shape-witness T must be upper triangular")
+            if row_index == column_index:
+                if row_index >= len(schur_values) or entry != schur_values[row_index]:
+                    fail("schur-shape-witness diagonal entries must match schur_values")
+    if triangular[0][1] != superdiagonal:
+        fail("schur-shape-witness superdiagonal does not match T[0,1]")
+    if schur_vectors != matrix_transpose(q_matrix):
+        fail("schur-shape-witness schur_vectors must be the columns of Q")
+    validate_orthonormal_vectors("Schur vector", schur_vectors)
+
+    reconstruction = checks["schur-reconstruction-witness"]
+    if reconstruction["expected_result"] != "sat":
+        fail("schur-reconstruction-witness must expect sat")
+    if reconstruction.get("proof_status") != "replay-only":
+        fail("schur-reconstruction-witness must be replay-only")
+    if single_witness_values(reconstruction, witnesses) != values:
+        fail("schur-reconstruction-witness must cite the Schur witness")
+    if mat_mul(mat_mul(q_matrix, triangular), q_transpose) != product:
+        fail("schur-reconstruction-witness product does not equal Q*T*Q^T")
+    if product != matrix:
+        fail("schur-reconstruction-witness product must equal A")
+
+    relation = checks["schur-vector-relation-witness"]
+    if relation["expected_result"] != "sat":
+        fail("schur-vector-relation-witness must expect sat")
+    if relation.get("proof_status") != "replay-only":
+        fail("schur-vector-relation-witness must be replay-only")
+    if single_witness_values(relation, witnesses) != values:
+        fail("schur-vector-relation-witness must cite the Schur witness")
+    left_relation = mat_mul(matrix, q_matrix)
+    right_relation = mat_mul(q_matrix, triangular)
+    if left_relation != right_relation:
+        fail("schur-vector-relation-witness A*Q does not equal Q*T")
+    expected_images = matrix_transpose(right_relation)
+    if images != expected_images:
+        fail("schur-vector-relation-witness images must be the columns of Q*T")
+    for index, vector in enumerate(schur_vectors):
+        require_mat_vec_shape("Schur vector relation", matrix, vector)
+        if mat_vec(matrix, vector) != images[index]:
+            fail(f"schur-vector-relation-witness image {index} does not equal A*q_i")
+    if images[0] != scalar_vec(schur_values[0], schur_vectors[0]):
+        fail("schur-vector-relation-witness first Schur vector must be an eigenvector")
+    coupled_second = vector_add_fraction(
+        scalar_vec(superdiagonal, schur_vectors[0]),
+        scalar_vec(schur_values[1], schur_vectors[1]),
+    )
+    if images[1] != coupled_second:
+        fail("schur-vector-relation-witness second Schur vector coupling is incorrect")
+
+    invariants = checks["schur-invariant-witness"]
+    if invariants["expected_result"] != "sat":
+        fail("schur-invariant-witness must expect sat")
+    if invariants.get("proof_status") != "replay-only":
+        fail("schur-invariant-witness must be replay-only")
+    if single_witness_values(invariants, witnesses) != values:
+        fail("schur-invariant-witness must cite the Schur witness")
+    if sum((matrix[index][index] for index in range(len(matrix))), Fraction(0)) != trace:
+        fail("schur-invariant-witness trace(A) is incorrect")
+    if sum(schur_values, Fraction(0)) != diagonal_sum:
+        fail("schur-invariant-witness diagonal sum is incorrect")
+    if trace != diagonal_sum:
+        fail("schur-invariant-witness trace must equal diagonal sum")
+    if matrix_determinant(matrix) != determinant:
+        fail("schur-invariant-witness determinant(A) is incorrect")
+    computed_product = Fraction(1)
+    for value in schur_values:
+        computed_product *= value
+    if computed_product != diagonal_product:
+        fail("schur-invariant-witness diagonal product is incorrect")
+    if determinant != diagonal_product:
+        fail("schur-invariant-witness determinant must equal diagonal product")
+
+    bad = checks["bad-schur-superdiagonal-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-schur-superdiagonal-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-schur-superdiagonal-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_schur_superdiagonal_replay":
+        fail("bad-schur-superdiagonal-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "rational-real-schur-decomposition":
+        fail("bad-schur-superdiagonal-rejected must cite rational-real-schur-decomposition")
+    entry = data.get("entry")
+    if not isinstance(entry, list) or len(entry) != 2:
+        fail("bad-schur-superdiagonal-rejected entry must be a row/column pair")
+    row_index = require_nonnegative_int("bad Schur entry row", entry[0])
+    column_index = require_nonnegative_int("bad Schur entry column", entry[1])
+    if row_index >= len(triangular) or column_index >= len(triangular[row_index]):
+        fail("bad-schur-superdiagonal-rejected entry is out of range")
+    computed_superdiagonal = require_fraction(
+        "bad Schur computed_superdiagonal",
+        data.get("computed_superdiagonal"),
+    )
+    claimed_superdiagonal = require_fraction(
+        "bad Schur claimed_superdiagonal",
+        data.get("claimed_superdiagonal"),
+    )
+    if triangular[row_index][column_index] != computed_superdiagonal:
+        fail("bad-schur-superdiagonal-rejected computed value does not match replay")
+    if computed_superdiagonal == claimed_superdiagonal:
+        fail("bad-schur-superdiagonal-rejected must document a false superdiagonal claim")
+    if "separate qf-lra-bad-schur-superdiagonal" not in bad.get("notes", ""):
+        fail("bad-schur-superdiagonal-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-schur-superdiagonal"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-schur-superdiagonal must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-schur-superdiagonal must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-schur-superdiagonal must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "rational-real-schur-decomposition":
+        fail("qf-lra-bad-schur-superdiagonal must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-schur-superdiagonal-rejected":
+        fail("qf-lra-bad-schur-superdiagonal must cite the replay row")
+    if qf_data.get("entry") != entry:
+        fail("qf-lra-bad-schur-superdiagonal entry must match the replay row")
+    qf_computed = require_fraction(
+        "qf Schur computed_superdiagonal",
+        qf_data.get("computed_superdiagonal"),
+    )
+    qf_claimed = require_fraction(
+        "qf Schur claimed_superdiagonal",
+        qf_data.get("claimed_superdiagonal"),
+    )
+    if qf_computed != computed_superdiagonal or qf_claimed != claimed_superdiagonal:
+        fail("qf-lra-bad-schur-superdiagonal data must match the replay row")
+    if qf_data.get("farkas_conflict") != "schur_t01 = 2 and schur_t01 = 3":
+        fail("qf-lra-bad-schur-superdiagonal must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Schur smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-real-schur-decomposition-v0/smt2/"
+        "bad-schur-superdiagonal-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-schur-superdiagonal smt2_artifact must name the checked source artifact")
+    check_source("qf Schur smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Schur farkas_regression", regression)
+    if "finite_real_schur_decomposition_bad_superdiagonal_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-schur-superdiagonal must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Schur certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-schur-superdiagonal certificate must document checked Farkas evidence")
+
+    horizon = checks["general-real-schur-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-real-schur-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-real-schur-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("real Schur horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("real Schur horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_finite_jordan_chain(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -31192,6 +31399,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_singular_value_shadow(expected)
     if metadata["id"] == "finite-orthogonal-diagonalization-v0":
         validate_finite_orthogonal_diagonalization(expected)
+    if metadata["id"] == "finite-real-schur-decomposition-v0":
+        validate_finite_real_schur_decomposition(expected)
     if metadata["id"] == "finite-jordan-chain-v0":
         validate_finite_jordan_chain(expected)
     if metadata["id"] == "metric-continuity-v0":

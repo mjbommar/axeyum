@@ -313,6 +313,9 @@ const SPECTRAL_BAD_EIGENPAIR: &str = include_str!(
 const FINITE_ORTHOGONAL_DIAGONALIZATION_BAD_EIGENVALUE: &str = include_str!(
     "../../../artifacts/examples/math/finite-orthogonal-diagonalization-v0/smt2/bad-spectral-eigenvalue-farkas-conflict.smt2"
 );
+const FINITE_REAL_SCHUR_DECOMPOSITION_BAD_SUPERDIAGONAL: &str = include_str!(
+    "../../../artifacts/examples/math/finite-real-schur-decomposition-v0/smt2/bad-schur-superdiagonal-farkas-conflict.smt2"
+);
 const FINITE_POWER_ITERATION_BAD_COORDINATE: &str = include_str!(
     "../../../artifacts/examples/math/finite-power-iteration-v0/smt2/bad-power-iterate-coordinate-farkas-conflict.smt2"
 );
@@ -1932,6 +1935,14 @@ fn finite_orthogonal_diagonalization_bad_eigenvalue_artifact_emits_checked_farka
     assert_resource_farkas(
         "finite-orthogonal-diagonalization-v0 bad-eigenvalue SMT-LIB artifact",
         FINITE_ORTHOGONAL_DIAGONALIZATION_BAD_EIGENVALUE,
+    );
+}
+
+#[test]
+fn finite_real_schur_decomposition_bad_superdiagonal_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-real-schur-decomposition-v0 bad-superdiagonal SMT-LIB artifact",
+        FINITE_REAL_SCHUR_DECOMPOSITION_BAD_SUPERDIAGONAL,
     );
 }
 
