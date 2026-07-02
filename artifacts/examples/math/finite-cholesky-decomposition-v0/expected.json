@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-cholesky-decomposition-v0",
+  "witnesses": [
+    {
+      "id": "two-by-two-cholesky-factorization",
+      "description": "Exact rational Cholesky factorization data for a fixed 2x2 positive-definite matrix.",
+      "values": {
+        "matrix": [
+          ["4", "2"],
+          ["2", "10"]
+        ],
+        "l": [
+          ["2", "0"],
+          ["1", "3"]
+        ],
+        "l_transpose": [
+          ["2", "1"],
+          ["0", "3"]
+        ],
+        "product": [
+          ["4", "2"],
+          ["2", "10"]
+        ],
+        "leading_principal_minors": [
+          "4",
+          "36"
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "cholesky-lower-triangular-witness",
+      "claim": "The fixed rational L matrix is lower triangular.",
+      "expected_result": "sat",
+      "validation": "exact_rational_cholesky_lower_triangular_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-cholesky-factorization"],
+      "notes": "The validator checks every above-diagonal entry of L exactly."
+    },
+    {
+      "id": "cholesky-positive-diagonal-witness",
+      "claim": "The fixed rational L matrix has positive diagonal entries.",
+      "expected_result": "sat",
+      "validation": "exact_rational_cholesky_positive_diagonal_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-cholesky-factorization"],
+      "notes": "The validator checks the two fixed diagonal entries are positive rationals."
+    },
+    {
+      "id": "cholesky-product-witness",
+      "claim": "The fixed rational matrices satisfy L*L^T = A.",
+      "expected_result": "sat",
+      "validation": "exact_rational_cholesky_product_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-cholesky-factorization"],
+      "notes": "The validator recomputes the matrix product exactly over rationals."
+    },
+    {
+      "id": "cholesky-positive-definite-shadow-witness",
+      "claim": "The fixed 2x2 matrix has positive leading principal minors.",
+      "expected_result": "sat",
+      "validation": "exact_rational_cholesky_positive_definite_shadow_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-cholesky-factorization"],
+      "notes": "The validator recomputes the two leading principal minors exactly; this is a fixed finite shadow, not a theorem about arbitrary matrices."
+    },
+    {
+      "id": "bad-cholesky-product-entry-rejected",
+      "claim": "The bottom-right entry of L*L^T is 9.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_cholesky_product_entry_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "two-by-two-cholesky-factorization",
+        "entry": [1, 1],
+        "computed_entry": "10",
+        "claimed_entry": "9"
+      },
+      "notes": "The validator recomputes L*L^T and rejects the malformed product-entry claim; the separate qf-lra-bad-cholesky-product-entry row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-cholesky-product-entry",
+      "claim": "The fixed malformed Cholesky product-entry claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "two-by-two-cholesky-factorization",
+        "source_replay_row": "bad-cholesky-product-entry-rejected",
+        "entry": [1, 1],
+        "computed_entry": "10",
+        "claimed_entry": "9",
+        "smt2_artifact": "artifacts/examples/math/finite-cholesky-decomposition-v0/smt2/bad-cholesky-product-entry-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_cholesky_decomposition_bad_product_entry_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the Cholesky product entry as 10, while the malformed row claims 9; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
+      "id": "general-cholesky-decomposition-theory-lean-horizon",
+      "claim": "Cholesky existence, uniqueness conventions, algorithm correctness, conditioning, and floating-point stability are theorem/numerical-honesty work.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For suitable positive-definite matrices over real or complex inner-product spaces, a Cholesky factorization exists under stated diagonal/sign conventions, and algorithms compute one under explicit assumptions.",
+        "future_checker": "Lean theorem statements for exact Cholesky existence and algorithm invariants plus separate numerical-honesty artifacts for floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource, not a theorem about arbitrary positive-definite matrices or a stability/performance claim for Cholesky algorithms."
+    }
+  ]
+}

@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 75 bridge-concept rows.
 - 5 example-family rows.
-- 113 non-template math packs.
-- 719 expected checks.
-- 339 checked proof/evidence rows.
-- 304 replay-only rows.
-- 76 Lean-horizon rows.
-- 113 promoted solver-reuse packs.
+- 114 non-template math packs.
+- 726 expected checks.
+- 340 checked proof/evidence rows.
+- 309 replay-only rows.
+- 77 Lean-horizon rows.
+- 114 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 113 focused learner-linked packs, with no path-only, index-only, or missing
+- 114 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 113 current non-template packs satisfy the focused-lesson side of this
+all 114 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2333,6 +2333,14 @@ Pick one row per commit unless the change is purely navigational.
      claim `1/2` versus the exact value `2/5`. The learner page keeps QR
      existence, QR algorithms, conditioning, and floating-point stability in
      theorem or numerical-honesty lanes.
+272. Landed: add `finite-cholesky-decomposition-v0` as an exact rational
+     positive-definite factorization resource. The pack replays lower
+     triangularity, positive diagonal entries, `L*L^T = A`, and two-by-two
+     leading principal minors, then adds `qf-lra-bad-cholesky-product-entry`
+     as the source-linked Farkas row for the malformed bottom-right
+     product-entry claim `9` versus the exact value `10`. The learner page
+     keeps Cholesky existence, algorithm correctness, conditioning, and
+     floating-point stability in theorem or numerical-honesty lanes.
 
 ## Validation Checklist
 

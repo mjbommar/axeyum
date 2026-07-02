@@ -42,7 +42,7 @@ when the consumer needs a concrete checked row to display.
 
 | Computation Family | Concept Filter | Route Filter | Start Query |
 |---|---|---|---|
-| Linear systems, nullspaces, LU, and QR | `bridge_lu_replay`; packs `linear-algebra-rational-v0`, `finite-qr-decomposition-v0` | `Farkas` | `checks --concept bridge_lu_replay --route Farkas --proof-status checked`; `checks --pack linear-algebra-rational-v0 --route Farkas --proof-status checked --text nullspace`; `checks --pack linear-algebra-rational-v0 --route Farkas --proof-status checked --text product-entry`; `checks --pack finite-qr-decomposition-v0 --route Farkas --proof-status checked` |
+| Linear systems, nullspaces, LU, QR, and Cholesky | `bridge_lu_replay`; packs `linear-algebra-rational-v0`, `finite-qr-decomposition-v0`, `finite-cholesky-decomposition-v0` | `Farkas` | `checks --concept bridge_lu_replay --route Farkas --proof-status checked`; `checks --pack linear-algebra-rational-v0 --route Farkas --proof-status checked --text nullspace`; `checks --pack linear-algebra-rational-v0 --route Farkas --proof-status checked --text product-entry`; `checks --pack finite-qr-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-cholesky-decomposition-v0 --route Farkas --proof-status checked` |
 | Residual bounds, solution boxes, and least squares | `bridge_residual_bound`; pack `numerical-linear-algebra-v0` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked --text solution` |
 | Rank, kernel, image, vector-space, and dual rows | `bridge_rank_nullity`; pack `finite-vector-spaces-v0` | `Alethe` | `packs --concept bridge_rank_nullity --route Alethe`; `checks --pack finite-vector-spaces-v0 --route Alethe --proof-status checked --text addition-closure` |
 | Rayleigh quotients, eigenpairs, and matrix invariants | `bridge_eigenpair` | `Farkas` | `checks --concept bridge_eigenpair --route Farkas --proof-status checked` |
@@ -128,6 +128,16 @@ Display checked finite QR product-entry rows:
 ```sh
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-qr-decomposition-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+```
+
+Display checked finite Cholesky product-entry rows:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-cholesky-decomposition-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any

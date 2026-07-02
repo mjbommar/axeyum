@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 113 non-template math example packs validate.
+  Status: 114 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 113 non-template packs have at least one `checked` expected-result row.
+  Status: 114 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3304,6 +3304,13 @@ upper-triangular `R`, and `Q*R = A`, while a source-linked QF_LRA/Farkas
 artifact rejects the malformed bottom-right product-entry claim `1/2` against
 the exact value `2/5`. QR existence, QR algorithms, conditioning, and
 floating-point stability stay in theorem or numerical-honesty lanes.
+The matrix-computation layer now adds `finite-cholesky-decomposition-v0` as the
+114th non-template math pack. Exact rational replay checks lower-triangular
+`L`, positive diagonal entries, `L*L^T = A`, and two-by-two leading principal
+minors, while a source-linked QF_LRA/Farkas artifact rejects the malformed
+bottom-right product-entry claim `9` against the exact value `10`. Cholesky
+existence, algorithm correctness, conditioning, and floating-point stability
+stay in theorem or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

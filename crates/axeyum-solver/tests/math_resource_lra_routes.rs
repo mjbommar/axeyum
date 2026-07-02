@@ -22,6 +22,9 @@ const LINEAR_ALGEBRA_BAD_NULLSPACE_COMPONENT: &str = include_str!(
 const FINITE_QR_DECOMPOSITION_BAD_PRODUCT_ENTRY: &str = include_str!(
     "../../../artifacts/examples/math/finite-qr-decomposition-v0/smt2/bad-qr-product-entry-farkas-conflict.smt2"
 );
+const FINITE_CHOLESKY_DECOMPOSITION_BAD_PRODUCT_ENTRY: &str = include_str!(
+    "../../../artifacts/examples/math/finite-cholesky-decomposition-v0/smt2/bad-cholesky-product-entry-farkas-conflict.smt2"
+);
 const LINEAR_OPTIMIZATION_OBJECTIVE_THRESHOLD: &str = include_str!(
     "../../../artifacts/examples/math/linear-optimization-v0/smt2/objective-threshold-farkas-conflict.smt2"
 );
@@ -607,6 +610,14 @@ fn finite_qr_decomposition_bad_product_entry_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-qr-decomposition-v0 bad-qr-product-entry SMT-LIB artifact",
         FINITE_QR_DECOMPOSITION_BAD_PRODUCT_ENTRY,
+    );
+}
+
+#[test]
+fn finite_cholesky_decomposition_bad_product_entry_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-cholesky-decomposition-v0 bad-cholesky-product-entry SMT-LIB artifact",
+        FINITE_CHOLESKY_DECOMPOSITION_BAD_PRODUCT_ENTRY,
     );
 }
 

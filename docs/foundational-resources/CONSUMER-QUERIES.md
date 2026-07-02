@@ -2220,8 +2220,8 @@ python3 scripts/query-foundational-resources.py checks \
 ```
 
 For exact matrix factorizations, the shared matrix-factorization bridge now
-finds both LU product-entry and QR product-entry rows while keeping pivoting,
-QR algorithm correctness, conditioning, and stability out of the checked
+finds LU, QR, and Cholesky product-entry rows while keeping pivoting, QR and
+Cholesky algorithm correctness, conditioning, and stability out of the checked
 finite claim:
 
 ```sh
@@ -2234,6 +2234,12 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-qr-decomposition-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-cholesky-decomposition-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any
@@ -2526,6 +2532,7 @@ python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0
 python3 scripts/query-foundational-resources.py checks --field functional_analysis_and_operator_theory --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-walsh-hadamard-transform-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-qr-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-cholesky-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null
 ```
 
 That keeps the examples on this page aligned with the committed data boundary

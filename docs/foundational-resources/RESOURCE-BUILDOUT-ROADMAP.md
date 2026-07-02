@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 75 bridge-concept rows.
 - 5 example-family rows.
-- 113 non-template math example packs.
-- 719 expected checks.
-- 339 checked proof/evidence rows.
-- 304 replay-only rows.
-- 76 Lean-horizon rows.
-- 113 promoted solver-reuse packs.
+- 114 non-template math example packs.
+- 726 expected checks.
+- 340 checked proof/evidence rows.
+- 309 replay-only rows.
+- 77 Lean-horizon rows.
+- 114 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 113 focused learner-linked packs, with no path-only, index-only, or missing
+- 114 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2355,6 +2355,13 @@ Pick one item per commit unless the change is purely navigational.
      claim through a source-linked QF_LRA/Farkas regression without claiming
      QR existence, Gram-Schmidt/Householder correctness, conditioning, or
      floating-point stability.
+161. Landed: add `finite-cholesky-decomposition-v0` as an exact rational
+     Cholesky factorization resource. The pack computes lower triangularity,
+     positive diagonal entries, `L*L^T`, and leading principal minors, then
+     promotes the malformed bottom-right product-entry claim through a
+     source-linked QF_LRA/Farkas regression without claiming Cholesky
+     existence, algorithm correctness, conditioning, or floating-point
+     stability.
 
 ## Validation Checklist
 

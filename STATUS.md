@@ -240,6 +240,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Cholesky decomposition resource landed.**
+  `finite-cholesky-decomposition-v0` now gives the matrix-computation,
+  numerical-linear-algebra, and optimization lanes an exact rational Cholesky
+  factorization replay: it checks lower-triangular `L`, positive diagonal
+  entries, `L*L^T = A`, and two-by-two leading principal minors, then isolates
+  the malformed bottom-right product entry as a source-linked QF_LRA/Farkas
+  row. The focused learner page keeps Cholesky existence, uniqueness
+  conventions, algorithm correctness, conditioning, and floating-point
+  stability in theorem or numerical-honesty lanes. The public summary now
+  reports 121 concept rows, 114 packs, 726 expected checks, 340 checked rows,
+  309 replay-only rows, 77 Lean-horizon rows, and 114 promoted solver-reuse
+  packs.
 - **Finite QR decomposition resource landed.**
   `finite-qr-decomposition-v0` now gives the matrix-computation and numerical
   linear-algebra lanes an exact rational QR factorization replay: it checks
@@ -247,10 +259,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   malformed bottom-right product entry as a source-linked QF_LRA/Farkas row.
   The focused learner page keeps QR existence, uniqueness conventions,
   Gram-Schmidt/Householder correctness, conditioning, and floating-point
-  stability in theorem or numerical-honesty lanes. The public summary now
-  reports 121 concept rows, 113 packs, 719 expected checks, 339 checked rows,
-  304 replay-only rows, 76 Lean-horizon rows, and 113 promoted solver-reuse
-  packs.
+  stability in theorem or numerical-honesty lanes. That QR landing is now
+  superseded by the Cholesky counters in the current summary above.
 - **Finite Walsh-Hadamard transform resource landed.**
   `finite-walsh-hadamard-transform-v0` now gives the linear-algebra and
   functional-analysis lanes an exact order-4 Walsh-Hadamard transform replay:

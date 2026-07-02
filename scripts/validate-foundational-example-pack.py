@@ -15861,6 +15861,144 @@ def validate_finite_qr_decomposition(expected: dict[str, Any]) -> None:
     require_string("QR horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_cholesky_decomposition(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    lower = checks["cholesky-lower-triangular-witness"]
+    if lower["expected_result"] != "sat":
+        fail("cholesky-lower-triangular-witness must expect sat")
+    values = single_witness_values(lower, witnesses)
+    matrix = require_fraction_matrix("Cholesky matrix A", values.get("matrix"))
+    l_matrix = require_fraction_matrix("Cholesky L matrix", values.get("l"))
+    l_transpose = require_fraction_matrix("Cholesky L transpose", values.get("l_transpose"))
+    product = require_fraction_matrix("Cholesky product", values.get("product"))
+    leading_minors = require_fraction_vector(
+        "Cholesky leading principal minors",
+        values.get("leading_principal_minors"),
+    )
+    require_square_matrix("Cholesky matrix A", matrix)
+    require_square_matrix("Cholesky L matrix", l_matrix)
+    if len(matrix) != len(l_matrix):
+        fail("Cholesky A and L matrices must have the same dimension")
+    if lower.get("proof_status") != "replay-only":
+        fail("cholesky-lower-triangular-witness must be replay-only")
+    if matrix_transpose(l_matrix) != l_transpose:
+        fail("cholesky-lower-triangular-witness L transpose does not match L^T")
+    for row_index, row in enumerate(l_matrix):
+        for column_index in range(row_index + 1, len(row)):
+            if row[column_index] != 0:
+                fail("cholesky-lower-triangular-witness L has a nonzero above-diagonal entry")
+
+    positive_diagonal = checks["cholesky-positive-diagonal-witness"]
+    if positive_diagonal["expected_result"] != "sat":
+        fail("cholesky-positive-diagonal-witness must expect sat")
+    if positive_diagonal.get("proof_status") != "replay-only":
+        fail("cholesky-positive-diagonal-witness must be replay-only")
+    for index, row in enumerate(l_matrix):
+        if row[index] <= 0:
+            fail("cholesky-positive-diagonal-witness L has a nonpositive diagonal entry")
+
+    product_check = checks["cholesky-product-witness"]
+    if product_check["expected_result"] != "sat":
+        fail("cholesky-product-witness must expect sat")
+    require_mat_mul_shape("Cholesky product", l_matrix, l_transpose)
+    if mat_mul(l_matrix, l_transpose) != product:
+        fail("cholesky-product-witness product does not equal L*L^T")
+    if product != matrix:
+        fail("cholesky-product-witness product must equal the listed matrix A")
+    if matrix != matrix_transpose(matrix):
+        fail("cholesky-product-witness matrix A must be symmetric")
+
+    positive_definite = checks["cholesky-positive-definite-shadow-witness"]
+    if positive_definite["expected_result"] != "sat":
+        fail("cholesky-positive-definite-shadow-witness must expect sat")
+    if positive_definite.get("proof_status") != "replay-only":
+        fail("cholesky-positive-definite-shadow-witness must be replay-only")
+    if len(matrix) != 2 or len(matrix[0]) != 2 or len(matrix[1]) != 2:
+        fail("cholesky-positive-definite-shadow-witness is intentionally a 2x2 shadow")
+    expected_minors = [
+        matrix[0][0],
+        matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0],
+    ]
+    if leading_minors != expected_minors:
+        fail("cholesky-positive-definite-shadow-witness leading minors do not match replay")
+    if any(minor <= 0 for minor in leading_minors):
+        fail("cholesky-positive-definite-shadow-witness leading minors must be positive")
+
+    bad = checks["bad-cholesky-product-entry-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-cholesky-product-entry-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-cholesky-product-entry-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_cholesky_product_entry_replay":
+        fail("bad-cholesky-product-entry-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-by-two-cholesky-factorization":
+        fail("bad-cholesky-product-entry-rejected must cite two-by-two-cholesky-factorization")
+    entry = data.get("entry")
+    if not isinstance(entry, list) or len(entry) != 2:
+        fail("bad-cholesky-product-entry-rejected entry must be a row/column pair")
+    row_index = require_nonnegative_int("bad Cholesky entry row", entry[0])
+    column_index = require_nonnegative_int("bad Cholesky entry column", entry[1])
+    if row_index >= len(product) or column_index >= len(product[row_index]):
+        fail("bad-cholesky-product-entry-rejected entry is out of range")
+    computed_entry = require_fraction("bad Cholesky computed_entry", data.get("computed_entry"))
+    claimed_entry = require_fraction("bad Cholesky claimed_entry", data.get("claimed_entry"))
+    if product[row_index][column_index] != computed_entry:
+        fail("bad-cholesky-product-entry-rejected computed entry does not match replay")
+    if computed_entry == claimed_entry:
+        fail("bad-cholesky-product-entry-rejected must document a false entry claim")
+    if "separate qf-lra-bad-cholesky-product-entry" not in bad.get("notes", ""):
+        fail("bad-cholesky-product-entry-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-cholesky-product-entry"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-cholesky-product-entry must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-cholesky-product-entry must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-cholesky-product-entry must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-by-two-cholesky-factorization":
+        fail("qf-lra-bad-cholesky-product-entry must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-cholesky-product-entry-rejected":
+        fail("qf-lra-bad-cholesky-product-entry must cite the replay row")
+    qf_entry = qf_data.get("entry")
+    if qf_entry != entry:
+        fail("qf-lra-bad-cholesky-product-entry entry must match the replay row")
+    qf_computed = require_fraction("qf Cholesky computed_entry", qf_data.get("computed_entry"))
+    qf_claimed = require_fraction("qf Cholesky claimed_entry", qf_data.get("claimed_entry"))
+    if qf_computed != computed_entry or qf_claimed != claimed_entry:
+        fail("qf-lra-bad-cholesky-product-entry data must match the replay row")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Cholesky smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-cholesky-decomposition-v0/smt2/"
+        "bad-cholesky-product-entry-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-cholesky-product-entry smt2_artifact must name the checked source artifact")
+    check_source("qf Cholesky smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Cholesky farkas_regression", regression)
+    if "finite_cholesky_decomposition_bad_product_entry_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-cholesky-product-entry must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Cholesky certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-cholesky-product-entry certificate must document checked Farkas evidence")
+
+    horizon = checks["general-cholesky-decomposition-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-cholesky-decomposition-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-cholesky-decomposition-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("Cholesky horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("Cholesky horizon future_checker", horizon_data.get("future_checker"))
+
+
 def require_complex_pair(context: str, value: Any) -> tuple[Fraction, Fraction]:
     pair = require_fraction_vector(context, value)
     if len(pair) != 2:
@@ -27465,6 +27603,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_simplicial_homology(expected)
     if metadata["id"] == "finite-chain-complex-torsion-v0":
         validate_finite_chain_complex_torsion(expected)
+    if metadata["id"] == "finite-cholesky-decomposition-v0":
+        validate_finite_cholesky_decomposition(expected)
     if metadata["id"] == "finite-universal-coefficient-shadow-v0":
         validate_finite_universal_coefficient_shadow(expected)
     if metadata["id"] == "finite-simplicial-cohomology-v0":
