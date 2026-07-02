@@ -129,6 +129,20 @@ python3 scripts/query-foundational-resources.py horizon-frontier \
   --require-any
 ```
 
+Display finite stochastic-kernel rows, then the theorem boundary:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-stochastic-kernels-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text stochastic-kernel \
+  --require-any
+```
+
 Display finite concentration rows, then the theorem boundary:
 
 ```sh
@@ -268,6 +282,13 @@ For the finite random-variable boundary, read
 before displaying measurable-function, distribution-law, convergence,
 continuous-random-variable, or density-calculus language next to finite
 pushforward, expectation, and independence rows.
+
+For the finite stochastic-kernel boundary, read
+[Stochastic Kernel Theorem Boundary](../learn/math/stochastic-kernel-theorem-boundary.md)
+before displaying regular conditional probability, disintegration,
+measurable-kernel, Markov-process, or stochastic-process convergence language
+next to finite row-normalization, pushforward, joint-table, and composition
+rows.
 
 For the finite hitting-time boundary, read
 [Hitting-Time Theorem Boundary](../learn/math/hitting-time-theorem-boundary.md)

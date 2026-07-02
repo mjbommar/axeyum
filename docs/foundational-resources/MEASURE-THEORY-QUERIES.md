@@ -171,6 +171,10 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --require-any
 
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text stochastic-kernel \
+  --require-any
+
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-hitting-times-v0 \
   --route Farkas \
@@ -203,6 +207,13 @@ For the finite random-variable boundary, read
 before treating finite pushforward, expectation, independence, or checked
 bad-row resources as evidence for general measurable-random-variable,
 distribution-law, convergence, or continuous-distribution claims.
+
+For the finite stochastic-kernel boundary, read
+[Stochastic Kernel Theorem Boundary](../learn/math/stochastic-kernel-theorem-boundary.md)
+before treating finite row-normalization, pushforward, joint-disintegration,
+composition, or checked bad-row resources as evidence for regular conditional
+probability, disintegration, measurable-kernel, or stochastic-process theorem
+claims.
 
 They do not prove:
 

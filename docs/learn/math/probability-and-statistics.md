@@ -31,6 +31,7 @@ Companion map:
 
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
 - [Random Variable Theorem Boundary](random-variable-theorem-boundary.md)
+- [Stochastic Kernel Theorem Boundary](stochastic-kernel-theorem-boundary.md)
 - [Hitting-Time Theorem Boundary](hitting-time-theorem-boundary.md)
 - [Martingale Theorem Boundary](martingale-theorem-boundary.md)
 - [Concentration Theorem Boundary](concentration-theorem-boundary.md)
@@ -186,6 +187,11 @@ row-normalization and composed-entry claims.
 
 For a focused finite stochastic-kernel trace, read
 [End To End: Finite Stochastic Kernels](finite-stochastic-kernels-end-to-end.md).
+For the theorem boundary that keeps finite row normalization, pushforward,
+joint-disintegration, composition, and checked bad-row resources separate from
+regular conditional probability, disintegration, measurable-kernel, and
+stochastic-process theorem claims, read
+[Stochastic Kernel Theorem Boundary](stochastic-kernel-theorem-boundary.md).
 
 For finite hitting times in an absorbing Markov chain, it checks:
 

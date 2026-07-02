@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Stochastic-kernel theorem-boundary resource landed.**
+  `stochastic-kernel-theorem-boundary.md` now separates
+  `finite-stochastic-kernels-v0` finite row-normalization replay,
+  pushforward distributions, joint disintegration, kernel composition, and
+  checked bad kernel-row/bad composition QF_LRA/Farkas rows from regular
+  conditional probability, disintegration, measurable Markov-kernel, and
+  stochastic-process theorem claims. The theorem horizon,
+  probability/statistics, measure-theory, dynamics, learner-map, and smoke
+  query docs now expose the stochastic-kernel boundary directly.
+
 - **Random-variable theorem-boundary resource landed.**
   `random-variable-theorem-boundary.md` now separates
   `finite-random-variables-v0` finite total-function replay, pushforward

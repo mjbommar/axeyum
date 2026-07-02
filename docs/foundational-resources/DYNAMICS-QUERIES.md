@@ -171,6 +171,10 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --require-any
 
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text stochastic-kernel \
+  --require-any
+
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-hitting-times-v0 \
   --route Farkas \
@@ -210,6 +214,12 @@ For the finite Euler boundary in particular, read
 [Euler Method Theorem Boundary](../learn/math/euler-method-theorem-boundary.md)
 before displaying ODE convergence, stability, stiffness, floating-point, or
 PDE theorem language next to finite transition/error rows.
+
+For the finite stochastic-kernel boundary, read
+[Stochastic Kernel Theorem Boundary](../learn/math/stochastic-kernel-theorem-boundary.md)
+before displaying measurable Markov kernels, disintegration, regular
+conditional probability, infinite-state Markov processes, or stochastic-process
+convergence language next to finite stochastic-transition and composition rows.
 
 For the finite hitting-time boundary, read
 [Hitting-Time Theorem Boundary](../learn/math/hitting-time-theorem-boundary.md)

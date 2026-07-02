@@ -2037,6 +2037,11 @@ row-normalized finite kernels, pushforward distributions, joint
 factorization/disintegration, kernel composition, replayed bad kernel-row and
 composition-entry rejections, separate checked QF_LRA/Farkas final-obligation
 refutations, and the regular-conditional-probability Lean horizon.
+It also has a focused stochastic-kernel theorem-boundary page that keeps finite
+row-normalization, pushforward, joint-disintegration, composition, and checked
+bad-row Farkas evidence separate from regular conditional probability,
+disintegration, measurable Markov-kernel, and stochastic-process theorem
+claims.
 `finite-hitting-times-v0` now has a learner-facing end-to-end lesson for finite
 absorbing-chain first-hit distributions, survival mass, absorption equations,
 expected hitting-time equations, checked QF_LRA/Farkas bad survival-mass and
@@ -2680,6 +2685,15 @@ checked bad pushforward and bad expectation Farkas rows, the
 graduation criteria for future no-`sorry` measurable-function,
 distribution-law, convergence, conditional-expectation, and continuous
 random-variable routes.
+The learner/planning layer now also has
+[`stochastic-kernel-theorem-boundary.md`](../learn/math/stochastic-kernel-theorem-boundary.md),
+which narrows the measure/probability and stochastic-process theorem boundary
+to `finite-stochastic-kernels-v0`: finite row-normalization replay,
+pushforward distributions, joint-disintegration replay, kernel composition,
+checked bad kernel-row and bad composition Farkas rows, the
+`general-kernel-lean-horizon` metadata row, copyable queries, and graduation
+criteria for future no-`sorry` regular-conditional-probability,
+disintegration, measurable Markov-kernel, and stochastic-process routes.
 The learner/planning layer now also has
 [`martingale-theorem-boundary.md`](../learn/math/martingale-theorem-boundary.md),
 which narrows the stochastic-process theorem boundary to

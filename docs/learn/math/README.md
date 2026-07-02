@@ -58,6 +58,11 @@ Companion maps:
   separates finite total-function, pushforward, expectation, independence,
   and checked bad-row replay from measurable-random-variable, distribution-law,
   convergence, and continuous-random-variable theorem targets.
+- [Stochastic Kernel Theorem Boundary](stochastic-kernel-theorem-boundary.md):
+  separates finite row-normalized kernels, pushforwards, joint
+  disintegration, composition, and checked bad-row replay from regular
+  conditional probability, disintegration, measurable-kernel, and
+  stochastic-process theorem targets.
 - [Concentration Theorem Boundary](concentration-theorem-boundary.md):
   separates finite Markov, Chebyshev, union-bound, and bad-tail replay from
   Chernoff, Hoeffding, martingale concentration, limit-theorem, and
@@ -524,6 +529,10 @@ Companion maps:
   and composition-entry rejections, separate checked QF_LRA/Farkas
   final-obligation refutations, and the regular-conditional-probability Lean
   horizon.
+- [Stochastic Kernel Theorem Boundary](stochastic-kernel-theorem-boundary.md):
+  maps those finite kernel and composition shadows to the missing regular
+  conditional probability, disintegration, measurable Markov-kernel, and
+  stochastic-process proof routes.
 - [Finite Hitting Times](finite-hitting-times-end-to-end.md): follows finite
   absorbing-chain first-hit distributions, survival mass, absorption
   equations, expected hitting-time equations, checked bad survival-mass and

@@ -1899,12 +1899,21 @@ Pick one row per commit unless the change is purely navigational.
      theorem-boundary page for `finite-random-variables-v0`. It maps finite
      total-function replay, pushforward distributions,
      expectation-through-pushforward replay, independence checks, and checked
-     QF_LRA/Farkas bad
-     pushforward and bad expectation rows to the missing measurable-function,
+     QF_LRA/Farkas bad pushforward and bad expectation rows to the missing
+     measurable-function,
      distribution-law, convergence, conditional-expectation, and continuous
      random-variable theorem routes, and adds random-variable-specific horizon
      queries to the public smoke gate without adding a duplicate pack or changing
      resource counts.
+227. Landed: add `stochastic-kernel-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-stochastic-kernels-v0`. It maps finite
+     row-normalization replay, pushforward distributions,
+     joint-disintegration replay, kernel composition, and checked QF_LRA/Farkas
+     bad kernel-row and bad composition rows to the missing regular
+     conditional probability, disintegration, measurable Markov-kernel, and
+     stochastic-process theorem routes, and adds stochastic-kernel-specific
+     horizon queries to the public smoke gate without adding a duplicate pack
+     or changing resource counts.
 
 ## Validation Checklist
 
