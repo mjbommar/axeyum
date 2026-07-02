@@ -68,6 +68,9 @@ python3 scripts/query-foundational-resources.py checks --field topology --proof-
 python3 scripts/query-foundational-resources.py checks --field topology --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --text convergence --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --field topology --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --curriculum-node calculus --format json --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text convergence --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --route Alethe --require-any >/dev/null

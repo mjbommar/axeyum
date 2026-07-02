@@ -236,6 +236,32 @@ Use this as a selection aid, not as a claim that every returned row should be
 promoted. Some replay rows are the right final trust story, and an empty route
 result only means this narrow frontier has no current candidate rows.
 
+## Theorem Horizon Frontier Discovery
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --field topology \
+  --require-any
+```
+
+This answers: "Which general theorem boundaries are attached to finite checked
+or replayed examples in this field?" Rows include the pack, fields, curriculum
+nodes, horizon row ids, finite checked/replay counts, sample finite row ids,
+and pack path.
+
+For curriculum-scoped tools:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --curriculum-node calculus \
+  --format json \
+  --require-any
+```
+
+Use this view to keep finite shadows and theorem claims on separate display
+paths. A horizon row is not checked SMT evidence, replay evidence, benchmark
+evidence, or a theorem proof.
+
 ## Concept And Proof-Route Discovery
 
 ```sh

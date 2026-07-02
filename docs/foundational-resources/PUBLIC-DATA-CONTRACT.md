@@ -121,6 +121,16 @@ This command is advisory. It lists replay-only `unsat` rows in packs that
 already advertise a certificate route, plus checked-row contrast in the same
 pack. It does not assert that every replay row needs promotion.
 
+Theorem-boundary discovery has the same dependency-free shape:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier --field topology
+```
+
+This command lists `lean-horizon` rows with finite checked/replay contrast from
+the same pack. It is for routing and display boundaries, not for proof,
+benchmark, or parity claims.
+
 ## Compatibility Rules
 
 A compatible additive change may:
@@ -157,6 +167,7 @@ python3 scripts/consume-foundational-resources.py --format json
 python3 scripts/query-foundational-resources.py summary
 python3 scripts/query-foundational-resources.py labels
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --require-any
+python3 scripts/query-foundational-resources.py horizon-frontier --field topology --require-any
 ```
 
 For command examples and drilldowns, use

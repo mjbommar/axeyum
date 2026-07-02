@@ -1746,6 +1746,12 @@ Pick one row per commit unless the change is purely navigational.
      Alethe, Diophantine, or QF_BV certificate routes, show checked-row
      contrast in the same pack, emit JSON for downstream tooling, and keep
      empty route frontiers distinct from proof gaps.
+206. Landed: add `query-foundational-resources.py horizon-frontier` for
+     theorem-boundary selection. The public JSON consumer can now list
+     `lean-horizon` rows with the finite checked and replay rows that live in
+     the same pack, filter by field, curriculum node, pack, or topic text,
+     emit JSON for downstream tooling, and keep finite shadows separate from
+     theorem, benchmark, and parity claims.
 
 ## Validation Checklist
 

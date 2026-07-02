@@ -807,6 +807,79 @@ def command_upgrade_frontier(args: argparse.Namespace) -> int:
     )
 
 
+def command_horizon_frontier(args: argparse.Namespace) -> int:
+    store = ResourceStore()
+    rows = []
+    for pack in store.packs:
+        metadata = pack["metadata"]
+        if args.pack and pack["id"] != args.pack:
+            continue
+        if args.field and args.field not in metadata.get("field_ids", []):
+            continue
+        if args.curriculum_node and args.curriculum_node not in metadata.get(
+            "curriculum_nodes", []
+        ):
+            continue
+
+        horizon_checks = [
+            check
+            for check in pack["checks"]
+            if check.get("proof_status") == "lean-horizon"
+        ]
+        if args.text:
+            horizon_checks = [
+                check
+                for check in horizon_checks
+                if contains_text(check_route_text(check), args.text)
+            ]
+        if not horizon_checks:
+            continue
+
+        checked_finite_checks = [
+            check
+            for check in pack["checks"]
+            if check.get("proof_status") == "checked"
+        ]
+        replay_finite_checks = [
+            check
+            for check in pack["checks"]
+            if check.get("proof_status") == "replay-only"
+        ]
+        rows.append(
+            {
+                "pack": pack["id"],
+                "fields": metadata["field_ids"],
+                "curriculum_nodes": metadata["curriculum_nodes"],
+                "horizon_rows": len(horizon_checks),
+                "finite_checked": len(checked_finite_checks),
+                "finite_replay": len(replay_finite_checks),
+                "horizon_checks": [check["id"] for check in horizon_checks[:5]],
+                "checked_examples": [check["id"] for check in checked_finite_checks[:5]],
+                "replay_examples": [check["id"] for check in replay_finite_checks[:5]],
+                "path": pack["path"],
+                "_sort": (-len(horizon_checks), pack["id"]),
+            }
+        )
+
+    rows = [clean_row(row) for row in sorted(rows, key=lambda row: row["_sort"])]
+    return emit(
+        rows,
+        [
+            "pack",
+            "fields",
+            "curriculum_nodes",
+            "horizon_rows",
+            "finite_checked",
+            "finite_replay",
+            "horizon_checks",
+            "checked_examples",
+            "replay_examples",
+            "path",
+        ],
+        args,
+    )
+
+
 def command_labels(args: argparse.Namespace) -> int:
     store = ResourceStore()
 
@@ -973,6 +1046,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_output_args(upgrade_frontier, default_limit=DEFAULT_LIMIT)
     upgrade_frontier.set_defaults(func=command_upgrade_frontier)
+
+    horizon_frontier = subparsers.add_parser(
+        "horizon-frontier",
+        help="list theorem-horizon rows with finite-shadow contrast",
+    )
+    horizon_frontier.add_argument("--field", help="exact field id, such as topology")
+    horizon_frontier.add_argument("--pack", help="exact example-pack id")
+    horizon_frontier.add_argument("--curriculum-node", help="exact curriculum node id")
+    horizon_frontier.add_argument(
+        "--text",
+        help="case-insensitive search over theorem-horizon row text",
+    )
+    add_output_args(horizon_frontier, default_limit=DEFAULT_LIMIT)
+    horizon_frontier.set_defaults(func=command_horizon_frontier)
 
     labels = subparsers.add_parser("labels", help="audit row and pack display labels")
     labels.add_argument(

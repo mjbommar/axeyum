@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Theorem-horizon frontier query landed.**
+  `scripts/query-foundational-resources.py horizon-frontier` now exposes
+  `lean-horizon` rows with finite checked/replay contrast directly from the
+  public JSON contract. It reports pack, fields, curriculum nodes, horizon-row
+  ids, finite checked and replay counts, sample finite row ids, and pack path,
+  with JSON output for downstream tools. The foundational resource gate now
+  smoke-checks topology, calculus, and convergence horizon-frontier queries so
+  consumers can keep finite shadows separate from theorem, benchmark, and
+  parity claims.
+
 - **Proof-upgrade frontier query landed.**
   `scripts/query-foundational-resources.py upgrade-frontier` now exposes
   replay-only `unsat` rows grouped by existing certificate routes directly from

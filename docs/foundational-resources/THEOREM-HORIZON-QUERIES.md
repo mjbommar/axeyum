@@ -47,6 +47,40 @@ Pack route summaries use the recipe name `lean-horizon-template`; individual
 row discovery should usually filter by `--proof-status lean-horizon`, because
 horizon rows are metadata rows rather than checked proof-object rows.
 
+## Direct Horizon Frontier
+
+List theorem-horizon rows with the finite checked and replay rows that live in
+the same pack:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --field topology \
+  --require-any
+```
+
+This answers: "Which finite checked examples are the bounded shadows, and which
+general theorem row marks the boundary?" Rows include the pack, fields,
+curriculum nodes, horizon row ids, finite checked/replay counts, sample finite
+row ids, and pack path.
+
+Curriculum-scoped and machine-readable versions use the same public JSON
+contract:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --curriculum-node calculus \
+  --format json \
+  --require-any
+```
+
+Topic text filters are useful for cross-field theorem themes:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text convergence \
+  --require-any
+```
+
 ## Field-Scoped Horizon Queries
 
 Logic and proof horizons:
