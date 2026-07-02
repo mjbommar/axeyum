@@ -1532,14 +1532,24 @@ fn direct_pre_solve_structural_report(
     // the query), so this pre-solve upgrade is size-gated: big instances (e.g.
     // the FIFO BC04 BMC rows) keep their fast structural certificates here,
     // and still get an Alethe upgrade attempt on the post-solve `Unsat` path.
-    if assertion_dag_within(arena, assertions, PRE_SOLVE_ALETHE_MAX_NODES)
-        && let Some(proof) = zero_trust_alethe_certificate(arena, assertions)
-    {
-        return Some(EvidenceReport {
-            evidence: Evidence::UnsatAletheProof(proof),
-            provenance: provenance.clone(),
-            trusted_steps: Vec::new(),
-        });
+    if assertion_dag_within(arena, assertions, PRE_SOLVE_ALETHE_MAX_NODES) {
+        if let Some(proof) = zero_trust_alethe_certificate(arena, assertions) {
+            return Some(EvidenceReport {
+                evidence: Evidence::UnsatAletheProof(proof),
+                provenance: provenance.clone(),
+                trusted_steps: Vec::new(),
+            });
+        }
+        // The mixed UF+linear-arithmetic zero-trust emitter (congruence-then-
+        // arithmetic conflicts, e.g. `f(x)=1 ∧ f(y)=2 ∧ x=y`) — otherwise the
+        // structural `uf_arith_congruence` certificate below shadows it.
+        if let Some(proof) = uflia_alethe_certificate(arena, assertions) {
+            return Some(EvidenceReport {
+                evidence: Evidence::UnsatArithAletheProof(proof),
+                provenance: provenance.clone(),
+                trusted_steps: Vec::new(),
+            });
+        }
     }
     if let Some(cert) = crate::bool_euf::bool_euf_exhaustive_refutation(arena, assertions) {
         return Some(EvidenceReport {
@@ -1934,6 +1944,23 @@ pub fn produce_evidence(
     }
     if let Some(report) = uflia_alethe_evidence_report(arena, assertions, &provenance) {
         return Ok(report);
+    }
+    // Prefer the pure LIA/LRA `lia_generic`/`la_generic` Alethe proof over the
+    // arith-DPLL lemma refutation when the instance supports both: the Alethe
+    // proof object is the Lean-parity ladder (re-checked by the arithmetic-aware
+    // checker; the Farkas reduction CERTIFIED), whereas the DPLL refutation is a
+    // structural lemma certificate. The arith-DPLL route (d3b0d2e1) had shadowed
+    // this, downgrading plain QF_LIA evidence. Size-gated like the other
+    // pre-solve proof attempts; larger instances keep the cheaper DPLL cert and
+    // still get the Alethe attempt on the post-solve `Unsat` path.
+    if assertion_dag_within(arena, assertions, PRE_SOLVE_ALETHE_MAX_NODES)
+        && let Some(proof) = arith_alethe_certificate(arena, assertions)
+    {
+        return Ok(EvidenceReport {
+            evidence: Evidence::UnsatArithAletheProof(proof),
+            provenance,
+            trusted_steps: trust_steps(&[(TrustId::Farkas, true)]),
+        });
     }
     if let Some(report) = produce_arith_dpll_evidence(arena, assertions, config)? {
         return Ok(report);

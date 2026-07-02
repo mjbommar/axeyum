@@ -165,7 +165,7 @@ fn sat_bv2nat_query_is_not_reported_unsat() {
 /// Regression: a plain `QF_LIA` unsat (`x > 0 ∧ x < 0`, no `bv2nat`) still gets a
 /// **checked** arithmetic certificate with no `IntBlast` (bv2nat-range) trust
 /// hole. The exact route has since upgraded: the arith-DPLL theory-enumeration
-/// cert (`d3b0d2e1`, "close QF_LIA dominance") now decides this instance ahead
+/// cert (`d3b0d2e1`, "close `QF_LIA` dominance") now decides this instance ahead
 /// of the older Farkas Alethe path — both are internally re-checkable (Carcara
 /// has no `lia_generic`, so neither was externally checkable for integers), so
 /// the intent of this regression (checked cert, no `IntBlast` hole) is

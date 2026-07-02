@@ -147,18 +147,18 @@ fn tamper_rejects_guarded_quant_uf_certificate() {
     let mut tampered = proof.clone();
     let mut mutated = false;
     for cmd in &mut tampered {
-        if let AletheCommand::Step { rule, clause, .. } = cmd {
-            if rule == "forall_inst_guarded" {
-                if let Some(l) = clause.get_mut(1) {
-                    // literal 1 is `(= (f v) 0)`; bump the witness `v` to 99.
-                    *l = AletheLit {
-                        atom: bump_arg(&l.atom),
-                        negated: l.negated,
-                    };
-                    mutated = true;
-                }
-                break;
+        if let AletheCommand::Step { rule, clause, .. } = cmd
+            && rule == "forall_inst_guarded"
+        {
+            if let Some(l) = clause.get_mut(1) {
+                // literal 1 is `(= (f v) 0)`; bump the witness `v` to 99.
+                *l = AletheLit {
+                    atom: bump_arg(&l.atom),
+                    negated: l.negated,
+                };
+                mutated = true;
             }
+            break;
         }
     }
     assert!(mutated, "must have mutated a forall_inst_guarded step");
@@ -173,20 +173,20 @@ fn tamper_rejects_guarded_quant_uf_certificate() {
     let mut tampered2 = proof.clone();
     let mut mutated2 = false;
     for cmd in &mut tampered2 {
-        if let AletheCommand::Step { rule, clause, .. } = cmd {
-            if rule == "eq_transitive" {
-                if let Some(l) = clause.last_mut() {
-                    l.atom = AletheTerm::App(
-                        "=".to_owned(),
-                        vec![
-                            AletheTerm::Const("zzz".to_owned()),
-                            AletheTerm::Const("99".to_owned()),
-                        ],
-                    );
-                    mutated2 = true;
-                }
-                break;
+        if let AletheCommand::Step { rule, clause, .. } = cmd
+            && rule == "eq_transitive"
+        {
+            if let Some(l) = clause.last_mut() {
+                l.atom = AletheTerm::App(
+                    "=".to_owned(),
+                    vec![
+                        AletheTerm::Const("zzz".to_owned()),
+                        AletheTerm::Const("99".to_owned()),
+                    ],
+                );
+                mutated2 = true;
             }
+            break;
         }
     }
     assert!(mutated2, "must have mutated an eq_transitive step");
