@@ -35,6 +35,36 @@ check_results={'sat': 9, 'unsat': 27}
 proof_statuses={'checked': 27, 'replayed': 9}
 ```
 
+## Coverage Summaries
+
+Domain coverage:
+
+```sh
+python3 scripts/query-rules-as-code.py coverage --by domain --require-any
+```
+
+Fragment coverage as JSON:
+
+```sh
+python3 scripts/query-rules-as-code.py coverage \
+  --by fragment \
+  --format json \
+  --require-any
+```
+
+Validation-route coverage:
+
+```sh
+python3 scripts/query-rules-as-code.py coverage \
+  --by validation \
+  --require-any
+```
+
+The coverage rows aggregate pack count, expected-check count, generated-family
+count, generated-row count, proof-status counts, validation counts, fragment
+labels, and sample pack ids. They are discovery and planning summaries over
+the committed JSON boundary, not legal advice and not solver benchmarks.
+
 ## Find Packs By Pattern
 
 All checked Bool/QF_LIA packs:
@@ -291,6 +321,9 @@ Equivalent direct commands:
 python3 scripts/gen-rules-as-code-dashboard.py
 python3 scripts/validate-rules-as-code.py
 python3 scripts/query-rules-as-code.py summary
+python3 scripts/query-rules-as-code.py coverage --by domain --require-any
+python3 scripts/query-rules-as-code.py coverage --by validation --require-any
+python3 scripts/query-rules-as-code.py coverage --by fragment --format json --require-any
 python3 scripts/query-rules-as-code.py packs --text procurement --require-any
 python3 scripts/query-rules-as-code.py checks --pack procurement_scoring_v0 --proof-status checked --require-any
 python3 scripts/query-rules-as-code.py families --pack procurement_scoring_v0 --text quality --require-any

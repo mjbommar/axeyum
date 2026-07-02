@@ -298,8 +298,8 @@ routes into concrete policy/rule checks is
 The rules/law query guide is
 [`docs/foundational-resources/RULES-LAW-QUERIES.md`](docs/foundational-resources/RULES-LAW-QUERIES.md);
 it records copyable `scripts/query-rules-as-code.py` commands for pack
-discovery, checked-obligation lookup, generated query-family lookup, and
-bounded generated-row inspection.
+discovery, coverage summaries, checked-obligation lookup, generated
+query-family lookup, and bounded generated-row inspection.
 The rules/law pattern matrix is
 [`docs/foundational-resources/RULES-LAW-PATTERN-MATRIX.md`](docs/foundational-resources/RULES-LAW-PATTERN-MATRIX.md);
 it maps finite predicates, role/tenant relations, thresholds, monotonicity,

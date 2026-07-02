@@ -75,8 +75,9 @@ and monotonicity checks.
 
 The copyable downstream query guide lives in
 [Rules/Law Resource Queries](../foundational-resources/RULES-LAW-QUERIES.md).
-It uses `scripts/query-rules-as-code.py` to find packs, checked obligations,
-generated query families, and bounded rows from the committed JSON boundary.
+It uses `scripts/query-rules-as-code.py` to find coverage summaries, packs,
+checked obligations, generated query families, and bounded rows from the
+committed JSON boundary.
 
 The current pattern matrix lives in
 [Rules/Law Pattern Matrix](../foundational-resources/RULES-LAW-PATTERN-MATRIX.md).
@@ -142,6 +143,9 @@ Validate the current packs with:
 python3 scripts/gen-rules-as-code-dashboard.py
 python3 scripts/validate-rules-as-code.py
 python3 scripts/query-rules-as-code.py summary
+python3 scripts/query-rules-as-code.py coverage --by domain --require-any
+python3 scripts/query-rules-as-code.py coverage --by validation --require-any
+python3 scripts/query-rules-as-code.py coverage --by fragment --format json --require-any
 python3 scripts/query-rules-as-code.py packs --pack category_equivalence_v0 --require-any
 python3 scripts/query-rules-as-code.py packs --pack workflow_reachability_v0 --require-any
 cargo test -p axeyum-solver --test rules_as_code_examples

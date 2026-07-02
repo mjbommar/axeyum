@@ -1752,6 +1752,13 @@ Pick one row per commit unless the change is purely navigational.
      the same pack, filter by field, curriculum node, pack, or topic text,
      emit JSON for downstream tooling, and keep finite shadows separate from
      theorem, benchmark, and parity claims.
+207. Landed: add `query-rules-as-code.py coverage` for rules/law boundary
+     summaries. The command aggregates committed rule packs by domain,
+     fragment, validation route, or proof status; reports pack, check,
+     generated-family, generated-row, result, proof-status, validation, and
+     sample-pack counts; emits JSON for downstream tools; and keeps generated
+     rule rows in the planning/replay lane rather than promoting them to legal
+     advice or solver benchmarks.
 
 ## Validation Checklist
 

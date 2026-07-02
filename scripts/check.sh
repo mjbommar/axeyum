@@ -32,6 +32,9 @@ step foundational-resources ./scripts/check-foundational-resources.sh
 step rules-as-code-generate python3 scripts/gen-rules-as-code-dashboard.py
 step rules-as-code-validate python3 scripts/validate-rules-as-code.py
 step rules-as-code-query-summary python3 scripts/query-rules-as-code.py summary
+step rules-as-code-query-coverage-domain python3 scripts/query-rules-as-code.py coverage --by domain --require-any
+step rules-as-code-query-coverage-validation python3 scripts/query-rules-as-code.py coverage --by validation --require-any
+step rules-as-code-query-coverage-fragment-json python3 scripts/query-rules-as-code.py coverage --by fragment --format json --require-any
 step rules-as-code-query-pack python3 scripts/query-rules-as-code.py packs --text procurement --require-any
 step rules-as-code-query-checks python3 scripts/query-rules-as-code.py checks --pack procurement_scoring_v0 --proof-status checked --require-any
 step rules-as-code-query-families python3 scripts/query-rules-as-code.py families --pack procurement_scoring_v0 --text quality --require-any

@@ -234,6 +234,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Rules/law coverage query landed.**
+  `scripts/query-rules-as-code.py coverage` now aggregates the committed
+  rules-as-code JSON boundary by domain, fragment, validation route, or proof
+  status. The query reports pack counts, expected checks, generated families
+  and rows, result/proof/validation counts, fragments, and sample pack ids,
+  with JSON output for downstream tools. The rules/law docs and fallback
+  check script now smoke-check domain, validation, proof-status, and fragment
+  coverage without treating generated rows as legal advice or benchmark data.
+
 - **Theorem-horizon frontier query landed.**
   `scripts/query-foundational-resources.py horizon-frontier` now exposes
   `lean-horizon` rows with finite checked/replay contrast directly from the

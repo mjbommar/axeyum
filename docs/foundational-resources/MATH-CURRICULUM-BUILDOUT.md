@@ -40,8 +40,8 @@ For the stable JSON/query contract exposed to downstream consumers, use the
 For the concrete rules/law transfer map from math-resource patterns into
 policy and legal-rule checks, use the
 [Rules/Law Crosswalk](RULES-LAW-CROSSWALK.md).
-For copyable queries over the current rules-as-code JSON boundary, use the
-[Rules/Law Resource Queries](RULES-LAW-QUERIES.md).
+For copyable queries and coverage summaries over the current rules-as-code JSON
+boundary, use the [Rules/Law Resource Queries](RULES-LAW-QUERIES.md).
 For the current map from reusable rules/law patterns to math concepts, proof
 routes, rule packs, and query commands, use the
 [Rules/Law Pattern Matrix](RULES-LAW-PATTERN-MATRIX.md).

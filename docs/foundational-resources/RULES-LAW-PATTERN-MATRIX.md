@@ -34,6 +34,14 @@ check_results={'sat': 9, 'unsat': 27}
 proof_statuses={'checked': 27, 'replayed': 9}
 ```
 
+Coverage summaries for the same boundary:
+
+```sh
+python3 scripts/query-rules-as-code.py coverage --by domain --require-any
+python3 scripts/query-rules-as-code.py coverage --by validation --require-any
+python3 scripts/query-rules-as-code.py coverage --by fragment --format json --require-any
+```
+
 | Pack | Domain | Main Pattern | Checked Rows | Generated Families |
 |---|---|---|---|---|
 | `benefit_eligibility_v0` | benefits | predicates, thresholds, effective dates | consistency, coverage, monotonicity, implementation equivalence | `coverage` (576), `income_monotonicity_adjacent` (528) |
@@ -78,6 +86,8 @@ These are the matrix smoke queries. They intentionally use the same public JSON
 boundary as downstream consumers:
 
 ```sh
+python3 scripts/query-rules-as-code.py coverage --by domain --require-any
+python3 scripts/query-rules-as-code.py coverage --by proof-status --require-any
 python3 scripts/query-rules-as-code.py checks --text monotonicity --require-any
 python3 scripts/query-rules-as-code.py checks --text implementation_equivalence --require-any
 python3 scripts/query-rules-as-code.py families --text adjacent --require-any

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +43,12 @@ def table_cell(value: Any) -> str:
     else:
         text = str(value)
     return text.replace("\n", " ").replace("|", "\\|")
+
+
+def count_text(counter: Counter[str]) -> str:
+    if not counter:
+        return "-"
+    return ",".join(f"{key}:{counter[key]}" for key in sorted(counter))
 
 
 def emit_table(headers: list[str], rows: list[list[Any]]) -> None:
@@ -105,6 +112,31 @@ def filter_packs(args: argparse.Namespace, packs: list[dict[str, Any]]) -> list[
     return rows
 
 
+def generated_row_count(pack: dict[str, Any]) -> int:
+    generated = pack["generated"]
+    if generated:
+        return sum(family["row_count"] for family in generated["query_families"])
+
+    sample = pack["expected"].get("sample_domain", {})
+    sample_count = 1
+    for value in sample.values():
+        if isinstance(value, list):
+            sample_count *= len(value)
+    return sample_count
+
+
+def generated_family_count(pack: dict[str, Any]) -> int:
+    generated = pack["generated"]
+    return len(generated["query_families"]) if generated else 0
+
+
+def bounded_sample_row_count(pack: dict[str, Any]) -> int:
+    generated = pack["generated"]
+    if generated:
+        return generated["query_families"][0]["row_count"]
+    return generated_row_count(pack)
+
+
 def check_required(args: argparse.Namespace, rows: list[Any]) -> None:
     if args.require_any and not rows:
         raise QueryError("query returned no rows")
@@ -119,15 +151,7 @@ def command_summary(args: argparse.Namespace) -> None:
     for pack in packs:
         expected = pack["expected"]
         generated = pack["generated"]
-        if generated:
-            bounded_rows += generated["query_families"][0]["row_count"]
-        else:
-            sample = expected.get("sample_domain", {})
-            sample_count = 1
-            for value in sample.values():
-                if isinstance(value, list):
-                    sample_count *= len(value)
-            bounded_rows += sample_count
+        bounded_rows += bounded_sample_row_count(pack)
         for check in expected["checks"]:
             check_results[check["expected_result"]] = (
                 check_results.get(check["expected_result"], 0) + 1
@@ -299,6 +323,115 @@ def command_rows(args: argparse.Namespace) -> None:
     )
 
 
+def group_keys(pack: dict[str, Any], by: str) -> list[str]:
+    metadata = pack["metadata"]
+    checks = pack["expected"]["checks"]
+    if by == "domain":
+        return [metadata["domain"]]
+    if by == "fragment":
+        return list(metadata["axeyum_fragments"])
+    if by == "validation":
+        return sorted({check["validation"] for check in checks})
+    if by == "proof-status":
+        return sorted({check["proof_status"] for check in checks})
+    raise QueryError(f"unsupported coverage group: {by}")
+
+
+def checks_for_group(checks: list[dict[str, Any]], by: str, key: str) -> list[dict[str, Any]]:
+    if by == "validation":
+        return [check for check in checks if check["validation"] == key]
+    if by == "proof-status":
+        return [check for check in checks if check["proof_status"] == key]
+    return checks
+
+
+def command_coverage(args: argparse.Namespace) -> None:
+    groups: dict[str, dict[str, Any]] = {}
+    for pack in load_packs():
+        metadata = pack["metadata"]
+        checks = pack["expected"]["checks"]
+        if args.domain and metadata["domain"] != args.domain:
+            continue
+        if args.fragment and args.fragment not in metadata["axeyum_fragments"]:
+            continue
+        if not matches_text({"metadata": metadata, "expected": pack["expected"]}, args.text):
+            continue
+
+        for key in group_keys(pack, args.by):
+            matching_checks = checks_for_group(checks, args.by, key)
+            group = groups.setdefault(
+                key,
+                {
+                    "group": key,
+                    "packs": set(),
+                    "checks": 0,
+                    "generated_families": 0,
+                    "generated_rows": 0,
+                    "results": Counter(),
+                    "proof_statuses": Counter(),
+                    "validations": Counter(),
+                    "fragments": set(),
+                },
+            )
+            group["packs"].add(metadata["id"])
+            group["checks"] += len(matching_checks)
+            group["generated_families"] += generated_family_count(pack)
+            group["generated_rows"] += generated_row_count(pack)
+            group["fragments"].update(metadata["axeyum_fragments"])
+            for check in matching_checks:
+                group["results"][check["expected_result"]] += 1
+                group["proof_statuses"][check["proof_status"]] += 1
+                group["validations"][check["validation"]] += 1
+
+    rows = []
+    for group in groups.values():
+        packs = sorted(group["packs"])
+        row = {
+            "group": group["group"],
+            "packs": len(packs),
+            "checks": group["checks"],
+            "generated_families": group["generated_families"],
+            "generated_rows": group["generated_rows"],
+            "results": dict(sorted(group["results"].items())),
+            "proof_statuses": dict(sorted(group["proof_statuses"].items())),
+            "validations": dict(sorted(group["validations"].items())),
+            "fragments": sorted(group["fragments"]),
+            "sample_packs": packs[:5],
+        }
+        rows.append(row)
+    rows.sort(key=lambda row: row["group"])
+    check_required(args, rows)
+
+    if args.format == "json":
+        print(json.dumps(rows, indent=2, sort_keys=True))
+        return
+    emit_table(
+        [
+            "Group",
+            "Packs",
+            "Checks",
+            "Generated Families",
+            "Generated Rows",
+            "Proof Statuses",
+            "Validations",
+            "Sample Packs",
+        ],
+        [
+            [
+                row["group"],
+                row["packs"],
+                row["checks"],
+                row["generated_families"],
+                row["generated_rows"],
+                count_text(Counter(row["proof_statuses"])),
+                count_text(Counter(row["validations"])),
+                ", ".join(row["sample_packs"]),
+            ]
+            for row in rows
+        ],
+    )
+
+
 def add_common_filters(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--pack", help="metadata id or directory name")
     parser.add_argument("--text", help="case-insensitive JSON text search")
@@ -339,6 +472,20 @@ def build_parser() -> argparse.ArgumentParser:
     rows.add_argument("--family")
     rows.add_argument("--limit", type=int, default=10)
     rows.set_defaults(func=command_rows)
+
+    coverage = subparsers.add_parser("coverage", help="summarize rule coverage groups")
+    coverage.add_argument(
+        "--by",
+        choices=["domain", "fragment", "validation", "proof-status"],
+        default="domain",
+        help="coverage grouping dimension",
+    )
+    coverage.add_argument("--domain", help="exact metadata domain")
+    coverage.add_argument("--fragment", help="exact axeyum fragment")
+    coverage.add_argument("--text", help="case-insensitive JSON text search")
+    coverage.add_argument("--require-any", action="store_true", help="fail if no rows match")
+    coverage.add_argument("--format", choices=["table", "json"], default="table")
+    coverage.set_defaults(func=command_coverage)
 
     return parser
 
