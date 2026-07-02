@@ -121,6 +121,18 @@ This command is advisory. It lists replay-only `unsat` rows in packs that
 already advertise a certificate route, plus checked-row contrast in the same
 pack. It does not assert that every replay row needs promotion.
 
+Coverage-frontier discovery ranks resource-builder pressure over the same
+dependency-free JSON boundary:
+
+```sh
+python3 scripts/query-foundational-resources.py coverage-frontier --by field
+```
+
+This command is also advisory. It groups rows by field, fragment, curriculum
+node, or decidability class and reports checked evidence, replay-only rows,
+replay-only refutations, and theorem horizons for work selection. It does not
+define corpus totals, benchmark claims, or parity claims.
+
 Theorem-boundary discovery has the same dependency-free shape:
 
 ```sh
@@ -167,6 +179,9 @@ python3 scripts/consume-foundational-resources.py --format json
 python3 scripts/query-foundational-resources.py summary
 python3 scripts/query-foundational-resources.py coverage --by field --require-any
 python3 scripts/query-foundational-resources.py coverage --by proof-status --require-any
+python3 scripts/query-foundational-resources.py coverage-frontier --by field --require-any
+python3 scripts/query-foundational-resources.py coverage-frontier --by fragment --min-replay-unsat 1 --format json --require-any
+python3 scripts/query-foundational-resources.py coverage-frontier --by curriculum-node --field topology --min-horizon 1 --require-any
 python3 scripts/query-foundational-resources.py labels
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --require-any
 python3 scripts/query-foundational-resources.py horizon-frontier --field topology --require-any

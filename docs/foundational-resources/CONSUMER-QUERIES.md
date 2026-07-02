@@ -16,6 +16,8 @@ consumer would.
 
 For stable files, fields, schema-version expectations, compatibility rules, and
 required smoke commands, see [PUBLIC-DATA-CONTRACT.md](PUBLIC-DATA-CONTRACT.md).
+For ranked resource-builder pressure over the same public JSON, see
+[COVERAGE-FRONTIER-QUERIES.md](COVERAGE-FRONTIER-QUERIES.md).
 For a compact all-field map of the current smoke-checked readiness routes,
 bridge lookups, checked-row drilldowns, and theorem boundaries, see
 [FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md).
@@ -114,6 +116,43 @@ These are group-membership counts. Packs and rows can appear in more than one
 field, fragment, decidability class, or curriculum-node group, so those tables
 are planning and discovery views, not corpus-total replacements for
 `summary`.
+
+## Coverage Frontier
+
+```sh
+python3 scripts/query-foundational-resources.py coverage-frontier \
+  --by field \
+  --require-any
+```
+
+This answers: "Where should a resource builder inspect next?" Frontier rows
+rank groups by replay-only `unsat` rows, Lean-horizon rows, checked-evidence
+density, and sample packs. The action labels are planning hints, not theorem,
+benchmark, or parity claims.
+
+Useful variants:
+
+```sh
+python3 scripts/query-foundational-resources.py coverage-frontier \
+  --by fragment \
+  --min-replay-unsat 1 \
+  --format json \
+  --require-any
+
+python3 scripts/query-foundational-resources.py coverage-frontier \
+  --by curriculum-node \
+  --field topology \
+  --min-horizon 1 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py coverage-frontier \
+  --by field \
+  --max-checked-ratio 0.35 \
+  --require-any
+```
+
+Use [COVERAGE-FRONTIER-QUERIES.md](COVERAGE-FRONTIER-QUERIES.md) before turning
+a high-pressure group into a pack, proof-upgrade, or learner-page increment.
 
 ## Display Label Audit
 

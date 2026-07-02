@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Foundational coverage-frontier query landed.**
+  `scripts/query-foundational-resources.py coverage-frontier` now ranks public
+  math-resource coverage groups by checked evidence, replay-only rows,
+  replay-only `unsat` rows, Lean-horizon rows, checked-row ratio, action
+  hints, and sample packs. The guide
+  `docs/foundational-resources/COVERAGE-FRONTIER-QUERIES.md`, the public
+  contract, consumer query docs, buildout ledger, and foundational smoke gate
+  now cover field, fragment, and topology curriculum-node frontier queries
+  while keeping frontier pressure separate from theorem, benchmark,
+  solver-performance, and parity claims.
+
 - **Foundational coverage query landed.**
   `scripts/query-foundational-resources.py coverage` now aggregates the public
   math-resource JSON boundary by field, fragment, proof status, expected

@@ -34,6 +34,11 @@ rows.
 Use [PUBLIC-DATA-CONTRACT.md](PUBLIC-DATA-CONTRACT.md) when a downstream
 consumer needs the stable JSON file list, fields, schema versions,
 compatibility rules, and smoke commands for the R6 boundary.
+Use [COVERAGE-FRONTIER-QUERIES.md](COVERAGE-FRONTIER-QUERIES.md) when a
+resource builder needs to rank fields, fragments, curriculum nodes, or
+decidability classes by checked-evidence density, replay-only refutations, and
+Lean/theorem horizons before choosing the next pack, proof-upgrade, or learner
+increment.
 Use [CHECKER-TAMPER-MATRIX.md](CHECKER-TAMPER-MATRIX.md) to find the
 route-specific corrupted-evidence command before calling a route tamper-covered.
 
@@ -1767,6 +1772,13 @@ Pick one row per commit unless the change is purely navigational.
      sample-concept, and sample-pack counts; emits JSON for downstream tools;
      and keeps group-membership counts separate from corpus totals, theorem
      claims, benchmark claims, and parity claims.
+209. Landed: add `query-foundational-resources.py coverage-frontier` for
+     resource-builder work selection. The command ranks field, fragment,
+     curriculum-node, or decidability groups by checked evidence, replay-only
+     rows, replay-only `unsat` rows, Lean-horizon rows, checked-row ratio,
+     action hints, and sample packs; emits JSON for downstream tools; and keeps
+     frontier pressure separate from theorem, benchmark, solver-performance,
+     and parity claims.
 
 ## Validation Checklist
 

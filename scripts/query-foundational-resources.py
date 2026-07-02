@@ -517,6 +517,9 @@ class ResourceStore:
         raise QueryError(f"unsupported coverage group: {by}")
 
 
+FRONTIER_GROUPS = ["field", "fragment", "curriculum-node", "decidability"]
+
+
 def command_summary(args: argparse.Namespace) -> int:
     store = ResourceStore()
     concept_counts = Counter(row["kind"] for row in store.concepts)
@@ -956,6 +959,175 @@ def command_coverage(args: argparse.Namespace) -> int:
     )
 
 
+def command_coverage_frontier(args: argparse.Namespace) -> int:
+    store = ResourceStore()
+    groups: dict[str, dict[str, Any]] = {}
+
+    for concept in store.concepts:
+        if not coverage_concept_matches(concept, args):
+            continue
+        for key in store.coverage_group_keys_for_concept(concept, args.by):
+            if not key:
+                continue
+            group = groups.setdefault(
+                key,
+                {
+                    "group": key,
+                    "concepts": set(),
+                    "packs": {},
+                    "checks": 0,
+                    "checked": 0,
+                    "replay_only": 0,
+                    "lean_horizon": 0,
+                    "replay_unsat": 0,
+                    "checked_unsat": 0,
+                    "not_run_horizon": 0,
+                    "fields": set(),
+                    "fragments": set(),
+                    "replay_unsat_packs": set(),
+                    "horizon_packs": set(),
+                },
+            )
+            group["concepts"].add(concept["id"])
+            group["fields"].update(concept.get("field_ids", []))
+            group["fragments"].update(concept.get("axeyum_fragments", []))
+
+    for pack in store.packs:
+        if not coverage_pack_matches(pack, args, store):
+            continue
+        metadata = pack["metadata"]
+        for key in store.coverage_group_keys_for_pack(pack, args.by):
+            if not key:
+                continue
+            group = groups.setdefault(
+                key,
+                {
+                    "group": key,
+                    "concepts": set(),
+                    "packs": {},
+                    "checks": 0,
+                    "checked": 0,
+                    "replay_only": 0,
+                    "lean_horizon": 0,
+                    "replay_unsat": 0,
+                    "checked_unsat": 0,
+                    "not_run_horizon": 0,
+                    "fields": set(),
+                    "fragments": set(),
+                    "replay_unsat_packs": set(),
+                    "horizon_packs": set(),
+                },
+            )
+            group["packs"][pack["id"]] = pack
+            group["fields"].update(metadata.get("field_ids", []))
+            group["fragments"].update(metadata.get("axeyum_fragments", []))
+
+            pack_has_replay_unsat = False
+            pack_has_horizon = False
+            for check in pack["checks"]:
+                proof_status = check.get("proof_status", "")
+                expected_result = check.get("expected_result", "")
+                group["checks"] += 1
+                if proof_status == "checked":
+                    group["checked"] += 1
+                    if expected_result == "unsat":
+                        group["checked_unsat"] += 1
+                elif proof_status == "replay-only":
+                    group["replay_only"] += 1
+                    if expected_result == "unsat":
+                        group["replay_unsat"] += 1
+                        pack_has_replay_unsat = True
+                elif proof_status == "lean-horizon":
+                    group["lean_horizon"] += 1
+                    pack_has_horizon = True
+                    if expected_result == "not-run":
+                        group["not_run_horizon"] += 1
+            if pack_has_replay_unsat:
+                group["replay_unsat_packs"].add(pack["id"])
+            if pack_has_horizon:
+                group["horizon_packs"].add(pack["id"])
+
+    rows = []
+    for group in groups.values():
+        pack_ids = sorted(group["packs"])
+        packs_without_checked = sorted(
+            pack_id
+            for pack_id, pack in group["packs"].items()
+            if not any(check.get("proof_status") == "checked" for check in pack["checks"])
+        )
+        checked_ratio = (
+            round(group["checked"] / group["checks"], 3)
+            if group["checks"]
+            else None
+        )
+        actions = []
+        if group["concepts"] and not pack_ids:
+            actions.append("seed-pack")
+        if packs_without_checked:
+            actions.append("add-checked-evidence")
+        if group["replay_unsat"]:
+            actions.append("proof-upgrade")
+        if group["lean_horizon"]:
+            actions.append("theorem-horizon")
+        if not actions and pack_ids:
+            actions.append("maintain")
+
+        action_score = (
+            group["replay_unsat"] * 4
+            + group["lean_horizon"] * 2
+            + len(packs_without_checked) * 3
+            + (1 if group["concepts"] and not pack_ids else 0)
+        )
+        if args.min_replay_unsat and group["replay_unsat"] < args.min_replay_unsat:
+            continue
+        if args.min_horizon and group["lean_horizon"] < args.min_horizon:
+            continue
+        if args.max_checked_ratio is not None:
+            if checked_ratio is None or checked_ratio > args.max_checked_ratio:
+                continue
+
+        rows.append(
+            {
+                "group": group["group"],
+                "concepts": len(group["concepts"]),
+                "packs": len(pack_ids),
+                "checks": group["checks"],
+                "checked": group["checked"],
+                "replay_only": group["replay_only"],
+                "replay_unsat": group["replay_unsat"],
+                "lean_horizon": group["lean_horizon"],
+                "checked_unsat": group["checked_unsat"],
+                "checked_ratio": checked_ratio if checked_ratio is not None else "-",
+                "actions": actions,
+                "sample_packs": pack_ids[:5],
+                "replay_unsat_packs": sorted(group["replay_unsat_packs"])[:5],
+                "horizon_packs": sorted(group["horizon_packs"])[:5],
+                "fields": sorted(group["fields"]),
+                "fragments": sorted(group["fragments"]),
+                "_sort": (-action_score, group["group"]),
+            }
+        )
+
+    rows = [clean_row(row) for row in sorted(rows, key=lambda row: row["_sort"])]
+    return emit(
+        rows,
+        [
+            "group",
+            "concepts",
+            "packs",
+            "checks",
+            "checked",
+            "replay_only",
+            "replay_unsat",
+            "lean_horizon",
+            "checked_ratio",
+            "actions",
+            "sample_packs",
+        ],
+        args,
+    )
+
+
 def command_upgrade_frontier(args: argparse.Namespace) -> int:
     store = ResourceStore()
     rows = []
@@ -1291,6 +1463,47 @@ def build_parser() -> argparse.ArgumentParser:
     coverage.add_argument("--text", help="case-insensitive search over public text")
     add_output_args(coverage, default_limit=None)
     coverage.set_defaults(func=command_coverage)
+
+    coverage_frontier = subparsers.add_parser(
+        "coverage-frontier",
+        help="rank coverage groups by replay, checked-evidence, and horizon pressure",
+    )
+    coverage_frontier.add_argument(
+        "--by",
+        choices=FRONTIER_GROUPS,
+        default="field",
+        help="frontier grouping dimension",
+    )
+    coverage_frontier.add_argument("--field", help="exact field id")
+    coverage_frontier.add_argument("--curriculum-node", help="exact curriculum node id")
+    coverage_frontier.add_argument("--fragment", help="case-insensitive fragment substring")
+    coverage_frontier.add_argument("--proof-status", help="exact proof_status")
+    coverage_frontier.add_argument("--expected-result", help="exact expected_result")
+    coverage_frontier.add_argument("--decidability", help="exact decidability class")
+    coverage_frontier.add_argument(
+        "--solver-reuse",
+        choices=["candidate", "promoted", "non-benchmark-horizon", "unclassified"],
+    )
+    coverage_frontier.add_argument("--text", help="case-insensitive search over public text")
+    coverage_frontier.add_argument(
+        "--min-replay-unsat",
+        type=int,
+        default=0,
+        help="only show groups with at least this many replay-only UNSAT rows",
+    )
+    coverage_frontier.add_argument(
+        "--min-horizon",
+        type=int,
+        default=0,
+        help="only show groups with at least this many Lean-horizon rows",
+    )
+    coverage_frontier.add_argument(
+        "--max-checked-ratio",
+        type=float,
+        help="only show groups at or below this checked/checks ratio",
+    )
+    add_output_args(coverage_frontier, default_limit=DEFAULT_LIMIT)
+    coverage_frontier.set_defaults(func=command_coverage_frontier)
 
     upgrade_frontier = subparsers.add_parser(
         "upgrade-frontier",
