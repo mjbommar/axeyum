@@ -7,7 +7,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use axeyum_ir::{ArraySortKey, Assignment, Op, Sort, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{
+    ArraySortKey, Assignment, Op, Sort, TermArena, TermId, TermNode, TermStats, Value, eval,
+};
 
 /// The small array axiom schema used by a checked refutation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -80,12 +82,44 @@ pub fn array_axiom_refutation(
     }
 
     for &assertion in assertions {
+        // The read-congruence probe re-runs a contextual-`ite` equality-fact
+        // *fixpoint* (`saturate_contextual_ite_equality_facts`, added by
+        // f4575ea5 to certify contextual-`ite` array rows) at every node of the
+        // bit-blasted bv1 skeleton it walks — both while collecting the
+        // assertion and again inside each `prove_bit_term` branch probe. That
+        // cost grows with (bit-nodes × `ite` density): on a hand-authored
+        // array-axiom row it is negligible, but on an `ite`-dense bit-blasted
+        // BMC formula (e.g. a FIFO equivalence row: ~960 DAG nodes, 319 `ite`s)
+        // it runs O(nodes²·ites) global fixpoints and ground `produce_evidence`
+        // for >300s — even though the probe ultimately *declines* the row (it
+        // is not a read-congruence refutation; the instance is certified by the
+        // downstream structural cert). Gate the probe on that saturation-work
+        // proxy: a graceful decline on cost-heavy inputs, never a changed
+        // verdict, and — since `ite`-free rows score 0 and hand-authored
+        // contextual-`ite` rows sit far below the cap — no lost certificate.
+        let stats = TermStats::compute(arena, &[assertion]);
+        if stats
+            .dag_nodes
+            .saturating_mul(stats.ite_count)
+            .saturating_mul(stats.ite_count)
+            > READ_CONGRUENCE_MAX_SATURATION_WORK
+        {
+            continue;
+        }
         if let Some(cert) = read_congruence_refutation(arena, assertion) {
             return Some(cert);
         }
     }
     None
 }
+
+/// Work-proxy cap for the read-congruence probe's contextual-`ite` saturation
+/// (see [`array_axiom_refutation`]). Scored as `dag_nodes · ite_count²` (the
+/// probe re-saturates per node and the fixpoint iterates with the `ite`
+/// population): hand-authored array-axiom rows — including the contextual-`ite`
+/// rows this cert exists for — score far below it, while `ite`-dense
+/// bit-blasted BMC formulas score far above and decline gracefully.
+const READ_CONGRUENCE_MAX_SATURATION_WORK: u64 = 1_000_000;
 
 fn read_congruence_refutation(
     arena: &TermArena,

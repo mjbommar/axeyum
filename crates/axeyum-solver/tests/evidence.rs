@@ -2456,11 +2456,6 @@ fn produce_evidence_certifies_binary_search16_unsat() {
 }
 
 #[test]
-#[ignore = "pre-existing perf regression (2026-06-25..07-01 window, reproduced on \
-            pre-session builds): the FIFO BC04 BMC row exceeds 300s in \
-            produce_evidence where it passed when added (c093fa91). Tracked as the \
-            evidence-dispatch perf follow-up; re-enable once the grinding stage is \
-            fixed"]
 fn produce_evidence_certifies_fifo_bc04_unsat() {
     let text = include_str!(
         "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__fifo32bc04k05.smt2"
