@@ -94,6 +94,11 @@ Use [Graph And Discrete Reasoning](graph-and-discrete-reasoning.md) when you
 want the surrounding graph-resource cluster: coloring, matching, cuts,
 d-separation, counting, and proof-by-refutation.
 
+Use [Graph Matching Certificate Trust Boundary](graph-matching-certificate-trust-boundary.md)
+when the question is whether proposed matching edges or an augmenting path are
+valid on a fixed graph. That page keeps finite matching replay separate from
+matching-theory and algorithm-correctness claims.
+
 Use [Finite Shortest Path Certificates](finite-shortest-path-end-to-end.md)
 when the question is path optimality rather than traversal order. That page
 shows how exact path replay and potential inequalities certify one finite

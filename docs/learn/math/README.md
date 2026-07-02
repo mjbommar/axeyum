@@ -175,6 +175,10 @@ Companion maps:
 - [Graph Matching And Augmenting Paths](graph-matching-end-to-end.md): follows
   finite matching witness replay, overlapping-edge rejection, augmenting-path
   flip replay, and a `K3` perfect-matching refutation.
+- [Graph Matching Certificate Trust Boundary](graph-matching-certificate-trust-boundary.md):
+  maps those finite matching and augmenting-path rows to the missing Hall,
+  Tutte, Edmonds, weighted-matching, flow-reduction, and complexity layers
+  without promoting them to theorem claims.
 - [Graph Cut Certificates](graph-cut-end-to-end.md): follows finite
   minimum-edge-cut and minimum-vertex-cut certificates, rejected one-cut claims,
   and checked smaller-cut enumeration.

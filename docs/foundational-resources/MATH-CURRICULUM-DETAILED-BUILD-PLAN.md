@@ -2086,6 +2086,15 @@ Pick one row per commit unless the change is purely navigational.
      graph-partitioning, and asymptotic layers, and adds graph-cut-specific
      checked-row queries to the public smoke gate without adding a duplicate
      pack or inventing a theorem horizon row for this pack.
+247. Landed: add `graph-matching-certificate-trust-boundary.md` as the focused
+     matching trust-boundary page for `graph-matching-v0`. It maps checked
+     finite maximum-matching replay, overlapping-edge rejection,
+     augmenting-path replay, and the `K3` perfect-matching CNF/DRAT/LRAT
+     refutation to the missing Hall/Tutte theorem, Edmonds/blossom,
+     Hopcroft-Karp, Hungarian/weighted matching, flow-reduction, graph-minor,
+     and asymptotic layers, and adds matching-specific checked-row queries to
+     the public smoke gate without adding a duplicate pack or inventing a
+     theorem horizon row for this pack.
 
 ## Validation Checklist
 

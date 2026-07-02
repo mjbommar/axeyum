@@ -393,6 +393,12 @@ python3 scripts/query-foundational-resources.py checks --field graph_theory --ro
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route LIA --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_graph_replay_obstruction --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_graph_replay_obstruction --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-matching-v0 --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-matching-v0 --proof-status checked --expected-result sat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-matching-v0 --proof-status checked --expected-result unsat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-matching-v0 --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-matching-v0 --proof-status checked --text augmenting --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-matching-v0 --proof-status checked --text "triangle K3" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack graph-cut-v0 --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack graph-cut-v0 --proof-status checked --expected-result sat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack graph-cut-v0 --proof-status checked --expected-result unsat --require-any >/dev/null

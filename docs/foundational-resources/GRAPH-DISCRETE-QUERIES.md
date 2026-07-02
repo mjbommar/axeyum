@@ -76,6 +76,8 @@ needs concrete checked rows to display.
 | All checked graph rows | field `graph_theory` | any route | `checks --field graph_theory --expected-result unsat --proof-status checked` |
 | Runtime-specific rows | pack `graph-search-runtime-v0` | `LIA` | `checks --pack graph-search-runtime-v0 --route LIA --proof-status checked` |
 | Coloring-specific rows | pack `graph-coloring-v0` | `boolean`; `qf-bv` | `checks --pack graph-coloring-v0 --route boolean --proof-status checked`; `checks --pack graph-coloring-v0 --route qf-bv --proof-status checked` |
+| Matching checked finite rows | pack `graph-matching-v0` | finite graph replay | `checks --pack graph-matching-v0 --proof-status checked` |
+| Matching CNF perfect-matching refutation | pack `graph-matching-v0` | `boolean` | `checks --pack graph-matching-v0 --route boolean --proof-status checked` |
 | Graph-cut checked finite rows | pack `graph-cut-v0` | finite graph replay | `checks --pack graph-cut-v0 --proof-status checked` |
 | Graph-cut CNF non-cut row | pack `graph-cut-v0` | `boolean` | `checks --pack graph-cut-v0 --route boolean --proof-status checked` |
 | D-separation checked finite rows | pack `graph-d-separation-v0` | finite DAG replay | `checks --pack graph-d-separation-v0 --proof-status checked` |
@@ -101,6 +103,54 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --require-any
 ```
+
+Display checked matching and augmenting-path rows:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-matching-v0 \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-matching-v0 \
+  --expected-result sat \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-matching-v0 \
+  --expected-result unsat \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-matching-v0 \
+  --route boolean \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-matching-v0 \
+  --proof-status checked \
+  --text augmenting \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-matching-v0 \
+  --proof-status checked \
+  --text "triangle K3" \
+  --require-any
+```
+
+Use
+[Graph Matching Certificate Trust Boundary](../learn/math/graph-matching-certificate-trust-boundary.md)
+when a consumer needs display wording that keeps finite matching replay,
+augmenting-path replay, and the `K3` CNF perfect-matching refutation separate
+from Hall/Tutte theorem coverage, Edmonds/Hopcroft-Karp/Hungarian algorithms,
+weighted matching, flow reductions, and asymptotic claims. The current
+`graph-matching-v0` pack intentionally has no `horizon-frontier --text
+matching` command because no theorem row is committed for this pack.
 
 Display checked graph-cut certificate and non-cut rows:
 

@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Graph-matching certificate trust-boundary resource landed.**
+  `graph-matching-certificate-trust-boundary.md` now separates
+  `graph-matching-v0` checked finite maximum-matching replay,
+  overlapping-edge rejection, augmenting-path replay, and the `K3`
+  perfect-matching CNF/DRAT/LRAT refutation from Hall/Tutte theorem coverage,
+  Edmonds/blossom, Hopcroft-Karp, Hungarian/weighted matching, flow reductions,
+  graph minors, and asymptotic claims. The graph/discrete query guide, learner
+  map, traversal index, and smoke query docs now expose the matching trust
+  boundary without adding a false theorem horizon row.
+
 - **Graph-cut certificate trust-boundary resource landed.**
   `graph-cut-certificate-trust-boundary.md` now separates `graph-cut-v0`
   checked finite minimum edge-cut replay, one-edge non-cut CNF/DRAT/LRAT

@@ -32,6 +32,7 @@ Example packs:
 Companion map:
 
 - [Graph Traversal Runtime Index](graph-traversal-runtime-index.md)
+- [Graph Matching Certificate Trust Boundary](graph-matching-certificate-trust-boundary.md)
 - [Graph Cut Certificate Trust Boundary](graph-cut-certificate-trust-boundary.md)
 - [D-Separation Causal Trust Boundary](d-separation-causal-trust-boundary.md)
 - [Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md)
@@ -61,7 +62,11 @@ runtime pack adds finite visited-node counters for BFS and DFS target discovery,
 checks a shortcut-tail family, and rejects a false DFS cost bound with a
 checked QF_LIA arithmetic-DPLL regression. The graph
 matching pack checks finite matching witnesses, invalid overlapping edges,
-augmenting path flips, and a perfect-matching obstruction. The DAG
+augmenting path flips, and a perfect-matching obstruction. Its focused trust
+boundary is
+[Graph Matching Certificate Trust Boundary](graph-matching-certificate-trust-boundary.md),
+which keeps the finite matching rows separate from Hall, Tutte, Edmonds,
+weighted-matching, flow-reduction, and complexity claims. The DAG
 d-separation pack checks chains, forks, colliders, and descendant-opened
 colliders by enumerating finite skeleton paths, with CNF/DRAT/LRAT artifacts for
 conditioned-chain and unconditioned-collider blockers. The graph cut pack checks
@@ -315,6 +320,7 @@ For a fuller trace from data row to replay result and evidence status, read
 [End To End: Graph Reachability And Traversal](graph-reachability-end-to-end.md),
 [End To End: Graph Search Runtime Counters](graph-search-runtime-end-to-end.md),
 [End To End: Graph Matching And Augmenting Paths](graph-matching-end-to-end.md),
+[Graph Matching Certificate Trust Boundary](graph-matching-certificate-trust-boundary.md),
 [End To End: Graph Cut Certificates](graph-cut-end-to-end.md),
 [Graph Cut Certificate Trust Boundary](graph-cut-certificate-trust-boundary.md),
 [End To End: Finite Flow And Cut Certificates](finite-flow-cut-end-to-end.md),

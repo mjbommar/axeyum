@@ -761,6 +761,11 @@ It also exposes a focused graph-cut trust boundary that keeps finite edge and
 vertex cut replay plus the one-edge CNF non-cut row separate from Menger-style
 cut theorems, max-flow/min-cut, scalable algorithms, spectral cuts,
 graph-partitioning guarantees, and asymptotic claims.
+The graph learner map now likewise exposes a focused matching trust boundary
+that keeps finite matching replay, augmenting-path replay, and the `K3`
+perfect-matching CNF refutation separate from Hall/Tutte theorem coverage,
+matching algorithms, weighted matching, flow reductions, graph minors, and
+asymptotic claims.
 `bad-dfs-cost-bound-rejected` now has a source-linked
 QF_LIA artifact checked by the `math_resource_lia_routes` arithmetic-DPLL
 regression and `diophantine-gcd-obstruction` now has a source-linked QF_LIA

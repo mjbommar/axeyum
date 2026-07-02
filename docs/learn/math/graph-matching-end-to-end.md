@@ -4,6 +4,9 @@ This lesson follows one finite graph resource from raw edge lists to matching
 witness replay, invalid-matching rejection, augmenting-path replay, and a
 perfect-matching refutation. It uses
 [graph-matching-v0](../../../artifacts/examples/math/graph-matching-v0/).
+For the broader boundary between these finite matching checks and matching
+theory or algorithm claims, read
+[Graph Matching Certificate Trust Boundary](graph-matching-certificate-trust-boundary.md).
 
 Concept rows:
 

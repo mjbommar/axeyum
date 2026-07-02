@@ -2075,6 +2075,11 @@ into one graph learner path.
 matching witness replay, overlapping-edge rejection, augmenting-path flip
 replay, checked `K3` perfect-matching refutation, and the general matching
 theory horizon.
+It also has a focused matching trust-boundary page that keeps finite matching
+replay, augmenting-path replay, and the `K3` CNF perfect-matching refutation
+separate from Hall/Tutte theorem coverage, Edmonds/Hopcroft-Karp/Hungarian
+algorithms, weighted matching, flow reductions, graph minors, and asymptotic
+claims.
 `graph-cut-v0` now has a learner-facing end-to-end lesson for finite
 minimum-edge-cut and minimum-vertex-cut certificates, rejected one-cut claims,
 checked smaller-cut enumeration, and the general max-flow/min-cut theorem
