@@ -21,11 +21,14 @@ Concept rows:
 | Check | Expected | Evidence Status |
 |---|---|---|
 | `linear-recurrence-trace` | `sat` | replay-only |
-| `bad-transition-step-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-transition-step-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-transition-step` | `unsat` | checked QF_LRA/Farkas |
 | `bounded-invariant-witness` | `sat` | replay-only |
 | `unsafe-threshold-reachable` | `sat` | replay-only |
-| `bad-threshold-step-rejected` | `unsat` | checked QF_LRA/Farkas |
-| `bad-invariant-bound-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-threshold-step-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-threshold-step` | `unsat` | checked QF_LRA/Farkas |
+| `bad-invariant-bound-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-invariant-bound` | `unsat` | checked QF_LRA/Farkas |
 
 Every row is a finite exact-rational transition-system slice. The pack checks
 listed traces, finite invariants, and bounded reachability. It does not prove
@@ -70,9 +73,10 @@ Exact replay computes:
 2 + 2 = 4
 ```
 
-The committed SMT-LIB artifact
+The replay row rejects the malformed transition by exact arithmetic. The
+separate `qf-lra-bad-transition-step` row owns the committed SMT-LIB artifact
 [`bad-transition-step-farkas-conflict.smt2`](../../../artifacts/examples/math/bounded-dynamics-v0/smt2/bad-transition-step-farkas-conflict.smt2)
-isolates the exact-linear contradiction:
+and isolates the exact-linear contradiction:
 
 ```text
 next_state = previous_state + delta
@@ -81,8 +85,8 @@ delta = 2
 next_state = 5
 ```
 
-The source object is still the finite recurrence row; the solver proof is only
-accepted after the emitted `UnsatFarkas` certificate checks independently.
+The source object is still the finite recurrence row; the solver proof row is
+only accepted after the emitted `UnsatFarkas` certificate checks independently.
 
 ## Replay An Invariant
 
@@ -141,9 +145,10 @@ Exact replay computes:
 x(2) = 6 < 7
 ```
 
-The committed SMT-LIB artifact
+The replay row rejects the early-threshold claim by exact arithmetic. The
+separate `qf-lra-bad-threshold-step` row owns the committed SMT-LIB artifact
 [`bad-threshold-step-farkas-conflict.smt2`](../../../artifacts/examples/math/bounded-dynamics-v0/smt2/bad-threshold-step-farkas-conflict.smt2)
-isolates the exact-linear contradiction:
+and isolates the exact-linear contradiction:
 
 ```text
 state_at_claimed_step = 6
@@ -152,7 +157,8 @@ state_at_claimed_step >= threshold
 ```
 
 The trusted result is not the solver's rejection by itself. The route accepts
-the row only after the emitted `UnsatFarkas` certificate checks independently.
+the proof row only after the emitted `UnsatFarkas` certificate checks
+independently.
 
 ## Check The Bad Invariant
 
@@ -168,9 +174,10 @@ Exact replay computes:
 max(0, 2, 4, 6, 8) = 8
 ```
 
-The committed SMT-LIB artifact
+The replay row rejects the false invariant bound by exact arithmetic. The
+separate `qf-lra-bad-invariant-bound` row owns the committed SMT-LIB artifact
 [`bad-invariant-bound-farkas-conflict.smt2`](../../../artifacts/examples/math/bounded-dynamics-v0/smt2/bad-invariant-bound-farkas-conflict.smt2)
-isolates the final exact-linear contradiction:
+and isolates the final exact-linear contradiction:
 
 ```text
 terminal_state = 8

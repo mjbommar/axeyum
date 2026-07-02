@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 677 expected checks.
+- 680 expected checks.
 - 322 checked proof/evidence rows.
-- 284 replay-only rows.
+- 287 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -240,8 +240,8 @@ Exit criteria:
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | standalone finite probability mass-table lesson landed; keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | LP objective/Farkas, rational convexity/gradient bridge rows with checked bad midpoint and affine-threshold evidence, finite root-finding step and bisection-width replay, finite hyperplane-separation replay, finite KKT replay with checked bad stationarity and complementarity evidence, finite active-set QP face/slack replay with checked bad free-gradient, bad inactive-slack, and bad degenerate-multiplier rows, finite degenerate active-bound replay, finite SDP primal/dual replay with checked bad objective, bad duality-gap, and bad slack-entry rows, finite gradient-descent replay with checked bad decrease, bad step-coordinate, and bad descent-bound rows, finite Armijo line-search replay with checked bad Armijo, bad descent-direction, and bad accepted-candidate rows, finite Wolfe line-search replay with checked bad minimizer, bad sufficient-decrease, and bad curvature rows, finite projected-gradient interval/decrease replay with checked bad projection and bad projected-decrease rows, finite proximal soft-threshold/composite-decrease replay, and finite box-plus-L1 proximal replay landed with checked bad proximal-point, bad composite-decrease, and bad box-proximal-point rows; add only distinct duality, working-set pivots, higher-dimensional SDP, strong-Wolfe/nonconvex line-search, group-lasso, active-set proximal, or stochastic/convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
-| `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | maintain landed finite dynamics/Euler bridge and keep numerical-honesty rows distinct from promoted exact residual/error certificates; finite Euler now keeps bad max-error, terminal-error, and fixed-step claims as replay-only rows with separate checked `qf-lra-*` Farkas proof rows; bounded dynamics now checks false transition-step, threshold-step, and invariant-bound arithmetic, finite line-search and finite Wolfe now check descent-direction, accepted-candidate, exact-minimizer, sufficient-decrease, and curvature arithmetic conflicts, and finite proximal-gradient now checks false composite-decrease arithmetic | QF_LRA/Farkas, replay, Lean horizon |
-| `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | maintain landed finite dynamics/Euler and bounded-family/asymptotic-boundary bridges; finite Euler now separates replay-only bad finite-error/fixed-step rows from explicit `qf-lra-*` Farkas proof rows; bounded dynamics now has checked bad transition-step, bad threshold-step, and bad invariant-bound rows; add only distinct transition, reachability, invariant, stochastic, finite-error, or theorem-boundary pressure | QF_LRA/Farkas, replay, Lean horizon |
+| `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | maintain landed finite dynamics/Euler bridge and keep numerical-honesty rows distinct from promoted exact residual/error certificates; finite Euler now keeps bad max-error, terminal-error, and fixed-step claims as replay-only rows with separate checked `qf-lra-*` Farkas proof rows; bounded dynamics now keeps false transition-step, threshold-step, and invariant-bound arithmetic as replay-only rows with separate checked `qf-lra-*` proof rows, finite line-search and finite Wolfe now check descent-direction, accepted-candidate, exact-minimizer, sufficient-decrease, and curvature arithmetic conflicts, and finite proximal-gradient now checks false composite-decrease arithmetic | QF_LRA/Farkas, replay, Lean horizon |
+| `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | maintain landed finite dynamics/Euler and bounded-family/asymptotic-boundary bridges; finite Euler now separates replay-only bad finite-error/fixed-step rows from explicit `qf-lra-*` Farkas proof rows; bounded dynamics now also separates replay-only bad transition-step, bad threshold-step, and bad invariant-bound rows from explicit `qf-lra-*` Farkas proof rows; add only distinct transition, reachability, invariant, stochastic, finite-error, or theorem-boundary pressure | QF_LRA/Farkas, replay, Lean horizon |
 | `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, circle, inversion, and cyclic rational geometry | maintain landed coordinate/oriented replay and finite circle/inversion/cyclic replay bridge rows; add only distinct nontrivial affine-coordinate, circle-line correspondence, higher-degree polynomial-geometry, or theorem-reconstruction pressure beyond the current midpoint-coordinate, affine collinearity-determinant, area-scaling, circle-line, square angle-dot, and Ptolemy rows | QF_LRA/Farkas, finite replay |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now keeps bad `l1` norm, bad operator-bound, and bad Chebyshev-prefix rows as exact replay, with separate checked `qf-lra-*` Farkas rows; inner-product now has checked bad negative-norm and projection-orthogonality rows; finite-Chebyshev now keeps duplicate-node, bad-interpolation, and bad-alternation source rows as exact replay with separate checked `qf-lra-*` Farkas rows; add only distinct norm, projection, recurrence, alternation variants, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
 
@@ -404,8 +404,9 @@ Pick one row per commit unless the change is purely navigational.
    prefix evidence out of the broad bounded-dynamics/operator bridge lesson.
 37. Landed: add standalone bounded-dynamics learner page, splitting exact
    recurrence trace replay, finite invariant checking, threshold reachability,
-   and checked QF_LRA/Farkas bad transition-step, bad threshold-step, and bad invariant-bound
-   evidence out of the combined finite dynamics/Euler bridge lesson.
+   replay-only bad transition-step, bad threshold-step, and bad invariant-bound
+   rows plus separate checked QF_LRA/Farkas proof rows out of the combined
+   finite dynamics/Euler bridge lesson.
 38. Landed: add standalone finite-Euler learner page, splitting exact
    explicit-Euler transition replay, finite polynomial-solution error tables,
    monotone invariant checking, replay-only bad max-error, bad terminal-error,
@@ -981,13 +982,12 @@ Pick one row per commit unless the change is purely navigational.
      QF_LRA/Farkas route now checks both trace arithmetic and characteristic
      polynomial conflicts without claiming general spectral-invariant theorem
      coverage.
-109. Landed: extend `bounded-dynamics-v0` with a checked bad transition-step
-     row. Exact recurrence replay computes the plus-two transition after state
-     `2` as `4`, while the malformed source SMT-LIB artifact claims the same
-     next state is `5`; the shared QF_LRA/Farkas route now checks both local
-     transition arithmetic and invariant-bound conflicts without claiming
-     continuous-time dynamics, ODE existence/uniqueness, stability, chaos, or
-     PDE coverage.
+109. Landed: extend `bounded-dynamics-v0` with a source-linked bad
+     transition-step proof route. Exact recurrence replay computes the plus-two
+     transition after state `2` as `4`, while the malformed source SMT-LIB
+     artifact claims the same next state is `5`; the shared QF_LRA/Farkas route
+     checks local transition arithmetic without claiming continuous-time
+     dynamics, ODE existence/uniqueness, stability, chaos, or PDE coverage.
 110. Landed: extend `finite-euler-method-v0` with a checked bad max-error-bound
      row. Exact finite error-table replay computes maximum error `3/4` for the
      quadratic-forcing Euler trace, while the malformed source SMT-LIB artifact
@@ -1318,11 +1318,11 @@ Pick one row per commit unless the change is purely navigational.
      box-proximal-point conflicts without claiming proximal-gradient
      convergence, nonsmooth convex analysis, stochastic variants, active-set
      identification, or floating-point stability.
-153. Landed: extend `bounded-dynamics-v0` with a source-linked checked bad
-     threshold-step row. Exact replay of the plus-three trace computes state
-     `6` at step `2`, below threshold `7` by shortfall `1`, while the malformed
-     source SMT-LIB artifact claims threshold reachability at that step; the
-     shared QF_LRA/Farkas route now checks local transition arithmetic,
+153. Landed: extend `bounded-dynamics-v0` with a source-linked bad
+     threshold-step proof route. Exact replay of the plus-three trace computes
+     state `6` at step `2`, below threshold `7` by shortfall `1`, while the
+     malformed source SMT-LIB artifact claims threshold reachability at that
+     step; the shared QF_LRA/Farkas route checks local transition arithmetic,
      threshold-step reachability, and invariant-bound conflicts without
      claiming continuous-time dynamics, ODE existence/uniqueness, stability,
      chaos, or PDE coverage.
@@ -1598,9 +1598,18 @@ Pick one row per commit unless the change is purely navigational.
      `3/4`, terminal error `3/4`, and the fixed Euler next state `1/2`, while
      the QF_LRA/Farkas rows separately reject the fixed max-error, terminal
      equality, and transition-equation conflicts through the existing
+     `math_resource_lra_routes` regressions. Row-scoped Farkas lookup for the
+     pack returns the three explicit Euler rows.
+185. Landed: split `bounded-dynamics-v0` transition-step, threshold-step, and
+     invariant-bound proof-object checking into explicit `qf-lra-*` rows. Exact
+     recurrence replay still owns the malformed source rows by computing next
+     state `4`, threshold-step state `6`, and terminal/max state `8`, while the
+     QF_LRA/Farkas rows separately reject the fixed transition equality,
+     threshold inequality, and invariant-bound conflicts through the existing
      `math_resource_lra_routes` regressions. The public query surface now
-     reports 677 checks, 322 checked rows, 284 replay-only rows, and row-scoped
-     Farkas lookup for the pack returns the three explicit Euler rows.
+     reports 680 checks, 322 checked rows, 287 replay-only rows, and row-scoped
+     Farkas lookup for the pack returns the three explicit bounded-dynamics
+     rows.
 
 ## Validation Checklist
 

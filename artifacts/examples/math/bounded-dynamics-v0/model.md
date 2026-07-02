@@ -27,6 +27,7 @@ computes:
 ```
 
 so the malformed claim that the next state is `5` is rejected by the
+replay-only row. The separate `qf-lra-bad-transition-step` row owns the
 source-linked QF_LRA/Farkas artifact.
 
 ## Invariant Witness
@@ -48,6 +49,7 @@ max(0, 2, 4, 6, 8) = 8
 ```
 
 so the malformed invariant upper bound `x(t) <= 6` is rejected by the
+replay-only row. The separate `qf-lra-bad-invariant-bound` row owns the
 source-linked QF_LRA/Farkas artifact.
 
 ## Reachability Witness
@@ -71,7 +73,8 @@ x(2) = 6 < 7
 ```
 
 so the malformed claim that threshold `7` is already reached at step `2` is
-rejected by the source-linked QF_LRA/Farkas artifact.
+rejected by the replay-only row. The separate `qf-lra-bad-threshold-step` row
+owns the source-linked QF_LRA/Farkas artifact.
 
 These are bounded replay targets. They are not general statements about
 continuous dynamics, numerical convergence, or asymptotic behavior.

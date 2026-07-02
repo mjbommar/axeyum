@@ -12,8 +12,15 @@ four steps, and checks the states are exactly `0, 2, 4, 6, 8`.
 Expected result: `unsat`.
 
 The validator replays the plus-two trace and recomputes the transition after
-state `2` as `4`. The malformed claim says the same next state is `5`; the
-source QF_LRA artifact isolates the contradiction `next_state = 2 + 2` and
+state `2` as `4`. The malformed claim says the same next state is `5`. This
+row is replay-only; `qf-lra-bad-transition-step` owns the proof-object
+refutation.
+
+## `qf-lra-bad-transition-step`
+
+Expected result: `unsat`.
+
+The source QF_LRA artifact isolates the contradiction `next_state = 2 + 2` and
 `next_state = 5` for Farkas checking.
 
 ## `bounded-invariant-witness`
@@ -36,8 +43,15 @@ three steps, and checks that threshold `x(t) >= 7` first becomes true at step
 Expected result: `unsat`.
 
 The validator replays the plus-three trace and recomputes the state at step
-`2` as `6`. The malformed claim says that step already reaches threshold `7`;
-the source QF_LRA artifact isolates the contradiction `state_at_claimed_step =
+`2` as `6`. The malformed claim says that step already reaches threshold `7`.
+This row is replay-only; `qf-lra-bad-threshold-step` owns the proof-object
+refutation.
+
+## `qf-lra-bad-threshold-step`
+
+Expected result: `unsat`.
+
+The source QF_LRA artifact isolates the contradiction `state_at_claimed_step =
 6` and `state_at_claimed_step >= 7` for Farkas checking.
 
 ## `bad-invariant-bound-rejected`
@@ -45,6 +59,12 @@ the source QF_LRA artifact isolates the contradiction `state_at_claimed_step =
 Expected result: `unsat`.
 
 The validator replays the plus-two trace and recomputes the maximum state as
-`8`. The malformed claim says every state stays below `6`; the source QF_LRA
-artifact isolates the contradiction `terminal_state = 8` and
+`8`. The malformed claim says every state stays below `6`. This row is
+replay-only; `qf-lra-bad-invariant-bound` owns the proof-object refutation.
+
+## `qf-lra-bad-invariant-bound`
+
+Expected result: `unsat`.
+
+The source QF_LRA artifact isolates the contradiction `terminal_state = 8` and
 `terminal_state <= 6` for Farkas checking.

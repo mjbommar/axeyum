@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 677 expected checks.
+- 680 expected checks.
 - 322 checked proof/evidence rows.
-- 284 replay-only rows.
+- 287 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -964,8 +964,8 @@ Build next:
   reachability, Euler transition, discrete flow, absorbing Markov chain, and
   existence/uniqueness horizon.
 - Keep `bounded-dynamics-v0`'s promoted bad transition-step, bad
-  threshold-step, and invariant-bound rows tied to exact recurrence replay plus source
-  QF_LRA/Farkas artifacts.
+  threshold-step, and invariant-bound rows tied to exact recurrence replay plus
+  separate `qf-lra-*` QF_LRA/Farkas artifacts.
 - Promote bad finite transitions, expected-time equations, and invariant
   failures through LRA/LIA or replay according to source shape.
 - Keep continuous dynamics, PDEs, chaos, and existence/uniqueness theory as
@@ -1506,9 +1506,9 @@ Pick one item per commit unless the change is purely navigational.
 48. Landed: add standalone bounded-dynamics learner page.
     `docs/learn/math/bounded-dynamics-end-to-end.md` follows
     `bounded-dynamics-v0` through exact recurrence trace replay, finite
-    invariant checking, threshold reachability, checked QF_LRA/Farkas
-    bad transition-step, bad threshold-step, and bad invariant-bound evidence, and the
-    continuous-dynamics/ODE Lean horizon.
+    invariant checking, threshold reachability, replay-only bad transition-step,
+    bad threshold-step, and bad invariant-bound rows, separate checked
+    QF_LRA/Farkas proof rows, and the continuous-dynamics/ODE Lean horizon.
 49. Landed: add standalone finite-Euler learner page.
     `docs/learn/math/finite-euler-method-end-to-end.md` follows
     `finite-euler-method-v0` through exact explicit-Euler transition replay,
@@ -2134,11 +2134,11 @@ Pick one item per commit unless the change is purely navigational.
      the new source SMT-LIB artifact reaches independently checked
      QF_LRA/Farkas evidence through
      `finite_proximal_gradient_bad_composite_decrease_artifact_emits_checked_farkas`.
-136. Landed: extend `bounded-dynamics-v0` with a source-linked checked
-     threshold-step refutation. Exact replay computes state `6` at claimed
-     step `2`, below threshold `7`, while the malformed row claims the
-     threshold is already reached; the new source SMT-LIB artifact reaches
-     independently checked QF_LRA/Farkas evidence through
+136. Landed: extend `bounded-dynamics-v0` with a source-linked threshold-step
+     refutation route. Exact replay computes state `6` at claimed step `2`,
+     below threshold `7`, while the malformed row claims the threshold is
+     already reached; the source SMT-LIB artifact reaches independently
+     checked QF_LRA/Farkas evidence through
      `bounded_dynamics_bad_threshold_step_artifact_emits_checked_farkas`.
 137. Landed: extend `complex-plane-transforms-v0` with a source-linked checked
      conjugation-product imaginary-part refutation. Exact real-pair replay

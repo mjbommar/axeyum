@@ -52,7 +52,7 @@
       "claim": "The plus-two recurrence has next state 5 after state 2.",
       "expected_result": "unsat",
       "validation": "exact_rational_bad_transition_step_refutation",
-      "proof_status": "checked",
+      "proof_status": "replay-only",
       "data": {
         "initial": "0",
         "delta": "2",
@@ -61,12 +61,28 @@
         "step_index": 2,
         "previous_state": "2",
         "computed_next_state": "4",
+        "claimed_next_state": "5"
+      },
+      "notes": "Exact recurrence replay computes the second transition as 2 + 2 = 4, while the malformed row claims the next state is 5. The separate qf-lra-bad-transition-step row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-transition-step",
+      "claim": "The fixed QF_LRA conflict for the false recurrence transition is unsatisfiable.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_bounded_dynamics_bad_transition_step_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-transition-step-rejected",
+        "previous_state": "2",
+        "delta": "2",
+        "computed_next_state": "4",
         "claimed_next_state": "5",
+        "farkas_conflict": "next_state = previous_state + delta and next_state = 5",
         "smt2_artifact": "artifacts/examples/math/bounded-dynamics-v0/smt2/bad-transition-step-farkas-conflict.smt2",
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas",
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "Exact recurrence replay computes the second transition as 2 + 2 = 4, while the malformed row claims the next state is 5; the source QF_LRA artifact isolates that transition-step equality conflict for Farkas checking."
+      "notes": "This proof row isolates the malformed transition step as a small QF_LRA/Farkas contradiction after the replay row has computed the exact next state."
     },
     {
       "id": "bounded-invariant-witness",
@@ -91,37 +107,66 @@
       "claim": "The plus-three recurrence reaches threshold 7 by step 2.",
       "expected_result": "unsat",
       "validation": "exact_rational_bad_threshold_step_refutation",
-      "proof_status": "checked",
+      "proof_status": "replay-only",
       "data": {
         "source_witness": "plus-three-threshold",
         "claimed_reaching_step": 2,
         "computed_state_at_claimed_step": "6",
         "threshold": "7",
+        "threshold_shortfall": "1"
+      },
+      "notes": "Exact recurrence replay computes state 6 at step 2, which is below threshold 7 by shortfall 1. The separate qf-lra-bad-threshold-step row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-threshold-step",
+      "claim": "The fixed QF_LRA conflict for the false early-threshold claim is unsatisfiable.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_bounded_dynamics_bad_threshold_step_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-threshold-step-rejected",
+        "computed_state_at_claimed_step": "6",
+        "threshold": "7",
         "threshold_shortfall": "1",
+        "farkas_conflict": "state_at_claimed_step = 6 and state_at_claimed_step >= 7",
         "smt2_artifact": "artifacts/examples/math/bounded-dynamics-v0/smt2/bad-threshold-step-farkas-conflict.smt2",
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_threshold_step_artifact_emits_checked_farkas",
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "Exact recurrence replay computes state 6 at step 2, which is below threshold 7 by shortfall 1; the source QF_LRA artifact isolates the malformed early-reachability claim for Farkas checking."
+      "notes": "This proof row isolates the malformed early-threshold claim as a small QF_LRA/Farkas contradiction after the replay row has computed the exact state."
     },
     {
       "id": "bad-invariant-bound-rejected",
       "claim": "The plus-two recurrence trace satisfies the upper invariant bound x(t) <= 6 through the four-step horizon.",
       "expected_result": "unsat",
       "validation": "exact_rational_bad_invariant_bound_refutation",
-      "proof_status": "checked",
+      "proof_status": "replay-only",
       "data": {
         "initial": "0",
         "delta": "2",
         "steps": 4,
         "trace": ["0", "2", "4", "6", "8"],
         "computed_max_state": "8",
+        "claimed_upper_bound": "6"
+      },
+      "notes": "Exact recurrence replay computes the terminal and maximum state as 8, while the malformed row claims the trace stays at or below 6. The separate qf-lra-bad-invariant-bound row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-invariant-bound",
+      "claim": "The fixed QF_LRA conflict for the false invariant upper bound is unsatisfiable.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_bounded_dynamics_bad_invariant_bound_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-invariant-bound-rejected",
+        "computed_max_state": "8",
         "claimed_upper_bound": "6",
+        "farkas_conflict": "terminal_state = 8 and terminal_state <= 6",
         "smt2_artifact": "artifacts/examples/math/bounded-dynamics-v0/smt2/bad-invariant-bound-farkas-conflict.smt2",
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas",
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "Exact recurrence replay computes the terminal and maximum state as 8, while the malformed row claims the trace stays at or below 6; the source QF_LRA artifact isolates that final bound conflict for Farkas checking."
+      "notes": "This proof row isolates the malformed invariant upper bound as a small QF_LRA/Farkas contradiction after the replay row has computed the finite maximum state."
     }
   ]
 }

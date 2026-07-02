@@ -104,7 +104,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `statistics` | probability, linear algebra | exact tests, regression, finite sampling tables, numerical-honesty rows | QF_LRA, QF_LIA, replay |
 | `optimization_and_convexity` | rationals, reals, linear algebra | landed LP objective/Farkas, rational convexity/gradient bridge rows with checked bad midpoint and affine-threshold evidence, finite root-finding step and bisection-width replay, finite hyperplane-separation replay, finite KKT replay with checked stationarity/complementarity evidence, finite active-set QP face/slack replay with checked inactive-slack evidence, finite degenerate active-bound replay, finite SDP replay, finite gradient-descent replay with checked descent-bound evidence, finite Armijo line-search rejected-step, descent-direction, and accepted-candidate replay, finite Wolfe line-search replay, finite projected-gradient interval/decrease replay, finite proximal-gradient soft-threshold/composite-decrease replay, and finite box-plus-L1 proximal replay; add narrower duality, working-set pivots, higher-dimensional SDP, group-lasso/active-set proximal, strong-Wolfe/nonconvex line-search, or stochastic/convergence rows only when reused | QF_LRA/Farkas, NRA shadows |
 | `numerical_analysis` | linear algebra, calculus | maintain landed finite dynamics/Euler bridge alongside residual bounds, interval boxes, exact error recurrences, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search descent-direction and accepted-candidate arithmetic, projected-gradient, and proximal-gradient composite-decrease iterations | QF_LRA, replay, numerical-honesty metadata |
-| `differential_equations_and_dynamical_systems` | calculus, linear algebra | maintain landed finite dynamics/Euler bridge for bounded recurrences, Euler traces, invariant checks, threshold reachability, checked bad threshold-step rows, and finite error tables | QF_LRA, BV/LIA counters, Lean horizon |
+| `differential_equations_and_dynamical_systems` | calculus, linear algebra | maintain landed finite dynamics/Euler bridge for bounded recurrences, Euler traces, invariant checks, threshold reachability, replay-only bad dynamics rows, separate checked QF_LRA proof rows, and finite error tables | QF_LRA, BV/LIA counters, Lean horizon |
 | `geometry` | reals, polynomials, linear algebra | landed coordinate/incidence/rigid/affine/oriented replay plus finite circle/inversion/cyclic replay bridge rows; add only distinct nontrivial circle-line correspondence, higher-degree polynomial-geometry, or theorem-reconstruction pressure beyond the current affine collinearity-determinant, area-scaling, circle-line, square angle-dot, and Ptolemy rows when reused | QF_LRA/NRA, replay |
 | `functional_analysis_and_operator_theory` | linear algebra, real analysis | finite operators, inner products, Chebyshev-system slices | QF_LRA, finite replay, Lean horizon |
 
@@ -228,8 +228,9 @@ Build sequence:
    operators now split the norm/operator-bound/Chebyshev-prefix story from the broad
    bounded-dynamics/operator bridge. Standalone bounded dynamics now splits
    recurrence traces, finite invariants, and threshold reachability from the
-   finite dynamics/Euler bridge, including checked bad transition-step, bad
-   threshold-step, and bad invariant-bound rows. Standalone finite Euler now splits
+   finite dynamics/Euler bridge, including replay-only bad transition-step, bad
+   threshold-step, and bad invariant-bound rows plus separate checked QF_LRA
+   proof rows. Standalone finite Euler now splits
    explicit-Euler transition replay, finite error tables, and bad-step
    evidence from the same bridge.
 7. Recurring fixed-width finite algebra, residue, and one-bit graph

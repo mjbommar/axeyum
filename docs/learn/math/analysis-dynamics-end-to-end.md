@@ -36,9 +36,12 @@ Concept rows:
 |---|---|---|
 | `bounded-invariant-witness` | `sat` | replay-only |
 | `unsafe-threshold-reachable` | `sat` | replay-only |
-| `bad-transition-step-rejected` | `unsat` | checked |
-| `bad-threshold-step-rejected` | `unsat` | checked |
-| `bad-invariant-bound-rejected` | `unsat` | checked |
+| `bad-transition-step-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-transition-step` | `unsat` | checked |
+| `bad-threshold-step-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-threshold-step` | `unsat` | checked |
+| `bad-invariant-bound-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-invariant-bound` | `unsat` | checked |
 | `finite-horizon-distribution-replay` | `sat` | replay-only |
 | `stationary-distribution-witness` | `sat` | replay-only |
 | `bad-stochastic-row-rejected` | `unsat` | replay-only |
@@ -114,17 +117,18 @@ For the dynamics row, the checker verifies every transition:
 and then checks every state lies in `[0,8]`.
 
 The bad transition-step row reuses that exact trace but claims the step after
-state `2` lands at `5`; exact replay computes `2 + 2 = 4`, then the source
-QF_LRA artifact checks the contradictory next-state equality through Farkas
-evidence. The bad invariant-bound row reuses the same trace but claims every
-state is at most `6`; exact replay computes terminal/max state `8`, then the
-source QF_LRA artifact checks `terminal_state = 8` with `terminal_state <= 6`
-through Farkas evidence.
+state `2` lands at `5`; exact replay computes `2 + 2 = 4`, then the separate
+`qf-lra-bad-transition-step` row checks the contradictory next-state equality
+through Farkas evidence. The bad invariant-bound row reuses the same trace but
+claims every state is at most `6`; exact replay computes terminal/max state
+`8`, then the separate `qf-lra-bad-invariant-bound` row checks
+`terminal_state = 8` with `terminal_state <= 6` through Farkas evidence.
 
 The bad threshold-step row uses the plus-three threshold trace but claims step
 `2` already reaches threshold `7`; exact replay computes state `6`, so the
-source QF_LRA artifact checks `state_at_claimed_step = 6`, `threshold = 7`,
-and `state_at_claimed_step >= threshold` through Farkas evidence.
+separate `qf-lra-bad-threshold-step` row checks
+`state_at_claimed_step = 6`, `threshold = 7`, and
+`state_at_claimed_step >= threshold` through Farkas evidence.
 
 For the operator/norm rows, the checker recomputes `u+v`, `A*x`, the `l1` and
 infinity norms, the row-sum norm, and the bound:

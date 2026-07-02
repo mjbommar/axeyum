@@ -58,8 +58,8 @@ needs concrete checked rows to display.
 | Finite recurrences, transition steps, invariants, and Euler rows | `bridge_finite_dynamics_euler_replay` | `Farkas` | `checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked` |
 | Bounded family rows versus convergence/asymptotic theorem boundaries | `bridge_bounded_family_asymptotic_boundary` | `Farkas`; `LIA` | `checks --concept bridge_bounded_family_asymptotic_boundary --route Farkas --proof-status checked`; `checks --concept bridge_bounded_family_asymptotic_boundary --route LIA --proof-status checked` |
 | Stochastic kernels, Markov chains, and hitting-time equations | `bridge_stochastic_kernel` | `Farkas` | `checks --concept bridge_stochastic_kernel --route Farkas --proof-status checked` |
-| Bounded deterministic dynamics display rows | pack `bounded-dynamics-v0` | `Farkas` | `checks --pack bounded-dynamics-v0 --route Farkas --proof-status checked` |
-| Bounded threshold-step refutations | pack `bounded-dynamics-v0` | `Farkas` | `checks --pack bounded-dynamics-v0 --route Farkas --proof-status checked --text threshold` |
+| Bounded deterministic dynamics proof rows | pack `bounded-dynamics-v0` | `Farkas` | `checks --pack bounded-dynamics-v0 --route Farkas --proof-status checked --text qf-lra-bad-transition-step` |
+| Bounded threshold-step refutations | pack `bounded-dynamics-v0` | `Farkas` | `checks --pack bounded-dynamics-v0 --route Farkas --proof-status checked --text qf-lra-bad-threshold-step` |
 | Explicit Euler display rows | pack `finite-euler-method-v0` | `Farkas` | `checks --pack finite-euler-method-v0 --route Farkas --proof-status checked` |
 | Finite Markov-chain display rows | pack `finite-markov-chain-v0` | `Farkas` | `checks --pack finite-markov-chain-v0 --route Farkas --proof-status checked --text qf-lra-bad-stationary-distribution` |
 | Hitting-time display rows | pack `finite-hitting-times-v0` | `Farkas` | `checks --pack finite-hitting-times-v0 --route Farkas --proof-status checked --text qf-lra-bad-expected-time` |
@@ -146,7 +146,7 @@ python3 scripts/query-foundational-resources.py checks \
   --pack bounded-dynamics-v0 \
   --route Farkas \
   --proof-status checked \
-  --text threshold \
+  --text qf-lra-bad-threshold-step \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \

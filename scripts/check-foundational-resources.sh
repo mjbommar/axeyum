@@ -89,8 +89,10 @@ python3 scripts/query-foundational-resources.py packs --concept bridge_finite_dy
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-recurrence-prefix-v0 --route Farkas --proof-status checked --text affine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_stochastic_kernel --route Farkas --proof-status checked --require-any >/dev/null
-python3 scripts/query-foundational-resources.py checks --pack bounded-dynamics-v0 --route Farkas --proof-status checked --require-any >/dev/null
-python3 scripts/query-foundational-resources.py checks --pack bounded-dynamics-v0 --route Farkas --proof-status checked --text threshold --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack bounded-dynamics-v0 --route Farkas --proof-status checked --text qf-lra-bad-transition-step --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack bounded-dynamics-v0 --route Farkas --proof-status checked --text qf-lra-bad-threshold-step --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack bounded-dynamics-v0 --route Farkas --proof-status checked --text qf-lra-bad-invariant-bound --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack bounded-dynamics-v0 --proof-status replay-only --text rejected --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-euler-method-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-euler-method-v0 --route Farkas --proof-status checked --text qf-lra-bad-max-error-bound --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-euler-method-v0 --route Farkas --proof-status checked --text qf-lra-bad-terminal-error --require-any >/dev/null

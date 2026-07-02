@@ -234,6 +234,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Bounded-dynamics Farkas rows split landed.**
+  `bounded-dynamics-v0` now keeps `bad-transition-step-rejected`,
+  `bad-threshold-step-rejected`, and `bad-invariant-bound-rejected` as exact
+  recurrence replay rows: they compute next state `4`, threshold-step state
+  `6`, and terminal/max state `8` before rejecting malformed claims. The
+  checked proof-object paths are now the explicit `qf-lra-bad-transition-step`,
+  `qf-lra-bad-threshold-step`, and `qf-lra-bad-invariant-bound` rows linked to
+  the QF_LRA/Farkas SMT-LIB artifacts and regressions. Focused validation and
+  the three bounded-dynamics `math_resource_lra_routes` regressions pass; the
+  public summary now reports 120 concept rows, 108 packs, 680 expected checks,
+  322 checked rows, 287 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite Euler-method Farkas rows split landed.**
   `finite-euler-method-v0` now keeps `bad-max-error-bound-rejected`,
   `bad-terminal-error-rejected`, and `bad-euler-step-rejected` as exact finite
@@ -241,9 +253,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   fixed Euler next state `1/2` before rejecting malformed claims. The checked
   proof-object paths are now the explicit `qf-lra-bad-max-error-bound`,
   `qf-lra-bad-terminal-error`, and `qf-lra-bad-euler-step` rows linked to the
-  QF_LRA/Farkas SMT-LIB artifacts and regressions. Focused validation passes;
-  the public summary now reports 120 concept rows, 108 packs, 677 expected
-  checks, 322 checked rows, 284 replay-only rows, and 71 Lean-horizon rows.
+  QF_LRA/Farkas SMT-LIB artifacts and regressions. Focused validation passes.
 
 - **Finite Chebyshev-system Farkas rows split landed.**
   `finite-chebyshev-systems-v0` now keeps

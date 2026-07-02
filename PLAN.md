@@ -253,8 +253,8 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-02): the public JSON layer reports
-120 concept rows, 108 non-template packs, 677 expected checks (336 `sat`,
-270 `unsat`, 71 `not-run`), 322 checked rows, 284 replay-only rows, and 71
+120 concept rows, 108 non-template packs, 680 expected checks (336 `sat`,
+273 `unsat`, 71 `not-run`), 322 checked rows, 287 replay-only rows, and 71
 Lean-horizon rows. The rules/law JSON layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
@@ -973,8 +973,9 @@ the latest finite-separation bad convex-combination and bad separator
 QF_LRA/Farkas promotions,
 the latest finite-root-finding bad Newton-step and bad bisection-width
 QF_LRA/Farkas promotions,
-the latest bounded-dynamics bad transition-step, bad threshold-step, and invariant-bound
-QF_LRA/Farkas promotion,
+the latest bounded-dynamics split into replay-only bad transition-step,
+bad threshold-step, and invariant-bound rows plus separate `qf-lra-*`
+QF_LRA/Farkas proof rows,
 complex-algebraic bad product-coordinate and bad norm-squared QF_LRA/Farkas
 promotion,
 finite-operator bad `l1` sum-norm QF_LRA/Farkas promotion,

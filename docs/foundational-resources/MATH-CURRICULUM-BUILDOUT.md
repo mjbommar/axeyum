@@ -944,8 +944,8 @@ rejection of false tail and union bounds, and a concentration/limit-theorem
 Lean-horizon row.
 `artifacts/examples/math/bounded-dynamics-v0/` now validates exact rational
 recurrence traces, bounded invariant witnesses, threshold reachability replay,
-and checked QF_LRA/Farkas rejection of bad transition-step, bad threshold-step, and invariant-bound
-rows.
+replay-only rejection of bad transition-step, bad threshold-step, and
+invariant-bound rows, and separate checked QF_LRA/Farkas proof rows.
 `artifacts/examples/math/finite-euler-method-v0/` now validates exact finite
 Euler-method traces, polynomial-solution error replay, invariant checks,
 replay-only rejection of bad max-error, bad terminal-error, and bad Euler-step
@@ -1855,15 +1855,17 @@ They now also have standalone finite-topology and finite-measure pages so
 learners can start from one pack before crossing the topology/measure boundary.
 `bounded-dynamics-v0` and `finite-euler-method-v0` now have a learner-facing
 end-to-end lesson for bounded recurrence traces, invariant replay, threshold
-reachability, checked bad transition-step, bad threshold-step, and invariant-bound rejection with
-QF_LRA/Farkas evidence, explicit Euler replay, exact finite error tables,
+reachability, replay-only bad transition-step, bad threshold-step, and
+invariant-bound rejection plus separate QF_LRA/Farkas proof rows, explicit
+Euler replay, exact finite error tables,
 replay-only bad terminal-error and bad Euler-step rejections, separate
 QF_LRA/Farkas proof rows, and the
 ODE/numerical-analysis Lean horizon.
 `bounded-dynamics-v0` now also has a standalone bounded recurrence dynamics
 lesson for exact trace replay, finite invariant checking, threshold
-reachability, checked QF_LRA/Farkas bad transition-step, bad threshold-step, and bad
-invariant-bound rejection, and the continuous-dynamics/ODE Lean horizon.
+reachability, replay-only bad transition-step, bad threshold-step, and bad
+invariant-bound rejection, separate checked QF_LRA/Farkas proof rows, and the
+continuous-dynamics/ODE Lean horizon.
 `finite-euler-method-v0` now also has a standalone finite Euler method lesson
 for exact explicit-Euler transition replay, finite polynomial-solution error
 tables, monotone invariant checking, replay-only bad max-error,
@@ -2062,8 +2064,9 @@ CNF/LRAT proof-upgrade target set.
 transition-step, bad threshold-step, and bad invariant-bound rows: exact
 recurrence replay computes the local next state `4`, threshold-step state `6`
 below threshold `7`, and terminal/max state `8`, and the source QF_LRA
-artifacts are checked by the bounded-dynamics `math_resource_lra_routes`
-regressions.
+artifacts are owned by the separate `qf-lra-bad-transition-step`,
+`qf-lra-bad-threshold-step`, and `qf-lra-bad-invariant-bound` rows checked by
+the bounded-dynamics `math_resource_lra_routes` regressions.
 The QF_LRA/Farkas lane now has a source-linked solver-reuse promotion for
 `rationals-lra-v0`: fixed trichotomy impossible branches and the fixed
 order-transitivity violating branch carry SMT-LIB artifacts with Axeyum

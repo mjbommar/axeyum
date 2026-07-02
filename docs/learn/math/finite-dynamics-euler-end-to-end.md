@@ -28,9 +28,12 @@ Concept rows:
 | `linear-recurrence-trace` | `sat` | replay-only |
 | `bounded-invariant-witness` | `sat` | replay-only |
 | `unsafe-threshold-reachable` | `sat` | replay-only |
-| `bad-transition-step-rejected` | `unsat` | checked |
-| `bad-threshold-step-rejected` | `unsat` | checked |
-| `bad-invariant-bound-rejected` | `unsat` | checked |
+| `bad-transition-step-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-transition-step` | `unsat` | checked |
+| `bad-threshold-step-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-threshold-step` | `unsat` | checked |
+| `bad-invariant-bound-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-invariant-bound` | `unsat` | checked |
 | `linear-decay-euler-trace` | `sat` | replay-only |
 | `quadratic-forcing-error-replay` | `sat` | replay-only |
 | `bad-max-error-bound-rejected` | `unsat` | replay-only |
@@ -82,9 +85,9 @@ This is the finite, explicit version of an invariant proof. The future
 graduation route is to encode the same shape as a bounded model-checking
 obligation and replay the returned model against the original recurrence.
 
-The first checked negative row uses the same trace but claims the transition
-after state `2` lands at `5`. Exact replay computes `2 + 2 = 4`; the resource
-regression checks the bad transition as `QF_LRA`:
+The first negative row uses the same trace but claims the transition after
+state `2` lands at `5`. Exact replay computes `2 + 2 = 4`; the separate
+`qf-lra-bad-transition-step` row checks the bad transition as `QF_LRA`:
 
 ```text
 previous_state = 2
@@ -93,14 +96,14 @@ next_state = previous_state + delta
 next_state = 5
 ```
 
-The second checked negative row uses the same trace but claims:
+The invariant negative row uses the same trace but claims:
 
 ```text
 x(t) <= 6
 ```
 
-Exact replay computes the final and maximum state as `8`. The resource
-regression checks the bad invariant as `QF_LRA`:
+Exact replay computes the final and maximum state as `8`. The separate
+`qf-lra-bad-invariant-bound` row checks the bad invariant as `QF_LRA`:
 
 ```text
 terminal_state = 8
@@ -134,9 +137,10 @@ This is a bounded safety or bug-finding pattern: a candidate trace is
 untrusted, and the small checker confirms that the trace really reaches the
 target.
 
-The checked threshold negative row claims step `2` already reaches threshold
-`7`. Exact replay computes `x(2) = 6`, so the source QF_LRA artifact isolates
-the contradiction `state_at_claimed_step = 6`, `threshold = 7`, and
+The threshold negative row claims step `2` already reaches threshold `7`.
+Exact replay computes `x(2) = 6`, so the separate
+`qf-lra-bad-threshold-step` row isolates the source QF_LRA contradiction
+`state_at_claimed_step = 6`, `threshold = 7`, and
 `state_at_claimed_step >= threshold`.
 
 ## Encode Explicit Euler As A Transition System
@@ -306,6 +310,5 @@ remaining horizon -> continuous ODE theory, convergence, stability, and PDEs
 The next practical graduation step is to lower fixed recurrence and Euler-step
 rows into deterministic QF_LRA or BV transition obligations, then replay SAT
 witnesses and checked refutations through Axeyum instead of pack-local Python
-alone. The bad transition-step row, bad threshold-step row,
-bad invariant-bound row, and the separate finite Euler `qf-lra-*` rows now
-exercise that QF_LRA/Farkas route.
+alone. The separate bounded-dynamics and finite Euler `qf-lra-*` rows now
+exercise that QF_LRA/Farkas route after replay computes the finite values.

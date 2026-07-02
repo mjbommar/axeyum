@@ -25974,8 +25974,12 @@ def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
     require_recurrence_trace("linear recurrence", values)
 
     bad_step = checks["bad-transition-step-rejected"]
-    if bad_step["expected_result"] != "unsat" or bad_step.get("proof_status") != "checked":
-        fail("bad-transition-step-rejected must be a checked unsat row")
+    if bad_step["expected_result"] != "unsat":
+        fail("bad-transition-step-rejected must expect unsat")
+    if bad_step.get("proof_status") != "replay-only":
+        fail("bad-transition-step-rejected must be replay-only")
+    if bad_step.get("validation") != "exact_rational_bad_transition_step_refutation":
+        fail("bad-transition-step-rejected validation is incorrect")
     data = bad_step.get("data", {})
     trace = require_recurrence_trace("bad transition step", data)
     step_index = require_nonnegative_int("bad transition step step_index", data.get("step_index"))
@@ -25999,19 +26003,59 @@ def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
         fail("bad-transition-step-rejected computed_next_state is not previous_state + delta")
     if claimed_next_state == computed_next_state:
         fail("bad-transition-step-rejected claimed next state unexpectedly matches replay")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad transition step smt2_artifact", smt2_artifact)
+    if "smt2_artifact" in data or "farkas_regression" in data:
+        fail("bad-transition-step-rejected replay row must not carry QF_LRA artifact fields")
+    if "separate qf-lra-bad-transition-step" not in bad_step.get("notes", ""):
+        fail("bad-transition-step-rejected notes must name the separate qf-lra-bad-transition-step row")
+
+    qf_bad_step = checks["qf-lra-bad-transition-step"]
+    if qf_bad_step["expected_result"] != "unsat":
+        fail("qf-lra-bad-transition-step must expect unsat")
+    if qf_bad_step.get("proof_status") != "checked":
+        fail("qf-lra-bad-transition-step must be checked")
+    if qf_bad_step.get("validation") != "qf_lra_bounded_dynamics_bad_transition_step_refutation":
+        fail("qf-lra-bad-transition-step validation is incorrect")
+    qf_data = qf_bad_step.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-transition-step-rejected":
+        fail("qf-lra-bad-transition-step must cite bad-transition-step-rejected")
+    qf_previous_state = require_fraction(
+        "qf-lra bad transition previous_state",
+        qf_data.get("previous_state"),
+    )
+    qf_delta = require_fraction("qf-lra bad transition delta", qf_data.get("delta"))
+    qf_computed_next_state = require_fraction(
+        "qf-lra bad transition computed_next_state",
+        qf_data.get("computed_next_state"),
+    )
+    qf_claimed_next_state = require_fraction(
+        "qf-lra bad transition claimed_next_state",
+        qf_data.get("claimed_next_state"),
+    )
+    if qf_previous_state != previous_state:
+        fail("qf-lra-bad-transition-step previous_state must match replay")
+    if qf_delta != delta:
+        fail("qf-lra-bad-transition-step delta must match replay")
+    if qf_computed_next_state != computed_next_state:
+        fail("qf-lra-bad-transition-step computed_next_state must match replay")
+    if qf_claimed_next_state != claimed_next_state:
+        fail("qf-lra-bad-transition-step claimed_next_state must match replay")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf-lra bad transition farkas_conflict", conflict)
+    if conflict != "next_state = previous_state + delta and next_state = 5":
+        fail("qf-lra-bad-transition-step must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad transition smt2_artifact", smt2_artifact)
     if smt2_artifact != "artifacts/examples/math/bounded-dynamics-v0/smt2/bad-transition-step-farkas-conflict.smt2":
-        fail("bad-transition-step-rejected smt2_artifact must name the checked QF_LRA artifact")
-    check_source("bad transition step smt2_artifact", smt2_artifact)
-    regression = data.get("farkas_regression")
-    require_string("bad transition step farkas_regression", regression)
+        fail("qf-lra-bad-transition-step smt2_artifact must name the checked QF_LRA artifact")
+    check_source("qf-lra bad transition smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad transition farkas_regression", regression)
     if "bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas" not in regression:
-        fail("bad-transition-step-rejected must link the Farkas regression")
-    certificate = data.get("certificate")
-    require_string("bad transition step certificate", certificate)
-    if "UnsatFarkas" not in certificate:
-        fail("bad-transition-step-rejected certificate must document checked Farkas evidence")
+        fail("qf-lra-bad-transition-step must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad transition certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-transition-step certificate must document checked Farkas evidence")
 
     invariant = checks["bounded-invariant-witness"]
     if invariant["expected_result"] != "sat":
@@ -26047,9 +26091,9 @@ def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
     bad_threshold = checks["bad-threshold-step-rejected"]
     if (
         bad_threshold["expected_result"] != "unsat"
-        or bad_threshold.get("proof_status") != "checked"
+        or bad_threshold.get("proof_status") != "replay-only"
     ):
-        fail("bad-threshold-step-rejected must be a checked unsat row")
+        fail("bad-threshold-step-rejected must be a replay-only unsat row")
     if bad_threshold["validation"] != "exact_rational_bad_threshold_step_refutation":
         fail("bad-threshold-step-rejected validation is incorrect")
     data = bad_threshold.get("data", {})
@@ -26093,23 +26137,64 @@ def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
         fail("bad-threshold-step-rejected threshold shortfall is incorrect")
     if threshold_shortfall <= 0:
         fail("bad-threshold-step-rejected must claim a state below threshold")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad threshold step smt2_artifact", smt2_artifact)
+    if "smt2_artifact" in data or "farkas_regression" in data:
+        fail("bad-threshold-step-rejected replay row must not carry QF_LRA artifact fields")
+    if "separate qf-lra-bad-threshold-step" not in bad_threshold.get("notes", ""):
+        fail("bad-threshold-step-rejected notes must name the separate qf-lra-bad-threshold-step row")
+
+    qf_bad_threshold = checks["qf-lra-bad-threshold-step"]
+    if qf_bad_threshold["expected_result"] != "unsat":
+        fail("qf-lra-bad-threshold-step must expect unsat")
+    if qf_bad_threshold.get("proof_status") != "checked":
+        fail("qf-lra-bad-threshold-step must be checked")
+    if qf_bad_threshold.get("validation") != "qf_lra_bounded_dynamics_bad_threshold_step_refutation":
+        fail("qf-lra-bad-threshold-step validation is incorrect")
+    qf_data = qf_bad_threshold.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-threshold-step-rejected":
+        fail("qf-lra-bad-threshold-step must cite bad-threshold-step-rejected")
+    qf_computed_state = require_fraction(
+        "qf-lra bad threshold computed_state_at_claimed_step",
+        qf_data.get("computed_state_at_claimed_step"),
+    )
+    qf_threshold = require_fraction(
+        "qf-lra bad threshold threshold",
+        qf_data.get("threshold"),
+    )
+    qf_shortfall = require_fraction(
+        "qf-lra bad threshold threshold_shortfall",
+        qf_data.get("threshold_shortfall"),
+    )
+    if qf_computed_state != computed_state:
+        fail("qf-lra-bad-threshold-step computed state must match replay")
+    if qf_threshold != bad_threshold_value:
+        fail("qf-lra-bad-threshold-step threshold must match replay")
+    if qf_shortfall != threshold_shortfall:
+        fail("qf-lra-bad-threshold-step shortfall must match replay")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf-lra bad threshold farkas_conflict", conflict)
+    if conflict != "state_at_claimed_step = 6 and state_at_claimed_step >= 7":
+        fail("qf-lra-bad-threshold-step must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad threshold smt2_artifact", smt2_artifact)
     if smt2_artifact != "artifacts/examples/math/bounded-dynamics-v0/smt2/bad-threshold-step-farkas-conflict.smt2":
-        fail("bad-threshold-step-rejected smt2_artifact must name the checked QF_LRA artifact")
-    check_source("bad threshold step smt2_artifact", smt2_artifact)
-    regression = data.get("farkas_regression")
-    require_string("bad threshold step farkas_regression", regression)
+        fail("qf-lra-bad-threshold-step smt2_artifact must name the checked QF_LRA artifact")
+    check_source("qf-lra bad threshold smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad threshold farkas_regression", regression)
     if "bounded_dynamics_bad_threshold_step_artifact_emits_checked_farkas" not in regression:
-        fail("bad-threshold-step-rejected must link the Farkas regression")
-    certificate = data.get("certificate")
-    require_string("bad threshold step certificate", certificate)
+        fail("qf-lra-bad-threshold-step must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad threshold certificate", certificate)
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
-        fail("bad-threshold-step-rejected certificate must document checked Farkas evidence")
+        fail("qf-lra-bad-threshold-step certificate must document checked Farkas evidence")
 
     bad_bound = checks["bad-invariant-bound-rejected"]
-    if bad_bound["expected_result"] != "unsat" or bad_bound.get("proof_status") != "checked":
-        fail("bad-invariant-bound-rejected must be a checked unsat row")
+    if bad_bound["expected_result"] != "unsat":
+        fail("bad-invariant-bound-rejected must expect unsat")
+    if bad_bound.get("proof_status") != "replay-only":
+        fail("bad-invariant-bound-rejected must be replay-only")
+    if bad_bound.get("validation") != "exact_rational_bad_invariant_bound_refutation":
+        fail("bad-invariant-bound-rejected validation is incorrect")
     data = bad_bound.get("data", {})
     trace = require_recurrence_trace("bad invariant bound", data)
     computed_max_state = require_fraction(
@@ -26124,17 +26209,50 @@ def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
         fail("bad-invariant-bound-rejected computed_max_state is incorrect")
     if computed_max_state <= claimed_upper_bound:
         fail("bad-invariant-bound-rejected must claim a bound below the replayed max state")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad invariant bound smt2_artifact", smt2_artifact)
-    check_source("bad invariant bound smt2_artifact", smt2_artifact)
-    regression = data.get("farkas_regression")
-    require_string("bad invariant bound farkas_regression", regression)
+    if "smt2_artifact" in data or "farkas_regression" in data:
+        fail("bad-invariant-bound-rejected replay row must not carry QF_LRA artifact fields")
+    if "separate qf-lra-bad-invariant-bound" not in bad_bound.get("notes", ""):
+        fail("bad-invariant-bound-rejected notes must name the separate qf-lra-bad-invariant-bound row")
+
+    qf_bad_bound = checks["qf-lra-bad-invariant-bound"]
+    if qf_bad_bound["expected_result"] != "unsat":
+        fail("qf-lra-bad-invariant-bound must expect unsat")
+    if qf_bad_bound.get("proof_status") != "checked":
+        fail("qf-lra-bad-invariant-bound must be checked")
+    if qf_bad_bound.get("validation") != "qf_lra_bounded_dynamics_bad_invariant_bound_refutation":
+        fail("qf-lra-bad-invariant-bound validation is incorrect")
+    qf_data = qf_bad_bound.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-invariant-bound-rejected":
+        fail("qf-lra-bad-invariant-bound must cite bad-invariant-bound-rejected")
+    qf_computed_max_state = require_fraction(
+        "qf-lra bad invariant bound computed_max_state",
+        qf_data.get("computed_max_state"),
+    )
+    qf_claimed_upper_bound = require_fraction(
+        "qf-lra bad invariant bound claimed_upper_bound",
+        qf_data.get("claimed_upper_bound"),
+    )
+    if qf_computed_max_state != computed_max_state:
+        fail("qf-lra-bad-invariant-bound computed_max_state must match replay")
+    if qf_claimed_upper_bound != claimed_upper_bound:
+        fail("qf-lra-bad-invariant-bound claimed_upper_bound must match replay")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf-lra bad invariant bound farkas_conflict", conflict)
+    if conflict != "terminal_state = 8 and terminal_state <= 6":
+        fail("qf-lra-bad-invariant-bound must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad invariant bound smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/bounded-dynamics-v0/smt2/bad-invariant-bound-farkas-conflict.smt2":
+        fail("qf-lra-bad-invariant-bound smt2_artifact must name the checked QF_LRA artifact")
+    check_source("qf-lra bad invariant bound smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad invariant bound farkas_regression", regression)
     if "bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas" not in regression:
-        fail("bad-invariant-bound-rejected must link the Farkas regression")
-    certificate = data.get("certificate")
-    require_string("bad invariant bound certificate", certificate)
-    if "UnsatFarkas" not in certificate:
-        fail("bad-invariant-bound-rejected certificate must document checked Farkas evidence")
+        fail("qf-lra-bad-invariant-bound must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad invariant bound certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-invariant-bound certificate must document checked Farkas evidence")
 
 
 def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) -> None:

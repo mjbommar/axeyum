@@ -11,11 +11,11 @@ The examples are intentionally small:
 - a bounded invariant witness over that trace;
 - a reachable threshold witness over a finite horizon;
 - a malformed transition-step row whose next state contradicts exact replay
-  and is checked through QF_LRA/Farkas evidence;
+  plus a separate checked QF_LRA/Farkas row;
 - a malformed threshold-step row whose early reachability claim contradicts
-  exact replay and is checked through QF_LRA/Farkas evidence;
+  exact replay plus a separate checked QF_LRA/Farkas row;
 - a malformed invariant-bound row whose final exact state contradicts the
-  claimed upper bound and is checked through QF_LRA/Farkas evidence.
+  claimed upper bound plus a separate checked QF_LRA/Farkas row.
 
 ## Concepts
 
@@ -33,13 +33,14 @@ strings. It checks that each trace starts at the claimed initial state, follows
 the listed affine update `x(t+1) = x(t) + delta`, and satisfies the claimed
 bounded invariant or threshold reachability condition.
 
-The checked bad rows emit tiny source-linked QF_LRA artifacts: transition replay
-computes `2 + 2 = 4` while a malformed row claims the next state is `5`, and
-reachability replay computes state `6` at step `2` while the threshold is `7`,
-and invariant replay computes the terminal state `8` while a malformed
-invariant claims `x(t) <= 6`. The `math_resource_lra_routes` regressions parse
-those artifacts, emit `UnsatFarkas` evidence, and independently recheck the
-certificates.
+The malformed rows are replay-only rows: transition replay computes `2 + 2 =
+4` while a malformed row claims the next state is `5`, reachability replay
+computes state `6` at step `2` while the threshold is `7`, and invariant replay
+computes the terminal state `8` while a malformed invariant claims `x(t) <= 6`.
+Separate `qf-lra-bad-transition-step`, `qf-lra-bad-threshold-step`, and
+`qf-lra-bad-invariant-bound` rows emit tiny source-linked QF_LRA artifacts. The
+`math_resource_lra_routes` regressions parse those artifacts, emit
+`UnsatFarkas` evidence, and independently recheck the certificates.
 Continuous-time dynamics, ODE existence and uniqueness, stability, chaos, and
 PDE theory remain proof-horizon material.
 

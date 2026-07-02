@@ -530,8 +530,8 @@ Companion maps:
   cohomology-ring Lean horizon.
 - [Bounded Recurrence Dynamics](bounded-dynamics-end-to-end.md): follows exact
   finite recurrence replay, bounded invariant checking, threshold reachability,
-  and checked QF_LRA/Farkas bad transition-step, bad threshold-step, and bad invariant-bound
-  rejection.
+  replay-only bad transition-step, bad threshold-step, and bad invariant-bound
+  rejection, plus separate checked QF_LRA/Farkas proof rows.
 - [Finite Dynamics And Euler Replay](finite-dynamics-euler-end-to-end.md):
   follows bounded recurrence traces, finite invariants, threshold
   reachability, explicit Euler replay, finite error tables, and checked

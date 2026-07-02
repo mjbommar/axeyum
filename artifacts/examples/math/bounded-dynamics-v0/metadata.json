@@ -35,9 +35,9 @@
     "target": "bounded recurrence bad-transition, bad-threshold, and bad-invariant QF_LRA/Farkas regression seeds",
     "pressure": "Malformed exact recurrence rows where replay computes the transition next state as 4 but a row claims 5, computes state 6 at step 2 below threshold 7 but a row claims threshold reachability, and terminal/max state 8 but a row claims the invariant upper bound is 6.",
     "evidence": [
-      "bad-transition-step-rejected",
-      "bad-threshold-step-rejected",
-      "bad-invariant-bound-rejected"
+      "qf-lra-bad-transition-step",
+      "qf-lra-bad-threshold-step",
+      "qf-lra-bad-invariant-bound"
     ],
     "next_step": "Promote additional dynamics rows only when they add distinct transition, reachability, invariant, or finite-error pressure; keep continuous-time existence, uniqueness, stability, chaos, and PDE theory in the Lean-horizon lane."
   },
@@ -58,15 +58,18 @@
   "expected_results": [
     "linear-recurrence-trace",
     "bad-transition-step-rejected",
+    "qf-lra-bad-transition-step",
     "bounded-invariant-witness",
     "unsafe-threshold-reachable",
     "bad-threshold-step-rejected",
-    "bad-invariant-bound-rejected"
+    "qf-lra-bad-threshold-step",
+    "bad-invariant-bound-rejected",
+    "qf-lra-bad-invariant-bound"
   ],
   "graduation_criteria": [
     "Encode bounded recurrence traces as deterministic LRA/BV transition systems.",
     "Replay safe invariant witnesses through Axeyum model evaluation.",
-    "Emit checked transition-step, threshold-step, and bad-invariant evidence for finite recurrence claims; the bad transition-step, threshold-step, and invariant-bound rows now have checked QF_LRA/Farkas evidence after replay computes the exact trace values.",
+    "Emit checked QF_LRA/Farkas proof rows for finite recurrence claims; the replay rows compute the exact trace values and separate qf-lra-bad-transition-step, qf-lra-bad-threshold-step, and qf-lra-bad-invariant-bound rows own the checked evidence.",
     "Add broader bounded-model-checking rows only when they expose distinct transition-system pressure.",
     "Keep continuous-time existence, uniqueness, stability, chaos, and PDE theory marked Lean-horizon."
   ]
