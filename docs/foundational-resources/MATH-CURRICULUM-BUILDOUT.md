@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 130 non-template math example packs validate.
+  Status: 131 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 130 non-template packs have at least one `checked` expected-result row.
+  Status: 131 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3465,6 +3465,17 @@ triangular solve replay for `b = [3,7]`, and the solution `[1,1]`, while a
 source-linked QF_LRA/Farkas artifact rejects the malformed pivot-sign claim
 `det(P) = +1` against the exact value `-1`. Pivot-selection correctness,
 rank-deficient behavior, sparse pivot policies, growth factors, conditioning,
+and floating-point stability claims stay in theorem or numerical-honesty lanes.
+The linear-algebra/numerical-analysis layer now adds
+`finite-ldlt-decomposition-v0` as the 131st non-template math pack. Exact
+rational replay checks `A = [[4,2],[2,3]]`,
+`L = [[1,0],[1/2,1]]`, `D = [[4,0],[0,2]]`,
+`L*D*L^T = A`, determinant/product replay
+`det(A) = product(diag(D)) = 8`, positive leading minors `[4,8]`,
+triangular solve replay for `b = [6,5]`, and the solution `[1,1]`, while a
+source-linked QF_LRA/Farkas artifact rejects the malformed diagonal-entry
+claim `D[1,1] = 3` against the exact value `2`. LDLT existence, pivoting
+strategy correctness, indefinite variants, sparse algorithms, conditioning,
 and floating-point stability claims stay in theorem or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects

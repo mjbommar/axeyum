@@ -177,6 +177,9 @@ python3 scripts/query-foundational-resources.py checks --pack finite-lu-decompos
 python3 scripts/query-foundational-resources.py checks --pack finite-pivoted-lu-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_lu_replay --pack finite-pivoted-lu-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-pivoted-lu-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-ldlt-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_lu_replay --pack finite-ldlt-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-ldlt-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field linear_algebra --text Schur --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_schur_complement --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_schur_complement --route Farkas --proof-status checked --require-any >/dev/null

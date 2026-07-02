@@ -240,6 +240,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite LDLT decomposition resource landed.**
+  `finite-ldlt-decomposition-v0` now gives the linear-algebra,
+  numerical-analysis, and optimization lanes an exact rational
+  positive-definite factorization transcript: it checks
+  `A = [[4,2],[2,3]]`, `L = [[1,0],[1/2,1]]`,
+  `D = [[4,0],[0,2]]`, `L*D*L^T = A`, determinant/product replay
+  `det(A) = product(diag(D)) = 8`, positive leading minors `[4,8]`,
+  triangular solve replay for `b = [6,5]`, and solution `[1,1]`, then
+  isolates the malformed diagonal-entry claim `D[1,1] = 3` versus exact `2`
+  as a source-linked QF_LRA/Farkas row. The focused learner page,
+  matrix/numerical query guides, concept bridges, validator, and
+  `math_resource_lra_routes` regression keep fixed finite LDLT replay separate
+  from LDLT existence, pivoting strategy correctness, indefinite variants,
+  sparse algorithms, conditioning, and floating-point stability. The public
+  summary now reports 122 concept rows, 131 packs, 858 expected checks, 357
+  checked rows, 407 replay-only rows, 94 Lean-horizon rows, and 131 promoted
+  solver-reuse packs.
 - **Finite pivoted-LU decomposition resource landed.**
   `finite-pivoted-lu-decomposition-v0` now gives the linear-algebra,
   numerical-analysis, and optimization lanes an exact row-swapped rational
@@ -254,9 +271,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_lra_routes` regression keep fixed finite pivoted-LU replay
   separate from pivot-selection correctness, rank-deficient behavior, sparse
   pivoting, growth-factor bounds, conditioning, and floating-point stability.
-  The public summary now reports 122 concept rows, 130 packs, 850 expected
-  checks, 356 checked rows, 401 replay-only rows, 93 Lean-horizon rows, and
-  130 promoted solver-reuse packs.
+  The public summary now reports 122 concept rows, 131 packs, 858 expected
+  checks, 357 checked rows, 407 replay-only rows, 94 Lean-horizon rows, and
+  131 promoted solver-reuse packs.
 - **Finite LU-decomposition resource landed.**
   `finite-lu-decomposition-v0` now gives the linear-algebra and
   numerical-analysis lanes an exact rational factorization transcript: it
@@ -281,8 +298,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   validator, and `math_resource_lra_routes` regression keep fixed finite
   Gram-Schmidt replay separate from general Gram-Schmidt/QR correctness,
   rank-deficient variants, conditioning, and floating-point stability. The
-  public summary now reports 122 concept rows, 130 packs, 850 expected checks,
-  356 checked rows, 401 replay-only rows, 93 Lean-horizon rows, and 130
+  public summary now reports 122 concept rows, 131 packs, 858 expected checks,
+  357 checked rows, 407 replay-only rows, 94 Lean-horizon rows, and 131
   promoted solver-reuse packs.
 - **Finite Householder-reflection resource landed.**
   `finite-householder-reflection-v0` now gives the linear-algebra,

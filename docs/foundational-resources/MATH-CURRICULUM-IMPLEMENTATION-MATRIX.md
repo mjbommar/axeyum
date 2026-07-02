@@ -990,7 +990,19 @@ Build sequence:
     exact finite pivoted-LU replay separate from pivot-selection correctness,
     rank-deficient behavior, sparse pivoting, growth-factor bounds,
     conditioning, and floating-point stability.
-101. Revisit crate/repo boundaries only after three real consumers or repeated
+101. Landed: add the finite LDLT-decomposition resource.
+    `finite-ldlt-decomposition-v0` now records one exact rational
+    positive-definite factorization transcript: `A = [[4,2],[2,3]]`,
+    `L = [[1,0],[1/2,1]]`, `D = [[4,0],[0,2]]`,
+    `L*D*L^T = A`, determinant/product replay
+    `det(A) = product(diag(D)) = 8`, positive leading minors `[4,8]`,
+    triangular solve replay for `b = [6,5]`, and solution `[1,1]`.
+    It includes a checked QF_LRA/Farkas artifact for the malformed diagonal
+    claim `D[1,1] = 3`. The reused matrix and exact-vs-floating bridges keep
+    exact finite LDLT replay separate from LDLT existence, pivoting strategy
+    correctness, indefinite variants, sparse algorithms, conditioning, and
+    floating-point stability.
+102. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

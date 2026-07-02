@@ -13514,6 +13514,204 @@ def validate_finite_pivoted_lu_decomposition(expected: dict[str, Any]) -> None:
     require_string("pivoted LU horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_ldlt_decomposition(expected: dict[str, Any]) -> None:
+    def det2(context: str, matrix: list[list[Fraction]]) -> Fraction:
+        if len(matrix) != 2 or any(len(row) != 2 for row in matrix):
+            fail(f"{context} expects a 2x2 matrix")
+        return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
+
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    shape = checks["ldlt-shape-witness"]
+    if shape["expected_result"] != "sat":
+        fail("ldlt-shape-witness must expect sat")
+    if shape.get("proof_status") != "replay-only":
+        fail("ldlt-shape-witness must be replay-only")
+    values = single_witness_values(shape, witnesses)
+    matrix = require_fraction_matrix("LDLT matrix A", values.get("matrix"))
+    l_matrix = require_fraction_matrix("LDLT L matrix", values.get("l"))
+    d_matrix = require_fraction_matrix("LDLT D matrix", values.get("d"))
+    l_transpose = require_fraction_matrix("LDLT L transpose", values.get("l_transpose"))
+    product = require_fraction_matrix("LDLT product", values.get("product"))
+    rhs = require_fraction_vector("LDLT rhs", values.get("rhs"))
+    forward_solution = require_fraction_vector(
+        "LDLT forward_solution",
+        values.get("forward_solution"),
+    )
+    diagonal_solution = require_fraction_vector(
+        "LDLT diagonal_solution",
+        values.get("diagonal_solution"),
+    )
+    solution = require_fraction_vector("LDLT solution", values.get("solution"))
+    det_matrix = require_fraction("LDLT det_matrix", values.get("det_matrix"))
+    diagonal_product = require_fraction(
+        "LDLT diagonal_product",
+        values.get("diagonal_product"),
+    )
+    leading_principal_minors = require_fraction_vector(
+        "LDLT leading_principal_minors",
+        values.get("leading_principal_minors"),
+    )
+    require_square_matrix("LDLT matrix A", matrix)
+    require_square_matrix("LDLT L matrix", l_matrix)
+    require_square_matrix("LDLT D matrix", d_matrix)
+    require_square_matrix("LDLT L transpose", l_transpose)
+    require_square_matrix("LDLT product", product)
+    require_mat_mul_shape("LDLT L*D", l_matrix, d_matrix)
+    require_mat_mul_shape("LDLT D*L^T", d_matrix, l_transpose)
+    if len(matrix) != 2 or len(rhs) != 2 or len(solution) != 2:
+        fail("finite LDLT replay expects one 2x2 system")
+    if len(forward_solution) != 2 or len(diagonal_solution) != 2:
+        fail("finite LDLT replay expects two-entry solve data")
+    if len(leading_principal_minors) != 2:
+        fail("finite LDLT replay expects two leading principal minors")
+    if matrix_transpose(matrix) != matrix:
+        fail("ldlt-shape-witness expects a symmetric matrix")
+    for index, row in enumerate(l_matrix):
+        if row[index] != 1:
+            fail("ldlt-shape-witness L must have unit diagonal")
+        for column in range(index + 1, len(row)):
+            if row[column] != 0:
+                fail("ldlt-shape-witness L must be lower triangular")
+    for row in range(len(d_matrix)):
+        for column in range(len(d_matrix[row])):
+            if row != column and d_matrix[row][column] != 0:
+                fail("ldlt-shape-witness D must be diagonal")
+    if matrix_transpose(l_matrix) != l_transpose:
+        fail("ldlt-shape-witness L^T is incorrect")
+
+    product_check = checks["ldlt-product-witness"]
+    if product_check["expected_result"] != "sat":
+        fail("ldlt-product-witness must expect sat")
+    if product_check.get("proof_status") != "replay-only":
+        fail("ldlt-product-witness must be replay-only")
+    if single_witness_values(product_check, witnesses) != values:
+        fail("ldlt-product-witness must cite the LDLT witness")
+    ld = mat_mul(l_matrix, d_matrix)
+    if mat_mul(ld, l_transpose) != product:
+        fail("ldlt-product-witness product does not equal L*D*L^T")
+    if product != matrix:
+        fail("ldlt-product-witness product must equal A")
+
+    determinant = checks["ldlt-determinant-witness"]
+    if determinant["expected_result"] != "sat":
+        fail("ldlt-determinant-witness must expect sat")
+    if determinant.get("proof_status") != "replay-only":
+        fail("ldlt-determinant-witness must be replay-only")
+    if single_witness_values(determinant, witnesses) != values:
+        fail("ldlt-determinant-witness must cite the LDLT witness")
+    if det_matrix != det2("LDLT matrix A", matrix):
+        fail("ldlt-determinant-witness det(A) is incorrect")
+    diagonal_entries = [d_matrix[index][index] for index in range(len(d_matrix))]
+    if diagonal_product != diagonal_entries[0] * diagonal_entries[1]:
+        fail("ldlt-determinant-witness diagonal product is incorrect")
+    if diagonal_product != det_matrix:
+        fail("ldlt-determinant-witness det(A) must equal product(diag(D))")
+
+    positive = checks["ldlt-positive-definite-shadow-witness"]
+    if positive["expected_result"] != "sat":
+        fail("ldlt-positive-definite-shadow-witness must expect sat")
+    if positive.get("proof_status") != "replay-only":
+        fail("ldlt-positive-definite-shadow-witness must be replay-only")
+    if single_witness_values(positive, witnesses) != values:
+        fail("ldlt-positive-definite-shadow-witness must cite the LDLT witness")
+    if leading_principal_minors != [matrix[0][0], det_matrix]:
+        fail("ldlt-positive-definite-shadow-witness leading minors are incorrect")
+    if any(minor <= 0 for minor in leading_principal_minors):
+        fail("ldlt-positive-definite-shadow-witness expects positive leading minors")
+
+    triangular_solve = checks["ldlt-triangular-solve-witness"]
+    if triangular_solve["expected_result"] != "sat":
+        fail("ldlt-triangular-solve-witness must expect sat")
+    if triangular_solve.get("proof_status") != "replay-only":
+        fail("ldlt-triangular-solve-witness must be replay-only")
+    if single_witness_values(triangular_solve, witnesses) != values:
+        fail("ldlt-triangular-solve-witness must cite the LDLT witness")
+    if mat_vec(l_matrix, forward_solution) != rhs:
+        fail("ldlt-triangular-solve-witness L*z does not equal b")
+    if mat_vec(d_matrix, diagonal_solution) != forward_solution:
+        fail("ldlt-triangular-solve-witness D*y does not equal z")
+    if mat_vec(l_transpose, solution) != diagonal_solution:
+        fail("ldlt-triangular-solve-witness L^T*x does not equal y")
+    if mat_vec(matrix, solution) != rhs:
+        fail("ldlt-triangular-solve-witness A*x does not equal rhs")
+
+    bad = checks["bad-ldlt-diagonal-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-ldlt-diagonal-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-ldlt-diagonal-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_ldlt_diagonal_replay":
+        fail("bad-ldlt-diagonal-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-by-two-ldlt-factorization":
+        fail("bad-ldlt-diagonal-rejected must cite two-by-two-ldlt-factorization")
+    computed_diagonal = require_fraction(
+        "bad LDLT computed_diagonal",
+        data.get("computed_diagonal"),
+    )
+    claimed_diagonal = require_fraction(
+        "bad LDLT claimed_diagonal",
+        data.get("claimed_diagonal"),
+    )
+    if computed_diagonal != d_matrix[1][1]:
+        fail("bad-ldlt-diagonal-rejected computed diagonal does not match replay")
+    if computed_diagonal == claimed_diagonal:
+        fail("bad-ldlt-diagonal-rejected must document a false diagonal claim")
+    if "separate qf-lra-bad-ldlt-diagonal" not in bad.get("notes", ""):
+        fail("bad-ldlt-diagonal-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-ldlt-diagonal"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-ldlt-diagonal must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-ldlt-diagonal must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-ldlt-diagonal must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-by-two-ldlt-factorization":
+        fail("qf-lra-bad-ldlt-diagonal must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-ldlt-diagonal-rejected":
+        fail("qf-lra-bad-ldlt-diagonal must cite the replay row")
+    qf_computed = require_fraction(
+        "qf LDLT computed_diagonal",
+        qf_data.get("computed_diagonal"),
+    )
+    qf_claimed = require_fraction(
+        "qf LDLT claimed_diagonal",
+        qf_data.get("claimed_diagonal"),
+    )
+    if qf_computed != computed_diagonal or qf_claimed != claimed_diagonal:
+        fail("qf-lra-bad-ldlt-diagonal data must match the replay row")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf LDLT smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-ldlt-decomposition-v0/smt2/"
+        "bad-ldlt-diagonal-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-ldlt-diagonal smt2_artifact must name the checked source artifact")
+    check_source("qf LDLT smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf LDLT farkas_regression", regression)
+    if "finite_ldlt_decomposition_bad_diagonal_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-ldlt-diagonal must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf LDLT certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-ldlt-diagonal certificate must document checked Farkas evidence")
+
+    horizon = checks["general-ldlt-decomposition-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-ldlt-decomposition-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-ldlt-decomposition-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("LDLT horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("LDLT horizon future_checker", horizon_data.get("future_checker"))
+
+
 def require_fraction_vector_list(context: str, value: Any) -> list[list[Fraction]]:
     if not isinstance(value, list) or not value:
         fail(f"{context} must be a non-empty list of vectors")
@@ -30678,6 +30876,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_lu_decomposition(expected)
     if metadata["id"] == "finite-pivoted-lu-decomposition-v0":
         validate_finite_pivoted_lu_decomposition(expected)
+    if metadata["id"] == "finite-ldlt-decomposition-v0":
+        validate_finite_ldlt_decomposition(expected)
     if metadata["id"] == "finite-gradient-descent-v0":
         validate_finite_gradient_descent(expected)
     if metadata["id"] == "finite-line-search-v0":

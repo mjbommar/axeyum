@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-ldlt-decomposition-v0",
+  "witnesses": [
+    {
+      "id": "two-by-two-ldlt-factorization",
+      "description": "Exact rational LDLT factorization and triangular-solve data for a fixed 2x2 positive-definite system.",
+      "values": {
+        "matrix": [
+          ["4", "2"],
+          ["2", "3"]
+        ],
+        "l": [
+          ["1", "0"],
+          ["1/2", "1"]
+        ],
+        "d": [
+          ["4", "0"],
+          ["0", "2"]
+        ],
+        "l_transpose": [
+          ["1", "1/2"],
+          ["0", "1"]
+        ],
+        "product": [
+          ["4", "2"],
+          ["2", "3"]
+        ],
+        "rhs": ["6", "5"],
+        "forward_solution": ["6", "2"],
+        "diagonal_solution": ["3/2", "1"],
+        "solution": ["1", "1"],
+        "det_matrix": "8",
+        "diagonal_product": "8",
+        "leading_principal_minors": ["4", "8"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "ldlt-shape-witness",
+      "claim": "The fixed rational A is symmetric, L is unit lower triangular, and D is diagonal.",
+      "expected_result": "sat",
+      "validation": "exact_rational_ldlt_shape_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-ldlt-factorization"],
+      "notes": "The validator checks symmetry, unit diagonal, triangular entries, and zero off-diagonal entries in D exactly."
+    },
+    {
+      "id": "ldlt-product-witness",
+      "claim": "The fixed rational matrices satisfy L*D*L^T = A.",
+      "expected_result": "sat",
+      "validation": "exact_rational_ldlt_product_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-ldlt-factorization"],
+      "notes": "The validator recomputes both matrix products exactly over rationals."
+    },
+    {
+      "id": "ldlt-determinant-witness",
+      "claim": "The fixed rational matrix determinant equals the product of D's diagonal entries.",
+      "expected_result": "sat",
+      "validation": "exact_rational_ldlt_determinant_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-ldlt-factorization"],
+      "notes": "The validator recomputes det(A) and product(diag(D)) exactly."
+    },
+    {
+      "id": "ldlt-positive-definite-shadow-witness",
+      "claim": "The fixed 2x2 symmetric matrix has positive leading principal minors.",
+      "expected_result": "sat",
+      "validation": "exact_rational_ldlt_positive_definite_shadow_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-ldlt-factorization"],
+      "notes": "The validator recomputes the two leading principal minors exactly; this is a fixed finite shadow, not a theorem about arbitrary matrices."
+    },
+    {
+      "id": "ldlt-triangular-solve-witness",
+      "claim": "Forward, diagonal, and transpose-back substitution through the LDLT system give x = [1, 1], which solves A*x = b.",
+      "expected_result": "sat",
+      "validation": "exact_rational_ldlt_triangular_solve_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-ldlt-factorization"],
+      "notes": "The validator checks L*z = b, D*y = z, L^T*x = y, and A*x = b exactly."
+    },
+    {
+      "id": "bad-ldlt-diagonal-rejected",
+      "claim": "The second diagonal entry of D is 3.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_ldlt_diagonal_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "two-by-two-ldlt-factorization",
+        "entry": [1, 1],
+        "computed_diagonal": "2",
+        "claimed_diagonal": "3"
+      },
+      "notes": "Exact replay computes D[1,1] as 2, so the claimed value 3 is rejected; the separate qf-lra-bad-ldlt-diagonal row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-ldlt-diagonal",
+      "claim": "The fixed malformed LDLT diagonal-entry claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "two-by-two-ldlt-factorization",
+        "source_replay_row": "bad-ldlt-diagonal-rejected",
+        "entry": [1, 1],
+        "computed_diagonal": "2",
+        "claimed_diagonal": "3",
+        "farkas_conflict": "ldlt_d11 = 2 and ldlt_d11 = 3",
+        "smt2_artifact": "artifacts/examples/math/finite-ldlt-decomposition-v0/smt2/bad-ldlt-diagonal-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_ldlt_decomposition_bad_diagonal_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the LDLT diagonal entry as 2, while the malformed row claims 3; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-ldlt-decomposition-theory-lean-horizon",
+      "claim": "General LDLT existence, pivoting strategy, indefinite variants, rank-deficient cases, sparse factorization, conditioning, and floating-point stability are theorem/numerical-honesty work.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For suitable symmetric matrices over exact fields, prove LDLT factorization under explicit pivot assumptions, determinant accounting, triangular-solve correctness, and positive-definite or indefinite side conditions.",
+        "future_checker": "Lean theorem statements for exact LDLT plus separate numerical-honesty artifacts for pivoted indefinite LDLT, sparse algorithms, conditioning, and floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational LDLT transcript, not a theorem about arbitrary LDLT or a stability claim for numerical implementations."
+    }
+  ]
+}

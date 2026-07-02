@@ -22,6 +22,9 @@ const FINITE_LU_DECOMPOSITION_BAD_MULTIPLIER: &str = include_str!(
 const FINITE_PIVOTED_LU_DECOMPOSITION_BAD_PIVOT_SIGN: &str = include_str!(
     "../../../artifacts/examples/math/finite-pivoted-lu-decomposition-v0/smt2/bad-pivot-sign-farkas-conflict.smt2"
 );
+const FINITE_LDLT_DECOMPOSITION_BAD_DIAGONAL: &str = include_str!(
+    "../../../artifacts/examples/math/finite-ldlt-decomposition-v0/smt2/bad-ldlt-diagonal-farkas-conflict.smt2"
+);
 const LINEAR_ALGEBRA_BAD_NULLSPACE_COMPONENT: &str = include_str!(
     "../../../artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-nullspace-component-farkas-conflict.smt2"
 );
@@ -658,6 +661,14 @@ fn finite_pivoted_lu_decomposition_bad_pivot_sign_artifact_emits_checked_farkas(
     assert_resource_farkas(
         "finite-pivoted-lu-decomposition-v0 bad-pivot-sign SMT-LIB artifact",
         FINITE_PIVOTED_LU_DECOMPOSITION_BAD_PIVOT_SIGN,
+    );
+}
+
+#[test]
+fn finite_ldlt_decomposition_bad_diagonal_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-ldlt-decomposition-v0 bad-ldlt-diagonal SMT-LIB artifact",
+        FINITE_LDLT_DECOMPOSITION_BAD_DIAGONAL,
     );
 }
 

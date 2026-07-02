@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "finite-ldlt-decomposition-v0",
+  "title": "Finite LDLT Decomposition Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_optimization_and_convexity",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_lu_replay"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "optimization_and_convexity"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite matrices",
+    "finite positive-definite factorization",
+    "exact rational matrix replay",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-ldlt-decomposition-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite LDLT bad diagonal-entry QF_LRA/Farkas regression seed",
+    "pressure": "Exact LDLT replay computes D[1,1] as 2 while a malformed row claims 3, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-ldlt-diagonal"
+    ],
+    "next_step": "Promote additional LDLT rows only when they add distinct diagonal, pivoting, inertia, Hessian, covariance, SDP, or block-factorization solver pressure; keep LDLT existence, pivoting strategy, sparse algorithms, conditioning, and floating-point stability in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/ldlt-decomposition-end-to-end.md",
+    "artifacts/examples/math/finite-ldlt-decomposition-v0/smt2/bad-ldlt-diagonal-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "ldlt-shape-witness",
+    "ldlt-product-witness",
+    "ldlt-determinant-witness",
+    "ldlt-positive-definite-shadow-witness",
+    "ldlt-triangular-solve-witness",
+    "bad-ldlt-diagonal-rejected",
+    "qf-lra-bad-ldlt-diagonal",
+    "general-ldlt-decomposition-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational A, L, D, L^T, product, right-hand side, triangular solve, determinant, and leading minors as deterministic exact-rational replay obligations.",
+    "Route the false diagonal-entry row through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting diagonal value.",
+    "Expose the pack through the matrix computation learner and consumer query surfaces.",
+    "Keep LDLT existence, pivoting strategy, indefinite factorization, rank-deficient cases, sparse algorithms, floating-point conditioning, and stability claims marked Lean or numerical-honesty horizon."
+  ]
+}

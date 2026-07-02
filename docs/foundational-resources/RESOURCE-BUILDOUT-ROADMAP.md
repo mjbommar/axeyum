@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 130 non-template math example packs.
-- 850 expected checks.
-- 356 checked proof/evidence rows.
-- 401 replay-only rows.
-- 93 Lean-horizon rows.
-- 130 promoted solver-reuse packs.
+- 131 non-template math example packs.
+- 858 expected checks.
+- 357 checked proof/evidence rows.
+- 407 replay-only rows.
+- 94 Lean-horizon rows.
+- 131 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 130 focused learner-linked packs, with no path-only, index-only, or missing
+- 131 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2486,6 +2486,17 @@ Pick one item per commit unless the change is purely navigational.
      `det(P) = +1` versus exact `-1` through a source-linked QF_LRA/Farkas
      regression without claiming pivot-selection correctness, rank-deficient
      behavior, sparse pivot policies, growth-factor bounds, conditioning, or
+     floating-point stability.
+177. Landed: add `finite-ldlt-decomposition-v0` as an exact finite LDLT
+     resource. The pack computes one rational positive-definite factorization
+     with `A = [[4,2],[2,3]]`, `L = [[1,0],[1/2,1]]`,
+     `D = [[4,0],[0,2]]`, `L*D*L^T = A`, determinant/product replay
+     `det(A) = product(diag(D)) = 8`, positive leading minors `[4,8]`,
+     triangular solve replay for `b = [6,5]`, and the exact solution
+     `[1,1]`, then promotes the malformed diagonal-entry claim
+     `D[1,1] = 3` versus exact `2` through a source-linked QF_LRA/Farkas
+     regression without claiming LDLT existence, pivoting strategy
+     correctness, indefinite variants, sparse algorithms, conditioning, or
      floating-point stability.
 
 ## Validation Checklist

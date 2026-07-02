@@ -14,6 +14,7 @@ Example packs:
 - [finite-gaussian-elimination-v0](../../../artifacts/examples/math/finite-gaussian-elimination-v0/)
 - [finite-lu-decomposition-v0](../../../artifacts/examples/math/finite-lu-decomposition-v0/)
 - [finite-pivoted-lu-decomposition-v0](../../../artifacts/examples/math/finite-pivoted-lu-decomposition-v0/)
+- [finite-ldlt-decomposition-v0](../../../artifacts/examples/math/finite-ldlt-decomposition-v0/)
 - [finite-qr-decomposition-v0](../../../artifacts/examples/math/finite-qr-decomposition-v0/)
 - [finite-gram-schmidt-v0](../../../artifacts/examples/math/finite-gram-schmidt-v0/)
 - [finite-givens-rotation-v0](../../../artifacts/examples/math/finite-givens-rotation-v0/)
@@ -121,7 +122,12 @@ row-swap permutation, `P*A` and `P*b` replay, determinant-sign accounting,
 `L*U = P*A`, triangular-solve replay, and checked QF_LRA/Farkas rejection of a
 bad pivot-sign claim without claiming pivot-selection correctness,
 rank-deficient behavior, sparse pivot policies, growth-factor bounds,
-conditioning, or floating-point stability. The QR slice adds exact rational
+conditioning, or floating-point stability. The LDLT slice adds exact rational
+unit-lower/diagonal factor replay, determinant and positive-minor checks,
+triangular-solve replay, and checked QF_LRA/Farkas rejection of a bad diagonal
+entry without claiming LDLT existence, pivoting strategy correctness,
+indefinite variants, sparse algorithms, conditioning, or floating-point
+stability. The QR slice adds exact rational
 orthogonality replay, upper-triangular factor checking, `Q*R` product replay,
 and checked QF_LRA/Farkas rejection of a bad product entry without claiming QR
 existence, algorithm correctness, conditioning, or numerical stability. The
@@ -1033,6 +1039,7 @@ replay, read
 [End To End: Finite Walsh-Hadamard Transform Checks](walsh-hadamard-transform-end-to-end.md),
 [End To End: Finite LU Decomposition](lu-decomposition-end-to-end.md),
 [End To End: Finite Pivoted LU Decomposition](pivoted-lu-decomposition-end-to-end.md),
+[End To End: Finite LDLT Decomposition](ldlt-decomposition-end-to-end.md),
 [End To End: Finite QR Decomposition Checks](qr-decomposition-end-to-end.md),
 [End To End: Finite Gram-Schmidt](gram-schmidt-end-to-end.md),
 [End To End: Finite Givens Rotation](givens-rotation-end-to-end.md),
@@ -1059,7 +1066,7 @@ finite-dimensional operator rows start as
 Infeasible rational systems, LP thresholds, bad residual and solution-box bounds, malformed
 eigenpairs, bad Rayleigh-quotient rows, bad characteristic-polynomial rows,
 bad Jordan-chain components, bad operator-bound and bad Chebyshev-prefix rows, bad Walsh-Hadamard
-transform coefficients, bad LU multipliers, bad pivot signs, bad Gram-Schmidt projection coefficients, bad Givens coefficients, bad Householder entries, bad QR/Cholesky product entries, bad covariance
+transform coefficients, bad LU multipliers, bad pivot signs, bad LDLT diagonal entries, bad Gram-Schmidt projection coefficients, bad Givens coefficients, bad Householder entries, bad QR/Cholesky product entries, bad covariance
 entries, bad KKT stationarity and complementarity rows,
 bad condition-number bounds, bad Schur-complement scalar rows, bad Newton-coordinate rows, bad proximal residual rows, negative-norm rows, and projection-orthogonality
 examples graduate through
@@ -1088,6 +1095,6 @@ module theory, universal coefficient theorem schemas, exact sequences,
 Ext/Tor laws,
 Chebyshev-system/Haar-space theorems, minimax approximation, conditioning,
 Walsh-Hadamard/Fourier transform theorems, fast transform algorithms,
-LU pivoting and pivot-selection correctness, Gram-Schmidt/Givens/Householder/QR/Cholesky existence/algorithm/stability theorems, Schur-complement and block-inverse theorems, Gaussian-elimination pivoting/stability, numerical stability, SDP, general convex analysis, KKT sufficiency, constraint
+LU/LDLT pivoting and pivot-selection correctness, Gram-Schmidt/Givens/Householder/QR/Cholesky existence/algorithm/stability theorems, Schur-complement and block-inverse theorems, Gaussian-elimination pivoting/stability, numerical stability, SDP, general convex analysis, KKT sufficiency, constraint
 qualifications, and algorithm convergence need proof routes or carefully
 bounded numerical-experiment metadata.
