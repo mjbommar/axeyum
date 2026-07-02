@@ -193,8 +193,9 @@ existence/convergence theory, and projected-gradient projection/convergence
 theory, proximal-gradient proximal-map/convergence theory, max-flow/min-cut
 theorem boundaries, shortest-path theorem boundaries, topological-sort theorem
 boundaries, finite topology/compactness/connectedness/quotient/specialization
-theorem boundaries, circle-geometry tangent/chord, inversion-geometry
-circle-line, and cyclic-geometry Ptolemy theorem boundaries.
+theorem boundaries, affine-geometry affine-combination/incidence,
+circle-geometry tangent/chord, inversion-geometry circle-line, and
+cyclic-geometry Ptolemy theorem boundaries.
 The solver-reuse query guide is
 [`docs/foundational-resources/SOLVER-REUSE-QUERIES.md`](docs/foundational-resources/SOLVER-REUSE-QUERIES.md);
 it records promoted-pack, proof-route, field, and checked-row queries for

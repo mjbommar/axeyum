@@ -2177,6 +2177,15 @@ Pick one row per commit unless the change is purely navigational.
      pack-specific checked-row and horizon-frontier queries to the public
      smoke gate without promoting finite exact-arithmetic rows into theorem
      coverage.
+256. Landed: add `affine-geometry-theorem-boundary.md` as the focused
+     finite/general affine-geometry theorem-boundary page for
+     `affine-geometry-v0`. It maps exact affine-map, midpoint-preservation,
+     collinearity, and fixed distance replay plus scoped QF_LRA/Farkas
+     evidence to the missing affine-combination, incidence, ratio,
+     projective, synthetic, differential, and numerical-geometry theorem
+     layers, and adds pack-specific checked-row and horizon-frontier queries
+     to the public smoke gate without promoting finite coordinate rows into
+     theorem coverage.
 
 ## Validation Checklist
 

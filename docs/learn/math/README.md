@@ -473,6 +473,10 @@ Companion maps:
   QF_LRA/Farkas bad affine collinearity, QF_LRA/Farkas
   bad-distance-preservation, QF_LRA/Farkas bad area-scaling, and QF_LRA/Farkas
   bad-orientation checks.
+- [Affine Geometry Theorem Boundary](affine-geometry-theorem-boundary.md):
+  maps finite affine-map, midpoint, collinearity, and
+  bad-distance-preservation shadows to the missing affine-combination,
+  incidence, ratio, projective, and synthetic-geometry theorem routes.
 - [Incidence Geometry](incidence-geometry-end-to-end.md): follows exact line
   equations, non-parallel line intersection, point-on-line replay, checked
   QF_LRA/Farkas bad intersection-coordinate and bad-incidence rejection, and

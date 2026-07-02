@@ -715,7 +715,13 @@ Build sequence:
     finite order/lattice counterexamples under one checked concept-scoped query
     while keeping arbitrary first-order validity and induction schemas in the
     Lean-horizon lane.
-68. Revisit crate/repo boundaries only after three real consumers or repeated
+68. Landed: add the affine-geometry theorem-boundary page.
+    `affine-geometry-theorem-boundary.md` maps exact affine-map, midpoint,
+    collinearity, and fixed distance replay plus checked QF_LRA/Farkas bad-row
+    evidence to the missing affine-combination, incidence, ratio, projective,
+    synthetic, differential, and numerical-geometry theorem routes, with
+    pack-specific checked-row and horizon-frontier queries.
+69. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

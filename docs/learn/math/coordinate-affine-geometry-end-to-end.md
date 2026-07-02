@@ -14,6 +14,9 @@ For exact distance-table and finite isometry replay, use
 [rigid-configuration-geometry-v0](../../../artifacts/examples/math/rigid-configuration-geometry-v0/)
 and
 [Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md).
+For the boundary between finite affine-coordinate replay and general affine,
+projective, and synthetic geometry, use
+[Affine Geometry Theorem Boundary](affine-geometry-theorem-boundary.md).
 For exact circle point, tangent-line, and chord-midpoint replay, use
 [finite-circle-geometry-v0](../../../artifacts/examples/math/finite-circle-geometry-v0/)
 and [Finite Circle Geometry](finite-circle-geometry-end-to-end.md).

@@ -2007,6 +2007,12 @@ complex-plane transform, fixed root, polynomial-identity, and rational
 factorization packs a focused finite/general complex-analysis trust map without
 promoting exact arithmetic replay into holomorphic, analytic-continuation,
 algebraic-closure, or arbitrary factorization theorem coverage.
+`affine-geometry-theorem-boundary.md` now gives `affine-geometry-v0` a focused
+finite/general affine-geometry trust map. It keeps exact affine-map,
+midpoint-preservation, collinearity, and fixed distance replay plus checked
+QF_LRA/Farkas bad-row evidence separate from affine-combination, incidence,
+ratio, projective, synthetic, differential, and numerical-geometry theorem
+coverage.
 `metric-continuity-v0` now has a learner-facing end-to-end lesson for finite
 metric-table replay, finite Lipschitz checks, epsilon-delta containment,
 open-ball preimage replay, checked QF_LRA/Farkas bad-delta and bad-preimage
@@ -2622,6 +2628,15 @@ resource smoke expose `bridge_coordinate_orientation_geometry` and
 pack/check queries, making coordinate/incidence/rigid/affine/orientation rows
 and circle/inversion/cyclic rows discoverable while keeping broad geometry
 theorems in the proof-horizon lane.
+The learner/planning layer now also has
+[`affine-geometry-theorem-boundary.md`](../learn/math/affine-geometry-theorem-boundary.md),
+which expands the finite affine-geometry row into a concrete boundary ledger:
+affine-map replay, midpoint-preservation replay, collinearity replay, and
+bad midpoint-coordinate, bad collinearity-determinant, and
+bad distance-preservation QF_LRA/Farkas rows are linked to copyable queries and
+graduation criteria while keeping affine-combination, incidence, ratio,
+projective, synthetic, differential, and numerical-geometry claims in
+Lean/theorem-horizon lanes.
 The learner/planning layer now also has
 [`circle-geometry-theorem-boundary.md`](../learn/math/circle-geometry-theorem-boundary.md),
 which expands the finite circle-geometry row into a concrete boundary ledger:

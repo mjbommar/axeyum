@@ -496,6 +496,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Affine-geometry affine-combination, incidence, ratio, projective, and
+synthetic-geometry horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text "affine geometry" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack affine-geometry-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Circle-geometry tangent, chord, power-of-a-point, cyclic, and inversion
 horizons:
 
@@ -654,6 +668,7 @@ The main learner maps that explain these boundaries are:
 - [Shortest Path Theorem Boundary](../learn/math/shortest-path-theorem-boundary.md)
 - [Topological Sort Theorem Boundary](../learn/math/topological-sort-theorem-boundary.md)
 - [Graph Search Runtime Theorem Boundary](../learn/math/graph-search-runtime-theorem-boundary.md)
+- [Affine Geometry Theorem Boundary](../learn/math/affine-geometry-theorem-boundary.md)
 - [Circle Geometry Theorem Boundary](../learn/math/circle-geometry-theorem-boundary.md)
 - [Inversion Geometry Theorem Boundary](../learn/math/inversion-geometry-theorem-boundary.md)
 - [Cyclic Geometry Theorem Boundary](../learn/math/cyclic-geometry-theorem-boundary.md)
