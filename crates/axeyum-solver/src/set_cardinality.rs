@@ -60,9 +60,10 @@ pub fn set_cardinality_refutation(
 ) -> Option<SetCardinalityRefutationCertificate> {
     let mut facts = Facts::default();
     let mut conjuncts = Vec::new();
+    let mut visited = BTreeSet::new();
     for &assertion in assertions {
         collect_top_conjuncts(arena, assertion, &mut conjuncts);
-        collect_bitvec_terms(arena, assertion, &mut facts.candidate_terms);
+        collect_bitvec_terms(arena, assertion, &mut facts.candidate_terms, &mut visited);
     }
     for conjunct in conjuncts {
         if let Some(bounds) = match_popcount_comparison(arena, conjunct) {
@@ -119,13 +120,26 @@ fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>)
     }
 }
 
-fn collect_bitvec_terms(arena: &TermArena, term: TermId, out: &mut BTreeSet<TermId>) {
+/// Collects every bit-vector-sorted subterm, walking the term **DAG** once per
+/// node. The `visited` set short-circuits re-traversal of shared subterms —
+/// without it the walk is per-*path* and goes exponential on heavily-shared
+/// circuits (an FP `fp.rem`/`fp.fma` row bit-blasts to thousands of shared
+/// nodes; the unguarded walk ran for hours where this one takes milliseconds).
+fn collect_bitvec_terms(
+    arena: &TermArena,
+    term: TermId,
+    out: &mut BTreeSet<TermId>,
+    visited: &mut BTreeSet<TermId>,
+) {
+    if !visited.insert(term) {
+        return;
+    }
     if matches!(arena.sort_of(term), Sort::BitVec(_)) {
         out.insert(term);
     }
     if let TermNode::App { args, .. } = arena.node(term) {
         for &arg in &**args {
-            collect_bitvec_terms(arena, arg, out);
+            collect_bitvec_terms(arena, arg, out, visited);
         }
     }
 }
