@@ -106,6 +106,9 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+The learner-facing bridge page is
+[Finite Countermodel Replay](../learn/math/finite-countermodel-replay.md).
+
 Display finite proof-pattern rows:
 
 ```sh

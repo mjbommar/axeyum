@@ -779,6 +779,7 @@ BRIDGE_CONCEPTS = [
                 "lean_status": "not-required",
                 "sources": [
                     "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/learn/math/finite-countermodel-replay.md",
                     "docs/learn/math/finite-predicate-end-to-end.md",
                     "docs/learn/math/proof-methods-patterns-end-to-end.md",
                     "docs/foundational-resources/FOUNDATIONS-DISCRETE-QUERIES.md",
@@ -811,6 +812,7 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
             "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/learn/math/finite-countermodel-replay.md",
             "docs/learn/math/finite-predicate-end-to-end.md",
             "docs/learn/math/proof-methods-patterns-end-to-end.md",
             "docs/learn/math/logic-basics-end-to-end.md",

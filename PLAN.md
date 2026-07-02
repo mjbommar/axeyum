@@ -271,8 +271,8 @@ specialization-order, finite cohomology, finite universal-coefficient shadow,
 and finite cup-product extensions. The
 finite countermodel lane now also makes explicit finite universes, Boolean
 assignments, predicate extensions, relation tables, function tables, and finite
-order/lattice counterexamples queryable as one checked bridge concept without
-changing pack or check totals. The
+order/lattice counterexamples queryable as one checked bridge concept with a
+learner-facing replay guide, without changing pack or check totals. The
 finite algebra-homomorphism lane now also promotes the
 concrete bad group-homomorphism row through QF_UF/Alethe after exact table
 replay isolates `phi(1+1)=1` versus `phi(1)+phi(1)=0`. The finite

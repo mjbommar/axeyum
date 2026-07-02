@@ -1652,10 +1652,11 @@ Pick one row per commit unless the change is purely navigational.
      `finite-predicate-v0`, `logic-basics-v0`,
      `proof-methods-patterns-v0`, `relations-functions-v0`, and
      `finite-order-lattices-v0` under explicit finite countermodel replay and
-     bounded no-countermodel certificate routes. The public query surface now
-     reports 121 concept rows, 75 bridge concepts, 108 packs, and the
-     concept-scoped countermodel query returns checked rows without changing
-     pack/check totals.
+     bounded no-countermodel certificate routes, with
+     `docs/learn/math/finite-countermodel-replay.md` documenting the shared
+     trust boundary. The public query surface now reports 121 concept rows, 75
+     bridge concepts, 108 packs, and the concept-scoped countermodel query
+     returns checked rows without changing pack/check totals.
 
 ## Validation Checklist
 

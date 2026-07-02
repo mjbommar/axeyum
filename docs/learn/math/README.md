@@ -73,6 +73,9 @@ Companion maps:
   universal/existential predicate replay, bounded quantifier implication
   enumeration with checked DRAT/LRAT evidence, relation symmetry
   counterexamples, and the first-order Lean horizon.
+- [Finite Countermodel Replay](finite-countermodel-replay.md): groups Boolean
+  assignments, finite predicate tables, relation/function tables, and finite
+  order/lattice tables under the reusable checked-countermodel pattern.
 - [Proof By Refutation](proof-methods-refutation-end-to-end.md): follows a
   pigeonhole SAT control, checked `PHP(3,2)` CNF truth-table refutation, and
   checked DRAT/LRAT proof-object evidence for the source DIMACS artifact.

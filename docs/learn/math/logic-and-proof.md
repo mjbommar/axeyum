@@ -96,6 +96,11 @@ The `finite-predicate-v0` validator checks that `exists x. P(x)` holds,
 violates symmetry. It also enumerates every unary predicate over a non-empty
 two-element universe to reject a counterexample to `forall x. P(x) -> exists
 x. P(x)`, and the matching source DIMACS row now checks through DRAT/LRAT.
+The cross-cutting
+[Finite Countermodel Replay](finite-countermodel-replay.md) lesson groups that
+same pattern with Boolean assignment countermodels, proof-pattern
+countermodels, finite function-table failures, and finite order/lattice table
+failures.
 For induction, encode the finite obligations for a specific property:
 
 ```text
@@ -138,6 +143,7 @@ For fuller traces, read:
 
 - [End To End: Logic Basics](logic-basics-end-to-end.md)
 - [End To End: Finite Predicate Logic](finite-predicate-end-to-end.md)
+- [Finite Countermodel Replay](finite-countermodel-replay.md)
 - [End To End: Proof By Refutation](proof-methods-refutation-end-to-end.md)
 - [End To End: Proof Object Anatomy](proof-object-anatomy-end-to-end.md)
 - [End To End: Proof Method Patterns](proof-methods-patterns-end-to-end.md)
@@ -148,9 +154,9 @@ For fuller traces, read:
 ## Proof Upgrade Notes
 
 Use the generated bridge rows `bridge_finite_model_replay`,
-`bridge_counterexample_proof`, `bridge_bounded_theorem_shadow`, and
-`bridge_lean_horizon` as the status vocabulary for this page. SAT witnesses and
-finite truth-table rows stay on
+`bridge_finite_countermodel_replay`, `bridge_counterexample_proof`,
+`bridge_bounded_theorem_shadow`, and `bridge_lean_horizon` as the status
+vocabulary for this page. SAT witnesses and finite truth-table rows stay on
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md).
 Boolean refutations such as proof-by-contradiction, pigeonhole, and triangle
 non-colorability graduate through
