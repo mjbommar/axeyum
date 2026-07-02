@@ -125,3 +125,6 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/<p
 
 The promotion is not complete until the artifact or regression rejects a
 tampered or missing certificate where the route supports tamper rejection.
+Use [Checker Tamper Matrix](CHECKER-TAMPER-MATRIX.md) to find the current
+focused corrupted-evidence command, and keep unsupported tamper routes explicit
+as gaps.

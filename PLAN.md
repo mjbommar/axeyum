@@ -188,6 +188,11 @@ The rejection-case query guide is
 [`docs/foundational-resources/REJECTION-CASE-QUERIES.md`](docs/foundational-resources/REJECTION-CASE-QUERIES.md);
 it records malformed-claim and route-scoped rejection queries while keeping
 public resource rows separate from proof-cookbook tamper tests.
+The checker-tamper matrix is
+[`docs/foundational-resources/CHECKER-TAMPER-MATRIX.md`](docs/foundational-resources/CHECKER-TAMPER-MATRIX.md);
+it maps each active proof route from malformed source-row discovery to the
+focused corrupted-evidence command, and records routes that still need a tamper
+regression before they can be called tamper-covered.
 The curriculum-node query guide is
 [`docs/foundational-resources/CURRICULUM-NODE-QUERIES.md`](docs/foundational-resources/CURRICULUM-NODE-QUERIES.md);
 it records concept, pack, field, route, checked-row, and horizon drilldowns for

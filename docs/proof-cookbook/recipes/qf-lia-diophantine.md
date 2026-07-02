@@ -136,6 +136,7 @@ Focused certificate tests:
 ```sh
 cargo test -p axeyum-solver diophantine
 cargo test -p axeyum-solver certificate_tamper_is_rejected
+cargo test -p axeyum-solver --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
 ```
 
 Integer Lean reconstruction slice:

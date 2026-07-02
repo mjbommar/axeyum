@@ -154,7 +154,8 @@ rejected claim, then link to the pack and proof-cookbook route for details.
 ## Tamper Tests
 
 Public resource JSON does not expose checker-tamper fixtures as rows. Follow
-the proof-cookbook recipes for the focused cargo commands:
+the proof-cookbook recipes for the focused cargo commands, or use
+[Checker Tamper Matrix](CHECKER-TAMPER-MATRIX.md) as the compact route index:
 
 - [Boolean CNF DRAT/LRAT Evidence](../proof-cookbook/recipes/boolean-cnf-lrat.md)
 - [QF_BV Bit-Blast Evidence](../proof-cookbook/recipes/qf-bv-bitblast.md)
@@ -163,8 +164,8 @@ the proof-cookbook recipes for the focused cargo commands:
 - [QF_UF Congruence And Alethe Evidence](../proof-cookbook/recipes/qf-uf-congruence-alethe.md)
 - [Finite Model Replay Evidence](../proof-cookbook/recipes/finite-model-replay.md)
 
-Use this guide to find source rows. Use the cookbook to check corrupted
-evidence rejection.
+Use this guide to find source rows. Use the cookbook or checker-tamper matrix
+to check corrupted evidence rejection.
 
 ## Consumer Rules
 

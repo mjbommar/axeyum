@@ -170,6 +170,7 @@ Focused:
 ```sh
 cargo test -p axeyum-solver --test evidence lra_unsat_evidence_carries_a_recheckable_farkas_certificate
 cargo test -p axeyum-solver --test evidence tampered_farkas_evidence_fails_its_own_check
+cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_rejects_tampered_farkas_certificate
 ```
 
 Lean cross-check:

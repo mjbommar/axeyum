@@ -39,6 +39,8 @@ First recipe files have landed:
 Each names a tiny formula, the current evidence artifact, the checker, focused
 test commands, trust boundary, Lean status, and links to the atlas/support/trust
 docs.
+The cross-route tamper command index lives in
+[Checker Tamper Matrix](../foundational-resources/CHECKER-TAMPER-MATRIX.md).
 
 ## Recipe Structure
 
@@ -253,6 +255,9 @@ test that proves its current claim.
 - Keep examples tiny enough that a reader can inspect the whole formula.
 - Prefer exact file links over vague module names.
 - Include at least one rejection or tamper case for every checker recipe.
+  Use the
+  [Checker Tamper Matrix](../foundational-resources/CHECKER-TAMPER-MATRIX.md)
+  to keep route-specific corrupted-evidence commands and explicit gaps visible.
 
 ## Links To Capabilities
 
@@ -270,7 +275,9 @@ horizons now each include a `Math Examples Using This Route` section linking
 the proof route back to concrete foundational math packs.
 Malformed source rows can be discovered through
 [Rejection Case Queries](../foundational-resources/REJECTION-CASE-QUERIES.md);
-checker-tamper behavior remains documented in the route recipes themselves.
+checker-tamper behavior is indexed in
+[Checker Tamper Matrix](../foundational-resources/CHECKER-TAMPER-MATRIX.md) and
+documented in the route recipes themselves.
 
 ## Graduation Criteria
 

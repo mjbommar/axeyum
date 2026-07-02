@@ -133,6 +133,7 @@ Focused CNF checker tests:
 ```sh
 cargo test -p axeyum-cnf drat
 cargo test -p axeyum-cnf lrat
+cargo test -p axeyum-cnf --test math_resource_boolean_routes proof_methods_refutation_php_3_2_rejects_tampered_drat_and_lrat
 ```
 
 Foundational resource examples that currently point at this route:

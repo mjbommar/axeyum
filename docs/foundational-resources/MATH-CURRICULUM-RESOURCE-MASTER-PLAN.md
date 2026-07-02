@@ -98,6 +98,8 @@ benchmark pressure.
 Use [Rejection Case Queries](REJECTION-CASE-QUERIES.md) when a reviewer needs
 malformed-claim row discovery before auditing checker-tamper behavior in the
 proof cookbook.
+Use [Checker Tamper Matrix](CHECKER-TAMPER-MATRIX.md) when the audit needs the
+route-specific corrupted-evidence command and current tamper gaps.
 
 ## Build Waves
 

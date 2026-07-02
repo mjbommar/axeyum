@@ -36,6 +36,8 @@ The focused guide for SMT-fragment demand queries is
 [FRAGMENT-DEMAND-QUERIES.md](FRAGMENT-DEMAND-QUERIES.md).
 The focused guide for malformed-claim and route-scoped rejection queries is
 [REJECTION-CASE-QUERIES.md](REJECTION-CASE-QUERIES.md).
+The focused matrix for route-specific corrupted-evidence commands is
+[CHECKER-TAMPER-MATRIX.md](CHECKER-TAMPER-MATRIX.md).
 
 Every resource should reinforce Axeyum's identity: untrusted fast search,
 trusted small checking. Bounded examples are useful, but they must stay visibly
@@ -376,6 +378,8 @@ Near-term boundary:
 - [REJECTION-CASE-QUERIES.md](REJECTION-CASE-QUERIES.md) is the malformed-row
   guide for reviewers and proof contributors that need checked/replay-only
   rejection examples before following proof-cookbook tamper tests.
+- [CHECKER-TAMPER-MATRIX.md](CHECKER-TAMPER-MATRIX.md) is the compact route
+  matrix for corrupted-evidence commands and current tamper gaps.
 - No Rust crate or separate repository until at least one real consumer needs
   typed APIs, release cadence, or large external corpora.
 

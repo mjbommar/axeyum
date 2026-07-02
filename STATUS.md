@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Checker-tamper matrix landed.**
+  `CHECKER-TAMPER-MATRIX.md` now connects malformed source-row discovery to the
+  route-specific corrupted-evidence commands for finite replay fixtures,
+  Bool/CNF DRAT/LRAT, QF_BV DRAT, QF_LIA/Diophantine, QF_LRA/Farkas, and
+  QF_UF/Alethe, while keeping array ROW and Lean-horizon gaps explicit. The
+  proof-cookbook recipes now surface the resource-level tamper regressions
+  instead of leaving them only in learner pages. The public resource summary
+  remains 121 concept rows, 75 bridge concepts, 108 packs, 688 expected checks,
+  322 checked rows, 295 replay-only rows, and 71 Lean-horizon rows.
+
 - **Rejection-case query guide landed.**
   `REJECTION-CASE-QUERIES.md` now documents how reviewers and proof
   contributors find checked and replay-only malformed-claim rows, plus

@@ -28,6 +28,8 @@ upgrades. Use
 [PROOF-ROUTE-FAMILY-SELECTION.md](PROOF-ROUTE-FAMILY-SELECTION.md) to choose the
 representative replay-heavy family per active proof route before adding another
 compact checked row.
+Use [CHECKER-TAMPER-MATRIX.md](CHECKER-TAMPER-MATRIX.md) to find the
+route-specific corrupted-evidence command before calling a route tamper-covered.
 
 The invariant stays simple:
 
@@ -154,6 +156,8 @@ and states when another compact negative row is worth promoting.
 [Proof Route Learner Snippets](../learn/math/proof-route-learner-snippets.md)
 gives the reusable learner-facing trust-boundary wording for those checked
 routes.
+[Checker Tamper Matrix](CHECKER-TAMPER-MATRIX.md) maps those routes to focused
+corrupted-evidence commands and records the remaining tamper gaps.
 
 | Route | Curriculum Pressure | Build Pattern | Stop Condition |
 |---|---|---|---|
@@ -1699,6 +1703,12 @@ Pick one row per commit unless the change is purely navigational.
      rejection rows plus Farkas, Alethe, QF_BV, Boolean, and Diophantine
      bad-row drilldowns while keeping public resource rows separate from
      proof-cookbook checker-tamper regressions.
+199. Landed: add `CHECKER-TAMPER-MATRIX.md` as the route-level bridge from
+     malformed source-row discovery to focused corrupted-evidence commands.
+     It records finite replay negative fixtures, Boolean DRAT/LRAT, QF_BV
+     DRAT, QF_LIA/Diophantine, QF_LRA/Farkas, QF_UF/Alethe, array ROW, and
+     Lean-horizon tamper boundaries so reviewers can distinguish source-row
+     rejection from checker-tamper rejection.
 
 ## Validation Checklist
 

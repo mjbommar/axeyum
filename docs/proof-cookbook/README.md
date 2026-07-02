@@ -7,6 +7,8 @@ verifiers.
 The cookbook should teach proof artifacts by example. Each recipe should start
 with a tiny formula, show the solver route, show the evidence artifact, name the
 checker, and describe whether the result reconstructs to Lean.
+The route-level tamper command index lives in
+[Checker Tamper Matrix](../foundational-resources/CHECKER-TAMPER-MATRIX.md).
 
 ## Audience
 
@@ -35,6 +37,8 @@ docs/proof-cookbook/
 ## Roadmap
 
 The detailed implementation plan lives in [ROADMAP.md](ROADMAP.md).
+For active route tamper coverage and gaps, use
+[Checker Tamper Matrix](../foundational-resources/CHECKER-TAMPER-MATRIX.md).
 
 ## First Recipe Candidates
 

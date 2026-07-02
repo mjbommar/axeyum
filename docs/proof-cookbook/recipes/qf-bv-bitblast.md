@@ -105,6 +105,7 @@ Focused:
 ```sh
 cargo test -p axeyum-solver --test evidence unsat_evidence_carries_a_recheckable_drat_certificate
 cargo test -p axeyum-solver --test evidence qf_bv_drat_unsat_reports_bitblast_tseitin_sat_steps
+cargo test -p axeyum-solver --test math_resource_bv_routes qf_bv_resource_route_rejects_tampered_drat_certificate
 ```
 
 Broader:

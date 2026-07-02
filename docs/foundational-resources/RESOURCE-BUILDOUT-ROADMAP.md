@@ -42,6 +42,8 @@ For executable queries that begin at the SMT-fragment demand layer, use
 [Fragment Demand Queries](FRAGMENT-DEMAND-QUERIES.md).
 For executable queries that begin from malformed claims and checked rejection
 rows, use [Rejection Case Queries](REJECTION-CASE-QUERIES.md).
+For route-specific corrupted-evidence commands and tamper gaps, use
+[Checker Tamper Matrix](CHECKER-TAMPER-MATRIX.md).
 
 The product is not a textbook and not a formal-library clone. It is a system of
 small resources that make Axeyum's identity concrete:
@@ -214,6 +216,8 @@ status-first checked, replay-only, and Lean-horizon drilldowns before deciding
 what a resource can claim.
 Use [Rejection Case Queries](REJECTION-CASE-QUERIES.md) when a reviewer needs
 route-scoped malformed-claim rows before following cookbook tamper regressions.
+Use [Checker Tamper Matrix](CHECKER-TAMPER-MATRIX.md) when a reviewer needs the
+focused corrupted-evidence command for each active route.
 
 Route plan:
 

@@ -35,7 +35,9 @@ Build from these sources in order:
 6. [`PROOF-ROUTE-QUERY-MATRIX.md`](PROOF-ROUTE-QUERY-MATRIX.md) and
    [`PROOF-UPGRADE-FRONTIER.md`](PROOF-UPGRADE-FRONTIER.md): proof-route
    coverage and upgrade queues.
-7. [`RULES-LAW-CROSSWALK.md`](RULES-LAW-CROSSWALK.md): downstream transfer
+7. [`CHECKER-TAMPER-MATRIX.md`](CHECKER-TAMPER-MATRIX.md): route-specific
+   corrupted-evidence commands and current tamper gaps.
+8. [`RULES-LAW-CROSSWALK.md`](RULES-LAW-CROSSWALK.md): downstream transfer
    into policy/rule reasoning.
 
 Generated dashboards are evidence, not editable plans. If a dashboard disagrees
