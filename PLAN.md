@@ -184,7 +184,8 @@ evidence; the public query script also exposes
 including finite/infinite cardinality, algebra homomorphism/quotient structure,
 vector-space/duality/module/tensor structure, finite random-variable,
 recurrence/asymptotic, stochastic-kernel, and
-martingale/stopping theory, root-finding convergence/stability, and
+martingale/stopping theory, finite integration/Lebesgue theorem boundaries,
+root-finding convergence/stability, and
 calculus differentiability/integrability/FTC/multivariable theory,
 complex-analysis/factorization theory, convexity/Jensen theorem boundaries,
 hyperplane-separation/duality, KKT sufficiency, active-set method theory, SDP

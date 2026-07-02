@@ -58,6 +58,10 @@ Companion maps:
   separates finite midpoint/Jensen, second-difference, affine-threshold, and
   checked bad convexity rows from Jensen, convexity, separation, duality, and
   convergence theorem targets.
+- [Lebesgue Integration Theorem Boundary](lebesgue-integration-theorem-boundary.md):
+  separates finite simple-function, indicator, linearity, and checked bad
+  expectation rows from Lebesgue integration, convergence, Fubini/Tonelli, and
+  almost-everywhere theorem targets.
 - [Random Variable Theorem Boundary](random-variable-theorem-boundary.md):
   separates finite total-function, pushforward, expectation, independence,
   and checked bad-row replay from measurable-random-variable, distribution-law,
@@ -673,6 +677,9 @@ Companion maps:
   simple-function integrals, indicator integrals, integral linearity, replayed
   bad-expectation rejection, a separate checked `qf-lra-bad-expectation` row,
   and the Lebesgue-integration Lean horizon.
+- [Lebesgue Integration Theorem Boundary](lebesgue-integration-theorem-boundary.md):
+  maps those finite weighted-sum shadows to the missing Lebesgue integration,
+  convergence, Fubini/Tonelli, and almost-everywhere theorem routes.
 - [Finite Product Measure](finite-product-measure-end-to-end.md): follows
   Cartesian-product probability tables, rectangle probabilities, marginals,
   finite Fubini replay, checked bad product-probability and bad marginal

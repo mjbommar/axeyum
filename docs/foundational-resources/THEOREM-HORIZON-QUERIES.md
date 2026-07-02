@@ -247,6 +247,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Lebesgue-integration, simple-function, convergence, Fubini/Tonelli, and
+almost-everywhere horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-integration-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-integration-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Random-variable, distribution-law, and measurability horizons:
 
 ```sh

@@ -57,6 +57,7 @@ needs concrete checked rows to display.
 |---|---|---|---|
 | Finite measure, complement, monotonicity, subadditivity, normalization, and concentration rows | `bridge_finite_measure_additivity`; `bridge_probability_mass_table` | `Farkas` | `checks --concept bridge_finite_measure_additivity --route Farkas --proof-status checked` |
 | Product measure, marginal, integration, and simple-function rows | `bridge_finite_product_integration` | `Farkas` | `checks --concept bridge_finite_product_integration --route Farkas --proof-status checked` |
+| Lebesgue-integration theorem boundary | pack `finite-integration-v0` | `Lean horizon` | `horizon-frontier --pack finite-integration-v0`; `checks --pack finite-integration-v0 --proof-status lean-horizon` |
 | Pushforward and expectation-through-pushforward rows | `bridge_pushforward_distribution` | `Farkas` | `checks --concept bridge_pushforward_distribution --route Farkas --proof-status checked` |
 | Conditional expectation, total expectation, tower property, and stopped expectation rows | `bridge_conditional_expectation` | `Farkas` | `checks --concept bridge_conditional_expectation --route Farkas --proof-status checked` |
 | Stochastic kernels, Markov rows, and finite hitting-time equations | `bridge_stochastic_kernel` | `Farkas` | `checks --concept bridge_stochastic_kernel --route Farkas --proof-status checked` |
@@ -128,6 +129,15 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --text qf-lra-bad-expectation \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-integration-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-integration-v0 \
+  --proof-status lean-horizon \
   --require-any
 ```
 
@@ -207,6 +217,13 @@ For the finite random-variable boundary, read
 before treating finite pushforward, expectation, independence, or checked
 bad-row resources as evidence for general measurable-random-variable,
 distribution-law, convergence, or continuous-distribution claims.
+
+For the finite integration boundary, read
+[Lebesgue Integration Theorem Boundary](../learn/math/lebesgue-integration-theorem-boundary.md)
+before treating finite simple-function sums, indicator integrals, finite
+linearity, or checked bad expectation rows as evidence for Lebesgue
+integration, convergence theorems, Fubini/Tonelli, or almost-everywhere
+reasoning.
 
 For the finite stochastic-kernel boundary, read
 [Stochastic Kernel Theorem Boundary](../learn/math/stochastic-kernel-theorem-boundary.md)

@@ -4,6 +4,9 @@ This lesson follows one finite integration resource from atom probabilities to
 simple-function expectation replay. It uses
 [finite-integration-v0](../../../artifacts/examples/math/finite-integration-v0/).
 
+For the focused finite-versus-theorem boundary, read
+[Lebesgue Integration Theorem Boundary](lebesgue-integration-theorem-boundary.md).
+
 Concept rows:
 
 - `curriculum_sets`, `curriculum_rationals`, and `curriculum_counting` in the

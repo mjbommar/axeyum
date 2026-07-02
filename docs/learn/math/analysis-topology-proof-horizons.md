@@ -69,6 +69,7 @@ Companion map:
 - [Topology Theorem Boundary](topology-theorem-boundary.md)
 - [Monotone Convergence Theorem Boundary](monotone-convergence-theorem-boundary.md)
 - [Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md)
+- [Lebesgue Integration Theorem Boundary](lebesgue-integration-theorem-boundary.md)
 - [Hitting-Time Theorem Boundary](hitting-time-theorem-boundary.md)
 
 ## What Axeyum Checks
@@ -648,6 +649,7 @@ replay, read
 [End To End: Finite Specialization Order](finite-specialization-order-end-to-end.md),
 [End To End: Finite Measure](finite-measure-end-to-end.md),
 [End To End: Finite Integration](finite-integration-end-to-end.md),
+[Lebesgue Integration Theorem Boundary](lebesgue-integration-theorem-boundary.md),
 [End To End: Finite Product Measure](finite-product-measure-end-to-end.md),
 and [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end.md).
 

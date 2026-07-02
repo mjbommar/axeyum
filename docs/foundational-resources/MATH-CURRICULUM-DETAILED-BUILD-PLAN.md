@@ -2233,6 +2233,16 @@ Pick one row per commit unless the change is purely navigational.
      convergence theorem layers, and adds pack-specific checked-row and
      horizon-frontier queries to the public smoke gate without promoting finite
      rational samples into theorem coverage.
+262. Landed: add `lebesgue-integration-theorem-boundary.md` as the focused
+     finite/general integration theorem-boundary page for
+     `finite-integration-v0`. It maps exact simple-function weighted sums,
+     indicator integrals, finite linearity replay, replay-only bad expectation
+     rejection, and scoped QF_LRA/Farkas bad expectation evidence to the
+     missing Lebesgue integration, monotone/dominated convergence,
+     Fubini/Tonelli, almost-everywhere, product-measure, and stochastic
+     integration theorem layers, and adds pack-specific checked-row and
+     horizon-frontier queries to the public smoke gate without promoting finite
+     atom-table rows into theorem coverage.
 
 ## Validation Checklist
 

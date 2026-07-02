@@ -35,6 +35,7 @@ Companion map:
 - [Hitting-Time Theorem Boundary](hitting-time-theorem-boundary.md)
 - [Martingale Theorem Boundary](martingale-theorem-boundary.md)
 - [Concentration Theorem Boundary](concentration-theorem-boundary.md)
+- [Lebesgue Integration Theorem Boundary](lebesgue-integration-theorem-boundary.md)
 
 ## What Axeyum Checks
 
@@ -343,7 +344,8 @@ For the diagnostic-test Bayes posterior and checked bad-posterior row, read
 For a focused finite conditional-expectation trace, read
 [End To End: Finite Conditional Expectation](finite-conditional-expectation-end-to-end.md).
 For exact simple-function integration over finite atom tables, read
-[End To End: Finite Integration](finite-integration-end-to-end.md).
+[End To End: Finite Integration](finite-integration-end-to-end.md) and
+[Lebesgue Integration Theorem Boundary](lebesgue-integration-theorem-boundary.md).
 For exact finite product-measure and Fubini replay, read
 [End To End: Finite Product Measure](finite-product-measure-end-to-end.md).
 For exact finite statistics and regression replay, read

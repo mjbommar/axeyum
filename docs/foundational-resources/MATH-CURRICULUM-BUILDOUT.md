@@ -2058,6 +2058,10 @@ bad-coefficient certificate, and the homology Lean horizon.
 simple-function integrals, indicator integrals, integral linearity, replayed
 bad expectation rejection, a separate checked `qf-lra-bad-expectation` row, and
 the Lebesgue-integration Lean horizon.
+The focused `lebesgue-integration-theorem-boundary.md` learner page now maps
+those finite simple-function, indicator, linearity, and bad expectation rows
+to the missing Lebesgue integration, monotone/dominated convergence,
+Fubini/Tonelli, almost-everywhere, and product-measure theorem layers.
 `finite-product-measure-v0` now has a learner-facing end-to-end lesson for
 Cartesian-product probability tables, rectangle probabilities, marginals,
 finite Fubini replay, checked bad product-probability and bad marginal

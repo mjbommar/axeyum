@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Lebesgue-integration theorem-boundary resource landed.**
+  `lebesgue-integration-theorem-boundary.md` now separates
+  `finite-integration-v0` exact simple-function integral replay,
+  indicator-integral replay, finite linearity replay, replay-only bad
+  expectation rejection, and checked `qf-lra-bad-expectation` QF_LRA/Farkas
+  evidence from Lebesgue integration, monotone/dominated convergence,
+  Fubini/Tonelli, almost-everywhere, product-measure, and stochastic-integration
+  theorem claims. The theorem-horizon, measure/probability, learner-map, and
+  smoke-query docs now expose the finite-integration boundary through
+  pack-specific checked-row and horizon-frontier queries.
 - **Convexity theorem-boundary resource landed.**
   `convexity-theorem-boundary.md` now separates `convexity-rational-v0` exact
   midpoint Jensen replay, finite second-difference checks, affine-threshold

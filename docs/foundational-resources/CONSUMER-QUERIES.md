@@ -1139,6 +1139,15 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+For the finite integration theorem boundary, use the horizon-frontier row
+instead of treating finite simple-function sums as Lebesgue-integration proof:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-integration-v0 \
+  --require-any
+```
+
 For statistics, query the Farkas route to keep exact finite tests,
 contingency tables, least-squares RSS rows, random-matrix finite moments,
 finite probability/process tables, concentration rows, and stochastic-kernel
@@ -2205,6 +2214,7 @@ python3 scripts/query-foundational-resources.py checks --field probability_theor
 python3 scripts/query-foundational-resources.py checks --concept bridge_probability_mass_table --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_measure_additivity --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_product_integration --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-integration-v0 --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_pushforward_distribution --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_conditional_expectation --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_stochastic_kernel --route Farkas --proof-status checked --require-any >/dev/null

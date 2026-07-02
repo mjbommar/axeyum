@@ -755,7 +755,14 @@ Build sequence:
     bad-row evidence to the missing Jensen, convexity-equivalence, separation,
     duality, KKT/SDP, first-order optimality, nonsmooth, and convergence theorem
     routes, with pack-specific checked-row and horizon-frontier queries.
-74. Revisit crate/repo boundaries only after three real consumers or repeated
+74. Landed: add the Lebesgue integration theorem-boundary page.
+    `lebesgue-integration-theorem-boundary.md` maps exact simple-function
+    weighted sums, indicator integrals, finite linearity replay, and checked
+    QF_LRA/Farkas bad expectation evidence to the missing Lebesgue integration,
+    monotone/dominated convergence, Fubini/Tonelli, almost-everywhere,
+    product-measure, and stochastic-integration theorem routes, with
+    pack-specific checked-row and horizon-frontier queries.
+75. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands
