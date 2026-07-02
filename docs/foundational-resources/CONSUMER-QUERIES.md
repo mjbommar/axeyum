@@ -88,6 +88,33 @@ counts, schema versions, and display-label counts:
 python3 scripts/consume-foundational-resources.py --format json
 ```
 
+## Coverage Aggregates
+
+```sh
+python3 scripts/query-foundational-resources.py coverage --by field --require-any
+```
+
+This answers: "How is the current public resource surface distributed across
+fields, fragments, proof statuses, result statuses, solver-reuse status,
+decidability classes, or curriculum nodes?" Coverage rows report concept
+counts, pack counts, expected-check counts, expected-result mix, proof-status
+mix, solver-reuse status counts, proof-cookbook route counts, and sample packs.
+
+Useful variants:
+
+```sh
+python3 scripts/query-foundational-resources.py coverage --by fragment --format json --require-any
+python3 scripts/query-foundational-resources.py coverage --by proof-status --require-any
+python3 scripts/query-foundational-resources.py coverage --by expected-result --require-any
+python3 scripts/query-foundational-resources.py coverage --by decidability --require-any
+python3 scripts/query-foundational-resources.py coverage --by curriculum-node --field topology --require-any
+```
+
+These are group-membership counts. Packs and rows can appear in more than one
+field, fragment, decidability class, or curriculum-node group, so those tables
+are planning and discovery views, not corpus-total replacements for
+`summary`.
+
 ## Display Label Audit
 
 ```sh

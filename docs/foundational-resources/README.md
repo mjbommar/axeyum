@@ -58,11 +58,11 @@ schemas, examples, and validation workflows.
   them.
 - [PUBLIC-DATA-CONTRACT.md](PUBLIC-DATA-CONTRACT.md) defines the R6 public JSON
   and query boundary: stable files, fields, schema versions, compatibility
-  rules, smoke commands, and display-label counts.
+  rules, smoke commands, coverage summaries, and display-label counts.
 - [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) gives copyable sample queries over
-  the committed JSON data contract for pack discovery, checked-row mining,
-  solver-reuse rows, atlas concept lookup, and curriculum field-readiness
-  summaries.
+  the committed JSON data contract for coverage aggregates, pack discovery,
+  checked-row mining, solver-reuse rows, atlas concept lookup, and curriculum
+  field-readiness summaries.
 - [FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md) is the
   compact 18-field map of the smoke-checked readiness route, bridge lookup,
   checked-row drilldown, and theorem-horizon boundary for downstream
@@ -184,8 +184,8 @@ schemas, examples, and validation workflows.
   is a dependency-free downstream-consumer smoke test for the public atlas and
   example-pack JSON contract.
 - [`scripts/query-foundational-resources.py`](../../scripts/query-foundational-resources.py)
-  is a dependency-free consumer query helper for common pack, check, concept,
-  and field-readiness lookups over the same committed JSON contract.
+  is a dependency-free consumer query helper for common coverage, pack, check,
+  concept, and field-readiness lookups over the same committed JSON contract.
 - [`artifacts/ontology/foundational-example-pack.schema.json`](../../artifacts/ontology/foundational-example-pack.schema.json)
   defines the example-pack metadata and expected-result shape.
 - [`scripts/validate-foundational-example-pack.py`](../../scripts/validate-foundational-example-pack.py)

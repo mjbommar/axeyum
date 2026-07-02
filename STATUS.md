@@ -234,6 +234,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Foundational coverage query landed.**
+  `scripts/query-foundational-resources.py coverage` now aggregates the public
+  math-resource JSON boundary by field, fragment, proof status, expected
+  result, solver-reuse status, decidability class, or curriculum node. The
+  query reports concept counts, pack counts, expected-check counts,
+  result/proof/solver-reuse mixes, proof-cookbook route counts, sample
+  concepts, and sample packs, with JSON output for downstream tools. The
+  public contract, consumer query guide, and foundational smoke gate now cover
+  representative field, fragment, status, result, decidability, and curriculum
+  coverage groups while keeping them as discovery views rather than theorem,
+  benchmark, or parity claims.
+
 - **Rules/law coverage query landed.**
   `scripts/query-rules-as-code.py coverage` now aggregates the committed
   rules-as-code JSON boundary by domain, fragment, validation route, or proof

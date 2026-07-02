@@ -366,9 +366,9 @@ Near-term boundary:
 - `scripts/consume-foundational-resources.py` is the smoke test.
 - `scripts/query-foundational-resources.py` plus
   [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) are the consumer-facing sample
-  query layer for summary counts, pack discovery, field-plus-proof-route
-  discovery, checked-row mining, solver-reuse candidates, atlas concept
-  lookup, and field-level curriculum readiness.
+  query layer for summary counts, coverage aggregates, pack discovery,
+  field-plus-proof-route discovery, checked-row mining, solver-reuse
+  candidates, atlas concept lookup, and field-level curriculum readiness.
 - [SOLVER-REUSE-QUERIES.md](SOLVER-REUSE-QUERIES.md) is the focused R5 guide
   for solver, proof, benchmark, and fuzzing contributors mining promoted packs
   by route, field, and checked row without treating them as theorem or parity

@@ -11,6 +11,12 @@ python3 scripts/check-foundational-negative-fixtures.py
 python3 scripts/consume-foundational-resources.py
 python3 scripts/consume-foundational-resources.py --format json >/dev/null
 python3 scripts/query-foundational-resources.py summary >/dev/null
+python3 scripts/query-foundational-resources.py coverage --by field --require-any >/dev/null
+python3 scripts/query-foundational-resources.py coverage --by fragment --format json --require-any >/dev/null
+python3 scripts/query-foundational-resources.py coverage --by proof-status --require-any >/dev/null
+python3 scripts/query-foundational-resources.py coverage --by expected-result --require-any >/dev/null
+python3 scripts/query-foundational-resources.py coverage --by decidability --require-any >/dev/null
+python3 scripts/query-foundational-resources.py coverage --by curriculum-node --field topology --require-any >/dev/null
 python3 scripts/query-foundational-resources.py routes --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py routes --route qf-bv --require-any >/dev/null
 python3 scripts/query-foundational-resources.py routes --route Diophantine --field number_theory --require-any >/dev/null

@@ -179,6 +179,18 @@ def route_text_matches(route: str, values: list[str]) -> bool:
     return any(contains_text(values, alias) for alias in ROUTE_ALIASES.get(route, set()))
 
 
+def concept_example_pack_ids(concept: dict[str, Any]) -> list[str]:
+    pack_ids = []
+    for pack_ref in concept.get("example_packs", []):
+        if isinstance(pack_ref, dict):
+            pack_id = pack_ref.get("id")
+        else:
+            pack_id = str(pack_ref)
+        if pack_id:
+            pack_ids.append(pack_id)
+    return pack_ids
+
+
 def route_order(route: str) -> int:
     try:
         return UPGRADE_ROUTE_ORDER.index(route)
@@ -241,21 +253,21 @@ class ResourceStore:
         if not self.concepts:
             fail(f"{ATLAS} has no rows")
         self.packs = self._load_packs()
+        self.concepts_by_pack_id = self._index_concepts_by_pack_id()
 
     def pack_ids_for_concept(self, concept_id: str) -> set[str]:
         for concept in self.concepts:
             if concept.get("id") != concept_id:
                 continue
-            pack_ids = set()
-            for pack_ref in concept.get("example_packs", []):
-                if isinstance(pack_ref, dict):
-                    pack_id = pack_ref.get("id")
-                else:
-                    pack_id = str(pack_ref)
-                if pack_id:
-                    pack_ids.add(pack_id)
-            return pack_ids
+            return set(concept_example_pack_ids(concept))
         fail(f"unknown concept id: {concept_id}")
+
+    def _index_concepts_by_pack_id(self) -> dict[str, list[dict[str, Any]]]:
+        concepts_by_pack_id: dict[str, list[dict[str, Any]]] = {}
+        for concept in self.concepts:
+            for pack_id in concept_example_pack_ids(concept):
+                concepts_by_pack_id.setdefault(pack_id, []).append(concept)
+        return concepts_by_pack_id
 
     def _load_packs(self) -> list[dict[str, Any]]:
         packs = []
@@ -466,6 +478,43 @@ class ResourceStore:
                 }
             )
         return rows
+
+    def coverage_group_keys_for_concept(self, concept: dict[str, Any], by: str) -> list[str]:
+        if by == "field":
+            return list(concept.get("field_ids", []))
+        if by == "fragment":
+            return list(concept.get("axeyum_fragments", []))
+        if by == "decidability":
+            return [concept.get("decidability", "")]
+        if by == "curriculum-node":
+            return [concept.get("curriculum_node") or "no-curriculum-node"]
+        return []
+
+    def coverage_group_keys_for_pack(self, pack: dict[str, Any], by: str) -> list[str]:
+        metadata = pack["metadata"]
+        checks = pack["checks"]
+        if by == "field":
+            return list(metadata.get("field_ids", []))
+        if by == "fragment":
+            return list(metadata.get("axeyum_fragments", []))
+        if by == "proof-status":
+            return sorted({check.get("proof_status", "") for check in checks})
+        if by == "expected-result":
+            return sorted({check.get("expected_result", "") for check in checks})
+        if by == "solver-reuse":
+            solver_reuse = metadata.get("solver_reuse") or {}
+            return [solver_reuse.get("status", "unclassified")]
+        if by == "decidability":
+            return sorted(
+                {
+                    concept.get("decidability", "")
+                    for concept in self.concepts_by_pack_id.get(pack["id"], [])
+                    if concept.get("decidability")
+                }
+            )
+        if by == "curriculum-node":
+            return list(metadata.get("curriculum_nodes", []))
+        raise QueryError(f"unsupported coverage group: {by}")
 
 
 def command_summary(args: argparse.Namespace) -> int:
@@ -717,6 +766,190 @@ def command_routes(args: argparse.Namespace) -> int:
             "results",
             "solver_reuse",
             "fields",
+            "sample_packs",
+        ],
+        args,
+    )
+
+
+def coverage_concept_matches(concept: dict[str, Any], args: argparse.Namespace) -> bool:
+    if args.proof_status or args.expected_result or args.solver_reuse:
+        return False
+    if args.field and args.field not in concept.get("field_ids", []):
+        return False
+    if args.curriculum_node and concept.get("curriculum_node") != args.curriculum_node:
+        return False
+    if args.decidability and concept.get("decidability") != args.decidability:
+        return False
+    if not contains_text(concept.get("axeyum_fragments", []), args.fragment):
+        return False
+    if args.text:
+        haystack = [
+            concept.get("id", ""),
+            concept.get("title", ""),
+            concept.get("summary", ""),
+            *(concept.get("open_gaps", [])),
+        ]
+        if not contains_text(haystack, args.text):
+            return False
+    return True
+
+
+def coverage_pack_matches(
+    pack: dict[str, Any], args: argparse.Namespace, store: ResourceStore
+) -> bool:
+    metadata = pack["metadata"]
+    checks = pack["checks"]
+    if args.field and args.field not in metadata.get("field_ids", []):
+        return False
+    if args.curriculum_node and args.curriculum_node not in metadata.get(
+        "curriculum_nodes", []
+    ):
+        return False
+    if args.solver_reuse:
+        solver_reuse = metadata.get("solver_reuse") or {}
+        if solver_reuse.get("status", "unclassified") != args.solver_reuse:
+            return False
+    if args.proof_status and not any(
+        check.get("proof_status") == args.proof_status for check in checks
+    ):
+        return False
+    if args.expected_result and not any(
+        check.get("expected_result") == args.expected_result for check in checks
+    ):
+        return False
+    if not contains_text(metadata.get("axeyum_fragments", []), args.fragment):
+        return False
+    if args.decidability:
+        decidabilities = {
+            concept.get("decidability")
+            for concept in store.concepts_by_pack_id.get(pack["id"], [])
+        }
+        if args.decidability not in decidabilities:
+            return False
+    if args.text:
+        solver_reuse = metadata.get("solver_reuse") or {}
+        haystack = [
+            metadata.get("id", ""),
+            metadata.get("title", ""),
+            metadata.get("trust_status", ""),
+            solver_reuse.get("target", ""),
+            solver_reuse.get("pressure", ""),
+            solver_reuse.get("next_step", ""),
+            *(metadata.get("source_refs", [])),
+            *(metadata.get("graduation_criteria", [])),
+        ]
+        if not contains_text(haystack, args.text):
+            return False
+    return True
+
+
+def coverage_checks_for_group(
+    checks: list[dict[str, Any]], by: str, key: str
+) -> list[dict[str, Any]]:
+    if by == "proof-status":
+        return [check for check in checks if check.get("proof_status") == key]
+    if by == "expected-result":
+        return [check for check in checks if check.get("expected_result") == key]
+    return checks
+
+
+def command_coverage(args: argparse.Namespace) -> int:
+    store = ResourceStore()
+    groups: dict[str, dict[str, Any]] = {}
+
+    for concept in store.concepts:
+        if not coverage_concept_matches(concept, args):
+            continue
+        for key in store.coverage_group_keys_for_concept(concept, args.by):
+            if not key:
+                continue
+            group = groups.setdefault(
+                key,
+                {
+                    "group": key,
+                    "concepts": set(),
+                    "packs": set(),
+                    "checks": 0,
+                    "results": Counter(),
+                    "proof": Counter(),
+                    "solver_reuse": Counter(),
+                    "fields": set(),
+                    "fragments": set(),
+                    "routes": Counter(),
+                },
+            )
+            group["concepts"].add(concept["id"])
+            group["fields"].update(concept.get("field_ids", []))
+            group["fragments"].update(concept.get("axeyum_fragments", []))
+
+    for pack in store.packs:
+        if not coverage_pack_matches(pack, args, store):
+            continue
+        metadata = pack["metadata"]
+        solver_reuse = metadata.get("solver_reuse") or {}
+        routes = recipe_names(metadata)
+        for key in store.coverage_group_keys_for_pack(pack, args.by):
+            if not key:
+                continue
+            matching_checks = coverage_checks_for_group(pack["checks"], args.by, key)
+            group = groups.setdefault(
+                key,
+                {
+                    "group": key,
+                    "concepts": set(),
+                    "packs": set(),
+                    "checks": 0,
+                    "results": Counter(),
+                    "proof": Counter(),
+                    "solver_reuse": Counter(),
+                    "fields": set(),
+                    "fragments": set(),
+                    "routes": Counter(),
+                },
+            )
+            group["packs"].add(pack["id"])
+            group["checks"] += len(matching_checks)
+            group["fields"].update(metadata.get("field_ids", []))
+            group["fragments"].update(metadata.get("axeyum_fragments", []))
+            group["routes"].update(routes)
+            group["solver_reuse"][solver_reuse.get("status", "unclassified")] += 1
+            for check in matching_checks:
+                group["results"][check.get("expected_result", "")] += 1
+                group["proof"][check.get("proof_status", "")] += 1
+
+    rows = []
+    for group in groups.values():
+        concepts = sorted(group["concepts"])
+        packs = sorted(group["packs"])
+        rows.append(
+            {
+                "group": group["group"],
+                "concepts": len(concepts),
+                "packs": len(packs),
+                "checks": group["checks"],
+                "results": dict(sorted(group["results"].items())),
+                "proof": dict(sorted(group["proof"].items())),
+                "solver_reuse": dict(sorted(group["solver_reuse"].items())),
+                "routes": dict(sorted(group["routes"].items())),
+                "fields": sorted(group["fields"]),
+                "fragments": sorted(group["fragments"]),
+                "sample_concepts": concepts[:5],
+                "sample_packs": packs[:5],
+            }
+        )
+    rows.sort(key=lambda row: row["group"])
+    return emit(
+        rows,
+        [
+            "group",
+            "concepts",
+            "packs",
+            "checks",
+            "results",
+            "proof",
+            "solver_reuse",
+            "routes",
             "sample_packs",
         ],
         args,
@@ -1029,6 +1262,35 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_output_args(routes, default_limit=DEFAULT_LIMIT)
     routes.set_defaults(func=command_routes)
+
+    coverage = subparsers.add_parser("coverage", help="summarize resource coverage groups")
+    coverage.add_argument(
+        "--by",
+        choices=[
+            "field",
+            "fragment",
+            "proof-status",
+            "expected-result",
+            "solver-reuse",
+            "decidability",
+            "curriculum-node",
+        ],
+        default="field",
+        help="coverage grouping dimension",
+    )
+    coverage.add_argument("--field", help="exact field id")
+    coverage.add_argument("--curriculum-node", help="exact curriculum node id")
+    coverage.add_argument("--fragment", help="case-insensitive fragment substring")
+    coverage.add_argument("--proof-status", help="exact proof_status")
+    coverage.add_argument("--expected-result", help="exact expected_result")
+    coverage.add_argument("--decidability", help="exact decidability class")
+    coverage.add_argument(
+        "--solver-reuse",
+        choices=["candidate", "promoted", "non-benchmark-horizon", "unclassified"],
+    )
+    coverage.add_argument("--text", help="case-insensitive search over public text")
+    add_output_args(coverage, default_limit=None)
+    coverage.set_defaults(func=command_coverage)
 
     upgrade_frontier = subparsers.add_parser(
         "upgrade-frontier",

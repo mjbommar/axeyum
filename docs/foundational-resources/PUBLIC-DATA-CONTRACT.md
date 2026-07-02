@@ -165,6 +165,8 @@ git diff --check
 python3 scripts/consume-foundational-resources.py
 python3 scripts/consume-foundational-resources.py --format json
 python3 scripts/query-foundational-resources.py summary
+python3 scripts/query-foundational-resources.py coverage --by field --require-any
+python3 scripts/query-foundational-resources.py coverage --by proof-status --require-any
 python3 scripts/query-foundational-resources.py labels
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --require-any
 python3 scripts/query-foundational-resources.py horizon-frontier --field topology --require-any

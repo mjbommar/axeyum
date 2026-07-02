@@ -1759,6 +1759,14 @@ Pick one row per commit unless the change is purely navigational.
      sample-pack counts; emits JSON for downstream tools; and keeps generated
      rule rows in the planning/replay lane rather than promoting them to legal
      advice or solver benchmarks.
+208. Landed: add `query-foundational-resources.py coverage` for public
+     math-resource boundary summaries. The command groups the committed atlas
+     and example-pack JSON by field, fragment, proof status, expected result,
+     solver-reuse status, decidability class, or curriculum node; reports
+     concept, pack, expected-check, result, proof-status, solver-reuse, route,
+     sample-concept, and sample-pack counts; emits JSON for downstream tools;
+     and keeps group-membership counts separate from corpus totals, theorem
+     claims, benchmark claims, and parity claims.
 
 ## Validation Checklist
 
