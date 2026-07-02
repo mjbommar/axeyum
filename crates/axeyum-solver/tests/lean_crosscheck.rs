@@ -13,8 +13,12 @@
 #![allow(clippy::many_single_char_names)]
 #![allow(clippy::similar_names)]
 
+use std::cell::RefCell;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::{Duration, Instant};
 
 use axeyum_ir::{Rational, Sort, TermArena};
 use axeyum_smtlib::parse_script;
@@ -35,47 +39,360 @@ fn lean_bin() -> Option<PathBuf> {
         .find(|c| c.is_file())
 }
 
-/// Write `source` to a temp `.lean` file and run `lean` on it. Asserts the
-/// module type-checks (exit 0) and that `#print axioms` reports no `sorryAx`.
-/// Skips silently when no `lean` binary is available.
-fn lean_accepts(tag: &str, source: &str) {
+// -------------------------------------------------------------------------
+// Lean cross-check harness (parallel + sliced).
+//
+// Each proof-family builder below reconstructs a self-contained `prelude`-mode
+// Lean module and hands it to `lean_accepts`. Running every module through the
+// real `lean` kernel is the Lean-parity gate, but the kernel checks are slow
+// CPU-bound subprocesses: a naïve sequential sweep (one child at a time) makes a
+// full `cargo test` run take hours.
+//
+// This harness keeps the gate but makes the cost bounded:
+//   * The builders no longer run `lean` inline. `lean_accepts` *collects*
+//     `(tag, source)` pairs into a thread-local sink; a builder invocation only
+//     performs the (fast, always-on) Rust-side structural checks
+//     (parse / `assert_eq!(fragment, …)` / no-`sorryAx`).
+//   * Two harness `#[test]`s drive the collected cases through
+//     `run_lean_checks`, which fans the independent `lean` processes across a
+//     bounded thread pool (parallelism is *internal*, so it holds even under
+//     `cargo test -- --test-threads 1`).
+//   * `lean_crosscheck_representative` (default) checks ONE module per family —
+//     minutes, not hours. `lean_crosscheck_full` (`#[ignore]`) checks every
+//     module; run it with `cargo test --test lean_crosscheck -- --ignored`.
+//
+// Invariant: any module that is actually handed to `lean` and is REJECTED (or
+// depends on `sorryAx`) fails the test. Coverage reductions are explicit and
+// LOUD — every run prints `checked X of Y`, and budget/no-lean skips are
+// reported, never silently dropped.
+//
+// Knobs (env):
+//   AXEYUM_LEAN_BIN         path to a `lean` executable (else first on PATH)
+//   AXEYUM_LEAN_JOBS        pool size (default: available parallelism)
+//   AXEYUM_LEAN_BUDGET_SECS wall-clock budget; remaining modules are skipped
+//                           (loudly, NOT failed) once exceeded. Unset/0 = no cap.
+// -------------------------------------------------------------------------
+
+thread_local! {
+    /// When `Some`, `lean_accepts` collects into this sink instead of shelling
+    /// out to `lean`. Set by the harness while it invokes a family builder.
+    static LEAN_SINK: RefCell<Option<Vec<(String, String)>>> = const { RefCell::new(None) };
+}
+
+/// Family builders: each reconstructs one proof family and pushes its Lean
+/// module(s) via `lean_accepts`. The `bool` marks whether the family's *first*
+/// module is a heavier one (informational only). Registered here so both the
+/// representative and full harness tests can enumerate every family.
+type FamilyBuilder = fn();
+
+/// Every proof-family builder in this file. The representative slice checks the
+/// first module each produces; the full run checks all of them.
+const FAMILY_BUILDERS: &[FamilyBuilder] = &[
+    qf_ufbv_refutation_checks_in_real_lean,
+    qf_ufbv_lean_entry_normalizes_conjunction_and_double_negation,
+    qf_ufbv_finite_domain_pigeonhole_checks_in_real_lean,
+    quantified_bv_finite_domain_enum_rows_check_in_real_lean,
+    cvc5_quantified_bv_inversion_rows_check_in_real_lean,
+    qf_ufff_bv_uf_local_rows_check_in_real_lean,
+    qf_ff_term_level_enum_rows_check_in_real_lean,
+    qf_ff_bv_defined_enum_gap_rows_check_in_real_lean,
+    qf_fp_bv_defined_enum_rows_check_in_real_lean,
+    qf_bvfp_bv_defined_enum_rows_check_in_real_lean,
+    qf_dt_cvc5_slice_checks_in_real_lean,
+    lra_refutation_checks_in_real_lean,
+    qf_lra_ite_true_identity_checks_in_real_lean,
+    qf_lra_dpll_audit_rows_check_in_real_lean,
+    qf_lia_arith_dpll_audit_rows_check_in_real_lean,
+    qf_uflia_use_name_arith_dpll_rows_check_in_real_lean,
+    qf_lia_bool_simplification_audit_row_checks_in_real_lean,
+    qf_uf_issue3970_term_identity_checks_in_real_lean,
+    qf_ufbv_fun1_bool_uf_exhaustive_checks_in_real_lean,
+    qf_uf_sets_cardinality_checks_in_real_lean,
+    qf_uf_boolean_euf_rows_check_in_real_lean,
+    qf_uf_overbound_online_euf_rows_check_in_real_lean,
+    qf_uf_bug303_uf_arith_congruence_checks_in_real_lean,
+    qf_uf_declared_sort_equality_checks_in_real_lean,
+    qf_nra_sos_certificate_audit_rows_check_in_real_lean,
+    qf_nra_even_power_audit_rows_check_in_real_lean,
+    qf_nia_bounded_int_blast_audit_rows_check_in_real_lean,
+    forall_refutation_checks_in_real_lean,
+    exists_refutation_checks_in_real_lean,
+    qf_abv_read_consistency_refutation_checks_in_real_lean,
+    qf_abv_extensionality_refutation_checks_in_real_lean,
+    array_axiom_lean_entry_normalizes_conjunction_and_double_negation,
+    qf_aufbv_finite_array_extensionality_checks_in_real_lean,
+    qf_aufbv_array_axiom_refutations_check_in_real_lean,
+    qf_aufbv_bv_abstraction_checks_in_real_lean,
+    qf_alia_store_chain_certificates_check_in_real_lean,
+    qf_ax_declared_sort_certificates_check_in_real_lean,
+    qf_ax_bool_array_read_collapse_checks_in_real_lean,
+    qf_aufbv_aligned_write_chain_checks_in_real_lean,
+    qf_aufbv_two_byte_memcpy_checks_in_real_lean,
+    qf_aufbv_two_element_bubble_sort_checks_in_real_lean,
+    qf_aufbv_two_element_selection_sort_checks_in_real_lean,
+    qf_aufbv_two_cell_xor_swap_checks_in_real_lean,
+    qf_aufbv_two_byte_xor_swap_roundtrip_checks_in_real_lean,
+    qf_aufbv_binary_search16_checks_in_real_lean,
+    qf_aufbv_fifo_bc04_checks_in_real_lean,
+    datatype_read_over_construct_checks_in_real_lean,
+    tester_fold_checks_in_real_lean,
+    distinct_constructors_check_in_real_lean,
+    injective_field_mismatch_check_in_real_lean,
+    acyclicity_cycle_check_in_real_lean,
+    acyclicity_cycle_reversed_check_in_real_lean,
+    acyclicity_two_step_cycle_check_in_real_lean,
+    acyclicity_three_step_cycle_check_in_real_lean,
+    distinct_constructor_equality_is_not_an_injectivity_refutation,
+    qf_bv_comparison_refutation_checks_in_real_lean,
+    qf_bv_bvredand_identity_contradiction_checks_in_real_lean,
+    disjunctive_lra_case_split_checks_in_real_lean,
+    const_shl_lowering_checks_in_real_lean,
+    const_lshr_lowering_checks_in_real_lean,
+    const_ashr_lowering_checks_in_real_lean,
+    certified_lra_interpolant_both_farkas_certs_checked_by_real_lean,
+    certified_euf_interpolant_both_congruence_certs_checked_by_real_lean,
+    certified_lia_interpolant_both_integer_certs_checked_by_real_lean,
+    certified_uflia_interpolant_both_integer_certs_checked_by_real_lean,
+];
+
+/// Collect the Lean modules a builder produces (running its Rust-side structural
+/// asserts as a side effect). `per_family = Some(k)` keeps only the first `k`
+/// modules (the representative slice); `None` keeps them all.
+fn collect_family(
+    builder: FamilyBuilder,
+    per_family: Option<usize>,
+    out: &mut Vec<(String, String)>,
+) {
+    LEAN_SINK.with(|s| *s.borrow_mut() = Some(Vec::new()));
+    builder();
+    let cases = LEAN_SINK.with(|s| s.borrow_mut().take().unwrap_or_default());
+    let keep = per_family.map_or(cases.len(), |k| k.min(cases.len()));
+    out.extend(cases.into_iter().take(keep));
+}
+
+/// Build the module list for every family (`per_family = Some(1)` →
+/// representative slice; `None` → exhaustive). Reconstruction is the CPU-heavy
+/// part, and families are independent, so it is fanned across the same bounded
+/// pool as the kernel checks. Each worker owns its `LEAN_SINK` (thread-local),
+/// so there is no cross-talk; a builder's structural `assert!`/`panic!` still
+/// aborts its scoped thread and fails the test via `thread::scope` join.
+fn collect_cases(per_family: Option<usize>) -> Vec<(String, String)> {
+    let jobs = lean_jobs(FAMILY_BUILDERS.len());
+    let next = AtomicUsize::new(0);
+    // Keep results indexed by family so the module order is deterministic.
+    let per_family_out: Vec<Mutex<Vec<(String, String)>>> = (0..FAMILY_BUILDERS.len())
+        .map(|_| Mutex::new(Vec::new()))
+        .collect();
+
+    std::thread::scope(|scope| {
+        for _ in 0..jobs {
+            scope.spawn(|| {
+                loop {
+                    let i = next.fetch_add(1, Ordering::SeqCst);
+                    if i >= FAMILY_BUILDERS.len() {
+                        break;
+                    }
+                    let mut cases = Vec::new();
+                    collect_family(FAMILY_BUILDERS[i], per_family, &mut cases);
+                    *per_family_out[i].lock().unwrap() = cases;
+                }
+            });
+        }
+    });
+
+    per_family_out
+        .into_iter()
+        .flat_map(|m| m.into_inner().unwrap())
+        .collect()
+}
+
+/// Run one Lean module through the kernel. `Ok(())` iff `lean` accepts it and
+/// `#print axioms` shows no `sorryAx`; `Err` carries a diagnostic. Returns
+/// `Ok(())` (a skip) when no `lean` binary is available.
+fn check_one_lean(tag: &str, source: &str) -> Result<(), String> {
     let Some(bin) = lean_bin() else {
-        eprintln!("[skip] {tag}: lean binary not found; install via elan or set AXEYUM_LEAN_BIN");
-        return;
+        return Ok(());
     };
     let dir = std::env::temp_dir().join(format!("axeyum_lean_{tag}"));
-    std::fs::create_dir_all(&dir).expect("create temp dir");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("{tag}: create temp dir: {e}"))?;
     let file = dir.join(format!("{tag}.lean"));
-    std::fs::write(&file, source).expect("write lean module");
+    std::fs::write(&file, source).map_err(|e| format!("{tag}: write lean module: {e}"))?;
 
     let out = Command::new(&bin)
         .arg(&file)
         .output()
-        .expect("run lean binary");
+        .map_err(|e| format!("{tag}: run lean binary: {e}"))?;
     let stdout = String::from_utf8_lossy(&out.stdout);
     let stderr = String::from_utf8_lossy(&out.stderr);
-    assert!(
-        out.status.success(),
-        "lean REJECTED the {tag} module ({})\n=== stdout ===\n{stdout}\n=== stderr ===\n{stderr}\n=== source ({}) ===\n{source}",
-        bin.display(),
-        file.display()
-    );
+    if !out.status.success() {
+        return Err(format!(
+            "lean REJECTED the {tag} module ({})\n=== stdout ===\n{stdout}\n=== stderr ===\n{stderr}\n=== source ({}) ===\n{source}",
+            bin.display(),
+            file.display()
+        ));
+    }
     // `#print axioms axeyum_refutation` prints to stdout; a real proof must not
     // lean on the `sorryAx` escape hatch.
-    assert!(
-        !stdout.contains("sorryAx"),
-        "{tag}: reconstructed proof depends on sorryAx:\n{stdout}"
-    );
-    assert!(
-        stdout.contains("axeyum_refutation"),
-        "{tag}: missing `#print axioms` output:\n{stdout}"
-    );
+    if stdout.contains("sorryAx") {
+        return Err(format!(
+            "{tag}: reconstructed proof depends on sorryAx:\n{stdout}"
+        ));
+    }
+    if !stdout.contains("axeyum_refutation") {
+        return Err(format!("{tag}: missing `#print axioms` output:\n{stdout}"));
+    }
     eprintln!("[lean ok] {tag}: {}", stdout.trim().replace('\n', " | "));
+    Ok(())
+}
+
+/// Collect a Lean module for later kernel checking (harness mode), or — outside
+/// the harness — check it immediately and panic on rejection (legacy direct
+/// mode, used only if a builder is ever called as a plain function).
+fn lean_accepts(tag: &str, source: &str) {
+    let collected = LEAN_SINK.with(|s| {
+        if let Some(v) = s.borrow_mut().as_mut() {
+            v.push((tag.to_owned(), source.to_owned()));
+            true
+        } else {
+            false
+        }
+    });
+    if !collected {
+        if lean_bin().is_none() {
+            eprintln!(
+                "[skip] {tag}: lean binary not found; install via elan or set AXEYUM_LEAN_BIN"
+            );
+            return;
+        }
+        if let Err(msg) = check_one_lean(tag, source) {
+            panic!("{msg}");
+        }
+    }
+}
+
+/// Optional wall-clock budget from `AXEYUM_LEAN_BUDGET_SECS` (unset/0 = none).
+fn lean_budget() -> Option<Duration> {
+    match std::env::var("AXEYUM_LEAN_BUDGET_SECS") {
+        Ok(v) => v
+            .trim()
+            .parse::<u64>()
+            .ok()
+            .filter(|&s| s > 0)
+            .map(Duration::from_secs),
+        Err(_) => None,
+    }
+}
+
+/// Pool size from `AXEYUM_LEAN_JOBS`, else available parallelism, clamped to the
+/// number of pending modules.
+fn lean_jobs(total: usize) -> usize {
+    let requested = std::env::var("AXEYUM_LEAN_JOBS")
+        .ok()
+        .and_then(|v| v.trim().parse::<usize>().ok())
+        .filter(|&j| j > 0)
+        .or_else(|| {
+            std::thread::available_parallelism()
+                .ok()
+                .map(std::num::NonZeroUsize::get)
+        })
+        .unwrap_or(1);
+    requested.clamp(1, total.max(1))
+}
+
+/// Drive `cases` through the real `lean` kernel across a bounded thread pool,
+/// honoring the wall-clock budget. Prints an honest summary and FAILS the test
+/// iff any *checked* module was rejected. Budget / no-lean skips are loud but
+/// not failures. Skips gracefully (prints a note, passes) when no `lean` binary
+/// is available — the CI-runner behavior.
+fn run_lean_checks(label: &str, cases: &[(String, String)]) {
+    let total = cases.len();
+    if total == 0 {
+        eprintln!("[lean crosscheck:{label}] no modules to check");
+        return;
+    }
+    if lean_bin().is_none() {
+        eprintln!(
+            "[skip] lean crosscheck:{label}: lean binary not found; install via elan or set \
+             AXEYUM_LEAN_BIN ({total} modules NOT checked)"
+        );
+        return;
+    }
+
+    let budget = lean_budget();
+    let jobs = lean_jobs(total);
+    let start = Instant::now();
+    let next = AtomicUsize::new(0);
+    let checked = AtomicUsize::new(0);
+    let skipped = AtomicUsize::new(0);
+    let failures: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+    std::thread::scope(|scope| {
+        for _ in 0..jobs {
+            scope.spawn(|| {
+                loop {
+                    let i = next.fetch_add(1, Ordering::SeqCst);
+                    if i >= total {
+                        break;
+                    }
+                    if budget.is_some_and(|b| start.elapsed() >= b) {
+                        skipped.fetch_add(1, Ordering::SeqCst);
+                        continue;
+                    }
+                    let (tag, source) = &cases[i];
+                    match check_one_lean(tag, source) {
+                        Ok(()) => {
+                            checked.fetch_add(1, Ordering::SeqCst);
+                        }
+                        Err(msg) => failures.lock().unwrap().push(msg),
+                    }
+                }
+            });
+        }
+    });
+
+    let checked = checked.load(Ordering::SeqCst);
+    let skipped = skipped.load(Ordering::SeqCst);
+    let failures = failures.into_inner().unwrap();
+    let budget_note = budget.map_or_else(
+        || "no budget".to_owned(),
+        |b| format!("budget {}s", b.as_secs()),
+    );
+    eprintln!(
+        "[lean crosscheck:{label}] checked {checked} of {total} modules in {:.1}s using {jobs} \
+         jobs ({budget_note}); {skipped} skipped due to budget; {} FAILED",
+        start.elapsed().as_secs_f64(),
+        failures.len()
+    );
+    assert!(
+        failures.is_empty(),
+        "{} Lean module(s) FAILED the kernel crosscheck:\n{}",
+        failures.len(),
+        failures.join("\n===\n")
+    );
+}
+
+/// **Representative Lean cross-check (default).** One reconstructed module per
+/// proof family is fed to the real `lean` kernel. Fast enough for every
+/// `cargo test` run; the exhaustive per-row check lives in
+/// `lean_crosscheck_full` (`#[ignore]`). Structural asserts inside every family
+/// builder still run for all rows regardless.
+#[test]
+fn lean_crosscheck_representative() {
+    run_lean_checks("representative", &collect_cases(Some(1)));
+}
+
+/// **Exhaustive Lean cross-check.** Every reconstructed module across every
+/// proof family is fed to the real `lean` kernel. Corpus-scale; run explicitly:
+/// `cargo test --test lean_crosscheck -- --ignored`
+/// (optionally `AXEYUM_LEAN_BUDGET_SECS=…` / `AXEYUM_LEAN_JOBS=…`).
+#[test]
+#[ignore = "corpus-scale; run explicitly: cargo test --test lean_crosscheck -- --ignored"]
+fn lean_crosscheck_full() {
+    run_lean_checks("full", &collect_cases(None));
 }
 
 /// `QF_UFBV`: `f(a) = #b00 ∧ a = b ∧ ¬(f(b) = #b00)` — `Apply` + `BitVec`, refuted
 /// by congruence; the exported module must check in real Lean.
-#[test]
 fn qf_ufbv_refutation_checks_in_real_lean() {
     let mut arena = TermArena::new();
     let f = arena
@@ -103,7 +420,6 @@ fn qf_ufbv_refutation_checks_in_real_lean() {
     lean_accepts("qf_ufbv", &source);
 }
 
-#[test]
 fn qf_ufbv_lean_entry_normalizes_conjunction_and_double_negation() {
     let mut arena = TermArena::new();
     let f = arena
@@ -140,7 +456,6 @@ fn qf_ufbv_lean_entry_normalizes_conjunction_and_double_negation() {
 /// impossible by pigeonhole. This is the cvc5 `bug593` dominance-audit miss that
 /// is not an Ackermann/BV proof: the Lean path proves it directly by `Bool.rec`
 /// over the three one-bit arguments.
-#[test]
 fn qf_ufbv_finite_domain_pigeonhole_checks_in_real_lean() {
     let mut script = parse_script(
         r"
@@ -174,7 +489,6 @@ fn qf_ufbv_finite_domain_pigeonhole_checks_in_real_lean() {
 /// evaluator-level finite-domain enumeration route. The Lean export is a
 /// checked-certificate wrapper: reconstruction reruns the Rust certifier before
 /// rendering the kernel-checked module.
-#[test]
 fn quantified_bv_finite_domain_enum_rows_check_in_real_lean() {
     for (tag, input) in [
         (
@@ -212,7 +526,6 @@ fn quantified_bv_finite_domain_enum_rows_check_in_real_lean() {
 /// The remaining cvc5 quantified-BV inversion audit rows are closed by a checked
 /// non-constant universal-BV certificate. Reconstruction reruns that checker
 /// before rendering the certificate-wrapper module.
-#[test]
 fn cvc5_quantified_bv_inversion_rows_check_in_real_lean() {
     for (tag, input) in [
         (
@@ -269,7 +582,6 @@ fn cvc5_quantified_bv_inversion_rows_check_in_real_lean() {
 /// unsats are certified by deriving local BV equalities, then closing the UF
 /// contradiction by congruence. Reconstruction reruns that checker before
 /// rendering the certificate-wrapper module.
-#[test]
 fn qf_ufff_bv_uf_local_rows_check_in_real_lean() {
     for (tag, input) in [
         (
@@ -326,7 +638,6 @@ fn qf_ufff_bv_uf_local_rows_check_in_real_lean() {
 /// have checked evidence; reconstruction must route them through the same
 /// executable certificate instead of falling back to the unsupported DRAT Lean
 /// path.
-#[test]
 fn qf_ff_term_level_enum_rows_check_in_real_lean() {
     for (tag, input) in [
         (
@@ -358,7 +669,6 @@ fn qf_ff_term_level_enum_rows_check_in_real_lean() {
 /// The two remaining `QF_FF` audit gaps are certified by bounded enumeration after
 /// checked top-level definitions and finite-domain restrictions. This keeps
 /// finite-field algebra/parity rows off the unsupported DRAT Lean path.
-#[test]
 fn qf_ff_bv_defined_enum_gap_rows_check_in_real_lean() {
     for (tag, input) in [
         (
@@ -390,7 +700,6 @@ fn qf_ff_bv_defined_enum_gap_rows_check_in_real_lean() {
 /// `QF_FP` rows lower to finite scalar terms with Float values represented as bit
 /// patterns. The definition-aware enum route rechecks the original assertions
 /// before rendering the Lean wrapper.
-#[test]
 fn qf_fp_bv_defined_enum_rows_check_in_real_lean() {
     for (tag, input) in [
         (
@@ -425,7 +734,6 @@ fn qf_fp_bv_defined_enum_rows_check_in_real_lean() {
     }
 }
 
-#[test]
 fn qf_bvfp_bv_defined_enum_rows_check_in_real_lean() {
     for (tag, input) in [
         (
@@ -454,7 +762,6 @@ fn qf_bvfp_bv_defined_enum_rows_check_in_real_lean() {
     }
 }
 
-#[test]
 fn qf_dt_cvc5_slice_checks_in_real_lean() {
     for (tag, input) in [
         (
@@ -490,7 +797,6 @@ fn qf_dt_cvc5_slice_checks_in_real_lean() {
 }
 
 /// `LRA`: `x < 0 ∧ 0 ≤ x` — a Farkas refutation over the axiomatized ordered field.
-#[test]
 fn lra_refutation_checks_in_real_lean() {
     let mut arena = TermArena::new();
     let x = arena.real_var("x").unwrap();
@@ -506,7 +812,6 @@ fn lra_refutation_checks_in_real_lean() {
 /// The checked term-identity route recognizes `ite true x y = x` and exports a
 /// Lean proof of the contradiction without invoking the bit-blast or DPLL proof
 /// routes.
-#[test]
 fn qf_lra_ite_true_identity_checks_in_real_lean() {
     let mut script = parse_script(include_str!(
         "../../../corpus/public-curated/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__ite_arith.smt2"
@@ -527,7 +832,6 @@ fn qf_lra_ite_true_identity_checks_in_real_lean() {
 /// lazy-SMT DPLL(T) refutation checker. The Lean route is a checked-certificate
 /// wrapper: reconstruction reruns the Rust certificate before rendering a kernel
 /// proof term, matching the existing structural certificate routes.
-#[test]
 fn qf_lra_dpll_audit_rows_check_in_real_lean() {
     for (tag, input) in [
         (
@@ -559,7 +863,6 @@ fn qf_lra_dpll_audit_rows_check_in_real_lean() {
 /// `QF_LIA`: two exact-audit unsats are certified by the arithmetic lazy-SMT
 /// DPLL(T) refutation checker. As with `LraDpll`, the Lean route reruns the
 /// Rust certificate and renders only a checked certificate wrapper.
-#[test]
 fn qf_lia_arith_dpll_audit_rows_check_in_real_lean() {
     for (tag, input) in [
         (
@@ -592,7 +895,6 @@ fn qf_lia_arith_dpll_audit_rows_check_in_real_lean() {
 /// arithmetic proof-step encodings. They reconstruct through the same checked
 /// `ArithDPLL` wrapper after treating integer-valued UF applications as opaque
 /// arithmetic variables.
-#[test]
 fn qf_uflia_use_name_arith_dpll_rows_check_in_real_lean() {
     for (tag, input) in [
         (
@@ -624,7 +926,6 @@ fn qf_uflia_use_name_arith_dpll_rows_check_in_real_lean() {
 /// `QF_LIA`: the RF-11 ACI normalization stress row contains a large Boolean
 /// assertion that simplifies directly to `false`. The checked Boolean
 /// simplification route avoids spending the audit budget in arithmetic DPLL.
-#[test]
 fn qf_lia_bool_simplification_audit_row_checks_in_real_lean() {
     let mut script = parse_script(include_str!(
         "../../../corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__proofs__RF-11-aci-norm-ndet.smt2"
@@ -644,7 +945,6 @@ fn qf_lia_bool_simplification_audit_row_checks_in_real_lean() {
 /// `QF_UFNRA`: cvc5 `issue3970-nl-ext-purify` contains a purified `distinct`
 /// contradiction whose expansion includes a disequality of the same term with
 /// itself, before any nonlinear arithmetic certificate is needed.
-#[test]
 fn qf_uf_issue3970_term_identity_checks_in_real_lean() {
     let mut script = parse_script(include_str!(
         "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__issue3970-nl-ext-purify.smt2"
@@ -665,7 +965,6 @@ fn qf_uf_issue3970_term_identity_checks_in_real_lean() {
 /// contradiction. Exhaustively checking the two Boolean variables and the
 /// four unary-Boolean function interpretations gives a direct certificate,
 /// avoiding the old Ackermann + bit-blast trust-hole route.
-#[test]
 fn qf_ufbv_fun1_bool_uf_exhaustive_checks_in_real_lean() {
     let mut script = parse_script(include_str!(
         "../../../corpus/public-curated/non-incremental/QF_UFBV/bitwuzla-regress-clean/solver__fun__fun1.smt2"
@@ -685,7 +984,6 @@ fn qf_ufbv_fun1_bool_uf_exhaustive_checks_in_real_lean() {
 /// `QF_UF` with finite sets: the frontend lowers `set.card` to BV popcounts.
 /// `sets/card-6` is refuted by `C ⊆ A ∪ B`, `|C| ≥ 5`, `|A| ≤ 2`, and
 /// `|B| ≤ 2`, so the certificate avoids the slower reduced-CNF proof route.
-#[test]
 fn qf_uf_sets_cardinality_checks_in_real_lean() {
     let mut script = parse_script(include_str!(
         "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__sets__card-6.smt2"
@@ -704,7 +1002,6 @@ fn qf_uf_sets_cardinality_checks_in_real_lean() {
 
 /// `QF_UF`: Boolean structure around EUF atoms is discharged by enumerating the
 /// equality-atom skeleton and checking every skeleton model with congruence.
-#[test]
 fn qf_uf_boolean_euf_rows_check_in_real_lean() {
     for (tag, input, expected_fragment) in [
         (
@@ -745,7 +1042,6 @@ fn qf_uf_boolean_euf_rows_check_in_real_lean() {
 /// `QF_UF` overbound finite-model rows are too large for the bounded exhaustive
 /// Boolean-EUF checker, but the online EUF DPLL(T) checker refutes their
 /// Boolean equality skeletons and the Lean wrapper re-runs that checker.
-#[test]
 fn qf_uf_overbound_online_euf_rows_check_in_real_lean() {
     for (tag, input) in [
         (
@@ -782,7 +1078,6 @@ fn qf_uf_overbound_online_euf_rows_check_in_real_lean() {
 
 /// `QF_UFLIA`: `bug303` needs congruence over the declared `list` carrier before
 /// the integer contradiction is visible.
-#[test]
 fn qf_uf_bug303_uf_arith_congruence_checks_in_real_lean() {
     let mut script = parse_script(include_str!(
         "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__bug303.smt2"
@@ -802,7 +1097,6 @@ fn qf_uf_bug303_uf_arith_congruence_checks_in_real_lean() {
 /// `QF_UF`: `parallel-let` reduces to a declared-carrier equality conflict
 /// without any `Apply` node. The current proof route discharges it through the
 /// exhaustive Boolean-EUF checker over the declared carrier equality atoms.
-#[test]
 fn qf_uf_declared_sort_equality_checks_in_real_lean() {
     let mut script = parse_script(
         r"
@@ -830,7 +1124,6 @@ fn qf_uf_declared_sort_equality_checks_in_real_lean() {
 /// `QF_NRA`: broader SOS certificates now reconstruct through a certificate-gated
 /// Lean wrapper when the detailed ring-normalized proof slice does not cover the
 /// shape. The checker still re-runs `SosCertificate::verify` before rendering.
-#[test]
 fn qf_nra_sos_certificate_audit_rows_check_in_real_lean() {
     for (tag, input) in [
         (
@@ -861,7 +1154,6 @@ fn qf_nra_sos_certificate_audit_rows_check_in_real_lean() {
 
 /// `QF_NRA`: higher even-power nonnegativity rows are outside the degree-2 SOS
 /// certificate but still reconstruct through a checked structural Lean wrapper.
-#[test]
 fn qf_nra_even_power_audit_rows_check_in_real_lean() {
     for (tag, input) in [
         (
@@ -893,7 +1185,6 @@ fn qf_nra_even_power_audit_rows_check_in_real_lean() {
 /// `QF_NIA`: bounded nonlinear integer UNSAT rows are certified by the
 /// proven-box bounded-int-blast certificate (box + regenerated DIMACS + DRAT)
 /// and reconstruct through a certificate-gated Lean wrapper.
-#[test]
 fn qf_nia_bounded_int_blast_audit_rows_check_in_real_lean() {
     for (tag, input) in [
         (
@@ -923,7 +1214,6 @@ fn qf_nia_bounded_int_blast_audit_rows_check_in_real_lean() {
 }
 
 /// Universal: `∀x.(f x = c) ∧ ¬(f a = c)` — instantiation refutation.
-#[test]
 fn forall_refutation_checks_in_real_lean() {
     let mut arena = TermArena::new();
     let alpha = Sort::BitVec(8);
@@ -948,7 +1238,6 @@ fn forall_refutation_checks_in_real_lean() {
 }
 
 /// Existential: `∃x.(f x = c) ∧ ∀y.(f y = d) ∧ c ≠ d` — skolemization refutation.
-#[test]
 fn exists_refutation_checks_in_real_lean() {
     let mut arena = TermArena::new();
     let alpha = Sort::BitVec(8);
@@ -979,7 +1268,6 @@ fn exists_refutation_checks_in_real_lean() {
 /// `QF_ABV`: `select(a, i) = 0 ∧ i = j ∧ ¬(select(a, j) = 0)` is unsat by read
 /// consistency (`i = j ⇒ select(a, i) = select(a, j)`). The reconstructed array
 /// refutation (via array elimination → `QF_UFBV`) must type-check in real Lean.
-#[test]
 fn qf_abv_read_consistency_refutation_checks_in_real_lean() {
     let mut arena = TermArena::new();
     let a = arena.array_var("a", 4, 8).unwrap();
@@ -1009,7 +1297,6 @@ fn qf_abv_read_consistency_refutation_checks_in_real_lean() {
 /// `select`. This is the corpus `smtextarrayaxiom*uf` shape: evidence already has
 /// a direct Alethe certificate, and the Lean route should reconstruct that direct
 /// EUF proof instead of requiring the array-elimination certificate.
-#[test]
 fn qf_abv_extensionality_refutation_checks_in_real_lean() {
     let mut arena = TermArena::new();
     let a = arena.array_var("a", 2, 2).unwrap();
@@ -1030,7 +1317,6 @@ fn qf_abv_extensionality_refutation_checks_in_real_lean() {
     lean_accepts("qf_abv_extensionality", &source);
 }
 
-#[test]
 fn array_axiom_lean_entry_normalizes_conjunction_and_double_negation() {
     let mut arena = TermArena::new();
     let a = arena.array_var("a", 2, 8).unwrap();
@@ -1055,7 +1341,6 @@ fn array_axiom_lean_entry_normalizes_conjunction_and_double_negation() {
 /// the arrays are asserted disequal. This mirrors the `smtextarrayaxiom*` corpus
 /// family and reconstructs through the finite-array extensionality certificate,
 /// not the generic ABV/Alethe route.
-#[test]
 fn qf_aufbv_finite_array_extensionality_checks_in_real_lean() {
     let mut script = parse_script(
         r"
@@ -1085,7 +1370,6 @@ fn qf_aufbv_finite_array_extensionality_checks_in_real_lean() {
 /// `QF_AUFBV`: single-assertion negations of small array axiom schemas from the
 /// bitwuzla array regression slice. The schema checker supplies the certified
 /// equality and the Lean route closes it against the asserted disequality.
-#[test]
 #[allow(clippy::too_many_lines)]
 fn qf_aufbv_array_axiom_refutations_check_in_real_lean() {
     let cases = [
@@ -1460,7 +1744,6 @@ fn qf_aufbv_array_axiom_refutations_check_in_real_lean() {
 /// treated as arbitrary BV values. The Rust certificate re-checks that scalar
 /// abstraction through the `QF_BV` evidence route, and the Lean module records the
 /// resulting small contradiction witness.
-#[test]
 fn qf_aufbv_bv_abstraction_checks_in_real_lean() {
     let text = include_str!(
         "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/rewrite__array__rw213.smt2"
@@ -1477,7 +1760,6 @@ fn qf_aufbv_bv_abstraction_checks_in_real_lean() {
     lean_accepts("qf_aufbv_bv_abstraction", &source);
 }
 
-#[test]
 fn qf_alia_store_chain_certificates_check_in_real_lean() {
     let cases = [
         (
@@ -1510,7 +1792,6 @@ fn qf_alia_store_chain_certificates_check_in_real_lean() {
     }
 }
 
-#[test]
 fn qf_ax_declared_sort_certificates_check_in_real_lean() {
     let cases = [
         (
@@ -1550,7 +1831,6 @@ fn qf_ax_declared_sort_certificates_check_in_real_lean() {
     }
 }
 
-#[test]
 fn qf_ax_bool_array_read_collapse_checks_in_real_lean() {
     let mut script = parse_script(include_str!(
         "../../../corpus/public-curated/non-incremental/QF_AX/cvc5-regress-clean/cli__regress0__arrays__bool-array.smt2"
@@ -1570,7 +1850,6 @@ fn qf_ax_bool_array_read_collapse_checks_in_real_lean() {
 /// `QF_AUFBV`: generated aligned byte write chains commute when both word
 /// addresses have their low two bits cleared. The `wchains002ue` regression
 /// asserts the opposite store orders differ under those guards.
-#[test]
 fn qf_aufbv_aligned_write_chain_checks_in_real_lean() {
     let text = include_str!(
         "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__wchains002ue.smt2"
@@ -1590,7 +1869,6 @@ fn qf_aufbv_aligned_write_chain_checks_in_real_lean() {
 /// `QF_AUFBV`: a two-byte `memcpy` obligation under no-overlap/no-wrap guards
 /// is refuted when the copied destination byte is asserted different from the
 /// matching original source byte for some `j < 2`.
-#[test]
 fn qf_aufbv_two_byte_memcpy_checks_in_real_lean() {
     let text = include_str!(
         "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__memcpy02.smt2"
@@ -1610,7 +1888,6 @@ fn qf_aufbv_two_byte_memcpy_checks_in_real_lean() {
 /// `QF_AUFBV`: the two-element bubble-sort benchmark conditionally swaps the
 /// original cells into sorted order, then asserts an in-range original read is
 /// distinct from both sorted cells.
-#[test]
 fn qf_aufbv_two_element_bubble_sort_checks_in_real_lean() {
     let text = include_str!(
         "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__bubsort002un.smt2"
@@ -1630,7 +1907,6 @@ fn qf_aufbv_two_element_bubble_sort_checks_in_real_lean() {
 /// `QF_AUFBV`: the two-element selection-sort benchmark stores the selected
 /// minimum at `start`, then asserts an in-range original read is distinct from
 /// both sorted cells.
-#[test]
 fn qf_aufbv_two_element_selection_sort_checks_in_real_lean() {
     let text = include_str!(
         "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__selsort002un.smt2"
@@ -1649,7 +1925,6 @@ fn qf_aufbv_two_element_selection_sort_checks_in_real_lean() {
 
 /// `QF_AUFBV`: the two-cell XOR-swap benchmark compares two ordinary swaps
 /// with the corresponding two generated XOR swaps and asserts the arrays differ.
-#[test]
 fn qf_aufbv_two_cell_xor_swap_checks_in_real_lean() {
     let text = include_str!(
         "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__dubreva002ue.smt2"
@@ -1668,7 +1943,6 @@ fn qf_aufbv_two_cell_xor_swap_checks_in_real_lean() {
 
 /// `QF_AUFBV`: the two-byte swapmem benchmark uses generated XOR swaps to swap
 /// two disjoint byte ranges twice, then asserts memory changed.
-#[test]
 fn qf_aufbv_two_byte_xor_swap_roundtrip_checks_in_real_lean() {
     let text = include_str!(
         "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__swapmem002ue.smt2"
@@ -1687,7 +1961,6 @@ fn qf_aufbv_two_byte_xor_swap_roundtrip_checks_in_real_lean() {
 
 /// `QF_AUFBV`: after storing the searched value into a sorted 16-element
 /// array, the generated five-probe binary search cannot miss that value.
-#[test]
 fn qf_aufbv_binary_search16_checks_in_real_lean() {
     let text = include_str!(
         "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__binarysearch32s016.smt2"
@@ -1707,7 +1980,6 @@ fn qf_aufbv_binary_search16_checks_in_real_lean() {
 /// `QF_AUFBV`: the five-cycle FIFO benchmark compares a shift-register FIFO
 /// with a circular-queue FIFO and asserts a final output/flag mismatch under
 /// the generated transition constraints.
-#[test]
 fn qf_aufbv_fifo_bc04_checks_in_real_lean() {
     let text = include_str!(
         "../../../corpus/public-curated/non-incremental/QF_AUFBV/bitwuzla-regress-clean/solver__array__fifo32bc04k05.smt2"
@@ -1727,7 +1999,6 @@ fn qf_aufbv_fifo_bc04_checks_in_real_lean() {
 /// Datatypes: `select_0(mk(a, b)) = #b00 ∧ ¬(a = #b00)` is unsat by
 /// read-over-construct. Reconstructed via datatype simplification → `QF_UFBV`;
 /// the refutation must type-check in real Lean.
-#[test]
 fn datatype_read_over_construct_checks_in_real_lean() {
     let mut arena = TermArena::new();
     let pair = arena.declare_datatype("Pair");
@@ -1768,7 +2039,6 @@ fn datatype_read_over_construct_checks_in_real_lean() {
 ///
 /// The exported module must type-check in real Lean and `#print axioms` must
 /// report no `sorryAx` — the fold is kernel-computed, not assumed.
-#[test]
 fn tester_fold_checks_in_real_lean() {
     // A two-constructor datatype `Color = Red(v) | Green(w)`.
     let build = |tested_is_green: bool, negate: bool| {
@@ -1813,7 +2083,6 @@ fn tester_fold_checks_in_real_lean() {
 ///
 /// The exported module must type-check in real Lean and `#print axioms` must report
 /// no `sorryAx` and no datatype-distinctness axiom — distinctness is kernel-computed.
-#[test]
 fn distinct_constructors_check_in_real_lean() {
     let mut arena = TermArena::new();
     let color = arena.declare_datatype("Color");
@@ -1877,7 +2146,6 @@ fn same_constructor_equality_is_not_a_distinctness_refutation() {
 ///
 /// The exported module must type-check in real Lean and `#print axioms` must report
 /// no `sorryAx` and no datatype-injectivity axiom — injectivity is kernel-computed.
-#[test]
 fn injective_field_mismatch_check_in_real_lean() {
     let mut arena = TermArena::new();
     let pair = arena.declare_datatype("Pair");
@@ -1980,7 +2248,6 @@ fn same_constructor_without_field_conflict_is_not_an_injectivity_refutation() {
 ///
 /// The exported module must type-check in real Lean and `#print axioms` must
 /// report no `sorryAx` and no acyclicity axiom — acyclicity is kernel-computed.
-#[test]
 fn acyclicity_cycle_check_in_real_lean() {
     let mut arena = TermArena::new();
     // IntList = nil | cons(head : BitVec(2), tail : IntList) — RECURSIVE datatype.
@@ -2020,7 +2287,6 @@ fn acyclicity_cycle_check_in_real_lean() {
 /// asserted the other way; the size congruence is re-oriented by an inline
 /// `Eq.symm`, and the module must still reconstruct to a kernel-checked `False`
 /// that checks in real Lean with a clean `#print axioms`.
-#[test]
 fn acyclicity_cycle_reversed_check_in_real_lean() {
     let mut arena = TermArena::new();
     let list = arena.declare_datatype("IntList");
@@ -2057,7 +2323,6 @@ fn acyclicity_cycle_reversed_check_in_real_lean() {
 /// Nat.succ`) yields `size x = Nat.succ^2 (size x)`, refuted by `n ≠ Nat.succ^2 n`
 /// (the chained generalization of `n ≠ Nat.succ n`). No `noConfusion`, no assumed
 /// acyclicity axiom, no well-founded recursion; `#print axioms` stays clean.
-#[test]
 fn acyclicity_two_step_cycle_check_in_real_lean() {
     let mut arena = TermArena::new();
     let list = arena.declare_datatype("IntList");
@@ -2104,7 +2369,6 @@ fn acyclicity_two_step_cycle_check_in_real_lean() {
 /// y = cons(g, z) ∧ z = cons(f, x)` — the general-`k` chained size argument at
 /// k = 3 (`size x = Nat.succ^3 (size x)`, refuted by `n ≠ Nat.succ^3 n`). Confirms
 /// the chain length generalizes beyond the mutual-recursion (k = 2) case.
-#[test]
 fn acyclicity_three_step_cycle_check_in_real_lean() {
     let mut arena = TermArena::new();
     let list = arena.declare_datatype("IntList");
@@ -2186,7 +2450,6 @@ fn finite_list_is_not_an_acyclicity_refutation() {
 /// kernel-checked `False` (via the slice-2 distinctness route), and the rendered
 /// module must be axiom-free over the fold — confirming injectivity does not
 /// hijack or corrupt the distinct-constructor case.
-#[test]
 fn distinct_constructor_equality_is_not_an_injectivity_refutation() {
     let mut arena = TermArena::new();
     let color = arena.declare_datatype("Color");
@@ -2216,7 +2479,6 @@ fn distinct_constructor_equality_is_not_an_injectivity_refutation() {
 /// `QF_BV` (the foundational bit-blasting path): `bvule a b ∧ bvult b a`
 /// (`a ≤ b ∧ b < a`, `BitVec(2)`) is unsat. It lowers to core ops and the
 /// bit-level resolution refutation must type-check in real Lean.
-#[test]
 fn qf_bv_comparison_refutation_checks_in_real_lean() {
     let mut arena = TermArena::new();
     let mk = |a: &mut TermArena, n: &str| {
@@ -2235,7 +2497,6 @@ fn qf_bv_comparison_refutation_checks_in_real_lean() {
 /// The curated `bvredand` row is a parser-reduction identity contradiction.
 /// The current structural Lean route recognizes the checked equivalence and
 /// closes the row without falling back to the bit-blast emitter.
-#[test]
 fn qf_bv_bvredand_identity_contradiction_checks_in_real_lean() {
     let mut script = parse_script(include_str!(
         "../../../corpus/public-curated/bvred/cvc5__redand-eliminate.smt2"
@@ -2258,7 +2519,6 @@ fn qf_bv_bvredand_identity_contradiction_checks_in_real_lean() {
 /// for `y`). The conjunctive Farkas path declines a top-level positive `Or`, so
 /// this carries a Lean proof only through the new `Or.rec` case-split
 /// reconstruction. The exported module must check in real Lean with no `sorryAx`.
-#[test]
 fn disjunctive_lra_case_split_checks_in_real_lean() {
     use axeyum_solver::ProofFragment;
     let mut arena = TermArena::new();
@@ -2376,7 +2636,6 @@ fn shl1_w4_concat() -> AletheTerm {
 /// **ROUTE-B positive (`bvshl`)**: the constant-left-shift lowering identity
 /// `(bvshl a #b0001) = (concat ((_ extract 2 0) a) #b0)` reconstructs to a real-Lean
 /// kernel-checked theorem with **no `sorryAx`**.
-#[test]
 fn const_shl_lowering_checks_in_real_lean() {
     let source = prove_const_shift_lowering_to_lean_module(&shl1_w4(), &shl1_w4_concat(), 4)
         .expect("constant bvshl lowering reconstructs to a kernel-checked theorem");
@@ -2392,7 +2651,6 @@ fn const_shl_lowering_checks_in_real_lean() {
 /// **ROUTE-B positive (`bvlshr`)**: the constant-logical-right-shift identity
 /// `(bvlshr a #b0001) = (concat #b0 ((_ extract 3 1) a))` over width 4 — prepend a
 /// zero at the high end, drop the low bit.
-#[test]
 fn const_lshr_lowering_checks_in_real_lean() {
     let shift = AletheTerm::App(
         "bvlshr".to_owned(),
@@ -2425,7 +2683,6 @@ fn const_lshr_lowering_checks_in_real_lean() {
 /// `(bvashr a #b0001) = ((_ sign_extend 1) ((_ extract 3 1) a))` over width 4 — drop
 /// the low bit, fill the high end with the sign (`sign_extend` of the surviving high
 /// slice, whose MSB is `a`'s sign bit).
-#[test]
 fn const_ashr_lowering_checks_in_real_lean() {
     let shift = AletheTerm::App(
         "bvashr".to_owned(),
@@ -2520,7 +2777,6 @@ fn lean_typechecks(tag: &str, source: &str) -> Option<bool> {
     Some(out.status.success())
 }
 
-#[test]
 fn certified_lra_interpolant_both_farkas_certs_checked_by_real_lean() {
     use axeyum_solver::lra_interpolant_certified;
     // A: x ≤ 0 ; B: x ≥ 1.  Unsat; shared variable x.
@@ -2625,7 +2881,6 @@ fn tampered_certified_lra_interpolant_module_is_rejected_by_real_lean() {
 // `sorryAx` — is the external check that upgrades the EUF interpolant from Validated
 // to Checked via the Lean route.
 
-#[test]
 fn certified_euf_interpolant_both_congruence_certs_checked_by_real_lean() {
     use axeyum_solver::qf_uf_interpolant_certified;
     // A: a=b, b=c ; B: a≠c.  I = (a=c), a positive equality conjunction.
@@ -2747,7 +3002,6 @@ fn tampered_certified_euf_interpolant_module_is_rejected_by_real_lean() {
 // the LIA interpolant from Validated to Checked. Carcara has NO `lia_generic` rule
 // (warns + `holey`), so for integers the Lean kernel is the external checker.
 
-#[test]
 fn certified_lia_interpolant_both_integer_certs_checked_by_real_lean() {
     use axeyum_solver::{ProofFragment, lia_interpolant_certified};
     // A: 2x ≥ 1 ; B: 2x ≤ 0 over Int.  Unsat; shared variable x.  I = (2x ≥ 1), and
@@ -2888,7 +3142,6 @@ fn uflra_opaque_application_refutation_is_declined_by_lean_path() {
 // Lean kernel is the external checker (unlike QF_UFLRA, whose opaque-application
 // `la_generic` refutations Carcara checks).
 
-#[test]
 fn certified_uflia_interpolant_both_integer_certs_checked_by_real_lean() {
     use axeyum_solver::{ProofFragment, uflia_interpolant_certified};
     // A: 2·f(c) ≥ 1 ; B: 2·f(c) ≤ 0 over Int, with f(c) a SHARED opaque integer
