@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "finite-arnoldi-iteration-v0",
+  "title": "Finite Arnoldi Iteration Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_functional_analysis_and_operator_theory",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "bridge_residual_bound",
+    "bridge_eigenpair",
+    "bridge_inner_product_projection",
+    "bridge_finite_operator_chebyshev",
+    "bridge_exact_vs_floating_arithmetic"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "functional_analysis_and_operator_theory"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite matrices",
+    "exact rational Arnoldi iteration",
+    "orthonormal-basis replay",
+    "Hessenberg relation replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-arnoldi-iteration-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Arnoldi bad Hessenberg coefficient QF_LRA/Farkas regression seed",
+    "pressure": "Exact Arnoldi replay computes h21 = 3 from the residual norm while a malformed row claims h21 = 2, isolating a compact equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-arnoldi-h21"
+    ],
+    "next_step": "Promote additional Arnoldi, Lanczos, or GMRES rows only when they add distinct orthogonalization, Hessenberg, restart, least-squares residual, or numerical-honesty pressure; keep general convergence, Ritz value theory, loss of orthogonality, and floating-point stability in Lean or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/arnoldi-iteration-end-to-end.md",
+    "artifacts/examples/math/finite-arnoldi-iteration-v0/smt2/bad-arnoldi-h21-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "initial-krylov-vector-replay",
+    "first-arnoldi-projection-replay",
+    "arnoldi-orthonormal-basis-replay",
+    "second-column-hessenberg-replay",
+    "hessenberg-relation-replay",
+    "bad-arnoldi-h21-rejected",
+    "qf-lra-bad-arnoldi-h21",
+    "general-arnoldi-gmres-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational matrix, starting vector, first two Arnoldi basis vectors, projection coefficients, residual norm, Hessenberg matrix, and exact matrix relation as deterministic exact-rational replay obligations.",
+    "Route the false first subdiagonal Hessenberg coefficient through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes h21 = 3.",
+    "Expose the pack through matrix computation, residual-bound, eigenpair/operator, inner-product, and exact-vs-floating learner and consumer query surfaces.",
+    "Keep general Arnoldi/GMRES convergence, Ritz value theory, restarts, reorthogonalization, loss of orthogonality, and floating-point Krylov stability marked Lean or numerical-honesty horizon."
+  ]
+}

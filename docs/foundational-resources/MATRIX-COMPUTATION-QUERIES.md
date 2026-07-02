@@ -44,9 +44,9 @@ when the consumer needs a concrete checked row to display.
 |---|---|---|---|
 | Linear systems, Gaussian elimination, nullspaces, LU, QR, and Cholesky | `bridge_lu_replay`; packs `linear-algebra-rational-v0`, `finite-gaussian-elimination-v0`, `finite-qr-decomposition-v0`, `finite-cholesky-decomposition-v0` | `Farkas` | `checks --concept bridge_lu_replay --route Farkas --proof-status checked`; `checks --pack finite-gaussian-elimination-v0 --route Farkas --proof-status checked`; `checks --pack linear-algebra-rational-v0 --route Farkas --proof-status checked --text nullspace`; `checks --pack linear-algebra-rational-v0 --route Farkas --proof-status checked --text product-entry`; `checks --pack finite-qr-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-cholesky-decomposition-v0 --route Farkas --proof-status checked` |
 | Schur complements and block matrix shadows | `bridge_schur_complement`; pack `finite-schur-complement-v0` | `Farkas` | `packs --concept bridge_schur_complement --route Farkas`; `checks --concept bridge_schur_complement --route Farkas --proof-status checked`; `checks --pack finite-schur-complement-v0 --route Farkas --proof-status checked` |
-| Residual bounds, condition numbers, singular values, power iteration, conjugate gradient, Hessian solves, solution boxes, and least squares | `bridge_residual_bound`; packs `numerical-linear-algebra-v0`, `finite-condition-number-v0`, `finite-singular-value-shadow-v0`, `finite-power-iteration-v0`, `finite-conjugate-gradient-v0`, `finite-newton-step-v0` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked`; `checks --pack finite-condition-number-v0 --route Farkas --proof-status checked`; `checks --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked`; `checks --pack finite-power-iteration-v0 --route Farkas --proof-status checked`; `checks --pack finite-conjugate-gradient-v0 --route Farkas --proof-status checked`; `checks --pack finite-newton-step-v0 --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked --text solution` |
+| Residual bounds, condition numbers, singular values, power iteration, conjugate gradient, Arnoldi, Hessian solves, solution boxes, and least squares | `bridge_residual_bound`; packs `numerical-linear-algebra-v0`, `finite-condition-number-v0`, `finite-singular-value-shadow-v0`, `finite-power-iteration-v0`, `finite-conjugate-gradient-v0`, `finite-arnoldi-iteration-v0`, `finite-newton-step-v0` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked`; `checks --pack finite-condition-number-v0 --route Farkas --proof-status checked`; `checks --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked`; `checks --pack finite-power-iteration-v0 --route Farkas --proof-status checked`; `checks --pack finite-conjugate-gradient-v0 --route Farkas --proof-status checked`; `checks --pack finite-arnoldi-iteration-v0 --route Farkas --proof-status checked`; `checks --pack finite-newton-step-v0 --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked --text solution` |
 | Rank, kernel, image, vector-space, and dual rows | `bridge_rank_nullity`; pack `finite-vector-spaces-v0` | `Alethe` | `packs --concept bridge_rank_nullity --route Alethe`; `checks --pack finite-vector-spaces-v0 --route Alethe --proof-status checked --text addition-closure` |
-| Rayleigh quotients, eigenpairs, power iteration, Jordan chains, singular values, and matrix invariants | `bridge_eigenpair` | `Farkas` | `checks --concept bridge_eigenpair --route Farkas --proof-status checked`; `checks --pack finite-power-iteration-v0 --route Farkas --proof-status checked`; `checks --pack finite-jordan-chain-v0 --route Farkas --proof-status checked`; `checks --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked` |
+| Rayleigh quotients, eigenpairs, power iteration, Arnoldi/Hessenberg, Jordan chains, singular values, and matrix invariants | `bridge_eigenpair` | `Farkas` | `checks --concept bridge_eigenpair --route Farkas --proof-status checked`; `checks --pack finite-power-iteration-v0 --route Farkas --proof-status checked`; `checks --pack finite-arnoldi-iteration-v0 --route Farkas --proof-status checked`; `checks --pack finite-jordan-chain-v0 --route Farkas --proof-status checked`; `checks --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked` |
 | Orthogonal transforms and Parseval scaling | `bridge_inner_product_projection`; pack `finite-walsh-hadamard-transform-v0` | `Farkas` | `checks --pack finite-walsh-hadamard-transform-v0 --route Farkas --proof-status checked`; `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked --text transform` |
 | Finite random-matrix moments, ranks, and covariance | `bridge_random_matrix_finite_moment` | `Farkas` | `checks --pack random-matrix-finite-v0 --route Farkas --proof-status checked --text rank`; `checks --pack finite-covariance-matrix-v0 --route Farkas --proof-status checked` |
 | Inner products and projections | `bridge_inner_product_projection` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked` |
@@ -128,6 +128,12 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --pack finite-arnoldi-iteration-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --pack finite-newton-step-v0 \
   --route Farkas \
   --proof-status checked \
@@ -189,6 +195,12 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-power-iteration-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-arnoldi-iteration-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any

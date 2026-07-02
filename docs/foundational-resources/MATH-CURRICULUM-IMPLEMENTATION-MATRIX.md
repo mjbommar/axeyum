@@ -917,7 +917,17 @@ Build sequence:
     exact-vs-floating bridges keep exact finite CG replay separate from
     convergence, finite termination, Krylov minimization, preconditioning,
     roundoff, and floating-point stability.
-94. Revisit crate/repo boundaries only after three real consumers or repeated
+94. Landed: add the finite Arnoldi-iteration resource.
+    `finite-arnoldi-iteration-v0` now records one exact two-by-two Krylov
+    transcript: `A = [[1,2],[3,4]]`, `q1 = [1,0]`, the first projection and
+    residual, `h21 = 3`, `q2 = [0,1]`, the second projection column, an
+    orthonormal basis, and `A*Q = Q*H`. It includes a checked
+    QF_LRA/Farkas artifact for the malformed subdiagonal coefficient claim
+    `h21 = 2`. The reused residual-bound, eigenpair, inner-product,
+    finite-operator/Chebyshev, and exact-vs-floating bridges keep exact finite
+    Arnoldi replay separate from GMRES convergence, Ritz-value theory,
+    restart/reorthogonalization strategies, and floating-point stability.
+95. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

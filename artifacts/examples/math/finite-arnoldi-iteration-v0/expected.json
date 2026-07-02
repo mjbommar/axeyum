@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-arnoldi-iteration-v0",
+  "witnesses": [
+    {
+      "id": "two-step-arnoldi-transcript",
+      "description": "Exact rational two-step Arnoldi transcript for a fixed 2x2 matrix and starting vector.",
+      "values": {
+        "matrix": [
+          ["1", "2"],
+          ["3", "4"]
+        ],
+        "q1": ["1", "0"],
+        "aq1": ["1", "3"],
+        "h11": "1",
+        "residual1": ["0", "3"],
+        "residual1_norm_squared": "9",
+        "h21": "3",
+        "q2": ["0", "1"],
+        "q1_norm_squared": "1",
+        "q2_norm_squared": "1",
+        "q1_q2_dot": "0",
+        "aq2": ["2", "4"],
+        "h12": "2",
+        "h22": "4",
+        "basis_matrix": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "hessenberg_matrix": [
+          ["1", "2"],
+          ["3", "4"]
+        ],
+        "a_times_basis": [
+          ["1", "2"],
+          ["3", "4"]
+        ],
+        "basis_times_hessenberg": [
+          ["1", "2"],
+          ["3", "4"]
+        ],
+        "full_residual": ["0", "0"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "initial-krylov-vector-replay",
+      "claim": "The starting Arnoldi vector q1 is unit length and A*q1 = [1,3].",
+      "expected_result": "sat",
+      "validation": "exact_rational_arnoldi_initial_vector_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-step-arnoldi-transcript"],
+      "notes": "The validator recomputes q1^T*q1 and the first matrix-vector product exactly."
+    },
+    {
+      "id": "first-arnoldi-projection-replay",
+      "claim": "The first Arnoldi projection has h11 = 1, residual [0,3], h21 = 3, and q2 = [0,1].",
+      "expected_result": "sat",
+      "validation": "exact_rational_arnoldi_first_projection_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-step-arnoldi-transcript"],
+      "notes": "The validator recomputes h11 = q1^T*A*q1, v = A*q1 - h11*q1, h21^2 = v^T*v, and q2 = v/h21."
+    },
+    {
+      "id": "arnoldi-orthonormal-basis-replay",
+      "claim": "The two Arnoldi basis vectors are orthonormal.",
+      "expected_result": "sat",
+      "validation": "exact_rational_arnoldi_orthonormal_basis_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-step-arnoldi-transcript"],
+      "notes": "The validator checks q1^T*q1 = 1, q2^T*q2 = 1, and q1^T*q2 = 0."
+    },
+    {
+      "id": "second-column-hessenberg-replay",
+      "claim": "The second Arnoldi column has h12 = 2 and h22 = 4.",
+      "expected_result": "sat",
+      "validation": "exact_rational_arnoldi_second_column_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-step-arnoldi-transcript"],
+      "notes": "The validator recomputes A*q2, q1^T*A*q2, and q2^T*A*q2 exactly."
+    },
+    {
+      "id": "hessenberg-relation-replay",
+      "claim": "For this full 2D basis, A*Q = Q*H with H = [[1,2],[3,4]].",
+      "expected_result": "sat",
+      "validation": "exact_rational_arnoldi_hessenberg_relation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-step-arnoldi-transcript"],
+      "notes": "The validator recomputes both sides of the finite Hessenberg relation exactly."
+    },
+    {
+      "id": "bad-arnoldi-h21-rejected",
+      "claim": "The first Arnoldi subdiagonal coefficient is h21 = 2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_arnoldi_h21_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "two-step-arnoldi-transcript",
+        "computed_h21": "3",
+        "claimed_h21": "2"
+      },
+      "notes": "Exact replay computes h21 as 3, so the claimed value 2 is rejected; the separate qf-lra-bad-arnoldi-h21 row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-arnoldi-h21",
+      "claim": "The fixed malformed Arnoldi h21 claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "two-step-arnoldi-transcript",
+        "source_replay_row": "bad-arnoldi-h21-rejected",
+        "computed_h21": "3",
+        "claimed_h21": "2",
+        "farkas_conflict": "arnoldi_h21 = 3 and arnoldi_h21 = 2",
+        "smt2_artifact": "artifacts/examples/math/finite-arnoldi-iteration-v0/smt2/bad-arnoldi-h21-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_arnoldi_iteration_bad_h21_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes h21 = 3, while the malformed row claims 2; the source QF_LRA artifact isolates that Hessenberg-coefficient contradiction for Farkas checking."
+    },
+    {
+      "id": "general-arnoldi-gmres-theory-lean-horizon",
+      "claim": "General Arnoldi decomposition theorems, Ritz value theory, GMRES residual minimization, restart policies, reorthogonalization, loss of orthogonality, and floating-point Krylov stability require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For finite-dimensional operators and exact arithmetic, prove the Arnoldi relation A*Q_k = Q_{k+1}*Hbar_k, orthonormality preservation under nonzero residuals, and the GMRES least-squares residual characterization; separately state restart and floating-point variants with explicit hypotheses.",
+        "future_checker": "Lean theorem statements for exact Arnoldi/GMRES theory plus separate numerical-honesty or QF_FP artifacts for floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one 2x2 rational Arnoldi transcript, not a theorem about arbitrary operators, restarted GMRES, Ritz convergence, or floating-point orthogonalization stability."
+    }
+  ]
+}

@@ -240,6 +240,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Arnoldi-iteration resource landed.**
+  `finite-arnoldi-iteration-v0` now gives the linear-algebra,
+  numerical-analysis, and operator-theory lanes an exact rational
+  Krylov/Hessenberg transcript: it checks `A = [[1,2],[3,4]]`, `q1 = [1,0]`,
+  the first projection and residual, `h21 = 3`, `q2 = [0,1]`, the second
+  projection column, orthonormality, and the exact relation `A*Q = Q*H`, then
+  isolates the malformed subdiagonal coefficient claim `h21 = 2` versus exact
+  `3` as a source-linked QF_LRA/Farkas row. The focused learner page,
+  matrix/operator query guides, concept bridges, validator, and
+  `math_resource_lra_routes` regression keep fixed finite Arnoldi replay
+  separate from general Arnoldi/GMRES convergence, Ritz-value theory,
+  restart/reorthogonalization strategies, and floating-point stability. The
+  public summary now reports 122 concept rows, 124 packs, 803 expected checks,
+  350 checked rows, 366 replay-only rows, 87 Lean-horizon rows, and 124
+  promoted solver-reuse packs.
 - **Finite Conjugate-gradient resource landed.**
   `finite-conjugate-gradient-v0` now gives the linear-algebra,
   numerical-analysis, and optimization lanes an exact rational SPD solve
@@ -251,8 +266,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   validator, and `math_resource_lra_routes` regression keep fixed finite CG
   replay separate from general convergence, Krylov minimization,
   preconditioning, roundoff, and floating-point stability. The public summary
-  now reports 122 concept rows, 123 packs, 795 expected checks, 349 checked
-  rows, 360 replay-only rows, 86 Lean-horizon rows, and 123 promoted
+  now reports 122 concept rows, 124 packs, 803 expected checks, 350 checked
+  rows, 366 replay-only rows, 87 Lean-horizon rows, and 124 promoted
   solver-reuse packs.
 - **Finite Power-iteration resource landed.**
   `finite-power-iteration-v0` now gives the linear-algebra,
@@ -267,8 +282,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   separate from convergence, spectral-gap assumptions,
   residual-to-eigenvalue error theorems, deflation, block iteration,
   conditioning, and floating-point eigensolver stability. The public summary
-  now reports 122 concept rows, 123 packs, 795 expected checks, 349 checked
-  rows, 360 replay-only rows, 86 Lean-horizon rows, and 123 promoted
+  now reports 122 concept rows, 124 packs, 803 expected checks, 350 checked
+  rows, 366 replay-only rows, 87 Lean-horizon rows, and 124 promoted
   solver-reuse packs.
 - **Finite Gaussian-elimination resource landed.**
   `finite-gaussian-elimination-v0` now gives the linear-algebra,
@@ -281,8 +296,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_lra_routes` regression keep fixed transcript replay separate
   from general Gaussian-elimination correctness, pivoting, rank-revealing,
   sparse fill-in, conditioning, and floating-point stability theorems. The
-  public summary now reports 122 concept rows, 123 packs, 795 expected checks,
-  349 checked rows, 360 replay-only rows, 86 Lean-horizon rows, and 123
+  public summary now reports 122 concept rows, 124 packs, 803 expected checks,
+  350 checked rows, 366 replay-only rows, 87 Lean-horizon rows, and 124
   promoted solver-reuse packs.
 - **Finite Schur-complement resource landed.**
   `finite-schur-complement-v0` now gives the linear-algebra,

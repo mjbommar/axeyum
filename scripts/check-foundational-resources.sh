@@ -597,6 +597,7 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_residual
 python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --route Farkas --proof-status checked --text Newton --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --route Farkas --proof-status checked --text condition --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --pack finite-conjugate-gradient-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --pack finite-arnoldi-iteration-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-kkt-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text KKT --require-any >/dev/null
@@ -680,8 +681,10 @@ python3 scripts/query-foundational-resources.py packs --concept bridge_finite_op
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_operator_chebyshev --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --field linear_algebra --text "power-iteration" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --field numerical_analysis --text "conjugate-gradient" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --field numerical_analysis --text "Arnoldi" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-power-iteration-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-arnoldi-iteration-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-jordan-chain-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-walsh-hadamard-transform-v0 --route Farkas --proof-status checked --require-any >/dev/null
@@ -694,6 +697,7 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_tensor_b
 python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0 --route Farkas --proof-status checked --text qf-lra-bad-l1-sum-norm --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0 --route Farkas --proof-status checked --text qf-lra-bad-operator-bound --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0 --route Farkas --proof-status checked --text qf-lra-bad-chebyshev-t3 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_operator_chebyshev --pack finite-arnoldi-iteration-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0 --proof-status replay-only --text rejected --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-chebyshev-systems-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-chebyshev-systems-v0 --route Farkas --proof-status checked --text qf-lra-bad-duplicate-node-grid --require-any >/dev/null

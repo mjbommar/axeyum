@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 123 non-template math example packs.
-- 795 expected checks.
-- 349 checked proof/evidence rows.
-- 360 replay-only rows.
-- 86 Lean-horizon rows.
-- 123 promoted solver-reuse packs.
+- 124 non-template math example packs.
+- 803 expected checks.
+- 350 checked proof/evidence rows.
+- 366 replay-only rows.
+- 87 Lean-horizon rows.
+- 124 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 123 focused learner-linked packs, with no path-only, index-only, or missing
+- 124 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2421,6 +2421,15 @@ Pick one item per commit unless the change is purely navigational.
      exact `1/4` through a source-linked QF_LRA/Farkas regression without
      claiming general CG convergence, Krylov minimization, preconditioners,
      roundoff, or floating-point stability.
+170. Landed: add `finite-arnoldi-iteration-v0` as an exact finite
+     Arnoldi/Krylov resource. The pack computes one rational Arnoldi
+     transcript for `A = [[1,2],[3,4]]`, including `q1`, `q2`, projection
+     coefficients `h11`, `h21`, `h12`, `h22`, orthonormality, and the exact
+     Hessenberg relation `A*Q = Q*H`, then promotes the malformed
+     subdiagonal coefficient claim `h21 = 2` versus exact `3` through a
+     source-linked QF_LRA/Farkas regression without claiming general
+     Arnoldi/GMRES convergence, Ritz-value theory, restart or
+     reorthogonalization behavior, or floating-point stability.
 
 ## Validation Checklist
 

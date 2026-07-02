@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 123 non-template math packs.
-- 795 expected checks.
-- 349 checked proof/evidence rows.
-- 360 replay-only rows.
-- 86 Lean-horizon rows.
-- 123 promoted solver-reuse packs.
+- 124 non-template math packs.
+- 803 expected checks.
+- 350 checked proof/evidence rows.
+- 366 replay-only rows.
+- 87 Lean-horizon rows.
+- 124 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 123 focused learner-linked packs, with no path-only, index-only, or missing
+- 124 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 123 current non-template packs satisfy the focused-lesson side of this
+all 124 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2426,6 +2426,16 @@ Pick one row per commit unless the change is purely navigational.
      pages keep exact finite CG replay separate from Krylov minimization,
      finite-termination theorems, preconditioners, roundoff, and
      floating-point CG stability.
+282. Landed: add `finite-arnoldi-iteration-v0` as an exact finite Arnoldi
+     resource. The pack replays `A = [[1,2],[3,4]]`, `q1 = [1,0]`,
+     `A*q1 = [1,3]`, `h11 = 1`, residual `[0,3]`, `h21 = 3`,
+     `q2 = [0,1]`, the second projection column `h12 = 2`, `h22 = 4`,
+     orthonormality, and the exact Hessenberg relation `A*Q = Q*H`, then adds
+     `qf-lra-bad-arnoldi-h21` as the source-linked Farkas row for the false
+     subdiagonal coefficient claim `h21 = 2` versus exact `3`. The learner and
+     query pages keep exact finite Krylov/Hessenberg replay separate from
+     Arnoldi/GMRES convergence, Ritz-value theory, restart strategies,
+     reorthogonalization, and floating-point stability.
 
 ## Validation Checklist
 

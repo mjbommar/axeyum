@@ -17241,6 +17241,214 @@ def validate_finite_conjugate_gradient(expected: dict[str, Any]) -> None:
     require_string("CG horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_arnoldi_iteration(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    initial = checks["initial-krylov-vector-replay"]
+    if initial["expected_result"] != "sat":
+        fail("initial-krylov-vector-replay must expect sat")
+    if initial.get("proof_status") != "replay-only":
+        fail("initial-krylov-vector-replay must be replay-only")
+    values = single_witness_values(initial, witnesses)
+    matrix = require_fraction_matrix("Arnoldi matrix", values.get("matrix"))
+    q1 = require_fraction_vector("Arnoldi q1", values.get("q1"))
+    aq1 = require_fraction_vector("Arnoldi aq1", values.get("aq1"))
+    h11 = require_fraction("Arnoldi h11", values.get("h11"))
+    residual1 = require_fraction_vector("Arnoldi residual1", values.get("residual1"))
+    residual1_norm_squared = require_fraction(
+        "Arnoldi residual1_norm_squared",
+        values.get("residual1_norm_squared"),
+    )
+    h21 = require_fraction("Arnoldi h21", values.get("h21"))
+    q2 = require_fraction_vector("Arnoldi q2", values.get("q2"))
+    q1_norm_squared = require_fraction(
+        "Arnoldi q1_norm_squared",
+        values.get("q1_norm_squared"),
+    )
+    q2_norm_squared = require_fraction(
+        "Arnoldi q2_norm_squared",
+        values.get("q2_norm_squared"),
+    )
+    q1_q2_dot = require_fraction("Arnoldi q1_q2_dot", values.get("q1_q2_dot"))
+    aq2 = require_fraction_vector("Arnoldi aq2", values.get("aq2"))
+    h12 = require_fraction("Arnoldi h12", values.get("h12"))
+    h22 = require_fraction("Arnoldi h22", values.get("h22"))
+    basis_matrix = require_fraction_matrix(
+        "Arnoldi basis_matrix",
+        values.get("basis_matrix"),
+    )
+    hessenberg_matrix = require_fraction_matrix(
+        "Arnoldi hessenberg_matrix",
+        values.get("hessenberg_matrix"),
+    )
+    a_times_basis = require_fraction_matrix(
+        "Arnoldi a_times_basis",
+        values.get("a_times_basis"),
+    )
+    basis_times_hessenberg = require_fraction_matrix(
+        "Arnoldi basis_times_hessenberg",
+        values.get("basis_times_hessenberg"),
+    )
+    full_residual = require_fraction_vector(
+        "Arnoldi full_residual",
+        values.get("full_residual"),
+    )
+
+    require_square_matrix("Arnoldi matrix", matrix)
+    if len(matrix) != 2:
+        fail("finite Arnoldi replay expects one 2x2 matrix")
+    require_mat_vec_shape("Arnoldi q1", matrix, q1)
+    if dot_product(q1, q1) != q1_norm_squared:
+        fail("initial-krylov-vector-replay q1_norm_squared is incorrect")
+    if q1_norm_squared != 1:
+        fail("initial-krylov-vector-replay q1 must be unit length")
+    if mat_vec(matrix, q1) != aq1:
+        fail("initial-krylov-vector-replay aq1 is not A*q1")
+
+    first = checks["first-arnoldi-projection-replay"]
+    if first["expected_result"] != "sat":
+        fail("first-arnoldi-projection-replay must expect sat")
+    if first.get("proof_status") != "replay-only":
+        fail("first-arnoldi-projection-replay must be replay-only")
+    if single_witness_values(first, witnesses) != values:
+        fail("first-arnoldi-projection-replay must cite the Arnoldi witness")
+    if dot_product(q1, aq1) != h11:
+        fail("first-arnoldi-projection-replay h11 is incorrect")
+    if vector_sub(aq1, scalar_vec(h11, q1)) != residual1:
+        fail("first-arnoldi-projection-replay residual1 is incorrect")
+    if dot_product(residual1, residual1) != residual1_norm_squared:
+        fail("first-arnoldi-projection-replay residual norm square is incorrect")
+    if h21 <= 0:
+        fail("first-arnoldi-projection-replay h21 must be positive for this pack")
+    if h21 * h21 != residual1_norm_squared:
+        fail("first-arnoldi-projection-replay h21^2 must equal residual norm square")
+    if scalar_vec(Fraction(1, 1) / h21, residual1) != q2:
+        fail("first-arnoldi-projection-replay q2 is not residual1/h21")
+
+    orthonormal = checks["arnoldi-orthonormal-basis-replay"]
+    if orthonormal["expected_result"] != "sat":
+        fail("arnoldi-orthonormal-basis-replay must expect sat")
+    if orthonormal.get("proof_status") != "replay-only":
+        fail("arnoldi-orthonormal-basis-replay must be replay-only")
+    if single_witness_values(orthonormal, witnesses) != values:
+        fail("arnoldi-orthonormal-basis-replay must cite the Arnoldi witness")
+    if dot_product(q2, q2) != q2_norm_squared:
+        fail("arnoldi-orthonormal-basis-replay q2_norm_squared is incorrect")
+    if q2_norm_squared != 1:
+        fail("arnoldi-orthonormal-basis-replay q2 must be unit length")
+    if dot_product(q1, q2) != q1_q2_dot:
+        fail("arnoldi-orthonormal-basis-replay q1_q2_dot is incorrect")
+    if q1_q2_dot != 0:
+        fail("arnoldi-orthonormal-basis-replay requires q1^T*q2 = 0")
+
+    second = checks["second-column-hessenberg-replay"]
+    if second["expected_result"] != "sat":
+        fail("second-column-hessenberg-replay must expect sat")
+    if second.get("proof_status") != "replay-only":
+        fail("second-column-hessenberg-replay must be replay-only")
+    if single_witness_values(second, witnesses) != values:
+        fail("second-column-hessenberg-replay must cite the Arnoldi witness")
+    require_mat_vec_shape("Arnoldi q2", matrix, q2)
+    if mat_vec(matrix, q2) != aq2:
+        fail("second-column-hessenberg-replay aq2 is not A*q2")
+    if dot_product(q1, aq2) != h12:
+        fail("second-column-hessenberg-replay h12 is incorrect")
+    if dot_product(q2, aq2) != h22:
+        fail("second-column-hessenberg-replay h22 is incorrect")
+    if vector_sub(vector_sub(aq2, scalar_vec(h12, q1)), scalar_vec(h22, q2)) != full_residual:
+        fail("second-column-hessenberg-replay full residual is incorrect")
+    if any(item != 0 for item in full_residual):
+        fail("second-column-hessenberg-replay expects a complete two-dimensional relation")
+
+    relation = checks["hessenberg-relation-replay"]
+    if relation["expected_result"] != "sat":
+        fail("hessenberg-relation-replay must expect sat")
+    if relation.get("proof_status") != "replay-only":
+        fail("hessenberg-relation-replay must be replay-only")
+    if single_witness_values(relation, witnesses) != values:
+        fail("hessenberg-relation-replay must cite the Arnoldi witness")
+    computed_basis = [[q1[row], q2[row]] for row in range(len(q1))]
+    if basis_matrix != computed_basis:
+        fail("hessenberg-relation-replay basis_matrix must have q1 and q2 as columns")
+    expected_hessenberg = [[h11, h12], [h21, h22]]
+    if hessenberg_matrix != expected_hessenberg:
+        fail("hessenberg-relation-replay hessenberg_matrix entries are incorrect")
+    if mat_mul(matrix, basis_matrix) != a_times_basis:
+        fail("hessenberg-relation-replay a_times_basis is not A*Q")
+    if mat_mul(basis_matrix, hessenberg_matrix) != basis_times_hessenberg:
+        fail("hessenberg-relation-replay basis_times_hessenberg is not Q*H")
+    if a_times_basis != basis_times_hessenberg:
+        fail("hessenberg-relation-replay requires A*Q = Q*H")
+
+    bad = checks["bad-arnoldi-h21-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-arnoldi-h21-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-arnoldi-h21-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_arnoldi_h21_replay":
+        fail("bad-arnoldi-h21-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-step-arnoldi-transcript":
+        fail("bad-arnoldi-h21-rejected must cite the Arnoldi witness")
+    computed_h21 = require_fraction("bad Arnoldi computed_h21", data.get("computed_h21"))
+    claimed_h21 = require_fraction("bad Arnoldi claimed_h21", data.get("claimed_h21"))
+    if computed_h21 != h21:
+        fail("bad-arnoldi-h21-rejected computed h21 does not match replay")
+    if computed_h21 == claimed_h21:
+        fail("bad-arnoldi-h21-rejected malformed h21 unexpectedly matches")
+    if "separate qf-lra-bad-arnoldi-h21" not in bad.get("notes", ""):
+        fail("bad-arnoldi-h21-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-arnoldi-h21"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-arnoldi-h21 must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-arnoldi-h21 must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-arnoldi-h21 must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-step-arnoldi-transcript":
+        fail("qf-lra-bad-arnoldi-h21 must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-arnoldi-h21-rejected":
+        fail("qf-lra-bad-arnoldi-h21 must cite the replay row")
+    qf_computed = require_fraction("qf Arnoldi computed_h21", qf_data.get("computed_h21"))
+    qf_claimed = require_fraction("qf Arnoldi claimed_h21", qf_data.get("claimed_h21"))
+    if qf_computed != computed_h21 or qf_claimed != claimed_h21:
+        fail("qf-lra-bad-arnoldi-h21 data must match the replay row")
+    if qf_data.get("farkas_conflict") != "arnoldi_h21 = 3 and arnoldi_h21 = 2":
+        fail("qf-lra-bad-arnoldi-h21 must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Arnoldi smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-arnoldi-iteration-v0/smt2/"
+        "bad-arnoldi-h21-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-arnoldi-h21 smt2_artifact must name the checked source artifact")
+    check_source("qf Arnoldi smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Arnoldi farkas_regression", regression)
+    if "finite_arnoldi_iteration_bad_h21_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-arnoldi-h21 must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Arnoldi certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-arnoldi-h21 certificate must document checked Farkas evidence")
+
+    horizon = checks["general-arnoldi-gmres-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-arnoldi-gmres-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-arnoldi-gmres-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "Arnoldi horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string("Arnoldi horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_finite_walsh_hadamard_transform(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -29286,6 +29494,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_cyclic_geometry(expected)
     if metadata["id"] == "finite-compactness-v0":
         validate_finite_compactness(expected)
+    if metadata["id"] == "finite-arnoldi-iteration-v0":
+        validate_finite_arnoldi_iteration(expected)
     if metadata["id"] == "finite-connectedness-v0":
         validate_finite_connectedness(expected)
     if metadata["id"] == "finite-continuous-maps-v0":

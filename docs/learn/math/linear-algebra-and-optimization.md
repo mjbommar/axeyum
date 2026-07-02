@@ -26,6 +26,7 @@ Example packs:
 - [finite-singular-value-shadow-v0](../../../artifacts/examples/math/finite-singular-value-shadow-v0/)
 - [finite-power-iteration-v0](../../../artifacts/examples/math/finite-power-iteration-v0/)
 - [finite-conjugate-gradient-v0](../../../artifacts/examples/math/finite-conjugate-gradient-v0/)
+- [finite-arnoldi-iteration-v0](../../../artifacts/examples/math/finite-arnoldi-iteration-v0/)
 - [finite-jordan-chain-v0](../../../artifacts/examples/math/finite-jordan-chain-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
@@ -170,6 +171,12 @@ step-size updates, residual orthogonality, A-conjugacy, exact solution replay,
 and checked QF_LRA/Farkas bad-step-size evidence; its general convergence,
 finite-termination, Krylov minimization, preconditioner, roundoff, and
 floating-point-stability claims stay as Lean or numerical-honesty horizons.
+The finite Arnoldi slice adds exact Krylov vector replay, projection
+coefficients, orthonormal-basis checking, a full two-dimensional Hessenberg
+relation, and checked QF_LRA/Farkas bad-subdiagonal-coefficient evidence; its
+general Arnoldi decomposition, Ritz convergence, GMRES minimization, restart,
+reorthogonalization, and floating-point stability claims stay as Lean or
+numerical-honesty horizons.
 The finite line-search slice adds exact Armijo trial rejection, one accepted
 backtracked step, and checked QF_LRA/Farkas bad-acceptance,
 bad-descent-direction, and bad-accepted-candidate certificates; its theorem
@@ -677,6 +684,25 @@ exact replay computes `1/4`, then checks the resulting scalar contradiction
 through QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Conjugate Gradient](conjugate-gradient-end-to-end.md).
 
+For a finite Arnoldi example, encode a two-by-two matrix and a normalized start
+vector:
+
+```text
+A = [[1, 2], [3, 4]]
+q1 = [1, 0]
+h11 = 1
+h21 = 3
+q2 = [0, 1]
+H = [[1, 2], [3, 4]]
+```
+
+The `finite-arnoldi-iteration-v0` validator recomputes `A*q1`, the projection
+coefficient, residual norm, normalized second basis vector, orthonormality,
+the second Hessenberg column, and `A*Q = Q*H`. Its bad row changes `h21` to
+`2`; exact replay computes `3`, then checks the resulting scalar contradiction
+through QF_LRA/Farkas evidence. For a focused trace, read
+[End To End: Finite Arnoldi Iteration](arnoldi-iteration-end-to-end.md).
+
 For a finite line-search example, encode a one-dimensional quadratic and one
 Armijo backtracking trace:
 
@@ -859,6 +885,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_power_iteration_bad_coordinate_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-conjugate-gradient-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_conjugate_gradient_bad_alpha0_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-arnoldi-iteration-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_arnoldi_iteration_bad_h21_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0
