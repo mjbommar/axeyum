@@ -70,13 +70,21 @@ increment at a time and record each one.
    move the core decide-rate; its job is to surface real gaps (it has filed
    U6/U7/U8) and ship user-facing, certifying value, not to claim parity.
 
-**Immediate next focus (2026-06-30, updated after measurement): the two theory
-frontiers have full top-down build programs; nonlinear (P2.5) is now in
-execution.** Strings (P2.7) and nonlinear arithmetic (P2.5) are the largest
-remaining decide-rate gaps, each decomposed into a source-grounded program
-(current state → literature → architecture → phased build → evaluation) under
+**Immediate next focus (2026-07-02, updated after the landing wave): both theory
+frontiers are in execution and delivering.** Strings (P2.7) and nonlinear
+arithmetic (P2.5) remain the largest decide-rate gaps, each decomposed under
 [`docs/plan/track-2-theories/P2.7-strings/`](docs/plan/track-2-theories/P2.7-strings/)
 and [`docs/plan/track-2-theories/P2.5-nra/`](docs/plan/track-2-theories/P2.5-nra/).
+Landed 2026-07-01/02: **P2.7 Phase A essentially complete** (A.1a/b sort+ops;
+**A.2 = ADR-0052**: the `bv2nat`-linear blast + the parser-built unbounded
+length abstraction + the bounded-string `unsat` gate at every front door — the
+Gap-10 `str.len`-unsat marker decides, and a **measured pre-existing
+wrong-unsat class vs Z3 was repaired**); **P1.9 FM→simplex keystone complete**;
+**NRA coprime-split CAD projection** (curated QF_NRA 13→20, DISAGREE=0 on both
+fuzzes). Next levers: strings Phase B (word-level solver; the gate's `unknown`s
+are its routing signal) + recovering the 21 gate-downgraded declared-unsat
+instances via richer length facts/width widening; NRA free-division `/0`
+witnesses and threshold-1 monotonicity.
 
 **Grounding correction (important).** Reading the code + ADRs showed the NRA
 engine is *far more built* than the first plan draft assumed: the bignum algebraic
@@ -87,22 +95,31 @@ CAD** (2-variable complete, N-variable decision-complete, fuzz-gated) lives in
 primitives in `axeyum-ir`) and "Phase A" is mostly done — see the corrected
 [P2.5 current-state](docs/plan/track-2-theories/P2.5-nra/00-current-state.md).
 
-**Measured (2026-06-30, `check_auto` vs z3 4.13.3, curated corpus, DISAGREE=0):
-QF_NRA 9/36, QF_NIA 20/28.** Route-trace root cause: the strong CAD only decides
-*flat conjunctions*, so any Boolean structure (`or`/`distinct`/`ite`) over
-nonlinear atoms — essentially every real benchmark — declines and falls to the
-≤2-cross-product relaxation. **The dominant NRA lever is a DPLL(T)/case-split
-feeding conjunctive cubes to the existing CAD** (P2.5 Phase B), the concrete first
-slice of the [CDCL(T) loop (P1.5)](docs/plan/track-1-engine/P1.5-cdcl-t-loop.md).
+**Measured (2026-07-01/02, `check_auto` vs z3 4.13.3, curated corpus,
+DISAGREE=0): QF_NRA 20/37 (was 9/36), QF_NIA 20/28.** The 2026-06-30 route-trace
+finding (the CAD declines Boolean structure) was resolved by the landed
+case-split (`5ede57f4` — the earlier fuzz "failure" was a benign i128
+eval-overflow, not a wrong verdict), then sign/zero refutation (`f9e06baf`) and
+**coprime-split CAD projection** (`98719094` — the dominant decline was a
+shared-factor `Res ≡ 0`, not a cap). Strings re-measured under the ADR-0052
+gate: QF_S 48/134, QF_SEQ 26/33, QF_SLIA 11/50 — **23 previously-claimed
+`unsat`s are now honest `unknown`s, two of which were on declared-`sat`
+instances** (real wrong verdicts the oracle path never compared;
+[SCOREBOARD](bench-results/SCOREBOARD.md)).
 
-**Live status.** Landed a graceful-`unknown` fix for an i128 LRA-replay overflow.
-A Boolean-case-split prototype (`check_with_nra_dpll`) unlocked +1 (`issue3656`)
-but **the NRA differential fuzz vs Z3 caught a wrong verdict, so it was reverted**
-(soundness floor) — root-causing that wrong verdict is the current top task and
-blocks re-landing the case-split. Strings (P2.7) is still at the planning stage;
-its first increment is Phase A (first-class `Seq`/`String` IR sort + String+LIA
-over `len`, closing the `str.len`-unsat gap). Both keep DISAGREE=0, `unknown`-first,
-and the measured-scoreboard discipline (no decide-rate claim without a re-run).
+**Live status (2026-07-02).** The **whole-repo health debt was paid**: main's CI
+had been red for 198 consecutive runs (MSRV/let-chains, rustdoc, fmt,
+cargo-deny, ~100 stable-clippy sites — repaired in `0d10aeba`/`f4734abf`); two
+**exponential per-path DAG walks** were found and memoized
+(`set_cardinality`'s BV collector `0bc133c2` — evidence binaries had been
+grinding 8+ hours, stalling every full sweep since 2026-06-26; the `bv2nat`
+blast's skeleton scan `f403991b` — a 9-hour QF_S scoreboard hang); and five
+stale evidence reds that rotted behind the hang were un-rotted (`459ffc41`,
+`4ca37cee` — the zero-trust Alethe emitters again outrank the structural
+pre-solve certs, size-gated). Two honest `#[ignore]`s remain with tracked
+follow-ups (the uninterpreted-sort `ite` SAT row → the P1.4/P1.5 keystone;
+`fifo_bc04` perf → root-cause in progress). All landings keep DISAGREE=0,
+`unknown`-first, and the measured-scoreboard discipline.
 
 The per-track detail, exit criteria, and current frontier levers are in the
 sections below and under [`docs/plan/`](docs/plan/README.md). **Treat any
