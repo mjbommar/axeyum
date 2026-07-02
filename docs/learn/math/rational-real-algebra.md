@@ -627,6 +627,10 @@ polynomial replay, and a checked false-root Diophantine row, read
 [End To End: Polynomial Identities](polynomial-identities-end-to-end.md). For
 factorization, division, and GCD replay, read
 [End To End: Rational Polynomial Factorization](polynomial-factorization-end-to-end.md).
+For the focused boundary between exact complex real-pair and polynomial
+replay versus holomorphic, analytic-continuation, algebraic-closure, and
+arbitrary factorization theorem claims, read
+[Complex Analysis Theorem Boundary](complex-analysis-theorem-boundary.md).
 For finite coefficient extraction and convolution replay, read
 [End To End: Generating Functions](generating-functions-end-to-end.md). For
 finite recurrence-prefix replay, read

@@ -184,6 +184,23 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Complex-analysis and factorization horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --field complex_analysis \
+  --shadow-state checked-finite-shadow \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack complex-plane-transforms-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack polynomial-factorization-rational-v0 \
+  --require-any
+```
+
 Measure/probability horizons:
 
 ```sh
@@ -618,6 +635,7 @@ The main learner maps that explain these boundaries are:
 - [Real Completeness Theorem Boundary](../learn/math/real-completeness-theorem-boundary.md)
 - [Monotone Convergence Theorem Boundary](../learn/math/monotone-convergence-theorem-boundary.md)
 - [Recurrence And Asymptotic Theorem Boundary](../learn/math/recurrence-asymptotic-theorem-boundary.md)
+- [Complex Analysis Theorem Boundary](../learn/math/complex-analysis-theorem-boundary.md)
 - [Topology Theorem Boundary](../learn/math/topology-theorem-boundary.md)
 - [Root-Finding Convergence Theorem Boundary](../learn/math/root-finding-convergence-theorem-boundary.md)
 - [Hyperplane Separation Theorem Boundary](../learn/math/hyperplane-separation-theorem-boundary.md)

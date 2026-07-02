@@ -22,6 +22,10 @@ analytic theory. Completeness, IVT/MVT/FTC, uniform convergence, analytic
 continuation, holomorphicity, contour integration, general factorization,
 algebraic closure, numerical stability, and floating-point error guarantees
 remain in the proof-horizon or numerical-honesty lanes.
+For the focused learner-facing boundary over exact complex real-pair,
+complex-plane transform, fixed root, and rational-polynomial factorization
+resources, read
+[Complex Analysis Theorem Boundary](../learn/math/complex-analysis-theorem-boundary.md).
 
 ## Query Shape
 
@@ -253,6 +257,23 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Display complex-analysis and factorization theorem horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --field complex_analysis \
+  --shadow-state checked-finite-shadow \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack complex-plane-transforms-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack polynomial-factorization-rational-v0 \
+  --require-any
+```
+
 Display checked exact-vs-floating boundary rows:
 
 ```sh
@@ -327,6 +348,12 @@ For the finite Euler boundary, read
 [Euler Method Theorem Boundary](../learn/math/euler-method-theorem-boundary.md)
 before displaying ODE convergence, stability, stiffness, PDE, or
 floating-point method claims next to exact rational finite-step rows.
+
+For the complex-analysis boundary, read
+[Complex Analysis Theorem Boundary](../learn/math/complex-analysis-theorem-boundary.md)
+before displaying holomorphic, contour-integral, analytic-continuation,
+algebraic-closure, or arbitrary factorization claims next to exact real-pair
+and coefficient rows.
 
 For the bounded monotone sequence boundary, read
 [Monotone Convergence Theorem Boundary](../learn/math/monotone-convergence-theorem-boundary.md)

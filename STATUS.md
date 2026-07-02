@@ -234,6 +234,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Complex-analysis theorem-boundary resource landed.**
+  `complex-analysis-theorem-boundary.md` now separates `complex-algebraic-v0`,
+  `complex-plane-transforms-v0`, `polynomial-identities-v0`, and
+  `polynomial-factorization-rational-v0` exact complex real-pair, fixed
+  transform, displayed root, coefficient, division, GCD, square-free, and
+  rational factorization replay plus scoped QF_LRA/Farkas and
+  QF_LIA/Diophantine evidence from holomorphic, Cauchy/residue,
+  analytic-continuation, conformal-map, algebraic-closure, fundamental theorem
+  of algebra, and arbitrary factorization theorem claims. The number-system,
+  algebra, rational-real, analysis/numerical, theorem-horizon, learner-index,
+  and smoke-query docs now expose the boundary through pack-specific
+  checked-row and horizon-frontier queries.
+
 - **Topology theorem-boundary resource landed.**
   `topology-theorem-boundary.md` now separates `finite-topology-v0`,
   `finite-compactness-v0`, `finite-connectedness-v0`,

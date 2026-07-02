@@ -31,6 +31,7 @@ Companion pages:
 - [Real Completeness Theorem Boundary](real-completeness-theorem-boundary.md)
 - [Monotone Convergence Theorem Boundary](monotone-convergence-theorem-boundary.md)
 - [Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md)
+- [Complex Analysis Theorem Boundary](complex-analysis-theorem-boundary.md)
 - [Root-Finding Convergence Theorem Boundary](root-finding-convergence-theorem-boundary.md)
 - [Hyperplane Separation Theorem Boundary](hyperplane-separation-theorem-boundary.md)
 - [KKT Sufficiency Theorem Boundary](kkt-sufficiency-theorem-boundary.md)

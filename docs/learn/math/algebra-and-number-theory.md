@@ -425,6 +425,7 @@ data through replay, read
 [End To End: Complex Plane Transforms](complex-plane-transforms-end-to-end.md),
 [End To End: Polynomial Identities](polynomial-identities-end-to-end.md),
 [End To End: Rational Polynomial Factorization](polynomial-factorization-end-to-end.md),
+[Complex Analysis Theorem Boundary](complex-analysis-theorem-boundary.md),
 [End To End: Finite Groups](finite-groups-end-to-end.md),
 [End To End: Finite Monoids](finite-monoids-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md),

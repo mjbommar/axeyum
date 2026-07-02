@@ -2163,6 +2163,20 @@ Pick one row per commit unless the change is purely navigational.
      layers, and adds pack-specific checked-row and horizon-frontier queries
      to the public smoke gate without promoting finite topology tables into
      theorem coverage.
+255. Landed: add `complex-analysis-theorem-boundary.md` as the focused
+     finite/general complex-analysis theorem-boundary page for
+     `complex-algebraic-v0`, `complex-plane-transforms-v0`,
+     `polynomial-identities-v0`, and
+     `polynomial-factorization-rational-v0`. It maps exact complex real-pair
+     arithmetic, conjugation/norm replay, fixed root witnesses, unit-root and
+     Mobius-transform replay, coefficient identities, rational polynomial
+     division/GCD/square-free replay, and scoped QF_LRA/Farkas plus
+     QF_LIA/Diophantine evidence to the missing holomorphic, Cauchy/residue,
+     analytic-continuation, conformal-map, algebraic-closure, fundamental
+     theorem of algebra, and arbitrary factorization theorem layers, and adds
+     pack-specific checked-row and horizon-frontier queries to the public
+     smoke gate without promoting finite exact-arithmetic rows into theorem
+     coverage.
 
 ## Validation Checklist
 

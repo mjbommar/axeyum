@@ -186,6 +186,7 @@ modular quotient-ring replay, read
 [End To End: Bounded Number Theory](number-theory-end-to-end.md),
 [End To End: Complex Algebraic Replay](complex-algebraic-end-to-end.md),
 [End To End: Complex Plane Transforms](complex-plane-transforms-end-to-end.md),
+[Complex Analysis Theorem Boundary](complex-analysis-theorem-boundary.md),
 [End To End: Rational Midpoint](rational-midpoint-end-to-end.md),
 [End To End: Finite Fields](finite-fields-end-to-end.md), and
 [End To End: Finite Ideals And Quotient Rings](finite-ideals-quotient-rings-end-to-end.md)
@@ -198,3 +199,5 @@ General real completeness, infinite decimal/limit facts, analytic number
 theory, algebraic number theory, and the fundamental theorem of algebra are not
 claimed by these packs. They need Lean-backed theorem reconstruction or a much
 broader theory route.
+For the focused complex-number and complex-analysis boundary, read
+[Complex Analysis Theorem Boundary](complex-analysis-theorem-boundary.md).

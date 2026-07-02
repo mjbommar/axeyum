@@ -271,6 +271,11 @@ Companion maps:
   unit-root cycle replay, conjugation over products, a rational Mobius
   transform, QF_LRA/Farkas bad conjugation-product imaginary-part and
   unit-square real-part rejections, and the complex-analysis Lean horizon.
+- [Complex Analysis Theorem Boundary](complex-analysis-theorem-boundary.md):
+  separates exact complex real-pair arithmetic, fixed plane transforms,
+  displayed roots, and rational polynomial factorization replay from
+  holomorphic, contour-integral, analytic-continuation, algebraic-closure, and
+  arbitrary factorization theorem targets.
 - [Rational Midpoint](rational-midpoint-end-to-end.md): follows an exact
   density witness through fraction arithmetic and replay-only evidence status.
 - [Bounded Rational Real Analysis](real-analysis-rational-end-to-end.md):

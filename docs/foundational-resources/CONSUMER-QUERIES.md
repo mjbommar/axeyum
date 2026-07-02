@@ -1723,6 +1723,8 @@ For complex analysis, query the Farkas route to keep exact real-pair complex
 arithmetic, norm, unit-circle transform, and polynomial-discriminant rows
 grouped while leaving holomorphic, contour-integral, analytic-continuation,
 and general complex-analysis theorems in the Lean-horizon lane:
+For the focused finite/general theorem boundary, read
+[Complex Analysis Theorem Boundary](../learn/math/complex-analysis-theorem-boundary.md).
 
 ```sh
 python3 scripts/query-foundational-resources.py fields \
@@ -2258,6 +2260,7 @@ python3 scripts/query-foundational-resources.py checks --field numerical_analysi
 python3 scripts/query-foundational-resources.py fields --field complex_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field complex_analysis --text real-pair --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field complex_analysis --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --field complex_analysis --shadow-state checked-finite-shadow --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field optimization_and_convexity --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text objective --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field optimization_and_convexity --text convexity --require-any >/dev/null

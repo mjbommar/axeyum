@@ -511,7 +511,14 @@ python3 scripts/query-foundational-resources.py fields --field complex_analysis 
 python3 scripts/query-foundational-resources.py concepts --field complex_analysis --text real-pair --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field complex_analysis --text polynomial --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field complex_analysis --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --field complex_analysis --shadow-state checked-finite-shadow --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --pack complex-plane-transforms-v0 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --pack polynomial-factorization-rational-v0 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack complex-algebraic-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack complex-plane-transforms-v0 --route Farkas --proof-status checked --text conjugation --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack complex-plane-transforms-v0 --route Farkas --proof-status checked --text unit --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack polynomial-identities-v0 --route Diophantine --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack polynomial-factorization-rational-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_complex_real_pair_transform --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_complex_real_pair_transform --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field optimization_and_convexity --route Farkas --require-any >/dev/null

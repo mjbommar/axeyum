@@ -2002,6 +2002,11 @@ Fisher tail replay, probability-ordered two-sided Fisher replay, checked
 QF_LRA/Farkas bad Fisher and multinomial p-value rejection, a checked QF_LIA
 bad tail-count certificate, and the statistical
 numerical-honesty horizon.
+`complex-analysis-theorem-boundary.md` now gives exact complex real-pair,
+complex-plane transform, fixed root, polynomial-identity, and rational
+factorization packs a focused finite/general complex-analysis trust map without
+promoting exact arithmetic replay into holomorphic, analytic-continuation,
+algebraic-closure, or arbitrary factorization theorem coverage.
 `metric-continuity-v0` now has a learner-facing end-to-end lesson for finite
 metric-table replay, finite Lipschitz checks, epsilon-delta containment,
 open-ball preimage replay, checked QF_LRA/Farkas bad-delta and bad-preimage
