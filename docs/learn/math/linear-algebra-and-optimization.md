@@ -109,12 +109,14 @@ SDP slice adds two-by-two PSD replay, trace/objective arithmetic, dual-slack
 matrix replay, zero duality-gap checking, and checked QF_LRA/Farkas
 bad-objective, bad-duality-gap, and bad-slack-entry certificates; its theorem
 boundary is
-[SDP Duality Theorem Boundary](sdp-duality-theorem-boundary.md). The finite-gradient-descent slice adds exact
-quadratic gradient replay, step-update replay, objective-decrease checking,
-finite descent-bound replay, and a checked QF_LRA/Farkas bad-decrease
-certificate. The finite line-search slice adds exact Armijo trial rejection,
-one accepted backtracked step, and a checked QF_LRA/Farkas bad-acceptance
-certificate. The finite Wolfe line-search slice adds exact Wolfe
+[SDP Duality Theorem Boundary](sdp-duality-theorem-boundary.md). The
+finite-gradient-descent slice adds exact quadratic gradient replay, step-update
+replay, objective-decrease checking, finite descent-bound replay, and a checked
+QF_LRA/Farkas bad-decrease certificate; its theorem boundary is
+[Gradient Descent Convergence Theorem Boundary](gradient-descent-convergence-theorem-boundary.md).
+The finite line-search slice adds exact Armijo trial rejection, one accepted
+backtracked step, and a checked QF_LRA/Farkas bad-acceptance certificate. The
+finite Wolfe line-search slice adds exact Wolfe
 sufficient-decrease and curvature replay plus checked bad-minimizer and
 bad-curvature certificates. The finite projected-gradient slice adds exact
 interval projection after a trial step, projected objective decrease, and
@@ -483,6 +485,10 @@ x-coordinate to `3/4`; exact replay computes decrease error `3/4` and
 `next_x = 1/2`, then checks the resulting exact-linear contradictions through
 QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Gradient Descent Checks](finite-gradient-descent-end-to-end.md).
+For the theorem boundary that keeps those finite gradient-descent rows separate
+from descent lemmas, convergence rates, stopping criteria, variants, and
+floating-point behavior, read
+[Gradient Descent Convergence Theorem Boundary](gradient-descent-convergence-theorem-boundary.md).
 
 For a finite line-search example, encode a one-dimensional quadratic and one
 Armijo backtracking trace:

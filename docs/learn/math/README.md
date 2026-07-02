@@ -284,6 +284,10 @@ Companion maps:
   follows exact quadratic gradient replay, one descent step, a finite descent
   bound, checked QF_LRA/Farkas bad-decrease and bad step-coordinate
   rejections, and the general convergence Lean horizon.
+- [Gradient Descent Convergence Theorem Boundary](gradient-descent-convergence-theorem-boundary.md):
+  maps those finite gradient, step, objective, and descent-bound shadows to the
+  missing descent-lemma, smooth-convex convergence, rate, stopping-criterion,
+  variant, and numerical-stability routes.
 - [Finite Line Search Checks](finite-line-search-end-to-end.md): follows exact
   descent-direction replay, Armijo trial rejection, one accepted backtracked
   step, checked QF_LRA/Farkas bad-acceptance and bad accepted-candidate

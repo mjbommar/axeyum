@@ -1968,6 +1968,15 @@ Pick one row per commit unless the change is purely navigational.
      numerical-stability routes, and adds SDP-specific horizon queries to the
      public smoke gate without adding a duplicate pack or changing resource
      counts.
+234. Landed: add `gradient-descent-convergence-theorem-boundary.md` as the
+     focused theorem-boundary page for `finite-gradient-descent-v0`. It maps
+     exact quadratic gradient replay, one-step update replay, objective
+     decrease replay, descent-bound slack replay, and checked QF_LRA/Farkas bad
+     decrease, bad step-coordinate, and bad descent-bound rows to the missing
+     descent lemma, smooth-convex convergence, step-size, stopping-criterion,
+     rate, variant, and numerical-stability theorem routes, and adds
+     gradient-specific horizon queries to the public smoke gate without adding
+     a duplicate pack or changing resource counts.
 
 ## Validation Checklist
 

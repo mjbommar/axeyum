@@ -312,6 +312,10 @@ replay computes decrease error `3/4` and `next_x = 1/2`, then checks the
 resulting exact-linear contradictions through QF_LRA/Farkas evidence. For a
 focused trace, read
 [End To End: Finite Gradient Descent Checks](finite-gradient-descent-end-to-end.md).
+For the theorem boundary that keeps those finite gradient, step, objective, and
+descent-bound rows separate from descent lemmas, convergence, rates, stopping
+criteria, variants, and numerical-stability claims, read
+[Gradient Descent Convergence Theorem Boundary](gradient-descent-convergence-theorem-boundary.md).
 
 For a finite line-search check, encode one exact Armijo backtracking trace:
 

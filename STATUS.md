@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Gradient-descent convergence theorem-boundary resource landed.**
+  `gradient-descent-convergence-theorem-boundary.md` now separates
+  `finite-gradient-descent-v0` exact quadratic gradient replay, one-step update
+  replay, objective-decrease replay, descent-bound slack replay, and checked
+  bad decrease/bad step-coordinate/bad descent-bound QF_LRA/Farkas rows from
+  descent lemmas, smooth-convex convergence, step-size conditions, stopping
+  criteria, convergence rates, stochastic/accelerated variants, and numerical
+  stability theorem claims. The theorem horizon, optimization/convexity,
+  learner-map, and smoke query docs now expose the gradient-descent boundary
+  directly.
+
 - **SDP duality theorem-boundary resource landed.**
   `sdp-duality-theorem-boundary.md` now separates `finite-sdp-v0` finite
   two-by-two PSD replay, trace/objective replay, dual-slack replay, zero

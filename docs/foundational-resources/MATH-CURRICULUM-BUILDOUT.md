@@ -2572,6 +2572,11 @@ the horizon lanes. The learner/planning layer now also has
 as the focused page that keeps finite two-by-two PSD/objective/slack/gap replay
 and checked Farkas bad-row evidence separate from SDP weak/strong duality,
 Slater conditions, cone-KKT/complementary-slackness, convergence, and numerical
+stability theorem claims; and
+[`gradient-descent-convergence-theorem-boundary.md`](../learn/math/gradient-descent-convergence-theorem-boundary.md)
+as the focused page that keeps finite gradient/step/objective/descent-bound
+replay and checked Farkas bad-row evidence separate from descent lemmas,
+smooth-convex convergence, rates, stopping criteria, variants, and numerical
 stability theorem claims.
 The functional-analysis/operator consumer layer now also has
 [`FUNCTIONAL-OPERATOR-QUERIES.md`](FUNCTIONAL-OPERATOR-QUERIES.md). The guide
@@ -2628,10 +2633,11 @@ finite SDP objective/slack/gap replay, finite gradient-descent replay, finite
 line-search replay, residual bounds, finite Wolfe line-search replay, finite
 projected-gradient replay, finite proximal-gradient replay, and
 matrix witnesses stay visible through the public JSON boundary without
-promoting duality, KKT sufficiency, SDP strong duality, gradient-descent,
-Slater conditions, gradient-descent, line-search, active-set method theory,
-Wolfe line-search, projected-gradient convergence, proximal-gradient
-convergence, or convergence-theorem claims.
+promoting duality, KKT sufficiency, SDP strong duality, Slater conditions,
+gradient-descent convergence/rates, line-search convergence,
+active-set method theory, Wolfe line-search theory, projected-gradient
+convergence, proximal-gradient convergence, or broader convergence-theorem
+claims.
 The consumer query layer now also exposes functional-analysis/operator
 readiness: `CONSUMER-QUERIES.md` shows the Farkas field summary,
 operator/Chebyshev bridge lookup, concept-scoped

@@ -311,6 +311,19 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Gradient-descent convergence, descent-lemma, and rate horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text gradient \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-gradient-descent-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Hitting-time, recurrence/transience, and stochastic-process horizons:
 
 ```sh
