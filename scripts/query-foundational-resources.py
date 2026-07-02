@@ -534,6 +534,13 @@ class ResourceStore:
 
 
 FRONTIER_GROUPS = ["field", "fragment", "curriculum-node", "decidability"]
+PACK_ACTIONS = [
+    "proof-upgrade",
+    "proof-review",
+    "theorem-horizon",
+    "low-checked-density",
+    "maintain",
+]
 
 
 def command_summary(args: argparse.Namespace) -> int:
@@ -1144,6 +1151,163 @@ def command_coverage_frontier(args: argparse.Namespace) -> int:
     )
 
 
+def command_pack_frontier(args: argparse.Namespace) -> int:
+    store = ResourceStore()
+    rows = []
+
+    for pack in store.packs:
+        metadata = pack["metadata"]
+        checks = pack["checks"]
+        if args.field and args.field not in metadata.get("field_ids", []):
+            continue
+        if args.curriculum_node and args.curriculum_node not in metadata.get(
+            "curriculum_nodes", []
+        ):
+            continue
+        if not contains_text(metadata.get("axeyum_fragments", []), args.fragment):
+            continue
+        if args.solver_reuse:
+            solver_reuse = metadata.get("solver_reuse") or {}
+            if solver_reuse.get("status", "unclassified") != args.solver_reuse:
+                continue
+        if args.route:
+            routes = recipe_names(metadata)
+            route_match = any(route_name_matches(route, args.route) for route in routes)
+            if not route_match and not contains_text(
+                metadata_route_text(metadata), args.route
+            ):
+                continue
+        if args.text:
+            solver_reuse = metadata.get("solver_reuse") or {}
+            haystack = [
+                metadata.get("id", ""),
+                metadata.get("title", ""),
+                metadata.get("trust_status", ""),
+                solver_reuse.get("target", ""),
+                solver_reuse.get("pressure", ""),
+                solver_reuse.get("next_step", ""),
+                *(metadata.get("source_refs", [])),
+                *(metadata.get("graduation_criteria", [])),
+            ]
+            for check in checks:
+                haystack.extend(check_route_text(check))
+            if not contains_text(haystack, args.text):
+                continue
+
+        checked_checks = [
+            check for check in checks if check.get("proof_status") == "checked"
+        ]
+        replay_checks = [
+            check for check in checks if check.get("proof_status") == "replay-only"
+        ]
+        replay_unsat_checks = [
+            check
+            for check in replay_checks
+            if check.get("expected_result") == "unsat"
+        ]
+        checked_unsat_checks = [
+            check
+            for check in checked_checks
+            if check.get("expected_result") == "unsat"
+        ]
+        horizon_checks = [
+            check for check in checks if check.get("proof_status") == "lean-horizon"
+        ]
+
+        promotion_states = []
+        for route in recipe_names(metadata):
+            if route not in UPGRADE_ROUTE_ORDER or not replay_unsat_checks:
+                continue
+            route_checked_checks = [
+                check
+                for check in checked_unsat_checks
+                if route_text_matches(route, check_route_text(check))
+            ]
+            state = promotion_state(len(replay_unsat_checks), len(route_checked_checks))
+            promotion_states.append(f"{route}:{state}")
+
+        promotion_state_values = {
+            state.split(":", 1)[1] for state in promotion_states
+        }
+        if args.promotion_state and args.promotion_state not in promotion_state_values:
+            continue
+
+        shadow_state = (
+            horizon_shadow_state(len(checked_checks), len(replay_checks))
+            if horizon_checks
+            else "-"
+        )
+        if args.shadow_state and shadow_state != args.shadow_state:
+            continue
+
+        checked_ratio = round(len(checked_checks) / len(checks), 3) if checks else 0.0
+        if args.min_replay_unsat and len(replay_unsat_checks) < args.min_replay_unsat:
+            continue
+        if args.min_horizon and len(horizon_checks) < args.min_horizon:
+            continue
+        if args.max_checked_ratio is not None and checked_ratio > args.max_checked_ratio:
+            continue
+
+        actions = []
+        if promotion_state_values & {"no-route-contrast", "partial-route-contrast"}:
+            actions.append("proof-upgrade")
+        elif replay_unsat_checks:
+            actions.append("proof-review")
+        if horizon_checks:
+            actions.append("theorem-horizon")
+        if checked_ratio < 0.35:
+            actions.append("low-checked-density")
+        if not actions:
+            actions.append("maintain")
+        if args.action and args.action not in actions:
+            continue
+
+        action_score = (
+            len(replay_unsat_checks) * 4
+            + len(horizon_checks) * 2
+            + (5 if "proof-upgrade" in actions else 0)
+            + (2 if "low-checked-density" in actions else 0)
+        )
+        rows.append(
+            {
+                "pack": pack["id"],
+                "fields": metadata.get("field_ids", []),
+                "curriculum_nodes": metadata.get("curriculum_nodes", []),
+                "checks": len(checks),
+                "checked": len(checked_checks),
+                "replay_unsat": len(replay_unsat_checks),
+                "lean_horizon": len(horizon_checks),
+                "checked_ratio": checked_ratio,
+                "actions": actions,
+                "promotion_states": promotion_states or ["-"],
+                "shadow_state": shadow_state,
+                "replay_checks": [check["id"] for check in replay_unsat_checks[:5]],
+                "horizon_checks": [check["id"] for check in horizon_checks[:5]],
+                "path": pack["path"],
+                "_sort": (-action_score, pack["id"]),
+            }
+        )
+
+    rows = [clean_row(row) for row in sorted(rows, key=lambda row: row["_sort"])]
+    return emit(
+        rows,
+        [
+            "pack",
+            "fields",
+            "checks",
+            "checked",
+            "replay_unsat",
+            "lean_horizon",
+            "checked_ratio",
+            "actions",
+            "promotion_states",
+            "shadow_state",
+            "path",
+        ],
+        args,
+    )
+
+
 def command_upgrade_frontier(args: argparse.Namespace) -> int:
     store = ResourceStore()
     rows = []
@@ -1532,6 +1696,65 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_output_args(coverage_frontier, default_limit=DEFAULT_LIMIT)
     coverage_frontier.set_defaults(func=command_coverage_frontier)
+
+    pack_frontier = subparsers.add_parser(
+        "pack-frontier",
+        help="rank individual packs by proof, horizon, and evidence pressure",
+    )
+    pack_frontier.add_argument("--field", help="exact field id, such as real_analysis")
+    pack_frontier.add_argument("--curriculum-node", help="exact curriculum node id")
+    pack_frontier.add_argument("--fragment", help="case-insensitive fragment substring")
+    pack_frontier.add_argument(
+        "--route",
+        help="case-insensitive proof/evidence route, such as Farkas or Alethe",
+    )
+    pack_frontier.add_argument(
+        "--action",
+        choices=PACK_ACTIONS,
+        help="filter by suggested pack-level action",
+    )
+    pack_frontier.add_argument(
+        "--promotion-state",
+        choices=[
+            "no-route-contrast",
+            "partial-route-contrast",
+            "covered-by-route-contrast",
+        ],
+        help="filter by any route promotion-state present in the pack",
+    )
+    pack_frontier.add_argument(
+        "--shadow-state",
+        choices=[
+            "checked-finite-shadow",
+            "replay-only-finite-shadow",
+            "no-finite-shadow",
+        ],
+        help="filter horizon packs by finite-shadow evidence state",
+    )
+    pack_frontier.add_argument(
+        "--solver-reuse",
+        choices=["candidate", "promoted", "non-benchmark-horizon", "unclassified"],
+    )
+    pack_frontier.add_argument("--text", help="case-insensitive search over public text")
+    pack_frontier.add_argument(
+        "--min-replay-unsat",
+        type=int,
+        default=0,
+        help="only show packs with at least this many replay-only UNSAT rows",
+    )
+    pack_frontier.add_argument(
+        "--min-horizon",
+        type=int,
+        default=0,
+        help="only show packs with at least this many Lean-horizon rows",
+    )
+    pack_frontier.add_argument(
+        "--max-checked-ratio",
+        type=float,
+        help="only show packs at or below this checked/checks ratio",
+    )
+    add_output_args(pack_frontier, default_limit=DEFAULT_LIMIT)
+    pack_frontier.set_defaults(func=command_pack_frontier)
 
     upgrade_frontier = subparsers.add_parser(
         "upgrade-frontier",

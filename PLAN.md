@@ -213,6 +213,11 @@ it ranks field, fragment, curriculum-node, and decidability groups by checked
 evidence, replay-only refutations, and Lean-horizon pressure so builders can
 choose the next pack, proof-upgrade, or learner-page increment from the public
 JSON contract.
+The pack-frontier query guide is
+[`docs/foundational-resources/PACK-FRONTIER-QUERIES.md`](docs/foundational-resources/PACK-FRONTIER-QUERIES.md);
+it drills from those group-level rankings to concrete pack worklists with
+checked-density, proof-review, theorem-horizon, route-promotion, and
+finite-shadow filters.
 The curriculum-node query guide is
 [`docs/foundational-resources/CURRICULUM-NODE-QUERIES.md`](docs/foundational-resources/CURRICULUM-NODE-QUERIES.md);
 it records concept, pack, field, route, checked-row, and horizon drilldowns for

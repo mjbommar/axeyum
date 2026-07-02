@@ -19,6 +19,15 @@ rows, replay-only rows, replay-only `unsat` rows, Lean-horizon rows, checked-row
 ratio, suggested action labels, and sample packs. It is a work-selection view,
 not a theorem, benchmark, or solver-parity metric.
 
+When a group needs concrete pack-level follow-up, use
+[Pack Frontier Queries](PACK-FRONTIER-QUERIES.md) or:
+
+```sh
+python3 scripts/query-foundational-resources.py pack-frontier \
+  --field real_analysis \
+  --require-any
+```
+
 ## Start Here
 
 Rank field pressure:
@@ -126,7 +135,7 @@ That is useful for planning pressure and bad for corpus-total claims.
 Use this command to choose the next resource increment:
 
 1. Pick a high-pressure group.
-2. Drill into it with `packs`, `checks`, `upgrade-frontier`, or
+2. Drill into it with `pack-frontier`, `packs`, `checks`, `upgrade-frontier`, or
    `horizon-frontier`.
 3. Decide whether the next commit should add learner wording, a checked proof
    row, a Lean-horizon note, or a new pack.

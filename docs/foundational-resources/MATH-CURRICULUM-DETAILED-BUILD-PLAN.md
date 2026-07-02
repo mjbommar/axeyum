@@ -39,6 +39,9 @@ resource builder needs to rank fields, fragments, curriculum nodes, or
 decidability classes by checked-evidence density, replay-only refutations, and
 Lean/theorem horizons before choosing the next pack, proof-upgrade, or learner
 increment.
+Use [PACK-FRONTIER-QUERIES.md](PACK-FRONTIER-QUERIES.md) after that ranking
+when the next decision needs concrete pack rows, action labels,
+route-promotion states, finite-shadow state, and pack paths.
 Use [CHECKER-TAMPER-MATRIX.md](CHECKER-TAMPER-MATRIX.md) to find the
 route-specific corrupted-evidence command before calling a route tamper-covered.
 
@@ -128,6 +131,8 @@ Exit criteria:
 
 - `python3 scripts/query-foundational-resources.py summary` shows no accidental
   candidate drift.
+- `python3 scripts/query-foundational-resources.py pack-frontier --field real_analysis --require-any`
+  returns concrete pack-level follow-up rows from the public JSON boundary.
 - Every still-unclassified pack has a short reason in the proof frontier or this
   file's next revision.
 - `PROOF-UPGRADE-FRONTIER.md` names the first checked route for every promoted

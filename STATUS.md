@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Pack-frontier query landed.**
+  `scripts/query-foundational-resources.py pack-frontier` now ranks concrete
+  packs by checked evidence, replay-only `unsat` pressure, Lean-horizon rows,
+  checked-row density, action labels, route-promotion states, and finite-shadow
+  state. The guide `docs/foundational-resources/PACK-FRONTIER-QUERIES.md`, the
+  public contract, consumer query docs, buildout ledger, and foundational smoke
+  gate now expose the drilldown from group-level frontier pressure to exact pack
+  worklists without turning those ranks into theorem, benchmark, solver, or
+  parity claims.
+
 - **Theorem-horizon shadow-state triage landed.**
   `scripts/query-foundational-resources.py horizon-frontier` now reports and
   filters `shadow_state`: `checked-finite-shadow`,

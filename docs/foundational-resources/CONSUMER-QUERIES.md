@@ -18,6 +18,8 @@ For stable files, fields, schema-version expectations, compatibility rules, and
 required smoke commands, see [PUBLIC-DATA-CONTRACT.md](PUBLIC-DATA-CONTRACT.md).
 For ranked resource-builder pressure over the same public JSON, see
 [COVERAGE-FRONTIER-QUERIES.md](COVERAGE-FRONTIER-QUERIES.md).
+For concrete pack-level worklists under those frontier groups, see
+[PACK-FRONTIER-QUERIES.md](PACK-FRONTIER-QUERIES.md).
 For a compact all-field map of the current smoke-checked readiness routes,
 bridge lookups, checked-row drilldowns, and theorem boundaries, see
 [FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md).
@@ -153,6 +155,45 @@ python3 scripts/query-foundational-resources.py coverage-frontier \
 
 Use [COVERAGE-FRONTIER-QUERIES.md](COVERAGE-FRONTIER-QUERIES.md) before turning
 a high-pressure group into a pack, proof-upgrade, or learner-page increment.
+
+## Pack Frontier
+
+```sh
+python3 scripts/query-foundational-resources.py pack-frontier \
+  --field real_analysis \
+  --require-any
+```
+
+This answers: "Which concrete packs should a resource builder inspect after a
+field, fragment, or curriculum-node frontier shows pressure?" Rows include
+checked evidence counts, replay-only `unsat` counts, Lean-horizon counts,
+checked-row density, action labels, route-promotion states, finite-shadow state,
+and pack paths.
+
+Useful variants:
+
+```sh
+python3 scripts/query-foundational-resources.py pack-frontier \
+  --field topology \
+  --action theorem-horizon \
+  --shadow-state checked-finite-shadow \
+  --require-any
+
+python3 scripts/query-foundational-resources.py pack-frontier \
+  --field measure_theory \
+  --max-checked-ratio 0.35 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py pack-frontier \
+  --field real_analysis \
+  --action proof-review \
+  --format json \
+  --require-any
+```
+
+Use [PACK-FRONTIER-QUERIES.md](PACK-FRONTIER-QUERIES.md) before treating an
+action label as work. The labels are selection hints, not theorem, benchmark,
+or parity claims.
 
 ## Display Label Audit
 

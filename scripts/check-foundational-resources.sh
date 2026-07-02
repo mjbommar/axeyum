@@ -20,6 +20,10 @@ python3 scripts/query-foundational-resources.py coverage --by curriculum-node --
 python3 scripts/query-foundational-resources.py coverage-frontier --by field --require-any >/dev/null
 python3 scripts/query-foundational-resources.py coverage-frontier --by fragment --min-replay-unsat 1 --format json --require-any >/dev/null
 python3 scripts/query-foundational-resources.py coverage-frontier --by curriculum-node --field topology --min-horizon 1 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py pack-frontier --field real_analysis --require-any >/dev/null
+python3 scripts/query-foundational-resources.py pack-frontier --field topology --action theorem-horizon --shadow-state checked-finite-shadow --require-any >/dev/null
+python3 scripts/query-foundational-resources.py pack-frontier --field measure_theory --max-checked-ratio 0.35 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py pack-frontier --field real_analysis --action proof-review --format json --require-any >/dev/null
 python3 scripts/query-foundational-resources.py routes --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py routes --route qf-bv --require-any >/dev/null
 python3 scripts/query-foundational-resources.py routes --route Diophantine --field number_theory --require-any >/dev/null

@@ -136,6 +136,17 @@ node, or decidability class and reports checked evidence, replay-only rows,
 replay-only refutations, and theorem horizons for work selection. It does not
 define corpus totals, benchmark claims, or parity claims.
 
+Pack-frontier discovery drills from those group-level rankings to concrete
+pack-level worklists:
+
+```sh
+python3 scripts/query-foundational-resources.py pack-frontier --field real_analysis
+```
+
+This command reports checked evidence, replay-only refutations, theorem
+horizons, checked-row density, action labels, route-promotion states, and
+finite-shadow state per pack. It is advisory work selection only.
+
 Theorem-boundary discovery has the same dependency-free shape:
 
 ```sh
@@ -188,6 +199,10 @@ python3 scripts/query-foundational-resources.py coverage --by proof-status --req
 python3 scripts/query-foundational-resources.py coverage-frontier --by field --require-any
 python3 scripts/query-foundational-resources.py coverage-frontier --by fragment --min-replay-unsat 1 --format json --require-any
 python3 scripts/query-foundational-resources.py coverage-frontier --by curriculum-node --field topology --min-horizon 1 --require-any
+python3 scripts/query-foundational-resources.py pack-frontier --field real_analysis --require-any
+python3 scripts/query-foundational-resources.py pack-frontier --field topology --action theorem-horizon --shadow-state checked-finite-shadow --require-any
+python3 scripts/query-foundational-resources.py pack-frontier --field measure_theory --max-checked-ratio 0.35 --require-any
+python3 scripts/query-foundational-resources.py pack-frontier --field real_analysis --action proof-review --format json --require-any
 python3 scripts/query-foundational-resources.py labels
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --require-any
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Alethe --promotion-state covered-by-route-contrast --require-any

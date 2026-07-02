@@ -41,6 +41,8 @@ summaries.
 For ranked resource-builder pressure across fields, fragments, curriculum
 nodes, and decidability classes, use the
 [Coverage Frontier Queries](COVERAGE-FRONTIER-QUERIES.md).
+For concrete pack-level worklists under those frontier groups, use the
+[Pack Frontier Queries](PACK-FRONTIER-QUERIES.md).
 For the concrete rules/law transfer map from math-resource patterns into
 policy and legal-rule checks, use the
 [Rules/Law Crosswalk](RULES-LAW-CROSSWALK.md).

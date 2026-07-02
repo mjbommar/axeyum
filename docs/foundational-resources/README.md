@@ -63,6 +63,10 @@ schemas, examples, and validation workflows.
   the committed JSON data contract for coverage aggregates, pack discovery,
   checked-row mining, solver-reuse rows, atlas concept lookup, and curriculum
   field-readiness summaries.
+- [PACK-FRONTIER-QUERIES.md](PACK-FRONTIER-QUERIES.md) gives concrete
+  pack-level worklist queries beneath coverage-frontier groups, including
+  proof-review, theorem-horizon, low-checked-density, route-promotion, and
+  finite-shadow filters.
 - [FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md) is the
   compact 18-field map of the smoke-checked readiness route, bridge lookup,
   checked-row drilldown, and theorem-horizon boundary for downstream
