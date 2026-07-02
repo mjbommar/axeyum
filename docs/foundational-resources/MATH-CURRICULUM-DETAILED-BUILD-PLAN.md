@@ -2149,6 +2149,20 @@ Pick one row per commit unless the change is purely navigational.
      Noetherian, and ideal-theory theorem layers, and adds pack-specific
      quotient and horizon-frontier queries to the public smoke gate without
      promoting finite quotient tables into theorem coverage.
+254. Landed: add `topology-theorem-boundary.md` as the focused finite/general
+     topology theorem-boundary page for `finite-topology-v0`,
+     `finite-compactness-v0`, `finite-connectedness-v0`,
+     `finite-continuous-maps-v0`, `finite-quotient-topology-v0`, and
+     `finite-specialization-order-v0`. It maps finite open-set replay,
+     closure/interior replay, finite cover and subcover replay,
+     connectedness/clopen enumeration, open-preimage and homeomorphism replay,
+     quotient-fiber/preimage-open replay, specialization-preorder replay, and
+     scoped Bool/CNF plus QF_UF/Alethe evidence to the missing arbitrary-space
+     compactness, connectedness, continuity, homeomorphism-invariance,
+     quotient, specialization, metrization, and algebraic-topology theorem
+     layers, and adds pack-specific checked-row and horizon-frontier queries
+     to the public smoke gate without promoting finite topology tables into
+     theorem coverage.
 
 ## Validation Checklist
 

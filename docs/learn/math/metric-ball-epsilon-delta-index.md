@@ -93,6 +93,9 @@ Use [Finite Topology](finite-topology-end-to-end.md),
 [Finite Connectedness](finite-connectedness-end-to-end.md) when the metric
 story is replaced by open-set families. The trusted object is still finite
 enumeration, not a general theorem.
+Use [Topology Theorem Boundary](topology-theorem-boundary.md) when the question
+is whether finite topology, compactness, connectedness, open-preimage,
+quotient, or specialization rows prove arbitrary-space topology theorems.
 
 Use [Finite Continuous Maps](finite-continuous-maps-end-to-end.md) when the
 continuity claim is phrased as open preimages. This is the topological version

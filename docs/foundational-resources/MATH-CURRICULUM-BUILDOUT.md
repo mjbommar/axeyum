@@ -1653,6 +1653,10 @@ finite metric-continuity, sequence-tail, finite compactness, finite
 connectedness, and finite open-preimage resources into one learner path while
 keeping quantified continuity, compactness, connectedness, and convergence
 theorems in the Lean-horizon lane.
+`topology-theorem-boundary.md` now gives finite topology, compactness,
+connectedness, continuous-map, quotient-topology, and specialization-order
+packs a focused finite/general topology trust map without promoting finite
+open-set enumeration into arbitrary-space theorem coverage.
 `finite-compactness-v0` now adds the finite open-cover/subcover and
 finite-intersection bridge to the compactness horizon.
 `finite-connectedness-v0` now adds the finite clopen-subset/open-separation

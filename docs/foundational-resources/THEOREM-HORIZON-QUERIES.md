@@ -150,6 +150,31 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Finite topology, compactness, connectedness, continuous-map, quotient, and
+specialization horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-compactness-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-connectedness-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-continuous-maps-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-quotient-topology-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-specialization-order-v0 \
+  --require-any
+```
+
 Real-analysis and optimization horizons:
 
 ```sh
@@ -593,6 +618,7 @@ The main learner maps that explain these boundaries are:
 - [Real Completeness Theorem Boundary](../learn/math/real-completeness-theorem-boundary.md)
 - [Monotone Convergence Theorem Boundary](../learn/math/monotone-convergence-theorem-boundary.md)
 - [Recurrence And Asymptotic Theorem Boundary](../learn/math/recurrence-asymptotic-theorem-boundary.md)
+- [Topology Theorem Boundary](../learn/math/topology-theorem-boundary.md)
 - [Root-Finding Convergence Theorem Boundary](../learn/math/root-finding-convergence-theorem-boundary.md)
 - [Hyperplane Separation Theorem Boundary](../learn/math/hyperplane-separation-theorem-boundary.md)
 - [KKT Sufficiency Theorem Boundary](../learn/math/kkt-sufficiency-theorem-boundary.md)

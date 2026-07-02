@@ -84,6 +84,11 @@ python3 scripts/query-foundational-resources.py checks --field graph_theory --pr
 python3 scripts/query-foundational-resources.py checks --text convergence --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --field topology --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --field topology --shadow-state checked-finite-shadow --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-compactness-v0 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-connectedness-v0 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-continuous-maps-v0 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-quotient-topology-v0 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-specialization-order-v0 --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --shadow-state no-finite-shadow --format json >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --curriculum-node calculus --format json --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text convergence --require-any >/dev/null
@@ -260,14 +265,20 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_bounded_
 python3 scripts/query-foundational-resources.py checks --pack metric-continuity-v0 --route Farkas --proof-status checked --text preimage --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_compactness_shadow --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_connectedness_shadow --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-topology-v0 --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-compactness-v0 --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-connectedness-v0 --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_topology_operator_homeomorphism --route alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_topology_operator_homeomorphism --route alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-continuous-maps-v0 --route alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-continuous-maps-v0 --route Alethe --proof-status checked --text preimage --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_quotient_topology_replay --route alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_quotient_topology_replay --route alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-quotient-topology-v0 --route alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-quotient-topology-v0 --route Alethe --proof-status checked --text representative --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_specialization_order_replay --route alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_specialization_order_replay --route alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-specialization-order-v0 --route alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_boundary_operator_replay --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_boundary_operator_replay --route Diophantine --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_chain_homology_replay --route Diophantine --require-any >/dev/null

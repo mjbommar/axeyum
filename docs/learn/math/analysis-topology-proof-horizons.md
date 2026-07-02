@@ -65,6 +65,7 @@ Companion map:
 
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
 - [Metric Balls And Epsilon-Delta Index](metric-ball-epsilon-delta-index.md)
+- [Topology Theorem Boundary](topology-theorem-boundary.md)
 - [Monotone Convergence Theorem Boundary](monotone-convergence-theorem-boundary.md)
 - [Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md)
 - [Hitting-Time Theorem Boundary](hitting-time-theorem-boundary.md)
@@ -145,6 +146,10 @@ confirms antisymmetry for a finite `T0` slice, and rejects a false `T0` claim
 for the indiscrete two-point topology through checked QF_UF/Alethe evidence.
 This is finite replay plus equality evidence, not a proof of general
 specialization-order, sobriety, or domain-theory theorems.
+For the focused boundary that keeps finite topology, compactness,
+connectedness, continuous-map, quotient-topology, and specialization-order rows
+separate from arbitrary-space topology theorem claims, read
+[Topology Theorem Boundary](topology-theorem-boundary.md).
 
 For a bounded sequence shadow, encode exact rational values and one fixed
 epsilon:

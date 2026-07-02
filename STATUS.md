@@ -234,6 +234,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Topology theorem-boundary resource landed.**
+  `topology-theorem-boundary.md` now separates `finite-topology-v0`,
+  `finite-compactness-v0`, `finite-connectedness-v0`,
+  `finite-continuous-maps-v0`, `finite-quotient-topology-v0`, and
+  `finite-specialization-order-v0` finite open-set, cover, clopen,
+  preimage, quotient-fiber, and specialization-order replay plus scoped
+  Bool/CNF and QF_UF/Alethe evidence from arbitrary-space compactness,
+  connectedness, continuity, homeomorphism-invariance, quotient,
+  specialization, metrization, and algebraic-topology theorem claims. The
+  topology horizon map, metric-ball index, sets/foundations page,
+  theorem-horizon guide, learner index, and smoke-query docs now expose the
+  boundary through pack-specific checked-row and horizon-frontier queries.
+
 - **Algebra homomorphism/quotient theorem-boundary resource landed.**
   `algebra-homomorphism-quotient-theorem-boundary.md` now separates
   `finite-algebra-homomorphisms-v0` and `finite-ideals-v0` finite map,

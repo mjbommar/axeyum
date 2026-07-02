@@ -96,6 +96,10 @@ Companion maps:
 - [Metric Balls And Epsilon-Delta Index](metric-ball-epsilon-delta-index.md):
   connects bounded rational balls, finite metric continuity, sequence-tail
   shadows, finite compactness, finite connectedness, and open-preimage replay.
+- [Topology Theorem Boundary](topology-theorem-boundary.md): separates finite
+  topology, compactness, connectedness, continuous-map, quotient-topology, and
+  specialization-order replay from arbitrary-space topology, preservation,
+  invariance, quotient, and specialization theorem targets.
 - [Graph Traversal Runtime Index](graph-traversal-runtime-index.md): separates
   finite reachability, BFS/DFS traces, visited-node counters, checked LIA cost
   refutations, and asymptotic runtime horizons.
@@ -695,6 +699,9 @@ Companion maps:
   axiom replay, closure/interior computation, exact metric-ball replay,
   checked Bool/CNF missing-empty-set rejection, and the general-topology Lean
   horizon.
+- [Topology Theorem Boundary](topology-theorem-boundary.md): maps finite
+  topology, compactness, connectedness, continuous-map, quotient-topology, and
+  specialization-order rows to the missing arbitrary-space theorem layers.
 - [Finite Quotient Topology](finite-quotient-topology-end-to-end.md): follows
   quotient-map fiber replay, quotient topology by preimage-open enumeration,
   saturated-open image replay, checked QF_UF/Alethe bad representative and

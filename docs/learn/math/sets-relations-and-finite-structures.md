@@ -423,6 +423,7 @@ and measure replay, read
 [End To End: Finite Algebra Homomorphisms](finite-algebra-homomorphisms-end-to-end.md),
 [End To End: Finite Quotient Topology](finite-quotient-topology-end-to-end.md),
 [End To End: Finite Specialization Order](finite-specialization-order-end-to-end.md),
+[Topology Theorem Boundary](topology-theorem-boundary.md),
 [End To End: Finite Compactness](finite-compactness-end-to-end.md),
 [End To End: Finite Connectedness](finite-connectedness-end-to-end.md),
 [End To End: Finite Continuous Maps](finite-continuous-maps-end-to-end.md),

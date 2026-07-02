@@ -22,6 +22,10 @@ coefficient shadows, and F2 cup products. Arbitrary compactness,
 connectedness, homeomorphism invariance, quotient universal properties,
 homology/cohomology invariance, exact sequences, UCT naturality, cohomology
 ring laws, and infinite-space topology remain in the proof-horizon lane.
+For the focused learner-facing trust boundary over the finite topology,
+compactness, connectedness, continuous-map, quotient, and specialization
+cluster, read
+[Topology Theorem Boundary](../learn/math/topology-theorem-boundary.md).
 
 ## Query Shape
 
@@ -67,6 +71,16 @@ python3 scripts/query-foundational-resources.py checks \
 
 Use `packs` for catalog rows and pack paths. Use `checks` when the consumer
 needs concrete checked rows to display.
+
+Use `horizon-frontier` when the consumer needs to show the finite checked
+shadow next to the missing theorem row:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --field topology \
+  --shadow-state checked-finite-shadow \
+  --require-any
+```
 
 ## Topology Query Families
 
