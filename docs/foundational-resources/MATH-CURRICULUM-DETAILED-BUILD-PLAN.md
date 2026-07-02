@@ -2308,6 +2308,16 @@ Pick one row per commit unless the change is purely navigational.
      evidence. The finite flow/cut replay rows still own capacity,
      conservation, and cut-capacity arithmetic, while solver reuse is promoted
      only for the final exact-rational `4 <= 3` contradiction.
+269. Landed: promote `finite-shortest-path-v0` with
+     `qf-lra-bad-shorter-distance-potential-bound` as the source-linked
+     QF_LRA/Farkas row for the finite potential-bound conflict. The new
+     SMT-LIB artifact records `potential_lower_bound = 5`,
+     `claimed_upper_bound = 4`, and
+     `potential_lower_bound <= claimed_upper_bound`; the focused
+     `math_resource_lra_routes` regression requires checked `UnsatFarkas`
+     evidence. The finite shortest-path replay rows still own path-length,
+     edge-relaxation, and potential-certificate arithmetic, while solver reuse
+     is promoted only for the final exact-rational `5 <= 4` contradiction.
 
 ## Validation Checklist
 

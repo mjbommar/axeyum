@@ -234,16 +234,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite shortest-path QF_LRA/Farkas promotion landed.**
+  `finite-shortest-path-v0` now has
+  `qf-lra-bad-shorter-distance-potential-bound`, a source-linked SMT-LIB
+  artifact and focused `math_resource_lra_routes` regression for the final
+  finite potential-bound contradiction `5 <= 4`. Solver reuse is promoted only
+  for that checked `UnsatFarkas` row; the finite replay rows still own
+  path-length, edge-relaxation, and potential-certificate arithmetic, and
+  arbitrary-graph shortest-path correctness remains Lean-horizon work. The
+  public summary now reports 121 concept rows, 111 packs, 705 expected checks,
+  336 checked rows, 295 replay-only rows, 74 Lean-horizon rows, 110 promoted
+  solver-reuse packs, and 1 non-benchmark-horizon pack.
 - **Finite flow/cut QF_LRA/Farkas promotion landed.**
   `finite-flow-cut-v0` now has `qf-lra-bad-flow-value-cut-bound`, a
   source-linked SMT-LIB artifact and focused `math_resource_lra_routes`
   regression for the final finite cut-bound contradiction `4 <= 3`. Solver
   reuse is promoted only for that checked `UnsatFarkas` row; the finite replay
   rows still own capacity, conservation, and cut-capacity arithmetic, and the
-  arbitrary-network max-flow/min-cut theorem remains Lean-horizon work. The
-  public summary now reports 121 concept rows, 111 packs, 704 expected checks,
-  335 checked rows, 295 replay-only rows, 74 Lean-horizon rows, 109 promoted
-  solver-reuse packs, and 2 non-benchmark-horizon packs.
+  arbitrary-network max-flow/min-cut theorem remains Lean-horizon work. Current
+  public resource totals are recorded in the latest process-lane entry above.
 - **Chain-complex torsion theorem-boundary resource landed.**
   `chain-complex-torsion-theorem-boundary.md` now separates
   `finite-chain-complex-torsion-v0` finite free abelian chain-complex replay,
@@ -764,9 +773,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `finite-shortest-path-v0` adds exact directed weighted path replay,
   potential optimality-certificate replay, malformed path-length rejection,
   claimed-shorter-distance rejection by a finite potential lower bound, and a
-  shortest-path theorem horizon. It is deliberately
-  `non-benchmark-horizon` until a source exact-arithmetic artifact and checked
-  proof route exist.
+  shortest-path theorem horizon. It was introduced as
+  `non-benchmark-horizon`; the later
+  `qf-lra-bad-shorter-distance-potential-bound` promotion adds the source
+  exact-arithmetic artifact and checked Farkas route for the final
+  potential-bound conflict.
 
 - **Finite flow/cut graph resource landed.**
   `finite-flow-cut-v0` adds exact directed-flow feasibility replay, saturated

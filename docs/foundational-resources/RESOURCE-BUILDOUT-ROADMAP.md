@@ -2326,6 +2326,15 @@ Pick one item per commit unless the change is purely navigational.
      `claimed_flow_value <= cut_capacity`, while the theorem boundary keeps
      arbitrary-network max-flow/min-cut and algorithm correctness in the
      Lean-horizon lane.
+157. Landed: promote `finite-shortest-path-v0` with
+     `qf-lra-bad-shorter-distance-potential-bound` as the source-linked
+     checked Farkas row for the finite potential lower-bound conflict. The
+     committed SMT-LIB artifact isolates `potential_lower_bound = 5`,
+     `claimed_upper_bound = 4`, and
+     `potential_lower_bound <= claimed_upper_bound`, while the theorem
+     boundary keeps arbitrary shortest-path correctness, negative-cycle
+     reasoning, all-pairs algorithms, and asymptotic runtime in the
+     Lean-horizon lane.
 
 ## Validation Checklist
 

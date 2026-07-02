@@ -427,6 +427,7 @@ python3 scripts/query-foundational-resources.py horizon-frontier --text shortest
 python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --proof-status checked --text "exact length" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --proof-status checked --text potentials --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --proof-status checked --text "at most 4" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --route Farkas --proof-status checked --text qf-lra-bad-shorter-distance-potential-bound --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --field graph_theory --text topological --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --expected-result not-run --proof-status lean-horizon --require-any >/dev/null

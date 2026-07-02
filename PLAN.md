@@ -368,10 +368,10 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-02): the public JSON layer reports
-121 concept rows, 111 non-template packs, 704 expected checks (342 `sat`,
-288 `unsat`, 74 `not-run`), 335 checked rows, 295 replay-only rows, 74
-Lean-horizon rows, 109 promoted solver-reuse packs, and 2
-non-benchmark-horizon packs. The rules/law JSON layer now reports 7 packs, 1,037
+121 concept rows, 111 non-template packs, 705 expected checks (342 `sat`,
+289 `unsat`, 74 `not-run`), 336 checked rows, 295 replay-only rows, 74
+Lean-horizon rows, 110 promoted solver-reuse packs, and 1
+non-benchmark-horizon pack. The rules/law JSON layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
 coverage audit records all 111 non-template packs as focused-lesson linked,
@@ -769,8 +769,8 @@ curriculum-pressure dashboards now expose conservative R0-R6 gate/next-gate
 columns and overlapping fragment-pressure buckets, making R4-to-R5 solver-reuse
 candidates and Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
 Lean-horizon demand visible without hand-maintained scans.
-The generated solver-reuse disposition audit now reports 109 promoted math
-packs, 2 non-benchmark-horizon packs, and 0 unclassified rows, so future
+The generated solver-reuse disposition audit now reports 110 promoted math
+packs, 1 non-benchmark-horizon pack, and 0 unclassified rows, so future
 unclassified packs and deliberate non-benchmark rows surface in a
 freshness-checked queue.
 The generated curriculum-status audit now separates source `curriculum_status`
@@ -1109,8 +1109,10 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **109 promoted solver-reuse
-packs**, **2 non-benchmark-horizon packs**, and **0 unclassified packs** after
+the foundational resource dashboards now report **110 promoted solver-reuse
+packs**, **1 non-benchmark-horizon pack**, and **0 unclassified packs** after
+the latest finite-shortest-path bad potential-bound QF_LRA/Farkas promotion,
+the latest finite-flow-cut bad cut-bound QF_LRA/Farkas promotion,
 the latest finite-specialization-order bad `T0` QF_UF/Alethe promotion,
 the latest finite-Chebyshev split into replay rows plus explicit `qf-lra-*`
 Farkas rows,

@@ -71,12 +71,13 @@ optimality for this listed finite graph by exact replay.
 | `potential-optimality-witness` | `sat` | checked | The listed potentials satisfy every edge relaxation and match the path length, certifying this finite instance. |
 | `bad-path-distance-rejected` | `unsat` | checked | The malformed row claims the same path has length `4`, but exact replay computes `5`. |
 | `bad-shorter-distance-rejected` | `unsat` | checked | The malformed row claims an `s`-to-`t` path of length at most `4`, but the potential lower bound is `5`. |
+| `qf-lra-bad-shorter-distance-potential-bound` | `unsat` | checked QF_LRA/Farkas | The source SMT-LIB artifact isolates `5 <= 4` after replay checks the potential lower bound. |
 | `shortest-path-theorem-lean-horizon` | `not-run` | lean-horizon | General shortest-path theorem and algorithm-correctness claims remain future proof-assistant work. |
 
-The checked rows are deterministic exact finite replay. The pack is currently a
-`non-benchmark-horizon` resource, not a promoted solver-regression route: no
-source SMT/CNF artifact or route-specific certificate has been committed for
-the malformed rows.
+The checked rows are deterministic exact finite replay, plus one promoted
+source-linked QF_LRA/Farkas row for the final potential-bound contradiction.
+That promoted row is a solver-regression seed for `5 <= 4`; it does not promote
+the arbitrary-graph theorem, negative-cycle theory, or algorithm correctness.
 
 ## What Is Not Proved Yet
 
@@ -146,6 +147,13 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --text "at most 4" \
   --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-shortest-path-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text qf-lra-bad-shorter-distance-potential-bound \
+  --require-any
 ```
 
 ## Graduation Criteria
@@ -158,8 +166,9 @@ General shortest-path resources graduate only when they add:
 2. explicit hypotheses for finite directed graphs, exact weights, allowed
    negative weights, source/target reachability, paths, cycles, and algorithms;
 3. no-`sorry` proofs with an axiom audit;
-4. a source exact-arithmetic artifact plus checked certificate route before
-   promoting malformed distance rows as solver regressions;
+4. source exact-arithmetic artifacts plus checked certificate routes before
+   promoting additional malformed distance, edge-relaxation, or
+   potential-bound rows as solver regressions;
 5. display labels that keep finite replay, route certificates, theorem rows,
    and benchmark claims separate.
 
@@ -177,9 +186,11 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-shortest-path-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_shortest_path_bad_shorter_distance_potential_bound_artifact_emits_checked_farkas
 python3 scripts/query-foundational-resources.py horizon-frontier --text shortest --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --route Farkas --proof-status checked --text qf-lra-bad-shorter-distance-potential-bound --require-any
 ```
 
 Expected resource boundary: the finite pack validates, the

@@ -2,7 +2,7 @@
 
 Audience: graph-theory learners, optimization learners, solver contributors,
 and resource consumers who need a small checked example of path/certificate
-duality.
+duality plus a source-linked exact-rational proof row.
 
 This pack checks one finite directed weighted graph over exact rationals. It
 does not prove a shortest-path algorithm correct. It shows how a proposed path
@@ -27,13 +27,15 @@ and a proposed potential certificate can be replayed by a small checker.
 | `potential-optimality-witness` | `sat` | checked edge-relaxation and path replay |
 | `bad-path-distance-rejected` | `unsat` | checked path-length recomputation |
 | `bad-shorter-distance-rejected` | `unsat` | checked potential lower-bound rejection |
+| `qf-lra-bad-shorter-distance-potential-bound` | `unsat` | checked QF_LRA/Farkas artifact for `5 <= 4` |
 | `shortest-path-theorem-lean-horizon` | `not-run` | theorem horizon |
 
 ## Trust Boundary
 
 The untrusted side proposes a path, a distance value, or a potential assignment.
 The trusted checker recomputes every used edge weight, every edge-relaxation
-inequality, and the resulting lower bound. The checker does not trust Dijkstra,
+inequality, the resulting lower bound, and the source-linked Farkas certificate
+for the promoted potential-bound conflict. The checker does not trust Dijkstra,
 Bellman-Ford, or any search trace for this row.
 
 ## Run

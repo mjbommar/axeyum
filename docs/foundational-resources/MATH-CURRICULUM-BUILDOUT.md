@@ -3274,6 +3274,14 @@ certificate, checked rejection of malformed capacity and flow-value claims, and
 a source-linked QF_LRA/Farkas cut-bound proof row for the final `4 <= 3`
 conflict. The pack is promoted as a narrow solver-reuse seed for that checked
 artifact while the general max-flow/min-cut theorem remains Lean-horizon work.
+The graph curriculum layer now also promotes `finite-shortest-path-v0` with
+`qf-lra-bad-shorter-distance-potential-bound`. Exact path and potential replay
+still own the finite graph arithmetic, while the source-linked QF_LRA/Farkas
+artifact isolates the malformed shorter-distance claim as the final
+`5 <= 4` potential-bound contradiction. The pack is promoted only for that
+checked artifact while arbitrary-graph shortest-path correctness,
+negative-cycle theory, all-pairs variants, and asymptotic algorithm claims
+remain Lean-horizon work.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

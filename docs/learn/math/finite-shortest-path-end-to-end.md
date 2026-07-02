@@ -23,6 +23,7 @@ Concept rows:
 | `potential-optimality-witness` | `sat` | checked |
 | `bad-path-distance-rejected` | `unsat` | checked |
 | `bad-shorter-distance-rejected` | `unsat` | checked |
+| `qf-lra-bad-shorter-distance-potential-bound` | `unsat` | checked QF_LRA/Farkas |
 | `shortest-path-theorem-lean-horizon` | `not-run` | lean-horizon |
 
 The checked rows are exact finite replay. They do not prove Dijkstra,
@@ -94,6 +95,11 @@ The bad shorter-distance row claims there is an `s`-to-`t` path of length at
 most `4`. The checker verifies the potential certificate lower-bounds every
 path by `5`, so the row is rejected.
 
+The source-linked QF_LRA row isolates that final scalar contradiction as
+`potential_lower_bound = 5`, `claimed_upper_bound = 4`, and
+`potential_lower_bound <= claimed_upper_bound`; Axeyum emits checked
+`UnsatFarkas` evidence for this exact `5 <= 4` conflict.
+
 ## Why This Matters
 
 This is the shortest-path version of Axeyum's trust pattern:
@@ -112,6 +118,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-shortest-path-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_shortest_path_bad_shorter_distance_potential_bound_artifact_emits_checked_farkas
 ```
 
 ## Trust Boundary
@@ -119,4 +126,5 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 The validator checks this fixed graph over exact rationals. General
 shortest-path algorithm correctness, negative-cycle handling, all-pairs
 variants, data-structure costs, and asymptotic runtime remain theorem/proof
-resource work until Lean routes and solver-facing certificates exist.
+resource work. The promoted solver-reuse row covers only the source-linked
+potential-bound contradiction, not the general shortest-path theorem.

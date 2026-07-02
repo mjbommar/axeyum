@@ -31,20 +31,19 @@
     "finite shortest-path replay",
     "finite potential certificates",
     "exact rational arithmetic",
+    "QF_LRA / Farkas",
+    "UnsatFarkas certificate",
     "Lean horizon"
   ],
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-shortest-path-v0",
   "solver_reuse": {
-    "status": "non-benchmark-horizon",
-    "target": "finite shortest-path replay and potential-certificate theorem boundary",
-    "pressure": "Exact replay checks one path length, one feasible shortest-path potential certificate, one malformed path-distance row, and one claimed-shorter-distance violation; no source solver artifact is committed yet, so this is not a solver regression or benchmark claim.",
+    "status": "promoted",
+    "target": "finite shortest-path potential-bound QF_LRA/Farkas regression seed",
+    "pressure": "Exact replay checks one path length and one feasible shortest-path potential certificate, then the source-linked QF_LRA artifact isolates the malformed claimed-shorter-distance row as the impossible potential-bound obligation 5 <= 4.",
     "evidence": [
-      "path-distance-witness",
-      "potential-optimality-witness",
-      "bad-path-distance-rejected",
-      "bad-shorter-distance-rejected"
+      "qf-lra-bad-shorter-distance-potential-bound"
     ],
-    "next_step": "Promote only after adding a source exact-arithmetic artifact and checked proof route for path length, edge relaxation, or dual potential conflicts; keep general shortest-path algorithms, negative-cycle theory, and asymptotic runtime in the Lean-horizon lane."
+    "next_step": "Promote additional shortest-path rows only when they add distinct path-length, edge-relaxation, dual-potential, negative-cycle, or proof-reconstruction pressure; keep general shortest-path algorithms, negative-cycle theory, and asymptotic runtime in the Lean-horizon lane."
   },
   "source_refs": [
     "docs/foundational-resources/MATH-FIELDS.md",
@@ -54,21 +53,25 @@
     "docs/curriculum/02-structures/counting.md",
     "docs/curriculum/01-number-systems/rationals.md",
     "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
     "docs/proof-cookbook/recipes/lean-horizon-template.md",
-    "docs/learn/math/finite-shortest-path-end-to-end.md"
+    "docs/learn/math/finite-shortest-path-end-to-end.md",
+    "artifacts/examples/math/finite-shortest-path-v0/smt2/bad-shorter-distance-potential-bound-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
   ],
   "expected_results": [
     "path-distance-witness",
     "potential-optimality-witness",
     "bad-path-distance-rejected",
     "bad-shorter-distance-rejected",
+    "qf-lra-bad-shorter-distance-potential-bound",
     "shortest-path-theorem-lean-horizon"
   ],
   "graduation_criteria": [
     "Replay finite directed weighted graphs, path adjacency, and path length over exact rationals.",
     "Replay finite potential certificates by checking every edge relaxation inequality.",
     "Reject malformed rows by recomputing a path length or by comparing a claimed shorter distance against the potential lower bound.",
-    "Add a source exact-arithmetic artifact and checked certificate route before promoting the pack as a solver regression.",
+    "Keep the promoted potential-bound row tied to a committed SMT-LIB artifact and checked QF_LRA/Farkas evidence.",
     "Keep arbitrary-graph shortest-path correctness, negative-cycle reasoning, all-pairs algorithms, and asymptotic complexity as Lean/theorem horizons until proof artifacts exist."
   ]
 }

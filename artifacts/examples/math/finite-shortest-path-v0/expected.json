@@ -126,6 +126,22 @@
       "notes": "The potential certificate lower-bounds every s-t path by 5, so a claimed upper bound of 4 is impossible for this finite graph."
     },
     {
+      "id": "qf-lra-bad-shorter-distance-potential-bound",
+      "claim": "The same graph has an s-t path of length at most 4 while the listed potentials lower-bound every s-t path by 5.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "potential_lower_bound": "5",
+        "claimed_upper_bound": "4",
+        "potential_bound": "potential_lower_bound <= claimed_upper_bound",
+        "smt2_artifact": "artifacts/examples/math/finite-shortest-path-v0/smt2/bad-shorter-distance-potential-bound-farkas-conflict.smt2",
+        "proof_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_shortest_path_bad_shorter_distance_potential_bound_artifact_emits_checked_farkas",
+        "certificate": "produce_lra_evidence emits Evidence::UnsatFarkas checked by Evidence::check for the exact rational inequality conflict 5 <= 4"
+      },
+      "notes": "The SMT-LIB artifact isolates the potential lower-bound contradiction after replay checks the edge relaxations."
+    },
+    {
       "id": "shortest-path-theorem-lean-horizon",
       "claim": "General shortest-path algorithm correctness and negative-cycle theory require future theorem-prover reconstruction.",
       "expected_result": "not-run",

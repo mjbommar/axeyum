@@ -31,6 +31,23 @@ computes length `5`.
 Rejects the claim that the graph has an `s`-to-`t` path of length at most `4`.
 The potential certificate lower-bounds every such path by `5`.
 
+## `qf-lra-bad-shorter-distance-potential-bound`
+
+Expected: `unsat`.
+
+Validation: `qf_lra_farkas_evidence`.
+
+The source SMT-LIB artifact records the final scalar conflict:
+
+```text
+potential_lower_bound = 5
+claimed_upper_bound = 4
+potential_lower_bound <= claimed_upper_bound
+```
+
+Axeyum emits and independently checks `UnsatFarkas` evidence for that
+exact-rational contradiction.
+
 ## `shortest-path-theorem-lean-horizon`
 
 Records the theorem boundary: general algorithm correctness, negative-cycle

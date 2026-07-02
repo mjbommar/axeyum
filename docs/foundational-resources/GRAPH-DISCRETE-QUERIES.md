@@ -74,7 +74,7 @@ needs concrete checked rows to display.
 | BFS/DFS runtime theorem boundary | pack `graph-search-runtime-v0` | `lean-horizon` | `horizon-frontier --text BFS`; `checks --pack graph-search-runtime-v0 --proof-status lean-horizon` |
 | Finite directed flow and cut certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay`; exact rational; `Farkas` | `checks --pack finite-flow-cut-v0 --proof-status checked`; `checks --pack finite-flow-cut-v0 --route Farkas --proof-status checked` |
 | Max-flow/min-cut theorem boundary | pack `finite-flow-cut-v0` | `lean-horizon` | `horizon-frontier --text "max-flow"`; `checks --pack finite-flow-cut-v0 --expected-result not-run --proof-status lean-horizon` |
-| Finite shortest-path certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay`; exact rational | `checks --pack finite-shortest-path-v0 --proof-status checked` |
+| Finite shortest-path certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay`; exact rational; `Farkas` | `checks --pack finite-shortest-path-v0 --proof-status checked`; `checks --pack finite-shortest-path-v0 --route Farkas --proof-status checked` |
 | Shortest-path theorem boundary | pack `finite-shortest-path-v0` | `lean-horizon` | `horizon-frontier --text shortest`; `checks --pack finite-shortest-path-v0 --expected-result not-run --proof-status lean-horizon` |
 | Finite DAG topological-order certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay` | `checks --pack finite-dag-topological-order-v0 --proof-status checked` |
 | Topological-sort theorem boundary | pack `finite-dag-topological-order-v0` | `lean-horizon` | `horizon-frontier --text "topological-sort"`; `checks --pack finite-dag-topological-order-v0 --expected-result not-run --proof-status lean-horizon` |
@@ -569,6 +569,13 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-shortest-path-v0 \
   --proof-status checked \
   --text "at most 4" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-shortest-path-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text qf-lra-bad-shorter-distance-potential-bound \
   --require-any
 ```
 

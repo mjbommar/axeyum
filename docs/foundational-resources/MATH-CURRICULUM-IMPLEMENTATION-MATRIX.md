@@ -811,7 +811,14 @@ Build sequence:
     contradiction `4 <= 3`. The finite replay rows still compute feasibility,
     conservation, and cut capacity; only the isolated cut-bound conflict is
     promoted as solver-reuse evidence.
-81. Revisit crate/repo boundaries only after three real consumers or repeated
+81. Landed: promote the finite shortest-path potential-bound row.
+    `finite-shortest-path-v0` now has
+    `qf-lra-bad-shorter-distance-potential-bound`, a source-linked
+    QF_LRA/Farkas artifact for the final exact-rational contradiction
+    `5 <= 4`. The finite replay rows still compute path length, edge
+    relaxations, and the potential lower bound; only the isolated
+    potential-bound conflict is promoted as solver-reuse evidence.
+82. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

@@ -43,3 +43,7 @@ p(v) <= p(u) + weight(u,v)
 Summing those inequalities along any `s`-to-`t` path proves that every path has
 length at least `p(t) - p(s) = 5`. Since the listed path also has length `5`,
 the fixed finite optimality certificate checks.
+
+The `qf-lra-bad-shorter-distance-potential-bound` row keeps the same potential
+lower-bound replay and checks the final `5 <= 4` contradiction with
+source-linked Farkas evidence.

@@ -106,6 +106,9 @@ const FINITE_ROOT_FINDING_BAD_BISECTION_WIDTH: &str = include_str!(
 const FINITE_FLOW_CUT_BAD_FLOW_VALUE_CUT_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/finite-flow-cut-v0/smt2/bad-flow-value-cut-bound-farkas-conflict.smt2"
 );
+const FINITE_SHORTEST_PATH_BAD_SHORTER_DISTANCE_POTENTIAL_BOUND: &str = include_str!(
+    "../../../artifacts/examples/math/finite-shortest-path-v0/smt2/bad-shorter-distance-potential-bound-farkas-conflict.smt2"
+);
 const FINITE_SEPARATION_BAD_SEPARATOR: &str = include_str!(
     "../../../artifacts/examples/math/finite-separation-v0/smt2/bad-separator-farkas-conflict.smt2"
 );
@@ -836,6 +839,14 @@ fn finite_flow_cut_bad_flow_value_cut_bound_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-flow-cut-v0 qf-lra-bad-flow-value-cut-bound SMT-LIB artifact",
         FINITE_FLOW_CUT_BAD_FLOW_VALUE_CUT_BOUND,
+    );
+}
+
+#[test]
+fn finite_shortest_path_bad_shorter_distance_potential_bound_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-shortest-path-v0 qf-lra-bad-shorter-distance-potential-bound SMT-LIB artifact",
+        FINITE_SHORTEST_PATH_BAD_SHORTER_DISTANCE_POTENTIAL_BOUND,
     );
 }
 
