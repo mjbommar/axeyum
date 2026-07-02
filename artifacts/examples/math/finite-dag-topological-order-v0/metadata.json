@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "finite-dag-topological-order-v0",
+  "title": "Finite DAG Topological Order Certificates",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_graph_theory",
+    "field_discrete_math",
+    "curriculum_sets",
+    "curriculum_relations_and_functions",
+    "curriculum_counting",
+    "bridge_finite_graph_replay_obstruction"
+  ],
+  "field_ids": [
+    "graph_theory",
+    "discrete_math"
+  ],
+  "curriculum_nodes": [
+    "sets",
+    "relations-and-functions",
+    "counting"
+  ],
+  "axeyum_fragments": [
+    "finite directed graphs",
+    "finite DAG replay",
+    "finite topological-order replay",
+    "finite cycle obstruction replay",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dag-topological-order-v0",
+  "solver_reuse": {
+    "status": "non-benchmark-horizon",
+    "target": "finite DAG topological-order replay and theorem boundary",
+    "pressure": "Replay checks two valid topological orders, one malformed order rejected by an edge-position violation, and one cyclic graph rejected by a directed-cycle obstruction; no source CNF/SMT artifact is committed yet, so this is not a solver regression or benchmark claim.",
+    "evidence": [
+      "topological-order-witness",
+      "independent-swap-order-witness",
+      "bad-order-rejected",
+      "cycle-obstruction-rejected"
+    ],
+    "next_step": "Promote only after adding a source Boolean/LIA artifact and checked proof route for acyclicity, topological-order existence, or cycle obstruction; keep Kahn/DFS algorithm correctness and linear-extension theorems in the Lean-horizon lane."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/00-foundations/sets.md",
+    "docs/curriculum/00-foundations/relations-and-functions.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/finite-dag-topological-order-end-to-end.md"
+  ],
+  "expected_results": [
+    "topological-order-witness",
+    "independent-swap-order-witness",
+    "bad-order-rejected",
+    "cycle-obstruction-rejected",
+    "topological-sort-theorem-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Replay finite directed graphs and topological orders by checking every vertex appears exactly once.",
+    "Check every directed edge against the listed order position.",
+    "Reject malformed rows by naming a concrete edge whose order is violated.",
+    "Reject cyclic ordering claims by replaying a directed cycle witness.",
+    "Add a source Boolean/LIA artifact and checked certificate route before promoting the pack as a solver regression.",
+    "Keep general topological-sort algorithm correctness, linear-extension existence, and asymptotic complexity as Lean/theorem horizons until proof artifacts exist."
+  ]
+}

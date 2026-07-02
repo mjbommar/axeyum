@@ -1988,7 +1988,7 @@ def validate_graph_matching(expected: dict[str, Any]) -> None:
         fail("triangle-no-perfect-matching certificate must document DRAT/LRAT independent checking")
 
 
-def require_directed_acyclic_graph(
+def require_directed_graph(
     context: str,
     values: dict[str, Any],
 ) -> tuple[list[str], list[tuple[str, str]]]:
@@ -2014,6 +2014,14 @@ def require_directed_acyclic_graph(
             fail(f"{context}.directed_edges repeats edge {directed_edge}")
         seen_edges.add(directed_edge)
         directed_edges.append(directed_edge)
+    return vertices, directed_edges
+
+
+def require_directed_acyclic_graph(
+    context: str,
+    values: dict[str, Any],
+) -> tuple[list[str], list[tuple[str, str]]]:
+    vertices, directed_edges = require_directed_graph(context, values)
     if not is_dag(vertices, directed_edges):
         fail(f"{context} must be acyclic")
     return vertices, directed_edges
@@ -2035,6 +2043,120 @@ def is_dag(vertices: list[str], directed_edges: list[tuple[str, str]]) -> bool:
             if indegree[child] == 0:
                 queue.append(child)
     return visited == len(vertices)
+
+
+def require_topological_order(context: str, value: Any, vertices: list[str]) -> list[str]:
+    order = require_string_list(context, value)
+    vertex_set = set(vertices)
+    if set(order) != vertex_set or len(order) != len(vertices):
+        missing = sorted(vertex_set - set(order))
+        extra = sorted(set(order) - vertex_set)
+        fail(f"{context} must list every vertex exactly once; missing={missing} extra={extra}")
+    return order
+
+
+def topological_order_violations(
+    order: list[str],
+    directed_edges: list[tuple[str, str]],
+) -> list[tuple[str, str]]:
+    positions = {vertex: index for index, vertex in enumerate(order)}
+    return [
+        (parent, child)
+        for parent, child in directed_edges
+        if positions[parent] >= positions[child]
+    ]
+
+
+def require_directed_cycle(
+    context: str,
+    value: Any,
+    vertices: list[str],
+    directed_edges: list[tuple[str, str]],
+) -> list[str]:
+    if not isinstance(value, list):
+        fail(f"{context} must be a list")
+    cycle: list[str] = []
+    for index, item in enumerate(value):
+        require_string(f"{context}[{index}]", item)
+        cycle.append(item)
+    if len(cycle) < 4:
+        fail(f"{context} must contain at least three edges and repeat the start vertex")
+    if cycle[0] != cycle[-1]:
+        fail(f"{context} must repeat its start vertex at the end")
+    internal = cycle[:-1]
+    if len(set(internal)) != len(internal):
+        fail(f"{context} must be simple before the repeated start vertex")
+    vertex_set = set(vertices)
+    for vertex in internal:
+        if vertex not in vertex_set:
+            fail(f"{context} references missing vertex {vertex!r}")
+    edge_set = directed_edge_set(directed_edges)
+    for parent, child in zip(cycle, cycle[1:]):
+        if (parent, child) not in edge_set:
+            fail(f"{context} uses missing directed edge {(parent, child)}")
+    return cycle
+
+
+def validate_finite_dag_topological_order(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    topo = checks["topological-order-witness"]
+    if topo["expected_result"] != "sat" or topo.get("proof_status") != "checked":
+        fail("topological-order-witness must be a checked sat row")
+    values = single_witness_values(topo, witnesses)
+    vertices, directed_edges = require_directed_acyclic_graph("topological-order-witness", values)
+    order = require_topological_order("topological-order-witness.order", values.get("order"), vertices)
+    if topological_order_violations(order, directed_edges):
+        fail("topological-order-witness order violates a directed edge")
+
+    swap = checks["independent-swap-order-witness"]
+    if swap["expected_result"] != "sat" or swap.get("proof_status") != "checked":
+        fail("independent-swap-order-witness must be a checked sat row")
+    values = single_witness_values(swap, witnesses)
+    vertices, directed_edges = require_directed_acyclic_graph("independent-swap-order-witness", values)
+    order = require_topological_order("independent-swap-order-witness.order", values.get("order"), vertices)
+    if topological_order_violations(order, directed_edges):
+        fail("independent-swap-order-witness order violates a directed edge")
+
+    bad_order = checks["bad-order-rejected"]
+    if bad_order["expected_result"] != "unsat" or bad_order.get("proof_status") != "checked":
+        fail("bad-order-rejected must be a checked unsat row")
+    data = bad_order.get("data", {})
+    vertices, directed_edges = require_directed_acyclic_graph("bad-order-rejected", data)
+    order = require_topological_order("bad-order-rejected.order", data.get("order"), vertices)
+    violations = topological_order_violations(order, directed_edges)
+    if not violations:
+        fail("bad-order-rejected must list an order that violates an edge")
+    listed_violation = data.get("violating_edge")
+    if not isinstance(listed_violation, list) or len(listed_violation) != 2:
+        fail("bad-order-rejected.violating_edge must be a two-element list")
+    parent, child = listed_violation
+    require_string("bad-order-rejected.violating_edge[0]", parent)
+    require_string("bad-order-rejected.violating_edge[1]", child)
+    if (parent, child) not in violations:
+        fail("bad-order-rejected.violating_edge is not violated by the listed order")
+
+    cycle = checks["cycle-obstruction-rejected"]
+    if cycle["expected_result"] != "unsat" or cycle.get("proof_status") != "checked":
+        fail("cycle-obstruction-rejected must be a checked unsat row")
+    data = cycle.get("data", {})
+    vertices, directed_edges = require_directed_graph("cycle-obstruction-rejected", data)
+    if is_dag(vertices, directed_edges):
+        fail("cycle-obstruction-rejected graph must contain a directed cycle")
+    order = require_topological_order("cycle-obstruction-rejected.order", data.get("order"), vertices)
+    if not topological_order_violations(order, directed_edges):
+        fail("cycle-obstruction-rejected must violate at least one directed edge")
+    require_directed_cycle(
+        "cycle-obstruction-rejected.cycle",
+        data.get("cycle"),
+        vertices,
+        directed_edges,
+    )
+
+    horizon = checks["topological-sort-theorem-lean-horizon"]
+    if horizon["expected_result"] != "not-run" or horizon.get("proof_status") != "lean-horizon":
+        fail("topological-sort-theorem-lean-horizon must be a Lean-horizon not-run row")
 
 
 def require_vertex_set(context: str, value: Any, vertices: list[str], *, nonempty: bool = False) -> set[str]:
@@ -27015,6 +27137,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_flow_cut(expected)
     if metadata["id"] == "finite-shortest-path-v0":
         validate_finite_shortest_path(expected)
+    if metadata["id"] == "finite-dag-topological-order-v0":
+        validate_finite_dag_topological_order(expected)
     if metadata["id"] == "finite-algebra-homomorphisms-v0":
         validate_finite_algebra_homomorphisms(expected)
     if metadata["id"] == "finite-active-set-qp-v0":

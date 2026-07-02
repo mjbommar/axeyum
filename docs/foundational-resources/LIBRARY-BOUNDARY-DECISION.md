@@ -57,8 +57,8 @@ The Phase M8 threshold is met for size and repeated structure:
 | Requirement | Current Evidence |
 |---|---|
 | At least 40 validated concept rows | 121 atlas rows: 23 curriculum rows, 18 field rows, 75 bridge-concept rows, and 5 example-family rows. |
-| At least 12 validated example packs | 110 non-template math packs are listed through the atlas data contract. |
-| At least 6 packs with checked proof/evidence routes | 110 non-template packs contain at least one `checked` expected-result row. |
+| At least 12 validated example packs | 111 non-template math packs are listed through the atlas data contract. |
+| At least 6 packs with checked proof/evidence routes | 111 non-template packs contain at least one `checked` expected-result row. |
 | At least one consumer can read the data without repository-internal knowledge | `scripts/consume-foundational-resources.py` reads the atlas and example-pack JSON directly, checks schema versions, cross-checks pack coverage, and reports result/proof/label counts in text or JSON; `scripts/query-foundational-resources.py` answers summary, coverage, pack, check, concept, route, field-readiness, and display-label queries without importing validators or generators. |
 | At least one consumer can read promoted solver-reuse rows | `scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any` is part of `scripts/check-foundational-resources.sh` and currently finds 108 promoted packs. |
 | At least one consumer can derive display labels without prose parsing | `scripts/query-foundational-resources.py labels --require-any` reports row and pack labels from JSON, and `check-foundational-resources.sh` requires representative checked, replay-only, theorem-horizon, checked-pack, and mixed-trust labels. |
@@ -69,16 +69,16 @@ The Phase M8 threshold is met for size and repeated structure:
 
 The current pack-level evidence mix is still intentionally conservative:
 
-- `checked`: 330 expected-result rows
+- `checked`: 334 expected-result rows
 - `replay-only`: 295 expected-result rows
-- `lean-horizon`: 73 expected-result rows
-- `not-run`: 73 expected-result rows
-- `expected_result`: 340 `sat`, 285 `unsat`, 73 `not-run`
-- row labels: 88 checked witnesses, 242 checked refutations, 252 finite
-  witness replays, 43 finite rejection replays, and 73 theorem horizons
-- pack labels: 110 checked evidence packs, 99 mixed-trust packs, and 73 packs
+- `lean-horizon`: 74 expected-result rows
+- `not-run`: 74 expected-result rows
+- `expected_result`: 342 `sat`, 287 `unsat`, 74 `not-run`
+- row labels: 90 checked witnesses, 244 checked refutations, 252 finite
+  witness replays, 43 finite rejection replays, and 74 theorem horizons
+- pack labels: 111 checked evidence packs, 100 mixed-trust packs, and 74 packs
   with theorem boundaries
-- `solver_reuse`: 108 promoted packs, 2 non-benchmark-horizon packs, and 0
+- `solver_reuse`: 108 promoted packs, 3 non-benchmark-horizon packs, and 0
   unclassified packs
 
 That distribution argues for keeping the resource lane close to the proof

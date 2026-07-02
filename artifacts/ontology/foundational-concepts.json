@@ -4505,7 +4505,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "Finite graph rows state the vertex set, edge relation, ordering, witness object, and bounded search space being checked. The trusted object is replay of coloring, reachability, traversal, matching, cut, finite network-flow/cut, or d-separation data, or a checked Boolean/CNF, QF_BV, or QF_LIA certificate for a fixed malformed graph claim.",
+      "summary": "Finite graph rows state the vertex set, edge relation, ordering, witness object, and bounded search space being checked. The trusted object is replay of coloring, reachability, traversal, matching, cut, finite network-flow/cut, topological-order, cycle-obstruction, or d-separation data, or a checked Boolean/CNF, QF_BV, or QF_LIA certificate for a fixed malformed graph claim.",
       "prerequisites": [
         "bridge_finite_model_replay",
         "bridge_finite_counting_replay",
@@ -4530,6 +4530,7 @@
         "QF_LIA counters",
         "exact rational flow/cut replay",
         "exact rational shortest-path potential replay",
+        "finite DAG/topological-order replay",
         "finite enumeration"
       ],
       "example_packs": [
@@ -4576,6 +4577,12 @@
           "notes": "Finite directed weighted shortest-path replay, potential optimality certificates, malformed path-length rejection, and shortest-path theorem horizon."
         },
         {
+          "id": "finite-dag-topological-order-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-dag-topological-order-v0",
+          "notes": "Finite DAG topological-order replay, alternate linear extension replay, bad-order rejection, cycle obstruction, and topological-sort theorem horizon."
+        },
+        {
           "id": "graph-d-separation-v0",
           "status": "validated",
           "path": "artifacts/examples/math/graph-d-separation-v0",
@@ -4602,6 +4609,7 @@
             "docs/learn/math/graph-cut-end-to-end.md",
             "docs/learn/math/finite-flow-cut-end-to-end.md",
             "docs/learn/math/finite-shortest-path-end-to-end.md",
+            "docs/learn/math/finite-dag-topological-order-end-to-end.md",
             "docs/learn/math/graph-d-separation-end-to-end.md",
             "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
             "crates/axeyum-solver/tests/math_resource_bv_routes.rs",
@@ -4619,13 +4627,14 @@
         "docs/learn/math/graph-traversal-runtime-index.md",
         "docs/learn/math/finite-flow-cut-end-to-end.md",
         "docs/learn/math/finite-shortest-path-end-to-end.md",
+        "docs/learn/math/finite-dag-topological-order-end-to-end.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
         "crates/axeyum-solver/tests/math_resource_bv_routes.rs",
         "crates/axeyum-solver/tests/math_resource_lia_routes.rs"
       ],
       "open_gaps": [
-        "Finite graph rows do not prove chromatic-number theorems, general max-flow/min-cut, shortest-path algorithm correctness, matching duality, graph minors, extremal graph theory, or unbounded graph-family claims.",
+        "Finite graph rows do not prove chromatic-number theorems, general max-flow/min-cut, shortest-path algorithm correctness, topological-sort algorithm correctness, matching duality, graph minors, extremal graph theory, or unbounded graph-family claims.",
         "Traversal-cost rows are fixed finite counterexamples; asymptotic BFS/DFS complexity and average-case runtime remain Lean-horizon.",
         "D-separation rows are finite graph-theoretic checks and do not claim causal identification, do-calculus, or probabilistic graphical-model semantics."
       ],
@@ -11088,6 +11097,12 @@
           "notes": "Finite Cardinality And Bijection Checks"
         },
         {
+          "id": "finite-dag-topological-order-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-dag-topological-order-v0",
+          "notes": "Finite DAG Topological Order Certificates"
+        },
+        {
           "id": "finite-flow-cut-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-flow-cut-v0",
@@ -11449,7 +11464,13 @@
           "id": "graph-coloring-v0",
           "status": "validated",
           "path": "artifacts/examples/math/graph-coloring-v0",
-          "notes": "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, and d-separation."
+          "notes": "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."
+        },
+        {
+          "id": "finite-dag-topological-order-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-dag-topological-order-v0",
+          "notes": "Finite DAG Topological Order Certificates"
         },
         {
           "id": "finite-flow-cut-v0",

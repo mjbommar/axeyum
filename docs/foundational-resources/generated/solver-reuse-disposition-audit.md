@@ -13,7 +13,7 @@ or only educational boundary examples.
 
 | Metric | Count |
 |---|---:|
-| Non-template math packs | 110 |
+| Non-template math packs | 111 |
 | Promoted evidence row links | 195 |
 | Unclassified packs | 0 |
 
@@ -22,7 +22,7 @@ or only educational boundary examples.
 | Status | Packs |
 |---|---:|
 | `unclassified` | 0 |
-| `non-benchmark-horizon` | 2 |
+| `non-benchmark-horizon` | 3 |
 | `promoted` | 108 |
 
 ## Unclassified Queue
@@ -33,6 +33,7 @@ No unclassified solver-reuse packs.
 
 | Status | Pack | Gate | Next Gate | Fields | Fragments | Proof Statuses | Pressure Buckets | Solver Target | Evidence Rows | Next Step | Validator |
 |---|---|---|---|---|---|---|---|---|---|---|---|
+| `non-benchmark-horizon` | `finite-dag-topological-order-v0` | `R4 checked evidence` | `R5 solver reuse` | `graph_theory`, `discrete_math` | `finite directed graphs`, `finite DAG replay`, `finite topological-order replay`, `finite cycle obstruction replay`, `Lean horizon` | `checked`: 4, `lean-horizon`: 1 | `Bool / CNF`, `Finite Replay / Computable Witness`, `Lean Horizon` | finite DAG topological-order replay and theorem boundary | `topological-order-witness`, `independent-swap-order-witness`, `bad-order-rejected`, `cycle-obstruction-rejected` | Promote only after adding a source Boolean/LIA artifact and checked proof route for acyclicity, topological-order existence, or cycle obstruction; keep Kahn/DFS algorithm correctness and linear-extension theorems in the Lean-horizon lane. | `python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dag-topological-order-v0` |
 | `non-benchmark-horizon` | `finite-flow-cut-v0` | `R4 checked evidence` | `R5 solver reuse` | `graph_theory`, `discrete_math`, `optimization_and_convexity`, `linear_algebra` | `finite directed graphs`, `finite network flow replay`, `finite cut certificates`, `exact rational arithmetic`, `Lean horizon` | `checked`: 4, `lean-horizon`: 1 | `QF_LRA / Farkas`, `Finite Replay / Computable Witness`, `Lean Horizon` | finite network-flow replay and max-flow/min-cut theorem boundary | `feasible-flow-witness`, `flow-cut-optimality-witness`, `bad-capacity-bound-rejected`, `bad-flow-value-rejected` | Promote only after adding a source exact-arithmetic artifact and checked proof route for capacity, conservation, or cut-bound conflicts; keep the general max-flow/min-cut theorem in the Lean-horizon lane. | `python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-flow-cut-v0` |
 | `non-benchmark-horizon` | `finite-shortest-path-v0` | `R4 checked evidence` | `R5 solver reuse` | `graph_theory`, `discrete_math`, `optimization_and_convexity` | `finite directed weighted graphs`, `finite shortest-path replay`, `finite potential certificates`, `exact rational arithmetic`, `Lean horizon` | `checked`: 4, `lean-horizon`: 1 | `QF_LRA / Farkas`, `Finite Replay / Computable Witness`, `Lean Horizon` | finite shortest-path replay and potential-certificate theorem boundary | `path-distance-witness`, `potential-optimality-witness`, `bad-path-distance-rejected`, `bad-shorter-distance-rejected` | Promote only after adding a source exact-arithmetic artifact and checked proof route for path length, edge relaxation, or dual potential conflicts; keep general shortest-path algorithms, negative-cycle theory, and asymptotic runtime in the Lean-horizon lane. | `python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-shortest-path-v0` |
 | `promoted` | `affine-geometry-v0` | `R6 consumer boundary` | `no later gate` | `geometry`, `linear_algebra`, `real_analysis` | `LRA (exact rationals)`, `QF_LRA`, `finite coordinate replay`, `Lean horizon` | `checked`: 3, `lean-horizon`: 1, `replay-only`: 3 | `QF_LRA / Farkas`, `Finite Replay / Computable Witness`, `Lean Horizon` | affine geometry bad midpoint-coordinate, bad collinearity determinant, and bad distance-preservation QF_LRA/Farkas regression seeds | `bad-midpoint-image-y-rejected`, `bad-collinearity-determinant-rejected`, `bad-distance-preservation-rejected` | Promote additional affine-coordinate rows only when they add distinct exact-linear solver pressure beyond midpoint, collinearity, and distance counterclaims; keep general affine-combination, incidence, ratio, and synthetic-geometry theorems in the Lean-horizon lane. | `python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/affine-geometry-v0` |

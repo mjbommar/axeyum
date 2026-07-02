@@ -501,7 +501,7 @@ FIELD_PACKS = {
     "logic_and_proof": ("proof-methods-refutation-v0", "Negation-as-query, finite CNF checks, finite order counterexamples, and proof-object lessons."),
     "set_theory_and_foundations": ("finite-sets-v0", "Finite set, relation, function, monoid/function-composition, permutation-group, group-action, order, lattice, and cardinality checks."),
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
-    "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, and d-separation."),
+    "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU replay, rank, inverse, Jacobians, Hessians, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, and Cayley-table validation."),
@@ -2866,7 +2866,8 @@ BRIDGE_CONCEPTS = [
             "Finite graph rows state the vertex set, edge relation, ordering, "
             "witness object, and bounded search space being checked. The "
             "trusted object is replay of coloring, reachability, traversal, "
-            "matching, cut, finite network-flow/cut, or d-separation data, "
+            "matching, cut, finite network-flow/cut, topological-order, "
+            "cycle-obstruction, or d-separation data, "
             "or a checked Boolean/CNF, QF_BV, or QF_LIA certificate for a "
             "fixed malformed graph claim."
         ),
@@ -2894,6 +2895,7 @@ BRIDGE_CONCEPTS = [
             "QF_LIA counters",
             "exact rational flow/cut replay",
             "exact rational shortest-path potential replay",
+            "finite DAG/topological-order replay",
             "finite enumeration",
         ],
         "example_packs": [
@@ -2926,6 +2928,10 @@ BRIDGE_CONCEPTS = [
                 "Finite directed weighted shortest-path replay, potential optimality certificates, malformed path-length rejection, and shortest-path theorem horizon.",
             ),
             (
+                "finite-dag-topological-order-v0",
+                "Finite DAG topological-order replay, alternate linear extension replay, bad-order rejection, cycle obstruction, and topological-sort theorem horizon.",
+            ),
+            (
                 "graph-d-separation-v0",
                 "Finite DAG d-separation path enumeration with conditioned-chain and unconditioned-collider CNF proof routes.",
             ),
@@ -2950,6 +2956,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/graph-cut-end-to-end.md",
                     "docs/learn/math/finite-flow-cut-end-to-end.md",
                     "docs/learn/math/finite-shortest-path-end-to-end.md",
+                    "docs/learn/math/finite-dag-topological-order-end-to-end.md",
                     "docs/learn/math/graph-d-separation-end-to-end.md",
                     "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
                     "crates/axeyum-solver/tests/math_resource_bv_routes.rs",
@@ -2972,13 +2979,14 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/graph-traversal-runtime-index.md",
             "docs/learn/math/finite-flow-cut-end-to-end.md",
             "docs/learn/math/finite-shortest-path-end-to-end.md",
+            "docs/learn/math/finite-dag-topological-order-end-to-end.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-cnf/tests/math_resource_boolean_routes.rs",
             "crates/axeyum-solver/tests/math_resource_bv_routes.rs",
             "crates/axeyum-solver/tests/math_resource_lia_routes.rs",
         ],
         "open_gaps": [
-            "Finite graph rows do not prove chromatic-number theorems, general max-flow/min-cut, shortest-path algorithm correctness, matching duality, graph minors, extremal graph theory, or unbounded graph-family claims.",
+            "Finite graph rows do not prove chromatic-number theorems, general max-flow/min-cut, shortest-path algorithm correctness, topological-sort algorithm correctness, matching duality, graph minors, extremal graph theory, or unbounded graph-family claims.",
             "Traversal-cost rows are fixed finite counterexamples; asymptotic BFS/DFS complexity and average-case runtime remain Lean-horizon.",
             "D-separation rows are finite graph-theoretic checks and do not claim causal identification, do-calculus, or probabilistic graphical-model semantics.",
         ],

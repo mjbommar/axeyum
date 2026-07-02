@@ -13,11 +13,12 @@ Which checked graph packs match this finite graph family and proof route?
 
 The current graph surface is finite and route-explicit: graph coloring,
 reachability, traversal traces, BFS/DFS cost counters, matching, cuts, finite
-flow/cut certificates, finite shortest-path certificates, and d-separation.
+flow/cut certificates, finite shortest-path certificates, finite DAG
+topological-order certificates, and d-separation.
 General graph theorems, graph minors, extremal graph theory, max-flow/min-cut,
-shortest-path algorithm correctness, asymptotic algorithms, graph-family lower
-bounds, average-case traversal, and parallel/heuristic search guarantees remain
-in the proof-horizon lane.
+shortest-path algorithm correctness, topological-sort algorithm correctness,
+asymptotic algorithms, graph-family lower bounds, average-case traversal, and
+parallel/heuristic search guarantees remain in the proof-horizon lane.
 
 ## Query Shape
 
@@ -69,6 +70,8 @@ needs concrete checked rows to display.
 | Max-flow/min-cut theorem boundary | pack `finite-flow-cut-v0` | `lean-horizon` | `checks --pack finite-flow-cut-v0 --expected-result not-run --proof-status lean-horizon` |
 | Finite shortest-path certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay`; exact rational | `checks --pack finite-shortest-path-v0 --proof-status checked` |
 | Shortest-path theorem boundary | pack `finite-shortest-path-v0` | `lean-horizon` | `checks --pack finite-shortest-path-v0 --expected-result not-run --proof-status lean-horizon` |
+| Finite DAG topological-order certificates | `bridge_finite_graph_replay_obstruction` | `finite-model-replay` | `checks --pack finite-dag-topological-order-v0 --proof-status checked` |
+| Topological-sort theorem boundary | pack `finite-dag-topological-order-v0` | `lean-horizon` | `checks --pack finite-dag-topological-order-v0 --expected-result not-run --proof-status lean-horizon` |
 | Bounded family rows versus asymptotic theorem boundaries | `bridge_bounded_family_asymptotic_boundary` | `LIA`; `Farkas` | `checks --concept bridge_bounded_family_asymptotic_boundary --route LIA --proof-status checked`; `checks --concept bridge_bounded_family_asymptotic_boundary --route Farkas --proof-status checked` |
 | All checked graph rows | field `graph_theory` | any route | `checks --field graph_theory --expected-result unsat --proof-status checked` |
 | Runtime-specific rows | pack `graph-search-runtime-v0` | `LIA` | `checks --pack graph-search-runtime-v0 --route LIA --proof-status checked` |
@@ -186,6 +189,26 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Display finite DAG topological-order and cycle-obstruction rows:
+
+```sh
+python3 scripts/query-foundational-resources.py packs \
+  --field graph_theory \
+  --text topological \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-dag-topological-order-v0 \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-dag-topological-order-v0 \
+  --expected-result not-run \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Display bounded-family rows that are useful finite checks but not asymptotic
 theorems:
 
@@ -228,6 +251,7 @@ object family.
 They do not prove:
 
 - general graph-coloring, matching, cut, minor, or extremal graph theorems;
+- max-flow/min-cut, shortest-path, or topological-sort theorem families;
 - asymptotic BFS/DFS/Dijkstra/A* runtime theorems or graph-family lower
   bounds;
 - average-case traversal, randomized graph algorithms, or parallel search

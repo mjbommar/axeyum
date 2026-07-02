@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 75 bridge-concept rows.
 - 5 example-family rows.
-- 110 non-template math packs.
-- 698 expected checks.
-- 330 checked proof/evidence rows.
+- 111 non-template math packs.
+- 703 expected checks.
+- 334 checked proof/evidence rows.
 - 295 replay-only rows.
-- 73 Lean-horizon rows.
+- 74 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
-- 2 non-benchmark-horizon solver-reuse packs.
+- 3 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 110 focused learner-linked packs, with no path-only, index-only, or missing
+- 111 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 110 current non-template packs satisfy the focused-lesson side of this
+all 111 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -249,7 +249,7 @@ Exit criteria:
 | `logic_and_proof` | SAT, refutation, finite proof patterns, induction bounds | maintain proof-object anatomy bridge rows and PHP CNF promotions | Bool/CNF DRAT/LRAT, QF_LIA, Lean horizon |
 | `set_theory_and_foundations` | finite sets, relations, functions, quotients, lattices, cardinality | maintain landed finite Boolean algebra, partition/relation, image/preimage/inverse, finite cardinality, and cardinality-horizon bridge rows | finite replay, Bool/CNF, QF_UF/Alethe, Lean horizon |
 | `discrete_math` | counting, generating functions, graph resources, finite actions | maintain landed finite-counting replay and bounded-family/asymptotic-boundary bridges; add new rows only for distinct counting, recurrence, or family-boundary pressure | Bool/CNF, QF_LIA, QF_LRA/Farkas, finite replay |
-| `graph_theory` | coloring, reachability, search runtime, matching, cuts, d-separation | maintain landed finite graph replay/obstruction and bounded-family/asymptotic-boundary bridges; add theorem/asymptotic horizons only as proof targets | Bool/CNF, QF_BV, QF_LIA, finite replay |
+| `graph_theory` | coloring, reachability, search runtime, matching, cuts, flow/cut, shortest paths, topological orders, d-separation | maintain landed finite graph replay/obstruction and bounded-family/asymptotic-boundary bridges; add theorem/asymptotic horizons only as proof targets | Bool/CNF, QF_BV, QF_LIA, exact-rational replay, finite replay |
 | `number_theory` | gcd, modular arithmetic, residues, bounded Diophantine checks | group recurring divisibility and residue obstructions; modular Fermat-unit search now has a fixed-width QF_BV/DRAT row | QF_LIA/Diophantine, QF_BV |
 | `linear_algebra` | exact matrices, vector spaces, duals, modules, tensors, spectral rows, active-set QP rows, SDP rows, descent-step rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | maintain matrix rows queryable by computation type and solver route; five matrix/statistics bad rows now prove committed SMT-LIB artifacts directly through QF_LRA/Farkas regressions | QF_LRA/Farkas, finite replay, QF_UF/Alethe |
 | `abstract_algebra` | finite groups/rings/fields, homomorphisms, ideals, modules, tensors | add narrower rows only when multiple packs reuse them | QF_UF/Alethe, QF_BV, finite replay |
@@ -1833,6 +1833,19 @@ Pick one row per commit unless the change is purely navigational.
      Lean-horizon row. The pack is intentionally
      `non-benchmark-horizon` until a source exact-arithmetic artifact and
      checked proof route exist.
+217. Landed: add `finite-shortest-path-v0` as a graph/discrete/optimization
+     bridge pack. It checks exact directed weighted path replay, potential
+     optimality-certificate replay, malformed path-length rejection, claimed
+     shorter-distance rejection by a finite potential lower bound, and a
+     shortest-path theorem horizon. The pack is intentionally
+     `non-benchmark-horizon` until a source exact-arithmetic artifact and
+     checked proof route exist.
+218. Landed: add `finite-dag-topological-order-v0` as a graph/discrete bridge
+     pack. It checks two finite topological-order witnesses, rejects a bad
+     order by a concrete edge-position violation, rejects a cyclic graph by
+     replaying a directed cycle obstruction, and records a topological-sort
+     theorem horizon. The pack is intentionally `non-benchmark-horizon` until
+     a source Boolean/LIA artifact and checked proof route exist.
 
 ## Validation Checklist
 

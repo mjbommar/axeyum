@@ -26,6 +26,7 @@ Example packs:
 - [graph-cut-v0](../../../artifacts/examples/math/graph-cut-v0/)
 - [finite-flow-cut-v0](../../../artifacts/examples/math/finite-flow-cut-v0/)
 - [finite-shortest-path-v0](../../../artifacts/examples/math/finite-shortest-path-v0/)
+- [finite-dag-topological-order-v0](../../../artifacts/examples/math/finite-dag-topological-order-v0/)
 - [proof-methods-refutation-v0](../../../artifacts/examples/math/proof-methods-refutation-v0/)
 
 Companion map:
@@ -68,7 +69,10 @@ source-side cut capacity, rejecting a capacity violation, and rejecting a
 claimed flow value above that cut bound. The finite shortest-path pack checks
 one directed weighted graph by replaying a path length, verifying a potential
 lower-bound certificate, rejecting a malformed path length, and rejecting a
-claimed shorter distance below the potential lower bound.
+claimed shorter distance below the potential lower bound. The finite DAG
+topological-order pack checks two valid linear extensions of one prerequisite
+DAG, rejects an order with a backward edge, and rejects a cyclic graph by
+replaying a directed cycle obstruction.
 
 This gives a direct model of "untrusted fast search, trusted small checking":
 the search can propose colors, but the checker only needs the graph and the
@@ -87,13 +91,17 @@ propose edge flows and a cut; the checker recomputes capacities,
 conservation, source/sink balance, and the cut upper bound over exact
 rationals. For shortest paths, the search can propose a path and potentials;
 the checker recomputes edge weights and every edge-relaxation inequality over
-exact rationals.
+exact rationals. For DAG topological order, the search can propose a vertex
+order or cycle; the checker recomputes vertex coverage, edge positions, and
+cycle edges.
 The shared `bridge_finite_graph_replay_obstruction` row is the atlas vocabulary
 for this finite graph pattern across coloring, reachability, traversal,
-matching, cut, finite flow/cut, finite shortest-path, and d-separation
+matching, cut, finite flow/cut, finite shortest-path, finite DAG
+topological-order, and d-separation
 resources. It is deliberately finite: graph minors, max-flow/min-cut theorems,
-shortest-path algorithm correctness, matching duality, causal identification,
-and asymptotic traversal complexity stay in proof-horizon resources.
+shortest-path algorithm correctness, topological-sort algorithm correctness,
+matching duality, causal identification, and asymptotic traversal complexity
+stay in proof-horizon resources.
 
 ## Encode / Check Walkthrough
 

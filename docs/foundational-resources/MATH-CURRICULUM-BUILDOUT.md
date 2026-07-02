@@ -1506,9 +1506,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 110 non-template math example packs validate.
+  Status: 111 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 110 non-template packs have at least one `checked` expected-result row.
+  Status: 111 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas

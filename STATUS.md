@@ -234,16 +234,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite DAG topological-order graph resource landed.**
+  `finite-dag-topological-order-v0` adds finite DAG topological-order replay,
+  independent-order witness replay, bad-order rejection by a concrete
+  backward-edge position, cyclic-graph rejection by directed-cycle replay, and
+  a topological-sort theorem horizon. It is deliberately
+  `non-benchmark-horizon` until a source Boolean/LIA artifact and checked proof
+  route exist. The public summary now reports 121 concept rows, 111 packs, 703
+  expected checks, 334 checked rows, 295 replay-only rows, 74 Lean-horizon rows,
+  108 promoted solver-reuse packs, and 3 non-benchmark-horizon packs.
+
 - **Finite shortest-path graph resource landed.**
   `finite-shortest-path-v0` adds exact directed weighted path replay,
   potential optimality-certificate replay, malformed path-length rejection,
   claimed-shorter-distance rejection by a finite potential lower bound, and a
   shortest-path theorem horizon. It is deliberately
   `non-benchmark-horizon` until a source exact-arithmetic artifact and checked
-  proof route exist. The public summary now reports 121 concept rows, 110
-  packs, 698 expected checks, 330 checked rows, 295 replay-only rows, 73
-  Lean-horizon rows, 108 promoted solver-reuse packs, and 2
-  non-benchmark-horizon packs.
+  proof route exist.
 
 - **Finite flow/cut graph resource landed.**
   `finite-flow-cut-v0` adds exact directed-flow feasibility replay, saturated
@@ -3008,7 +3015,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   squared distance `25` against the malformed claim `26`, and
   `math_resource_lra_routes::coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas`
   checks the emitted `UnsatFarkas` certificate. Generated dashboards then reported
-  81 promoted, 3 non-benchmark-horizon, and 0 unclassified solver-reuse packs.
+  81 promoted, 2 non-benchmark-horizon, and 0 unclassified solver-reuse packs.
 
 - **Finite-operator QF_LRA/Farkas promotion landed.**
   `finite-operator-v0` now carries promoted `solver_reuse` metadata for its
@@ -15179,7 +15186,7 @@ plan is built and committed on the current branch:
   for the bad squared-distance row and wired it into `math_resource_lra_routes`.
   The pack metadata now marks `solver_reuse.status` as `promoted`, the expected
   row records the checked `UnsatFarkas` certificate path, and generated
-  dashboards then reported 81 promoted, 3 non-benchmark-horizon, and 0 unclassified
+  dashboards then reported 81 promoted, 2 non-benchmark-horizon, and 0 unclassified
   packs.
 
 - **2026-06-30** — **Finite-operator QF_LRA promotion landed.** Added

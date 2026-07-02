@@ -16,11 +16,11 @@ The current public summary is:
 
 ```text
 concept_rows=121
-non_template_packs=110
-checks=698
-expected_results=not-run:73,sat:340,unsat:285
-proof_statuses=checked:330,lean-horizon:73,replay-only:295
-solver_reuse=non-benchmark-horizon:2,promoted:108
+non_template_packs=111
+checks=703
+expected_results=not-run:74,sat:342,unsat:287
+proof_statuses=checked:334,lean-horizon:74,replay-only:295
+solver_reuse=non-benchmark-horizon:3,promoted:108
 ```
 
 ## Row Labels

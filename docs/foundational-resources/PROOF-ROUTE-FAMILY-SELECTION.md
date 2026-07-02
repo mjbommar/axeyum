@@ -37,13 +37,13 @@ The public query surface reports:
 python3 scripts/query-foundational-resources.py summary
 ```
 
-- 110 non-template math packs.
-- 698 expected checks.
-- 330 checked proof/evidence rows.
+- 111 non-template math packs.
+- 703 expected checks.
+- 334 checked proof/evidence rows.
 - 295 replay-only rows.
-- 73 Lean-horizon rows.
+- 74 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
-- 2 non-benchmark-horizon solver-reuse packs.
+- 3 non-benchmark-horizon solver-reuse packs.
 
 Route summaries from `scripts/query-foundational-resources.py routes`:
 
@@ -54,7 +54,7 @@ Route summaries from `scripts/query-foundational-resources.py routes`:
 | QF_LIA/Diophantine | 14 | 90 | 58 | 25 | 7 |
 | QF_LRA/Farkas | 58 | 404 | 147 | 215 | 42 |
 | QF_UF/Alethe | 19 | 122 | 58 | 48 | 16 |
-| Lean horizon | 80 | 536 | 225 | 238 | 73 |
+| Lean horizon | 81 | 541 | 229 | 238 | 74 |
 
 The counts overlap because packs and rows can carry multiple routes. That is
 intentional: a finite topology pack can have finite replay, Boolean evidence,

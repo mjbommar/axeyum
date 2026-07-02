@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-dag-topological-order-v0",
+  "witnesses": [
+    {
+      "id": "course-prerequisite-order",
+      "description": "One topological order for a tiny prerequisite DAG.",
+      "values": {
+        "vertices": ["intro", "algebra", "analysis", "topology", "thesis"],
+        "directed_edges": [
+          ["intro", "algebra"],
+          ["intro", "analysis"],
+          ["algebra", "topology"],
+          ["analysis", "topology"],
+          ["topology", "thesis"]
+        ],
+        "order": ["intro", "algebra", "analysis", "topology", "thesis"]
+      }
+    },
+    {
+      "id": "independent-course-swap-order",
+      "description": "A second valid topological order swaps the independent algebra and analysis vertices.",
+      "values": {
+        "vertices": ["intro", "algebra", "analysis", "topology", "thesis"],
+        "directed_edges": [
+          ["intro", "algebra"],
+          ["intro", "analysis"],
+          ["algebra", "topology"],
+          ["analysis", "topology"],
+          ["topology", "thesis"]
+        ],
+        "order": ["intro", "analysis", "algebra", "topology", "thesis"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "topological-order-witness",
+      "claim": "The listed prerequisite order is a valid topological order.",
+      "expected_result": "sat",
+      "validation": "finite_topological_order_replay",
+      "proof_status": "checked",
+      "witnesses": ["course-prerequisite-order"],
+      "notes": "The validator checks that every vertex appears once and that every directed edge points from an earlier vertex to a later vertex."
+    },
+    {
+      "id": "independent-swap-order-witness",
+      "claim": "The algebra and analysis vertices can be swapped while preserving the topological order.",
+      "expected_result": "sat",
+      "validation": "finite_topological_order_replay",
+      "proof_status": "checked",
+      "witnesses": ["independent-course-swap-order"],
+      "notes": "The validator accepts the swapped order because there is no edge between algebra and analysis."
+    },
+    {
+      "id": "bad-order-rejected",
+      "claim": "The order intro, topology, algebra, analysis, thesis is a valid topological order.",
+      "expected_result": "unsat",
+      "validation": "finite_bad_topological_order_refutation",
+      "proof_status": "checked",
+      "data": {
+        "vertices": ["intro", "algebra", "analysis", "topology", "thesis"],
+        "directed_edges": [
+          ["intro", "algebra"],
+          ["intro", "analysis"],
+          ["algebra", "topology"],
+          ["analysis", "topology"],
+          ["topology", "thesis"]
+        ],
+        "order": ["intro", "topology", "algebra", "analysis", "thesis"],
+        "violating_edge": ["algebra", "topology"]
+      },
+      "notes": "The listed order puts topology before algebra even though algebra must precede topology."
+    },
+    {
+      "id": "cycle-obstruction-rejected",
+      "claim": "The directed cycle a -> b -> c -> a has a topological order.",
+      "expected_result": "unsat",
+      "validation": "finite_directed_cycle_obstruction_replay",
+      "proof_status": "checked",
+      "data": {
+        "vertices": ["a", "b", "c"],
+        "directed_edges": [
+          ["a", "b"],
+          ["b", "c"],
+          ["c", "a"]
+        ],
+        "order": ["a", "b", "c"],
+        "cycle": ["a", "b", "c", "a"]
+      },
+      "notes": "A total order of the cycle vertices must place one cycle edge backward; the listed cycle is replayed as the finite obstruction."
+    },
+    {
+      "id": "topological-sort-theorem-lean-horizon",
+      "claim": "General DAG topological-sort correctness and linear-extension existence require future theorem-prover reconstruction.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "Every finite acyclic directed graph has a topological order, and any directed cycle obstructs such an order.",
+        "future_checker": "Lean proof of finite DAG linear-extension existence, Kahn/DFS topological-sort invariants, and cycle-obstruction completeness."
+      },
+      "notes": "The checked rows cover two explicit orders and one explicit cycle obstruction. They do not prove algorithm correctness or asymptotic runtime."
+    }
+  ]
+}

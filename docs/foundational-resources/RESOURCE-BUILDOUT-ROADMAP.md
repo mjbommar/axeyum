@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 75 bridge-concept rows.
 - 5 example-family rows.
-- 110 non-template math example packs.
-- 698 expected checks.
-- 330 checked proof/evidence rows.
+- 111 non-template math example packs.
+- 703 expected checks.
+- 334 checked proof/evidence rows.
 - 295 replay-only rows.
-- 73 Lean-horizon rows.
+- 74 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
-- 2 non-benchmark-horizon solver-reuse packs.
+- 3 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 110 focused learner-linked packs, with no path-only, index-only, or missing
+- 111 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -544,18 +544,21 @@ Current packs:
 - `graph-matching-v0`
 - `graph-cut-v0`
 - `finite-flow-cut-v0`
+- `finite-shortest-path-v0`
+- `finite-dag-topological-order-v0`
 - `graph-d-separation-v0`
 
 Build next:
 
 - Maintain the landed `bridge_finite_graph_replay_obstruction` row for
   coloring, reachability, BFS/DFS traversal, matching, cut, finite flow/cut,
-  separation, d-separation, and graph-counterexample replay.
+  shortest paths, DAG topological orders, separation, d-separation, and
+  graph-counterexample replay.
 - Promote one representative bad row per graph family into a small regression
   artifact if it produces a compact CNF/LIA/BV check.
 - Add proof-route notes for when graph claims are Boolean SAT, finite replay,
-  exact rational flow/cut replay, LIA cost counters, or Lean-horizon
-  asymptotics.
+  exact rational flow/cut or shortest-path replay, DAG order/cycle replay, LIA
+  cost counters, or Lean-horizon asymptotics.
 
 Graduation:
 
