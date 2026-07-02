@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-shifted-qr-step-v0",
+  "witnesses": [
+    {
+      "id": "rational-shifted-qr-step",
+      "description": "Exact rational shifted QR step for a fixed 2x2 matrix.",
+      "values": {
+        "shift": "1",
+        "matrix": [
+          ["4", "2"],
+          ["-4", "0"]
+        ],
+        "q_matrix": [
+          ["3/5", "4/5"],
+          ["-4/5", "3/5"]
+        ],
+        "q_transpose": [
+          ["3/5", "-4/5"],
+          ["4/5", "3/5"]
+        ],
+        "r_matrix": [
+          ["5", "2"],
+          ["0", "1"]
+        ],
+        "identity": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "shifted_matrix": [
+          ["3", "2"],
+          ["-4", "-1"]
+        ],
+        "factorization_product": [
+          ["3", "2"],
+          ["-4", "-1"]
+        ],
+        "rq_product": [
+          ["7/5", "26/5"],
+          ["-4/5", "3/5"]
+        ],
+        "next_matrix": [
+          ["12/5", "26/5"],
+          ["-4/5", "8/5"]
+        ],
+        "similarity_product": [
+          ["12/5", "26/5"],
+          ["-4/5", "8/5"]
+        ],
+        "r_diagonal": ["5", "1"],
+        "trace_matrix": "4",
+        "trace_next_matrix": "4",
+        "determinant_matrix": "8",
+        "determinant_next_matrix": "8"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "shifted-qr-shape-witness",
+      "claim": "The fixed rational matrix Q is orthogonal and R is upper triangular.",
+      "expected_result": "sat",
+      "validation": "exact_rational_shifted_qr_shape_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-shifted-qr-step"],
+      "notes": "The validator recomputes Q^T, Q^T*Q, Q*Q^T, upper-triangular shape, and the listed R diagonal exactly."
+    },
+    {
+      "id": "shifted-qr-factorization-witness",
+      "claim": "The fixed rational matrices satisfy A0 - mu*I = Q*R.",
+      "expected_result": "sat",
+      "validation": "exact_rational_shifted_qr_factorization_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-shifted-qr-step"],
+      "notes": "The validator recomputes the shifted matrix and QR product exactly over rationals."
+    },
+    {
+      "id": "shifted-qr-update-witness",
+      "claim": "The fixed rational matrices satisfy A1 = R*Q + mu*I.",
+      "expected_result": "sat",
+      "validation": "exact_rational_shifted_qr_update_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-shifted-qr-step"],
+      "notes": "The validator recomputes the shifted QR update exactly over rationals."
+    },
+    {
+      "id": "shifted-qr-similarity-witness",
+      "claim": "The fixed rational matrices satisfy Q^T*A0*Q = A1.",
+      "expected_result": "sat",
+      "validation": "exact_rational_shifted_qr_similarity_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-shifted-qr-step"],
+      "notes": "The validator checks that the shifted QR step is the corresponding orthogonal similarity transform for this fixed matrix."
+    },
+    {
+      "id": "shifted-qr-invariant-witness",
+      "claim": "The fixed shifted QR step preserves trace and determinant.",
+      "expected_result": "sat",
+      "validation": "exact_rational_shifted_qr_invariant_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-shifted-qr-step"],
+      "notes": "The validator recomputes trace(A0), trace(A1), det(A0), and det(A1) exactly."
+    },
+    {
+      "id": "bad-shifted-qr-entry-rejected",
+      "claim": "The lower-right entry of the shifted next-step matrix is 2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_shifted_qr_entry_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "rational-shifted-qr-step",
+        "entry": [1, 1],
+        "computed_entry": "8/5",
+        "claimed_entry": "2"
+      },
+      "notes": "Exact replay reads A1[1,1] as 8/5, so the claimed value 2 is rejected; the separate qf-lra-bad-shifted-qr-entry row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-shifted-qr-entry",
+      "claim": "The fixed malformed shifted-QR entry claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "rational-shifted-qr-step",
+        "source_replay_row": "bad-shifted-qr-entry-rejected",
+        "entry": [1, 1],
+        "computed_entry": "8/5",
+        "claimed_entry": "2",
+        "farkas_conflict": "shifted_qr_a11 = 8/5 and shifted_qr_a11 = 2",
+        "smt2_artifact": "artifacts/examples/math/finite-shifted-qr-step-v0/smt2/bad-shifted-qr-entry-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_shifted_qr_step_bad_entry_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the listed shifted next-step entry as 8/5, while the malformed row claims 2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-shifted-qr-theory-lean-horizon",
+      "claim": "General shifted QR iteration convergence, shift selection, deflation, Schur-form convergence, loss-of-orthogonality bounds, and floating-point eigensolver stability require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For suitable finite-dimensional real or complex matrices, prove shifted QR steps preserve similarity and characterize convergence/deflation behavior under explicit shift and spectral hypotheses.",
+        "future_checker": "Lean theorem statements for shifted QR iteration and Schur convergence plus separate numerical-honesty artifacts for floating-point QR implementations, shift heuristics, deflation, and loss of orthogonality."
+      },
+      "notes": "The finite exact row is a checked resource for one rational shifted QR step, not a theorem about shift choice, QR convergence, or floating-point eigensolver stability."
+    }
+  ]
+}

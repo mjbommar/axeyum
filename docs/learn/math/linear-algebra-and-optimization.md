@@ -34,6 +34,7 @@ Example packs:
 - [finite-real-schur-decomposition-v0](../../../artifacts/examples/math/finite-real-schur-decomposition-v0/)
 - [finite-polar-decomposition-v0](../../../artifacts/examples/math/finite-polar-decomposition-v0/)
 - [finite-qr-iteration-step-v0](../../../artifacts/examples/math/finite-qr-iteration-step-v0/)
+- [finite-shifted-qr-step-v0](../../../artifacts/examples/math/finite-shifted-qr-step-v0/)
 - [finite-power-iteration-v0](../../../artifacts/examples/math/finite-power-iteration-v0/)
 - [finite-conjugate-gradient-v0](../../../artifacts/examples/math/finite-conjugate-gradient-v0/)
 - [finite-arnoldi-iteration-v0](../../../artifacts/examples/math/finite-arnoldi-iteration-v0/)
@@ -556,6 +557,23 @@ shift selection, deflation, Schur theorem reconstruction, loss-of-orthogonality
 analysis, and floating-point stability stay in the horizon lane. For a focused
 trace, read [End To End: Finite QR Iteration Step](qr-iteration-step-end-to-end.md).
 
+For one exact shifted QR step, `finite-shifted-qr-step-v0` adds a rational
+shift to the same finite matrix story:
+
+```text
+mu = 1
+A0 - mu*I = Q*R
+A1 = R*Q + mu*I = Q^T*A0*Q
+```
+
+The validator recomputes `A0 - mu*I = Q*R`, `A1 = R*Q + mu*I`,
+`Q^T*A0*Q = A1`, `trace(A0) = trace(A1) = 4`, and
+`det(A0) = det(A1) = 8`. Its checked bad row rejects the claim that
+`A1[1,1] = 2` after exact replay reads `8/5`; shift-selection theory,
+deflation, QR convergence, Schur theorem reconstruction, loss-of-orthogonality
+analysis, and floating-point stability stay in the horizon lane. For a focused
+trace, read [End To End: Finite Shifted QR Step](shifted-qr-step-end-to-end.md).
+
 For a Jordan-chain shadow, `finite-jordan-chain-v0` uses one non-diagonal
 rational matrix:
 
@@ -1001,6 +1019,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_polar_decomposition_bad_diagonal_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-qr-iteration-step-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_qr_iteration_step_bad_entry_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-shifted-qr-step-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_shifted_qr_step_bad_entry_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-jordan-chain-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_jordan_chain_bad_component_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0

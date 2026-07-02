@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 135 non-template math packs.
-- 887 expected checks.
-- 361 checked proof/evidence rows.
-- 428 replay-only rows.
-- 98 Lean-horizon rows.
-- 135 promoted solver-reuse packs.
+- 136 non-template math packs.
+- 895 expected checks.
+- 362 checked proof/evidence rows.
+- 434 replay-only rows.
+- 99 Lean-horizon rows.
+- 136 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 135 focused learner-linked packs, with no path-only, index-only, or missing
+- 136 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 135 current non-template packs satisfy the focused-lesson side of this
+all 136 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2551,6 +2551,15 @@ Pick one row per commit unless the change is purely navigational.
      QR-iteration convergence, shifted/deflated variants, Schur theorem
      reconstruction, loss-of-orthogonality analysis, and floating-point
      eigensolver stability.
+294. Landed: add `finite-shifted-qr-step-v0` as an exact finite shifted-QR
+     resource. The pack replays `A0 - mu*I = Q*R`,
+     `A1 = R*Q + mu*I`, `Q^T*A0*Q = A1`, trace preservation, and determinant
+     preservation, then adds `qf-lra-bad-shifted-qr-entry` as the source-linked
+     Farkas row for the false shifted next-step entry claim `A1[1,1] = 2`
+     versus exact `8/5`. The learner and query pages keep exact finite
+     shifted-QR replay separate from shift-selection theory, deflation,
+     QR convergence, Schur theorem reconstruction, loss-of-orthogonality
+     analysis, and floating-point eigensolver stability.
 
 ## Validation Checklist
 

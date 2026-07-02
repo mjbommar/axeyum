@@ -1866,6 +1866,12 @@
           "notes": "Exact rational unshifted QR-iteration step, orthogonal-similarity replay, invariant replay, and checked bad next-step entry evidence."
         },
         {
+          "id": "finite-shifted-qr-step-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-shifted-qr-step-v0",
+          "notes": "Exact rational shifted QR step, shifted factorization replay, invariant replay, and checked bad next-step entry evidence."
+        },
+        {
           "id": "finite-power-iteration-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-power-iteration-v0",
@@ -3170,6 +3176,12 @@
           "notes": "One unshifted QR step, orthogonal-similarity replay, trace/determinant invariants, and bad next-step entry rows checked as exact rational arithmetic, not QR convergence or floating-point eigensolver stability evidence."
         },
         {
+          "id": "finite-shifted-qr-step-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-shifted-qr-step-v0",
+          "notes": "One shifted QR step, shifted factorization, orthogonal-similarity replay, trace/determinant invariants, and bad next-step entry rows checked as exact rational arithmetic, not shift-selection or floating-point eigensolver stability evidence."
+        },
+        {
           "id": "finite-conjugate-gradient-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-conjugate-gradient-v0",
@@ -3243,6 +3255,7 @@
             "docs/learn/math/real-schur-decomposition-end-to-end.md",
             "docs/learn/math/polar-decomposition-end-to-end.md",
             "docs/learn/math/qr-iteration-step-end-to-end.md",
+            "docs/learn/math/shifted-qr-step-end-to-end.md",
             "docs/learn/math/conjugate-gradient-end-to-end.md",
             "docs/learn/math/arnoldi-iteration-end-to-end.md",
             "docs/learn/math/lanczos-iteration-end-to-end.md",
@@ -3268,6 +3281,7 @@
         "docs/learn/math/real-schur-decomposition-end-to-end.md",
         "docs/learn/math/polar-decomposition-end-to-end.md",
         "docs/learn/math/qr-iteration-step-end-to-end.md",
+        "docs/learn/math/shifted-qr-step-end-to-end.md",
         "docs/learn/math/conjugate-gradient-end-to-end.md",
         "docs/learn/math/arnoldi-iteration-end-to-end.md",
         "docs/learn/math/lanczos-iteration-end-to-end.md",
@@ -7862,7 +7876,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A finite eigenpair row checks A*v = lambda*v exactly for a fixed matrix, and may additionally replay orthogonality, Rayleigh quotient, orthogonal diagonalization, real Schur triangularization, polar factorization, QR-iteration steps, power-iteration residuals, Arnoldi/Hessenberg reductions, Lanczos/tridiagonal reductions, spectral-decomposition, generalized-eigenvector, nilpotent-part, singular-vector, or SVD-shadow witnesses within the bounded matrix instance.",
+      "summary": "A finite eigenpair row checks A*v = lambda*v exactly for a fixed matrix, and may additionally replay orthogonality, Rayleigh quotient, orthogonal diagonalization, real Schur triangularization, polar factorization, QR-iteration and shifted-QR steps, power-iteration residuals, Arnoldi/Hessenberg reductions, Lanczos/tridiagonal reductions, spectral-decomposition, generalized-eigenvector, nilpotent-part, singular-vector, or SVD-shadow witnesses within the bounded matrix instance.",
       "prerequisites": [
         "bridge_lu_replay",
         "bridge_residual_bound",
@@ -7883,6 +7897,7 @@
         "real Schur decomposition replay",
         "polar decomposition replay",
         "QR iteration replay",
+        "shifted QR replay",
         "singular-value replay",
         "Arnoldi/Hessenberg replay",
         "Lanczos/tridiagonal replay",
@@ -7918,6 +7933,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-qr-iteration-step-v0",
           "notes": "Rational unshifted QR step, orthogonal-similarity replay, trace/determinant invariant, and checked bad next-step entry rows."
+        },
+        {
+          "id": "finite-shifted-qr-step-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-shifted-qr-step-v0",
+          "notes": "Rational shifted QR step, shifted factorization, orthogonal-similarity replay, trace/determinant invariant, and checked bad next-step entry rows."
         },
         {
           "id": "finite-power-iteration-v0",
@@ -8005,6 +8026,7 @@
         "docs/learn/math/real-schur-decomposition-end-to-end.md",
         "docs/learn/math/polar-decomposition-end-to-end.md",
         "docs/learn/math/qr-iteration-step-end-to-end.md",
+        "docs/learn/math/shifted-qr-step-end-to-end.md",
         "docs/learn/math/power-iteration-end-to-end.md",
         "docs/learn/math/arnoldi-iteration-end-to-end.md",
         "docs/learn/math/lanczos-iteration-end-to-end.md",
@@ -8014,6 +8036,7 @@
         "artifacts/examples/math/finite-real-schur-decomposition-v0/smt2/bad-schur-superdiagonal-farkas-conflict.smt2",
         "artifacts/examples/math/finite-polar-decomposition-v0/smt2/bad-polar-diagonal-farkas-conflict.smt2",
         "artifacts/examples/math/finite-qr-iteration-step-v0/smt2/bad-qr-step-entry-farkas-conflict.smt2",
+        "artifacts/examples/math/finite-shifted-qr-step-v0/smt2/bad-shifted-qr-entry-farkas-conflict.smt2",
         "artifacts/examples/math/finite-power-iteration-v0/smt2/bad-power-iterate-coordinate-farkas-conflict.smt2",
         "artifacts/examples/math/finite-arnoldi-iteration-v0/smt2/bad-arnoldi-h21-farkas-conflict.smt2",
         "artifacts/examples/math/finite-lanczos-iteration-v0/smt2/bad-lanczos-beta1-farkas-conflict.smt2",
@@ -8021,7 +8044,7 @@
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
       "open_gaps": [
-        "Fixed eigenpair, orthogonal-diagonalization, real-Schur, polar, QR-step, power-iteration, Arnoldi, Lanczos, Jordan-chain, and singular-value replay does not prove existence of eigenvalues, real/complex Schur theorem, polar decomposition theorem, square-root functional calculus, QR-iteration convergence, power-iteration convergence, Arnoldi/Ritz convergence, Lanczos/Ritz convergence, Jordan normal form, SVD, diagonalization criteria, spectral theorem, or stability of numerical eigensolvers.",
+        "Fixed eigenpair, orthogonal-diagonalization, real-Schur, polar, QR-step, shifted-QR-step, power-iteration, Arnoldi, Lanczos, Jordan-chain, and singular-value replay does not prove existence of eigenvalues, real/complex Schur theorem, polar decomposition theorem, square-root functional calculus, QR-iteration convergence, shifted QR/deflation theory, power-iteration convergence, Arnoldi/Ritz convergence, Lanczos/Ritz convergence, Jordan normal form, SVD, diagonalization criteria, spectral theorem, or stability of numerical eigensolvers.",
         "Nonlinear characteristic-root reasoning, algebraic/geometric multiplicity theorems, residual-to-eigenvalue error bounds, SVD perturbation theory, and infinite-dimensional operator theory remain separate theorem horizons."
       ],
       "graduation": {
@@ -12091,7 +12114,7 @@
           "id": "finite-operator-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-operator-v0",
-          "notes": "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact orthogonal transforms, Gram-Schmidt transcripts, Givens rotations, Householder reflections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration steps, power-iteration, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan/nilpotent shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."
+          "notes": "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact orthogonal transforms, Gram-Schmidt transcripts, Givens rotations, Householder reflections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan/nilpotent shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."
         },
         {
           "id": "finite-arnoldi-iteration-v0",
@@ -12176,6 +12199,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-real-schur-decomposition-v0",
           "notes": "Finite Real Schur Decomposition Checks"
+        },
+        {
+          "id": "finite-shifted-qr-step-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-shifted-qr-step-v0",
+          "notes": "Finite Shifted QR Step Checks"
         },
         {
           "id": "finite-singular-value-shadow-v0",
@@ -12471,7 +12500,7 @@
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -12748,6 +12777,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-separation-v0",
           "notes": "Finite Hyperplane Separation Checks"
+        },
+        {
+          "id": "finite-shifted-qr-step-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-shifted-qr-step-v0",
+          "notes": "Finite Shifted QR Step Checks"
         },
         {
           "id": "finite-simplicial-cohomology-v0",
@@ -13294,7 +13329,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, residual, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
+          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, residual, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -13493,6 +13528,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-schur-complement-v0",
           "notes": "Finite Schur-Complement Checks"
+        },
+        {
+          "id": "finite-shifted-qr-step-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-shifted-qr-step-v0",
+          "notes": "Finite Shifted QR Step Checks"
         },
         {
           "id": "finite-singular-value-shadow-v0",

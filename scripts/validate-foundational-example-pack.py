@@ -14830,6 +14830,240 @@ def validate_finite_qr_iteration_step(expected: dict[str, Any]) -> None:
     require_string("QR-step horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_shifted_qr_step(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    shape = checks["shifted-qr-shape-witness"]
+    if shape["expected_result"] != "sat":
+        fail("shifted-qr-shape-witness must expect sat")
+    if shape.get("proof_status") != "replay-only":
+        fail("shifted-qr-shape-witness must be replay-only")
+    values = single_witness_values(shape, witnesses)
+    shift = require_fraction("shifted QR shift", values.get("shift"))
+    matrix = require_fraction_matrix("shifted QR matrix A0", values.get("matrix"))
+    q_matrix = require_fraction_matrix("shifted QR Q", values.get("q_matrix"))
+    q_transpose = require_fraction_matrix("shifted QR Q^T", values.get("q_transpose"))
+    r_matrix = require_fraction_matrix("shifted QR R", values.get("r_matrix"))
+    identity = require_fraction_matrix("shifted QR identity", values.get("identity"))
+    shifted_matrix = require_fraction_matrix(
+        "shifted QR shifted matrix",
+        values.get("shifted_matrix"),
+    )
+    factorization_product = require_fraction_matrix(
+        "shifted QR factorization product",
+        values.get("factorization_product"),
+    )
+    rq_product = require_fraction_matrix("shifted QR RQ product", values.get("rq_product"))
+    next_matrix = require_fraction_matrix("shifted QR next matrix", values.get("next_matrix"))
+    similarity_product = require_fraction_matrix(
+        "shifted QR similarity product",
+        values.get("similarity_product"),
+    )
+    r_diagonal = require_fraction_vector("shifted QR R diagonal", values.get("r_diagonal"))
+    trace_matrix = require_fraction("shifted QR trace_matrix", values.get("trace_matrix"))
+    trace_next_matrix = require_fraction(
+        "shifted QR trace_next_matrix",
+        values.get("trace_next_matrix"),
+    )
+    determinant_matrix = require_fraction(
+        "shifted QR determinant_matrix",
+        values.get("determinant_matrix"),
+    )
+    determinant_next_matrix = require_fraction(
+        "shifted QR determinant_next_matrix",
+        values.get("determinant_next_matrix"),
+    )
+
+    require_square_matrix("shifted QR matrix A0", matrix)
+    require_square_matrix("shifted QR Q", q_matrix)
+    require_square_matrix("shifted QR R", r_matrix)
+    require_square_matrix("shifted QR identity", identity)
+    require_square_matrix("shifted QR shifted matrix", shifted_matrix)
+    require_square_matrix("shifted QR next matrix", next_matrix)
+    if len(matrix) != 2:
+        fail("finite shifted QR replay expects one 2x2 matrix")
+    if len(q_matrix) != len(matrix) or len(r_matrix) != len(matrix):
+        fail("shifted QR matrices must have matching dimensions")
+    expected_identity = [
+        [Fraction(1) if row == column else Fraction(0) for column in range(len(matrix))]
+        for row in range(len(matrix))
+    ]
+    if identity != expected_identity:
+        fail("shifted-qr-shape-witness identity must be the exact identity matrix")
+    if q_transpose != matrix_transpose(q_matrix):
+        fail("shifted-qr-shape-witness q_transpose is incorrect")
+    if mat_mul(q_transpose, q_matrix) != identity:
+        fail("shifted-qr-shape-witness Q^T*Q does not equal identity")
+    if mat_mul(q_matrix, q_transpose) != identity:
+        fail("shifted-qr-shape-witness Q*Q^T does not equal identity")
+    if len(r_diagonal) != len(r_matrix):
+        fail("shifted-qr-shape-witness must list one R diagonal entry per dimension")
+    for row_index, row in enumerate(r_matrix):
+        for column_index, entry in enumerate(row):
+            if row_index > column_index and entry != 0:
+                fail("shifted-qr-shape-witness R must be upper triangular")
+            if row_index == column_index and entry != r_diagonal[row_index]:
+                fail("shifted-qr-shape-witness R diagonal does not match r_diagonal")
+
+    def shift_diagonal(source: list[list[Fraction]], amount: Fraction) -> list[list[Fraction]]:
+        return [
+            [
+                source[row][column] + (amount if row == column else Fraction(0))
+                for column in range(len(source[row]))
+            ]
+            for row in range(len(source))
+        ]
+
+    factorization = checks["shifted-qr-factorization-witness"]
+    if factorization["expected_result"] != "sat":
+        fail("shifted-qr-factorization-witness must expect sat")
+    if factorization.get("proof_status") != "replay-only":
+        fail("shifted-qr-factorization-witness must be replay-only")
+    if single_witness_values(factorization, witnesses) != values:
+        fail("shifted-qr-factorization-witness must cite the shifted QR witness")
+    if shift_diagonal(matrix, -shift) != shifted_matrix:
+        fail("shifted-qr-factorization-witness shifted matrix is not A0 - mu*I")
+    if mat_mul(q_matrix, r_matrix) != factorization_product:
+        fail("shifted-qr-factorization-witness product does not equal Q*R")
+    if factorization_product != shifted_matrix:
+        fail("shifted-qr-factorization-witness product must equal A0 - mu*I")
+
+    update = checks["shifted-qr-update-witness"]
+    if update["expected_result"] != "sat":
+        fail("shifted-qr-update-witness must expect sat")
+    if update.get("proof_status") != "replay-only":
+        fail("shifted-qr-update-witness must be replay-only")
+    if single_witness_values(update, witnesses) != values:
+        fail("shifted-qr-update-witness must cite the shifted QR witness")
+    if mat_mul(r_matrix, q_matrix) != rq_product:
+        fail("shifted-qr-update-witness product does not equal R*Q")
+    if shift_diagonal(rq_product, shift) != next_matrix:
+        fail("shifted-qr-update-witness next matrix must equal R*Q + mu*I")
+
+    similarity = checks["shifted-qr-similarity-witness"]
+    if similarity["expected_result"] != "sat":
+        fail("shifted-qr-similarity-witness must expect sat")
+    if similarity.get("proof_status") != "replay-only":
+        fail("shifted-qr-similarity-witness must be replay-only")
+    if single_witness_values(similarity, witnesses) != values:
+        fail("shifted-qr-similarity-witness must cite the shifted QR witness")
+    if mat_mul(mat_mul(q_transpose, matrix), q_matrix) != similarity_product:
+        fail("shifted-qr-similarity-witness product does not equal Q^T*A0*Q")
+    if similarity_product != next_matrix:
+        fail("shifted-qr-similarity-witness product must equal A1")
+
+    invariants = checks["shifted-qr-invariant-witness"]
+    if invariants["expected_result"] != "sat":
+        fail("shifted-qr-invariant-witness must expect sat")
+    if invariants.get("proof_status") != "replay-only":
+        fail("shifted-qr-invariant-witness must be replay-only")
+    if single_witness_values(invariants, witnesses) != values:
+        fail("shifted-qr-invariant-witness must cite the shifted QR witness")
+    computed_trace = sum(
+        (matrix[index][index] for index in range(len(matrix))),
+        Fraction(0),
+    )
+    computed_next_trace = sum(
+        (next_matrix[index][index] for index in range(len(next_matrix))),
+        Fraction(0),
+    )
+    if computed_trace != trace_matrix:
+        fail("shifted-qr-invariant-witness trace(A0) is incorrect")
+    if computed_next_trace != trace_next_matrix:
+        fail("shifted-qr-invariant-witness trace(A1) is incorrect")
+    if trace_matrix != trace_next_matrix:
+        fail("shifted-qr-invariant-witness trace must be preserved")
+    if matrix_determinant(matrix) != determinant_matrix:
+        fail("shifted-qr-invariant-witness det(A0) is incorrect")
+    if matrix_determinant(next_matrix) != determinant_next_matrix:
+        fail("shifted-qr-invariant-witness det(A1) is incorrect")
+    if determinant_matrix != determinant_next_matrix:
+        fail("shifted-qr-invariant-witness determinant must be preserved")
+
+    bad = checks["bad-shifted-qr-entry-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-shifted-qr-entry-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-shifted-qr-entry-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_shifted_qr_entry_replay":
+        fail("bad-shifted-qr-entry-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "rational-shifted-qr-step":
+        fail("bad-shifted-qr-entry-rejected must cite rational-shifted-qr-step")
+    entry = data.get("entry")
+    if not isinstance(entry, list) or len(entry) != 2:
+        fail("bad-shifted-qr-entry-rejected entry must be a row/column pair")
+    row_index = require_nonnegative_int("bad shifted QR entry row", entry[0])
+    column_index = require_nonnegative_int("bad shifted QR entry column", entry[1])
+    if row_index >= len(next_matrix) or column_index >= len(next_matrix[row_index]):
+        fail("bad-shifted-qr-entry-rejected entry is out of range")
+    computed_entry = require_fraction("bad shifted QR computed_entry", data.get("computed_entry"))
+    claimed_entry = require_fraction("bad shifted QR claimed_entry", data.get("claimed_entry"))
+    if next_matrix[row_index][column_index] != computed_entry:
+        fail("bad-shifted-qr-entry-rejected computed value does not match replay")
+    if computed_entry == claimed_entry:
+        fail("bad-shifted-qr-entry-rejected must document a false entry claim")
+    if "separate qf-lra-bad-shifted-qr-entry" not in bad.get("notes", ""):
+        fail("bad-shifted-qr-entry-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-shifted-qr-entry"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-shifted-qr-entry must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-shifted-qr-entry must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-shifted-qr-entry must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "rational-shifted-qr-step":
+        fail("qf-lra-bad-shifted-qr-entry must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-shifted-qr-entry-rejected":
+        fail("qf-lra-bad-shifted-qr-entry must cite the replay row")
+    if qf_data.get("entry") != entry:
+        fail("qf-lra-bad-shifted-qr-entry entry must match the replay row")
+    qf_computed = require_fraction(
+        "qf shifted QR computed_entry",
+        qf_data.get("computed_entry"),
+    )
+    qf_claimed = require_fraction(
+        "qf shifted QR claimed_entry",
+        qf_data.get("claimed_entry"),
+    )
+    if qf_computed != computed_entry or qf_claimed != claimed_entry:
+        fail("qf-lra-bad-shifted-qr-entry data must match the replay row")
+    if qf_data.get("farkas_conflict") != "shifted_qr_a11 = 8/5 and shifted_qr_a11 = 2":
+        fail("qf-lra-bad-shifted-qr-entry must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf shifted QR smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-shifted-qr-step-v0/smt2/"
+        "bad-shifted-qr-entry-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-shifted-qr-entry smt2_artifact must name the checked source artifact")
+    check_source("qf shifted QR smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf shifted QR farkas_regression", regression)
+    if "finite_shifted_qr_step_bad_entry_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-shifted-qr-entry must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf shifted QR certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-shifted-qr-entry certificate must document checked Farkas evidence")
+
+    horizon = checks["general-shifted-qr-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-shifted-qr-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-shifted-qr-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "shifted QR horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string("shifted QR horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_finite_jordan_chain(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -31835,6 +32069,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_polar_decomposition(expected)
     if metadata["id"] == "finite-qr-iteration-step-v0":
         validate_finite_qr_iteration_step(expected)
+    if metadata["id"] == "finite-shifted-qr-step-v0":
+        validate_finite_shifted_qr_step(expected)
     if metadata["id"] == "finite-jordan-chain-v0":
         validate_finite_jordan_chain(expected)
     if metadata["id"] == "metric-continuity-v0":
