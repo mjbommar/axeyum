@@ -2,30 +2,32 @@
 
 Date: 2026-06-29
 
-Reviewed: 2026-06-30; counts refreshed after all 108 current math packs carry
-promoted solver-reuse metadata and no explicit non-benchmark-horizon packs
-remain.
+Reviewed: 2026-07-02; counts refreshed after the R6 public data contract,
+claim-label matrix, and executable label audit landed.
 
 ## Decision
 
 Keep the foundational-resource ecosystem inside the Axeyum repository for now.
 Do not add a new workspace crate and do not split a separate repository yet.
 
-The current boundary is a data contract:
+The current boundary is the JSON-first data contract documented in
+[Public Data Contract](PUBLIC-DATA-CONTRACT.md):
 
 - `artifacts/ontology/foundational-concepts.json`
 - `artifacts/ontology/foundational-concepts.schema.json`
 - `artifacts/ontology/foundational-example-pack.schema.json`
 - `artifacts/examples/math/*/metadata.json`
 - `artifacts/examples/math/*/expected.json`
-- `docs/foundational-resources/generated/*.md`
 
 The stable consumer surface is validated by
 [`scripts/consume-foundational-resources.py`](../../scripts/consume-foundational-resources.py),
 which reads only the committed JSON/metadata paths and imports none of the
 generator or validator internals. Common consumer lookups are demonstrated by
 [`scripts/query-foundational-resources.py`](../../scripts/query-foundational-resources.py)
-and [Foundational Resource Consumer Queries](CONSUMER-QUERIES.md). The compact
+and [Foundational Resource Consumer Queries](CONSUMER-QUERIES.md). The
+[Claim Label Matrix](CLAIM-LABEL-MATRIX.md) and
+`query-foundational-resources.py labels` command now expose downstream display
+labels over the same `expected_result` plus `proof_status` fields. The compact
 [Field Readiness Query Matrix](FIELD-READINESS-QUERY-MATRIX.md) summarizes the
 same public query surface across all 18 math fields.
 [Proof Route Query Matrix](PROOF-ROUTE-QUERY-MATRIX.md) summarizes the same
@@ -33,13 +35,11 @@ surface by proof/evidence route.
 [Matrix Computation Consumer Queries](MATRIX-COMPUTATION-QUERIES.md) narrows
 that same surface for bridge-concept-plus-route discovery over matrix packs.
 
-The 2026-06-30 review keeps the same decision. The consumer-query layer now
-reads promoted solver-reuse metadata directly, including the promoted
-probability/measure QF_LRA/Farkas rows, equality-heavy QF_UF/Alethe rows, and
-integer-count and coefficient QF_LIA/Diophantine rows, plus fixed-width
-QF_BV/DRAT rows. It also exposes field-level curriculum-readiness summaries
-over the same JSON files, but this is still an in-repository
-downstream-consumer stand-in rather than an external release consumer.
+The 2026-07-02 review keeps the same decision. The consumer-query layer now
+reads promoted solver-reuse metadata directly, exposes field-level
+curriculum-readiness summaries, and audits row/pack display labels over the
+same JSON files, but this is still an in-repository downstream-consumer stand-in
+rather than an external release consumer.
 The all-field matrix is documentation over that same stand-in; it improves
 navigability but does not create a new API boundary.
 The matrix computation query guide and `--concept` filters are likewise still
@@ -47,6 +47,8 @@ documentation plus a dependency-free query-helper surface over committed JSON,
 not a typed library boundary.
 The route matrix and `routes` summary command likewise summarize committed
 recipe links; they do not add a route checker or library API.
+The public data contract is a compatibility note over existing files and smoke
+commands; it does not create a crate boundary or versioned release process.
 
 ## Evidence
 
@@ -57,18 +59,25 @@ The Phase M8 threshold is met for size and repeated structure:
 | At least 40 validated concept rows | 121 atlas rows: 23 curriculum rows, 18 field rows, 75 bridge-concept rows, and 5 example-family rows. |
 | At least 12 validated example packs | 108 non-template math packs are listed through the atlas data contract. |
 | At least 6 packs with checked proof/evidence routes | 108 non-template packs contain at least one `checked` expected-result row. |
-| At least one consumer can read the data without repository-internal knowledge | `scripts/consume-foundational-resources.py` reads the atlas and example-pack JSON directly and cross-checks pack coverage; `scripts/query-foundational-resources.py` answers summary, pack, check, concept, and field-readiness queries without importing validators or generators. |
+| At least one consumer can read the data without repository-internal knowledge | `scripts/consume-foundational-resources.py` reads the atlas and example-pack JSON directly, checks schema versions, cross-checks pack coverage, and reports result/proof/label counts; `scripts/query-foundational-resources.py` answers summary, pack, check, concept, route, field-readiness, and display-label queries without importing validators or generators. |
 | At least one consumer can read promoted solver-reuse rows | `scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any` is part of `scripts/check-foundational-resources.sh` and currently finds 108 promoted packs. |
+| At least one consumer can derive display labels without prose parsing | `scripts/query-foundational-resources.py labels --require-any` reports row and pack labels from JSON, and `check-foundational-resources.sh` requires representative checked, replay-only, theorem-horizon, checked-pack, and mixed-trust labels. |
 | At least one documentation surface maps consumer queries by field | `FIELD-READINESS-QUERY-MATRIX.md` records the smoke-checked route, bridge lookup, checked-row drilldown, and theorem boundary for all 18 math fields without adding a typed API. |
 | At least one documentation surface maps consumer queries by proof route | `PROOF-ROUTE-QUERY-MATRIX.md` records route-summary, pack-drilldown, and checked-row queries for the active proof/evidence routes, and `check-foundational-resources.sh` smoke-checks representative `routes --route ...` commands. |
 | At least one documentation surface maps resources by bridge concept and route | `MATRIX-COMPUTATION-QUERIES.md` records concept-plus-route matrix queries, and `check-foundational-resources.sh` smoke-checks representative `packs/checks --concept ... --route ...` commands. |
+| At least one documentation surface defines compatibility | `PUBLIC-DATA-CONTRACT.md` names the public files, stable fields, schema-version expectations, compatibility rules, smoke commands, and current label counts. |
 
 The current pack-level evidence mix is still intentionally conservative:
 
 - `checked`: 322 expected-result rows
-- `replay-only`: 260 expected-result rows
+- `replay-only`: 295 expected-result rows
 - `lean-horizon`: 71 expected-result rows
 - `not-run`: 71 expected-result rows
+- `expected_result`: 336 `sat`, 281 `unsat`, 71 `not-run`
+- row labels: 84 checked witnesses, 238 checked refutations, 252 finite
+  witness replays, 43 finite rejection replays, and 71 theorem horizons
+- pack labels: 108 checked evidence packs, 97 mixed-trust packs, and 71 packs
+  with theorem boundaries
 - `solver_reuse`: 108 promoted packs, 0 non-benchmark-horizon packs, and 0
   unclassified packs
 
@@ -76,18 +85,17 @@ That distribution argues for keeping the resource lane close to the proof
 cookbook, validators, and solver evidence work. A premature crate would mostly
 freeze a data shape that is still learning from proof-route upgrades.
 
-The 2026-06-30 review also confirms that the new solver-reuse metadata is still
-evolving. The latest promotions mostly add source-linked regression back-links
-to existing example packs, and the former explicit non-benchmark-horizon rows
-have now either graduated or left no active pack in that bucket. They do not
-yet create a repeated public API need.
+The 2026-07-02 review also confirms that the JSON/query boundary is still
+evolving in small, consumer-facing ways. The latest additions are contract,
+label, and compatibility views over existing JSON. They improve downstream
+readability but do not yet create a repeated public API or release-cadence need.
 
 ## What Not To Extract Yet
 
 Do not create `axeyum-foundational-data` yet. A crate makes sense only after at
 least one non-repo consumer wants semver, versioned artifacts, or generated Rust
-types. The current query helper proves the JSON contract is usable; it does not
-prove that a semver Rust API is needed.
+types. The current public data contract and query helper prove the JSON
+contract is usable; they do not prove that a semver Rust API is needed.
 
 Do not create `axeyum-math-examples` yet. The validators contain repeated
 finite-set, graph, matrix, and probability logic, but those routines are still
@@ -123,6 +131,8 @@ boring and auditable:
 2. Keep `scripts/consume-foundational-resources.py` small and dependency-free.
 3. Keep `scripts/query-foundational-resources.py` as a sample consumer, not a
    validator or typed API layer.
-4. Add generated schema examples only when a real consumer asks for them.
-5. Promote repeated replay logic into library code only after it becomes an
+4. Keep [PUBLIC-DATA-CONTRACT.md](PUBLIC-DATA-CONTRACT.md) aligned with the
+   consumer smoke output when counts or status semantics change.
+5. Add generated schema examples only when a real consumer asks for them.
+6. Promote repeated replay logic into library code only after it becomes an
    encoder or checker used by multiple non-test consumers.

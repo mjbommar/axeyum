@@ -56,6 +56,9 @@ schemas, examples, and validation workflows.
   current Phase M8 decision: keep the resources in-repo, expose a stable JSON
   data contract, and defer crates or repo splits until real consumers require
   them.
+- [PUBLIC-DATA-CONTRACT.md](PUBLIC-DATA-CONTRACT.md) defines the R6 public JSON
+  and query boundary: stable files, fields, schema versions, compatibility
+  rules, smoke commands, and display-label counts.
 - [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) gives copyable sample queries over
   the committed JSON data contract for pack discovery, checked-row mining,
   solver-reuse rows, atlas concept lookup, and curriculum field-readiness

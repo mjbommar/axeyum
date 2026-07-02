@@ -1730,6 +1730,11 @@ Pick one row per commit unless the change is purely navigational.
      result/proof/label counts. The standalone consumer smoke now checks and
      prints schema, expected-result, proof-status, row-label, and pack-label
      counts without importing validators, generators, or solver crates.
+203. Landed: refresh `LIBRARY-BOUNDARY-DECISION.md` for the current R6
+     consumer boundary. It now cites the public data contract, executable
+     label audit, stronger consumer smoke, current result/proof/label counts,
+     and keeps the decision at JSON/query surfaces rather than a new crate or
+     repository split.
 
 ## Validation Checklist
 

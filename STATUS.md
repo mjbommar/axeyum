@@ -234,6 +234,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Library-boundary decision refreshed.**
+  `LIBRARY-BOUNDARY-DECISION.md` now reflects the 2026-07-02 R6 state: the
+  public data contract, executable label audit, stronger dependency-free
+  consumer smoke, current 688-row result/proof mix, row-label counts, and
+  pack-label counts. The decision remains unchanged: keep the resources
+  in-repo, expose JSON/query surfaces, and defer a crate or repo split until
+  repeated external consumers justify a versioned API.
+
 - **Public data contract landed.**
   `PUBLIC-DATA-CONTRACT.md` now names the R6 consumer boundary: the public JSON
   files, stable fields, schema-version expectations, compatibility rules,
