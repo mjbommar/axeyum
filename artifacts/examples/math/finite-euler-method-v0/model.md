@@ -39,7 +39,7 @@ The listed absolute errors are checked exactly.
 
 ## Bad Error Bound
 
-The same finite error table supplies a checked negative row. Exact replay
+The same finite error table supplies a replay-only negative row. Exact replay
 computes:
 
 ```text
@@ -47,7 +47,8 @@ max(0, 1/4, 1/2, 3/4) = 3/4
 ```
 
 so the malformed claim that the maximum error is at most `1/2` is rejected by
-the source-linked QF_LRA/Farkas artifact.
+finite arithmetic. A separate `qf-lra-bad-max-error-bound` row links the
+source QF_LRA/Farkas artifact for the fixed linear contradiction.
 
 The same table now also supplies a pointwise terminal-error row:
 
@@ -56,7 +57,8 @@ The same table now also supplies a pointwise terminal-error row:
 ```
 
 so the malformed claim that the final listed error is `1/2` is rejected by a
-separate source-linked QF_LRA/Farkas artifact.
+second replay-only row. A separate `qf-lra-bad-terminal-error` row links the
+source QF_LRA/Farkas artifact for the fixed terminal-error contradiction.
 
 ## Invariant And Bad Step
 
@@ -74,7 +76,8 @@ next_state = 3/4
 ```
 
 The pack keeps this false fixed-step transition on the checked `UnsatFarkas`
-route.
+route through the separate `qf-lra-bad-euler-step` row; the malformed
+fixed-step claim itself remains replay-only.
 
 These rows are finite replay targets, not a full ODE or numerical-analysis
 library.

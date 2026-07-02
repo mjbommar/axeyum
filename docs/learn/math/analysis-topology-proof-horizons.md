@@ -92,7 +92,8 @@ polynomial derivative identities, exact finite Riemann sums, antiderivative
 endpoint replay, exact rational gradients, Jacobian chain-rule replay, Hessian
 minor checks, bounded recurrence traces, finite invariant witnesses, matrix
 operator bounds, explicit Euler-step replay, finite Euler error tables,
-QF_LRA/Farkas bad Euler-step, bad terminal-error, and bad error-bound rejection, Chebyshev recurrence values at fixed
+replay-only bad Euler-step, bad terminal-error, and bad error-bound rejection
+with separate QF_LRA/Farkas proof rows, Chebyshev recurrence values at fixed
 points plus checked bad-prefix rejection,
 finite Chebyshev-system interpolation/sign-pattern checks, exact rational
 inner-product Gram matrices, fixed Cauchy-Schwarz/projection/Gram-Schmidt
@@ -489,8 +490,8 @@ states = 1, 1/2, 1/4, 1/8
 The `finite-euler-method-v0` validator checks every update
 `y_(n+1) = y_n + h*f(t_n,y_n)`, replays a finite exact-error table for
 `y' = 2t` with solution `y = t^2`, checks a nonnegative monotone invariant,
-and rejects bad one-step and terminal-error claims with checked
-`UnsatFarkas` evidence.
+and rejects bad one-step, terminal-error, and error-bound claims by replay
+before separate `qf-lra-*` rows check the isolated `UnsatFarkas` conflicts.
 
 For a finite stochastic transition system, encode a row-stochastic matrix and
 an initial distribution. The `finite-markov-chain-v0` validator applies exact

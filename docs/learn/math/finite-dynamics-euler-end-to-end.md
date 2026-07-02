@@ -33,10 +33,13 @@ Concept rows:
 | `bad-invariant-bound-rejected` | `unsat` | checked |
 | `linear-decay-euler-trace` | `sat` | replay-only |
 | `quadratic-forcing-error-replay` | `sat` | replay-only |
-| `bad-max-error-bound-rejected` | `unsat` | checked |
-| `bad-terminal-error-rejected` | `unsat` | checked |
+| `bad-max-error-bound-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-max-error-bound` | `unsat` | checked |
+| `bad-terminal-error-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-terminal-error` | `unsat` | checked |
 | `nonnegative-monotone-invariant` | `sat` | replay-only |
-| `bad-euler-step-rejected` | `unsat` | checked |
+| `bad-euler-step-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-euler-step` | `unsat` | checked |
 | `general-ode-theory-lean-horizon` | `not-run` | lean-horizon |
 
 These rows are finite transition-system checks over exact rationals. They do
@@ -195,8 +198,9 @@ The bad error-bound row reuses that exact table but claims:
 max_error <= 1/2
 ```
 
-Exact replay computes `max_error = 3/4`, so the source QF_LRA artifact checks
-the contradictory error-bound inequality through Farkas evidence.
+Exact replay computes `max_error = 3/4`, so the replay row rejects the
+malformed bound by exact arithmetic. The separate `qf-lra-bad-max-error-bound`
+row checks the isolated contradictory inequality through Farkas evidence.
 
 The bad terminal-error row focuses on the last point in the same table:
 
@@ -205,11 +209,12 @@ The bad terminal-error row focuses on the last point in the same table:
 ```
 
 and rejects the malformed claim that this final error is `1/2` with a separate
-source QF_LRA/Farkas artifact.
+replay row; the separate `qf-lra-bad-terminal-error` row owns the source
+QF_LRA/Farkas artifact.
 
 ## Reject A Bad Euler Step
 
-The checked negative row claims:
+The replay-only negative row claims:
 
 ```text
 For y' = -y, h = 1/2, y = 1, the next value is 3/4.
@@ -231,7 +236,7 @@ next_state = 3/4
 ```
 
 That `unsat` result must carry `Evidence::UnsatFarkas` and pass the independent
-certificate check.
+certificate check in the separate `qf-lra-bad-euler-step` row.
 
 so the row is rejected. This is the most important teaching shape in the pack:
 the same arithmetic that accepts a good step rejects a plausible but false
@@ -277,7 +282,9 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_threshold_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_step_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_max_error_bound_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_terminal_error_artifact_emits_checked_farkas
 ```
 
 Expected output for each command:
@@ -299,6 +306,6 @@ remaining horizon -> continuous ODE theory, convergence, stability, and PDEs
 The next practical graduation step is to lower fixed recurrence and Euler-step
 rows into deterministic QF_LRA or BV transition obligations, then replay SAT
 witnesses and checked refutations through Axeyum instead of pack-local Python
-alone. The bad transition-step row, bad threshold-step row, bad invariant-bound row, bad finite
-error-bound row, and bad fixed Euler step now exercise that QF_LRA/Farkas
-route.
+alone. The bad transition-step row, bad threshold-step row,
+bad invariant-bound row, and the separate finite Euler `qf-lra-*` rows now
+exercise that QF_LRA/Farkas route.

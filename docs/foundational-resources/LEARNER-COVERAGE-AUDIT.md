@@ -19,7 +19,7 @@ check, then name the replay, certificate, or theorem-horizon boundary.
 
 ## Current Result
 
-Audit date: 2026-07-01.
+Audit date: 2026-07-02.
 
 Evidence:
 
@@ -31,9 +31,9 @@ Current summary:
 
 - 120 concept rows.
 - 108 non-template math packs.
-- 674 expected checks.
+- 677 expected checks.
 - 322 checked proof/evidence rows.
-- 281 replay-only rows.
+- 284 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 

@@ -20,8 +20,15 @@ Expected result: `unsat`.
 
 The validator replays the same quadratic-forcing error table and recomputes the
 maximum error as `3/4`. The malformed claim says the max error is at most
-`1/2`; the source QF_LRA artifact isolates `max_error = 3/4` and
-`max_error <= 1/2` for Farkas checking.
+`1/2`; this row is replay-only.
+
+## `qf-lra-bad-max-error-bound`
+
+Expected result: `unsat`.
+
+The source QF_LRA artifact isolates `max_error = 3/4` and
+`max_error <= 1/2` as the checked Farkas contradiction corresponding to the
+replayed malformed bound.
 
 ## `bad-terminal-error-rejected`
 
@@ -29,8 +36,15 @@ Expected result: `unsat`.
 
 The validator replays the same quadratic-forcing error table and recomputes the
 terminal error as `|9/4 - 3/2| = 3/4`. The malformed claim says the terminal
-error is `1/2`; the source QF_LRA artifact isolates both equalities for Farkas
-checking.
+error is `1/2`; this row is replay-only.
+
+## `qf-lra-bad-terminal-error`
+
+Expected result: `unsat`.
+
+The source QF_LRA artifact isolates `terminal_error = 3/4` and
+`terminal_error = 1/2` as the checked Farkas contradiction corresponding to the
+replayed malformed terminal-error claim.
 
 ## `nonnegative-monotone-invariant`
 
@@ -45,6 +59,12 @@ Expected result: `unsat`.
 
 The validator rejects the false one-step claim for `y' = -y`: from `y = 1`
 with step `1/2`, explicit Euler gives `1/2`, not `3/4`.
+
+This row is replay-only.
+
+## `qf-lra-bad-euler-step`
+
+Expected result: `unsat`.
 
 The resource-backed Axeyum regression checks the transition contradiction as
 `QF_LRA`: `state = 1`, `derivative = -1`,

@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Euler-method Farkas rows split landed.**
+  `finite-euler-method-v0` now keeps `bad-max-error-bound-rejected`,
+  `bad-terminal-error-rejected`, and `bad-euler-step-rejected` as exact finite
+  replay rows: they recompute max error `3/4`, terminal error `3/4`, and the
+  fixed Euler next state `1/2` before rejecting malformed claims. The checked
+  proof-object paths are now the explicit `qf-lra-bad-max-error-bound`,
+  `qf-lra-bad-terminal-error`, and `qf-lra-bad-euler-step` rows linked to the
+  QF_LRA/Farkas SMT-LIB artifacts and regressions. Focused validation passes;
+  the public summary now reports 120 concept rows, 108 packs, 677 expected
+  checks, 322 checked rows, 284 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite Chebyshev-system Farkas rows split landed.**
   `finite-chebyshev-systems-v0` now keeps
   `bad-duplicate-node-grid-rejected`, `bad-interpolation-sample-rejected`, and
@@ -3958,8 +3969,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`finite-euler-method-end-to-end.md`](docs/learn/math/finite-euler-method-end-to-end.md)
   as the learner-facing trace for the finite-Euler pack: exact explicit-Euler
   transition replay, finite polynomial-solution error tables, monotone
-  invariant checking, checked QF_LRA/Farkas bad max-error, bad terminal-error,
-  and bad-step rejection, and the ODE/numerical-analysis Lean horizon. The lesson is linked from the math
+  invariant checking, replay-only bad max-error, bad terminal-error, and
+  bad-step rejection, separate checked QF_LRA/Farkas proof rows, and the
+  ODE/numerical-analysis Lean horizon. The lesson is linked from the math
   learning index plus the finite dynamics/Euler and bounded-dynamics/operator
   bridge pages.
 

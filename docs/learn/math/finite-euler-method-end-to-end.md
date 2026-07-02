@@ -22,10 +22,13 @@ Concept rows:
 |---|---|---|
 | `linear-decay-euler-trace` | `sat` | replay-only |
 | `quadratic-forcing-error-replay` | `sat` | replay-only |
-| `bad-max-error-bound-rejected` | `unsat` | checked QF_LRA/Farkas |
-| `bad-terminal-error-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-max-error-bound-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-max-error-bound` | `unsat` | checked QF_LRA/Farkas |
+| `bad-terminal-error-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-terminal-error` | `unsat` | checked QF_LRA/Farkas |
 | `nonnegative-monotone-invariant` | `sat` | replay-only |
-| `bad-euler-step-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-euler-step-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-euler-step` | `unsat` | checked QF_LRA/Farkas |
 | `general-ode-theory-lean-horizon` | `not-run` | Lean horizon |
 
 Every checked row is finite and exact-rational. The pack treats explicit Euler
@@ -90,6 +93,9 @@ Exact replay computes:
 max(0, 1/4, 1/2, 3/4) = 3/4
 ```
 
+That replay-only row rejects the malformed table claim by exact arithmetic. The
+separate `qf-lra-bad-max-error-bound` row owns the proof-object refutation.
+
 The committed SMT-LIB artifact
 [`bad-max-error-bound-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-euler-method-v0/smt2/bad-max-error-bound-farkas-conflict.smt2)
 isolates the exact-linear contradiction:
@@ -117,6 +123,9 @@ Exact replay computes:
 terminal_error = |9/4 - 3/2| = 3/4
 ```
 
+That replay-only row rejects the malformed pointwise error claim. The separate
+`qf-lra-bad-terminal-error` row owns the proof-object refutation.
+
 The committed SMT-LIB artifact
 [`bad-terminal-error-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-euler-method-v0/smt2/bad-terminal-error-farkas-conflict.smt2)
 isolates the exact-linear contradiction:
@@ -127,8 +136,8 @@ terminal_error = 1/2
 ```
 
 This keeps pointwise numerical-error rows in the same trust story as the
-max-error row: the finite table is replayed exactly, and only a checked Farkas
-certificate rejects the malformed claim.
+max-error row: the finite table is replayed exactly, while a separate checked
+Farkas certificate rejects the isolated linear conflict.
 
 ## Replay A Finite Invariant
 
@@ -163,6 +172,9 @@ Exact replay computes:
 next_state = 1 + (1/2)*(-1) = 1/2
 ```
 
+That replay-only row rejects the bad update by exact transition arithmetic. The
+separate `qf-lra-bad-euler-step` row owns the proof-object refutation.
+
 The committed SMT-LIB artifact
 [`bad-euler-step-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-euler-method-v0/smt2/bad-euler-step-farkas-conflict.smt2)
 isolates the exact-linear contradiction:
@@ -184,7 +196,9 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-euler-method-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_step_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_max_error_bound_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_terminal_error_artifact_emits_checked_farkas
 ```
 
 Expected validator output:

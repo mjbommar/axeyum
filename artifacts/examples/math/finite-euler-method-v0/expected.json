@@ -65,8 +65,8 @@
       "id": "bad-max-error-bound-rejected",
       "claim": "The finite Euler error table has maximum error at most 1/2.",
       "expected_result": "unsat",
-      "validation": "finite_bad_max_error_bound_refutation",
-      "proof_status": "checked",
+      "validation": "finite_bad_max_error_bound_replay",
+      "proof_status": "replay-only",
       "data": {
         "ode": "y_prime_equals_2t",
         "step": "1/2",
@@ -76,18 +76,33 @@
         "exact_solution": ["0", "1/4", "1", "9/4"],
         "absolute_errors": ["0", "1/4", "1/2", "3/4"],
         "computed_max_error": "3/4",
-        "claimed_error_bound": "1/2",
-        "smt2_artifact": "artifacts/examples/math/finite-euler-method-v0/smt2/bad-max-error-bound-farkas-conflict.smt2",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_max_error_bound_artifact_emits_checked_farkas"
+        "claimed_error_bound": "1/2"
       },
-      "notes": "The validator recomputes the finite error table exactly and finds max error 3/4; the source QF_LRA artifact isolates max_error = 3/4 with the malformed bound max_error <= 1/2 for rechecked Farkas evidence."
+      "notes": "The validator recomputes the finite error table exactly and finds max error 3/4. The separate qf-lra-bad-max-error-bound row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-max-error-bound",
+      "claim": "The fixed QF_LRA conflict max_error = 3/4 and max_error <= 1/2 is unsatisfiable.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_finite_euler_bad_max_error_bound_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-max-error-bound-rejected",
+        "computed_max_error": "3/4",
+        "claimed_error_bound": "1/2",
+        "farkas_conflict": "max_error = 3/4 and max_error <= 1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-euler-method-v0/smt2/bad-max-error-bound-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_max_error_bound_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "This proof row isolates the malformed max-error bound as a small QF_LRA/Farkas contradiction after the replay row has computed the finite error table."
     },
     {
       "id": "bad-terminal-error-rejected",
       "claim": "The finite Euler error at t = 3/2 is 1/2.",
       "expected_result": "unsat",
-      "validation": "finite_bad_terminal_error_refutation",
-      "proof_status": "checked",
+      "validation": "finite_bad_terminal_error_replay",
+      "proof_status": "replay-only",
       "data": {
         "source_witness": "quadratic-forcing-euler-error",
         "terminal_time": "3/2",
@@ -95,12 +110,27 @@
         "terminal_exact_solution": "9/4",
         "computed_terminal_error": "3/4",
         "claimed_terminal_error": "1/2",
+        "terminal_error_gap": "1/4"
+      },
+      "notes": "Exact replay computes terminal error |9/4 - 3/2| = 3/4, so the malformed pointwise error claim 1/2 is rejected. The separate qf-lra-bad-terminal-error row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-terminal-error",
+      "claim": "The fixed QF_LRA conflict terminal_error = 3/4 and terminal_error = 1/2 is unsatisfiable.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_finite_euler_bad_terminal_error_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-terminal-error-rejected",
+        "computed_terminal_error": "3/4",
+        "claimed_terminal_error": "1/2",
         "terminal_error_gap": "1/4",
+        "farkas_conflict": "terminal_error = 3/4 and terminal_error = 1/2",
         "smt2_artifact": "artifacts/examples/math/finite-euler-method-v0/smt2/bad-terminal-error-farkas-conflict.smt2",
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_terminal_error_artifact_emits_checked_farkas",
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "Exact replay computes terminal error |9/4 - 3/2| = 3/4, so the malformed pointwise error claim 1/2 is rejected by checked Farkas evidence."
+      "notes": "This proof row isolates the false terminal-error equality as a small QF_LRA/Farkas contradiction after the replay row has computed the finite terminal error."
     },
     {
       "id": "nonnegative-monotone-invariant",
@@ -115,8 +145,8 @@
       "id": "bad-euler-step-rejected",
       "claim": "For y' = -y, h = 1/2, and y = 1, one explicit Euler step gives 3/4.",
       "expected_result": "unsat",
-      "validation": "finite_bad_euler_step_refutation",
-      "proof_status": "checked",
+      "validation": "finite_bad_euler_step_replay",
+      "proof_status": "replay-only",
       "data": {
         "ode": "y_prime_equals_minus_y",
         "step": "1/2",
@@ -125,11 +155,28 @@
         "derivative": "-1",
         "claimed_next": "3/4",
         "actual_next": "1/2",
-        "farkas_step_equation": "next_state = state + (1/2)*derivative",
-        "smt2_artifact": "artifacts/examples/math/finite-euler-method-v0/smt2/bad-euler-step-farkas-conflict.smt2",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_step_emits_checked_farkas"
+        "farkas_step_equation": "next_state = state + (1/2)*derivative"
       },
-      "notes": "The validator recomputes the Euler update as 1 + (1/2)(-1) = 1/2; the Axeyum regression refutes the transition equation together with the false claim next_state = 3/4 using rechecked Farkas evidence."
+      "notes": "The validator recomputes the Euler update as 1 + (1/2)(-1) = 1/2. The separate qf-lra-bad-euler-step row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-euler-step",
+      "claim": "The fixed QF_LRA conflict for the false Euler transition is unsatisfiable.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_finite_euler_bad_step_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-euler-step-rejected",
+        "state": "1",
+        "derivative": "-1",
+        "actual_next": "1/2",
+        "claimed_next": "3/4",
+        "farkas_conflict": "next_state = state + (1/2)*derivative and next_state = 3/4",
+        "smt2_artifact": "artifacts/examples/math/finite-euler-method-v0/smt2/bad-euler-step-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_step_emits_checked_farkas",
+        "certificate": "The resource regression emits UnsatFarkas evidence for the fixed transition conflict and independently checks the certificate."
+      },
+      "notes": "This proof row isolates the false fixed-step transition as a small QF_LRA/Farkas contradiction after the replay row has computed the Euler step."
     },
     {
       "id": "general-ode-theory-lean-horizon",

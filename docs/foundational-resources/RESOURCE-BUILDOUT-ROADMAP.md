@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 674 expected checks.
+- 677 expected checks.
 - 322 checked proof/evidence rows.
-- 281 replay-only rows.
+- 284 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1513,7 +1513,8 @@ Pick one item per commit unless the change is purely navigational.
     `docs/learn/math/finite-euler-method-end-to-end.md` follows
     `finite-euler-method-v0` through exact explicit-Euler transition replay,
     finite polynomial-solution error tables, monotone invariant checking,
-    checked QF_LRA/Farkas bad max-error plus bad terminal-error and bad-step evidence, and the
+    replay-only bad max-error, bad terminal-error, and bad-step rejection plus
+    separate checked QF_LRA/Farkas proof rows, and the
     ODE/numerical-analysis Lean horizon.
 50. Landed: add field-level curriculum-readiness consumer queries.
     `scripts/query-foundational-resources.py fields --field probability_theory`

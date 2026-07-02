@@ -349,8 +349,10 @@ First targets:
   resource-backed Farkas regressions now live in `qf-lra-bad-kernel-row` and
   `qf-lra-bad-kernel-composition`)
 - [finite-euler-method-v0](../../artifacts/examples/math/finite-euler-method-v0/)
-  (source-linked solver-reuse promotions landed for the bad max-error bound,
-  bad terminal-error, and bad fixed-step transition)
+  (exact replay remains in the bad max-error, bad terminal-error, and
+  bad fixed-step transition rows; resource-backed Farkas regressions now live
+  in `qf-lra-bad-max-error-bound`, `qf-lra-bad-terminal-error`, and
+  `qf-lra-bad-euler-step`)
 - [orientation-area-geometry-v0](../../artifacts/examples/math/orientation-area-geometry-v0/)
   (resource-backed Farkas regressions landed for the bad affine-area-scaling
   and bad fixed-orientation rows)
@@ -468,8 +470,9 @@ Secondary targets:
   boundary: exact replay computes the bisection/Newton data and the next
   iterate, then Farkas checks the final bad-step equality conflict.
   Finite Euler now contributes the finite-error-table version of that boundary:
-  exact replay computes the finite error table and maximum error, then Farkas
-  checks the final bad-error-bound inequality conflict.
+  exact replay computes the finite error table, maximum error, terminal error,
+  and fixed Euler step, then separate Farkas rows check the final
+  bad-error-bound, terminal-error, and transition conflicts.
   Finite separation now contributes the convex-optimization version of that
   boundary: exact replay computes convex weights, separator scores, and the
   tight face, then Farkas checks the final bad convex-combination equality and

@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 674 expected checks.
+- 677 expected checks.
 - 322 checked proof/evidence rows.
-- 281 replay-only rows.
+- 284 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -240,8 +240,8 @@ Exit criteria:
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | standalone finite probability mass-table lesson landed; keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | LP objective/Farkas, rational convexity/gradient bridge rows with checked bad midpoint and affine-threshold evidence, finite root-finding step and bisection-width replay, finite hyperplane-separation replay, finite KKT replay with checked bad stationarity and complementarity evidence, finite active-set QP face/slack replay with checked bad free-gradient, bad inactive-slack, and bad degenerate-multiplier rows, finite degenerate active-bound replay, finite SDP primal/dual replay with checked bad objective, bad duality-gap, and bad slack-entry rows, finite gradient-descent replay with checked bad decrease, bad step-coordinate, and bad descent-bound rows, finite Armijo line-search replay with checked bad Armijo, bad descent-direction, and bad accepted-candidate rows, finite Wolfe line-search replay with checked bad minimizer, bad sufficient-decrease, and bad curvature rows, finite projected-gradient interval/decrease replay with checked bad projection and bad projected-decrease rows, finite proximal soft-threshold/composite-decrease replay, and finite box-plus-L1 proximal replay landed with checked bad proximal-point, bad composite-decrease, and bad box-proximal-point rows; add only distinct duality, working-set pivots, higher-dimensional SDP, strong-Wolfe/nonconvex line-search, group-lasso, active-set proximal, or stochastic/convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
-| `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | maintain landed finite dynamics/Euler bridge and keep numerical-honesty rows distinct from promoted exact residual/error certificates; bounded dynamics now checks false transition-step, threshold-step, and invariant-bound arithmetic, finite line-search and finite Wolfe now check descent-direction, accepted-candidate, exact-minimizer, sufficient-decrease, and curvature arithmetic conflicts, and finite proximal-gradient now checks false composite-decrease arithmetic | QF_LRA/Farkas, replay, Lean horizon |
-| `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | maintain landed finite dynamics/Euler and bounded-family/asymptotic-boundary bridges; bounded dynamics now has checked bad transition-step, bad threshold-step, and bad invariant-bound rows; add only distinct transition, reachability, invariant, stochastic, finite-error, or theorem-boundary pressure | QF_LRA/Farkas, replay, Lean horizon |
+| `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | maintain landed finite dynamics/Euler bridge and keep numerical-honesty rows distinct from promoted exact residual/error certificates; finite Euler now keeps bad max-error, terminal-error, and fixed-step claims as replay-only rows with separate checked `qf-lra-*` Farkas proof rows; bounded dynamics now checks false transition-step, threshold-step, and invariant-bound arithmetic, finite line-search and finite Wolfe now check descent-direction, accepted-candidate, exact-minimizer, sufficient-decrease, and curvature arithmetic conflicts, and finite proximal-gradient now checks false composite-decrease arithmetic | QF_LRA/Farkas, replay, Lean horizon |
+| `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | maintain landed finite dynamics/Euler and bounded-family/asymptotic-boundary bridges; finite Euler now separates replay-only bad finite-error/fixed-step rows from explicit `qf-lra-*` Farkas proof rows; bounded dynamics now has checked bad transition-step, bad threshold-step, and bad invariant-bound rows; add only distinct transition, reachability, invariant, stochastic, finite-error, or theorem-boundary pressure | QF_LRA/Farkas, replay, Lean horizon |
 | `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, circle, inversion, and cyclic rational geometry | maintain landed coordinate/oriented replay and finite circle/inversion/cyclic replay bridge rows; add only distinct nontrivial affine-coordinate, circle-line correspondence, higher-degree polynomial-geometry, or theorem-reconstruction pressure beyond the current midpoint-coordinate, affine collinearity-determinant, area-scaling, circle-line, square angle-dot, and Ptolemy rows | QF_LRA/Farkas, finite replay |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now keeps bad `l1` norm, bad operator-bound, and bad Chebyshev-prefix rows as exact replay, with separate checked `qf-lra-*` Farkas rows; inner-product now has checked bad negative-norm and projection-orthogonality rows; finite-Chebyshev now keeps duplicate-node, bad-interpolation, and bad-alternation source rows as exact replay with separate checked `qf-lra-*` Farkas rows; add only distinct norm, projection, recurrence, alternation variants, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
 
@@ -408,8 +408,9 @@ Pick one row per commit unless the change is purely navigational.
    evidence out of the combined finite dynamics/Euler bridge lesson.
 38. Landed: add standalone finite-Euler learner page, splitting exact
    explicit-Euler transition replay, finite polynomial-solution error tables,
-   monotone invariant checking, checked QF_LRA/Farkas bad max-error plus
-   bad terminal-error and bad-step evidence, and the ODE/numerical-analysis Lean horizon out of the combined finite
+   monotone invariant checking, replay-only bad max-error, bad terminal-error,
+   and bad-step rejection plus separate checked QF_LRA/Farkas proof rows, and
+   the ODE/numerical-analysis Lean horizon out of the combined finite
    dynamics/Euler bridge lesson.
 39. Landed: add dynamics field-readiness consumer query coverage, extending
    [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
@@ -1591,6 +1592,15 @@ Pick one row per commit unless the change is purely navigational.
      query surface now reports 674 checks, 322 checked rows, 281 replay-only
      rows, and row-scoped Farkas lookup for the pack returns the three explicit
      Chebyshev rows.
+184. Landed: split `finite-euler-method-v0` max-error-bound, terminal-error,
+     and fixed-step proof-object checking into explicit `qf-lra-*` rows. Exact
+     finite replay still owns the malformed source rows by computing max error
+     `3/4`, terminal error `3/4`, and the fixed Euler next state `1/2`, while
+     the QF_LRA/Farkas rows separately reject the fixed max-error, terminal
+     equality, and transition-equation conflicts through the existing
+     `math_resource_lra_routes` regressions. The public query surface now
+     reports 677 checks, 322 checked rows, 284 replay-only rows, and row-scoped
+     Farkas lookup for the pack returns the three explicit Euler rows.
 
 ## Validation Checklist
 

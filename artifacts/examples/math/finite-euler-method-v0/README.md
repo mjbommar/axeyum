@@ -10,9 +10,9 @@ The pack covers:
 - explicit Euler replay for the linear decay equation `y' = -y`;
 - exact finite error replay for Euler on `y' = 2t` with solution `y = t^2`;
 - a nonnegative monotone invariant over a finite Euler trace;
-- checked QF_LRA/Farkas rejection of a bad finite error bound;
-- checked QF_LRA/Farkas rejection of a bad terminal error;
-- checked QF_LRA/Farkas rejection of a bad Euler update;
+- replay-only rejection of bad finite error-bound, terminal-error, and Euler
+  update claims;
+- separate checked QF_LRA/Farkas rows for the three fixed linear conflicts;
 - a Lean-horizon row for continuous-time ODE theory and convergence theorems.
 
 ## Concepts
@@ -28,9 +28,10 @@ The pack covers:
 
 The validator parses step sizes, time grids, states, derivatives, exact
 solutions, and errors as exact rational strings. It recomputes every Euler
-update and every listed error without floating point. The false error-bound and
-terminal-error rows, plus the false fixed-step row, are routed through Axeyum's
-checked `UnsatFarkas` evidence path.
+update and every listed error without floating point. The false error-bound,
+terminal-error, and fixed-step replay rows are intentionally replay-only; the
+separate `qf-lra-*` rows isolate the same contradictions as small QF_LRA
+obligations routed through Axeyum's checked `UnsatFarkas` evidence path.
 
 This is a finite replay pack. It does not prove existence/uniqueness,
 stability, global convergence rates, stiffness behavior, or PDE theory.
@@ -39,5 +40,7 @@ Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-euler-method-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_step_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_max_error_bound_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_terminal_error_artifact_emits_checked_farkas
 ```

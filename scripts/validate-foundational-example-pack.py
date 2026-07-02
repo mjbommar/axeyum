@@ -25676,8 +25676,12 @@ def validate_finite_euler_method(expected: dict[str, Any]) -> None:
         fail("quadratic-forcing-error-replay max_error is incorrect")
 
     bad_error = checks["bad-max-error-bound-rejected"]
-    if bad_error["expected_result"] != "unsat" or bad_error.get("proof_status") != "checked":
-        fail("bad-max-error-bound-rejected must be a checked unsat row")
+    if bad_error["expected_result"] != "unsat":
+        fail("bad-max-error-bound-rejected must expect unsat")
+    if bad_error.get("proof_status") != "replay-only":
+        fail("bad-max-error-bound-rejected must be replay-only")
+    if bad_error.get("validation") != "finite_bad_max_error_bound_replay":
+        fail("bad-max-error-bound-rejected must use finite_bad_max_error_bound_replay validation")
     data = bad_error.get("data", {})
     replay = validate_euler_trace("bad max error Euler", data)
     if replay["ode"] != "y_prime_equals_2t":
@@ -25704,21 +25708,58 @@ def validate_finite_euler_method(expected: dict[str, Any]) -> None:
         fail("bad-max-error-bound-rejected computed_max_error is incorrect")
     if computed_max_error <= claimed_error_bound:
         fail("bad-max-error-bound-rejected must claim a bound below the replayed max error")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad max error smt2_artifact", smt2_artifact)
+    if "smt2_artifact" in data or "farkas_regression" in data:
+        fail("bad-max-error-bound-rejected replay row must not carry QF_LRA artifact fields")
+    if "separate qf-lra-bad-max-error-bound" not in bad_error.get("notes", ""):
+        fail("bad-max-error-bound-rejected notes must name the separate qf-lra-bad-max-error-bound row")
+
+    qf_bad_error = checks["qf-lra-bad-max-error-bound"]
+    if qf_bad_error["expected_result"] != "unsat":
+        fail("qf-lra-bad-max-error-bound must expect unsat")
+    if qf_bad_error.get("proof_status") != "checked":
+        fail("qf-lra-bad-max-error-bound must be checked")
+    if qf_bad_error.get("validation") != "qf_lra_finite_euler_bad_max_error_bound_refutation":
+        fail("qf-lra-bad-max-error-bound must use qf_lra_finite_euler_bad_max_error_bound_refutation validation")
+    qf_data = qf_bad_error.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-max-error-bound-rejected":
+        fail("qf-lra-bad-max-error-bound must cite bad-max-error-bound-rejected")
+    qf_computed_max_error = require_fraction(
+        "qf-lra bad max error computed_max_error",
+        qf_data.get("computed_max_error"),
+    )
+    qf_claimed_error_bound = require_fraction(
+        "qf-lra bad max error claimed_error_bound",
+        qf_data.get("claimed_error_bound"),
+    )
+    if qf_computed_max_error != computed_max_error:
+        fail("qf-lra-bad-max-error-bound computed_max_error must match replay")
+    if qf_claimed_error_bound != claimed_error_bound:
+        fail("qf-lra-bad-max-error-bound claimed_error_bound must match replay")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf-lra bad max error farkas_conflict", conflict)
+    if conflict != "max_error = 3/4 and max_error <= 1/2":
+        fail("qf-lra-bad-max-error-bound must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad max error smt2_artifact", smt2_artifact)
     if smt2_artifact != "artifacts/examples/math/finite-euler-method-v0/smt2/bad-max-error-bound-farkas-conflict.smt2":
-        fail("bad-max-error-bound-rejected smt2_artifact must name the checked QF_LRA artifact")
-    check_source("bad max error smt2_artifact", smt2_artifact)
-    regression = data.get("farkas_regression")
-    require_string("bad max error farkas_regression", regression)
+        fail("qf-lra-bad-max-error-bound smt2_artifact must name the checked QF_LRA artifact")
+    check_source("qf-lra bad max error smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad max error farkas_regression", regression)
     if "finite_euler_bad_max_error_bound_artifact_emits_checked_farkas" not in regression:
-        fail("bad-max-error-bound-rejected must link the Farkas regression")
-    if "Farkas" not in bad_error.get("notes", ""):
-        fail("bad-max-error-bound-rejected notes must document checked Farkas evidence")
+        fail("qf-lra-bad-max-error-bound must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad max error certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-max-error-bound certificate must document checked UnsatFarkas evidence")
 
     bad_terminal = checks["bad-terminal-error-rejected"]
-    if bad_terminal["expected_result"] != "unsat" or bad_terminal.get("proof_status") != "checked":
-        fail("bad-terminal-error-rejected must be a checked unsat row")
+    if bad_terminal["expected_result"] != "unsat":
+        fail("bad-terminal-error-rejected must expect unsat")
+    if bad_terminal.get("proof_status") != "replay-only":
+        fail("bad-terminal-error-rejected must be replay-only")
+    if bad_terminal.get("validation") != "finite_bad_terminal_error_replay":
+        fail("bad-terminal-error-rejected must use finite_bad_terminal_error_replay validation")
     data = bad_terminal.get("data", {})
     source_witness = data.get("source_witness")
     require_string("bad terminal error source_witness", source_witness)
@@ -25769,19 +25810,56 @@ def validate_finite_euler_method(expected: dict[str, Any]) -> None:
         fail("bad-terminal-error-rejected terminal error gap is incorrect")
     if terminal_error_gap <= 0:
         fail("bad-terminal-error-rejected terminal error gap must be positive")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad terminal error smt2_artifact", smt2_artifact)
+    if "smt2_artifact" in data or "farkas_regression" in data or "certificate" in data:
+        fail("bad-terminal-error-rejected replay row must not carry QF_LRA artifact fields")
+    if "separate qf-lra-bad-terminal-error" not in bad_terminal.get("notes", ""):
+        fail("bad-terminal-error-rejected notes must name the separate qf-lra-bad-terminal-error row")
+
+    qf_bad_terminal = checks["qf-lra-bad-terminal-error"]
+    if qf_bad_terminal["expected_result"] != "unsat":
+        fail("qf-lra-bad-terminal-error must expect unsat")
+    if qf_bad_terminal.get("proof_status") != "checked":
+        fail("qf-lra-bad-terminal-error must be checked")
+    if qf_bad_terminal.get("validation") != "qf_lra_finite_euler_bad_terminal_error_refutation":
+        fail("qf-lra-bad-terminal-error must use qf_lra_finite_euler_bad_terminal_error_refutation validation")
+    qf_data = qf_bad_terminal.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-terminal-error-rejected":
+        fail("qf-lra-bad-terminal-error must cite bad-terminal-error-rejected")
+    qf_computed_terminal_error = require_fraction(
+        "qf-lra bad terminal error computed_terminal_error",
+        qf_data.get("computed_terminal_error"),
+    )
+    qf_claimed_terminal_error = require_fraction(
+        "qf-lra bad terminal error claimed_terminal_error",
+        qf_data.get("claimed_terminal_error"),
+    )
+    qf_terminal_error_gap = require_fraction(
+        "qf-lra bad terminal error terminal_error_gap",
+        qf_data.get("terminal_error_gap"),
+    )
+    if qf_computed_terminal_error != computed_terminal_error:
+        fail("qf-lra-bad-terminal-error computed_terminal_error must match replay")
+    if qf_claimed_terminal_error != claimed_terminal_error:
+        fail("qf-lra-bad-terminal-error claimed_terminal_error must match replay")
+    if qf_terminal_error_gap != terminal_error_gap:
+        fail("qf-lra-bad-terminal-error terminal_error_gap must match replay")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf-lra bad terminal error farkas_conflict", conflict)
+    if conflict != "terminal_error = 3/4 and terminal_error = 1/2":
+        fail("qf-lra-bad-terminal-error must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad terminal error smt2_artifact", smt2_artifact)
     if smt2_artifact != "artifacts/examples/math/finite-euler-method-v0/smt2/bad-terminal-error-farkas-conflict.smt2":
-        fail("bad-terminal-error-rejected smt2_artifact must name the checked QF_LRA artifact")
-    check_source("bad terminal error smt2_artifact", smt2_artifact)
-    regression = data.get("farkas_regression")
-    require_string("bad terminal error farkas_regression", regression)
+        fail("qf-lra-bad-terminal-error smt2_artifact must name the checked QF_LRA artifact")
+    check_source("qf-lra bad terminal error smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad terminal error farkas_regression", regression)
     if "finite_euler_bad_terminal_error_artifact_emits_checked_farkas" not in regression:
-        fail("bad-terminal-error-rejected must link the Farkas regression")
-    certificate = data.get("certificate")
-    require_string("bad terminal error certificate", certificate)
+        fail("qf-lra-bad-terminal-error must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad terminal error certificate", certificate)
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
-        fail("bad-terminal-error-rejected certificate must document checked Farkas evidence")
+        fail("qf-lra-bad-terminal-error certificate must document checked UnsatFarkas evidence")
 
     invariant = checks["nonnegative-monotone-invariant"]
     if invariant["expected_result"] != "sat":
@@ -25804,8 +25882,12 @@ def validate_finite_euler_method(expected: dict[str, Any]) -> None:
             fail("nonnegative-monotone-invariant trace is not nonincreasing")
 
     bad_step = checks["bad-euler-step-rejected"]
-    if bad_step["expected_result"] != "unsat" or bad_step.get("proof_status") != "checked":
-        fail("bad-euler-step-rejected must be a checked unsat row")
+    if bad_step["expected_result"] != "unsat":
+        fail("bad-euler-step-rejected must expect unsat")
+    if bad_step.get("proof_status") != "replay-only":
+        fail("bad-euler-step-rejected must be replay-only")
+    if bad_step.get("validation") != "finite_bad_euler_step_replay":
+        fail("bad-euler-step-rejected must use finite_bad_euler_step_replay validation")
     data = bad_step.get("data", {})
     ode = require_euler_ode("bad Euler ode", data.get("ode"))
     step = require_fraction("bad Euler step", data.get("step"))
@@ -25826,13 +25908,50 @@ def validate_finite_euler_method(expected: dict[str, Any]) -> None:
     require_string("bad Euler farkas_step_equation", farkas_step_equation)
     if farkas_step_equation != "next_state = state + (1/2)*derivative":
         fail("bad-euler-step-rejected must document the Farkas transition equation")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad Euler smt2_artifact", smt2_artifact)
-    check_source("bad Euler smt2_artifact", smt2_artifact)
-    regression = data.get("farkas_regression")
-    require_string("bad Euler farkas_regression", regression)
+    if "smt2_artifact" in data or "farkas_regression" in data:
+        fail("bad-euler-step-rejected replay row must not carry QF_LRA artifact fields")
+    if "separate qf-lra-bad-euler-step" not in bad_step.get("notes", ""):
+        fail("bad-euler-step-rejected notes must name the separate qf-lra-bad-euler-step row")
+
+    qf_bad_step = checks["qf-lra-bad-euler-step"]
+    if qf_bad_step["expected_result"] != "unsat":
+        fail("qf-lra-bad-euler-step must expect unsat")
+    if qf_bad_step.get("proof_status") != "checked":
+        fail("qf-lra-bad-euler-step must be checked")
+    if qf_bad_step.get("validation") != "qf_lra_finite_euler_bad_step_refutation":
+        fail("qf-lra-bad-euler-step must use qf_lra_finite_euler_bad_step_refutation validation")
+    qf_data = qf_bad_step.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-euler-step-rejected":
+        fail("qf-lra-bad-euler-step must cite bad-euler-step-rejected")
+    qf_state = require_fraction("qf-lra bad Euler state", qf_data.get("state"))
+    qf_derivative = require_fraction("qf-lra bad Euler derivative", qf_data.get("derivative"))
+    qf_actual_next = require_fraction("qf-lra bad Euler actual_next", qf_data.get("actual_next"))
+    qf_claimed_next = require_fraction("qf-lra bad Euler claimed_next", qf_data.get("claimed_next"))
+    if qf_state != state:
+        fail("qf-lra-bad-euler-step state must match replay")
+    if qf_derivative != derivative:
+        fail("qf-lra-bad-euler-step derivative must match replay")
+    if qf_actual_next != actual_next:
+        fail("qf-lra-bad-euler-step actual_next must match replay")
+    if qf_claimed_next != claimed_next:
+        fail("qf-lra-bad-euler-step claimed_next must match replay")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf-lra bad Euler farkas_conflict", conflict)
+    if conflict != "next_state = state + (1/2)*derivative and next_state = 3/4":
+        fail("qf-lra-bad-euler-step must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad Euler smt2_artifact", smt2_artifact)
+    if smt2_artifact != "artifacts/examples/math/finite-euler-method-v0/smt2/bad-euler-step-farkas-conflict.smt2":
+        fail("qf-lra-bad-euler-step smt2_artifact must name the checked QF_LRA artifact")
+    check_source("qf-lra bad Euler smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad Euler farkas_regression", regression)
     if "finite_euler_bad_step_emits_checked_farkas" not in regression:
-        fail("bad-euler-step-rejected must link the Farkas regression")
+        fail("qf-lra-bad-euler-step must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad Euler certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-euler-step certificate must document checked UnsatFarkas evidence")
 
     horizon = checks["general-ode-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

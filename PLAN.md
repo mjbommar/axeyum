@@ -253,8 +253,8 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-02): the public JSON layer reports
-120 concept rows, 108 non-template packs, 674 expected checks (336 `sat`,
-267 `unsat`, 71 `not-run`), 322 checked rows, 281 replay-only rows, and 71
+120 concept rows, 108 non-template packs, 677 expected checks (336 `sat`,
+270 `unsat`, 71 `not-run`), 322 checked rows, 284 replay-only rows, and 71
 Lean-horizon rows. The rules/law JSON layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
@@ -593,8 +593,9 @@ evidence, leaving the combined finite-dynamics/Euler page as the numerical-step
 bridge.
 `finite-euler-method-v0` now also has a standalone finite Euler method page
 for exact explicit-Euler transition replay, finite polynomial-solution error
-tables, monotone invariant checks, checked QF_LRA/Farkas bad max-error,
-bad terminal-error, and bad-step evidence, and the ODE/numerical-analysis Lean horizon.
+tables, monotone invariant checks, replay-only bad max-error,
+bad terminal-error, and bad-step rejection, separate checked QF_LRA/Farkas
+proof rows, and the ODE/numerical-analysis Lean horizon.
 `finite-operator-v0` now also has a standalone finite-dimensional operator
 page for exact `l1` norm replay, row-sum operator-bound replay, finite
 Chebyshev recurrence replay, replay-only malformed norm/bound/Chebyshev rows,
