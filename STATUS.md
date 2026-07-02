@@ -240,6 +240,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite LU-decomposition resource landed.**
+  `finite-lu-decomposition-v0` now gives the linear-algebra and
+  numerical-analysis lanes an exact rational factorization transcript: it
+  checks `A = [[2,1],[4,5]]`, `L = [[1,0],[2,1]]`,
+  `U = [[2,1],[0,3]]`, `L*U = A`, determinant pivot product `6`,
+  forward/back substitution for `b = [5,17]`, and solution `[4/3,7/3]`,
+  then isolates the malformed multiplier claim `l21 = 3` versus exact `2` as
+  a source-linked QF_LRA/Farkas row. The focused learner page, matrix/numerical
+  query guides, concept bridges, validator, and `math_resource_lra_routes`
+  regression keep fixed finite LU replay separate from general LU existence,
+  pivoting correctness, rank-deficient variants, sparse algorithms,
+  conditioning, and floating-point stability. The public summary now reports
+  122 concept rows, 129 packs, 842 expected checks, 355 checked rows,
+  395 replay-only rows, 92 Lean-horizon rows, and 129 promoted solver-reuse
+  packs.
 - **Finite Gram-Schmidt resource landed.**
   `finite-gram-schmidt-v0` now gives the linear-algebra,
   numerical-analysis, and operator-theory lanes an exact rational
@@ -252,8 +267,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   validator, and `math_resource_lra_routes` regression keep fixed finite
   Gram-Schmidt replay separate from general Gram-Schmidt/QR correctness,
   rank-deficient variants, conditioning, and floating-point stability. The
-  public summary now reports 122 concept rows, 128 packs, 834 expected checks,
-  354 checked rows, 389 replay-only rows, 91 Lean-horizon rows, and 128
+  public summary now reports 122 concept rows, 129 packs, 842 expected checks,
+  355 checked rows, 395 replay-only rows, 92 Lean-horizon rows, and 129
   promoted solver-reuse packs.
 - **Finite Householder-reflection resource landed.**
   `finite-householder-reflection-v0` now gives the linear-algebra,

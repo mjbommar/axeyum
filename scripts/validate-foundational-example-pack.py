@@ -13151,6 +13151,173 @@ def validate_finite_gaussian_elimination(expected: dict[str, Any]) -> None:
     )
 
 
+def validate_finite_lu_decomposition(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    lower = checks["lu-unit-lower-triangular-witness"]
+    if lower["expected_result"] != "sat":
+        fail("lu-unit-lower-triangular-witness must expect sat")
+    if lower.get("proof_status") != "replay-only":
+        fail("lu-unit-lower-triangular-witness must be replay-only")
+    values = single_witness_values(lower, witnesses)
+    matrix = require_fraction_matrix("LU matrix A", values.get("matrix"))
+    l_matrix = require_fraction_matrix("LU L matrix", values.get("l"))
+    u_matrix = require_fraction_matrix("LU U matrix", values.get("u"))
+    rhs = require_fraction_vector("LU rhs", values.get("rhs"))
+    pivots = require_fraction_vector("LU pivots", values.get("pivots"))
+    multiplier = require_fraction("LU multiplier", values.get("multiplier"))
+    forward_solution = require_fraction_vector(
+        "LU forward_solution",
+        values.get("forward_solution"),
+    )
+    solution = require_fraction_vector("LU solution", values.get("solution"))
+    det_matrix = require_fraction("LU det_matrix", values.get("det_matrix"))
+    pivot_product = require_fraction("LU pivot_product", values.get("pivot_product"))
+    product = require_fraction_matrix("LU product", values.get("product"))
+    require_square_matrix("LU matrix A", matrix)
+    validate_lu_shape(l_matrix, u_matrix)
+    require_mat_mul_shape("LU factorization", l_matrix, u_matrix)
+    if len(matrix) != 2 or len(rhs) != 2 or len(solution) != 2:
+        fail("finite LU decomposition replay expects one 2x2 system")
+    if len(pivots) != 2 or len(forward_solution) != 2:
+        fail("finite LU decomposition replay expects two pivots and a two-entry forward solve")
+    if matrix[0][0] == 0:
+        fail("finite LU decomposition replay expects a nonzero first pivot")
+    if multiplier != matrix[1][0] / matrix[0][0]:
+        fail("lu-unit-lower-triangular-witness multiplier does not match A[1,0]/A[0,0]")
+    if multiplier != l_matrix[1][0]:
+        fail("lu-unit-lower-triangular-witness multiplier must match L[1,0]")
+
+    upper = checks["lu-upper-triangular-witness"]
+    if upper["expected_result"] != "sat":
+        fail("lu-upper-triangular-witness must expect sat")
+    if upper.get("proof_status") != "replay-only":
+        fail("lu-upper-triangular-witness must be replay-only")
+    if single_witness_values(upper, witnesses) != values:
+        fail("lu-upper-triangular-witness must cite the LU witness")
+
+    product_check = checks["lu-product-witness"]
+    if product_check["expected_result"] != "sat":
+        fail("lu-product-witness must expect sat")
+    if product_check.get("proof_status") != "replay-only":
+        fail("lu-product-witness must be replay-only")
+    if single_witness_values(product_check, witnesses) != values:
+        fail("lu-product-witness must cite the LU witness")
+    if mat_mul(l_matrix, u_matrix) != product:
+        fail("lu-product-witness product does not equal L*U")
+    if product != matrix:
+        fail("lu-product-witness product must equal the listed matrix A")
+
+    determinant = checks["lu-determinant-pivot-product-witness"]
+    if determinant["expected_result"] != "sat":
+        fail("lu-determinant-pivot-product-witness must expect sat")
+    if determinant.get("proof_status") != "replay-only":
+        fail("lu-determinant-pivot-product-witness must be replay-only")
+    if single_witness_values(determinant, witnesses) != values:
+        fail("lu-determinant-pivot-product-witness must cite the LU witness")
+    computed_det = matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
+    if det_matrix != computed_det:
+        fail("lu-determinant-pivot-product-witness det(A) is incorrect")
+    if pivots != [u_matrix[0][0], u_matrix[1][1]]:
+        fail("lu-determinant-pivot-product-witness pivots must be U's diagonal")
+    if pivot_product != pivots[0] * pivots[1]:
+        fail("lu-determinant-pivot-product-witness pivot product is incorrect")
+    if pivot_product != det_matrix:
+        fail("lu-determinant-pivot-product-witness pivot product must equal det(A)")
+
+    triangular_solve = checks["lu-forward-back-substitution-witness"]
+    if triangular_solve["expected_result"] != "sat":
+        fail("lu-forward-back-substitution-witness must expect sat")
+    if triangular_solve.get("proof_status") != "replay-only":
+        fail("lu-forward-back-substitution-witness must be replay-only")
+    if single_witness_values(triangular_solve, witnesses) != values:
+        fail("lu-forward-back-substitution-witness must cite the LU witness")
+    if mat_vec(l_matrix, forward_solution) != rhs:
+        fail("lu-forward-back-substitution-witness L*y does not equal rhs")
+    if mat_vec(u_matrix, solution) != forward_solution:
+        fail("lu-forward-back-substitution-witness U*x does not equal y")
+    if mat_vec(matrix, solution) != rhs:
+        fail("lu-forward-back-substitution-witness A*x does not equal rhs")
+
+    bad = checks["bad-lu-multiplier-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-lu-multiplier-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-lu-multiplier-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_lu_multiplier_replay":
+        fail("bad-lu-multiplier-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-by-two-lu-factorization":
+        fail("bad-lu-multiplier-rejected must cite two-by-two-lu-factorization")
+    computed_multiplier = require_fraction(
+        "bad LU computed_multiplier",
+        data.get("computed_multiplier"),
+    )
+    claimed_multiplier = require_fraction(
+        "bad LU claimed_multiplier",
+        data.get("claimed_multiplier"),
+    )
+    if computed_multiplier != multiplier:
+        fail("bad-lu-multiplier-rejected computed multiplier does not match replay")
+    if computed_multiplier == claimed_multiplier:
+        fail("bad-lu-multiplier-rejected must document a false multiplier claim")
+    if "separate qf-lra-bad-lu-multiplier" not in bad.get("notes", ""):
+        fail("bad-lu-multiplier-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-lu-multiplier"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-lu-multiplier must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-lu-multiplier must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-lu-multiplier must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-by-two-lu-factorization":
+        fail("qf-lra-bad-lu-multiplier must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-lu-multiplier-rejected":
+        fail("qf-lra-bad-lu-multiplier must cite the replay row")
+    qf_computed = require_fraction(
+        "qf LU computed_multiplier",
+        qf_data.get("computed_multiplier"),
+    )
+    qf_claimed = require_fraction(
+        "qf LU claimed_multiplier",
+        qf_data.get("claimed_multiplier"),
+    )
+    if qf_computed != computed_multiplier or qf_claimed != claimed_multiplier:
+        fail("qf-lra-bad-lu-multiplier data must match the replay row")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf LU smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-lu-decomposition-v0/smt2/"
+        "bad-lu-multiplier-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-lu-multiplier smt2_artifact must name the checked source artifact")
+    check_source("qf LU smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf LU farkas_regression", regression)
+    if "finite_lu_decomposition_bad_multiplier_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-lu-multiplier must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf LU certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-lu-multiplier certificate must document checked Farkas evidence")
+
+    horizon = checks["general-lu-decomposition-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-lu-decomposition-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-lu-decomposition-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "LU horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string("LU horizon future_checker", horizon_data.get("future_checker"))
+
+
 def require_fraction_vector_list(context: str, value: Any) -> list[list[Fraction]]:
     if not isinstance(value, list) or not value:
         fail(f"{context} must be a non-empty list of vectors")
@@ -30311,6 +30478,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_euler_method(expected)
     if metadata["id"] == "finite-gaussian-elimination-v0":
         validate_finite_gaussian_elimination(expected)
+    if metadata["id"] == "finite-lu-decomposition-v0":
+        validate_finite_lu_decomposition(expected)
     if metadata["id"] == "finite-gradient-descent-v0":
         validate_finite_gradient_descent(expected)
     if metadata["id"] == "finite-line-search-v0":

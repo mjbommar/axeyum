@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 128 non-template math example packs.
-- 834 expected checks.
-- 354 checked proof/evidence rows.
-- 389 replay-only rows.
-- 91 Lean-horizon rows.
-- 128 promoted solver-reuse packs.
+- 129 non-template math example packs.
+- 842 expected checks.
+- 355 checked proof/evidence rows.
+- 395 replay-only rows.
+- 92 Lean-horizon rows.
+- 129 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 128 focused learner-linked packs, with no path-only, index-only, or missing
+- 129 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2466,6 +2466,15 @@ Pick one item per commit unless the change is purely navigational.
      source-linked QF_LRA/Farkas regression without claiming general
      Gram-Schmidt/QR correctness, rank-deficient variants, conditioning, or
      floating-point stability.
+175. Landed: add `finite-lu-decomposition-v0` as an exact finite
+     LU-decomposition resource. The pack computes one rational two-by-two
+     factorization `A = [[2,1],[4,5]] = L*U` with
+     `L = [[1,0],[2,1]]`, `U = [[2,1],[0,3]]`, determinant pivot product
+     `6`, forward/back substitution for `b = [5,17]`, and the exact solution
+     `[4/3,7/3]`, then promotes the malformed multiplier claim `l21 = 3`
+     versus exact `2` through a source-linked QF_LRA/Farkas regression without
+     claiming general LU existence, pivoting correctness, rank-deficient
+     behavior, sparse algorithms, conditioning, or floating-point stability.
 
 ## Validation Checklist
 

@@ -16,6 +16,9 @@ const LINEAR_ALGEBRA_SINGULAR_SYSTEM: &str = include_str!(
 const LINEAR_ALGEBRA_BAD_LU_PRODUCT_ENTRY: &str = include_str!(
     "../../../artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-lu-product-entry-farkas-conflict.smt2"
 );
+const FINITE_LU_DECOMPOSITION_BAD_MULTIPLIER: &str = include_str!(
+    "../../../artifacts/examples/math/finite-lu-decomposition-v0/smt2/bad-lu-multiplier-farkas-conflict.smt2"
+);
 const LINEAR_ALGEBRA_BAD_NULLSPACE_COMPONENT: &str = include_str!(
     "../../../artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-nullspace-component-farkas-conflict.smt2"
 );
@@ -636,6 +639,14 @@ fn linear_algebra_bad_lu_product_entry_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "linear-algebra-rational-v0 bad-lu-product-entry SMT-LIB artifact",
         LINEAR_ALGEBRA_BAD_LU_PRODUCT_ENTRY,
+    );
+}
+
+#[test]
+fn finite_lu_decomposition_bad_multiplier_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-lu-decomposition-v0 bad-lu-multiplier SMT-LIB artifact",
+        FINITE_LU_DECOMPOSITION_BAD_MULTIPLIER,
     );
 }
 

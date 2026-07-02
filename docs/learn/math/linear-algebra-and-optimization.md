@@ -12,6 +12,7 @@ Example packs:
 
 - [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/)
 - [finite-gaussian-elimination-v0](../../../artifacts/examples/math/finite-gaussian-elimination-v0/)
+- [finite-lu-decomposition-v0](../../../artifacts/examples/math/finite-lu-decomposition-v0/)
 - [finite-qr-decomposition-v0](../../../artifacts/examples/math/finite-qr-decomposition-v0/)
 - [finite-gram-schmidt-v0](../../../artifacts/examples/math/finite-gram-schmidt-v0/)
 - [finite-givens-rotation-v0](../../../artifacts/examples/math/finite-givens-rotation-v0/)
@@ -109,7 +110,12 @@ adds exact pivot/multiplier replay, row replacement on an augmented system,
 determinant pivot-product replay, back-substitution, and checked QF_LRA/Farkas
 rejection of a bad eliminated RHS without claiming pivoting correctness,
 rank-revealing elimination, sparse fill-in behavior, conditioning, or
-floating-point stability. The QR slice adds exact rational
+floating-point stability.
+The LU slice adds exact unit-lower/upper triangular factor replay, determinant
+pivot-product checking, triangular-solve replay, and checked QF_LRA/Farkas
+rejection of a bad elimination multiplier without claiming general LU
+existence, pivoting correctness, rank-deficient behavior, sparse algorithms,
+conditioning, or floating-point stability. The QR slice adds exact rational
 orthogonality replay, upper-triangular factor checking, `Q*R` product replay,
 and checked QF_LRA/Farkas rejection of a bad product entry without claiming QR
 existence, algorithm correctness, conditioning, or numerical stability. The
@@ -1019,6 +1025,7 @@ replay, read
 [Cyclic Geometry Theorem Boundary](cyclic-geometry-theorem-boundary.md),
 [End To End: Rational Inner Product Spaces](inner-product-spaces-end-to-end.md),
 [End To End: Finite Walsh-Hadamard Transform Checks](walsh-hadamard-transform-end-to-end.md),
+[End To End: Finite LU Decomposition](lu-decomposition-end-to-end.md),
 [End To End: Finite QR Decomposition Checks](qr-decomposition-end-to-end.md),
 [End To End: Finite Gram-Schmidt](gram-schmidt-end-to-end.md),
 [End To End: Finite Givens Rotation](givens-rotation-end-to-end.md),
@@ -1045,7 +1052,7 @@ finite-dimensional operator rows start as
 Infeasible rational systems, LP thresholds, bad residual and solution-box bounds, malformed
 eigenpairs, bad Rayleigh-quotient rows, bad characteristic-polynomial rows,
 bad Jordan-chain components, bad operator-bound and bad Chebyshev-prefix rows, bad Walsh-Hadamard
-transform coefficients, bad Gram-Schmidt projection coefficients, bad Givens coefficients, bad Householder entries, bad QR/Cholesky product entries, bad covariance
+transform coefficients, bad LU multipliers, bad Gram-Schmidt projection coefficients, bad Givens coefficients, bad Householder entries, bad QR/Cholesky product entries, bad covariance
 entries, bad KKT stationarity and complementarity rows,
 bad condition-number bounds, bad Schur-complement scalar rows, bad Newton-coordinate rows, bad proximal residual rows, negative-norm rows, and projection-orthogonality
 examples graduate through

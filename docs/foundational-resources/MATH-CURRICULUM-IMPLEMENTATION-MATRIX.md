@@ -968,7 +968,17 @@ Build sequence:
     finite-operator/Chebyshev, and exact-vs-floating bridges keep exact finite
     Gram-Schmidt replay separate from QR correctness, rank-deficient variants,
     conditioning, and floating-point stability.
-99. Revisit crate/repo boundaries only after three real consumers or repeated
+99. Landed: add the finite LU-decomposition resource.
+    `finite-lu-decomposition-v0` now records one exact rational factorization
+    transcript: `A = [[2,1],[4,5]]`, `L = [[1,0],[2,1]]`,
+    `U = [[2,1],[0,3]]`, `L*U = A`, determinant pivot product `6`,
+    triangular solve replay for `b = [5,17]`, and solution `[4/3,7/3]`.
+    It includes a checked QF_LRA/Farkas artifact for the malformed multiplier
+    claim `l21 = 3`. The reused matrix and exact-vs-floating bridges keep
+    exact finite LU replay separate from general LU existence, pivoting,
+    rank-deficient variants, sparse algorithms, conditioning, and
+    floating-point stability.
+100. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

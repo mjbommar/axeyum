@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-lu-decomposition-v0",
+  "witnesses": [
+    {
+      "id": "two-by-two-lu-factorization",
+      "description": "Exact rational LU factorization and triangular-solve data for a fixed 2x2 system.",
+      "values": {
+        "matrix": [
+          ["2", "1"],
+          ["4", "5"]
+        ],
+        "l": [
+          ["1", "0"],
+          ["2", "1"]
+        ],
+        "u": [
+          ["2", "1"],
+          ["0", "3"]
+        ],
+        "rhs": ["5", "17"],
+        "pivots": ["2", "3"],
+        "multiplier": "2",
+        "forward_solution": ["5", "7"],
+        "solution": ["4/3", "7/3"],
+        "det_matrix": "6",
+        "pivot_product": "6",
+        "product": [
+          ["2", "1"],
+          ["4", "5"]
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "lu-unit-lower-triangular-witness",
+      "claim": "The fixed rational L matrix is unit lower triangular.",
+      "expected_result": "sat",
+      "validation": "exact_rational_lu_unit_lower_triangular_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-lu-factorization"],
+      "notes": "The validator checks the diagonal entries and every above-diagonal entry of L exactly."
+    },
+    {
+      "id": "lu-upper-triangular-witness",
+      "claim": "The fixed rational U matrix is upper triangular.",
+      "expected_result": "sat",
+      "validation": "exact_rational_lu_upper_triangular_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-lu-factorization"],
+      "notes": "The validator checks every below-diagonal entry of U exactly."
+    },
+    {
+      "id": "lu-product-witness",
+      "claim": "The fixed rational matrices satisfy L*U = A.",
+      "expected_result": "sat",
+      "validation": "exact_rational_lu_product_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-lu-factorization"],
+      "notes": "The validator recomputes the matrix product exactly over rationals."
+    },
+    {
+      "id": "lu-determinant-pivot-product-witness",
+      "claim": "The determinant of A equals the product of the two LU pivots, 6.",
+      "expected_result": "sat",
+      "validation": "exact_rational_lu_determinant_pivot_product_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-lu-factorization"],
+      "notes": "The validator recomputes det(A) and the product of U's diagonal pivots."
+    },
+    {
+      "id": "lu-forward-back-substitution-witness",
+      "claim": "Forward and back substitution give x = [4/3, 7/3], which solves A*x = b.",
+      "expected_result": "sat",
+      "validation": "exact_rational_lu_triangular_solve_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-lu-factorization"],
+      "notes": "The validator checks L*y = b, U*x = y, and A*x = b exactly."
+    },
+    {
+      "id": "bad-lu-multiplier-rejected",
+      "claim": "The elimination multiplier l21 is 3.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_lu_multiplier_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "two-by-two-lu-factorization",
+        "computed_multiplier": "2",
+        "claimed_multiplier": "3"
+      },
+      "notes": "Exact replay computes the multiplier as 4/2 = 2, so the claimed value 3 is rejected; the separate qf-lra-bad-lu-multiplier row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-lu-multiplier",
+      "claim": "The fixed malformed LU multiplier claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "two-by-two-lu-factorization",
+        "source_replay_row": "bad-lu-multiplier-rejected",
+        "computed_multiplier": "2",
+        "claimed_multiplier": "3",
+        "farkas_conflict": "lu_l21 = 2 and lu_l21 = 3",
+        "smt2_artifact": "artifacts/examples/math/finite-lu-decomposition-v0/smt2/bad-lu-multiplier-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_lu_decomposition_bad_multiplier_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the LU multiplier as 2, while the malformed row claims 3; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-lu-decomposition-theory-lean-horizon",
+      "claim": "General LU existence, pivoting strategy, rank-deficient cases, sparse factorization behavior, conditioning, and floating-point stability are theorem/numerical-honesty work.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For arbitrary compatible matrices over exact fields, prove LU factorization existence under pivot/nonzero-minor assumptions, relate row operations to triangular factors, and prove triangular-solve correctness.",
+        "future_checker": "Lean theorem statements for exact LU and triangular solves plus separate numerical-honesty artifacts for pivoting, conditioning, sparse algorithms, and floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational factorization transcript, not a theorem about arbitrary LU decomposition or a stability claim for numerical implementations."
+    }
+  ]
+}
