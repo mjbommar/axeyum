@@ -2084,6 +2084,11 @@ horizon.
 finite monotone-prefix replay, finite prefix supremum, finite tail-gap replay,
 replay-only bad upper-bound and bad tail-gap source rows, separate checked
 `qf-lra-*` Farkas proof rows, and the monotone convergence Lean horizon.
+It also has a focused monotone convergence theorem-boundary page that keeps
+finite monotone-prefix, prefix-supremum, and tail-gap rows separate from
+arbitrary bounded monotone sequence convergence, convergence to supremum, and
+real-completeness claims, while linking the public monotone horizon query to
+the existing checked finite QF_LRA/Farkas shadows.
 `calculus-algebraic-shadow-v0` and `calculus-riemann-sum-v0` now have a
 combined learner-facing end-to-end lesson for polynomial derivative replay,
 product-rule and tangent checks, finite Riemann sums, antiderivative endpoint
@@ -2632,6 +2637,13 @@ RCF shadows, metric continuity, and compactness prerequisites are linked to
 existing checked packs, copyable queries, replay commands, missing Lean
 dependencies, and graduation criteria while keeping finite samples separate
 from theorem-level real-analysis claims.
+The learner/planning layer now also has
+[`monotone-convergence-theorem-boundary.md`](../learn/math/monotone-convergence-theorem-boundary.md),
+which narrows that real-analysis boundary to `bounded-monotone-sequence-v0`:
+finite monotone prefixes, finite prefix suprema, finite tail gaps, checked bad
+upper-bound and bad tail-gap Farkas rows, the `monotone-convergence-lean-horizon`
+metadata row, copyable queries, and graduation criteria for a future no-`sorry`
+Lean theorem route.
 The learner/planning layer now also has
 [`algebra-equality-certificate-boundary.md`](../learn/math/algebra-equality-certificate-boundary.md),
 which turns the algebra queue rule into an explicit promotion boundary:

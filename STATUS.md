@@ -234,6 +234,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Monotone-convergence theorem-boundary resource landed.**
+  `monotone-convergence-theorem-boundary.md` now separates
+  `bounded-monotone-sequence-v0` finite monotone-prefix replay, finite prefix
+  supremum, finite tail-gap replay, and checked QF_LRA/Farkas bad
+  upper-bound/tail-gap rows from arbitrary bounded monotone real sequence
+  convergence, convergence to supremum, and real-completeness theorem targets.
+  The analysis/topology learner path, real-completeness boundary,
+  analysis/calculus horizon map, theorem-horizon query guide, analysis/numerical
+  query guide, and foundational smoke gate now expose the monotone-specific
+  horizon row next to the checked finite shadows. This is a learner/query-depth
+  increment over an existing promoted pack; public resource counts do not
+  change.
+
 - **Euler-method theorem-boundary resource landed.**
   `euler-method-theorem-boundary.md` now separates finite explicit-Euler
   transition replay, exact finite error tables, finite invariants, and checked

@@ -194,6 +194,19 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Monotone convergence horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text monotone \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack bounded-monotone-sequence-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Graph/asymptotic horizons:
 
 ```sh
@@ -231,6 +244,7 @@ The main learner maps that explain these boundaries are:
 
 - [Analysis And Calculus Theorem Horizon Map](../learn/math/analysis-calculus-theorem-horizon-map.md)
 - [Real Completeness Theorem Boundary](../learn/math/real-completeness-theorem-boundary.md)
+- [Monotone Convergence Theorem Boundary](../learn/math/monotone-convergence-theorem-boundary.md)
 - [Chebyshev Theorem Boundary](../learn/math/chebyshev-theorem-boundary.md)
 - [Concentration Theorem Boundary](../learn/math/concentration-theorem-boundary.md)
 - [Euler Method Theorem Boundary](../learn/math/euler-method-theorem-boundary.md)

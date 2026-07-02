@@ -1871,6 +1871,13 @@ Pick one row per commit unless the change is purely navigational.
      convergence, stability, stiffness, floating-point, and PDE routes, and
      adds ODE-specific horizon queries to the public smoke gate without adding
      a duplicate pack or changing resource counts.
+223. Landed: add `monotone-convergence-theorem-boundary.md` as the focused
+     theorem-boundary page for `bounded-monotone-sequence-v0`. It maps finite
+     monotone-prefix replay, finite prefix supremum, finite tail-gap replay,
+     and checked QF_LRA/Farkas bad upper-bound and bad tail-gap rows to the
+     missing quantified monotone convergence, supremum, and real-completeness
+     routes, and adds monotone-specific horizon queries to the public smoke
+     gate without adding a duplicate pack or changing resource counts.
 
 ## Validation Checklist
 

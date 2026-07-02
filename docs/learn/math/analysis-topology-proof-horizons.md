@@ -65,6 +65,7 @@ Companion map:
 
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
 - [Metric Balls And Epsilon-Delta Index](metric-ball-epsilon-delta-index.md)
+- [Monotone Convergence Theorem Boundary](monotone-convergence-theorem-boundary.md)
 
 ## What Axeyum Checks
 
@@ -179,6 +180,10 @@ claim that a tail starting at `n = 2` is within `epsilon = 1/4` after replay
 computes gap excess `1/12`; separate `qf-lra-*` proof rows own the checked
 Farkas artifacts. This is finite prefix evidence, not the monotone convergence
 theorem.
+For the theorem boundary that keeps those rows separate from arbitrary
+bounded monotone real sequences, supremum convergence, and completeness of the
+reals, read
+[Monotone Convergence Theorem Boundary](monotone-convergence-theorem-boundary.md).
 
 For a finite recurrence-prefix shadow, encode only the displayed recurrence
 data:

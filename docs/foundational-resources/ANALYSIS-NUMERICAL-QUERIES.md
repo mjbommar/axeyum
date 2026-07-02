@@ -291,6 +291,10 @@ python3 scripts/query-foundational-resources.py checks \
   --text qf-lra-bad-tail-gap \
   --require-any
 
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text monotone \
+  --require-any
+
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-euler-method-v0 \
   --route Farkas \
@@ -315,6 +319,11 @@ For the finite Euler boundary, read
 [Euler Method Theorem Boundary](../learn/math/euler-method-theorem-boundary.md)
 before displaying ODE convergence, stability, stiffness, PDE, or
 floating-point method claims next to exact rational finite-step rows.
+
+For the bounded monotone sequence boundary, read
+[Monotone Convergence Theorem Boundary](../learn/math/monotone-convergence-theorem-boundary.md)
+before displaying general monotone convergence, supremum, or real-completeness
+claims next to exact rational finite-prefix and finite-tail rows.
 
 They do not prove:
 

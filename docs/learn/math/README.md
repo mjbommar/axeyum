@@ -68,6 +68,9 @@ Companion maps:
   separates exact rational interval, finite sequence-tail, finite monotone
   prefix, finite compactness, and RCF-shadow resources from least-upper-bound,
   Cauchy-completeness, and monotone-convergence theorem targets.
+- [Monotone Convergence Theorem Boundary](monotone-convergence-theorem-boundary.md):
+  separates bounded-monotone finite prefix, finite supremum, finite tail-gap,
+  and checked bad-row evidence from the general monotone convergence theorem.
 - [Metric Balls And Epsilon-Delta Index](metric-ball-epsilon-delta-index.md):
   connects bounded rational balls, finite metric continuity, sequence-tail
   shadows, finite compactness, finite connectedness, and open-preimage replay.
@@ -202,6 +205,9 @@ Companion maps:
   tail-gap replay, replay-only bad upper-bound and bad tail-gap source rows
   with separate checked `qf-lra-*` Farkas proof rows, and the
   monotone-convergence Lean horizon.
+- [Monotone Convergence Theorem Boundary](monotone-convergence-theorem-boundary.md):
+  maps that finite bounded-monotone sequence shadow to the missing quantified
+  real-analysis theorem route.
 - [Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md):
   follows Fibonacci prefix replay, affine recurrence replay, companion-matrix
   state replay, replay-only bad-value and bad affine-step source rows with
@@ -296,6 +302,10 @@ Companion maps:
   maps least-upper-bound, Cauchy-completeness, monotone-convergence,
   compactness, and uniform-continuity dependencies to existing finite shadows
   and the missing no-`sorry` Lean route.
+- [Monotone Convergence Theorem Boundary](monotone-convergence-theorem-boundary.md):
+  narrows the real-completeness boundary to the
+  `bounded-monotone-sequence-v0` finite prefix, finite supremum, finite
+  tail-gap, and checked bad-row evidence.
 - [Matrix Invariants](matrix-invariants-end-to-end.md): follows exact trace,
   determinant, characteristic-polynomial, root, Cayley-Hamilton, Gershgorin,
   and a QF_LRA/Farkas bad-characteristic-polynomial certificate for a fixed
