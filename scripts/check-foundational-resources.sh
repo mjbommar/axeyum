@@ -305,7 +305,9 @@ python3 scripts/query-foundational-resources.py packs --concept bridge_lp_object
 python3 scripts/query-foundational-resources.py checks --concept bridge_lp_objective_farkas --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_rational_convexity_shadow --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack convexity-rational-v0 --route Farkas --proof-status checked --text threshold --require-any >/dev/null
-python3 scripts/query-foundational-resources.py checks --pack finite-separation-v0 --route Farkas --proof-status checked --text combination --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-separation-v0 --route Farkas --proof-status checked --text qf-lra-bad-convex-combination-point --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-separation-v0 --route Farkas --proof-status checked --text qf-lra-bad-separator --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-separation-v0 --proof-status replay-only --text rejected --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked --require-any >/dev/null

@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 686 expected checks.
+- 688 expected checks.
 - 322 checked proof/evidence rows.
-- 293 replay-only rows.
+- 295 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -677,8 +677,9 @@ Build next:
   `finite-root-finding-v0`'s bad Newton-step and bad bisection-width source
   rows replay-only with separate checked `qf-lra-*` proof rows tied to their
   source QF_LRA/Farkas artifacts; keep `finite-separation-v0`'s bad
-  convex-combination and bad separator rows tied to their source QF_LRA/Farkas
-  artifacts; keep `finite-kkt-v0`'s bad stationarity and bad
+  convex-combination and bad separator source rows replay-only with separate
+  checked `qf-lra-*` proof rows tied to their source QF_LRA/Farkas artifacts;
+  keep `finite-kkt-v0`'s bad stationarity and bad
   complementarity rows tied to their source QF_LRA/Farkas artifacts; keep
   `finite-active-set-qp-v0`'s bad free-gradient, bad inactive-slack, and bad
   degenerate-multiplier rows tied to their source QF_LRA/Farkas artifacts; keep `finite-sdp-v0`'s bad objective, bad duality-gap, and bad slack-entry rows tied to their
@@ -892,7 +893,8 @@ Build next:
 - Landed bridge rows for LP objective-threshold/Farkas replay and rational
   convexity/gradient shadows. Finite root-finding now adds exact iterate and
   residual-decrease replay, and finite separation adds convex-hull/supporting
-  face replay plus checked bad convex-combination evidence. Finite KKT now adds
+  face replay plus replay-only bad separation source rows and separate checked
+  proof rows. Finite KKT now adds
   constrained-quadratic stationarity, complementary-slackness replay, and
   checked bad stationarity plus bad complementarity evidence. Finite active-set
   QP now adds exact
@@ -1606,9 +1608,10 @@ Pick one item per commit unless the change is purely navigational.
 61. Landed: add `finite-separation-v0`.
     The new optimization/convexity pack validates exact convex-combination
     replay, separating-hyperplane score replay, supporting-face checking,
-    checked QF_LRA/Farkas rejection of a false separator, and a
-    separation/duality Lean horizon. The learner path now includes a focused
-    finite hyperplane-separation end-to-end page.
+    replay-only false convex-combination and false separator source rows,
+    separate checked `qf-lra-*` Farkas proof rows, and a separation/duality
+    Lean horizon. The learner path now includes a focused finite
+    hyperplane-separation end-to-end page.
 62. Landed: add `finite-kkt-v0`.
     The new optimization/convexity pack validates exact constrained-quadratic
     grid replay, KKT stationarity/complementarity replay,

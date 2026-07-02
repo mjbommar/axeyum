@@ -188,8 +188,9 @@ Companion maps:
   `qf-lra-*` Farkas proof rows, and the convergence/stability Lean horizon.
 - [Finite Hyperplane Separation](finite-separation-end-to-end.md): follows
   exact convex-combination replay, separating-hyperplane scores, supporting
-  face replay, checked QF_LRA/Farkas bad convex-combination and bad-separator
-  rejections, and the general separation theorem Lean horizon.
+  face replay, replay-only bad convex-combination and bad-separator source
+  rows, separate checked `qf-lra-*` Farkas proof rows, and the general
+  separation theorem Lean horizon.
 - [Finite KKT Checks](finite-kkt-end-to-end.md): follows constrained quadratic
   grid replay, stationarity and complementary-slackness replay, checked
   QF_LRA/Farkas bad-stationarity and bad-complementarity rejection, and the

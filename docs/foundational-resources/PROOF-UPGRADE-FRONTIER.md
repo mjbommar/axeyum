@@ -23,7 +23,7 @@ Generated from the current math resource queue:
 - math example packs: 108
 - learner-linked packs: 108 focused links
 - packs with non-checked proof rows: 97
-- non-checked proof rows: 364
+- non-checked proof rows: 366
 
 Candidate route totals:
 
@@ -268,9 +268,10 @@ First targets:
   root-finding replay computes the next iterate `17/12`, selected interval
   width `1/2`, and width excess `1/6`)
 - [finite-separation-v0](../../artifacts/examples/math/finite-separation-v0/)
-  (source-linked Farkas regressions landed for the bad convex-combination
-  point and bad separator rows after exact convex-hull replay computes point
-  `(1/3,1/3)` and exact separator replay computes outside score `4`)
+  (source-linked Farkas regressions landed as separate `qf-lra-*` proof rows
+  for the bad convex-combination point and bad separator source rows after
+  exact convex-hull replay computes point `(1/3,1/3)`, x-coordinate error
+  `1/6`, outside score `4`, and score excess `3`)
 - [finite-kkt-v0](../../artifacts/examples/math/finite-kkt-v0/)
   (source-linked Farkas regressions landed for the bad stationarity and bad
   complementarity rows after exact constrained-quadratic KKT replay computes
@@ -477,8 +478,8 @@ Secondary targets:
   bad-error-bound, terminal-error, and transition conflicts.
   Finite separation now contributes the convex-optimization version of that
   boundary: exact replay computes convex weights, separator scores, and the
-  tight face, then Farkas checks the final bad convex-combination equality and
-  bad-separator inequality conflicts.
+  tight face, while separate `qf-lra-*` rows let Farkas check the final bad
+  convex-combination equality and bad-separator inequality conflicts.
   Finite KKT now contributes the active-set/stationarity version of that
   boundary: exact replay computes the derivative, multiplier equation, and
   complementary-slackness product, then Farkas checks the final bad-stationarity

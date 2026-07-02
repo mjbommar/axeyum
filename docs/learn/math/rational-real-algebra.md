@@ -210,8 +210,9 @@ The `finite-separation-v0` validator checks the convex-combination witness,
 recomputes every separator dot product, checks the tight supporting face, and
 rejects both a false convex-combination point with x-error `1/6` and the false
 claim `normal . outside <= 1` after exact replay computes
-`normal . outside = 4`. The bad rows route those final exact-linear conflicts
-through checked QF_LRA/Farkas evidence. For a focused trace, read
+`normal . outside = 4`. The malformed source rows remain replay-only, while
+separate `qf-lra-*` rows route those final exact-linear conflicts through
+checked QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Hyperplane Separation](finite-separation-end-to-end.md).
 
 For a finite KKT check, encode one constrained quadratic:

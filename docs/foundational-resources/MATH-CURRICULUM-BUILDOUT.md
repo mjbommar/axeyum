@@ -605,9 +605,10 @@ Newton step, fixed residual-decrease replay, checked QF_LRA/Farkas rejection
 of false Newton-iterate and bisection-width claims, and a root-finding
 convergence/stability Lean-horizon row.
 `finite-separation-v0` now validates exact convex-combination replay, finite
-separating-hyperplane dot-product replay, supporting-face replay, checked
-QF_LRA/Farkas rejection of false convex-combination and separator claims, and
-a general separation-theorem Lean-horizon row.
+separating-hyperplane dot-product replay, supporting-face replay, replay-only
+false convex-combination and separator source rows, separate checked
+`qf-lra-*` Farkas proof rows, and a general separation-theorem Lean-horizon
+row.
 `finite-kkt-v0` now validates exact constrained-quadratic grid replay,
 stationarity replay, complementary-slackness replay, checked QF_LRA/Farkas
 rejection of a false stationarity multiplier and false complementarity product,
@@ -989,8 +990,9 @@ QF_LRA/Farkas rejection of false Newton-iterate and bisection-width claims,
 and a root-finding-convergence/stability Lean-horizon row.
 `artifacts/examples/math/finite-separation-v0/` now validates exact
 convex-combination replay, separating-hyperplane score replay, supporting-face
-checks, checked QF_LRA/Farkas rejection of a false separator, and a
-separation/duality Lean-horizon row.
+checks, replay-only false convex-combination and false separator source rows,
+separate checked `qf-lra-*` Farkas proof rows, and a separation/duality
+Lean-horizon row.
 `artifacts/examples/math/finite-kkt-v0/` now validates exact
 constrained-quadratic grid replay, stationarity replay,
 complementary-slackness replay, checked QF_LRA/Farkas rejection of a false
@@ -1166,9 +1168,10 @@ Recommended order:
     rows, and separate checked `qf-lra-*` Farkas proof rows, while convergence
     and floating-point stability remain horizon claims.
 34. `finite-separation-v0`: exact convex-hull membership, separating
-    hyperplane score replay, supporting-face checks, and checked QF_LRA/Farkas
-    bad convex-combination plus bad-separator rejection, while general
-    separation and duality theorems remain horizon claims.
+    hyperplane score replay, supporting-face checks, replay-only bad
+    convex-combination and bad-separator source rows, and separate checked
+    `qf-lra-*` Farkas proof rows, while general separation and duality theorems
+    remain horizon claims.
 35. `finite-kkt-v0`: exact constrained-quadratic grid replay, stationarity,
     complementary slackness, checked QF_LRA/Farkas bad-stationarity
     rejection, and checked QF_LRA/Farkas bad-complementarity rejection, while
@@ -2145,10 +2148,11 @@ bisection-width source rows as replay-only rows after exact replay computes
 the next iterate `17/12`, selected width `1/2`, and width excess `1/6`;
 separate checked `qf-lra-*` rows route the fixed scalar contradictions through
 the same Farkas evidence path.
-`finite-separation-v0` now routes its bad convex-combination and bad separator
-rows through the same checked Farkas evidence path after exact convex-hull
-replay computes point `(1/3,1/3)` and separator replay computes the outside
-score `4`.
+`finite-separation-v0` now keeps its bad convex-combination and bad separator
+source rows as replay-only rows after exact convex-hull replay computes point
+`(1/3,1/3)`, x-coordinate error `1/6`, outside score `4`, and score excess
+`3`; separate checked `qf-lra-*` rows route the fixed scalar contradictions
+through the same Farkas evidence path.
 `finite-kkt-v0` now routes its bad stationarity and bad complementarity rows
 through the same checked Farkas evidence path after exact KKT replay computes
 stationarity residual `-1`, stationarity error `1`, complementary-slackness

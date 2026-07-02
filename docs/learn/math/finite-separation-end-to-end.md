@@ -1,7 +1,8 @@
 # End To End: Finite Hyperplane Separation
 
 This lesson follows one convexity resource from exact convex-hull replay through
-checked bad convex-combination and bad-separator rejections. It uses the
+replay-only bad source rows and separate checked convex-combination and
+bad-separator proof rows. It uses the
 [finite-separation-v0](../../../artifacts/examples/math/finite-separation-v0/)
 pack.
 
@@ -21,8 +22,10 @@ Concept rows:
 | `convex-combination-replay` | `sat` | replay-only |
 | `separating-hyperplane-replay` | `sat` | replay-only |
 | `supporting-face-replay` | `sat` | replay-only |
-| `bad-convex-combination-point-rejected` | `unsat` | checked QF_LRA/Farkas |
-| `bad-separator-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-convex-combination-point-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-convex-combination-point` | `unsat` | checked QF_LRA/Farkas |
+| `bad-separator-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-separator` | `unsat` | checked QF_LRA/Farkas |
 | `general-separation-theorem-lean-horizon` | `not-run` | Lean horizon |
 
 Every positive row is one finite exact-rational calculation. The pack does not
@@ -58,9 +61,9 @@ w0*v0 + w1*v1 + w2*v2 = (1/3, 1/3)
 That is a finite convex-hull membership witness, not a general convex-set
 theorem.
 
-## Check The Convex-Combination Refutation
+## Replay The Bad Convex-Combination Source Row
 
-The first promoted bad row keeps the weights fixed and claims:
+The bad source row keeps the weights fixed and claims:
 
 ```text
 w0*v0 + w1*v1 + w2*v2 = (1/2, 1/3)
@@ -73,6 +76,12 @@ w0*v0 + w1*v1 + w2*v2 = (1/3, 1/3)
 1/2 - 1/3 = 1/6
 ```
 
+That source row is replay-only: it recomputes the offending value and records
+the malformed claim. The checked proof object lives in
+`qf-lra-bad-convex-combination-point`.
+
+## Check The Convex-Combination Refutation
+
 The committed SMT-LIB artifact
 [`bad-convex-combination-point-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-separation-v0/smt2/bad-convex-combination-point-farkas-conflict.smt2)
 records the tiny contradiction:
@@ -83,7 +92,8 @@ point_x_error = 0
 ```
 
 The accepted evidence is checked `UnsatFarkas` arithmetic over the original
-source artifact.
+source artifact and is attached to the separate
+`qf-lra-bad-convex-combination-point` row.
 
 ## Replay A Separator
 
@@ -130,9 +140,9 @@ The pack records tight indices:
 The validator recomputes those indices from the score table. This finite face
 check is useful for optimization and polyhedral examples.
 
-## Check The Separator Refutation
+## Replay The Bad Separator Source Row
 
-The promoted bad row claims:
+The bad separator source row claims:
 
 ```text
 outside_score <= 1
@@ -144,6 +154,11 @@ Exact replay computes:
 outside_score = 4
 ```
 
+That source row is replay-only: it recomputes the outside score and records
+the malformed bound. The checked proof object lives in `qf-lra-bad-separator`.
+
+## Check The Separator Refutation
+
 The committed SMT-LIB artifact
 [`bad-separator-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-separation-v0/smt2/bad-separator-farkas-conflict.smt2)
 records the tiny contradiction:
@@ -154,7 +169,8 @@ outside_score <= 1
 ```
 
 Axeyum may search for the contradiction, but the accepted evidence is checked
-`UnsatFarkas` arithmetic over the original source artifact.
+`UnsatFarkas` arithmetic over the original source artifact and is attached to
+the separate `qf-lra-bad-separator` row.
 
 ## Run It
 

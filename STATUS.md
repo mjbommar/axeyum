@@ -234,6 +234,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-separation Farkas rows split landed.**
+  `finite-separation-v0` now keeps
+  `bad-convex-combination-point-rejected` and `bad-separator-rejected` as
+  exact replay rows: they compute point `(1/3, 1/3)`, x-coordinate error
+  `1/6`, outside score `4`, and score excess `3` before rejecting malformed
+  claims. The checked proof-object paths are now the explicit
+  `qf-lra-bad-convex-combination-point` and `qf-lra-bad-separator` rows linked
+  to the QF_LRA/Farkas SMT-LIB artifacts and regressions. Focused validation
+  and the finite-separation `math_resource_lra_routes` regressions pass; the
+  public summary now reports 120 concept rows, 108 packs, 688 expected checks,
+  322 checked rows, 295 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite-root-finding Farkas rows split landed.**
   `finite-root-finding-v0` now keeps `bad-newton-step-rejected` and
   `bad-bisection-width-rejected` as exact replay rows: they compute the Newton

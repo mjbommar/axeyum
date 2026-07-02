@@ -32,11 +32,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-separation-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite separation bad convex-combination point and bad separator QF_LRA/Farkas regression seeds",
+    "target": "finite separation replay rows plus explicit bad convex-combination point and bad separator QF_LRA/Farkas regression seeds",
     "pressure": "Exact convex-combination replay computes point (1/3,1/3) while one malformed row claims x=1/2; exact separator replay computes outside_score = 4 for point (2,2) under x + y while another malformed row claims outside_score <= 1.",
     "evidence": [
-      "bad-convex-combination-point-rejected",
-      "bad-separator-rejected"
+      "qf-lra-bad-convex-combination-point",
+      "qf-lra-bad-separator"
     ],
     "next_step": "Promote additional finite separation rows only when they add distinct support, duality, face, or certificate pressure beyond the current convex-combination and separator rows; keep general separation, Hahn-Banach, SDP duality, and algorithm convergence in horizon lanes."
   },
@@ -58,13 +58,16 @@
     "separating-hyperplane-replay",
     "supporting-face-replay",
     "bad-convex-combination-point-rejected",
+    "qf-lra-bad-convex-combination-point",
     "bad-separator-rejected",
+    "qf-lra-bad-separator",
     "general-separation-theorem-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite convex-hull and separator witnesses as deterministic exact-rational replay rows.",
     "Replay convex weights, dot products, margins, and tight faces over exact rationals.",
-    "Route false finite convex-combination and separator claims through checked QF_LRA/Farkas evidence after replay computes the offending value.",
+    "Keep false finite convex-combination and separator source claims as replay-only rows that compute the offending values.",
+    "Route the resulting fixed contradictions through separate checked QF_LRA/Farkas evidence rows.",
     "Keep general separation theorems, Hahn-Banach-style arguments, SDP duality, and convergence claims marked Lean-horizon until proof artifacts exist."
   ]
 }

@@ -11972,8 +11972,10 @@ def validate_finite_separation(expected: dict[str, Any]) -> None:
             fail("supporting-face-replay tight index is outside the vertex list")
 
     bad_combination = checks["bad-convex-combination-point-rejected"]
-    if bad_combination["expected_result"] != "unsat" or bad_combination.get("proof_status") != "checked":
-        fail("bad-convex-combination-point-rejected must be a checked unsat row")
+    if bad_combination["expected_result"] != "unsat" or bad_combination.get("proof_status") != "replay-only":
+        fail("bad-convex-combination-point-rejected must be a replay-only unsat row")
+    if bad_combination.get("validation") != "finite_bad_convex_combination_point_refutation":
+        fail("bad-convex-combination-point-rejected validation is incorrect")
     data = bad_combination.get("data", {})
     if data.get("source_witness") != "triangle-convex-hull":
         fail("bad-convex-combination-point-rejected must cite the triangle-convex-hull source witness")
@@ -11999,45 +12001,119 @@ def validate_finite_separation(expected: dict[str, Any]) -> None:
         fail("bad-convex-combination-point-rejected x_coordinate_error is incorrect")
     if x_coordinate_error == 0:
         fail("bad-convex-combination-point-rejected must document a nonzero coordinate error")
+    for forbidden in ("smt2_artifact", "farkas_regression", "certificate"):
+        if forbidden in data:
+            fail("bad-convex-combination-point-rejected must leave checked evidence to qf-lra-bad-convex-combination-point")
+    notes = bad_combination.get("notes")
+    require_string("bad convex combination notes", notes)
+    if "qf-lra-bad-convex-combination-point" not in notes:
+        fail("bad-convex-combination-point-rejected notes must point to the checked qf-lra row")
+
+    bad_combination_qf = checks["qf-lra-bad-convex-combination-point"]
+    if bad_combination_qf["expected_result"] != "unsat" or bad_combination_qf.get("proof_status") != "checked":
+        fail("qf-lra-bad-convex-combination-point must be a checked unsat row")
+    if bad_combination_qf.get("validation") != "qf_lra_finite_separation_bad_convex_combination_point_refutation":
+        fail("qf-lra-bad-convex-combination-point validation is incorrect")
+    data = bad_combination_qf.get("data", {})
+    if data.get("source_replay_row") != "bad-convex-combination-point-rejected":
+        fail("qf-lra-bad-convex-combination-point must cite bad-convex-combination-point-rejected as source_replay_row")
+    qf_computed_point = require_fraction_vector(
+        "qf-lra bad convex combination computed_point",
+        data.get("computed_point"),
+    )
+    qf_claimed_point = require_fraction_vector(
+        "qf-lra bad convex combination claimed_point",
+        data.get("claimed_point"),
+    )
+    qf_x_coordinate_error = require_fraction(
+        "qf-lra bad convex combination x_coordinate_error",
+        data.get("x_coordinate_error"),
+    )
+    if qf_computed_point != computed_point:
+        fail("qf-lra-bad-convex-combination-point computed_point must match replay")
+    if qf_claimed_point != claimed_point:
+        fail("qf-lra-bad-convex-combination-point claimed_point must match replay")
+    if qf_x_coordinate_error != x_coordinate_error:
+        fail("qf-lra-bad-convex-combination-point x_coordinate_error must match replay")
+    farkas_conflict = data.get("farkas_conflict")
+    require_string("qf-lra bad convex combination farkas_conflict", farkas_conflict)
+    if farkas_conflict != "point_x_error = 1/6 and point_x_error = 0":
+        fail("qf-lra-bad-convex-combination-point must document the fixed error conflict")
     smt2_artifact = data.get("smt2_artifact")
-    require_string("bad convex combination smt2_artifact", smt2_artifact)
+    require_string("qf-lra bad convex combination smt2_artifact", smt2_artifact)
     if smt2_artifact != "artifacts/examples/math/finite-separation-v0/smt2/bad-convex-combination-point-farkas-conflict.smt2":
-        fail("bad-convex-combination-point-rejected smt2_artifact must name the checked QF_LRA artifact")
-    check_source("bad convex combination smt2_artifact", smt2_artifact)
+        fail("qf-lra-bad-convex-combination-point smt2_artifact must name the checked QF_LRA artifact")
+    check_source("qf-lra bad convex combination smt2_artifact", smt2_artifact)
     regression = data.get("farkas_regression")
-    require_string("bad convex combination farkas_regression", regression)
+    require_string("qf-lra bad convex combination farkas_regression", regression)
     if "finite_separation_bad_convex_combination_artifact_emits_checked_farkas" not in regression:
-        fail("bad-convex-combination-point-rejected must link the LRA route regression")
+        fail("qf-lra-bad-convex-combination-point must link the LRA route regression")
     certificate = data.get("certificate")
-    require_string("bad convex combination certificate", certificate)
+    require_string("qf-lra bad convex combination certificate", certificate)
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
-        fail("bad-convex-combination-point-rejected certificate must document checked Farkas evidence")
+        fail("qf-lra-bad-convex-combination-point certificate must document checked Farkas evidence")
 
     bad = checks["bad-separator-rejected"]
-    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
-        fail("bad-separator-rejected must be a checked unsat row")
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "replay-only":
+        fail("bad-separator-rejected must be a replay-only unsat row")
+    if bad.get("validation") != "finite_bad_separator_refutation":
+        fail("bad-separator-rejected validation is incorrect")
     data = bad.get("data", {})
     if data.get("source_witness") != "triangle-separator":
         fail("bad-separator-rejected must cite the triangle-separator source witness")
     computed = require_fraction("bad separator computed_outside_score", data.get("computed_outside_score"))
     claimed_upper_bound = require_fraction("bad separator claimed_upper_bound", data.get("claimed_upper_bound"))
+    score_excess = require_fraction("bad separator score_excess", data.get("score_excess"))
     if computed != outside_score:
         fail("bad-separator-rejected computed_outside_score does not match replay")
     if not computed > claimed_upper_bound:
         fail("bad-separator-rejected malformed bound must be strictly below the replayed score")
+    if score_excess != computed - claimed_upper_bound:
+        fail("bad-separator-rejected score_excess is incorrect")
+    if score_excess <= 0:
+        fail("bad-separator-rejected must document positive separator excess")
+    for forbidden in ("smt2_artifact", "farkas_regression", "certificate"):
+        if forbidden in data:
+            fail("bad-separator-rejected must leave checked evidence to qf-lra-bad-separator")
+    notes = bad.get("notes")
+    require_string("bad separator notes", notes)
+    if "qf-lra-bad-separator" not in notes:
+        fail("bad-separator-rejected notes must point to the checked qf-lra row")
+
+    bad_qf = checks["qf-lra-bad-separator"]
+    if bad_qf["expected_result"] != "unsat" or bad_qf.get("proof_status") != "checked":
+        fail("qf-lra-bad-separator must be a checked unsat row")
+    if bad_qf.get("validation") != "qf_lra_finite_separation_bad_separator_refutation":
+        fail("qf-lra-bad-separator validation is incorrect")
+    data = bad_qf.get("data", {})
+    if data.get("source_replay_row") != "bad-separator-rejected":
+        fail("qf-lra-bad-separator must cite bad-separator-rejected as source_replay_row")
+    qf_computed = require_fraction("qf-lra bad separator computed_outside_score", data.get("computed_outside_score"))
+    qf_claimed_upper_bound = require_fraction("qf-lra bad separator claimed_upper_bound", data.get("claimed_upper_bound"))
+    qf_score_excess = require_fraction("qf-lra bad separator score_excess", data.get("score_excess"))
+    if qf_computed != computed:
+        fail("qf-lra-bad-separator computed_outside_score must match replay")
+    if qf_claimed_upper_bound != claimed_upper_bound:
+        fail("qf-lra-bad-separator claimed_upper_bound must match replay")
+    if qf_score_excess != score_excess:
+        fail("qf-lra-bad-separator score_excess must match replay")
+    farkas_conflict = data.get("farkas_conflict")
+    require_string("qf-lra bad separator farkas_conflict", farkas_conflict)
+    if farkas_conflict != "outside_score = 4 and outside_score <= 1":
+        fail("qf-lra-bad-separator must document the fixed separator conflict")
     smt2_artifact = data.get("smt2_artifact")
-    require_string("bad separator smt2_artifact", smt2_artifact)
+    require_string("qf-lra bad separator smt2_artifact", smt2_artifact)
     if smt2_artifact != "artifacts/examples/math/finite-separation-v0/smt2/bad-separator-farkas-conflict.smt2":
-        fail("bad-separator-rejected smt2_artifact must name the checked QF_LRA artifact")
-    check_source("bad separator smt2_artifact", smt2_artifact)
+        fail("qf-lra-bad-separator smt2_artifact must name the checked QF_LRA artifact")
+    check_source("qf-lra bad separator smt2_artifact", smt2_artifact)
     regression = data.get("farkas_regression")
-    require_string("bad separator farkas_regression", regression)
+    require_string("qf-lra bad separator farkas_regression", regression)
     if "finite_separation_bad_separator_artifact_emits_checked_farkas" not in regression:
-        fail("bad-separator-rejected must link the LRA route regression")
+        fail("qf-lra-bad-separator must link the LRA route regression")
     certificate = data.get("certificate")
-    require_string("bad separator certificate", certificate)
+    require_string("qf-lra bad separator certificate", certificate)
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
-        fail("bad-separator-rejected certificate must document checked Farkas evidence")
+        fail("qf-lra-bad-separator certificate must document checked Farkas evidence")
 
     horizon = checks["general-separation-theorem-lean-horizon"]
     if horizon["expected_result"] != "not-run":

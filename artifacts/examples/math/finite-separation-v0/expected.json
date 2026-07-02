@@ -59,33 +59,64 @@
       "claim": "The listed convex weights also produce point (1/2, 1/3).",
       "expected_result": "unsat",
       "validation": "finite_bad_convex_combination_point_refutation",
-      "proof_status": "checked",
+      "proof_status": "replay-only",
       "data": {
         "source_witness": "triangle-convex-hull",
         "computed_point": ["1/3", "1/3"],
         "claimed_point": ["1/2", "1/3"],
+        "x_coordinate_error": "1/6"
+      },
+      "notes": "Exact convex-combination replay computes (1/3, 1/3), so the malformed x-coordinate 1/2 leaves error 1/6. The separate qf-lra-bad-convex-combination-point row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-convex-combination-point",
+      "claim": "The fixed QF_LRA conflict point_x_error = 1/6 and point_x_error = 0 is unsatisfiable.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_finite_separation_bad_convex_combination_point_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-convex-combination-point-rejected",
+        "computed_point": ["1/3", "1/3"],
+        "claimed_point": ["1/2", "1/3"],
         "x_coordinate_error": "1/6",
+        "farkas_conflict": "point_x_error = 1/6 and point_x_error = 0",
         "smt2_artifact": "artifacts/examples/math/finite-separation-v0/smt2/bad-convex-combination-point-farkas-conflict.smt2",
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_convex_combination_artifact_emits_checked_farkas",
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "Exact convex-combination replay computes (1/3, 1/3), so the malformed x-coordinate 1/2 leaves error 1/6; the source artifact checks that the same error cannot equal zero through QF_LRA/Farkas evidence."
+      "notes": "This proof row isolates the false convex-combination x-coordinate as a small QF_LRA/Farkas contradiction after replay computes the point."
     },
     {
       "id": "bad-separator-rejected",
       "claim": "The outside point (2,2) also satisfies x + y <= 1.",
       "expected_result": "unsat",
       "validation": "finite_bad_separator_refutation",
-      "proof_status": "checked",
+      "proof_status": "replay-only",
       "data": {
         "source_witness": "triangle-separator",
         "computed_outside_score": "4",
         "claimed_upper_bound": "1",
+        "score_excess": "3"
+      },
+      "notes": "Exact replay computes outside_score = 4, so the malformed outside_score <= 1 claim leaves excess 3. The separate qf-lra-bad-separator row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-separator",
+      "claim": "The fixed QF_LRA conflict outside_score = 4 and outside_score <= 1 is unsatisfiable.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_finite_separation_bad_separator_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-separator-rejected",
+        "computed_outside_score": "4",
+        "claimed_upper_bound": "1",
+        "score_excess": "3",
+        "farkas_conflict": "outside_score = 4 and outside_score <= 1",
         "smt2_artifact": "artifacts/examples/math/finite-separation-v0/smt2/bad-separator-farkas-conflict.smt2",
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_separator_artifact_emits_checked_farkas",
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "Exact replay computes outside_score = 4; the source artifact checks that the same score cannot satisfy outside_score <= 1."
+      "notes": "This proof row isolates the false separator bound as a small QF_LRA/Farkas contradiction after replay computes the outside score."
     },
     {
       "id": "general-separation-theorem-lean-horizon",
