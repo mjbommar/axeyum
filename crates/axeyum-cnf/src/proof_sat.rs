@@ -560,7 +560,7 @@ impl Cdcl {
                 // `DEADLINE_CHECK_INTERVAL` conflicts. On expiry, abandon the
                 // search with an *undecided* verdict (never sat/unsat by timeout).
                 if let Some(deadline) = deadline
-                    && self.conflicts % DEADLINE_CHECK_INTERVAL == 0
+                    && self.conflicts.is_multiple_of(DEADLINE_CHECK_INTERVAL)
                     && Instant::now() >= deadline
                 {
                     return ProofSolveOutcome::Interrupted;

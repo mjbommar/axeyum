@@ -395,23 +395,23 @@ fn apply(op: Op, vals: &[Value]) -> Result<Value, IrError> {
     // non-negative `i128` representation iff no bit at index ≥ 127 is set (i.e. it
     // is < 2^127 = i128::MAX + 1). Otherwise report overflow — never crash, never
     // wrap to a wrong (negative) integer.
-    if matches!(op, Op::Bv2Nat) {
-        if let Some(Value::WideBv(w)) = vals.first() {
-            if (127..w.width()).any(|i| w.bit(i)) {
-                return Err(IrError::ArithmeticOverflow { op: "bv2nat" });
-            }
-            // No bit at index ≥ 127 is set, so the value is < 2^127 ≤ i128::MAX:
-            // reconstruct it from its low bits (`to_u128` is unavailable for
-            // width > 128). Each set bit contributes `2^i` with `i < 127`.
-            let mut value: u128 = 0;
-            for i in 0..127 {
-                if w.bit(i) {
-                    value |= 1u128 << i;
-                }
-            }
-            #[allow(clippy::cast_possible_wrap)] // guarded: value < 2^127 ≤ i128::MAX.
-            return Ok(Value::Int(value as i128));
+    if matches!(op, Op::Bv2Nat)
+        && let Some(Value::WideBv(w)) = vals.first()
+    {
+        if (127..w.width()).any(|i| w.bit(i)) {
+            return Err(IrError::ArithmeticOverflow { op: "bv2nat" });
         }
+        // No bit at index ≥ 127 is set, so the value is < 2^127 ≤ i128::MAX:
+        // reconstruct it from its low bits (`to_u128` is unavailable for
+        // width > 128). Each set bit contributes `2^i` with `i < 127`.
+        let mut value: u128 = 0;
+        for i in 0..127 {
+            if w.bit(i) {
+                value |= 1u128 << i;
+            }
+        }
+        #[allow(clippy::cast_possible_wrap)] // guarded: value < 2^127 ≤ i128::MAX.
+        return Ok(Value::Int(value as i128));
     }
     // Bit-vectors wider than 128 bits take a separate path; the `u128` fast path
     // below is unchanged for the common case. This triggers when an operand is

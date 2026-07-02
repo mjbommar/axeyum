@@ -502,10 +502,10 @@ impl IncrementalXorMatrix {
         // Update the unit index.
         let old_unit = self.unit_var[r];
         if old_unit != new_unit {
-            if old_unit != usize::MAX {
-                if let Some(pos) = self.unit_rows.iter().position(|&x| x == r) {
-                    self.unit_rows.remove(pos);
-                }
+            if old_unit != usize::MAX
+                && let Some(pos) = self.unit_rows.iter().position(|&x| x == r)
+            {
+                self.unit_rows.remove(pos);
             }
             self.unit_var[r] = new_unit;
             if new_unit != usize::MAX {

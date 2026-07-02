@@ -594,7 +594,7 @@ fn permutation_sign(perm: &[usize]) -> i32 {
             }
         }
     }
-    if inv % 2 == 0 { 1 } else { -1 }
+    if inv.is_multiple_of(2) { 1 } else { -1 }
 }
 
 /// `Res_y(p, q)` of two univariate rational polynomials (LSB-first), as a
