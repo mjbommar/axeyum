@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-polar-decomposition-v0",
+  "witnesses": [
+    {
+      "id": "rational-polar-decomposition",
+      "description": "Exact rational polar decomposition for a fixed 2x2 matrix.",
+      "values": {
+        "matrix": [
+          ["6/5", "4"],
+          ["-8/5", "3"]
+        ],
+        "orthogonal": [
+          ["3/5", "4/5"],
+          ["-4/5", "3/5"]
+        ],
+        "orthogonal_transpose": [
+          ["3/5", "-4/5"],
+          ["4/5", "3/5"]
+        ],
+        "positive_factor": [
+          ["2", "0"],
+          ["0", "5"]
+        ],
+        "identity": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "product": [
+          ["6/5", "4"],
+          ["-8/5", "3"]
+        ],
+        "ata": [
+          ["4", "0"],
+          ["0", "25"]
+        ],
+        "positive_factor_square": [
+          ["4", "0"],
+          ["0", "25"]
+        ],
+        "positive_diagonal": ["2", "5"],
+        "leading_minors": ["2", "10"],
+        "trace_positive_factor": "7",
+        "diagonal_sum": "7",
+        "determinant_matrix": "10",
+        "determinant_orthogonal": "1",
+        "determinant_positive_factor": "10",
+        "determinant_product": "10"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "polar-shape-witness",
+      "claim": "The fixed rational matrix U is orthogonal and P is symmetric positive diagonal.",
+      "expected_result": "sat",
+      "validation": "exact_rational_polar_shape_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-polar-decomposition"],
+      "notes": "The validator recomputes U^T, U^T*U, U*U^T, symmetry, diagonal shape, positive diagonal entries, and leading minors exactly."
+    },
+    {
+      "id": "polar-product-witness",
+      "claim": "The fixed rational matrices satisfy U*P = A.",
+      "expected_result": "sat",
+      "validation": "exact_rational_polar_product_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-polar-decomposition"],
+      "notes": "The validator recomputes the matrix product exactly over rationals."
+    },
+    {
+      "id": "polar-normal-equation-witness",
+      "claim": "The fixed polar factor satisfies A^T*A = P^2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_polar_normal_equation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-polar-decomposition"],
+      "notes": "The validator recomputes A^T*A and P*P exactly; this is a fixed square-root shadow, not a general matrix-square-root theorem."
+    },
+    {
+      "id": "polar-invariant-witness",
+      "claim": "The fixed matrix determinant and positive-factor trace match the listed factor invariants.",
+      "expected_result": "sat",
+      "validation": "exact_rational_polar_invariant_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-polar-decomposition"],
+      "notes": "The validator recomputes det(A), det(U), det(P), trace(P), and the listed factor products exactly."
+    },
+    {
+      "id": "bad-polar-diagonal-rejected",
+      "claim": "The lower diagonal entry of the positive polar factor is 4.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_polar_diagonal_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "rational-polar-decomposition",
+        "entry": [1, 1],
+        "computed_diagonal": "5",
+        "claimed_diagonal": "4"
+      },
+      "notes": "Exact replay reads P[1,1] as 5, so the claimed value 4 is rejected; the separate qf-lra-bad-polar-diagonal row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-polar-diagonal",
+      "claim": "The fixed malformed polar-factor diagonal claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "rational-polar-decomposition",
+        "source_replay_row": "bad-polar-diagonal-rejected",
+        "entry": [1, 1],
+        "computed_diagonal": "5",
+        "claimed_diagonal": "4",
+        "farkas_conflict": "polar_p11 = 5 and polar_p11 = 4",
+        "smt2_artifact": "artifacts/examples/math/finite-polar-decomposition-v0/smt2/bad-polar-diagonal-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_polar_decomposition_bad_diagonal_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the listed positive-factor diagonal entry as 5, while the malformed row claims 4; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-polar-decomposition-theory-lean-horizon",
+      "claim": "General polar decomposition existence, uniqueness, square-root functional calculus, SVD theorem coverage, iterative algorithms, perturbation bounds, and floating-point stability require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For arbitrary finite-dimensional real or complex inner-product spaces, prove polar decomposition A = U*P under explicit rank and partial-isometry side conditions, with P positive semidefinite and P^2 = A^*A.",
+        "future_checker": "Lean theorem statements for finite-dimensional polar decomposition plus separate numerical-honesty artifacts for Newton/polar iterations, perturbation bounds, and floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational polar decomposition, not a theorem about arbitrary matrices or a numerical polar-decomposition algorithm."
+    }
+  ]
+}

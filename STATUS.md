@@ -240,6 +240,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite polar decomposition resource landed.**
+  `finite-polar-decomposition-v0` now gives the linear-algebra,
+  numerical-analysis, and functional-analysis/operator lanes an exact rational
+  polar shadow: it checks
+  `U = [[3/5,4/5],[-4/5,3/5]]`, `P = [[2,0],[0,5]]`,
+  `A = U*P = [[6/5,4],[-8/5,3]]`, `U^T*U = I`, `U*P = A`,
+  `A^T*A = P^2`, trace/diagonal-sum replay, and determinant/product replay,
+  then isolates the malformed diagonal claim `P[1,1] = 4` versus exact `5`
+  as a source-linked QF_LRA/Farkas row. The focused learner page,
+  matrix/numerical query guides, eigenpair and exact-vs-floating bridges,
+  validator, and `math_resource_lra_routes` regression keep fixed finite
+  polar replay separate from the polar theorem, partial-isometry variants,
+  square-root functional calculus, iterative algorithms, perturbation bounds,
+  and floating-point stability. The public summary now reports 122 concept rows,
+  134 packs, 879 expected checks, 360 checked rows, 422 replay-only rows,
+  97 Lean-horizon rows, and 134 promoted solver-reuse packs.
 - **Finite real Schur decomposition resource landed.**
   `finite-real-schur-decomposition-v0` now gives the linear-algebra,
   numerical-analysis, and functional-analysis/operator lanes an exact rational
@@ -254,8 +270,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   real-Schur replay separate from the general real/complex Schur theorem,
   eigenvalue ordering, QR-iteration convergence, perturbation bounds, and
   floating-point stability. The public summary now reports 122 concept rows,
-  133 packs, 872 expected checks, 359 checked rows, 417 replay-only rows,
-  96 Lean-horizon rows, and 133 promoted solver-reuse packs.
+  134 packs, 879 expected checks, 360 checked rows, 422 replay-only rows,
+  97 Lean-horizon rows, and 134 promoted solver-reuse packs.
 - **Finite orthogonal diagonalization resource landed.**
   `finite-orthogonal-diagonalization-v0` now gives the linear-algebra,
   numerical-analysis, and functional-analysis/operator lanes an exact rational
@@ -270,8 +286,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   regression keep fixed finite spectral replay separate from the spectral
   theorem, diagonalization criteria, multiplicity theory, perturbation bounds,
   eigensolver convergence, and floating-point stability. The public summary
-  now reports 122 concept rows, 133 packs, 872 expected checks, 359 checked
-  rows, 417 replay-only rows, 96 Lean-horizon rows, and 133 promoted
+  now reports 122 concept rows, 134 packs, 879 expected checks, 360 checked
+  rows, 422 replay-only rows, 97 Lean-horizon rows, and 134 promoted
   solver-reuse packs.
 - **Finite LDLT decomposition resource landed.**
   `finite-ldlt-decomposition-v0` now gives the linear-algebra,

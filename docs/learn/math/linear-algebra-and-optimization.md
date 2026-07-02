@@ -32,6 +32,7 @@ Example packs:
 - [finite-singular-value-shadow-v0](../../../artifacts/examples/math/finite-singular-value-shadow-v0/)
 - [finite-orthogonal-diagonalization-v0](../../../artifacts/examples/math/finite-orthogonal-diagonalization-v0/)
 - [finite-real-schur-decomposition-v0](../../../artifacts/examples/math/finite-real-schur-decomposition-v0/)
+- [finite-polar-decomposition-v0](../../../artifacts/examples/math/finite-polar-decomposition-v0/)
 - [finite-power-iteration-v0](../../../artifacts/examples/math/finite-power-iteration-v0/)
 - [finite-conjugate-gradient-v0](../../../artifacts/examples/math/finite-conjugate-gradient-v0/)
 - [finite-arnoldi-iteration-v0](../../../artifacts/examples/math/finite-arnoldi-iteration-v0/)
@@ -220,6 +221,12 @@ triangular `T`, reconstruction `Q*T*Q^T = A`, triangular coupling `A*Q = Q*T`,
 trace/determinant replay, and checked QF_LRA/Farkas bad-superdiagonal evidence;
 its general real/complex Schur theorem, QR-iteration convergence, perturbation,
 and floating-point stability claims stay as Lean or numerical-honesty horizons.
+The finite polar-decomposition slice adds exact rational orthogonal `U`,
+positive diagonal `P`, reconstruction `U*P = A`, normal-equation square
+`A^T*A = P^2`, trace/determinant replay, and checked QF_LRA/Farkas
+bad-diagonal evidence; its general polar theorem, partial-isometry theory,
+square-root functional calculus, iterative algorithms, perturbation, and
+floating-point stability claims stay as Lean or numerical-honesty horizons.
 The finite Lanczos slice adds the symmetric-matrix specialization: exact
 alpha/beta coefficient replay, orthonormal-basis checking, a full
 two-dimensional tridiagonal relation, and checked QF_LRA/Farkas bad
@@ -512,6 +519,23 @@ The validator recomputes `Q^T*Q = I`, `Q*T*Q^T = A`, `A*Q = Q*T`,
 QR-iteration convergence, perturbation theory, and floating-point stability
 stay in the horizon lane. For a focused trace, read
 [End To End: Finite Real Schur Decomposition](real-schur-decomposition-end-to-end.md).
+
+For exact polar decomposition, `finite-polar-decomposition-v0` uses one rational
+orthogonal factor and one positive diagonal factor:
+
+```text
+U = [[3/5,4/5],[-4/5,3/5]]
+P = [[2,0],[0,5]]
+A = U*P
+```
+
+The validator recomputes `U^T*U = I`, `U*P = A`, `A^T*A = P^2`,
+`trace(P) = 7`, and `det(A) = det(U)*det(P) = 10`. Its checked bad row
+rejects the claim that `P[1,1] = 4` after exact replay reads `5`; the general
+polar decomposition theorem, partial-isometry variants, square-root functional
+calculus, iterative polar algorithms, perturbation theory, and floating-point
+stability stay in the horizon lane. For a focused trace, read
+[End To End: Finite Polar Decomposition](polar-decomposition-end-to-end.md).
 
 For a Jordan-chain shadow, `finite-jordan-chain-v0` uses one non-diagonal
 rational matrix:
@@ -954,6 +978,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_singular_value_shadow_bad_bound_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-real-schur-decomposition-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_real_schur_decomposition_bad_superdiagonal_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-polar-decomposition-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_polar_decomposition_bad_diagonal_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-jordan-chain-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_jordan_chain_bad_component_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
@@ -1041,6 +1067,7 @@ replay, read
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md),
 [End To End: Finite Orthogonal Diagonalization](orthogonal-diagonalization-end-to-end.md),
 [End To End: Finite Real Schur Decomposition](real-schur-decomposition-end-to-end.md),
+[End To End: Finite Polar Decomposition](polar-decomposition-end-to-end.md),
 [End To End: Finite Power Iteration](power-iteration-end-to-end.md),
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md),
 [End To End: Finite Covariance Matrix](covariance-matrix-end-to-end.md),

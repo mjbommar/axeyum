@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 133 non-template math packs.
-- 872 expected checks.
-- 359 checked proof/evidence rows.
-- 417 replay-only rows.
-- 96 Lean-horizon rows.
-- 133 promoted solver-reuse packs.
+- 134 non-template math packs.
+- 879 expected checks.
+- 360 checked proof/evidence rows.
+- 422 replay-only rows.
+- 97 Lean-horizon rows.
+- 134 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 133 focused learner-linked packs, with no path-only, index-only, or missing
+- 134 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 133 current non-template packs satisfy the focused-lesson side of this
+all 134 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2531,6 +2531,17 @@ Pick one row per commit unless the change is purely navigational.
      finite real-Schur replay separate from general Schur theorem, eigenvalue
      ordering, QR-iteration convergence, perturbation theory, and
      floating-point stability.
+292. Landed: add `finite-polar-decomposition-v0` as an exact finite
+     polar-decomposition resource. The pack replays
+     `U = [[3/5,4/5],[-4/5,3/5]]`, `P = [[2,0],[0,5]]`,
+     `A = [[6/5,4],[-8/5,3]]`, `U^T*U = I`, `U*P = A`,
+     `A^T*A = P^2`, `trace(P) = 7`, and
+     `det(A) = det(U)*det(P) = 10`, then adds
+     `qf-lra-bad-polar-diagonal` as the source-linked Farkas row for the false
+     diagonal claim `P[1,1] = 4` versus exact `5`. The learner and query pages
+     keep exact finite polar replay separate from polar decomposition theorem,
+     partial-isometry variants, square-root functional calculus, iterative
+     algorithms, perturbation theory, and floating-point stability.
 
 ## Validation Checklist
 

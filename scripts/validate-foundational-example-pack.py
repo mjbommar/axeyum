@@ -14400,6 +14400,228 @@ def validate_finite_real_schur_decomposition(expected: dict[str, Any]) -> None:
     require_string("real Schur horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_polar_decomposition(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    shape = checks["polar-shape-witness"]
+    if shape["expected_result"] != "sat":
+        fail("polar-shape-witness must expect sat")
+    if shape.get("proof_status") != "replay-only":
+        fail("polar-shape-witness must be replay-only")
+    values = single_witness_values(shape, witnesses)
+    matrix = require_fraction_matrix("polar matrix A", values.get("matrix"))
+    orthogonal = require_fraction_matrix("polar orthogonal matrix", values.get("orthogonal"))
+    orthogonal_transpose = require_fraction_matrix(
+        "polar orthogonal transpose",
+        values.get("orthogonal_transpose"),
+    )
+    positive_factor = require_fraction_matrix("polar positive factor", values.get("positive_factor"))
+    identity = require_fraction_matrix("polar identity", values.get("identity"))
+    product = require_fraction_matrix("polar product", values.get("product"))
+    ata = require_fraction_matrix("polar A^T*A", values.get("ata"))
+    positive_factor_square = require_fraction_matrix(
+        "polar positive-factor square",
+        values.get("positive_factor_square"),
+    )
+    positive_diagonal = require_fraction_vector(
+        "polar positive diagonal",
+        values.get("positive_diagonal"),
+    )
+    leading_minors = require_fraction_vector("polar leading minors", values.get("leading_minors"))
+    trace_positive_factor = require_fraction(
+        "polar trace_positive_factor",
+        values.get("trace_positive_factor"),
+    )
+    diagonal_sum = require_fraction("polar diagonal_sum", values.get("diagonal_sum"))
+    determinant_matrix = require_fraction(
+        "polar determinant_matrix",
+        values.get("determinant_matrix"),
+    )
+    determinant_orthogonal = require_fraction(
+        "polar determinant_orthogonal",
+        values.get("determinant_orthogonal"),
+    )
+    determinant_positive_factor = require_fraction(
+        "polar determinant_positive_factor",
+        values.get("determinant_positive_factor"),
+    )
+    determinant_product = require_fraction(
+        "polar determinant_product",
+        values.get("determinant_product"),
+    )
+
+    require_square_matrix("polar matrix A", matrix)
+    require_square_matrix("polar orthogonal matrix", orthogonal)
+    require_square_matrix("polar positive factor", positive_factor)
+    require_square_matrix("polar identity", identity)
+    if len(matrix) != 2:
+        fail("finite polar replay expects one 2x2 matrix")
+    if len(orthogonal) != len(matrix) or len(positive_factor) != len(matrix):
+        fail("polar matrices must have matching dimensions")
+    expected_identity = [
+        [Fraction(1) if row == column else Fraction(0) for column in range(len(matrix))]
+        for row in range(len(matrix))
+    ]
+    if identity != expected_identity:
+        fail("polar-shape-witness identity must be the exact identity matrix")
+    if orthogonal_transpose != matrix_transpose(orthogonal):
+        fail("polar-shape-witness orthogonal_transpose is incorrect")
+    if mat_mul(orthogonal_transpose, orthogonal) != identity:
+        fail("polar-shape-witness U^T*U does not equal identity")
+    if mat_mul(orthogonal, orthogonal_transpose) != identity:
+        fail("polar-shape-witness U*U^T does not equal identity")
+    if positive_factor != matrix_transpose(positive_factor):
+        fail("polar-shape-witness positive factor must be symmetric")
+    for row_index, row in enumerate(positive_factor):
+        for column_index, entry in enumerate(row):
+            if row_index != column_index and entry != 0:
+                fail("polar-shape-witness positive factor must be diagonal")
+            if row_index == column_index:
+                if row_index >= len(positive_diagonal) or entry != positive_diagonal[row_index]:
+                    fail("polar-shape-witness diagonal entries must match positive_diagonal")
+                if entry <= 0:
+                    fail("polar-shape-witness diagonal entries must be positive")
+    if len(leading_minors) != len(matrix):
+        fail("polar-shape-witness must list one leading minor per dimension")
+    for size, listed_minor in enumerate(leading_minors, start=1):
+        leading = [row[:size] for row in positive_factor[:size]]
+        computed_minor = matrix_determinant(leading)
+        if computed_minor != listed_minor:
+            fail("polar-shape-witness leading minor is incorrect")
+        if computed_minor <= 0:
+            fail("polar-shape-witness leading minors must be positive")
+
+    product_check = checks["polar-product-witness"]
+    if product_check["expected_result"] != "sat":
+        fail("polar-product-witness must expect sat")
+    if product_check.get("proof_status") != "replay-only":
+        fail("polar-product-witness must be replay-only")
+    if single_witness_values(product_check, witnesses) != values:
+        fail("polar-product-witness must cite the polar witness")
+    if mat_mul(orthogonal, positive_factor) != product:
+        fail("polar-product-witness product does not equal U*P")
+    if product != matrix:
+        fail("polar-product-witness product must equal A")
+
+    normal = checks["polar-normal-equation-witness"]
+    if normal["expected_result"] != "sat":
+        fail("polar-normal-equation-witness must expect sat")
+    if normal.get("proof_status") != "replay-only":
+        fail("polar-normal-equation-witness must be replay-only")
+    if single_witness_values(normal, witnesses) != values:
+        fail("polar-normal-equation-witness must cite the polar witness")
+    if mat_mul(matrix_transpose(matrix), matrix) != ata:
+        fail("polar-normal-equation-witness A^T*A is incorrect")
+    if mat_mul(positive_factor, positive_factor) != positive_factor_square:
+        fail("polar-normal-equation-witness P^2 is incorrect")
+    if ata != positive_factor_square:
+        fail("polar-normal-equation-witness A^T*A must equal P^2")
+
+    invariants = checks["polar-invariant-witness"]
+    if invariants["expected_result"] != "sat":
+        fail("polar-invariant-witness must expect sat")
+    if invariants.get("proof_status") != "replay-only":
+        fail("polar-invariant-witness must be replay-only")
+    if single_witness_values(invariants, witnesses) != values:
+        fail("polar-invariant-witness must cite the polar witness")
+    computed_trace = sum(
+        (positive_factor[index][index] for index in range(len(matrix))),
+        Fraction(0),
+    )
+    if computed_trace != trace_positive_factor:
+        fail("polar-invariant-witness trace(P) is incorrect")
+    if sum(positive_diagonal, Fraction(0)) != diagonal_sum:
+        fail("polar-invariant-witness diagonal sum is incorrect")
+    if trace_positive_factor != diagonal_sum:
+        fail("polar-invariant-witness trace(P) must equal diagonal sum")
+    if matrix_determinant(matrix) != determinant_matrix:
+        fail("polar-invariant-witness det(A) is incorrect")
+    if matrix_determinant(orthogonal) != determinant_orthogonal:
+        fail("polar-invariant-witness det(U) is incorrect")
+    if matrix_determinant(positive_factor) != determinant_positive_factor:
+        fail("polar-invariant-witness det(P) is incorrect")
+    if determinant_orthogonal * determinant_positive_factor != determinant_product:
+        fail("polar-invariant-witness determinant product is incorrect")
+    if determinant_matrix != determinant_product:
+        fail("polar-invariant-witness det(A) must equal det(U)*det(P)")
+
+    bad = checks["bad-polar-diagonal-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-polar-diagonal-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-polar-diagonal-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_polar_diagonal_replay":
+        fail("bad-polar-diagonal-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "rational-polar-decomposition":
+        fail("bad-polar-diagonal-rejected must cite rational-polar-decomposition")
+    entry = data.get("entry")
+    if not isinstance(entry, list) or len(entry) != 2:
+        fail("bad-polar-diagonal-rejected entry must be a row/column pair")
+    row_index = require_nonnegative_int("bad polar entry row", entry[0])
+    column_index = require_nonnegative_int("bad polar entry column", entry[1])
+    if row_index >= len(positive_factor) or column_index >= len(positive_factor[row_index]):
+        fail("bad-polar-diagonal-rejected entry is out of range")
+    computed_diagonal = require_fraction("bad polar computed_diagonal", data.get("computed_diagonal"))
+    claimed_diagonal = require_fraction("bad polar claimed_diagonal", data.get("claimed_diagonal"))
+    if row_index != column_index:
+        fail("bad-polar-diagonal-rejected must target a diagonal entry")
+    if positive_factor[row_index][column_index] != computed_diagonal:
+        fail("bad-polar-diagonal-rejected computed value does not match replay")
+    if computed_diagonal == claimed_diagonal:
+        fail("bad-polar-diagonal-rejected must document a false diagonal claim")
+    if "separate qf-lra-bad-polar-diagonal" not in bad.get("notes", ""):
+        fail("bad-polar-diagonal-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-polar-diagonal"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-polar-diagonal must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-polar-diagonal must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-polar-diagonal must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "rational-polar-decomposition":
+        fail("qf-lra-bad-polar-diagonal must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-polar-diagonal-rejected":
+        fail("qf-lra-bad-polar-diagonal must cite the replay row")
+    if qf_data.get("entry") != entry:
+        fail("qf-lra-bad-polar-diagonal entry must match the replay row")
+    qf_computed = require_fraction("qf polar computed_diagonal", qf_data.get("computed_diagonal"))
+    qf_claimed = require_fraction("qf polar claimed_diagonal", qf_data.get("claimed_diagonal"))
+    if qf_computed != computed_diagonal or qf_claimed != claimed_diagonal:
+        fail("qf-lra-bad-polar-diagonal data must match the replay row")
+    if qf_data.get("farkas_conflict") != "polar_p11 = 5 and polar_p11 = 4":
+        fail("qf-lra-bad-polar-diagonal must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf polar smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-polar-decomposition-v0/smt2/"
+        "bad-polar-diagonal-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-polar-diagonal smt2_artifact must name the checked source artifact")
+    check_source("qf polar smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf polar farkas_regression", regression)
+    if "finite_polar_decomposition_bad_diagonal_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-polar-diagonal must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf polar certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-polar-diagonal certificate must document checked Farkas evidence")
+
+    horizon = checks["general-polar-decomposition-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-polar-decomposition-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-polar-decomposition-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("polar horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("polar horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_finite_jordan_chain(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -31401,6 +31623,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_orthogonal_diagonalization(expected)
     if metadata["id"] == "finite-real-schur-decomposition-v0":
         validate_finite_real_schur_decomposition(expected)
+    if metadata["id"] == "finite-polar-decomposition-v0":
+        validate_finite_polar_decomposition(expected)
     if metadata["id"] == "finite-jordan-chain-v0":
         validate_finite_jordan_chain(expected)
     if metadata["id"] == "metric-continuity-v0":
