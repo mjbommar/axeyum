@@ -1684,6 +1684,11 @@ Pick one row per commit unless the change is purely navigational.
      curriculum-node concept, pack, field, route, checked-row, and
      Lean-horizon drilldowns for nodes such as `sets`, `linear-algebra`,
      `modular-arithmetic`, and `calculus`.
+196. Landed: add `TRUST-BOUNDARY-QUERIES.md` as the focused status-first query
+     guide for downstream consumers. It records executable checked-evidence,
+     replay-only, `not-run`/Lean-horizon, pack-level, field-scoped, and JSON
+     drilldowns so consumers keep proof status separate from result status
+     before displaying or promoting resource claims.
 
 ## Validation Checklist
 

@@ -36,6 +36,8 @@ curriculum node -> concept row -> example pack -> learner page -> proof route
 
 For executable queries that begin at the curriculum-node layer, use
 [Curriculum Node Queries](CURRICULUM-NODE-QUERIES.md).
+For executable queries that begin at the proof-status/result-status trust
+boundary, use [Trust Boundary Queries](TRUST-BOUNDARY-QUERIES.md).
 
 The product is not a textbook and not a formal-library clone. It is a system of
 small resources that make Axeyum's identity concrete:
@@ -203,6 +205,9 @@ for compact learner-facing route wording on focused pack pages.
 Use [Proof Upgrade Queries](PROOF-UPGRADE-QUERIES.md) when a contributor needs
 executable replay-only row, route-relevant pack, checked-row, and horizon
 lookups before promoting another certificate row.
+Use [Trust Boundary Queries](TRUST-BOUNDARY-QUERIES.md) when a consumer needs
+status-first checked, replay-only, and Lean-horizon drilldowns before deciding
+what a resource can claim.
 
 Route plan:
 

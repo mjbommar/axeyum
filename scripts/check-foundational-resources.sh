@@ -18,6 +18,19 @@ python3 scripts/query-foundational-resources.py routes --route Alethe --field ab
 python3 scripts/query-foundational-resources.py routes --route lean --field topology --require-any >/dev/null
 python3 scripts/query-foundational-resources.py routes --route lean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --route lean-horizon-template --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --proof-status checked --expected-result unsat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --proof-status checked --expected-result sat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --proof-status replay-only --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --proof-status replay-only --expected-result sat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --proof-status lean-horizon --expected-result not-run --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --proof-status replay-only --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --expected-result not-run --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field graph_theory --proof-status checked --expected-result unsat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field probability_theory --proof-status replay-only --expected-result sat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field topology --proof-status lean-horizon --expected-result not-run --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field topology --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --text convergence --proof-status lean-horizon --require-any >/dev/null

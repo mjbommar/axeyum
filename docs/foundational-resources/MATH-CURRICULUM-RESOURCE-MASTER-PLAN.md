@@ -89,6 +89,9 @@ Every resource increment should land one coherent unit:
 Do not skip the trust story. For each SAT row, say what is replayed. For each
 UNSAT row, say what certificate route is checked or why the row remains a gap.
 For each `not-run` row, say what proof horizon blocks graduation.
+Use [Trust Boundary Queries](TRUST-BOUNDARY-QUERIES.md) when a consumer needs
+proof-status and result-status drilldowns before displaying or promoting a
+claim.
 
 ## Build Waves
 

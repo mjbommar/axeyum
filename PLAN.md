@@ -173,6 +173,11 @@ The proof-upgrade query guide is
 it records route-summary, replay-only row, route-relevant pack, checked-row,
 and horizon queries for choosing certificate upgrades without over-promoting
 finite replay rows.
+The trust-boundary query guide is
+[`docs/foundational-resources/TRUST-BOUNDARY-QUERIES.md`](docs/foundational-resources/TRUST-BOUNDARY-QUERIES.md);
+it records proof-status and result-status drilldowns for checked evidence,
+replay-only finite rows, and Lean-horizon boundaries before consumers display
+or promote resource claims.
 The curriculum-node query guide is
 [`docs/foundational-resources/CURRICULUM-NODE-QUERIES.md`](docs/foundational-resources/CURRICULUM-NODE-QUERIES.md);
 it records concept, pack, field, route, checked-row, and horizon drilldowns for

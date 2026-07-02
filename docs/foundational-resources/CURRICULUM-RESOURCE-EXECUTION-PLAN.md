@@ -30,6 +30,8 @@ curriculum node -> concept row -> example pack -> learner path -> proof route ->
 
 The focused query guide for starting from curriculum nodes is
 [CURRICULUM-NODE-QUERIES.md](CURRICULUM-NODE-QUERIES.md).
+The focused guide for status-first trust-boundary queries is
+[TRUST-BOUNDARY-QUERIES.md](TRUST-BOUNDARY-QUERIES.md).
 
 Every resource should reinforce Axeyum's identity: untrusted fast search,
 trusted small checking. Bounded examples are useful, but they must stay visibly
@@ -361,6 +363,9 @@ Near-term boundary:
   for solver, proof, benchmark, and fuzzing contributors mining promoted packs
   by route, field, and checked row without treating them as theorem or parity
   claims.
+- [TRUST-BOUNDARY-QUERIES.md](TRUST-BOUNDARY-QUERIES.md) is the status-first
+  guide for consumers that need to separate checked evidence, replay-only rows,
+  and Lean-horizon boundaries before display or promotion.
 - No Rust crate or separate repository until at least one real consumer needs
   typed APIs, release cadence, or large external corpora.
 

@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Trust-boundary query guide landed.**
+  `TRUST-BOUNDARY-QUERIES.md` now documents status-first consumer queries for
+  checked evidence, replay-only finite rows, and Lean-horizon theorem
+  boundaries, keeping proof status separate from result status. The
+  foundational resource smoke script now checks representative checked,
+  replay-only, `not-run`, pack-level, and field-scoped trust-boundary
+  drilldowns. The public summary remains 121 concept rows, 75 bridge concepts,
+  108 packs, 688 expected checks, 322 checked rows, 295 replay-only rows, and
+  71 Lean-horizon rows.
+
 - **Curriculum-node query guide landed.**
   `CURRICULUM-NODE-QUERIES.md` now documents how consumers start from formal
   curriculum nodes such as `sets`, `linear-algebra`, `modular-arithmetic`, and
