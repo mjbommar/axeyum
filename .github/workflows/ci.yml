@@ -5,12 +5,14 @@ on:
     branches: [main]
   pull_request:
 
-# One run per ref: a newer push supersedes the in-flight run instead of piling
-# up behind it (docs commits land every few minutes; without this the queue
-# saturates and no run ever reports before being stale).
+# Pushes land every few minutes across two agent lanes and a run takes ~20
+# minutes: with cancel-in-progress a newer push kills every run before it can
+# report, so NO conclusion ever lands. Runners execute in parallel, so letting
+# each push's run complete is fine now that the multi-hour test-job hang is
+# fixed; the group only serializes runs for the same commit.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
