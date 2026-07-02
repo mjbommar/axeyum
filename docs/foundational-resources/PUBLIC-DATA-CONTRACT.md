@@ -135,6 +135,9 @@ This command is also advisory. It groups rows by field, fragment, curriculum
 node, or decidability class and reports checked evidence, replay-only rows,
 replay-only refutations, and theorem horizons for work selection. It does not
 define corpus totals, benchmark claims, or parity claims.
+Its action labels distinguish `proof-upgrade` from `proof-review`: the latter
+means replay-only refutations exist but current same-pack route contrast already
+covers the proof shape.
 
 Pack-frontier discovery drills from those group-level rankings to concrete
 pack-level worklists:

@@ -1798,6 +1798,20 @@ Pick one row per commit unless the change is purely navigational.
      each state, and lets learner/resource consumers verify that a Lean-horizon
      row has finite bounded context before displaying it as a polished resource
      boundary.
+212. Landed: add `query-foundational-resources.py pack-frontier` for concrete
+     pack-level resource worklists beneath `coverage-frontier`. The command
+     ranks packs by checked evidence, replay-only `unsat` pressure,
+     Lean-horizon rows, checked-row density, route-promotion states, and
+     finite-shadow state; exposes action filters for `proof-review`,
+     `proof-upgrade`, `theorem-horizon`, `low-checked-density`, and
+     `maintain`; and keeps those ranks as work-selection hints rather than
+     theorem, benchmark, solver-performance, or parity claims.
+213. Landed: align `coverage-frontier` action labels with pack-level
+     promotion-state triage. Group-level rows now emit `proof-upgrade` only
+     when at least one replay-only `unsat` pack has absent or partial route
+     contrast; otherwise replay-only refutations with same-pack checked route
+     contrast emit `proof-review`, with JSON samples in `proof_upgrade_packs`
+     and `proof_review_packs`.
 
 ## Validation Checklist
 

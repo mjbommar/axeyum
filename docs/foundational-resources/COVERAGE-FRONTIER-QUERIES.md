@@ -72,8 +72,11 @@ python3 scripts/query-foundational-resources.py coverage \
 
 - `seed-pack`: atlas concepts exist but no pack is attached to the group.
 - `add-checked-evidence`: at least one pack in the group has no checked row.
-- `proof-upgrade`: the group has replay-only `unsat` rows that may be worth
-  comparing against existing certificate coverage.
+- `proof-upgrade`: the group has replay-only `unsat` rows whose route contrast
+  is absent or partial in at least one pack.
+- `proof-review`: the group has replay-only `unsat` rows, but the current pack
+  metadata shows same-pack checked route contrast; review before adding
+  duplicate checked rows.
 - `theorem-horizon`: the group has Lean-horizon rows that must stay out of
   finite evidence and benchmark summaries.
 - `maintain`: the group has packs and no current frontier flag from this view.
@@ -83,6 +86,8 @@ These labels are hints. Before promoting any replay-only row, read
 [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md). Before treating
 any horizon row as future proof work, read
 [Theorem Horizon Queries](THEOREM-HORIZON-QUERIES.md).
+Use [Pack Frontier Queries](PACK-FRONTIER-QUERIES.md) to see which concrete
+packs caused `proof-upgrade` or `proof-review`.
 
 ## Useful Filters
 

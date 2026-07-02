@@ -234,6 +234,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Coverage-frontier proof-review triage landed.**
+  `coverage-frontier` now reuses the pack-level promotion-state logic before
+  emitting action labels, so field/fragment/curriculum groups with replay-only
+  `unsat` rows and already-covered same-pack route contrast show
+  `proof-review` instead of implying an automatic `proof-upgrade`. JSON output
+  now includes `proof_upgrade_packs` and `proof_review_packs` samples for
+  downstream tooling.
+
 - **Pack-frontier query landed.**
   `scripts/query-foundational-resources.py pack-frontier` now ranks concrete
   packs by checked evidence, replay-only `unsat` pressure, Lean-horizon rows,

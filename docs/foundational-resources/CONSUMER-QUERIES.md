@@ -154,7 +154,8 @@ python3 scripts/query-foundational-resources.py coverage-frontier \
 ```
 
 Use [COVERAGE-FRONTIER-QUERIES.md](COVERAGE-FRONTIER-QUERIES.md) before turning
-a high-pressure group into a pack, proof-upgrade, or learner-page increment.
+a high-pressure group into a pack, proof-review, proof-upgrade, or learner-page
+increment.
 
 ## Pack Frontier
 

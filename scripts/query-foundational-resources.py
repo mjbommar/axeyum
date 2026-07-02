@@ -206,6 +206,29 @@ def promotion_state(replay_unsat: int, checked_unsat: int) -> str:
     return "covered-by-route-contrast"
 
 
+def pack_promotion_states(
+    metadata: dict[str, Any],
+    replay_unsat_checks: list[dict[str, Any]],
+    checked_unsat_checks: list[dict[str, Any]],
+) -> list[str]:
+    states = []
+    for route in recipe_names(metadata):
+        if route not in UPGRADE_ROUTE_ORDER or not replay_unsat_checks:
+            continue
+        route_checked_checks = [
+            check
+            for check in checked_unsat_checks
+            if route_text_matches(route, check_route_text(check))
+        ]
+        state = promotion_state(len(replay_unsat_checks), len(route_checked_checks))
+        states.append(f"{route}:{state}")
+    return states
+
+
+def promotion_state_values(states: list[str]) -> set[str]:
+    return {state.split(":", 1)[1] for state in states}
+
+
 def horizon_shadow_state(finite_checked: int, finite_replay: int) -> str:
     if finite_checked:
         return "checked-finite-shadow"
@@ -1008,6 +1031,8 @@ def command_coverage_frontier(args: argparse.Namespace) -> int:
                     "fields": set(),
                     "fragments": set(),
                     "replay_unsat_packs": set(),
+                    "proof_upgrade_packs": set(),
+                    "proof_review_packs": set(),
                     "horizon_packs": set(),
                 },
             )
@@ -1038,6 +1063,8 @@ def command_coverage_frontier(args: argparse.Namespace) -> int:
                     "fields": set(),
                     "fragments": set(),
                     "replay_unsat_packs": set(),
+                    "proof_upgrade_packs": set(),
+                    "proof_review_packs": set(),
                     "horizon_packs": set(),
                 },
             )
@@ -1067,6 +1094,27 @@ def command_coverage_frontier(args: argparse.Namespace) -> int:
                         group["not_run_horizon"] += 1
             if pack_has_replay_unsat:
                 group["replay_unsat_packs"].add(pack["id"])
+                checked_unsat_checks = [
+                    check
+                    for check in pack["checks"]
+                    if check.get("proof_status") == "checked"
+                    and check.get("expected_result") == "unsat"
+                ]
+                replay_unsat_checks = [
+                    check
+                    for check in pack["checks"]
+                    if check.get("proof_status") == "replay-only"
+                    and check.get("expected_result") == "unsat"
+                ]
+                state_values = promotion_state_values(
+                    pack_promotion_states(
+                        metadata, replay_unsat_checks, checked_unsat_checks
+                    )
+                )
+                if state_values & {"no-route-contrast", "partial-route-contrast"}:
+                    group["proof_upgrade_packs"].add(pack["id"])
+                else:
+                    group["proof_review_packs"].add(pack["id"])
             if pack_has_horizon:
                 group["horizon_packs"].add(pack["id"])
 
@@ -1088,8 +1136,10 @@ def command_coverage_frontier(args: argparse.Namespace) -> int:
             actions.append("seed-pack")
         if packs_without_checked:
             actions.append("add-checked-evidence")
-        if group["replay_unsat"]:
+        if group["proof_upgrade_packs"]:
             actions.append("proof-upgrade")
+        if group["proof_review_packs"]:
+            actions.append("proof-review")
         if group["lean_horizon"]:
             actions.append("theorem-horizon")
         if not actions and pack_ids:
@@ -1099,6 +1149,8 @@ def command_coverage_frontier(args: argparse.Namespace) -> int:
             group["replay_unsat"] * 4
             + group["lean_horizon"] * 2
             + len(packs_without_checked) * 3
+            + len(group["proof_upgrade_packs"]) * 5
+            + len(group["proof_review_packs"])
             + (1 if group["concepts"] and not pack_ids else 0)
         )
         if args.min_replay_unsat and group["replay_unsat"] < args.min_replay_unsat:
@@ -1124,6 +1176,8 @@ def command_coverage_frontier(args: argparse.Namespace) -> int:
                 "actions": actions,
                 "sample_packs": pack_ids[:5],
                 "replay_unsat_packs": sorted(group["replay_unsat_packs"])[:5],
+                "proof_upgrade_packs": sorted(group["proof_upgrade_packs"])[:5],
+                "proof_review_packs": sorted(group["proof_review_packs"])[:5],
                 "horizon_packs": sorted(group["horizon_packs"])[:5],
                 "fields": sorted(group["fields"]),
                 "fragments": sorted(group["fragments"]),
@@ -1214,22 +1268,11 @@ def command_pack_frontier(args: argparse.Namespace) -> int:
             check for check in checks if check.get("proof_status") == "lean-horizon"
         ]
 
-        promotion_states = []
-        for route in recipe_names(metadata):
-            if route not in UPGRADE_ROUTE_ORDER or not replay_unsat_checks:
-                continue
-            route_checked_checks = [
-                check
-                for check in checked_unsat_checks
-                if route_text_matches(route, check_route_text(check))
-            ]
-            state = promotion_state(len(replay_unsat_checks), len(route_checked_checks))
-            promotion_states.append(f"{route}:{state}")
-
-        promotion_state_values = {
-            state.split(":", 1)[1] for state in promotion_states
-        }
-        if args.promotion_state and args.promotion_state not in promotion_state_values:
+        promotion_states = pack_promotion_states(
+            metadata, replay_unsat_checks, checked_unsat_checks
+        )
+        state_values = promotion_state_values(promotion_states)
+        if args.promotion_state and args.promotion_state not in state_values:
             continue
 
         shadow_state = (
@@ -1249,7 +1292,7 @@ def command_pack_frontier(args: argparse.Namespace) -> int:
             continue
 
         actions = []
-        if promotion_state_values & {"no-route-contrast", "partial-route-contrast"}:
+        if state_values & {"no-route-contrast", "partial-route-contrast"}:
             actions.append("proof-upgrade")
         elif replay_unsat_checks:
             actions.append("proof-review")
