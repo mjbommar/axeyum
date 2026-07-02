@@ -36,6 +36,7 @@ Companion map:
 - [Martingale Theorem Boundary](martingale-theorem-boundary.md)
 - [Concentration Theorem Boundary](concentration-theorem-boundary.md)
 - [Lebesgue Integration Theorem Boundary](lebesgue-integration-theorem-boundary.md)
+- [Fubini Tonelli Theorem Boundary](fubini-tonelli-theorem-boundary.md)
 
 ## What Axeyum Checks
 
@@ -294,6 +295,11 @@ R({heads} x {two, three}) = 1/3
 sum_(x,y) f(x,y) R(x,y) = sum_x P(x) * sum_y f(x,y) Q(y) = 3
 ```
 
+For the theorem boundary that keeps finite product tables, marginals, and
+finite iterated sums separate from product-measure construction,
+Fubini/Tonelli, and almost-everywhere claims, read
+[Fubini Tonelli Theorem Boundary](fubini-tonelli-theorem-boundary.md).
+
 For descriptive statistics, it recomputes the mean and population variance of
 `1,2,3,4`, checks the reported margins of a finite contingency table, rejects
 a bad variance claim by exact replay, and emits a separate checked
@@ -347,7 +353,8 @@ For exact simple-function integration over finite atom tables, read
 [End To End: Finite Integration](finite-integration-end-to-end.md) and
 [Lebesgue Integration Theorem Boundary](lebesgue-integration-theorem-boundary.md).
 For exact finite product-measure and Fubini replay, read
-[End To End: Finite Product Measure](finite-product-measure-end-to-end.md).
+[End To End: Finite Product Measure](finite-product-measure-end-to-end.md) and
+[Fubini Tonelli Theorem Boundary](fubini-tonelli-theorem-boundary.md).
 For exact finite statistics and regression replay, read
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md).
 For finite matrix-valued probability tables, read

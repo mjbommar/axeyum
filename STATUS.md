@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Fubini/Tonelli theorem-boundary resource landed.**
+  `fubini-tonelli-theorem-boundary.md` now separates
+  `finite-product-measure-v0` exact Cartesian-product table replay, rectangle
+  probabilities, marginal replay, finite direct/iterated-sum replay, and
+  checked bad product-probability/bad marginal QF_LRA/Farkas evidence from
+  general product-measure construction, Fubini, Tonelli, section
+  measurability, sigma-finite hypotheses, and almost-everywhere theorem
+  claims. The theorem-horizon, measure/probability, learner-map, and
+  smoke-query docs now expose the finite-product-measure boundary through
+  pack-specific checked-row and horizon-frontier queries.
 - **Lebesgue-integration theorem-boundary resource landed.**
   `lebesgue-integration-theorem-boundary.md` now separates
   `finite-integration-v0` exact simple-function integral replay,

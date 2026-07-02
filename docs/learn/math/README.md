@@ -62,6 +62,10 @@ Companion maps:
   separates finite simple-function, indicator, linearity, and checked bad
   expectation rows from Lebesgue integration, convergence, Fubini/Tonelli, and
   almost-everywhere theorem targets.
+- [Fubini Tonelli Theorem Boundary](fubini-tonelli-theorem-boundary.md):
+  separates finite product tables, rectangle probabilities, marginals, finite
+  iterated sums, and checked bad product/marginal rows from product-measure,
+  Fubini, Tonelli, and almost-everywhere theorem targets.
 - [Random Variable Theorem Boundary](random-variable-theorem-boundary.md):
   separates finite total-function, pushforward, expectation, independence,
   and checked bad-row replay from measurable-random-variable, distribution-law,
@@ -684,6 +688,10 @@ Companion maps:
   Cartesian-product probability tables, rectangle probabilities, marginals,
   finite Fubini replay, checked bad product-probability and bad marginal
   rejection, and the Fubini/Tonelli Lean horizon.
+- [Fubini Tonelli Theorem Boundary](fubini-tonelli-theorem-boundary.md):
+  maps those finite product-table and finite iterated-sum shadows to the
+  missing product-measure construction, Fubini, Tonelli, section-measurability,
+  and almost-everywhere proof routes.
 - [Finite Random Variables](finite-random-variables-end-to-end.md): follows
   finite random-variable functions, pushforward distributions, expectation
   through pushforwards, finite independence, replayed bad pushforward and

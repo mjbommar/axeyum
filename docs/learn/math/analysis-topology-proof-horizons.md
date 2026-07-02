@@ -70,6 +70,7 @@ Companion map:
 - [Monotone Convergence Theorem Boundary](monotone-convergence-theorem-boundary.md)
 - [Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md)
 - [Lebesgue Integration Theorem Boundary](lebesgue-integration-theorem-boundary.md)
+- [Fubini Tonelli Theorem Boundary](fubini-tonelli-theorem-boundary.md)
 - [Hitting-Time Theorem Boundary](hitting-time-theorem-boundary.md)
 
 ## What Axeyum Checks
@@ -559,6 +560,10 @@ R(heads, one) = 1/6
 The `finite-product-measure-v0` validator checks every product probability,
 rectangle measures, marginals, equality of the direct finite integral with
 both iterated finite sums, and checked rejection of a malformed marginal claim.
+For the theorem boundary that keeps those finite product-table and iterated-sum
+rows separate from product-measure construction, Fubini, Tonelli, and
+almost-everywhere claims, read
+[Fubini Tonelli Theorem Boundary](fubini-tonelli-theorem-boundary.md).
 
 Run the checks from the repository root:
 
@@ -651,6 +656,7 @@ replay, read
 [End To End: Finite Integration](finite-integration-end-to-end.md),
 [Lebesgue Integration Theorem Boundary](lebesgue-integration-theorem-boundary.md),
 [End To End: Finite Product Measure](finite-product-measure-end-to-end.md),
+[Fubini Tonelli Theorem Boundary](fubini-tonelli-theorem-boundary.md),
 and [End To End: Finite Topology And Measure](finite-topology-measure-end-to-end.md).
 
 ## Horizon

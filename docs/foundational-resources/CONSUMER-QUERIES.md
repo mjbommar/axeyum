@@ -1148,6 +1148,16 @@ python3 scripts/query-foundational-resources.py horizon-frontier \
   --require-any
 ```
 
+For the finite product-measure theorem boundary, use the horizon-frontier row
+instead of treating finite product tables, marginals, or finite iterated sums
+as product-measure or Fubini/Tonelli proof:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-product-measure-v0 \
+  --require-any
+```
+
 For statistics, query the Farkas route to keep exact finite tests,
 contingency tables, least-squares RSS rows, random-matrix finite moments,
 finite probability/process tables, concentration rows, and stochastic-kernel

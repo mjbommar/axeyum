@@ -261,6 +261,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Product-measure construction, Fubini, Tonelli, section-measurability, and
+almost-everywhere product-integral horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-product-measure-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-product-measure-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Random-variable, distribution-law, and measurability horizons:
 
 ```sh

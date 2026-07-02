@@ -3,6 +3,8 @@
 This lesson follows one finite product-measure resource from factor probability
 tables to rectangle probabilities, marginals, and finite Fubini replay. It uses
 [finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/).
+For the focused finite/general theorem boundary, read
+[Fubini Tonelli Theorem Boundary](fubini-tonelli-theorem-boundary.md).
 
 Concept rows:
 

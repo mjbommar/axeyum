@@ -302,6 +302,8 @@ python3 scripts/query-foundational-resources.py checks --pack finite-measure-v0 
 python3 scripts/query-foundational-resources.py checks --pack finite-measure-monotonicity-v0 --route Farkas --proof-status checked --text union --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-measure-monotonicity-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-product-measure-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-product-measure-v0 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-product-measure-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-integration-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-integration-v0 --route Farkas --proof-status checked --text qf-lra-bad-expectation --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-integration-v0 --proof-status lean-horizon --require-any >/dev/null

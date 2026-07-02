@@ -2243,6 +2243,16 @@ Pick one row per commit unless the change is purely navigational.
      integration theorem layers, and adds pack-specific checked-row and
      horizon-frontier queries to the public smoke gate without promoting finite
      atom-table rows into theorem coverage.
+263. Landed: add `fubini-tonelli-theorem-boundary.md` as the focused
+     finite/general product-measure theorem-boundary page for
+     `finite-product-measure-v0`. It maps exact Cartesian-product probability
+     table replay, rectangle probabilities, marginals, finite direct and
+     iterated sums, and scoped QF_LRA/Farkas bad product-probability/bad
+     marginal evidence to the missing product-measure construction, Fubini,
+     Tonelli, section-measurability, sigma-finite hypotheses, and
+     almost-everywhere theorem layers, and adds pack-specific checked-row and
+     horizon-frontier queries to the public smoke gate without promoting finite
+     product tables into theorem coverage.
 
 ## Validation Checklist
 

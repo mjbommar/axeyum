@@ -57,6 +57,7 @@ needs concrete checked rows to display.
 |---|---|---|---|
 | Finite measure, complement, monotonicity, subadditivity, normalization, and concentration rows | `bridge_finite_measure_additivity`; `bridge_probability_mass_table` | `Farkas` | `checks --concept bridge_finite_measure_additivity --route Farkas --proof-status checked` |
 | Product measure, marginal, integration, and simple-function rows | `bridge_finite_product_integration` | `Farkas` | `checks --concept bridge_finite_product_integration --route Farkas --proof-status checked` |
+| Fubini/Tonelli theorem boundary | pack `finite-product-measure-v0` | `Lean horizon` | `horizon-frontier --pack finite-product-measure-v0`; `checks --pack finite-product-measure-v0 --proof-status lean-horizon` |
 | Lebesgue-integration theorem boundary | pack `finite-integration-v0` | `Lean horizon` | `horizon-frontier --pack finite-integration-v0`; `checks --pack finite-integration-v0 --proof-status lean-horizon` |
 | Pushforward and expectation-through-pushforward rows | `bridge_pushforward_distribution` | `Farkas` | `checks --concept bridge_pushforward_distribution --route Farkas --proof-status checked` |
 | Conditional expectation, total expectation, tower property, and stopped expectation rows | `bridge_conditional_expectation` | `Farkas` | `checks --concept bridge_conditional_expectation --route Farkas --proof-status checked` |
@@ -122,6 +123,15 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-product-measure-v0 \
   --route Farkas \
   --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-product-measure-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-product-measure-v0 \
+  --proof-status lean-horizon \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
@@ -224,6 +234,13 @@ before treating finite simple-function sums, indicator integrals, finite
 linearity, or checked bad expectation rows as evidence for Lebesgue
 integration, convergence theorems, Fubini/Tonelli, or almost-everywhere
 reasoning.
+
+For the finite product-measure boundary, read
+[Fubini Tonelli Theorem Boundary](../learn/math/fubini-tonelli-theorem-boundary.md)
+before treating finite product tables, rectangle probabilities, marginals,
+finite iterated sums, or checked bad product/marginal rows as evidence for
+general product-measure construction, Fubini, Tonelli, section
+measurability, or almost-everywhere reasoning.
 
 For the finite stochastic-kernel boundary, read
 [Stochastic Kernel Theorem Boundary](../learn/math/stochastic-kernel-theorem-boundary.md)

@@ -762,7 +762,15 @@ Build sequence:
     monotone/dominated convergence, Fubini/Tonelli, almost-everywhere,
     product-measure, and stochastic-integration theorem routes, with
     pack-specific checked-row and horizon-frontier queries.
-75. Revisit crate/repo boundaries only after three real consumers or repeated
+75. Landed: add the Fubini/Tonelli theorem-boundary page.
+    `fubini-tonelli-theorem-boundary.md` maps exact Cartesian-product
+    probability table replay, rectangle probabilities, marginal replay, finite
+    direct/iterated-sum replay, and checked QF_LRA/Farkas bad product-probability
+    and bad marginal evidence to the missing product-measure construction,
+    Fubini, Tonelli, section-measurability, sigma-finite, and
+    almost-everywhere theorem routes, with pack-specific checked-row and
+    horizon-frontier queries.
+76. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

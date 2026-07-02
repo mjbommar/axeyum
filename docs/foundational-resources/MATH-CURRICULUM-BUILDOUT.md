@@ -328,7 +328,7 @@ losing the curriculum anchor.
 |---|---|---|
 | `graph_theory` | sets, relations, counting | `graph-coloring-v0`, then reachability, search runtime/cost counters, matching, cuts, and d-separation. |
 | `topology` | sets, reals, sequences-and-limits, linear algebra | `finite-topology-v0`, `finite-specialization-order-v0`, `finite-simplicial-homology-v0`, then metric balls, closure/interior, specialization preorder replay, checked finite axiom conflicts, continuous maps, compactness, connectedness, and finite chain-complex checks. |
-| `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-measure-monotonicity-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-martingales-v0`, `finite-hitting-times-v0`, and `finite-concentration-v0` over finite universes; Lebesgue and convergence theory remain horizon. |
+| `measure_theory` | sets, rationals, probability | `finite-measure-v0`, `finite-measure-monotonicity-v0`, `finite-integration-v0`, `finite-product-measure-v0`, `finite-random-variables-v0`, `finite-conditional-expectation-v0`, `finite-stochastic-kernels-v0`, `finite-martingales-v0`, `finite-hitting-times-v0`, and `finite-concentration-v0` over finite universes; Lebesgue, product-measure construction, Fubini/Tonelli, and convergence theory remain horizon. |
 | `probability_theory` | counting, rationals, finite sets | `finite-probability-v0`, Bayes tables, finite expectations, finite random variables, finite conditional expectation, finite stochastic kernels, finite martingales, finite hitting times, finite concentration/tail bounds, product tables, exact discrete distributions, finite random-matrix moment tables, and the random-matrix moment learner-query index. |
 | `statistics` | probability, rationals, linear algebra | `descriptive-statistics-v0`, `least-squares-regression-v0`, contingency tables, exact small tests, least-squares normal equations, finite stochastic-kernel checks, finite hitting-time checks, finite martingale checks, finite concentration checks, and finite random-matrix moment checks. |
 | `optimization_and_convexity` | rationals, reals, linear algebra | `linear-optimization-v0`, `convexity-rational-v0`, `multivariable-calculus-rational-v0`, `finite-separation-v0`, `finite-kkt-v0`, `finite-active-set-qp-v0`, `finite-sdp-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0`, `finite-projected-gradient-v0`, `finite-proximal-gradient-v0`, LP feasibility, dual/Farkas certificates, finite convexity, gradients, Hessian checks, threshold checks, KKT stationarity/complementarity witnesses, active-set QP witnesses including inactive-slack conflicts, SDP primal/dual slack/gap replay, finite descent-step checks, finite Armijo/Wolfe line-search replay, finite projected-gradient interval/decrease replay, and finite proximal-gradient replay. |
@@ -2066,6 +2066,11 @@ Fubini/Tonelli, almost-everywhere, and product-measure theorem layers.
 Cartesian-product probability tables, rectangle probabilities, marginals,
 finite Fubini replay, checked bad product-probability and bad marginal
 rejection, and the Fubini/Tonelli Lean horizon.
+The focused `fubini-tonelli-theorem-boundary.md` learner page now maps those
+finite product tables, rectangle probabilities, marginals, finite
+direct/iterated sums, and bad product/marginal rows to the missing
+product-measure construction, Fubini, Tonelli, section-measurability,
+sigma-finite, and almost-everywhere theorem layers.
 `finite-random-variables-v0` now has a learner-facing end-to-end lesson for
 finite random-variable functions, pushforward distributions, expectation
 through pushforwards, finite independence, replayed bad pushforward and
@@ -2967,6 +2972,15 @@ QF_LRA/Farkas rows are linked to copyable queries and graduation criteria
 while keeping proximal-map theory, subdifferential calculus,
 proximal-gradient convergence, rates, variants, and numerical stability claims
 in Lean/theorem-horizon lanes.
+The learner/planning layer now also has
+[`fubini-tonelli-theorem-boundary.md`](../learn/math/fubini-tonelli-theorem-boundary.md),
+which expands the finite product-measure row into a concrete boundary ledger:
+exact Cartesian-product table replay, rectangle probabilities, marginals,
+finite direct/iterated sums, and bad product-probability/bad marginal
+QF_LRA/Farkas rows are linked to copyable queries and graduation criteria
+while keeping product-measure construction, Fubini, Tonelli,
+section-measurability, sigma-finite hypotheses, and almost-everywhere claims in
+Lean/theorem-horizon lanes.
 The learner/planning layer now also has
 [`real-completeness-theorem-boundary.md`](../learn/math/real-completeness-theorem-boundary.md),
 which expands the real-completeness row into a concrete dependency ledger:
