@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Graph-coloring certificate trust-boundary resource landed.**
+  `graph-coloring-certificate-trust-boundary.md` now separates
+  `graph-coloring-v0` replay-only triangle 3-coloring witness, checked
+  same-color rejection, Boolean CNF/DRAT/LRAT triangle non-2-colorability
+  evidence, and QF_BV/DRAT bit-blast evidence from chromatic-number theorems,
+  bipartite-coloring equivalence, planar coloring, coloring algorithms,
+  graph-minor claims, and asymptotic claims. The graph/discrete query guide,
+  learner map, traversal index, and smoke query docs now expose the coloring
+  trust boundary without adding a false theorem horizon row.
+
 - **Graph-reachability certificate trust-boundary resource landed.**
   `graph-reachability-certificate-trust-boundary.md` now separates
   `graph-reachability-v0` checked finite BFS shortest-distance replay,

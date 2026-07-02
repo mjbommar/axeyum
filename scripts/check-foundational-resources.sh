@@ -393,6 +393,14 @@ python3 scripts/query-foundational-resources.py checks --field graph_theory --ro
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route LIA --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_graph_replay_obstruction --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_graph_replay_obstruction --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-coloring-v0 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-coloring-v0 --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-coloring-v0 --proof-status replay-only --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-coloring-v0 --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-coloring-v0 --route qf-bv --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-coloring-v0 --text "same-color" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-coloring-v0 --text "proper 2-coloring" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-coloring-v0 --text "1-bit BV" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack graph-reachability-v0 --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack graph-reachability-v0 --proof-status checked --expected-result sat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack graph-reachability-v0 --proof-status checked --expected-result unsat --require-any >/dev/null

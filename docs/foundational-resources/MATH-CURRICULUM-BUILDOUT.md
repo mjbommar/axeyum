@@ -2060,6 +2060,11 @@ and the Markov-chain convergence Lean horizon.
 coefficient extraction, Cauchy product convolution, bounded Fibonacci
 generating-function prefix replay, checked bad Cauchy-product rejection, and
 the general generating-function Lean horizon.
+`graph-coloring-v0` now has a focused coloring trust-boundary page that keeps
+replay-only finite coloring witnesses, checked same-color rejection, Boolean
+CNF/DRAT/LRAT non-colorability evidence, and QF_BV/DRAT bit-blast evidence
+separate from chromatic-number theorems, planar coloring, coloring algorithms,
+graph-minor claims, and asymptotic claims.
 `graph-reachability-v0` now has a learner-facing end-to-end lesson for finite
 BFS shortest-distance replay, deterministic DFS traversal replay, checked
 disconnected no-path refutation, and edge-cut separation.

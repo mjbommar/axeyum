@@ -770,6 +770,10 @@ It also exposes a focused reachability trust boundary that keeps finite
 BFS/DFS/no-path/cut replay and the disconnected no-path CNF refutation separate
 from BFS/DFS correctness, all-pairs/dynamic reachability, graph-family,
 graph-minor, and asymptotic claims.
+It also exposes a focused coloring trust boundary that keeps replay-only finite
+coloring witnesses, checked same-color rejection, Boolean CNF/LRAT evidence,
+and QF_BV/DRAT evidence separate from chromatic-number, planar-coloring,
+algorithm, graph-minor, and asymptotic claims.
 `bad-dfs-cost-bound-rejected` now has a source-linked
 QF_LIA artifact checked by the `math_resource_lia_routes` arithmetic-DPLL
 regression and `diophantine-gcd-obstruction` now has a source-linked QF_LIA

@@ -3,6 +3,8 @@
 This lesson follows one validated resource from data row to replay result and
 proof/evidence status. It uses the
 [graph-coloring-v0](../../../artifacts/examples/math/graph-coloring-v0/) pack.
+For the focused display and proof-scope boundary, see
+[Graph Coloring Certificate Trust Boundary](graph-coloring-certificate-trust-boundary.md).
 
 Concept rows:
 

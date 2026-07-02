@@ -99,6 +99,12 @@ Use [Graph And Discrete Reasoning](graph-and-discrete-reasoning.md) when you
 want the surrounding graph-resource cluster: coloring, matching, cuts,
 d-separation, counting, and proof-by-refutation.
 
+Use [Graph Coloring Certificate Trust Boundary](graph-coloring-certificate-trust-boundary.md)
+when the question is whether a fixed finite coloring claim is replay-only,
+checked by edge replay, checked by Boolean CNF/LRAT, or checked by QF_BV/DRAT.
+That page keeps finite coloring evidence separate from chromatic-number,
+planar-coloring, algorithm, graph-minor, and asymptotic claims.
+
 Use [Graph Matching Certificate Trust Boundary](graph-matching-certificate-trust-boundary.md)
 when the question is whether proposed matching edges or an augmenting path are
 valid on a fixed graph. That page keeps finite matching replay separate from

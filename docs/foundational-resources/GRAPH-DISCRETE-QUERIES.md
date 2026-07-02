@@ -76,6 +76,7 @@ needs concrete checked rows to display.
 | All checked graph rows | field `graph_theory` | any route | `checks --field graph_theory --expected-result unsat --proof-status checked` |
 | Runtime-specific rows | pack `graph-search-runtime-v0` | `LIA` | `checks --pack graph-search-runtime-v0 --route LIA --proof-status checked` |
 | Coloring-specific rows | pack `graph-coloring-v0` | `boolean`; `qf-bv` | `checks --pack graph-coloring-v0 --route boolean --proof-status checked`; `checks --pack graph-coloring-v0 --route qf-bv --proof-status checked` |
+| Coloring finite replay and certificate rows | pack `graph-coloring-v0` | finite replay, `boolean`, `qf-bv` | `checks --pack graph-coloring-v0 --require-any` |
 | Reachability checked finite rows | pack `graph-reachability-v0` | finite graph replay | `checks --pack graph-reachability-v0 --proof-status checked` |
 | Reachability CNF no-path refutation | pack `graph-reachability-v0` | `boolean` | `checks --pack graph-reachability-v0 --route boolean --proof-status checked` |
 | Matching checked finite rows | pack `graph-matching-v0` | finite graph replay | `checks --pack graph-matching-v0 --proof-status checked` |
@@ -105,6 +106,65 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --require-any
 ```
+
+Display finite graph-coloring replay and certificate rows:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-coloring-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-coloring-v0 \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-coloring-v0 \
+  --expected-result sat \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-coloring-v0 \
+  --proof-status replay-only \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-coloring-v0 \
+  --route boolean \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-coloring-v0 \
+  --route qf-bv \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-coloring-v0 \
+  --text "same-color" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-coloring-v0 \
+  --text "proper 2-coloring" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-coloring-v0 \
+  --text "1-bit BV" \
+  --require-any
+```
+
+Use
+[Graph Coloring Certificate Trust Boundary](../learn/math/graph-coloring-certificate-trust-boundary.md)
+when a consumer needs display wording that keeps finite coloring witnesses,
+same-color rejection, Boolean CNF/LRAT evidence, and QF_BV/DRAT evidence
+separate from chromatic-number theorems, planar coloring, coloring algorithm
+correctness, graph-minor claims, and asymptotic claims. The current
+`graph-coloring-v0` pack intentionally has no `horizon-frontier --text
+coloring` command because no theorem row is committed for this pack.
 
 Display checked finite reachability and traversal rows:
 

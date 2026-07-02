@@ -2103,6 +2103,15 @@ Pick one row per commit unless the change is purely navigational.
      reachability, graph-family, graph-minor, and asymptotic layers, and adds
      reachability-specific checked-row queries to the public smoke gate without
      adding a duplicate pack or inventing a theorem horizon row for this pack.
+249. Landed: add `graph-coloring-certificate-trust-boundary.md` as the focused
+     coloring trust-boundary page for `graph-coloring-v0`. It maps the
+     replay-only triangle 3-coloring witness, checked same-color rejection,
+     Boolean CNF/DRAT/LRAT triangle non-2-colorability refutation, and QF_BV
+     bit-blast DRAT route to the missing chromatic-number, bipartite-coloring,
+     planar-coloring, algorithm-correctness, graph-minor, and asymptotic
+     layers, and adds coloring-specific replay/certificate queries to the
+     public smoke gate without adding a duplicate pack or inventing a theorem
+     horizon row for this pack.
 
 ## Validation Checklist
 

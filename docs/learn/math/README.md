@@ -99,6 +99,10 @@ Companion maps:
 - [Graph Traversal Runtime Index](graph-traversal-runtime-index.md): separates
   finite reachability, BFS/DFS traces, visited-node counters, checked LIA cost
   refutations, and asymptotic runtime horizons.
+- [Graph Coloring Certificate Trust Boundary](graph-coloring-certificate-trust-boundary.md):
+  separates replay-only coloring witnesses, checked finite rejections,
+  Boolean CNF/LRAT evidence, QF_BV/DRAT evidence, and graph-coloring theorem
+  horizons.
 - [Graph Reachability Certificate Trust Boundary](graph-reachability-certificate-trust-boundary.md):
   separates finite BFS/DFS/no-path/cut replay and the disconnected no-path CNF
   row from general reachability, BFS/DFS correctness, graph-family, and
@@ -165,6 +169,10 @@ Companion maps:
 - [Triangle Coloring](graph-coloring-end-to-end.md): follows a finite graph
   coloring resource from data row through replayed `sat`, checked finite
   `unsat`, and proof/evidence status.
+- [Graph Coloring Certificate Trust Boundary](graph-coloring-certificate-trust-boundary.md):
+  maps finite coloring replay, Boolean CNF/LRAT, and QF_BV/DRAT rows to the
+  missing chromatic-number, planar-coloring, algorithm-correctness,
+  graph-minor, and asymptotic layers without promoting them to theorem claims.
 - [Graph Reachability And Traversal](graph-reachability-end-to-end.md):
   follows BFS shortest-distance replay, deterministic DFS traversal replay,
   disconnected no-path refutation, and edge-cut separation over finite graphs.

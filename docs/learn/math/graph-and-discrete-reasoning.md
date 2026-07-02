@@ -32,6 +32,7 @@ Example packs:
 Companion map:
 
 - [Graph Traversal Runtime Index](graph-traversal-runtime-index.md)
+- [Graph Coloring Certificate Trust Boundary](graph-coloring-certificate-trust-boundary.md)
 - [Graph Reachability Certificate Trust Boundary](graph-reachability-certificate-trust-boundary.md)
 - [Graph Matching Certificate Trust Boundary](graph-matching-certificate-trust-boundary.md)
 - [Graph Cut Certificate Trust Boundary](graph-cut-certificate-trust-boundary.md)
@@ -56,8 +57,12 @@ finite orbit counting: it checks action laws, recomputes orbits and
 stabilizers, and verifies Burnside's fixed-point average for one small action.
 The graph coloring pack replays a
 coloring witness against every edge, rejects an invalid coloring, and checks a
-tiny `K3` two-colorability refutation by exhaustive finite search. The graph
-reachability pack checks finite BFS distances, deterministic DFS traversal
+tiny `K3` two-colorability refutation by exhaustive finite search, Boolean
+CNF/DRAT/LRAT, and QF_BV/DRAT. Its focused trust boundary is
+[Graph Coloring Certificate Trust Boundary](graph-coloring-certificate-trust-boundary.md),
+which keeps replay-only witnesses, checked finite rejections, Boolean CNF
+evidence, QF_BV evidence, and graph-coloring theorem horizons separate. The
+graph reachability pack checks finite BFS distances, deterministic DFS traversal
 order, disconnected no-path claims, and edge-cut separation. Its focused trust
 boundary is
 [Graph Reachability Certificate Trust Boundary](graph-reachability-certificate-trust-boundary.md),
@@ -323,6 +328,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 For a fuller trace from data row to replay result and evidence status, read
 [End To End: Counting And Pigeonhole](counting-pigeonhole-end-to-end.md),
 [End To End: Triangle Coloring](graph-coloring-end-to-end.md),
+[Graph Coloring Certificate Trust Boundary](graph-coloring-certificate-trust-boundary.md),
 [End To End: Graph Reachability And Traversal](graph-reachability-end-to-end.md),
 [Graph Reachability Certificate Trust Boundary](graph-reachability-certificate-trust-boundary.md),
 [End To End: Graph Search Runtime Counters](graph-search-runtime-end-to-end.md),
