@@ -4,6 +4,8 @@ This lesson follows one finite group-action resource from table data to
 replayed result and proof/evidence status. It uses the
 [finite-group-actions-v0](../../../artifacts/examples/math/finite-group-actions-v0/)
 pack.
+For the focused finite/general theorem boundary, read
+[Group Action Theorem Boundary](group-action-theorem-boundary.md).
 
 Concept rows:
 

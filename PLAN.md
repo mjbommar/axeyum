@@ -182,7 +182,8 @@ consumers can find theorem boundaries without treating them as checked SMT
 evidence; the public query script also exposes
 `horizon-frontier` for theorem-boundary rows with finite-shadow contrast,
 including finite/infinite cardinality, algebra homomorphism/quotient structure,
-vector-space/duality/module/tensor structure, finite random-variable,
+vector-space/duality/module/tensor structure, group-action/orbit-stabilizer
+and Burnside theorem boundaries, finite random-variable,
 recurrence/asymptotic, stochastic-kernel, and
 martingale/stopping theory, finite integration/Lebesgue theorem boundaries,
 finite product-measure/Fubini-Tonelli theorem boundaries,

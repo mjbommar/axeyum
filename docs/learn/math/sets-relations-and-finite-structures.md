@@ -197,6 +197,10 @@ that `(g*h).x = g.(h.x)` for the listed group table, and that the resulting
 function tables produce the claimed orbits and stabilizers. It also has
 exact replay rows for malformed identity-action and compatibility tables, plus
 explicit checked QF_UF/Alethe rows for the isolated equality conflicts.
+For the theorem boundary that keeps those finite action-table rows separate
+from arbitrary group-action, orbit-stabilizer, Burnside/Cauchy-Frobenius,
+quotient-action, and representation-theory claims, read
+[Group Action Theorem Boundary](group-action-theorem-boundary.md).
 
 For finite order theory, encode the four-element Boolean lattice:
 
@@ -416,6 +420,7 @@ and measure replay, read
 [End To End: Finite Monoids](finite-monoids-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md),
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md),
+[Group Action Theorem Boundary](group-action-theorem-boundary.md),
 [End To End: Finite Order Lattices](finite-order-lattices-end-to-end.md),
 [End To End: Finite Cardinality](finite-cardinality-end-to-end.md),
 [End To End: Cardinality Principles](cardinality-principles-end-to-end.md),

@@ -66,6 +66,7 @@ needs concrete checked rows to display.
 | Algebra equality certificates versus table replay | `bridge_algebra_equality_certificate_boundary` | `Alethe` | `checks --concept bridge_algebra_equality_certificate_boundary --route Alethe --proof-status checked` |
 | Group operations, homomorphisms, and permutation rows | `bridge_homomorphism_preservation` | `Alethe` | `checks --concept bridge_homomorphism_preservation --route Alethe --proof-status checked` |
 | Group actions and permutation actions | `bridge_group_action` | `Alethe` | `checks --concept bridge_group_action --route Alethe --proof-status checked` |
+| Group-action theorem boundary | pack `finite-group-actions-v0` | `Lean horizon` | `horizon-frontier --pack finite-group-actions-v0`; `checks --pack finite-group-actions-v0 --proof-status lean-horizon` |
 | Kernels, images, and quotient maps | `bridge_kernel_image`; `bridge_quotient_map` | `Alethe` | `packs --concept bridge_kernel_image --route Alethe`; `packs --concept bridge_quotient_map --route Alethe` |
 | Ideals and quotient-ring representatives | `bridge_ideal_closure` | `Alethe` | `checks --concept bridge_ideal_closure --route Alethe --proof-status checked` |
 | Modules, vector spaces, dual spaces, and tensor bilinearity | `bridge_module_action`; `bridge_tensor_bilinearity` | `Alethe` | `checks --concept bridge_module_action --route Alethe --proof-status checked`; `checks --concept bridge_tensor_bilinearity --route Alethe --proof-status checked`; `checks --pack finite-tensor-products-v0 --route Alethe --proof-status checked --text left-additivity` |
@@ -131,6 +132,15 @@ python3 scripts/query-foundational-resources.py checks \
   --concept bridge_group_action \
   --route Alethe \
   --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-group-actions-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-group-actions-v0 \
+  --proof-status lean-horizon \
   --require-any
 ```
 
@@ -272,3 +282,10 @@ They do not prove:
 
 Those claims need new proof-horizon rows, theorem-prover reconstruction, or
 benchmark artifacts before they can graduate.
+
+For the finite group-action boundary, read
+[Group Action Theorem Boundary](../learn/math/group-action-theorem-boundary.md)
+before treating finite action-law replay, orbit/stabilizer rows, Burnside
+averages, or checked identity/compatibility conflicts as evidence for
+arbitrary group-action, orbit-stabilizer, Burnside/Cauchy-Frobenius,
+quotient-action, or representation-theory claims.

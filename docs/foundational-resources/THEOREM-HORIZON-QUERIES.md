@@ -135,6 +135,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Algebra, group-action, orbit-stabilizer, and Burnside/Cauchy-Frobenius
+horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-group-actions-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-group-actions-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Topology and algebraic-topology horizons:
 
 ```sh

@@ -217,6 +217,10 @@ The `finite-group-actions-v0` pack recomputes the action orbits
 `{00}`, `{01,10}`, and `{11}` and checks the Burnside average exactly, while
 exact replay rejects malformed identity and compatibility action tables before
 the explicit QF_UF/Alethe rows check the isolated equality conflicts.
+For the theorem boundary that keeps this finite orbit-counting replay separate
+from general orbit-stabilizer, Burnside/Cauchy-Frobenius, quotient-action, and
+representation-theory claims, read
+[Group Action Theorem Boundary](group-action-theorem-boundary.md).
 
 For graph coloring,
 encode a finite graph by listing vertices, undirected edges, allowed colors, and
@@ -348,8 +352,9 @@ For a fuller trace from data row to replay result and evidence status, read
 [Topological Sort Theorem Boundary](topological-sort-theorem-boundary.md),
 [End To End: DAG D-Separation Checks](graph-d-separation-end-to-end.md),
 [D-Separation Causal Trust Boundary](d-separation-causal-trust-boundary.md),
-[End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md), and
-[End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md).
+[End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md),
+[End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md), and
+[Group Action Theorem Boundary](group-action-theorem-boundary.md).
 For coefficient-level finite recurrence and convolution replay, read
 [End To End: Generating Functions](generating-functions-end-to-end.md). For
 finite recurrence-prefix and companion-matrix replay, read

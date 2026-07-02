@@ -2253,6 +2253,17 @@ Pick one row per commit unless the change is purely navigational.
      almost-everywhere theorem layers, and adds pack-specific checked-row and
      horizon-frontier queries to the public smoke gate without promoting finite
      product tables into theorem coverage.
+264. Landed: add `group-action-theorem-boundary.md` as the focused
+     finite/general group-action theorem-boundary page for
+     `finite-group-actions-v0`. It maps exact finite action-law replay,
+     orbit/stabilizer recomputation, orbit-stabilizer cardinality replay,
+     Burnside fixed-point averaging, replay-only bad identity/compatibility
+     rejection, and scoped QF_UF/Alethe identity-action/action-compatibility
+     evidence to the missing arbitrary group-action, orbit-stabilizer,
+     Burnside/Cauchy-Frobenius, quotient-action, transported-structure,
+     Sylow-action, class-equation, and representation-theory layers, and adds
+     pack-specific checked-row and horizon-frontier queries to the public
+     smoke gate without promoting finite action tables into theorem coverage.
 
 ## Validation Checklist
 

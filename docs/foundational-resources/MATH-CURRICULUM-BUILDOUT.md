@@ -1778,6 +1778,12 @@ action-law replay, orbit/stabilizer recomputation, orbit-stabilizer
 cardinality, Burnside fixed-point counting, exact bad identity-action and
 action-compatibility replay, explicit QF_UF/Alethe identity-action and
 compatibility rows, and a group-action Lean-horizon row.
+The focused `group-action-theorem-boundary.md` learner page now maps those
+finite action-law, orbit/stabilizer, Burnside-average, and bad
+identity/compatibility rows to the missing arbitrary group-action,
+orbit-stabilizer, Burnside/Cauchy-Frobenius, quotient-action,
+transported-structure, Sylow-action, class-equation, and representation-theory
+layers.
 `finite-monoids-v0` now adds the exact finite function/algebra bridge:
 monoid identity/associativity replay, transformation-composition table replay,
 unit and idempotent recomputation, exact bad-nonassociative-table replay, an
@@ -2972,6 +2978,17 @@ QF_LRA/Farkas rows are linked to copyable queries and graduation criteria
 while keeping proximal-map theory, subdifferential calculus,
 proximal-gradient convergence, rates, variants, and numerical stability claims
 in Lean/theorem-horizon lanes.
+The learner/planning layer now also has
+[`group-action-theorem-boundary.md`](../learn/math/group-action-theorem-boundary.md),
+which expands the finite group-action row into a concrete boundary ledger:
+exact action-law replay, orbit/stabilizer recomputation,
+orbit-stabilizer-cardinality replay, Burnside fixed-point averaging,
+replay-only bad identity/compatibility rejection, and checked QF_UF/Alethe
+identity-action/action-compatibility rows are linked to copyable queries and
+graduation criteria while keeping arbitrary group-action theory,
+orbit-stabilizer, Burnside/Cauchy-Frobenius, quotient actions, transported
+structure, Sylow actions, class equations, and representation theory in
+Lean/theorem-horizon lanes.
 The learner/planning layer now also has
 [`fubini-tonelli-theorem-boundary.md`](../learn/math/fubini-tonelli-theorem-boundary.md),
 which expands the finite product-measure row into a concrete boundary ledger:

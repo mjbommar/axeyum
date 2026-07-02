@@ -612,6 +612,11 @@ Companion maps:
   follows action-law replay, orbit/stabilizer recomputation, Burnside fixed-point
   counting, exact bad identity/compatibility replay, and explicit checked
   QF_UF/Alethe equality-conflict rows.
+- [Group Action Theorem Boundary](group-action-theorem-boundary.md): maps those
+  finite action-law, orbit/stabilizer, Burnside-average, and checked
+  equality-conflict rows to the missing orbit-stabilizer,
+  Burnside/Cauchy-Frobenius, quotient-action, and representation-theory proof
+  routes.
 - [Finite Order Lattices](finite-order-lattices-end-to-end.md): follows finite
   partial-order replay, meet/join recomputation, distributivity checks,
   monotone fixed-point replay, checked bad-order replay, explicit QF_UF/Alethe

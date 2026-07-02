@@ -110,6 +110,10 @@ or bilinearity conflict.
 For the theorem boundary that keeps finite vector-space, dual-space, module,
 and tensor rows separate from general structure theorems, read
 [Linear Algebra Structure Theorem Boundary](linear-algebra-structure-theorem-boundary.md).
+For the theorem boundary that keeps finite group-action and Burnside replay
+separate from orbit-stabilizer, Burnside/Cauchy-Frobenius, quotient-action,
+and representation-theory claims, read
+[Group Action Theorem Boundary](group-action-theorem-boundary.md).
 
 ## Encode / Check Walkthrough
 
@@ -430,6 +434,7 @@ data through replay, read
 [End To End: Finite Monoids](finite-monoids-end-to-end.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md),
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md),
+[Group Action Theorem Boundary](group-action-theorem-boundary.md),
 [End To End: Finite Rings](finite-rings-end-to-end.md),
 [End To End: Finite Fields](finite-fields-end-to-end.md),
 [End To End: QF_BV Bit-Blast Certificate Anatomy](qf-bv-bitblast-certificate-anatomy-end-to-end.md),

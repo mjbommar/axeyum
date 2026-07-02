@@ -770,7 +770,16 @@ Build sequence:
     Fubini, Tonelli, section-measurability, sigma-finite, and
     almost-everywhere theorem routes, with pack-specific checked-row and
     horizon-frontier queries.
-76. Revisit crate/repo boundaries only after three real consumers or repeated
+76. Landed: add the group-action theorem-boundary page.
+    `group-action-theorem-boundary.md` maps exact finite action-law replay,
+    orbit/stabilizer recomputation, Burnside fixed-point averaging, replay-only
+    bad identity/compatibility rejection, and checked QF_UF/Alethe bad
+    identity-action/action-compatibility evidence to the missing arbitrary
+    group-action, orbit-stabilizer, Burnside/Cauchy-Frobenius, quotient-action,
+    transported-structure, Sylow-action, class-equation, and
+    representation-theory theorem routes, with pack-specific checked-row and
+    horizon-frontier queries.
+77. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

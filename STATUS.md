@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Group-action theorem-boundary resource landed.**
+  `group-action-theorem-boundary.md` now separates
+  `finite-group-actions-v0` exact action-law replay, orbit/stabilizer
+  recomputation, Burnside fixed-point averaging, replay-only bad
+  identity/compatibility rejection, and checked QF_UF/Alethe
+  identity-action/action-compatibility evidence from arbitrary
+  group-action, orbit-stabilizer, Burnside/Cauchy-Frobenius, quotient-action,
+  Sylow-action, class-equation, representation-theory, and transported
+  structure claims. The theorem-horizon, algebra/discrete learner, algebra
+  query, consumer, and smoke-query docs now expose the finite group-action
+  boundary through pack-specific checked-row and horizon-frontier queries.
 - **Fubini/Tonelli theorem-boundary resource landed.**
   `fubini-tonelli-theorem-boundary.md` now separates
   `finite-product-measure-v0` exact Cartesian-product table replay, rectangle
