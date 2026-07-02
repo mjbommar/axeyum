@@ -324,6 +324,10 @@ python3 scripts/query-foundational-resources.py checks --pack linear-algebra-rat
 python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_rank_nullity --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-vector-spaces-v0 --route Alethe --proof-status checked --text addition-closure --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-vector-spaces-v0 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-dual-spaces-v0 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-modules-v0 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-tensor-products-v0 --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field abstract_algebra --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text "equality certificate" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field abstract_algebra --text homomorphism --require-any >/dev/null

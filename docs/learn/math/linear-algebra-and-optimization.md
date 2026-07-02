@@ -51,6 +51,7 @@ Companion index:
 
 - [Matrix Computation Index](matrix-computation-index.md)
 - [Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md)
+- [Linear Algebra Structure Theorem Boundary](linear-algebra-structure-theorem-boundary.md)
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
 
 ## What Axeyum Checks
@@ -80,7 +81,9 @@ generated submodules, module homomorphisms, kernel/image replay, quotient-module
 tables, and checked QF_UF/Alethe non-submodule rejection. The finite-tensor-product
 slice adds bilinear maps, finite universal-factorization shadows, Kronecker
 products, checked bad-bilinear replay, and explicit QF_UF/Alethe
-left-additivity evidence over `F2`. The
+left-additivity evidence over `F2`. Their shared theorem boundary is
+[Linear Algebra Structure Theorem Boundary](linear-algebra-structure-theorem-boundary.md).
+The
 numerical-linear-algebra slice adds exact residual bounds, rational interval
 boxes for solutions, and a one-step Jacobi contraction check, with a checked
 QF_LRA/Farkas bad residual, solution-box, and Jacobi-bound certificates. The finite-recurrence-prefix slice adds
@@ -763,6 +766,10 @@ replay, read
 [End To End: Finite Modules](finite-modules-end-to-end.md). For finite
 multilinear replay, read
 [End To End: Finite Tensor Products](finite-tensor-products-end-to-end.md). For
+the boundary between those finite table rows and general vector-space, duality,
+module, tensor, and homological-algebra theorems, read
+[Linear Algebra Structure Theorem Boundary](linear-algebra-structure-theorem-boundary.md).
+For
 finite Chebyshev-system interpolation and alternation replay, read
 [End To End: Finite Chebyshev Systems](finite-chebyshev-systems-end-to-end.md).
 
@@ -787,7 +794,9 @@ matrix coefficient conflicts use
 Rank-nullity, spectral theorems, Hilbert-space projection, Riesz
 representation, conditioning, and convergence of numerical algorithms remain
 [Lean Horizon](../../proof-cookbook/recipes/lean-horizon-template.md) or
-explicit numerical-honesty work, not consequences of these finite rows.
+explicit numerical-honesty work, not consequences of these finite rows. The
+finite vector/dual/module/tensor split is expanded in
+[Linear Algebra Structure Theorem Boundary](linear-algebra-structure-theorem-boundary.md).
 
 ## Horizon
 

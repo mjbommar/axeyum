@@ -562,7 +562,12 @@ duality/functional-analysis Lean-horizon row.
 `F2^2 tensor F2` basis/dimension replay, finite bilinear-map table replay,
 universal-factorization shadow through a linear map, Kronecker-product matrix
 replay, checked bad-bilinear replay, explicit QF_UF/Alethe left-additivity
-evidence, and a general tensor-theory Lean-horizon row.
+evidence, and a general tensor-theory Lean-horizon row. The focused
+`linear-algebra-structure-theorem-boundary.md` learner page now maps these
+finite vector-space, dual-space, module, and tensor rows to the missing basis,
+dimension, duality, tensor-product, exact-sequence, module, and
+homological-algebra theorem layers without promoting finite table replay into
+theorem coverage.
 `finite-ideals-v0` now adds the finite quotient-ring bridge with `Z/6Z`
 ideal replay, principal ideal generation, modulo-2 ring-homomorphism
 kernel/image replay, quotient-ring table replay, checked QF_UF/Alethe
@@ -1789,6 +1794,8 @@ bridge over `F2`: tensor-product basis/dimension replay, bilinear-map table
 replay, universal-factorization shadow through a linear map, Kronecker-product
 matrix replay, checked bad-bilinear replay, explicit QF_UF/Alethe
 left-additivity evidence, and a tensor-theory Lean-horizon row.
+`linear-algebra-structure-theorem-boundary.md` now gives those four packs a
+focused finite/general-structure trust map.
 `finite-ideals-v0` now adds the exact finite quotient-ring bridge over `Z/6Z`:
 ideal laws, principal ideal generation, modulo-2 ring-homomorphism
 kernel/image replay, quotient-ring tables, replayed non-ideal rejection,

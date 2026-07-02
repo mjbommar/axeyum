@@ -2130,6 +2130,15 @@ Pick one row per commit unless the change is purely navigational.
      and infinite cardinal-arithmetic layers, and adds cardinality-specific
      checked-row, route-specific, and horizon-frontier queries to the public
      smoke gate without promoting finite rows into theorem claims.
+252. Landed: add `linear-algebra-structure-theorem-boundary.md` as the focused
+     structure-theorem boundary for `finite-vector-spaces-v0`,
+     `finite-dual-spaces-v0`, `finite-modules-v0`, and
+     `finite-tensor-products-v0`. It maps finite table replay plus scoped
+     QF_UF/Alethe closure/additivity evidence to the missing basis, dimension,
+     duality, tensor-product, exact-sequence, module, and
+     homological-algebra theorem layers, and adds pack-specific
+     horizon-frontier queries to the public smoke gate without promoting
+     finite algebraic tables into theorem coverage.
 
 ## Validation Checklist
 

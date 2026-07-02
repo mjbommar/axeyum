@@ -181,8 +181,8 @@ it records route, pack, field, and text queries for `lean-horizon` rows so
 consumers can find theorem boundaries without treating them as checked SMT
 evidence; the public query script also exposes
 `horizon-frontier` for theorem-boundary rows with finite-shadow contrast,
-including finite/infinite cardinality, finite random-variable,
-recurrence/asymptotic, stochastic-kernel, and
+including finite/infinite cardinality, vector-space/duality/module/tensor
+structure, finite random-variable, recurrence/asymptotic, stochastic-kernel, and
 martingale/stopping theory, root-finding convergence/stability, and
 hyperplane-separation/duality, KKT sufficiency, active-set method theory, and
 SDP duality/Slater-condition theory, and gradient-descent convergence/rate
@@ -552,8 +552,10 @@ lookups, and checked rows for exact rational matrices, residual/eigen
 witnesses, finite vector spaces, dual spaces, modules, tensors, geometry
 dot-products, finite SDP/KKT/active-set rows, and matrix process equations are
 smoke-checked through the committed JSON contract, while spectral theorems,
-conditioning/stability, and general vector-space/module theorem claims stay in
-the horizon lanes.
+conditioning/stability, and general vector-space/module/tensor theorem claims
+stay in the horizon lanes; the focused
+[`linear-algebra-structure-theorem-boundary.md`](docs/learn/math/linear-algebra-structure-theorem-boundary.md)
+page now records that split for finite vector, dual, module, and tensor packs.
 The public foundational-resource consumer query layer now also exercises the
 core algebra/number/graph lanes: abstract-algebra Alethe readiness,
 homomorphism/ideal bridge lookups, concept-scoped homomorphism-preservation

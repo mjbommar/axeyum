@@ -107,6 +107,9 @@ It groups the finite rows where table replay finds the concrete failure and a
 separate QF_UF/Alethe certificate checks the isolated equality, congruence,
 closure, representative, preservation, identity-action, action-compatibility,
 or bilinearity conflict.
+For the theorem boundary that keeps finite vector-space, dual-space, module,
+and tensor rows separate from general structure theorems, read
+[Linear Algebra Structure Theorem Boundary](linear-algebra-structure-theorem-boundary.md).
 
 ## Encode / Check Walkthrough
 
@@ -435,6 +438,9 @@ For finite Hom/Ext bookkeeping, read
 For the route-selection boundary that decides when a finite algebra row earns a
 separate equality certificate, read
 [Algebra Equality Certificate Boundary](algebra-equality-certificate-boundary.md).
+For finite vector-space, dual-space, module, and tensor rows as theorem
+shadows, read
+[Linear Algebra Structure Theorem Boundary](linear-algebra-structure-theorem-boundary.md).
 
 ## Proof Upgrade Notes
 

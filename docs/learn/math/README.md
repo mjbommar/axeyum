@@ -540,6 +540,10 @@ Companion maps:
   finite tensor-basis replay, bilinear-map checks, factorization through a
   tensor map, Kronecker-product replay, checked bad-bilinear replay, and
   explicit QF_UF/Alethe left-additivity evidence.
+- [Linear Algebra Structure Theorem Boundary](linear-algebra-structure-theorem-boundary.md):
+  maps finite vector-space, dual-space, module, and tensor replay to the
+  missing basis, dimension, duality, tensor, exact-sequence, and
+  homological-algebra theorem layers.
 - [Finite Groups](finite-groups-end-to-end.md): follows `Z/4Z`
   Cayley-table replay, inverse-table replay, and checked rejection of
   subtraction modulo `3` as a group operation, plus a QF_UF/Alethe operation

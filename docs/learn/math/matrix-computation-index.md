@@ -14,6 +14,9 @@ For the focused finite-operator and Chebyshev slice, see
 [Chebyshev And Operator Replay Index](chebyshev-operator-index.md).
 For finite matrix-valued probability tables and moment replay, see
 [Random Matrix Moment Index](random-matrix-moment-index.md).
+For finite vector-space, dual-space, module, and tensor rows as theorem
+shadows, see
+[Linear Algebra Structure Theorem Boundary](linear-algebra-structure-theorem-boundary.md).
 
 Concept rows:
 
@@ -87,7 +90,9 @@ universal coefficient theorems, exact sequences, Ext/Tor laws, cohomology
 operation laws, cohomology-ring quotienting, or cohomology invariance. Those
 claims remain Lean-horizon or
 numerical-honesty work until there is a kernel-checked or explicitly
-experimental artifact.
+experimental artifact. The vector-space, duality, module, and tensor part of
+that boundary is expanded in
+[Linear Algebra Structure Theorem Boundary](linear-algebra-structure-theorem-boundary.md).
 
 ## Focused Lessons
 
@@ -100,6 +105,7 @@ experimental artifact.
 - [Finite Dual Spaces](finite-dual-spaces-end-to-end.md)
 - [Finite Modules](finite-modules-end-to-end.md)
 - [Finite Tensor Products](finite-tensor-products-end-to-end.md)
+- [Linear Algebra Structure Theorem Boundary](linear-algebra-structure-theorem-boundary.md)
 - [Finite Simplicial Cohomology](finite-simplicial-cohomology-end-to-end.md)
 - [Finite Simplicial Cup Products](finite-simplicial-cup-products-end-to-end.md)
 - [Finite Chain-Complex Torsion](finite-chain-complex-torsion-end-to-end.md)

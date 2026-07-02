@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Linear-algebra structure theorem-boundary resource landed.**
+  `linear-algebra-structure-theorem-boundary.md` now separates
+  `finite-vector-spaces-v0`, `finite-dual-spaces-v0`, `finite-modules-v0`,
+  and `finite-tensor-products-v0` finite table replay plus scoped
+  QF_UF/Alethe closure/additivity evidence from general basis, dimension,
+  duality, tensor-product, exact-sequence, module, and homological-algebra
+  theorem claims. The linear-algebra, algebra, matrix, theorem-horizon, and
+  smoke-query docs now expose the boundary through pack-specific checked-row,
+  Alethe-route, and horizon-frontier queries.
+
 - **Cardinality theorem-boundary resource landed.**
   `cardinality-theorem-boundary.md` now separates
   `finite-cardinality-v0` and `cardinality-principles-v0` checked finite
