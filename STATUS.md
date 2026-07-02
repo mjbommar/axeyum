@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Recurrence/asymptotic theorem-boundary resource landed.**
+  `recurrence-asymptotic-theorem-boundary.md` now separates
+  `finite-recurrence-prefix-v0` finite Fibonacci prefix replay, affine
+  recurrence replay, companion-matrix state replay, and checked bad
+  Fibonacci-value/bad affine-step QF_LRA/Farkas rows from
+  induction-over-all-`n`, closed-form, asymptotic-growth, convergence, and
+  stability theorem claims. The theorem horizon, analysis/numerical,
+  foundations/discrete, learner-map, and smoke query docs now expose the
+  recurrence boundary directly.
+
 - **Stochastic-kernel theorem-boundary resource landed.**
   `stochastic-kernel-theorem-boundary.md` now separates
   `finite-stochastic-kernels-v0` finite row-normalization replay,

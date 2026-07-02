@@ -32,6 +32,7 @@ Example packs:
 Companion map:
 
 - [Graph Traversal Runtime Index](graph-traversal-runtime-index.md)
+- [Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md)
 
 ## What Axeyum Checks
 
@@ -143,6 +144,10 @@ Fibonacci companion-matrix trace. Its malformed source rows reject `F_6 = 9`
 after replay computes `F_6 = 8`, and reject `x_4 = 14` after affine recurrence
 replay computes `x_4 = 15`; separate `qf-lra-*` rows own the checked proof
 artifacts.
+For the theorem boundary that keeps finite recurrence prefixes,
+generating-function coefficient rows, and finite traversal counters separate
+from closed-form, asymptotic, and big-O claims, read
+[Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md).
 
 For orbit counting,
 first encode finite permutations as bijections:

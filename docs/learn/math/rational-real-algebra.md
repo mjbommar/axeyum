@@ -45,6 +45,7 @@ Example packs:
 Companion map:
 
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
+- [Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md)
 
 ## What Axeyum Checks
 
@@ -178,6 +179,9 @@ step, checks an affine recurrence prefix, and checks a companion-matrix state
 trace. Its malformed source rows reject `F_6 = 9` after replay computes
 `F_6 = 8`, and reject `x_4 = 14` after affine replay computes `x_4 = 15`;
 separate `qf-lra-*` rows own the checked proof artifacts.
+For the theorem boundary that keeps those finite prefixes separate from
+closed-form, asymptotic-growth, convergence, and stability claims, read
+[Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md).
 
 For finite root finding, keep the claim as one exact rational algorithm step:
 

@@ -2229,6 +2229,10 @@ contradictions through the same Farkas evidence path.
 affine-step source rows as replay-only rows after exact recurrence replay
 computes `F_6 = 8` and `x_4 = 15`; separate checked `qf-lra-*` rows route the
 fixed scalar contradictions through the same Farkas evidence path.
+It also has a focused recurrence/asymptotic theorem-boundary page that keeps
+finite prefix, companion-matrix, and checked bad-row Farkas evidence separate
+from induction-over-all-`n`, closed-form, asymptotic-growth, convergence, and
+stability claims.
 `finite-root-finding-v0` now keeps its bad Newton-step and bad
 bisection-width source rows as replay-only rows after exact replay computes
 the next iterate `17/12`, selected width `1/2`, and width excess `1/6`;
@@ -2666,6 +2670,15 @@ finite monotone prefixes, finite prefix suprema, finite tail gaps, checked bad
 upper-bound and bad tail-gap Farkas rows, the `monotone-convergence-lean-horizon`
 metadata row, copyable queries, and graduation criteria for a future no-`sorry`
 Lean theorem route.
+The learner/planning layer now also has
+[`recurrence-asymptotic-theorem-boundary.md`](../learn/math/recurrence-asymptotic-theorem-boundary.md),
+which narrows the recurrence/asymptotic boundary to
+`finite-recurrence-prefix-v0`: finite Fibonacci prefix replay, affine
+recurrence replay, companion-matrix state replay, checked bad Fibonacci-value
+and bad affine-step Farkas rows, the
+`general-recurrence-theory-lean-horizon` metadata row, copyable queries, and
+graduation criteria for future no-`sorry` induction-over-all-`n`,
+closed-form, asymptotic-growth, convergence, and stability routes.
 The learner/planning layer now also has
 [`hitting-time-theorem-boundary.md`](../learn/math/hitting-time-theorem-boundary.md),
 which narrows the stochastic-process theorem boundary to

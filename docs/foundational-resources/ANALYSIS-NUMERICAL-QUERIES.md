@@ -203,6 +203,10 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text recurrence \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
   --text ODE \
   --require-any
 ```
@@ -324,6 +328,12 @@ For the bounded monotone sequence boundary, read
 [Monotone Convergence Theorem Boundary](../learn/math/monotone-convergence-theorem-boundary.md)
 before displaying general monotone convergence, supremum, or real-completeness
 claims next to exact rational finite-prefix and finite-tail rows.
+
+For the finite recurrence/asymptotic boundary, read
+[Recurrence And Asymptotic Theorem Boundary](../learn/math/recurrence-asymptotic-theorem-boundary.md)
+before displaying induction-over-all-`n`, closed-form, asymptotic-growth,
+convergence, stability, or big-O language next to finite recurrence prefixes,
+companion-matrix traces, or finite cost counters.
 
 They do not prove:
 

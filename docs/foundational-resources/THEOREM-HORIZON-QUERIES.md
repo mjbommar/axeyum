@@ -233,6 +233,19 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Recurrence, closed-form, asymptotic-growth, and stability horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text recurrence \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-recurrence-prefix-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Hitting-time, recurrence/transience, and stochastic-process horizons:
 
 ```sh
@@ -297,6 +310,7 @@ The main learner maps that explain these boundaries are:
 - [Analysis And Calculus Theorem Horizon Map](../learn/math/analysis-calculus-theorem-horizon-map.md)
 - [Real Completeness Theorem Boundary](../learn/math/real-completeness-theorem-boundary.md)
 - [Monotone Convergence Theorem Boundary](../learn/math/monotone-convergence-theorem-boundary.md)
+- [Recurrence And Asymptotic Theorem Boundary](../learn/math/recurrence-asymptotic-theorem-boundary.md)
 - [Random Variable Theorem Boundary](../learn/math/random-variable-theorem-boundary.md)
 - [Stochastic Kernel Theorem Boundary](../learn/math/stochastic-kernel-theorem-boundary.md)
 - [Hitting-Time Theorem Boundary](../learn/math/hitting-time-theorem-boundary.md)

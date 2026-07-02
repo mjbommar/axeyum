@@ -66,6 +66,7 @@ Companion map:
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
 - [Metric Balls And Epsilon-Delta Index](metric-ball-epsilon-delta-index.md)
 - [Monotone Convergence Theorem Boundary](monotone-convergence-theorem-boundary.md)
+- [Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md)
 - [Hitting-Time Theorem Boundary](hitting-time-theorem-boundary.md)
 
 ## What Axeyum Checks
@@ -202,6 +203,10 @@ and reject the false affine-step claim `x_4 = 14` after exact replay computes
 `x_4 = 15`; separate `qf-lra-*` proof rows own the checked Farkas artifacts.
 This is finite recurrence evidence, not a closed form, asymptotic
 estimate, or convergence theorem.
+For the theorem boundary that keeps finite recurrence prefixes and
+companion-matrix traces separate from induction-over-all-`n`, closed-form,
+asymptotic-growth, convergence, and stability claims, read
+[Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md).
 
 For a finite root-finding shadow, encode one exact bisection update and one
 Newton update:

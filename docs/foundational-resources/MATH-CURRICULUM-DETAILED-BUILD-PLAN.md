@@ -1914,6 +1914,14 @@ Pick one row per commit unless the change is purely navigational.
      stochastic-process theorem routes, and adds stochastic-kernel-specific
      horizon queries to the public smoke gate without adding a duplicate pack
      or changing resource counts.
+228. Landed: add `recurrence-asymptotic-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-recurrence-prefix-v0`. It maps finite
+     Fibonacci prefix replay, affine recurrence replay, companion-matrix state
+     replay, and checked QF_LRA/Farkas bad Fibonacci-value and bad affine-step
+     rows to the missing induction-over-all-`n`, closed-form,
+     asymptotic-growth, convergence, and stability theorem routes, and adds
+     recurrence-specific horizon queries to the public smoke gate without
+     adding a duplicate pack or changing resource counts.
 
 ## Validation Checklist
 

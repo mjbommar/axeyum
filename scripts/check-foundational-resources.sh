@@ -203,6 +203,8 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_finite_d
 python3 scripts/query-foundational-resources.py checks --pack finite-recurrence-prefix-v0 --route Farkas --proof-status checked --text qf-lra-bad-fibonacci-value --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-recurrence-prefix-v0 --route Farkas --proof-status checked --text qf-lra-bad-affine-step --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-recurrence-prefix-v0 --proof-status replay-only --text rejected --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text recurrence --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-recurrence-prefix-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_stochastic_kernel --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack bounded-dynamics-v0 --route Farkas --proof-status checked --text qf-lra-bad-transition-step --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack bounded-dynamics-v0 --route Farkas --proof-status checked --text qf-lra-bad-threshold-step --require-any >/dev/null

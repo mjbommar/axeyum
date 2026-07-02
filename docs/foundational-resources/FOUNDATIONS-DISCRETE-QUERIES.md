@@ -76,6 +76,7 @@ for finite counting and bounded arithmetic obligations.
 | Finite Boolean algebra rows | `bridge_finite_boolean_algebra` | `boolean` | `checks --concept bridge_finite_boolean_algebra --route boolean --proof-status checked` |
 | Finite order and lattice rows | pack `finite-order-lattices-v0` | `Alethe`; `boolean` | `checks --pack finite-order-lattices-v0 --route Alethe --proof-status checked --text antisymmetry`; `checks --pack finite-order-lattices-v0 --route boolean --proof-status checked --text top` |
 | Finite counting, pigeonhole, binomial, and generating-function rows | `bridge_finite_counting_replay` | `Diophantine`; `boolean` | `checks --concept bridge_finite_counting_replay --route Diophantine --proof-status checked`; `checks --concept bridge_finite_counting_replay --route boolean --proof-status checked` |
+| Finite recurrence and asymptotic-boundary shadows | `bridge_bounded_family_asymptotic_boundary`; pack `finite-recurrence-prefix-v0` | `Farkas`; `LIA` | `checks --concept bridge_bounded_family_asymptotic_boundary --route Farkas --proof-status checked`; `horizon-frontier --text recurrence` |
 | Partition/equivalence and quotient rows | `bridge_partition_relation_roundtrip` | `Alethe` | `checks --concept bridge_partition_relation_roundtrip --route Alethe --proof-status checked` |
 | Finite image/preimage/inverse and function-table rows | `bridge_finite_image_preimage_inverse` | `Alethe` | `checks --concept bridge_finite_image_preimage_inverse --route Alethe --proof-status checked` |
 
@@ -175,6 +176,25 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Display finite recurrence and asymptotic-boundary rows:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-recurrence-prefix-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_bounded_family_asymptotic_boundary \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text recurrence \
+  --require-any
+```
+
 Display finite partition, relation, function, image, and preimage rows:
 
 ```sh
@@ -234,6 +254,12 @@ These queries prove discoverability of finite checked foundations and discrete
 rows, not theorem coverage. They can support a catalog, learner page,
 route-specific regression search, or sibling resource that wants examples by
 finite proof or finite structure family.
+
+For the finite recurrence/asymptotic boundary, read
+[Recurrence And Asymptotic Theorem Boundary](../learn/math/recurrence-asymptotic-theorem-boundary.md)
+before displaying closed-form, recurrence-solving, induction-over-all-`n`,
+asymptotic enumeration, or big-O language next to finite recurrence prefixes,
+generating-function coefficient rows, or finite graph-search counters.
 
 They do not prove:
 

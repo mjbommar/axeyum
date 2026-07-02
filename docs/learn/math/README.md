@@ -89,6 +89,10 @@ Companion maps:
 - [Monotone Convergence Theorem Boundary](monotone-convergence-theorem-boundary.md):
   separates bounded-monotone finite prefix, finite supremum, finite tail-gap,
   and checked bad-row evidence from the general monotone convergence theorem.
+- [Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md):
+  separates finite recurrence-prefix, companion-matrix, and checked bad-row
+  evidence from induction over all `n`, closed forms, asymptotics,
+  convergence, and stability theorem targets.
 - [Metric Balls And Epsilon-Delta Index](metric-ball-epsilon-delta-index.md):
   connects bounded rational balls, finite metric continuity, sequence-tail
   shadows, finite compactness, finite connectedness, and open-preimage replay.
@@ -231,6 +235,9 @@ Companion maps:
   state replay, replay-only bad-value and bad affine-step source rows with
   separate checked `qf-lra-*` Farkas proof rows, and the general
   recurrence-theory Lean horizon.
+- [Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md):
+  maps those finite prefix and matrix-state shadows to the missing induction,
+  closed-form, asymptotic-growth, convergence, and stability proof routes.
 - [Finite Root Finding](finite-root-finding-end-to-end.md): follows one exact
   bisection bracket update, one Newton iterate, residual decrease replay,
   replay-only bad-step and bad bisection-width source rows, separate checked
