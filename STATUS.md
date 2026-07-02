@@ -15191,6 +15191,17 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-02** — **Strings: 5 gate-downgraded unsats recovered**
+  (`a264681a`): a step-1a pure-LIA projection in the gate (drop non-Int
+  abstracted assertions on an unknown full solve — sound weakening), exact
+  `s = "" ⟺ len = 0` equality facts, and an unbounded-reachability
+  regex-emptiness fold (`L(R) = ∅ ⟹ in_re = false`). **Committed re-measure:
+  QF_S 48→52 (PAR-2 6.68→5.56), QF_SLIA 11→12, QF_SEQ 26, DISAGREE=0**; 8 new
+  regression tests (recovery + must-still-downgrade pairs); the remaining 16
+  downgrades are classified per-instance as Phase-B work (regex decision
+  procedure, lexicographic reasoning) in ADR-0052's follow-up section. Two
+  suggested coarseness relaxations were REJECTED as unsound with written
+  arguments (exact-interval `in_re`; packed-seq decode wouldn't move targets).
 - **2026-07-02** — **NRA `/0` division witnesses** (`124e18aa`): `Assignment`
   carries a `real_div_zero` interpretation (numerator→quotient) the evaluator
   consults at denominator 0; `check_with_nra` builds it from the elimination
