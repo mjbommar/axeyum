@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 664 expected checks.
+- 666 expected checks.
 - 322 checked proof/evidence rows.
-- 271 replay-only rows.
+- 273 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1107,13 +1107,15 @@ Pick one row per commit unless the change is purely navigational.
      checks the fixed false final bounds without claiming Chernoff/Hoeffding/
      LLN/CLT, martingale concentration, asymptotics, or general limit
      theorems.
-126. Landed: extend `finite-stochastic-kernels-v0` with a checked bad
-     composition-entry row. Exact two-step kernel replay computes
-     `(K;L)(rainy, early)=22/75`, while the malformed source SMT-LIB artifact
-     claims `1/3`; the shared QF_LRA/Farkas route now checks both kernel-row
-     normalization and kernel-composition contradictions without claiming
-     regular conditional probabilities, general disintegration, Markov kernels
-     on arbitrary measurable spaces, or stochastic-process convergence.
+126. Landed: split `finite-stochastic-kernels-v0` so bad kernel-row and
+     composition-entry rows remain exact replay, while
+     `qf-lra-bad-kernel-row` and `qf-lra-bad-kernel-composition` own the
+     checked proof-object refutations. Exact finite replay computes the
+     malformed row sum `6/5` and `(K;L)(rainy, early)=22/75`; the shared
+     QF_LRA/Farkas route checks the fixed false final obligations without
+     claiming regular conditional probabilities, general disintegration,
+     Markov kernels on arbitrary measurable spaces, or stochastic-process
+     convergence.
 127. Landed: split `finite-hitting-times-v0` so exact bad survival-mass and
      bad expected-time rows remain replay-only, while
      `qf-lra-bad-survival-mass` and `qf-lra-bad-expected-time` own the checked

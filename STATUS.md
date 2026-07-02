@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite stochastic-kernel Farkas rows split landed.**
+  `finite-stochastic-kernels-v0` now keeps `bad-kernel-row-rejected` and
+  `bad-kernel-composition-rejected` as exact finite replay: they recompute the
+  rainy row sum as `6/5` instead of accepting `1`, and the composed
+  rainy-to-early entry as `22/75` instead of accepting `1/3`. The checked
+  proof-object paths are now the explicit `qf-lra-bad-kernel-row` and
+  `qf-lra-bad-kernel-composition` rows linked to the QF_LRA/Farkas SMT-LIB
+  artifacts and regressions. Focused validation passes; the public summary now
+  reports 120 concept rows, 108 packs, 666 expected checks, 322 checked rows,
+  273 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite concentration Farkas rows split landed.**
   `finite-concentration-v0` now keeps `bad-concentration-bound-rejected` and
   `bad-union-bound-rejected` as exact finite replay: they recompute
@@ -1011,10 +1022,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   276 checked rows, 249 replay-only rows, and 71 Lean-horizon rows.
 
 - **Finite stochastic-kernel composition QF_LRA row landed.**
-  `finite-stochastic-kernels-v0` now includes a checked bad composed-entry row:
-  exact kernel-composition replay computes `(K;L)(rainy, early) = 22/75`, then
-  rejects the malformed claim `(K;L)(rainy, early) = 1/3` through a source
-  SMT-LIB artifact on the shared QF_LRA/Farkas route. The validator pins both
+  `finite-stochastic-kernels-v0` now includes a checked
+  `qf-lra-bad-kernel-composition` row: exact kernel-composition replay computes
+  `(K;L)(rainy, early) = 22/75`, then the QF_LRA/Farkas artifact rejects the
+  fixed malformed claim `(K;L)(rainy, early) = 1/3`. The validator pins both
   component kernels, the recomputed composed kernel, the bad source/target
   entry, artifact path, and regression; the shared `math_resource_lra_routes`
   regression parses the artifact and checks `UnsatFarkas` evidence. Generated
@@ -3754,9 +3765,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`finite-stochastic-kernels-end-to-end.md`](docs/learn/math/finite-stochastic-kernels-end-to-end.md)
   as the learner-facing trace for the finite-stochastic-kernels pack:
   row-normalized finite kernels, pushforward distributions, joint
-  factorization/disintegration, kernel composition, checked bad kernel-row
-  rejection, and the regular-conditional-probability Lean horizon. The lesson
-  is linked from the math learning index plus the probability/statistics path.
+  factorization/disintegration, kernel composition, replayed malformed
+  kernel-row/composed-entry rejections, separate checked QF_LRA/Farkas
+  proof-object rows, and the regular-conditional-probability Lean horizon. The
+  lesson is linked from the math learning index plus the probability/statistics
+  path.
 
 - **Finite-martingales end-to-end lesson landed.** Added
   [`finite-martingales-end-to-end.md`](docs/learn/math/finite-martingales-end-to-end.md)

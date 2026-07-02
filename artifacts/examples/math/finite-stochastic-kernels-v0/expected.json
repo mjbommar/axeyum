@@ -116,8 +116,8 @@
       "id": "bad-kernel-row-rejected",
       "claim": "The malformed weather-to-commute table is a stochastic kernel.",
       "expected_result": "unsat",
-      "validation": "finite_bad_kernel_row_refutation",
-      "proof_status": "checked",
+      "validation": "finite_bad_kernel_row_replay",
+      "proof_status": "replay-only",
       "data": {
         "source": ["sunny", "rainy"],
         "target": ["walk", "bus"],
@@ -126,18 +126,35 @@
           {"source": "rainy", "probabilities": {"walk": "3/5", "bus": "3/5"}}
         ],
         "row_sums": {"sunny": "1", "rainy": "6/5"},
-        "bad_source": "rainy",
-        "smt2_artifact": "artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-kernel-row-farkas-conflict.smt2",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_stochastic_kernel_bad_row_emits_checked_farkas"
+        "bad_source": "rainy"
       },
-      "notes": "The validator rejects the row because its probabilities sum to 6/5; the Axeyum regression refutes rainy_row_sum = rainy_walk + rainy_bus, rainy_walk = 3/5, rainy_bus = 3/5, rainy_row_sum = 1 with rechecked Farkas evidence."
+      "notes": "The validator rejects the row because its probabilities sum to 6/5. The separate qf-lra-bad-kernel-row row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-kernel-row",
+      "claim": "The fixed malformed kernel-row normalization claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_bad_kernel_row_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "weather-commute-kernel",
+        "source_replay_row": "bad-kernel-row-rejected",
+        "bad_source": "rainy",
+        "actual_row_sum": "6/5",
+        "claimed_row_sum": "1",
+        "farkas_row_sum_equation": "rainy_row_sum = rainy_walk + rainy_bus",
+        "smt2_artifact": "artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-kernel-row-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_stochastic_kernel_bad_row_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "The source SMT-LIB artifact isolates the final exact-linear contradiction after finite replay computes the rainy row sum as 6/5."
     },
     {
       "id": "bad-kernel-composition-rejected",
       "claim": "The listed weather-to-arrival composition has rainy-to-early probability 1/3.",
       "expected_result": "unsat",
-      "validation": "finite_bad_kernel_composition_refutation",
-      "proof_status": "checked",
+      "validation": "finite_bad_kernel_composition_replay",
+      "proof_status": "replay-only",
       "data": {
         "source": ["sunny", "rainy"],
         "middle": ["walk", "bus"],
@@ -157,11 +174,29 @@
         "bad_source": "rainy",
         "bad_target": "early",
         "actual_probability": "22/75",
-        "claimed_probability": "1/3",
-        "smt2_artifact": "artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-composition-entry-farkas-conflict.smt2",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_stochastic_kernel_bad_composition_artifact_emits_checked_farkas"
+        "claimed_probability": "1/3"
       },
-      "notes": "The validator rejects the composed-entry claim because exact kernel composition gives (rainy, early) = 22/75; the Axeyum regression refutes the final linear claim rainy_early = 1/3 with rechecked Farkas evidence."
+      "notes": "The validator rejects the composed-entry claim because exact kernel composition gives (rainy, early) = 22/75. The separate qf-lra-bad-kernel-composition row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-kernel-composition",
+      "claim": "The fixed malformed kernel-composition entry claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_bad_kernel_composition_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "weather-arrival-composition",
+        "source_replay_row": "bad-kernel-composition-rejected",
+        "bad_source": "rainy",
+        "bad_target": "early",
+        "actual_probability": "22/75",
+        "claimed_probability": "1/3",
+        "farkas_composition_equation": "rainy_early = actual_probability",
+        "smt2_artifact": "artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-composition-entry-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_stochastic_kernel_bad_composition_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "The source SMT-LIB artifact isolates the final exact-linear contradiction after finite replay computes the rainy-to-early probability as 22/75."
     },
     {
       "id": "general-kernel-lean-horizon",

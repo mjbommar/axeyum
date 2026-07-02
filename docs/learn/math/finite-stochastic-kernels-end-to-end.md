@@ -24,7 +24,10 @@ Concept rows:
 | `kernel-pushforward-witness` | `sat` | replay-only |
 | `joint-disintegration-witness` | `sat` | replay-only |
 | `kernel-composition-witness` | `sat` | replay-only |
-| `bad-kernel-row-rejected` | `unsat` | checked |
+| `bad-kernel-row-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-kernel-row` | `unsat` | checked |
+| `bad-kernel-composition-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-kernel-composition` | `unsat` | checked |
 | `general-kernel-lean-horizon` | `not-run` | lean-horizon |
 
 Every checked row is exact finite rational arithmetic over labeled finite
@@ -167,6 +170,53 @@ and rejects the row because:
 The candidate kernel is untrusted; the small checker rebuilds row sums and
 finite pushforward/factorization equations from the listed rational table.
 
+The checked `qf-lra-bad-kernel-row` row then isolates the final linear
+contradiction:
+
+```text
+rainy_row_sum = rainy_walk + rainy_bus
+rainy_walk = 3/5
+rainy_bus = 3/5
+rainy_row_sum = 1
+```
+
+The source table replay is not trusted to be a proof object. The trusted part
+is the independently rechecked `UnsatFarkas` certificate for this fixed
+linear arithmetic obligation.
+
+## Reject A Malformed Composition Entry
+
+The negative composition row reuses the weather-to-arrival composition but
+claims:
+
+```text
+KL(rainy, early) = 1/3
+```
+
+The checker recomputes:
+
+```text
+KL(rainy, early) = (1/5)*(2/3) + (4/5)*(1/5)
+                 = 22/75
+```
+
+and rejects the claim because:
+
+```text
+22/75 != 1/3
+```
+
+The checked `qf-lra-bad-kernel-composition` row isolates the final
+contradiction:
+
+```text
+75 * rainy_early = 22
+rainy_early = 1/3
+```
+
+The regression parses the committed SMT-LIB artifact and accepts the result
+only after the emitted `UnsatFarkas` evidence is rechecked.
+
 ## Name The Lean Horizon
 
 The finite pack checks:
@@ -178,7 +228,8 @@ pushforward distributions through kernels
 joint-table factorization
 kernel recovery by finite disintegration
 finite kernel composition
-bad kernel-row and bad composition-entry refutations
+replayed bad kernel-row and composition-entry rejections
+separate checked QF_LRA/Farkas refutations
 ```
 
 The following remain proof-assistant targets:
@@ -199,6 +250,8 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-stochastic-kernels-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_stochastic_kernel_bad_row_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_stochastic_kernel_bad_composition_artifact_emits_checked_farkas
 ```
 
 Expected output:
@@ -220,4 +273,5 @@ remaining horizon -> general Markov-kernel and disintegration theory
 The graduation target is to encode finite kernels as labeled source-to-target
 probability tables, replay normalization, pushforward, joint factorization,
 disintegration, and composition by exact rational sums, and emit checked
-counterexample evidence for malformed kernel rows.
+QF_LRA/Farkas evidence for malformed kernel rows and composition entries in
+separate proof-object rows.

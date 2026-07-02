@@ -1143,8 +1143,8 @@ Recommended order:
     separate QF_LRA/Farkas bad stopped-expectation/martingale proof rows.
 29. `finite-stochastic-kernels-v0`: finite source-to-target kernels,
     pushforward distributions, joint disintegration replay, kernel
-    composition, and QF_LRA/Farkas bad kernel-row and bad composition-entry
-    rejections.
+    composition, replayed bad kernel-row/composition-entry rejections, and
+    separate QF_LRA/Farkas proof rows.
 30. `finite-hitting-times-v0`: finite first-hit distributions, survival
     probabilities, absorption-probability equations, expected hitting-time
     equations, bad survival-mass/expected-time replay, and separate
@@ -1954,8 +1954,9 @@ stopped-expectation and martingale rejection with QF_LRA/Farkas evidence, and
 the general martingale Lean horizon.
 `finite-stochastic-kernels-v0` now has a learner-facing end-to-end lesson for
 row-normalized finite kernels, pushforward distributions, joint
-factorization/disintegration, kernel composition, checked QF_LRA/Farkas bad
-kernel-row rejection, and the regular-conditional-probability Lean horizon.
+factorization/disintegration, kernel composition, replayed bad kernel-row and
+composition-entry rejections, separate checked QF_LRA/Farkas final-obligation
+refutations, and the regular-conditional-probability Lean horizon.
 `finite-hitting-times-v0` now has a learner-facing end-to-end lesson for finite
 absorbing-chain first-hit distributions, survival mass, absorption equations,
 expected hitting-time equations, checked QF_LRA/Farkas bad survival-mass and
@@ -2098,10 +2099,12 @@ finite replay computes `mu({a}) = 1/6`, `mu({a,b}) = 1/2`, and
 `finite-markov-chain-v0` now routes its bad stochastic-row and
 bad stationary-distribution rejections through the same checked Farkas evidence
 path after exact replay computes the row sum and the next distribution.
-`finite-stochastic-kernels-v0` now routes its bad kernel-row and bad
-composition-entry rejections through the same checked Farkas evidence path
-after exact replay computes the malformed row sum `3/5 + 3/5 = 6/5` and the
-composed transition `(K;L)(rainy, early) = 22/75`.
+`finite-stochastic-kernels-v0` now keeps its bad kernel-row and bad
+composition-entry rejections as exact replay, while
+`qf-lra-bad-kernel-row` and `qf-lra-bad-kernel-composition` carry checked
+Farkas evidence after exact replay computes the malformed row sum
+`3/5 + 3/5 = 6/5` and the composed transition
+`(K;L)(rainy, early) = 22/75`.
 `finite-hitting-times-v0` now keeps its bad survival-mass and bad expected-time
 rows as exact finite replay, while `qf-lra-bad-survival-mass` and
 `qf-lra-bad-expected-time` carry source-linked checked Farkas evidence after

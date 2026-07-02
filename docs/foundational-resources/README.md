@@ -608,8 +608,9 @@ schemas, examples, and validation workflows.
   row.
 - [`artifacts/examples/math/finite-stochastic-kernels-v0/`](../../artifacts/examples/math/finite-stochastic-kernels-v0/)
   validates exact finite stochastic kernels, pushforward distributions, joint
-  table factorization/disintegration, finite kernel composition, checked
-  rejection of a malformed kernel row and malformed composed entry, and a
+  table factorization/disintegration, finite kernel composition, replay-only
+  rejection of malformed kernel-row and composed-entry tables, separate checked
+  QF_LRA/Farkas rows for the isolated linear conflicts, and a
   regular-conditional-probability Lean-horizon row.
 - [`artifacts/examples/math/finite-hitting-times-v0/`](../../artifacts/examples/math/finite-hitting-times-v0/)
   validates exact finite first-hit distributions, survival probabilities,

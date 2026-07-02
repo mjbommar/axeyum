@@ -343,8 +343,9 @@ First targets:
   (source-linked solver-reuse promotions landed for the bad high-block,
   total-expectation, tower-property, and variance-decomposition tables)
 - [finite-stochastic-kernels-v0](../../artifacts/examples/math/finite-stochastic-kernels-v0/)
-  (resource-backed Farkas regressions landed for the bad kernel-row
-  normalization conflict and bad composed-entry conflict)
+  (exact replay remains in the bad kernel-row and bad composed-entry rows;
+  resource-backed Farkas regressions now live in `qf-lra-bad-kernel-row` and
+  `qf-lra-bad-kernel-composition`)
 - [finite-euler-method-v0](../../artifacts/examples/math/finite-euler-method-v0/)
   (source-linked solver-reuse promotions landed for the bad max-error bound,
   bad terminal-error, and bad fixed-step transition)

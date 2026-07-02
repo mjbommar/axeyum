@@ -33,6 +33,13 @@ The validator recomputes the composed finite kernel
 Expected result: `unsat`.
 
 The validator rejects the malformed row because one source row sums to `6/5`.
+This row is replay-only; the separate `qf-lra-bad-kernel-row` row owns the
+proof-object refutation.
+
+## `qf-lra-bad-kernel-row`
+
+Expected result: `unsat`.
+
 The source-linked QF_LRA artifact isolates the exact-rational contradiction and
 the `math_resource_lra_routes` regression checks Axeyum's emitted Farkas
 evidence independently.
@@ -42,9 +49,16 @@ evidence independently.
 Expected result: `unsat`.
 
 The validator recomputes the composed transition
-`(K;L)(rainy, early) = 22/75`, so the claimed value `1/3` is false. The
-source-linked QF_LRA artifact isolates the final exact-rational contradiction
-`75 * rainy_early = 22` and `rainy_early = 1/3`, and the
+`(K;L)(rainy, early) = 22/75`, so the claimed value `1/3` is false.
+This row is replay-only; the separate `qf-lra-bad-kernel-composition` row owns
+the proof-object refutation.
+
+## `qf-lra-bad-kernel-composition`
+
+Expected result: `unsat`.
+
+The source-linked QF_LRA artifact isolates the final exact-rational
+contradiction `75 * rainy_early = 22` and `rainy_early = 1/3`, and the
 `math_resource_lra_routes` regression checks Axeyum's emitted Farkas evidence
 independently.
 

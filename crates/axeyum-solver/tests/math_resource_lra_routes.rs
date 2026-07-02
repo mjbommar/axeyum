@@ -316,6 +316,9 @@ const FINITE_CONDITIONAL_EXPECTATION_BAD_VARIANCE_DECOMPOSITION: &str = include_
 const FINITE_MARTINGALES_BAD_STOPPED_EXPECTATION: &str = include_str!(
     "../../../artifacts/examples/math/finite-martingales-v0/smt2/bad-stopped-expectation-farkas-conflict.smt2"
 );
+const FINITE_STOCHASTIC_KERNEL_BAD_ROW: &str = include_str!(
+    "../../../artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-kernel-row-farkas-conflict.smt2"
+);
 const FINITE_STOCHASTIC_KERNEL_BAD_COMPOSITION: &str = include_str!(
     "../../../artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-composition-entry-farkas-conflict.smt2"
 );
@@ -1511,26 +1514,10 @@ fn finite_conditional_expectation_bad_variance_decomposition_artifact_emits_chec
 }
 
 #[test]
-fn finite_stochastic_kernel_bad_row_emits_checked_farkas() {
-    let mut arena = TermArena::new();
-    let rainy_walk = real(&mut arena, "rainy_walk");
-    let rainy_bus = real(&mut arena, "rainy_bus");
-    let rainy_row_sum = real(&mut arena, "rainy_row_sum");
-    let rainy_walk_is_three_fifths = eq_ratio(&mut arena, rainy_walk, 3, 5);
-    let rainy_bus_is_three_fifths = eq_ratio(&mut arena, rainy_bus, 3, 5);
-    let row_entries_sum = arena.real_add(rainy_walk, rainy_bus).unwrap();
-    let row_sum_matches_entries = arena.eq(rainy_row_sum, row_entries_sum).unwrap();
-    let row_sum_is_one = eq_ratio(&mut arena, rainy_row_sum, 1, 1);
-
-    assert_farkas_checked(
-        "finite-stochastic-kernels-v0 bad-kernel-row-rejected",
-        &arena,
-        &[
-            rainy_walk_is_three_fifths,
-            rainy_bus_is_three_fifths,
-            row_sum_matches_entries,
-            row_sum_is_one,
-        ],
+fn finite_stochastic_kernel_bad_row_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-stochastic-kernels-v0 bad-kernel-row SMT-LIB artifact",
+        FINITE_STOCHASTIC_KERNEL_BAD_ROW,
     );
 }
 

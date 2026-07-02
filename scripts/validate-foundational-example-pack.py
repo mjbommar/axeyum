@@ -24215,6 +24215,10 @@ def validate_finite_stochastic_kernels(expected: dict[str, Any]) -> None:
     bad = checks["bad-kernel-row-rejected"]
     if bad["expected_result"] != "unsat":
         fail("bad-kernel-row-rejected must expect unsat")
+    if bad["proof_status"] != "replay-only":
+        fail("bad-kernel-row-rejected must be replay-only")
+    if bad["validation"] != "finite_bad_kernel_row_replay":
+        fail("bad-kernel-row-rejected must use finite_bad_kernel_row_replay validation")
     data = bad.get("data", {})
     source_ids = require_string_list("bad kernel source", data.get("source"))
     target_ids = require_string_list("bad kernel target", data.get("target"))
@@ -24234,15 +24238,53 @@ def validate_finite_stochastic_kernels(expected: dict[str, Any]) -> None:
         fail("bad-kernel-row-rejected bad_source is not in the source set")
     if row_sums[bad_source] == 1:
         fail("bad-kernel-row-rejected bad row unexpectedly sums to 1")
-    require_string("bad kernel smt2_artifact", data.get("smt2_artifact"))
-    check_source("bad kernel smt2_artifact", data["smt2_artifact"])
-    require_string("bad kernel farkas_regression", data.get("farkas_regression"))
-    if "finite_stochastic_kernel_bad_row_emits_checked_farkas" not in data["farkas_regression"]:
-        fail("bad-kernel-row-rejected must link the Farkas regression")
+    notes = bad.get("notes", "")
+    if "separate qf-lra-bad-kernel-row" not in notes:
+        fail("bad-kernel-row-rejected notes must name the separate qf-lra-bad-kernel-row row")
+
+    qf_bad_row = checks["qf-lra-bad-kernel-row"]
+    if qf_bad_row["expected_result"] != "unsat":
+        fail("qf-lra-bad-kernel-row must expect unsat")
+    if qf_bad_row["proof_status"] != "checked":
+        fail("qf-lra-bad-kernel-row must be checked")
+    if qf_bad_row["validation"] != "qf_lra_bad_kernel_row_refutation":
+        fail("qf-lra-bad-kernel-row must use qf_lra_bad_kernel_row_refutation validation")
+    qf_data = qf_bad_row.get("data", {})
+    if qf_data.get("source_witness") != "weather-commute-kernel":
+        fail("qf-lra-bad-kernel-row must cite weather-commute-kernel")
+    if qf_data.get("source_replay_row") != "bad-kernel-row-rejected":
+        fail("qf-lra-bad-kernel-row must cite bad-kernel-row-rejected")
+    if qf_data.get("bad_source") != bad_source:
+        fail("qf-lra-bad-kernel-row bad_source must match replay")
+    actual_row_sum = require_fraction("qf-lra bad kernel actual_row_sum", qf_data.get("actual_row_sum"))
+    claimed_row_sum = require_fraction("qf-lra bad kernel claimed_row_sum", qf_data.get("claimed_row_sum"))
+    if actual_row_sum != row_sums[bad_source]:
+        fail("qf-lra-bad-kernel-row actual_row_sum must match replay")
+    if claimed_row_sum != 1:
+        fail("qf-lra-bad-kernel-row claimed_row_sum must be 1")
+    equation = qf_data.get("farkas_row_sum_equation")
+    require_string("qf-lra bad kernel farkas_row_sum_equation", equation)
+    if equation != "rainy_row_sum = rainy_walk + rainy_bus":
+        fail("qf-lra-bad-kernel-row must document the Farkas row-sum equation")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad kernel smt2_artifact", smt2_artifact)
+    check_source("qf-lra bad kernel smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad kernel farkas_regression", regression)
+    if "finite_stochastic_kernel_bad_row_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-kernel-row must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad kernel certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-kernel-row certificate must document checked UnsatFarkas evidence")
 
     bad_composition = checks["bad-kernel-composition-rejected"]
     if bad_composition["expected_result"] != "unsat":
         fail("bad-kernel-composition-rejected must expect unsat")
+    if bad_composition["proof_status"] != "replay-only":
+        fail("bad-kernel-composition-rejected must be replay-only")
+    if bad_composition["validation"] != "finite_bad_kernel_composition_replay":
+        fail("bad-kernel-composition-rejected must use finite_bad_kernel_composition_replay validation")
     data = bad_composition.get("data", {})
     source_ids = require_string_list("bad kernel composition source", data.get("source"))
     middle_ids = require_string_list("bad kernel composition middle", data.get("middle"))
@@ -24291,11 +24333,53 @@ def validate_finite_stochastic_kernels(expected: dict[str, Any]) -> None:
         fail("bad-kernel-composition-rejected actual_probability is incorrect")
     if actual_probability == claimed_probability:
         fail("bad-kernel-composition-rejected must document a false composed probability")
-    require_string("bad kernel composition smt2_artifact", data.get("smt2_artifact"))
-    check_source("bad kernel composition smt2_artifact", data["smt2_artifact"])
-    require_string("bad kernel composition farkas_regression", data.get("farkas_regression"))
-    if "finite_stochastic_kernel_bad_composition_artifact_emits_checked_farkas" not in data["farkas_regression"]:
-        fail("bad-kernel-composition-rejected must link the Farkas regression")
+    notes = bad_composition.get("notes", "")
+    if "separate qf-lra-bad-kernel-composition" not in notes:
+        fail("bad-kernel-composition-rejected notes must name the separate qf-lra-bad-kernel-composition row")
+
+    qf_bad_composition = checks["qf-lra-bad-kernel-composition"]
+    if qf_bad_composition["expected_result"] != "unsat":
+        fail("qf-lra-bad-kernel-composition must expect unsat")
+    if qf_bad_composition["proof_status"] != "checked":
+        fail("qf-lra-bad-kernel-composition must be checked")
+    if qf_bad_composition["validation"] != "qf_lra_bad_kernel_composition_refutation":
+        fail("qf-lra-bad-kernel-composition must use qf_lra_bad_kernel_composition_refutation validation")
+    qf_data = qf_bad_composition.get("data", {})
+    if qf_data.get("source_witness") != "weather-arrival-composition":
+        fail("qf-lra-bad-kernel-composition must cite weather-arrival-composition")
+    if qf_data.get("source_replay_row") != "bad-kernel-composition-rejected":
+        fail("qf-lra-bad-kernel-composition must cite bad-kernel-composition-rejected")
+    if qf_data.get("bad_source") != bad_source:
+        fail("qf-lra-bad-kernel-composition bad_source must match replay")
+    if qf_data.get("bad_target") != bad_target:
+        fail("qf-lra-bad-kernel-composition bad_target must match replay")
+    qf_actual_probability = require_fraction(
+        "qf-lra bad kernel composition actual_probability",
+        qf_data.get("actual_probability"),
+    )
+    qf_claimed_probability = require_fraction(
+        "qf-lra bad kernel composition claimed_probability",
+        qf_data.get("claimed_probability"),
+    )
+    if qf_actual_probability != actual_probability:
+        fail("qf-lra-bad-kernel-composition actual_probability must match replay")
+    if qf_claimed_probability != claimed_probability:
+        fail("qf-lra-bad-kernel-composition claimed_probability must match replay")
+    equation = qf_data.get("farkas_composition_equation")
+    require_string("qf-lra bad kernel composition farkas_composition_equation", equation)
+    if equation != "rainy_early = actual_probability":
+        fail("qf-lra-bad-kernel-composition must document the Farkas composition equation")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad kernel composition smt2_artifact", smt2_artifact)
+    check_source("qf-lra bad kernel composition smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad kernel composition farkas_regression", regression)
+    if "finite_stochastic_kernel_bad_composition_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-kernel-composition must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad kernel composition certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-kernel-composition certificate must document checked UnsatFarkas evidence")
 
     horizon = checks["general-kernel-lean-horizon"]
     if horizon["expected_result"] != "not-run":

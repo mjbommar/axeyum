@@ -54,7 +54,10 @@ Concept rows:
 | `kernel-pushforward-witness` | `sat` | replay-only |
 | `joint-disintegration-witness` | `sat` | replay-only |
 | `kernel-composition-witness` | `sat` | replay-only |
-| `bad-kernel-row-rejected` | `unsat` | checked |
+| `bad-kernel-row-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-kernel-row` | `unsat` | checked |
+| `bad-kernel-composition-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-kernel-composition` | `unsat` | checked |
 | `markov-inequality-witness` | `sat` | replay-only |
 | `chebyshev-inequality-witness` | `sat` | replay-only |
 | `union-bound-witness` | `sat` | replay-only |
@@ -311,8 +314,10 @@ K(sunny, walk) = P(sunny, walk) / mu(sunny) = 3/4
 ```
 
 It also checks row normalization, target marginals, recovery of kernel rows
-from a finite joint table, kernel composition, and a malformed row that sums to
-`6/5`.
+from a finite joint table, kernel composition, a malformed row that sums to
+`6/5`, and a malformed composed-entry claim. The source rejections are
+replay-only; the fixed final contradictions live in separate checked
+QF_LRA/Farkas rows.
 
 For a fuller focused trace, read
 [End To End: Finite Stochastic Kernels](finite-stochastic-kernels-end-to-end.md).

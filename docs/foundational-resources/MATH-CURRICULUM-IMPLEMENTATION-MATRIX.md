@@ -357,7 +357,7 @@ Build sequence:
     `bad-interpolation-sample-rejected` plus
     `bad-alternating-residual-rejected` to source-level QF_LRA/Farkas
     artifacts, checked by the `math_resource_lra_routes` regression.
-    `finite-stochastic-kernels-v0` now links `bad-kernel-row-rejected` to
+    `finite-stochastic-kernels-v0` now links `qf-lra-bad-kernel-row` to
     `artifacts/examples/math/finite-stochastic-kernels-v0/smt2/bad-kernel-row-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
     `finite-ideals-v0` now links
