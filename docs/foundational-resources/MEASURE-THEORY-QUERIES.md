@@ -145,6 +145,10 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text random-variable \
+  --require-any
 ```
 
 Display martingale, stochastic-kernel, hitting-time, and concentration rows:
@@ -193,6 +197,12 @@ For the finite martingale boundary, read
 before treating finite filtration, submartingale, bounded-stopping, or checked
 bad-row resources as evidence for martingale convergence, optional stopping,
 Doob inequalities, stochastic integration, or continuous-time martingales.
+
+For the finite random-variable boundary, read
+[Random Variable Theorem Boundary](../learn/math/random-variable-theorem-boundary.md)
+before treating finite pushforward, expectation, independence, or checked
+bad-row resources as evidence for general measurable-random-variable,
+distribution-law, convergence, or continuous-distribution claims.
 
 They do not prove:
 

@@ -2011,6 +2011,11 @@ finite random-variable functions, pushforward distributions, expectation
 through pushforwards, finite independence, replayed bad pushforward and
 bad expectation-through-pushforward rejection, separate checked QF_LRA rows,
 and the general random-variable Lean horizon.
+It also has a focused random-variable theorem-boundary page that keeps finite
+total-function replay, pushforward distributions, expectation-through-pushforward
+replay, independence checks, and checked bad-row Farkas evidence
+separate from measurable-function, distribution-law, convergence,
+conditional-expectation, and continuous random-variable claims.
 `finite-conditional-expectation-v0` now has a learner-facing end-to-end lesson
 for finite conditioning partitions, blockwise conditional expectations, total
 expectation replay, tower-property replay, conditional-variance decomposition,
@@ -2665,6 +2670,16 @@ equations, checked bad survival-mass and bad expected-time Farkas rows, the
 `general-hitting-theory-lean-horizon` metadata row, copyable queries, and
 graduation criteria for future no-`sorry` recurrence/transience,
 optional-stopping, mixing, and potential-theory routes.
+The learner/planning layer now also has
+[`random-variable-theorem-boundary.md`](../learn/math/random-variable-theorem-boundary.md),
+which narrows the measure/probability theorem boundary to
+`finite-random-variables-v0`: finite total-function replay, pushforward
+distributions, expectation-through-pushforward replay, independence checks,
+checked bad pushforward and bad expectation Farkas rows, the
+`general-random-variable-lean-horizon` metadata row, copyable queries, and
+graduation criteria for future no-`sorry` measurable-function,
+distribution-law, convergence, conditional-expectation, and continuous
+random-variable routes.
 The learner/planning layer now also has
 [`martingale-theorem-boundary.md`](../learn/math/martingale-theorem-boundary.md),
 which narrows the stochastic-process theorem boundary to

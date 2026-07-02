@@ -164,7 +164,7 @@ it records route, pack, field, and text queries for `lean-horizon` rows so
 consumers can find theorem boundaries without treating them as checked SMT
 evidence; the public query script also exposes
 `horizon-frontier` for theorem-boundary rows with finite-shadow contrast,
-including finite martingale/stopping theory.
+including finite random-variable and martingale/stopping theory.
 The solver-reuse query guide is
 [`docs/foundational-resources/SOLVER-REUSE-QUERIES.md`](docs/foundational-resources/SOLVER-REUSE-QUERIES.md);
 it records promoted-pack, proof-route, field, and checked-row queries for

@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Random-variable theorem-boundary resource landed.**
+  `random-variable-theorem-boundary.md` now separates
+  `finite-random-variables-v0` finite total-function replay, pushforward
+  distributions, expectation-through-pushforward replay, independence checks,
+  and checked bad pushforward/bad expectation QF_LRA/Farkas rows from
+  measurable-function, distribution-law, convergence, conditional-expectation,
+  and continuous-random-variable theorem claims. The theorem horizon,
+  probability/statistics, measure-theory, learner-map, and smoke query docs now
+  expose the random-variable boundary directly.
+
 - **Martingale theorem-boundary resource landed.**
   `martingale-theorem-boundary.md` now separates
   `finite-martingales-v0` finite filtration/adaptedness replay,

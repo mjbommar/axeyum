@@ -168,6 +168,19 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Random-variable, distribution-law, and measurability horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text random-variable \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-random-variables-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Concentration and asymptotic-statistics horizons:
 
 ```sh
@@ -271,6 +284,7 @@ The main learner maps that explain these boundaries are:
 - [Analysis And Calculus Theorem Horizon Map](../learn/math/analysis-calculus-theorem-horizon-map.md)
 - [Real Completeness Theorem Boundary](../learn/math/real-completeness-theorem-boundary.md)
 - [Monotone Convergence Theorem Boundary](../learn/math/monotone-convergence-theorem-boundary.md)
+- [Random Variable Theorem Boundary](../learn/math/random-variable-theorem-boundary.md)
 - [Hitting-Time Theorem Boundary](../learn/math/hitting-time-theorem-boundary.md)
 - [Martingale Theorem Boundary](../learn/math/martingale-theorem-boundary.md)
 - [Chebyshev Theorem Boundary](../learn/math/chebyshev-theorem-boundary.md)

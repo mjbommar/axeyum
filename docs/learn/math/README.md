@@ -54,6 +54,10 @@ Companion maps:
   matrices, rank-mixture probabilities, checked bad trace-square and
   expected-rank Farkas evidence, and
   random-matrix asymptotic horizons.
+- [Random Variable Theorem Boundary](random-variable-theorem-boundary.md):
+  separates finite total-function, pushforward, expectation, independence,
+  and checked bad-row replay from measurable-random-variable, distribution-law,
+  convergence, and continuous-random-variable theorem targets.
 - [Concentration Theorem Boundary](concentration-theorem-boundary.md):
   separates finite Markov, Chebyshev, union-bound, and bad-tail replay from
   Chernoff, Hoeffding, martingale concentration, limit-theorem, and
@@ -496,6 +500,10 @@ Companion maps:
   through pushforwards, finite independence, replayed bad pushforward and
   bad expectation-through-pushforward rejection, separate checked QF_LRA rows,
   and the general random-variable Lean horizon.
+- [Random Variable Theorem Boundary](random-variable-theorem-boundary.md):
+  maps those finite pushforward, expectation, independence, and checked bad-row
+  shadows to the missing measurable-function, distribution-law, convergence,
+  and continuous-random-variable proof routes.
 - [Finite Conditional Expectation](finite-conditional-expectation-end-to-end.md):
   follows finite conditioning partitions, blockwise conditional expectations,
   total-expectation replay, tower-property replay, checked QF_LRA/Farkas bad

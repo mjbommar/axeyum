@@ -30,6 +30,7 @@ Example packs:
 Companion map:
 
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
+- [Random Variable Theorem Boundary](random-variable-theorem-boundary.md)
 - [Hitting-Time Theorem Boundary](hitting-time-theorem-boundary.md)
 - [Martingale Theorem Boundary](martingale-theorem-boundary.md)
 - [Concentration Theorem Boundary](concentration-theorem-boundary.md)
@@ -144,6 +145,14 @@ and finite independence of two random variables over a four-atom table. It
 rejects the malformed expectation row `E[X] = 25` because both exact replay
 routes compute `E[X] = 20`; the separate `qf-lra-*` rows check the final linear
 pushforward and expectation conflicts through `UnsatFarkas`.
+
+For a focused finite random-variable trace, read
+[End To End: Finite Random Variables](finite-random-variables-end-to-end.md).
+For the theorem boundary that keeps finite total-function, pushforward,
+expectation, independence, and checked bad-row resources separate from
+measurable-function, distribution-law, convergence, and continuous random
+variable claims, read
+[Random Variable Theorem Boundary](random-variable-theorem-boundary.md).
 Conditional expectation checks partition averages such as:
 
 ```text
@@ -325,8 +334,6 @@ For the single-pack finite-probability table story, read
 [End To End: Finite Probability Mass Tables](finite-probability-mass-tables-end-to-end.md).
 For the diagnostic-test Bayes posterior and checked bad-posterior row, read
 [End To End: Finite Bayes Update](finite-bayes-update-end-to-end.md).
-For a focused finite random-variable trace, read
-[End To End: Finite Random Variables](finite-random-variables-end-to-end.md).
 For a focused finite conditional-expectation trace, read
 [End To End: Finite Conditional Expectation](finite-conditional-expectation-end-to-end.md).
 For exact simple-function integration over finite atom tables, read

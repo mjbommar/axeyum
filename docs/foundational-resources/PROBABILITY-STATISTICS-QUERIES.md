@@ -115,6 +115,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Display finite random-variable rows, then the theorem boundary:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-random-variables-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text random-variable \
+  --require-any
+```
+
 Display finite concentration rows, then the theorem boundary:
 
 ```sh
@@ -248,6 +262,12 @@ For the finite concentration boundary in particular, read
 [Concentration Theorem Boundary](../learn/math/concentration-theorem-boundary.md)
 before displaying Chernoff, Hoeffding, martingale concentration, limit-theorem,
 or asymptotic-statistics language next to the finite rows.
+
+For the finite random-variable boundary, read
+[Random Variable Theorem Boundary](../learn/math/random-variable-theorem-boundary.md)
+before displaying measurable-function, distribution-law, convergence,
+continuous-random-variable, or density-calculus language next to finite
+pushforward, expectation, and independence rows.
 
 For the finite hitting-time boundary, read
 [Hitting-Time Theorem Boundary](../learn/math/hitting-time-theorem-boundary.md)
