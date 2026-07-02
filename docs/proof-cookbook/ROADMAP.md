@@ -268,6 +268,9 @@ Current status: the six active curriculum-facing recipes for Boolean CNF/LRAT,
 QF_BV bit-blast, QF_LIA/Diophantine, QF_LRA/Farkas, QF_UF/Alethe, and Lean
 horizons now each include a `Math Examples Using This Route` section linking
 the proof route back to concrete foundational math packs.
+Malformed source rows can be discovered through
+[Rejection Case Queries](../foundational-resources/REJECTION-CASE-QUERIES.md);
+checker-tamper behavior remains documented in the route recipes themselves.
 
 ## Graduation Criteria
 

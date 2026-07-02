@@ -1694,6 +1694,11 @@ Pick one row per commit unless the change is purely navigational.
      QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, promoted solver-reuse, and
      Lean-horizon pack/row drilldowns while keeping QF_NRA/NIA as future
      pressure lanes until stable resource rows expose them.
+198. Landed: add `REJECTION-CASE-QUERIES.md` as the focused malformed-claim
+     and rejection-row query guide. It records executable checked/replay-only
+     rejection rows plus Farkas, Alethe, QF_BV, Boolean, and Diophantine
+     bad-row drilldowns while keeping public resource rows separate from
+     proof-cookbook checker-tamper regressions.
 
 ## Validation Checklist
 

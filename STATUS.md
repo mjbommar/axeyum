@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Rejection-case query guide landed.**
+  `REJECTION-CASE-QUERIES.md` now documents how reviewers and proof
+  contributors find checked and replay-only malformed-claim rows, plus
+  route-scoped bad-row drilldowns for Farkas, Alethe, QF_BV, Boolean, and
+  Diophantine evidence. It explicitly separates public resource-row rejection
+  from proof-cookbook checker-tamper regressions. The foundational resource
+  smoke script now checks representative rejection-row and route-scoped bad-row
+  queries. The public summary remains 121 concept rows, 75 bridge concepts,
+  108 packs, 688 expected checks, 322 checked rows, 295 replay-only rows, and
+  71 Lean-horizon rows.
+
 - **Fragment-demand query guide landed.**
   `FRAGMENT-DEMAND-QUERIES.md` now documents how solver, proof, benchmark, and
   curriculum contributors query the math-resource corpus by public fragment

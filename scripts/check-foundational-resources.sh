@@ -34,6 +34,15 @@ python3 scripts/query-foundational-resources.py packs --fragment Lean --proof-st
 python3 scripts/query-foundational-resources.py checks --fragment Lean --proof-status lean-horizon --expected-result not-run --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --fragment QF_LRA --solver-reuse promoted --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --fragment QF_UF --solver-reuse promoted --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --text rejected --proof-status checked --expected-result unsat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --text rejected --proof-status replay-only --expected-result unsat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --text rejected --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --text rejected --proof-status replay-only --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --text bad --route Farkas --proof-status checked --expected-result unsat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --text bad --route Alethe --proof-status checked --expected-result unsat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --text bad --route qf-bv --proof-status checked --expected-result unsat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --text bad --route boolean --proof-status checked --expected-result unsat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --text bad --route Diophantine --proof-status checked --expected-result unsat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --proof-status checked --expected-result unsat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --proof-status checked --expected-result sat --require-any >/dev/null

@@ -95,6 +95,9 @@ claim.
 Use [Fragment Demand Queries](FRAGMENT-DEMAND-QUERIES.md) when a contributor
 needs SMT-fragment drilldowns before mining resources for solver, proof, or
 benchmark pressure.
+Use [Rejection Case Queries](REJECTION-CASE-QUERIES.md) when a reviewer needs
+malformed-claim row discovery before auditing checker-tamper behavior in the
+proof cookbook.
 
 ## Build Waves
 

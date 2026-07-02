@@ -34,6 +34,8 @@ The focused guide for status-first trust-boundary queries is
 [TRUST-BOUNDARY-QUERIES.md](TRUST-BOUNDARY-QUERIES.md).
 The focused guide for SMT-fragment demand queries is
 [FRAGMENT-DEMAND-QUERIES.md](FRAGMENT-DEMAND-QUERIES.md).
+The focused guide for malformed-claim and route-scoped rejection queries is
+[REJECTION-CASE-QUERIES.md](REJECTION-CASE-QUERIES.md).
 
 Every resource should reinforce Axeyum's identity: untrusted fast search,
 trusted small checking. Bounded examples are useful, but they must stay visibly
@@ -371,6 +373,9 @@ Near-term boundary:
 - [FRAGMENT-DEMAND-QUERIES.md](FRAGMENT-DEMAND-QUERIES.md) is the fragment
   demand guide for contributors mining Bool, QF_BV, QF_LIA, QF_LRA, QF_UF,
   finite replay, and Lean-horizon pressure through public JSON rows.
+- [REJECTION-CASE-QUERIES.md](REJECTION-CASE-QUERIES.md) is the malformed-row
+  guide for reviewers and proof contributors that need checked/replay-only
+  rejection examples before following proof-cookbook tamper tests.
 - No Rust crate or separate repository until at least one real consumer needs
   typed APIs, release cadence, or large external corpora.
 

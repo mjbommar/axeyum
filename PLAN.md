@@ -184,6 +184,10 @@ it records fragment-scoped pack and row queries for Bool, QF_BV, QF_LIA,
 QF_LRA, QF_UF, finite replay, and Lean-horizon resources so solver and proof
 contributors can mine curriculum pressure without turning it into parity
 evidence.
+The rejection-case query guide is
+[`docs/foundational-resources/REJECTION-CASE-QUERIES.md`](docs/foundational-resources/REJECTION-CASE-QUERIES.md);
+it records malformed-claim and route-scoped rejection queries while keeping
+public resource rows separate from proof-cookbook tamper tests.
 The curriculum-node query guide is
 [`docs/foundational-resources/CURRICULUM-NODE-QUERIES.md`](docs/foundational-resources/CURRICULUM-NODE-QUERIES.md);
 it records concept, pack, field, route, checked-row, and horizon drilldowns for
