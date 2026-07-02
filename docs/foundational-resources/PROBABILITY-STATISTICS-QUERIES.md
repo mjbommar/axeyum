@@ -115,6 +115,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Display finite concentration rows, then the theorem boundary:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-concentration-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text concentration \
+  --require-any
+```
+
 Display checked finite measure rows:
 
 ```sh
@@ -201,6 +215,11 @@ These queries prove discoverability of finite checked probability/statistics
 rows, not theorem coverage. They can support a catalog, learner page,
 solver-regression search, or sibling resource that needs examples by finite
 probability object family.
+
+For the finite concentration boundary in particular, read
+[Concentration Theorem Boundary](../learn/math/concentration-theorem-boundary.md)
+before displaying Chernoff, Hoeffding, martingale concentration, limit-theorem,
+or asymptotic-statistics language next to the finite rows.
 
 They do not prove:
 

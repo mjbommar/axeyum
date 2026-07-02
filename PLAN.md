@@ -347,13 +347,15 @@ order/lattice counterexamples queryable as one checked bridge concept with a
 learner-facing replay guide and a consumer query guide, without changing pack
 or check totals. The theorem-horizon lane now also has a consumer query guide
 for finding `lean-horizon` rows by route, field, pack, and topic while keeping
-them out of checked-evidence claims. The solver-reuse lane now also has a
-consumer query guide for finding promoted packs by proof route, field, and
-checked row while keeping educational resources separate from benchmark and
-parity claims. The proof-upgrade lane now also has a consumer query guide for
-finding replay-only rows, route-relevant packs, checked evidence contrasts,
-curriculum-node/R5 slices, and Lean horizons before promoting another
-certificate row. The curriculum-node
+them out of checked-evidence claims, and focused boundary pages for real
+completeness, Chebyshev/operator theory, and finite concentration now keep
+finite checked shadows separate from general theorem targets. The solver-reuse
+lane now also has a consumer query guide for finding promoted packs by proof
+route, field, and checked row while keeping educational resources separate from
+benchmark and parity claims. The proof-upgrade lane now also has a consumer
+query guide for finding replay-only rows, route-relevant packs, checked
+evidence contrasts, curriculum-node/R5 slices, and Lean horizons before
+promoting another certificate row. The curriculum-node
 lane now also has a consumer query guide for starting from nodes such as
 `sets`, `linear-algebra`, `modular-arithmetic`, and `calculus`, then drilling
 into concepts, packs, checked rows, and theorem horizons. The

@@ -1857,6 +1857,13 @@ Pick one row per commit unless the change is purely navigational.
      Haar-space, minimax, alternation, compactness, and function-space theorem
      route, and adds Chebyshev-specific horizon queries to the public smoke
      gate without adding a duplicate pack or changing resource counts.
+221. Landed: add `concentration-theorem-boundary.md` as the focused
+     theorem-boundary page for the finite concentration cluster. It maps
+     finite Markov, Chebyshev, union-bound, bad-tail, and bad-union replay to
+     the missing Chernoff, Hoeffding, martingale-concentration,
+     limit-theorem, and asymptotic-statistics routes, and adds
+     concentration-specific horizon queries to the public smoke gate without
+     adding a duplicate pack or changing resource counts.
 
 ## Validation Checklist
 

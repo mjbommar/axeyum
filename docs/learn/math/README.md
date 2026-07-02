@@ -54,6 +54,10 @@ Companion maps:
   matrices, rank-mixture probabilities, checked bad trace-square and
   expected-rank Farkas evidence, and
   random-matrix asymptotic horizons.
+- [Concentration Theorem Boundary](concentration-theorem-boundary.md):
+  separates finite Markov, Chebyshev, union-bound, and bad-tail replay from
+  Chernoff, Hoeffding, martingale concentration, limit-theorem, and
+  asymptotic-statistics targets.
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md):
   maps finite analysis, calculus, optimization, measure, dynamics, and operator
   shadows to their missing Lean/theorem reconstruction routes.
@@ -495,6 +499,10 @@ Companion maps:
   replayed bad tail and union-bound rejections, separate checked
   QF_LRA/Farkas final-bound refutations, and the general concentration Lean
   horizon.
+- [Concentration Theorem Boundary](concentration-theorem-boundary.md): maps
+  those finite tail and union-bound shadows to the missing Chernoff,
+  Hoeffding, martingale-concentration, limit-theorem, and
+  asymptotic-statistics proof routes.
 - [Finite Markov Chains](finite-markov-chain-end-to-end.md): follows exact
   row-stochastic transition matrices, finite-horizon distribution replay,
   stationary distributions, replayed bad transition-row and stationary

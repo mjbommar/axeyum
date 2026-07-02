@@ -30,6 +30,7 @@ Example packs:
 Companion map:
 
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
+- [Concentration Theorem Boundary](concentration-theorem-boundary.md)
 
 ## What Axeyum Checks
 
@@ -216,7 +217,11 @@ Chebyshev's inequality, the union bound, and rejects a false claim such as
 computes `P(A union B) = 3/4`.
 
 For a focused finite concentration trace, read
-[End To End: Finite Concentration](finite-concentration-end-to-end.md).
+[End To End: Finite Concentration](finite-concentration-end-to-end.md). For
+the theorem boundary that keeps these finite Markov, Chebyshev, and union-bound
+rows separate from Chernoff, Hoeffding, martingale concentration, limit
+theorems, and asymptotic statistics, read
+[Concentration Theorem Boundary](concentration-theorem-boundary.md).
 
 For finite martingales, it checks a two-step fair walk against its natural
 filtration:

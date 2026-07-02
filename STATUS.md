@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Concentration theorem-boundary resource landed.**
+  `concentration-theorem-boundary.md` now separates finite Markov,
+  Chebyshev, union-bound, bad-tail, and bad-union replay from Chernoff,
+  Hoeffding, martingale concentration, limit-theorem, and
+  asymptotic-statistics targets. The probability/statistics learner path,
+  theorem-horizon query guide, probability/statistics query guide, and
+  foundational smoke gate now expose the concentration-specific horizon row
+  next to its checked finite QF_LRA/Farkas shadows. This is a
+  learner/query-depth increment over an existing promoted pack; public
+  resource counts do not change.
+
 - **Chebyshev theorem-boundary resource landed.**
   `chebyshev-theorem-boundary.md` now separates finite Chebyshev recurrence,
   Vandermonde, interpolation, and alternating-residual replay from Haar-space,

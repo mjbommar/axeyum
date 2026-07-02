@@ -1943,6 +1943,12 @@ interpolation, and alternating-residual replay separate from Haar-space,
 minimax, alternation, compactness, and function-space theorem targets, and
 links the public horizon query for the Chebyshev row to the existing checked
 finite QF_LRA/Farkas shadows.
+`finite-concentration-v0` now also has a focused concentration theorem-boundary
+page. It keeps finite Markov, Chebyshev, union-bound, bad-tail, and bad-union
+replay separate from Chernoff, Hoeffding, martingale-concentration,
+limit-theorem, and asymptotic-statistics targets, and links the public horizon
+query for the concentration row to the existing checked finite QF_LRA/Farkas
+shadows.
 `equivalence-classes-v0` now has an Alethe certificate anatomy lesson that
 follows the quotient-map congruence conflict through source SMT-LIB, emitted
 zero-trust `UnsatAletheProof` evidence, and same-artifact truncated-proof
