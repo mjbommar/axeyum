@@ -259,6 +259,10 @@ Companion maps:
   grid replay, stationarity and complementary-slackness replay, checked
   QF_LRA/Farkas bad-stationarity and bad-complementarity rejection, and the
   general KKT sufficiency Lean horizon.
+- [KKT Sufficiency Theorem Boundary](kkt-sufficiency-theorem-boundary.md):
+  maps those finite stationarity and complementarity shadows to the missing
+  KKT necessity, KKT sufficiency, constraint-qualification, duality, and
+  convergence theorem routes.
 - [Finite Active-Set QP Checks](finite-active-set-qp-end-to-end.md): follows
   unconstrained minimizer replay, active-face candidate replay, inactive
   constraint slack, degenerate active-bound replay, checked QF_LRA/Farkas

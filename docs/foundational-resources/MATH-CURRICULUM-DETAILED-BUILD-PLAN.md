@@ -1940,6 +1940,15 @@ Pick one row per commit unless the change is purely navigational.
      KKT sufficiency, and optimization theorem routes, and adds
      separation-specific horizon queries to the public smoke gate without
      adding a duplicate pack or changing resource counts.
+231. Landed: add `kkt-sufficiency-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-kkt-v0`. It maps finite
+     constrained-quadratic grid replay, stationarity replay,
+     complementary-slackness replay, and checked QF_LRA/Farkas bad
+     stationarity and bad complementarity rows to the missing KKT necessity,
+     KKT sufficiency, constraint-qualification, duality, sensitivity,
+     SDP/KKT-specialization, and optimization-convergence theorem routes, and
+     adds KKT-specific horizon queries to the public smoke gate without adding
+     a duplicate pack or changing resource counts.
 
 ## Validation Checklist
 

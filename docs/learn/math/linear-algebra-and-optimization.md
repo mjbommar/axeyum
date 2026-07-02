@@ -96,8 +96,10 @@ convex-combination and bad-separator source rows, and separate checked
 [Hyperplane Separation Theorem Boundary](hyperplane-separation-theorem-boundary.md).
 The finite-KKT slice adds exact
 constrained-quadratic grid replay, stationarity replay, complementary-slackness
-checking, and a checked QF_LRA/Farkas bad-stationarity certificate. The finite
-active-set QP slice adds exact active-face replay, inactive-constraint slack
+checking, and checked QF_LRA/Farkas bad-stationarity and bad-complementarity
+certificates; its theorem boundary is
+[KKT Sufficiency Theorem Boundary](kkt-sufficiency-theorem-boundary.md).
+The finite active-set QP slice adds exact active-face replay, inactive-constraint slack
 checking, degenerate active-bound replay, and checked QF_LRA/Farkas
 bad-free-gradient plus bad-degenerate-multiplier certificates. The finite
 SDP slice adds two-by-two PSD replay, trace/objective arithmetic, dual-slack

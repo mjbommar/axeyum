@@ -244,6 +244,10 @@ stationarity residual `-1` and complementarity product `0`, then checks both
 final error contradictions through QF_LRA/Farkas evidence. For a focused trace,
 read
 [End To End: Finite KKT Checks](finite-kkt-end-to-end.md).
+For the theorem boundary that keeps those finite stationarity and
+complementarity rows separate from KKT necessity, KKT sufficiency,
+constraint-qualification, duality, and convergence claims, read
+[KKT Sufficiency Theorem Boundary](kkt-sufficiency-theorem-boundary.md).
 
 For a finite active-set QP check, encode a box-constrained quadratic:
 

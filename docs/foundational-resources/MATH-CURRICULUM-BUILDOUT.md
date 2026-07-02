@@ -2255,6 +2255,10 @@ cone/SDP duality, and optimization theorem claims.
 through the same checked Farkas evidence path after exact KKT replay computes
 stationarity residual `-1`, stationarity error `1`, complementary-slackness
 product `0`, and complementarity error `1`.
+It also has a focused KKT sufficiency theorem-boundary page that keeps finite
+grid, stationarity, complementarity, and checked bad-row Farkas evidence
+separate from KKT necessity/sufficiency, constraint qualifications, duality,
+sensitivity, SDP/KKT specialization, and optimization-convergence claims.
 `finite-active-set-qp-v0` now routes its bad free-gradient, bad inactive-slack,
 and bad degenerate-multiplier rows through the same checked Farkas evidence path
 after exact active-face replay computes free-coordinate stationarity error `2`,
@@ -2679,6 +2683,15 @@ replay, and bad convex-combination/bad separator QF_LRA/Farkas rows are linked
 to copyable queries and graduation criteria while keeping convex separation,
 Farkas-duality, Hahn-Banach, cone/SDP duality, and optimization theorem claims
 in Lean/theorem-horizon lanes.
+The learner/planning layer now also has
+[`kkt-sufficiency-theorem-boundary.md`](../learn/math/kkt-sufficiency-theorem-boundary.md),
+which expands the finite KKT row into a concrete boundary ledger:
+constrained-quadratic grid replay, stationarity replay, complementary-slackness
+replay, and bad stationarity/bad complementarity QF_LRA/Farkas rows are linked
+to copyable queries and graduation criteria while keeping KKT
+necessity/sufficiency, constraint qualifications, duality, sensitivity,
+SDP/KKT specialization, and optimization-convergence claims in
+Lean/theorem-horizon lanes.
 The learner/planning layer now also has
 [`real-completeness-theorem-boundary.md`](../learn/math/real-completeness-theorem-boundary.md),
 which expands the real-completeness row into a concrete dependency ledger:

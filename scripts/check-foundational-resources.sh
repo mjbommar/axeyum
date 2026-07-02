@@ -446,6 +446,8 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_inner_pr
 python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-kkt-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text KKT --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-kkt-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-active-set-qp-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-active-set-qp-v0 --route Farkas --proof-status checked --text inactive --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-active-set-qp-v0 --route Farkas --proof-status checked --text degenerate --require-any >/dev/null

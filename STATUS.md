@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **KKT sufficiency theorem-boundary resource landed.**
+  `kkt-sufficiency-theorem-boundary.md` now separates `finite-kkt-v0`
+  finite constrained-quadratic grid replay, exact stationarity replay,
+  complementary-slackness replay, and checked bad stationarity/bad
+  complementarity QF_LRA/Farkas rows from KKT necessity, KKT sufficiency,
+  constraint qualifications, duality, sensitivity, SDP/KKT specialization,
+  and optimization-convergence theorem claims. The theorem horizon,
+  optimization/convexity, learner-map, and smoke query docs now expose the KKT
+  boundary directly.
+
 - **Hyperplane-separation theorem-boundary resource landed.**
   `hyperplane-separation-theorem-boundary.md` now separates
   `finite-separation-v0` exact convex-combination replay, separating-hyperplane
