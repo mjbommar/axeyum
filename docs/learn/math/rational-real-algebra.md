@@ -45,6 +45,7 @@ Example packs:
 Companion map:
 
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
+- [Calculus Theorem Boundary](calculus-theorem-boundary.md)
 - [Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md)
 - [Affine Geometry Theorem Boundary](affine-geometry-theorem-boundary.md)
 - [Orientation And Area Geometry Theorem Boundary](orientation-area-geometry-theorem-boundary.md)
@@ -644,7 +645,8 @@ For matrix characteristic-polynomial replay, read
 finite eigenpair and spectral-decomposition replay, read
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md).
 For exact multivariable derivative replay, read
-[End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md).
+[End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md)
+and [Calculus Theorem Boundary](calculus-theorem-boundary.md).
 For exact LP feasibility and Farkas threshold evidence, read
 [End To End: Linear Optimization](linear-optimization-end-to-end.md).
 For exact finite convexity and KKT replay, read

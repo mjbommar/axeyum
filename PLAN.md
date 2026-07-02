@@ -185,6 +185,7 @@ including finite/infinite cardinality, algebra homomorphism/quotient structure,
 vector-space/duality/module/tensor structure, finite random-variable,
 recurrence/asymptotic, stochastic-kernel, and
 martingale/stopping theory, root-finding convergence/stability, and
+calculus differentiability/integrability/FTC/multivariable theory,
 complex-analysis/factorization theory, hyperplane-separation/duality, KKT
 sufficiency, active-set method theory, and SDP duality/Slater-condition
 theory, and gradient-descent convergence/rate

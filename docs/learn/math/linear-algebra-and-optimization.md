@@ -52,6 +52,7 @@ Companion index:
 - [Matrix Computation Index](matrix-computation-index.md)
 - [Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md)
 - [Linear Algebra Structure Theorem Boundary](linear-algebra-structure-theorem-boundary.md)
+- [Calculus Theorem Boundary](calculus-theorem-boundary.md)
 - [Affine Geometry Theorem Boundary](affine-geometry-theorem-boundary.md)
 - [Orientation And Area Geometry Theorem Boundary](orientation-area-geometry-theorem-boundary.md)
 - [Incidence Geometry Theorem Boundary](incidence-geometry-theorem-boundary.md)
@@ -755,6 +756,7 @@ replay, read
 [End To End: Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md),
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md),
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md),
+[Calculus Theorem Boundary](calculus-theorem-boundary.md),
 [End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md),
 [Affine Geometry Theorem Boundary](affine-geometry-theorem-boundary.md),
 [Orientation And Area Geometry Theorem Boundary](orientation-area-geometry-theorem-boundary.md),

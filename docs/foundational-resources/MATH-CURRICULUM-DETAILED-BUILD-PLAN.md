@@ -2213,6 +2213,17 @@ Pick one row per commit unless the change is purely navigational.
      higher-dimensional, and numerical-geometry theorem layers, and adds
      pack-specific checked-row and horizon-frontier queries to the public smoke
      gate without promoting finite coordinate rows into theorem coverage.
+260. Landed: add `calculus-theorem-boundary.md` as the focused finite/general
+     calculus theorem-boundary page for `calculus-algebraic-shadow-v0`,
+     `calculus-riemann-sum-v0`, and `multivariable-calculus-rational-v0`. It
+     maps exact derivative coefficients, fixed product-rule and tangent replay,
+     finite Riemann sums, antiderivative endpoint replay,
+     gradient/Jacobian/Hessian replay, and scoped QF_LRA/Farkas evidence to the
+     missing differentiability, MVT, integrability, FTC,
+     inverse/implicit-function, change-of-variables, and manifold-calculus
+     theorem layers, and adds pack-specific checked-row and horizon-frontier
+     queries to the public smoke gate without promoting finite polynomial rows
+     into theorem coverage.
 
 ## Validation Checklist
 

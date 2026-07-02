@@ -64,6 +64,7 @@ Example packs:
 Companion map:
 
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
+- [Calculus Theorem Boundary](calculus-theorem-boundary.md)
 - [Metric Balls And Epsilon-Delta Index](metric-ball-epsilon-delta-index.md)
 - [Topology Theorem Boundary](topology-theorem-boundary.md)
 - [Monotone Convergence Theorem Boundary](monotone-convergence-theorem-boundary.md)
@@ -621,6 +622,7 @@ replay, read
 [End To End: Bounded Rational Real Analysis](real-analysis-rational-end-to-end.md),
 [End To End: Sequence And Limit Shadows](sequence-limit-shadow-end-to-end.md),
 [End To End: Finite Calculus Shadows](calculus-shadows-end-to-end.md),
+[Calculus Theorem Boundary](calculus-theorem-boundary.md),
 [End To End: Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md),
 [End To End: Finite Root Finding](finite-root-finding-end-to-end.md),
 [End To End: Generating Functions](generating-functions-end-to-end.md),

@@ -184,6 +184,30 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Calculus differentiability, integration, FTC, multivariable, and manifold
+horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text calculus \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack calculus-algebraic-shadow-v0 \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack calculus-riemann-sum-v0 \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack multivariable-calculus-rational-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Complex-analysis and factorization horizons:
 
 ```sh
@@ -688,6 +712,7 @@ python3 scripts/query-foundational-resources.py checks \
 The main learner maps that explain these boundaries are:
 
 - [Analysis And Calculus Theorem Horizon Map](../learn/math/analysis-calculus-theorem-horizon-map.md)
+- [Calculus Theorem Boundary](../learn/math/calculus-theorem-boundary.md)
 - [Real Completeness Theorem Boundary](../learn/math/real-completeness-theorem-boundary.md)
 - [Monotone Convergence Theorem Boundary](../learn/math/monotone-convergence-theorem-boundary.md)
 - [Recurrence And Asymptotic Theorem Boundary](../learn/math/recurrence-asymptotic-theorem-boundary.md)

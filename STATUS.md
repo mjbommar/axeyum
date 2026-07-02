@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Calculus theorem-boundary resource landed.**
+  `calculus-theorem-boundary.md` now separates
+  `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, and
+  `multivariable-calculus-rational-v0` exact polynomial derivative,
+  product-rule, tangent, finite Riemann-sum, antiderivative, gradient,
+  Jacobian, Hessian, and scoped QF_LRA/Farkas evidence from differentiability,
+  MVT, integrability, FTC, inverse/implicit-function, change-of-variables, and
+  manifold-calculus theorem claims. The analysis/numerical, dynamics,
+  theorem-horizon, learner-index, rational-real, linear-algebra, and
+  smoke-query docs now expose the boundary through pack-specific checked-row
+  and horizon-frontier queries.
 - **Orientation/area theorem-boundary resource landed.**
   `orientation-area-geometry-theorem-boundary.md` now separates
   `orientation-area-geometry-v0` exact signed-area/orientation,

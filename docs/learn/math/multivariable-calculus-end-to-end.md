@@ -5,6 +5,9 @@ gradient replay to directional derivatives, Jacobian chain rule, Hessian
 minors, and a checked bad-gradient rejection. It uses the
 [multivariable-calculus-rational-v0](../../../artifacts/examples/math/multivariable-calculus-rational-v0/)
 pack.
+For the theorem boundary around finite polynomial derivative tables,
+Jacobians, Hessians, and general multivariable-calculus horizons, use
+[Calculus Theorem Boundary](calculus-theorem-boundary.md).
 
 Concept rows:
 

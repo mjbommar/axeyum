@@ -1661,6 +1661,28 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text calculus \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack calculus-algebraic-shadow-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack calculus-riemann-sum-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack multivariable-calculus-rational-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
 ```
 
 For numerical analysis, query the Farkas route to keep exact residual bounds,
@@ -2316,6 +2338,10 @@ python3 scripts/query-foundational-resources.py concepts --field real_analysis -
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text metric --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field real_analysis --text gradient --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field real_analysis --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text calculus --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack multivariable-calculus-rational-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field numerical_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text residual --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text operator --require-any >/dev/null

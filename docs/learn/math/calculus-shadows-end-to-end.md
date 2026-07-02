@@ -7,6 +7,9 @@ and
 Together they show what Axeyum can check today: exact polynomial derivative
 algebra, tangent and critical-point witnesses, finite Riemann sums,
 antiderivative endpoint replay, and rejected false calculus claims.
+For the theorem boundary around finite derivative, finite Riemann-sum, and
+analytic-calculus horizon rows, use
+[Calculus Theorem Boundary](calculus-theorem-boundary.md).
 
 Concept rows:
 

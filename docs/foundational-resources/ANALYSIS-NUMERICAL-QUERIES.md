@@ -26,6 +26,9 @@ For the focused learner-facing boundary over exact complex real-pair,
 complex-plane transform, fixed root, and rational-polynomial factorization
 resources, read
 [Complex Analysis Theorem Boundary](../learn/math/complex-analysis-theorem-boundary.md).
+For the focused calculus boundary over finite derivative, finite Riemann-sum,
+gradient, Jacobian, Hessian, and malformed-row shadows, read
+[Calculus Theorem Boundary](../learn/math/calculus-theorem-boundary.md).
 
 ## Query Shape
 
@@ -74,7 +77,7 @@ needs concrete checked rows to display.
 | Sequence tails, Cauchy shadows, and squeeze side conditions | `bridge_sequence_tail_shadow`; `bridge_cauchy_tail_shadow`; `bridge_squeeze_shadow` | `Farkas`; finite replay | `concepts --field real_analysis --text "Sequence Tail"`; `concepts --field real_analysis --text "Cauchy Tail"`; `concepts --field real_analysis --text "Squeeze Shadow"` |
 | Derivative identities and integration horizons | `bridge_derivative_identity_shadow`; `bridge_integration_horizon` | `Farkas`; Lean horizon | `concepts --field real_analysis --text "Derivative Identity"`; `concepts --field real_analysis --text "Integration Horizon"` |
 | Metric balls and bounded epsilon-delta rows | `bridge_metric_ball`; `bridge_bounded_epsilon_delta_shadow` | `Farkas` | `checks --concept bridge_bounded_epsilon_delta_shadow --route Farkas --proof-status checked` |
-| Algebraic derivative and Riemann-sum shadows | packs `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0` | `Farkas` | `checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked`; `checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked` |
+| Algebraic derivative, Riemann-sum, and multivariable calculus shadows | packs `calculus-algebraic-shadow-v0`, `calculus-riemann-sum-v0`, `multivariable-calculus-rational-v0` | `Farkas`; Lean horizon | `checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked`; `checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked`; `horizon-frontier --text calculus` |
 | Polynomial coefficients, factors, roots, and coefficient windows | `bridge_polynomial_coefficient_factor_replay` | `Diophantine`; `Farkas` | `checks --concept bridge_polynomial_coefficient_factor_replay --route Diophantine --proof-status checked`; `checks --concept bridge_polynomial_coefficient_factor_replay --route Farkas --proof-status checked` |
 | Root-finding and Newton-step rows | pack `finite-root-finding-v0`; concept `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --pack finite-root-finding-v0 --route Farkas --proof-status checked` |
 | Finite dynamics, recurrence, and Euler replay | `bridge_finite_dynamics_euler_replay` | `Farkas` | `checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked` |
@@ -181,6 +184,16 @@ python3 scripts/query-foundational-resources.py checks \
   --pack calculus-riemann-sum-v0 \
   --route Farkas \
   --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack multivariable-calculus-rational-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text calculus \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
@@ -348,6 +361,13 @@ For the finite Euler boundary, read
 [Euler Method Theorem Boundary](../learn/math/euler-method-theorem-boundary.md)
 before displaying ODE convergence, stability, stiffness, PDE, or
 floating-point method claims next to exact rational finite-step rows.
+
+For the finite calculus boundary, read
+[Calculus Theorem Boundary](../learn/math/calculus-theorem-boundary.md)
+before displaying differentiability, MVT, integrability, FTC,
+inverse/implicit-function, change-of-variables, or manifold-calculus claims
+next to exact polynomial derivative, finite-sum, gradient, Jacobian, Hessian,
+or bad-row examples.
 
 For the complex-analysis boundary, read
 [Complex Analysis Theorem Boundary](../learn/math/complex-analysis-theorem-boundary.md)

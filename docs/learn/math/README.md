@@ -82,6 +82,11 @@ Companion maps:
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md):
   maps finite analysis, calculus, optimization, measure, dynamics, and operator
   shadows to their missing Lean/theorem reconstruction routes.
+- [Calculus Theorem Boundary](calculus-theorem-boundary.md):
+  separates finite polynomial derivative, finite Riemann-sum, antiderivative,
+  gradient, Jacobian, Hessian, and checked bad-row replay from general
+  differentiability, MVT, integrability, FTC, inverse/implicit-function,
+  change-of-variables, and manifold-calculus theorem targets.
 - [Real Completeness Theorem Boundary](real-completeness-theorem-boundary.md):
   separates exact rational interval, finite sequence-tail, finite monotone
   prefix, finite compactness, and RCF-shadow resources from least-upper-bound,
@@ -394,6 +399,10 @@ Companion maps:
   polynomial derivative replay, product-rule and tangent checks, finite
   Riemann sums, antiderivative endpoint replay, false derivative/integral
   rejection with QF_LRA/Farkas certificates, and the calculus Lean horizons.
+- [Calculus Theorem Boundary](calculus-theorem-boundary.md): maps finite
+  derivative, product-rule, tangent, Riemann-sum, antiderivative, gradient,
+  Jacobian, Hessian, and malformed-row shadows to the missing differentiability,
+  MVT, integrability, FTC, multivariable, and manifold-calculus theorem routes.
 - [Metric Continuity](metric-continuity-end-to-end.md): follows finite metric
   table replay, finite Lipschitz checks, epsilon-delta containment,
   open-ball preimage replay, checked QF_LRA/Farkas bad-delta and bad-preimage

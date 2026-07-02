@@ -2212,6 +2212,14 @@ combined learner-facing end-to-end lesson for polynomial derivative replay,
 product-rule and tangent checks, finite Riemann sums, antiderivative endpoint
 replay, checked false derivative/integral rejection, and the differentiability,
 integrability, and fundamental-theorem Lean horizons.
+`calculus-theorem-boundary.md` now gives `calculus-algebraic-shadow-v0`,
+`calculus-riemann-sum-v0`, and `multivariable-calculus-rational-v0` a focused
+finite/general calculus trust map. It keeps exact derivative coefficients,
+fixed product-rule identity replay, tangent and critical-point replay, finite
+Riemann sums, antiderivative endpoint replay, gradient/Jacobian/Hessian replay,
+and checked QF_LRA/Farkas bad-row evidence separate from differentiability,
+MVT, integrability, FTC, inverse/implicit-function, change-of-variables, and
+manifold-calculus theorem coverage.
 The next proof/certificate layer is now organized in
 [PROOF-UPGRADE-FRONTIER.md](PROOF-UPGRADE-FRONTIER.md): classify the two
 `needs-proof-route` packs, then mine CNF/LRAT, QF_LRA/Farkas, QF_UF/Alethe,
@@ -2711,6 +2719,16 @@ keeping cyclic-quadrilateral criteria, inscribed-angle facts, Ptolemy,
 converse Ptolemy, angle-chasing, circle-line correspondence,
 synthetic-geometry, projective-geometry, and numerical-geometry claims in
 Lean/theorem-horizon lanes.
+The learner/planning layer now also has
+[`calculus-theorem-boundary.md`](../learn/math/calculus-theorem-boundary.md),
+which expands the finite calculus rows into a concrete boundary ledger:
+polynomial derivative replay, product-rule replay, tangent replay, finite
+Riemann-sum replay, antiderivative endpoint replay, gradient/Jacobian/Hessian
+replay, and bad derivative/bad integral/bad gradient QF_LRA/Farkas rows are
+linked to copyable queries and graduation criteria while keeping
+differentiability, MVT, integrability, FTC, inverse/implicit-function,
+change-of-variables, and manifold-calculus claims in Lean/theorem-horizon
+lanes.
 The graph/discrete consumer layer now also has
 [`GRAPH-DISCRETE-QUERIES.md`](GRAPH-DISCRETE-QUERIES.md). The guide and
 resource smoke expose `bridge_finite_graph_replay_obstruction` through

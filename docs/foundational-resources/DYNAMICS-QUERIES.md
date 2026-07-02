@@ -201,6 +201,10 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text calculus \
+  --require-any
 ```
 
 ## Current Boundary
@@ -214,6 +218,12 @@ For the finite Euler boundary in particular, read
 [Euler Method Theorem Boundary](../learn/math/euler-method-theorem-boundary.md)
 before displaying ODE convergence, stability, stiffness, floating-point, or
 PDE theorem language next to finite transition/error rows.
+
+For calculus prerequisites, read
+[Calculus Theorem Boundary](../learn/math/calculus-theorem-boundary.md)
+before displaying differentiability, integration, FTC, inverse/implicit
+function, change-of-variables, or manifold-calculus theorem language next to
+finite derivative, integral, Jacobian, Hessian, or polynomial replay rows.
 
 For the finite stochastic-kernel boundary, read
 [Stochastic Kernel Theorem Boundary](../learn/math/stochastic-kernel-theorem-boundary.md)

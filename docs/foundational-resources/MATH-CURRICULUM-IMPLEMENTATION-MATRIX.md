@@ -742,7 +742,14 @@ Build sequence:
     affine-volume, determinant/Jacobian, change-of-variables,
     differential/manifold, higher-dimensional, and numerical-geometry theorem
     routes, with pack-specific checked-row and horizon-frontier queries.
-72. Revisit crate/repo boundaries only after three real consumers or repeated
+72. Landed: add the calculus theorem-boundary page.
+    `calculus-theorem-boundary.md` maps exact derivative coefficients,
+    product-rule/tangent replay, finite Riemann sums, antiderivative endpoint
+    replay, gradient/Jacobian/Hessian replay, and checked QF_LRA/Farkas bad-row
+    evidence to the missing differentiability, MVT, integrability, FTC,
+    inverse/implicit-function, change-of-variables, and manifold-calculus
+    theorem routes, with pack-specific checked-row and horizon-frontier queries.
+73. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands
