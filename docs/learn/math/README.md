@@ -321,6 +321,11 @@ Companion maps:
   proximal replay, box-plus-L1 constrained replay, composite descent, checked
   QF_LRA/Farkas bad-proximal-point and bad box-proximal-point rejection, and
   the general proximal-gradient convergence Lean horizon.
+- [Proximal Gradient Convergence Theorem Boundary](proximal-gradient-convergence-theorem-boundary.md):
+  maps those finite smooth-gradient, trial-step, soft-threshold,
+  box-constrained prox, composite-decrease, and malformed-row shadows to the
+  missing proximal-map, subdifferential, convergence, rate, variant, and
+  numerical-stability routes.
 - [Finite Calculus Shadows](calculus-shadows-end-to-end.md): follows
   polynomial derivative replay, product-rule and tangent checks, finite
   Riemann sums, antiderivative endpoint replay, false derivative/integral

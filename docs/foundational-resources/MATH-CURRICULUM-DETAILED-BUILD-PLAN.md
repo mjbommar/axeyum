@@ -2004,6 +2004,16 @@ Pick one row per commit unless the change is purely navigational.
      active-set, variant, and numerical-stability routes, and adds
      projected-gradient-specific horizon queries to the public smoke gate
      without adding a duplicate pack or changing resource counts.
+238. Landed: add `proximal-gradient-convergence-theorem-boundary.md` as the
+     focused theorem-boundary page for `finite-proximal-gradient-v0`. It maps
+     exact smooth-gradient replay, trial-step replay, L1 soft-threshold
+     replay, box-plus-L1 constrained prox replay, composite-decrease replay,
+     and checked QF_LRA/Farkas bad proximal-point, bad composite-decrease, and
+     bad box-proximal-point rows to the missing proximal-map,
+     subdifferential-calculus, convergence, rate, variant, and
+     numerical-stability routes, and adds proximal-gradient-specific horizon
+     queries to the public smoke gate without adding a duplicate pack or
+     changing resource counts.
 
 ## Validation Checklist
 

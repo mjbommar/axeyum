@@ -132,7 +132,9 @@ The finite proximal-gradient slice adds exact L1 soft-threshold
 replay after a trial step, exact box-plus-L1 constrained replay with an active
 upper multiplier, composite-decrease replay, and checked QF_LRA/Farkas
 bad-proximal-point, bad composite-decrease, and bad box-proximal-point
-certificates. The finite random-matrix slice adds exact
+certificates; its theorem boundary is
+[Proximal Gradient Convergence Theorem Boundary](proximal-gradient-convergence-theorem-boundary.md).
+The finite random-matrix slice adds exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, rank distributions, and checked QF_LRA/Farkas bad trace-square and
 bad expected-rank certificates. The spectral slice checks exact finite
@@ -588,6 +590,10 @@ versus replayed `3/2`, and the boxed upper-bound violation for the
 unconstrained point. The contradictions are checked through QF_LRA/Farkas
 evidence. For a focused trace, read
 [End To End: Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md).
+For the theorem boundary that keeps those finite proximal-gradient rows
+separate from proximal-map theory, nonsmooth convex analysis,
+proximal-gradient convergence, rates, variants, and numerical stability, read
+[Proximal Gradient Convergence Theorem Boundary](proximal-gradient-convergence-theorem-boundary.md).
 
 For a Jacobian/Hessian bridge into optimization, encode:
 
@@ -719,6 +725,7 @@ replay, read
 [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md),
 [Projected Gradient Convergence Theorem Boundary](projected-gradient-convergence-theorem-boundary.md),
 [End To End: Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md),
+[Proximal Gradient Convergence Theorem Boundary](proximal-gradient-convergence-theorem-boundary.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md),
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md),

@@ -2594,7 +2594,13 @@ as the focused page that keeps finite derivative, trial-step,
 interval-projection, projected-descent replay, and checked Farkas bad-row
 evidence separate from projection theory, projected-gradient convergence,
 rates, active-set identification, variants, and numerical-stability theorem
-claims.
+claims; and
+[`proximal-gradient-convergence-theorem-boundary.md`](../learn/math/proximal-gradient-convergence-theorem-boundary.md)
+as the focused page that keeps finite smooth-gradient, trial-step,
+soft-threshold, box-constrained prox, composite-decrease replay, and checked
+Farkas bad-row evidence separate from proximal-map theory, subdifferential
+calculus, proximal-gradient convergence, rates, variants, and
+numerical-stability theorem claims.
 The functional-analysis/operator consumer layer now also has
 [`FUNCTIONAL-OPERATOR-QUERIES.md`](FUNCTIONAL-OPERATOR-QUERIES.md). The guide
 and resource smoke expose finite operator/Chebyshev rows, eigenpair and
@@ -2653,7 +2659,8 @@ matrix witnesses stay visible through the public JSON boundary without
 promoting duality, KKT sufficiency, SDP strong duality, Slater conditions,
 gradient-descent convergence/rates, line-search convergence,
 active-set method theory, Wolfe line-search theory, projection theory,
-projected-gradient convergence, proximal-gradient convergence, or broader
+proximal-map theory, projected-gradient convergence, proximal-gradient
+convergence, nonsmooth convex-analysis theorems, or broader
 convergence-theorem claims.
 The consumer query layer now also exposes functional-analysis/operator
 readiness: `CONSUMER-QUERIES.md` shows the Farkas field summary,
@@ -2764,6 +2771,16 @@ and bad projected-decrease QF_LRA/Farkas rows are linked to copyable queries
 and graduation criteria while keeping projection theory, projected-gradient
 convergence, rates, active-set identification, variants, and numerical
 stability claims in Lean/theorem-horizon lanes.
+The learner/planning layer now also has
+[`proximal-gradient-convergence-theorem-boundary.md`](../learn/math/proximal-gradient-convergence-theorem-boundary.md),
+which expands the finite proximal-gradient row into a concrete boundary
+ledger: exact smooth-gradient replay, trial-step replay, L1 soft-threshold
+prox replay, box-plus-L1 constrained prox replay, composite-decrease replay,
+and bad proximal-point/bad composite-decrease/bad box-proximal-point
+QF_LRA/Farkas rows are linked to copyable queries and graduation criteria
+while keeping proximal-map theory, subdifferential calculus,
+proximal-gradient convergence, rates, variants, and numerical stability claims
+in Lean/theorem-horizon lanes.
 The learner/planning layer now also has
 [`real-completeness-theorem-boundary.md`](../learn/math/real-completeness-theorem-boundary.md),
 which expands the real-completeness row into a concrete dependency ledger:

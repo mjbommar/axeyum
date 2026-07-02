@@ -406,6 +406,10 @@ unconstrained point `1` is feasible for the upper bound `3/4`; replay computes
 residual `-3/2` and box violation `1/4`, and the final contradictions are
 checked through QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md).
+For the theorem boundary that keeps those finite proximal-gradient rows
+separate from proximal-map theory, nonsmooth convex analysis,
+proximal-gradient convergence, rates, variants, and numerical stability, read
+[Proximal Gradient Convergence Theorem Boundary](proximal-gradient-convergence-theorem-boundary.md).
 
 For a matrix-invariant check, encode a fixed matrix and its characteristic
 polynomial:
@@ -631,7 +635,8 @@ and [End To End: Finite Line Search Checks](finite-line-search-end-to-end.md),
 and [End To End: Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md),
 and [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md),
 and [Projected Gradient Convergence Theorem Boundary](projected-gradient-convergence-theorem-boundary.md),
-and [End To End: Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md). For exact
+and [End To End: Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md),
+and [Proximal Gradient Convergence Theorem Boundary](proximal-gradient-convergence-theorem-boundary.md). For exact
 finite coordinate, incidence, rigid-configuration, affine, and oriented geometry replay, read
 [End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md)
 [End To End: Incidence Geometry](incidence-geometry-end-to-end.md), and

@@ -234,6 +234,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Proximal-gradient theorem-boundary resource landed.**
+  `proximal-gradient-convergence-theorem-boundary.md` now separates
+  `finite-proximal-gradient-v0` exact smooth-gradient replay, trial-step
+  replay, L1 soft-threshold prox replay, box-plus-L1 constrained prox replay,
+  composite-decrease replay, and checked bad proximal-point/bad
+  composite-decrease/bad box-proximal-point QF_LRA/Farkas rows from
+  proximal-map theory, subdifferential calculus, nonsmooth convex analysis,
+  convergence, rate theorems, stochastic/active-set variants, and
+  numerical-stability claims. The theorem horizon, optimization/convexity,
+  learner-map, and smoke query docs now expose the proximal-gradient boundary
+  directly.
+
 - **Projected-gradient theorem-boundary resource landed.**
   `projected-gradient-convergence-theorem-boundary.md` now separates
   `finite-projected-gradient-v0` exact derivative replay, unconstrained

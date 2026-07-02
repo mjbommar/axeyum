@@ -286,6 +286,17 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --require-any
 
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text proximal-gradient \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-proximal-gradient-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text proximal \
+  --require-any
+
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-proximal-gradient-v0 \
   --route Farkas \
