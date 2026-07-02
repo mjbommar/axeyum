@@ -24,6 +24,7 @@ Example packs:
 - [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
 - [finite-condition-number-v0](../../../artifacts/examples/math/finite-condition-number-v0/)
 - [finite-singular-value-shadow-v0](../../../artifacts/examples/math/finite-singular-value-shadow-v0/)
+- [finite-power-iteration-v0](../../../artifacts/examples/math/finite-power-iteration-v0/)
 - [finite-jordan-chain-v0](../../../artifacts/examples/math/finite-jordan-chain-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
@@ -191,7 +192,12 @@ bad trace-square, bad expected-rank, and bad covariance-entry certificates.
 The spectral slice checks exact finite
 eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotients, and
 `P*D*P^-1` reconstruction for a fixed rational matrix, plus a QF_LRA/Farkas
-bad-Rayleigh-quotient certificate and a bad-eigenpair certificate. The matrix-invariants
+bad-Rayleigh-quotient certificate and a bad-eigenpair certificate. The finite
+power-iteration slice checks two exact matrix-vector steps, one normalized
+iterate, the Rayleigh quotient of the first iterate, a residual shadow, the
+dominant eigenpair shadow, and a checked QF_LRA/Farkas bad-coordinate
+certificate without claiming convergence or floating-point eigensolver
+stability. The matrix-invariants
 slice checks trace, determinant, characteristic roots, Cayley-Hamilton replay,
 finite Gershgorin intervals, and QF_LRA/Farkas bad-trace plus
 bad-polynomial certificates for a fixed rational matrix. The
@@ -824,6 +830,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_proximal_gradient_bad_proximal_point_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes spectral_bad_rayleigh_quotient_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-power-iteration-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_power_iteration_bad_coordinate_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0
@@ -870,6 +878,7 @@ replay, read
 [Convexity Theorem Boundary](convexity-theorem-boundary.md),
 [End To End: Matrix Invariants](matrix-invariants-end-to-end.md),
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md),
+[End To End: Finite Power Iteration](power-iteration-end-to-end.md),
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md),
 [End To End: Finite Covariance Matrix](covariance-matrix-end-to-end.md),
 [Random Matrix Moment Index](random-matrix-moment-index.md),

@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 121 non-template math example packs validate.
+  Status: 122 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 121 non-template packs have at least one `checked` expected-result row.
+  Status: 122 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3364,6 +3364,26 @@ source-linked QF_LRA/Farkas artifact to reject the malformed scalar claim
 `S = 3/2`. General Schur-complement, block-inverse, Gaussian-elimination,
 pivoting, SDP, conditional-covariance theorem, and numerical-stability claims
 stay in theorem or numerical-honesty lanes.
+The linear-algebra/numerical-analysis/optimization layer now adds
+`finite-gaussian-elimination-v0` as the 121st non-template math pack. Exact
+rational replay checks the first pivot multiplier for
+`[[2,1],[4,5]] x = [5,17]`, the augmented row replacement
+`[4,5|17] - 2*[2,1|5] = [0,3|7]`, determinant pivot-product replay, and
+back-substitution `x = [4/3,7/3]`, while a source-linked QF_LRA/Farkas
+artifact rejects the malformed eliminated-RHS claim `8` against the exact
+value `7`. General Gaussian-elimination correctness, pivoting, rank-revealing
+variants, sparse fill-in, conditioning, and floating-point stability stay in
+theorem or numerical-honesty lanes.
+The linear-algebra/numerical-analysis/operator layer now adds
+`finite-power-iteration-v0` as the 122nd non-template math pack. Exact rational
+replay checks `A = diag(2,1)`, two power steps `[1,1] -> [2,1] -> [4,1]`,
+`l1` normalization `[4/5,1/5]`, Rayleigh quotient `9/5`, residual
+`[2/5,-4/5]`, and the dominant eigenpair shadow `2,[1,0]`, while a
+source-linked QF_LRA/Farkas artifact rejects the malformed second-iterate
+coordinate claim `3` against the exact value `4`. General power-iteration
+convergence, spectral-gap assumptions, residual-to-eigenvalue error theorems,
+deflation, block iteration, conditioning, and floating-point eigensolver
+stability stay in theorem or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

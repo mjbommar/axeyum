@@ -240,6 +240,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Power-iteration resource landed.**
+  `finite-power-iteration-v0` now gives the linear-algebra,
+  numerical-analysis, and operator-theory lanes an exact rational spectral
+  iteration shadow: it checks `A = diag(2,1)`, two power steps
+  `[1,1] -> [2,1] -> [4,1]`, `l1` normalization `[4/5,1/5]`, Rayleigh
+  quotient `9/5`, residual `[2/5,-4/5]`, and the dominant eigenpair shadow
+  `2,[1,0]`, then isolates the malformed second-iterate coordinate claim
+  `3` versus exact `4` as a source-linked QF_LRA/Farkas row. The focused
+  learner page, matrix index, concept bridges, query guide, validator, and
+  `math_resource_lra_routes` regression keep fixed finite iteration replay
+  separate from convergence, spectral-gap assumptions,
+  residual-to-eigenvalue error theorems, deflation, block iteration,
+  conditioning, and floating-point eigensolver stability. The public summary
+  now reports 122 concept rows, 122 packs, 786 expected checks, 348 checked
+  rows, 353 replay-only rows, 85 Lean-horizon rows, and 122 promoted
+  solver-reuse packs.
 - **Finite Gaussian-elimination resource landed.**
   `finite-gaussian-elimination-v0` now gives the linear-algebra,
   numerical-analysis, and optimization lanes an exact rational elimination
@@ -251,8 +267,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_lra_routes` regression keep fixed transcript replay separate
   from general Gaussian-elimination correctness, pivoting, rank-revealing,
   sparse fill-in, conditioning, and floating-point stability theorems. The
-  public summary now reports 122 concept rows, 121 packs, 777 expected checks,
-  347 checked rows, 346 replay-only rows, 84 Lean-horizon rows, and 121
+  public summary now reports 122 concept rows, 122 packs, 786 expected checks,
+  348 checked rows, 353 replay-only rows, 85 Lean-horizon rows, and 122
   promoted solver-reuse packs.
 - **Finite Schur-complement resource landed.**
   `finite-schur-complement-v0` now gives the linear-algebra,

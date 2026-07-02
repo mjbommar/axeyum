@@ -900,7 +900,16 @@ Build sequence:
     exact finite transcript replay separate from general elimination
     correctness, pivoting, rank-revealing variants, sparse fill-in,
     conditioning, and floating-point stability.
-92. Revisit crate/repo boundaries only after three real consumers or repeated
+92. Landed: add the finite power-iteration resource.
+    `finite-power-iteration-v0` now records one exact diagonal rational matrix,
+    two power steps, a normalized iterate, Rayleigh quotient, residual shadow,
+    dominant eigenpair shadow, and a checked QF_LRA/Farkas artifact for the
+    malformed second-iterate coordinate claim `4 = 3`. The reused eigenpair,
+    residual-bound, and exact-vs-floating bridges keep exact finite spectral
+    iteration replay separate from convergence theorems, spectral-gap
+    assumptions, residual-to-eigenvalue error bounds, deflation, block
+    iteration, conditioning, and floating-point eigensolver stability.
+93. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

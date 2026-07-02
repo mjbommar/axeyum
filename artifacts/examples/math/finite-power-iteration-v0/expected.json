@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-power-iteration-v0",
+  "witnesses": [
+    {
+      "id": "diagonal-two-step-power-iteration",
+      "description": "Exact rational two-step power-iteration transcript for A = diag(2, 1).",
+      "values": {
+        "matrix": [
+          ["2", "0"],
+          ["0", "1"]
+        ],
+        "start_vector": ["1", "1"],
+        "first_iterate": ["2", "1"],
+        "second_iterate": ["4", "1"],
+        "second_iterate_l1_norm": "5",
+        "normalized_second_iterate": ["4/5", "1/5"],
+        "rayleigh_vector": ["2", "1"],
+        "rayleigh_image": ["4", "1"],
+        "rayleigh_numerator": "9",
+        "rayleigh_denominator": "5",
+        "rayleigh_quotient": "9/5",
+        "residual_lambda": "9/5",
+        "residual_vector": ["2/5", "-4/5"],
+        "residual_inf_norm": "4/5",
+        "dominant_eigenvalue": "2",
+        "dominant_eigenvector": ["1", "0"],
+        "dominant_eigen_image": ["2", "0"]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "first-power-step-replay",
+      "claim": "Multiplying diag(2,1) by the start vector [1,1] gives the first power iterate [2,1].",
+      "expected_result": "sat",
+      "validation": "exact_rational_power_iteration_first_step",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-two-step-power-iteration"],
+      "notes": "The validator recomputes A*v0 exactly over rationals."
+    },
+    {
+      "id": "second-power-step-replay",
+      "claim": "Multiplying the first iterate [2,1] by diag(2,1) gives the second power iterate [4,1].",
+      "expected_result": "sat",
+      "validation": "exact_rational_power_iteration_second_step",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-two-step-power-iteration"],
+      "notes": "The validator recomputes A*v1 exactly over rationals."
+    },
+    {
+      "id": "normalized-iterate-replay",
+      "claim": "L1-normalizing the second iterate [4,1] gives [4/5,1/5].",
+      "expected_result": "sat",
+      "validation": "exact_rational_power_iteration_normalization_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-two-step-power-iteration"],
+      "notes": "The validator recomputes the positive L1 norm of the second iterate and divides each coordinate exactly."
+    },
+    {
+      "id": "rayleigh-quotient-replay",
+      "claim": "The Rayleigh quotient of the first iterate [2,1] for diag(2,1) is 9/5.",
+      "expected_result": "sat",
+      "validation": "exact_rational_power_iteration_rayleigh_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-two-step-power-iteration"],
+      "notes": "The validator recomputes w^T*A*w, w^T*w, and the exact quotient."
+    },
+    {
+      "id": "residual-shadow-replay",
+      "claim": "Using lambda = 9/5 for the first iterate [2,1] gives residual [2/5,-4/5] with infinity norm 4/5.",
+      "expected_result": "sat",
+      "validation": "exact_rational_power_iteration_residual_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-two-step-power-iteration"],
+      "notes": "The validator recomputes A*w - lambda*w and its exact infinity norm."
+    },
+    {
+      "id": "dominant-eigenpair-shadow-replay",
+      "claim": "The dominant exact eigenpair shadow for diag(2,1) is lambda = 2, v = [1,0].",
+      "expected_result": "sat",
+      "validation": "exact_rational_power_iteration_dominant_eigenpair_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-two-step-power-iteration"],
+      "notes": "The validator recomputes A*e1 = 2*e1 exactly; this is a finite shadow, not a convergence proof."
+    },
+    {
+      "id": "bad-power-iterate-coordinate-rejected",
+      "claim": "The first coordinate of the second power iterate is 3.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_power_iterate_coordinate_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "diagonal-two-step-power-iteration",
+        "computed_second_iterate_x0": "4",
+        "claimed_second_iterate_x0": "3"
+      },
+      "notes": "Exact replay computes the second-iterate first coordinate as 4, so the claimed value 3 is rejected; the separate qf-lra-bad-power-iterate-coordinate row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-power-iterate-coordinate",
+      "claim": "The fixed malformed second-iterate coordinate claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "diagonal-two-step-power-iteration",
+        "source_replay_row": "bad-power-iterate-coordinate-rejected",
+        "computed_second_iterate_x0": "4",
+        "claimed_second_iterate_x0": "3",
+        "farkas_conflict": "power_iterate2_x0 = 4 and power_iterate2_x0 = 3",
+        "smt2_artifact": "artifacts/examples/math/finite-power-iteration-v0/smt2/bad-power-iterate-coordinate-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_power_iteration_bad_coordinate_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the second iterate as [4,1], while the malformed row claims first coordinate 3; the source QF_LRA artifact isolates that coordinate contradiction for Farkas checking."
+    },
+    {
+      "id": "general-power-iteration-theory-lean-horizon",
+      "claim": "General power-iteration convergence, spectral-gap hypotheses, deflation, block iteration, conditioning, and floating-point stability require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For suitable finite-dimensional operators and starting vectors, prove convergence of normalized power iteration under spectral-gap assumptions, relate Rayleigh quotients and residuals to eigenvalue error, and state deflation/block-iteration variants with explicit hypotheses.",
+        "future_checker": "Lean theorem statements for exact finite-dimensional spectral convergence plus separate numerical-honesty or QF_FP artifacts for floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for two rational power steps and one residual shadow, not a theorem about power-iteration convergence or numerical eigensolver stability."
+    }
+  ]
+}

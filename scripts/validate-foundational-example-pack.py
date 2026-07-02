@@ -16776,6 +16776,248 @@ def validate_spectral_linear_algebra(expected: dict[str, Any]) -> None:
         fail("bad-eigenpair-rejected must link the Farkas regression")
 
 
+def validate_finite_power_iteration(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    first_step = checks["first-power-step-replay"]
+    if first_step["expected_result"] != "sat":
+        fail("first-power-step-replay must expect sat")
+    if first_step.get("proof_status") != "replay-only":
+        fail("first-power-step-replay must be replay-only")
+    values = single_witness_values(first_step, witnesses)
+    matrix = require_fraction_matrix("power iteration matrix", values.get("matrix"))
+    start = require_fraction_vector("power iteration start_vector", values.get("start_vector"))
+    first_iterate = require_fraction_vector(
+        "power iteration first_iterate",
+        values.get("first_iterate"),
+    )
+    second_iterate = require_fraction_vector(
+        "power iteration second_iterate",
+        values.get("second_iterate"),
+    )
+    require_square_matrix("power iteration matrix", matrix)
+    require_mat_vec_shape("power iteration first step", matrix, start)
+    if mat_vec(matrix, start) != first_iterate:
+        fail("first-power-step-replay first_iterate is not A*start_vector")
+
+    second_step = checks["second-power-step-replay"]
+    if second_step["expected_result"] != "sat":
+        fail("second-power-step-replay must expect sat")
+    if second_step.get("proof_status") != "replay-only":
+        fail("second-power-step-replay must be replay-only")
+    second_values = single_witness_values(second_step, witnesses)
+    if second_values != values:
+        fail("second-power-step-replay must cite the power-iteration witness")
+    require_mat_vec_shape("power iteration second step", matrix, first_iterate)
+    if mat_vec(matrix, first_iterate) != second_iterate:
+        fail("second-power-step-replay second_iterate is not A*first_iterate")
+
+    normalized = checks["normalized-iterate-replay"]
+    if normalized["expected_result"] != "sat":
+        fail("normalized-iterate-replay must expect sat")
+    if normalized.get("proof_status") != "replay-only":
+        fail("normalized-iterate-replay must be replay-only")
+    normalized_values = single_witness_values(normalized, witnesses)
+    if normalized_values != values:
+        fail("normalized-iterate-replay must cite the power-iteration witness")
+    listed_l1 = require_fraction(
+        "power iteration second_iterate_l1_norm",
+        values.get("second_iterate_l1_norm"),
+    )
+    listed_normalized = require_fraction_vector(
+        "power iteration normalized_second_iterate",
+        values.get("normalized_second_iterate"),
+    )
+    l1_norm = sum((abs(item) for item in second_iterate), Fraction(0))
+    if listed_l1 != l1_norm:
+        fail("normalized-iterate-replay listed l1 norm is incorrect")
+    if listed_l1 == 0:
+        fail("normalized-iterate-replay requires a nonzero iterate")
+    if [item / listed_l1 for item in second_iterate] != listed_normalized:
+        fail("normalized-iterate-replay normalized vector is incorrect")
+
+    rayleigh = checks["rayleigh-quotient-replay"]
+    if rayleigh["expected_result"] != "sat":
+        fail("rayleigh-quotient-replay must expect sat")
+    if rayleigh.get("proof_status") != "replay-only":
+        fail("rayleigh-quotient-replay must be replay-only")
+    rayleigh_values = single_witness_values(rayleigh, witnesses)
+    if rayleigh_values != values:
+        fail("rayleigh-quotient-replay must cite the power-iteration witness")
+    rayleigh_vector = require_fraction_vector(
+        "power iteration rayleigh_vector",
+        values.get("rayleigh_vector"),
+    )
+    rayleigh_image = require_fraction_vector(
+        "power iteration rayleigh_image",
+        values.get("rayleigh_image"),
+    )
+    numerator = require_fraction(
+        "power iteration rayleigh_numerator",
+        values.get("rayleigh_numerator"),
+    )
+    denominator = require_fraction(
+        "power iteration rayleigh_denominator",
+        values.get("rayleigh_denominator"),
+    )
+    quotient = require_fraction(
+        "power iteration rayleigh_quotient",
+        values.get("rayleigh_quotient"),
+    )
+    if rayleigh_vector != first_iterate:
+        fail("rayleigh-quotient-replay must use the first power iterate")
+    require_mat_vec_shape("power iteration Rayleigh", matrix, rayleigh_vector)
+    if mat_vec(matrix, rayleigh_vector) != rayleigh_image:
+        fail("rayleigh-quotient-replay rayleigh_image is not A*w")
+    if dot_product(rayleigh_vector, rayleigh_image) != numerator:
+        fail("rayleigh-quotient-replay numerator is incorrect")
+    if dot_product(rayleigh_vector, rayleigh_vector) != denominator:
+        fail("rayleigh-quotient-replay denominator is incorrect")
+    if denominator == 0:
+        fail("rayleigh-quotient-replay denominator must be nonzero")
+    if numerator / denominator != quotient:
+        fail("rayleigh-quotient-replay quotient is incorrect")
+
+    residual = checks["residual-shadow-replay"]
+    if residual["expected_result"] != "sat":
+        fail("residual-shadow-replay must expect sat")
+    if residual.get("proof_status") != "replay-only":
+        fail("residual-shadow-replay must be replay-only")
+    residual_values = single_witness_values(residual, witnesses)
+    if residual_values != values:
+        fail("residual-shadow-replay must cite the power-iteration witness")
+    residual_lambda = require_fraction(
+        "power iteration residual_lambda",
+        values.get("residual_lambda"),
+    )
+    residual_vector = require_fraction_vector(
+        "power iteration residual_vector",
+        values.get("residual_vector"),
+    )
+    residual_inf_norm = require_fraction(
+        "power iteration residual_inf_norm",
+        values.get("residual_inf_norm"),
+    )
+    if residual_lambda != quotient:
+        fail("residual-shadow-replay residual_lambda must be the Rayleigh quotient")
+    computed_residual = vector_sub(rayleigh_image, scalar_vec(residual_lambda, rayleigh_vector))
+    if computed_residual != residual_vector:
+        fail("residual-shadow-replay residual_vector is incorrect")
+    if linf_norm(residual_vector) != residual_inf_norm:
+        fail("residual-shadow-replay residual infinity norm is incorrect")
+
+    dominant = checks["dominant-eigenpair-shadow-replay"]
+    if dominant["expected_result"] != "sat":
+        fail("dominant-eigenpair-shadow-replay must expect sat")
+    if dominant.get("proof_status") != "replay-only":
+        fail("dominant-eigenpair-shadow-replay must be replay-only")
+    dominant_values = single_witness_values(dominant, witnesses)
+    if dominant_values != values:
+        fail("dominant-eigenpair-shadow-replay must cite the power-iteration witness")
+    dominant_lambda = require_fraction(
+        "power iteration dominant_eigenvalue",
+        values.get("dominant_eigenvalue"),
+    )
+    dominant_vector = require_fraction_vector(
+        "power iteration dominant_eigenvector",
+        values.get("dominant_eigenvector"),
+    )
+    dominant_image = require_fraction_vector(
+        "power iteration dominant_eigen_image",
+        values.get("dominant_eigen_image"),
+    )
+    require_mat_vec_shape("power iteration dominant eigenpair", matrix, dominant_vector)
+    if all(item == 0 for item in dominant_vector):
+        fail("dominant-eigenpair-shadow-replay eigenvector must be nonzero")
+    if mat_vec(matrix, dominant_vector) != dominant_image:
+        fail("dominant-eigenpair-shadow-replay dominant_eigen_image is not A*v")
+    if scalar_vec(dominant_lambda, dominant_vector) != dominant_image:
+        fail("dominant-eigenpair-shadow-replay image is not lambda*v")
+
+    bad = checks["bad-power-iterate-coordinate-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-power-iterate-coordinate-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-power-iterate-coordinate-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_power_iterate_coordinate_replay":
+        fail("bad-power-iterate-coordinate-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "diagonal-two-step-power-iteration":
+        fail("bad-power-iterate-coordinate-rejected must cite the power-iteration witness")
+    computed_x0 = require_fraction(
+        "bad power iteration computed_second_iterate_x0",
+        data.get("computed_second_iterate_x0"),
+    )
+    claimed_x0 = require_fraction(
+        "bad power iteration claimed_second_iterate_x0",
+        data.get("claimed_second_iterate_x0"),
+    )
+    if computed_x0 != second_iterate[0]:
+        fail("bad-power-iterate-coordinate-rejected computed x0 does not match replay")
+    if computed_x0 == claimed_x0:
+        fail("bad-power-iterate-coordinate-rejected malformed coordinate unexpectedly matches")
+    if "separate qf-lra-bad-power-iterate-coordinate" not in bad.get("notes", ""):
+        fail("bad-power-iterate-coordinate-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-power-iterate-coordinate"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-power-iterate-coordinate must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-power-iterate-coordinate must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-power-iterate-coordinate must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "diagonal-two-step-power-iteration":
+        fail("qf-lra-bad-power-iterate-coordinate must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-power-iterate-coordinate-rejected":
+        fail("qf-lra-bad-power-iterate-coordinate must cite the replay row")
+    qf_computed = require_fraction(
+        "qf power iteration computed_second_iterate_x0",
+        qf_data.get("computed_second_iterate_x0"),
+    )
+    qf_claimed = require_fraction(
+        "qf power iteration claimed_second_iterate_x0",
+        qf_data.get("claimed_second_iterate_x0"),
+    )
+    if qf_computed != computed_x0 or qf_claimed != claimed_x0:
+        fail("qf-lra-bad-power-iterate-coordinate data must match the replay row")
+    if qf_data.get("farkas_conflict") != "power_iterate2_x0 = 4 and power_iterate2_x0 = 3":
+        fail("qf-lra-bad-power-iterate-coordinate must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf power iteration smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-power-iteration-v0/smt2/"
+        "bad-power-iterate-coordinate-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-power-iterate-coordinate smt2_artifact must name the checked source artifact")
+    check_source("qf power iteration smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf power iteration farkas_regression", regression)
+    if "finite_power_iteration_bad_coordinate_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-power-iterate-coordinate must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf power iteration certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-power-iterate-coordinate certificate must document checked Farkas evidence")
+
+    horizon = checks["general-power-iteration-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-power-iteration-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-power-iteration-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "power iteration horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string(
+        "power iteration horizon future_checker",
+        horizon_data.get("future_checker"),
+    )
+
+
 def validate_finite_walsh_hadamard_transform(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -28847,6 +29089,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_projected_gradient(expected)
     if metadata["id"] == "finite-proximal-gradient-v0":
         validate_finite_proximal_gradient(expected)
+    if metadata["id"] == "finite-power-iteration-v0":
+        validate_finite_power_iteration(expected)
     if metadata["id"] == "finite-recurrence-prefix-v0":
         validate_finite_recurrence_prefix(expected)
     if metadata["id"] == "finite-root-finding-v0":

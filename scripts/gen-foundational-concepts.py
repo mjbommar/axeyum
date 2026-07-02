@@ -438,6 +438,10 @@ CURRICULUM_MAP = {
                 "Exact Gram matrix, singular-vector equations, SVD reconstruction, spectral/Frobenius norms, two-norm conditioning, and checked bad singular-value bound evidence.",
             ),
             (
+                "finite-power-iteration-v0",
+                "Exact two-step power-iteration replay, normalized iterate, Rayleigh quotient, residual shadow, dominant eigenpair shadow, and checked bad iterate-coordinate evidence.",
+            ),
+            (
                 "finite-jordan-chain-v0",
                 "Exact Jordan block, eigenvector, generalized-eigenvector, nilpotent-part, reconstruction, and checked bad-component evidence.",
             ),
@@ -551,7 +555,7 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU/QR/Cholesky/Schur replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU/QR/Cholesky/Schur replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, power-iteration, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, multivariable-calculus and Newton-step shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
@@ -576,7 +580,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU/QR/Cholesky/Schur replay, interval bounds, inner-product projections, condition-number, singular-value, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU/QR/Cholesky/Schur replay, interval bounds, inner-product projections, condition-number, singular-value, power-iteration, residual, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -596,7 +600,7 @@ FIELD_PACKS = {
             "Finite cyclic quadrilateral, diagonal-intersection, opposite-angle, and bad-intersection replay.",
         ),
     ],
-    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact condition-number, singular-value, and Jordan/nilpotent shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
+    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact condition-number, singular-value, power-iteration, and Jordan/nilpotent shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
 }
 
 FIELD_DECIDABILITY = {
@@ -5599,8 +5603,9 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "A residual-bound row checks exact rational residuals, norms, "
             "solution boxes, Jacobi-step error bounds, Hessian linear solves, "
-            "condition-number perturbation bounds, or normal-equation side "
-            "conditions for a fixed matrix problem, and separates exact "
+            "condition-number perturbation bounds, power-iteration residual "
+            "shadows, or normal-equation side conditions for a fixed matrix "
+            "problem, and separates exact "
             "infeasibility from floating error analysis."
         ),
         "prerequisites": [
@@ -5649,6 +5654,10 @@ BRIDGE_CONCEPTS = [
                 "Two-by-two diagonal inverse replay, infinity-norm condition number, perturbation-bound shadow, and checked bad condition-number bound.",
             ),
             (
+                "finite-power-iteration-v0",
+                "Two-step power-iteration replay, Rayleigh quotient, residual shadow, normalized iterate, and checked bad iterate-coordinate row.",
+            ),
+            (
                 "finite-schur-complement-v0",
                 "Two-by-two block Schur complement, determinant, inverse, positive-definite, and conditional-variance shadows with checked bad scalar evidence.",
             ),
@@ -5667,6 +5676,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/numerical-linear-algebra-end-to-end.md",
                     "docs/learn/math/newton-step-end-to-end.md",
                     "docs/learn/math/condition-number-end-to-end.md",
+                    "docs/learn/math/power-iteration-end-to-end.md",
                     "docs/learn/math/schur-complement-end-to-end.md",
                     "docs/learn/math/linear-algebra-and-optimization.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
@@ -5675,6 +5685,7 @@ BRIDGE_CONCEPTS = [
                     "Exact residual witnesses replay directly; false bound or "
                     "coefficient claims, including false Newton coordinates, "
                     "and condition-number bounds, "
+                    "or false power-iterate coordinates, "
                     "graduate only when the final rational "
                     "linear conflict has rechecked Farkas evidence."
                 ),
@@ -5688,8 +5699,10 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
             "docs/learn/math/newton-step-end-to-end.md",
             "docs/learn/math/condition-number-end-to-end.md",
+            "docs/learn/math/power-iteration-end-to-end.md",
             "docs/learn/math/schur-complement-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
+            "artifacts/examples/math/finite-power-iteration-v0/smt2/bad-power-iterate-coordinate-farkas-conflict.smt2",
             "artifacts/examples/math/finite-schur-complement-v0/smt2/bad-schur-complement-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
@@ -5715,7 +5728,7 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "A finite eigenpair row checks A*v = lambda*v exactly for a fixed "
             "matrix, and may additionally replay orthogonality, Rayleigh "
-            "quotient, spectral-decomposition, generalized-eigenvector, "
+            "quotient, power-iteration residuals, spectral-decomposition, generalized-eigenvector, "
             "nilpotent-part, singular-vector, or SVD-shadow "
             "witnesses within the bounded matrix instance."
         ),
@@ -5742,6 +5755,10 @@ BRIDGE_CONCEPTS = [
             (
                 "spectral-linear-algebra-v0",
                 "Eigenpair, orthogonal eigenbasis, Rayleigh quotient, spectral decomposition, and bad eigenpair rows.",
+            ),
+            (
+                "finite-power-iteration-v0",
+                "Two-step power-iteration transcript, normalized iterate, Rayleigh quotient, residual shadow, dominant eigenpair shadow, and checked bad coordinate row.",
             ),
             (
                 "finite-jordan-chain-v0",
@@ -5777,6 +5794,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/matrix-computation-index.md",
                     "docs/learn/math/matrix-corpus-benchmark-boundary.md",
                     "docs/learn/math/spectral-linear-algebra-end-to-end.md",
+                    "docs/learn/math/power-iteration-end-to-end.md",
                     "docs/learn/math/jordan-chain-end-to-end.md",
                     "docs/learn/math/singular-value-shadow-end-to-end.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
@@ -5788,6 +5806,9 @@ BRIDGE_CONCEPTS = [
                     "P*J*P^-1 reconstruction; "
                     "the singular-value shadow also replays A^T*A, "
                     "singular-vector equations, and SVD reconstruction. "
+                    "The power-iteration shadow replays two exact iterates, "
+                    "a Rayleigh quotient, an approximate residual, and a "
+                    "dominant eigenpair witness. "
                     "Promoted bad rows check isolated rational component or "
                     "scalar-bound conflicts with Farkas evidence. General "
                     "spectral and SVD theorems remain Lean-horizon."
@@ -5801,21 +5822,23 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/matrix-computation-index.md",
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/spectral-linear-algebra-end-to-end.md",
+            "docs/learn/math/power-iteration-end-to-end.md",
             "docs/learn/math/jordan-chain-end-to-end.md",
             "docs/learn/math/singular-value-shadow-end-to-end.md",
+            "artifacts/examples/math/finite-power-iteration-v0/smt2/bad-power-iterate-coordinate-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Fixed eigenpair, Jordan-chain, and singular-value replay does not prove existence of eigenvalues, Jordan normal form, SVD, diagonalization, spectral theorem, or stability of numerical eigensolvers.",
-            "Nonlinear characteristic-root reasoning, algebraic/geometric multiplicity theorems, SVD perturbation theory, and infinite-dimensional operator theory remain separate theorem horizons.",
+            "Fixed eigenpair, power-iteration, Jordan-chain, and singular-value replay does not prove existence of eigenvalues, power-iteration convergence, Jordan normal form, SVD, diagonalization, spectral theorem, or stability of numerical eigensolvers.",
+            "Nonlinear characteristic-root reasoning, algebraic/geometric multiplicity theorems, residual-to-eigenvalue error bounds, SVD perturbation theory, and infinite-dimensional operator theory remain separate theorem horizons.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
                 "Rows state A, lambda or sigma, vectors, field/domain, and every side condition such as nonzero vector, generalized-chain relation, nilpotency, orthogonality, or reconstruction shape.",
-                "The validator recomputes A*v = lambda*v, generalized-eigenvector chain equations, nilpotent powers, A^T*A*v = sigma^2*v, A*v = sigma*u, and decomposition products exactly, then rejects corrupted component or scalar-bound claims.",
-                "General spectral theorem, Jordan normal form, and SVD statements are linked as Lean-horizon rows, not as finite solver evidence.",
+                "The validator recomputes A*v = lambda*v, power-iteration steps, Rayleigh quotients, residuals, generalized-eigenvector chain equations, nilpotent powers, A^T*A*v = sigma^2*v, A*v = sigma*u, and decomposition products exactly, then rejects corrupted component or scalar-bound claims.",
+                "General spectral theorem, power-iteration convergence, Jordan normal form, and SVD statements are linked as Lean-horizon rows, not as finite solver evidence.",
             ],
         },
     },

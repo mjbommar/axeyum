@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 121 non-template math packs.
-- 777 expected checks.
-- 347 checked proof/evidence rows.
-- 346 replay-only rows.
-- 84 Lean-horizon rows.
-- 121 promoted solver-reuse packs.
+- 122 non-template math packs.
+- 786 expected checks.
+- 348 checked proof/evidence rows.
+- 353 replay-only rows.
+- 85 Lean-horizon rows.
+- 122 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 121 focused learner-linked packs, with no path-only, index-only, or missing
+- 122 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 121 current non-template packs satisfy the focused-lesson side of this
+all 122 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2405,6 +2405,17 @@ Pick one row per commit unless the change is purely navigational.
      keep exact transcript replay separate from general Gaussian-elimination
      correctness, pivoting, rank-revealing variants, sparse fill-in,
      conditioning, and floating-point stability.
+280. Landed: add `finite-power-iteration-v0` as an exact finite spectral
+     iteration resource. The pack replays `A = diag(2,1)`, two power steps
+     `[1,1] -> [2,1] -> [4,1]`, `l1` normalization `[4/5,1/5]`, the
+     Rayleigh quotient `9/5`, the residual `[2/5,-4/5]`, and the dominant
+     eigenpair shadow `2,[1,0]`, then adds
+     `qf-lra-bad-power-iterate-coordinate` as the source-linked Farkas row for
+     the false second-iterate coordinate claim `3` versus exact `4`. The
+     learner and query pages keep exact finite iteration replay separate from
+     convergence, spectral-gap assumptions, residual-to-eigenvalue error
+     theorems, deflation, block iteration, conditioning, and floating-point
+     eigensolver stability.
 
 ## Validation Checklist
 

@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "finite-power-iteration-v0",
+  "title": "Finite Power Iteration Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_functional_analysis_and_operator_theory",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_eigenpair",
+    "bridge_residual_bound",
+    "bridge_exact_vs_floating_arithmetic"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "functional_analysis_and_operator_theory"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite matrices",
+    "exact rational power iteration",
+    "Rayleigh quotient replay",
+    "residual bound replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-power-iteration-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite power-iteration bad iterate-coordinate QF_LRA/Farkas regression seed",
+    "pressure": "Exact matrix-vector replay computes the second power iterate as [4, 1] while a malformed row claims its first coordinate is 3, isolating a compact equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-power-iterate-coordinate"
+    ],
+    "next_step": "Promote additional iterative spectral rows only when they add distinct normalization, residual, deflation, block-iteration, or numerical-honesty pressure; keep convergence rates, spectral-gap assumptions, roundoff, and floating-point eigensolver correctness in Lean or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/power-iteration-end-to-end.md",
+    "artifacts/examples/math/finite-power-iteration-v0/smt2/bad-power-iterate-coordinate-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "first-power-step-replay",
+    "second-power-step-replay",
+    "normalized-iterate-replay",
+    "rayleigh-quotient-replay",
+    "residual-shadow-replay",
+    "dominant-eigenpair-shadow-replay",
+    "bad-power-iterate-coordinate-rejected",
+    "qf-lra-bad-power-iterate-coordinate",
+    "general-power-iteration-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational matrix, start vector, first two power iterates, normalized finite iterate, Rayleigh quotient, residual vector, and dominant eigenpair shadow as deterministic exact-rational replay obligations.",
+    "Route the false second-iterate coordinate through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting coordinate.",
+    "Expose the pack through the matrix computation learner and consumer query surfaces under eigenpair and residual-bound vocabulary.",
+    "Keep convergence theorems, spectral-gap assumptions, deflation, block methods, conditioning, roundoff, and floating-point eigensolver stability marked Lean or numerical-honesty horizon."
+  ]
+}
