@@ -129,6 +129,20 @@ python3 scripts/query-foundational-resources.py horizon-frontier \
   --require-any
 ```
 
+Display finite hitting-time rows, then the theorem boundary:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-hitting-times-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text hitting \
+  --require-any
+```
+
 Display checked finite measure rows:
 
 ```sh
@@ -220,6 +234,11 @@ For the finite concentration boundary in particular, read
 [Concentration Theorem Boundary](../learn/math/concentration-theorem-boundary.md)
 before displaying Chernoff, Hoeffding, martingale concentration, limit-theorem,
 or asymptotic-statistics language next to the finite rows.
+
+For the finite hitting-time boundary, read
+[Hitting-Time Theorem Boundary](../learn/math/hitting-time-theorem-boundary.md)
+before displaying recurrence, transience, optional-stopping, mixing, or
+potential-theory language next to finite first-hit and expected-time rows.
 
 They do not prove:
 

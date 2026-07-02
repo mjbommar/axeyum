@@ -30,6 +30,7 @@ Example packs:
 Companion map:
 
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
+- [Hitting-Time Theorem Boundary](hitting-time-theorem-boundary.md)
 - [Concentration Theorem Boundary](concentration-theorem-boundary.md)
 
 ## What Axeyum Checks
@@ -198,6 +199,10 @@ isolated scalar conflicts.
 
 For a focused finite hitting-time trace, read
 [End To End: Finite Hitting Times](finite-hitting-times-end-to-end.md).
+For the theorem boundary that keeps these finite first-hit, survival-mass,
+absorption-probability, and expected-time rows separate from recurrence,
+transience, optional-stopping, mixing, and potential-theory claims, read
+[Hitting-Time Theorem Boundary](hitting-time-theorem-boundary.md).
 
 For finite concentration checks, it recomputes exact tail probabilities and
 standard finite inequalities:

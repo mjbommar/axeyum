@@ -177,6 +177,10 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --text qf-lra-bad-expected-time \
   --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text hitting \
+  --require-any
 ```
 
 Display calculus shadow prerequisites used by the finite dynamics lane:
@@ -206,6 +210,12 @@ For the finite Euler boundary in particular, read
 [Euler Method Theorem Boundary](../learn/math/euler-method-theorem-boundary.md)
 before displaying ODE convergence, stability, stiffness, floating-point, or
 PDE theorem language next to finite transition/error rows.
+
+For the finite hitting-time boundary, read
+[Hitting-Time Theorem Boundary](../learn/math/hitting-time-theorem-boundary.md)
+before displaying recurrence/transience, optional stopping, mixing, potential
+theory, or continuous-time Markov-process language next to finite transition
+and expected-time rows.
 
 They do not prove:
 

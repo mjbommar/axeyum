@@ -2089,6 +2089,13 @@ finite monotone-prefix, prefix-supremum, and tail-gap rows separate from
 arbitrary bounded monotone sequence convergence, convergence to supremum, and
 real-completeness claims, while linking the public monotone horizon query to
 the existing checked finite QF_LRA/Farkas shadows.
+`finite-hitting-times-v0` now also has a focused hitting-time
+theorem-boundary page. It keeps finite first-hit distributions, survival mass,
+absorption-probability equations, expected hitting-time equations, and checked
+bad survival-mass/expected-time QF_LRA/Farkas rows separate from recurrence,
+transience, optional stopping, mixing, and Markov-chain potential-theory
+targets, and links the public hitting horizon query to the existing checked
+finite QF_LRA/Farkas shadows.
 `calculus-algebraic-shadow-v0` and `calculus-riemann-sum-v0` now have a
 combined learner-facing end-to-end lesson for polynomial derivative replay,
 product-rule and tangent checks, finite Riemann sums, antiderivative endpoint
@@ -2644,6 +2651,15 @@ finite monotone prefixes, finite prefix suprema, finite tail gaps, checked bad
 upper-bound and bad tail-gap Farkas rows, the `monotone-convergence-lean-horizon`
 metadata row, copyable queries, and graduation criteria for a future no-`sorry`
 Lean theorem route.
+The learner/planning layer now also has
+[`hitting-time-theorem-boundary.md`](../learn/math/hitting-time-theorem-boundary.md),
+which narrows the stochastic-process theorem boundary to
+`finite-hitting-times-v0`: finite first-hit distribution replay, finite
+survival mass, absorption-probability equations, expected hitting-time
+equations, checked bad survival-mass and bad expected-time Farkas rows, the
+`general-hitting-theory-lean-horizon` metadata row, copyable queries, and
+graduation criteria for future no-`sorry` recurrence/transience,
+optional-stopping, mixing, and potential-theory routes.
 The learner/planning layer now also has
 [`algebra-equality-certificate-boundary.md`](../learn/math/algebra-equality-certificate-boundary.md),
 which turns the algebra queue rule into an explicit promotion boundary:

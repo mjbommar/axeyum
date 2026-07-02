@@ -66,6 +66,7 @@ Companion map:
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
 - [Metric Balls And Epsilon-Delta Index](metric-ball-epsilon-delta-index.md)
 - [Monotone Convergence Theorem Boundary](monotone-convergence-theorem-boundary.md)
+- [Hitting-Time Theorem Boundary](hitting-time-theorem-boundary.md)
 
 ## What Axeyum Checks
 
@@ -520,6 +521,9 @@ probability and expected hitting-time equations over exact rationals.
 
 For a focused finite hitting-time trace, read
 [End To End: Finite Hitting Times](finite-hitting-times-end-to-end.md).
+For the theorem boundary that keeps those finite equations separate from
+recurrence, transience, optional-stopping, mixing, and potential theory, read
+[Hitting-Time Theorem Boundary](hitting-time-theorem-boundary.md).
 
 For finite integration, encode a finite atom table and a rational-valued simple
 function. The `finite-integration-v0` validator recomputes weighted sums,

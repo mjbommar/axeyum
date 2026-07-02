@@ -1878,6 +1878,14 @@ Pick one row per commit unless the change is purely navigational.
      missing quantified monotone convergence, supremum, and real-completeness
      routes, and adds monotone-specific horizon queries to the public smoke
      gate without adding a duplicate pack or changing resource counts.
+224. Landed: add `hitting-time-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-hitting-times-v0`. It maps finite
+     first-hit distribution replay, survival mass, absorption-probability
+     equations, expected hitting-time equations, and checked QF_LRA/Farkas bad
+     survival-mass and expected-time rows to the missing recurrence,
+     transience, optional-stopping, mixing, and Markov-chain potential-theory
+     routes, and adds hitting-specific horizon queries to the public smoke
+     gate without adding a duplicate pack or changing resource counts.
 
 ## Validation Checklist
 

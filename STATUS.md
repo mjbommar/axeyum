@@ -234,6 +234,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Hitting-time theorem-boundary resource landed.**
+  `hitting-time-theorem-boundary.md` now separates
+  `finite-hitting-times-v0` finite first-hit distribution replay, survival
+  mass, absorption-probability equations, expected hitting-time equations, and
+  checked QF_LRA/Farkas bad survival-mass/expected-time rows from recurrence,
+  transience, optional-stopping, mixing, continuous-time Markov-process, and
+  potential-theory theorem targets. The probability/statistics learner path,
+  analysis/topology learner path, dynamics query guide,
+  probability/statistics query guide, theorem-horizon query guide, and
+  foundational smoke gate now expose the hitting-specific horizon row next to
+  the checked finite shadows. This is a learner/query-depth increment over an
+  existing promoted pack; public resource counts do not change.
+
 - **Monotone-convergence theorem-boundary resource landed.**
   `monotone-convergence-theorem-boundary.md` now separates
   `bounded-monotone-sequence-v0` finite monotone-prefix replay, finite prefix

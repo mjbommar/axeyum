@@ -58,6 +58,10 @@ Companion maps:
   separates finite Markov, Chebyshev, union-bound, and bad-tail replay from
   Chernoff, Hoeffding, martingale concentration, limit-theorem, and
   asymptotic-statistics targets.
+- [Hitting-Time Theorem Boundary](hitting-time-theorem-boundary.md):
+  separates finite first-hit, survival-mass, absorption-probability, and
+  expected-time replay from recurrence, transience, optional-stopping, mixing,
+  and potential-theory targets.
 - [Euler Method Theorem Boundary](euler-method-theorem-boundary.md):
   separates finite explicit-Euler transition/error replay from continuous ODE,
   convergence, stability, stiffness, floating-point, and PDE theorem targets.
@@ -507,6 +511,9 @@ Companion maps:
   absorbing-chain first-hit distributions, survival mass, absorption
   equations, expected hitting-time equations, checked bad survival-mass and
   expected-time rejection, and the general hitting-theory Lean horizon.
+- [Hitting-Time Theorem Boundary](hitting-time-theorem-boundary.md): maps those
+  finite hitting-time shadows to the missing recurrence, transience,
+  optional-stopping, mixing, and potential-theory proof routes.
 - [Finite Concentration](finite-concentration-end-to-end.md): follows exact
   finite Markov, Chebyshev, and union-bound replay over rational atom tables,
   replayed bad tail and union-bound rejections, separate checked
