@@ -136,6 +136,50 @@ fn interface_equality_sat_companion() {
     assert_eq!(verdict(&offline), Some(true));
 }
 
+/// A free Bool symbol living *only* in the propositional skeleton (never as a theory
+/// atom) must land in the returned `sat` model with the skeleton's committed truth
+/// value — otherwise the witness fails to replay against the original assertions. Here
+/// `¬(x < 0)` forces the disjunct `b` true, so a model that omits `b` does not satisfy
+/// `(b ∨ x < 0)`.
+#[test]
+fn skeleton_only_bool_symbol_is_injected_into_sat_model() {
+    let mut arena = TermArena::new();
+    let x = rvar(&mut arena, "x");
+    let zero = rconst(&mut arena, 0);
+    let b_sym = arena.declare("b", Sort::Bool).expect("declare bool");
+    let b = arena.var(b_sym);
+    let x_lt_0 = arena.real_lt(x, zero).unwrap();
+    let disj = arena.or(b, x_lt_0).unwrap();
+    let neq = arena.not(x_lt_0).unwrap();
+    let assertions = [disj, neq];
+
+    let config = SolverConfig::default();
+    let online = check_qf_uflra_online(&mut arena, &assertions, &config).unwrap();
+    assert_eq!(
+        verdict(&online),
+        Some(true),
+        "instance is SAT with b = true"
+    );
+    // The model must carry `b`, so replay evaluates `(b ∨ x < 0)` to `true`.
+    let CheckResult::Sat(model) = &online else {
+        panic!("expected a sat model, got {online:?}");
+    };
+    let mut assignment = Assignment::new();
+    for (symbol, value) in model.iter() {
+        assignment.set(symbol, value);
+    }
+    for (func, interp) in model.functions() {
+        assignment.set_function(func, interp.clone());
+    }
+    for &a in &assertions {
+        assert_eq!(
+            eval(&arena, a, &assignment),
+            Ok(Value::Bool(true)),
+            "sat model must replay every assertion to true"
+        );
+    }
+}
+
 #[test]
 fn pure_lra_decides() {
     // (x < y) AND (y < x): pure LRA, no UF ⇒ UNSAT.

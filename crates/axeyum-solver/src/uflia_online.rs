@@ -1119,6 +1119,44 @@ fn replays_literals(arena: &TermArena, literals: &[Literal], model: &Model) -> b
     })
 }
 
+/// Whether `model` satisfies every original `assertion` (evaluates each to `true`)
+/// under the ground evaluator — the acceptance gate for a combined witness once the
+/// skeleton-only Bool symbols are injected. Any evaluation error, non-Boolean, or
+/// `false` makes it not replay (→ a sound decline, never a wrong `sat`).
+fn replays_assertions(arena: &TermArena, assertions: &[TermId], model: &Model) -> bool {
+    let assignment: Assignment = model.to_assignment();
+    assertions
+        .iter()
+        .all(|&a| matches!(eval(arena, a, &assignment), Ok(Value::Bool(true))))
+}
+
+/// Injects into `model` each Bool-sorted **leaf symbol** that the theory-combination
+/// model builder either omitted or defaulted — a symbol living purely in the
+/// propositional skeleton (never as a theory-atom side), so it never entered the
+/// e-graph / LIA witness. Its truth value is read from the Boolean layer via
+/// `value_of` (the SAT variable the encoder assigned it, in `term_var`). Symbols are
+/// visited in `TermId`-sorted order so the injection is independent of `HashMap`
+/// iteration order (the determinism hard rule); the committed value overrides any
+/// well-founded default `complete_non_int_symbols` may have placed. Additive and
+/// **replay-gated by the caller**, so it can never manufacture a wrong `sat`.
+fn inject_skeleton_bool_symbols(
+    arena: &TermArena,
+    term_var: &HashMap<TermId, usize>,
+    value_of: impl Fn(usize) -> Option<bool>,
+    model: &mut Model,
+) {
+    let mut entries: Vec<(TermId, usize)> = term_var.iter().map(|(&t, &v)| (t, v)).collect();
+    entries.sort_by_key(|(term, _)| *term);
+    for (term, var) in entries {
+        if let TermNode::Symbol(sym) = arena.node(term)
+            && arena.sort_of(term) == Sort::Bool
+            && let Some(value) = value_of(var)
+        {
+            model.set(*sym, Value::Bool(value));
+        }
+    }
+}
+
 /// Completes non-integer symbols in a combined `EUF+LIA` model.
 ///
 /// `LiaTheory::integer_model` only assigns integer symbols. Mixed AUFLIA terms
@@ -1546,7 +1584,21 @@ fn cdclt_combined(
         }
     }
     match decide_conjunction(arena, &literals, deadline) {
-        CheckResult::Sat(model) => CheckResult::Sat(model),
+        CheckResult::Sat(mut model) => {
+            // The conjunctive core only assigns theory symbols; a Bool symbol used purely
+            // as a Boolean-skeleton leaf (e.g. a free `b` in `(b ∨ x < 0)`) never enters
+            // the EUF/LIA witness, so it is omitted (or defaulted by
+            // `complete_non_int_symbols`) and the original assertion fails to replay.
+            // Inject each such skeleton-only Bool symbol from the SAT layer's committed
+            // value, then replay the completed witness against the ORIGINAL assertions as
+            // the acceptance gate — additive and replay-gated, so no wrong `sat`.
+            inject_skeleton_bool_symbols(arena, &enc.term_var, |v| solver.value_of(v), &mut model);
+            if replays_assertions(arena, assertions, &model) {
+                CheckResult::Sat(model)
+            } else {
+                decline("combined CDCL(T) leaf did not rebuild a replaying model")
+            }
+        }
         // The Dpll found the combined theory consistent at this leaf, but the conjunctive
         // core could not certify a replaying model. Degrade — never call it Unsat.
         CheckResult::Unsat | CheckResult::Unknown(_) => {
@@ -1803,6 +1855,22 @@ fn check_qf_uflia_boolean_enumerative(
         combined,
     };
     let result = search.solve(arena);
+    // On a `sat` leaf the search's `value` still holds the satisfying total propositional
+    // assignment. Inject each skeleton-only Bool symbol (a Bool leaf `enc` gave a fresh
+    // SAT variable, never a theory atom) from that assignment, then replay the completed
+    // witness against the ORIGINAL assertions — the same additive, replay-gated
+    // acceptance the CDCL(T) path applies, so no wrong `sat`.
+    let result = match result {
+        CheckResult::Sat(mut model) => {
+            inject_skeleton_bool_symbols(arena, &enc.term_var, |v| search.value[v], &mut model);
+            if replays_assertions(arena, assertions, &model) {
+                CheckResult::Sat(model)
+            } else {
+                decline("enumerative combined leaf did not replay after Bool injection")
+            }
+        }
+        other => other,
+    };
     if let Some(out) = metrics {
         out.prunes_fired = search.prunes_fired;
         out.models_tried = search.models_tried;

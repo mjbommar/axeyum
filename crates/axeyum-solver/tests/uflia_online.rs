@@ -322,6 +322,55 @@ fn interface_equality_sat_companion() {
     assert_eq!(verdict(&offline), Some(true));
 }
 
+/// Replays a `sat` model that may carry Bool symbol values (e.g. an injected
+/// skeleton-only Bool) against the assertions, asserting each evaluates to `true`.
+fn replays_with_bool(arena: &TermArena, assertions: &[TermId], result: &CheckResult) {
+    let CheckResult::Sat(model) = result else {
+        panic!("expected a sat model, got {result:?}");
+    };
+    let mut assignment = Assignment::new();
+    for (symbol, value) in model.iter() {
+        assignment.set(symbol, value);
+    }
+    for (func, interp) in model.functions() {
+        assignment.set_function(func, interp.clone());
+    }
+    for &a in assertions {
+        assert_eq!(
+            eval(arena, a, &assignment),
+            Ok(Value::Bool(true)),
+            "sat model must replay every assertion to true"
+        );
+    }
+}
+
+/// A free Bool symbol living *only* in the propositional skeleton (never as a theory
+/// atom) must land in the returned `sat` model with the skeleton's committed truth
+/// value — otherwise the witness fails to replay against the original assertions. Here
+/// `¬(x < 0)` forces the disjunct `b` true, so a model that omits `b` (or defaults it
+/// to `false`) does not satisfy `(b ∨ x < 0)`.
+#[test]
+fn skeleton_only_bool_symbol_is_injected_into_sat_model() {
+    let mut arena = TermArena::new();
+    let x = ivar(&mut arena, "x");
+    let zero = iconst(&mut arena, 0);
+    let b_sym = arena.declare("b", Sort::Bool).expect("declare bool");
+    let b = arena.var(b_sym);
+    let x_lt_0 = arena.int_lt(x, zero).unwrap();
+    let disj = arena.or(b, x_lt_0).unwrap();
+    let not_lt = arena.not(x_lt_0).unwrap();
+    let assertions = [disj, not_lt];
+
+    let config = SolverConfig::default();
+    let online = check_qf_uflia_online(&mut arena, &assertions, &config).unwrap();
+    assert_eq!(
+        verdict(&online),
+        Some(true),
+        "instance is SAT with b = true"
+    );
+    replays_with_bool(&arena, &assertions, &online);
+}
+
 #[test]
 fn integer_tightening_interface_unsat() {
     // 0 < x  AND  x < 2  AND  f(x) != f(1).
