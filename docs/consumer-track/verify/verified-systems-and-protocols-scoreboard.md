@@ -242,6 +242,8 @@ properties symbolically. 6 tests green.
 | **`capsum` loop** (`phi`+back-edge) → `TransitionSystem` | `acc <= 100` **Proved for ALL iterations** (k-induction, 4 ms); false bound `Reachable` (BMC) |
 | **`read_be16(const u8*)`** — buffer loads (`load`/`gep`) | **≡ value-passing `be16`** Proved (cross-form equivalence over memory-reading code) |
 | **IPv4 IHL** — clang's `(p0<<2)&60` strength-reduction | **≡ spec `zext(p0&0x0f)*4`** Proved (mini translation-validation); `≤ 60 ∧ ≡0 mod 4` Proved |
+| **`p[i & 3]`** — masked symbolic index (`gep` w/ register offset) | **in-bounds Proved** (load offset `< 4` for all `i`) |
+| **`p[i]`** — unguarded symbolic index | **out-of-bounds** — `offset < 4` **Disproved** with an `i ≥ 4` witness (Heartbleed-shaped, on compiled code) |
 
 **Measured (`-O` if-conversion, 2026-06-30):** `-O` collapses branchy leaf
 functions to `select` — `classify`'s `if/else-if` → *nested selects*, a `match`
@@ -272,6 +274,17 @@ own `range` attribute *asserts*, now *proved*). Fuzz cross-check vs C-semantics
 oracles, DISAGREE = 0. **Honest scope:** constant-offset read-only `i8` loads
 (which fixed-offset packet headers are); symbolic indices (array theory), stores,
 wide loads, and a bounds model are deferred.
+
+**Symbolic indices + bounds safety (P):** `p[i]` compiles to a `getelementptr`
+with a *register* offset; the reflector tracks each pointer register's offset as a
+BV term and models a symbolic `load i8` over a size-N buffer as an `ite`-table
+select (stays QF_BV) while recording the offset term. The safety spec *"every load
+offset < N"* is then proved or refuted: the masked `p[i & 3]` (N=4) is **proved
+in-bounds** for all `i`, and the unguarded `p[i]` is **refuted** with a concrete
+`i ≥ 4` out-of-bounds witness — memory-access bounds safety on *compiled* LLVM,
+the Heartbleed-shaped check one level below the Rust `#[verify]` version. Fixed-N
+ite-table; a genuinely unbounded/symbolic-size buffer is the array-theory route
+(`Sort::Array` / `select` / `eliminate_arrays`, present in the solver), deferred.
 
 Headline: **one front end verifies code from two source languages**, and proves
 two structurally-different LLVM forms of the same function equivalent. Measured
