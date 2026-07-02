@@ -39,8 +39,8 @@ These rows live in the
 
 | Question | Packs | Trusted Check | Horizon |
 |---|---|---|---|
-| Does a finite operator/norm row replay? | `finite-operator-v0` | vector-sum replay, exact `l1` norm, matrix-vector replay, exact infinity norm, row-sum bound, checked bad-norm and bad-bound Farkas rows | Banach/Hilbert-space operator theory |
-| Does a Chebyshev recurrence prefix replay? | `finite-operator-v0` | fixed rational recurrence values such as `T0`, `T1`, `T2`, `T3` at `x = 1/2`, plus checked rejection of a bad `T3` value | general Chebyshev polynomial theory |
+| Does a finite operator/norm row replay? | `finite-operator-v0` | vector-sum replay, exact `l1` norm, matrix-vector replay, exact infinity norm, row-sum bound, replay-only bad norm/bound rows, and separate checked `qf-lra-*` Farkas rows | Banach/Hilbert-space operator theory |
+| Does a Chebyshev recurrence prefix replay? | `finite-operator-v0` | fixed rational recurrence values such as `T0`, `T1`, `T2`, `T3` at `x = 1/2`, plus replay-only bad `T3` rejection and a separate checked `qf-lra-bad-chebyshev-t3` row | general Chebyshev polynomial theory |
 | Is a finite interpolation grid unisolvent? | `finite-chebyshev-systems-v0` | exact Vandermonde matrix and determinant replay | Haar-space and Chebyshev-system theorems |
 | Do finite samples match listed coefficients? | `finite-chebyshev-systems-v0` | exact evaluation-matrix times coefficient-vector replay plus checked bad-sample Farkas row | general interpolation and approximation theory |
 | Does a residual alternate on a finite grid? | `finite-chebyshev-systems-v0` | exact residual values, signs, common absolute error, and checked bad-uniform-error Farkas row | minimax and alternation theorems |
@@ -136,7 +136,9 @@ as a QF_LRA/Farkas row.
 
 Start with [Finite-Dimensional Operators](finite-operator-end-to-end.md) for
 exact vector norms, matrix row-sum bounds, Chebyshev recurrence replay, and the
-checked bad norm, bad operator-bound, and bad Chebyshev-prefix rows.
+split bad norm, bad operator-bound, and bad Chebyshev-prefix rows: exact replay
+rejects the fixed values, while explicit `qf-lra-*` rows own checked Farkas
+evidence.
 
 Use [Rational Inner Product Spaces](inner-product-spaces-end-to-end.md) when the
 operator story needs projection arithmetic, residual orthogonality, and checked
@@ -164,7 +166,7 @@ From the repository root:
 python3 scripts/query-foundational-resources.py concepts --field functional_analysis_and_operator_theory --text Chebyshev --require-any
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_operator_chebyshev --route Farkas --require-any
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_operator_chebyshev --route Farkas --proof-status checked --require-any
-python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0 --route Farkas --proof-status checked --text Chebyshev --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0 --route Farkas --proof-status checked --text qf-lra-bad-chebyshev-t3 --require-any
 python3 scripts/query-foundational-resources.py checks --field functional_analysis_and_operator_theory --route Farkas --proof-status checked --require-any
 ```
 

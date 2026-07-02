@@ -10783,10 +10783,12 @@ def validate_finite_operator(expected: dict[str, Any]) -> None:
         fail("l1 triangle witness violates the triangle inequality")
 
     bad_l1 = checks["bad-l1-sum-norm-rejected"]
-    if bad_l1["expected_result"] != "unsat" or bad_l1.get("proof_status") != "checked":
-        fail("bad-l1-sum-norm-rejected must be a checked unsat row")
-    if bad_l1["validation"] != "exact_rational_l1_bad_bound_refutation":
-        fail("bad-l1-sum-norm-rejected must use exact_rational_l1_bad_bound_refutation validation")
+    if bad_l1["expected_result"] != "unsat":
+        fail("bad-l1-sum-norm-rejected must expect unsat")
+    if bad_l1.get("proof_status") != "replay-only":
+        fail("bad-l1-sum-norm-rejected must be replay-only")
+    if bad_l1["validation"] != "finite_operator_bad_l1_sum_norm_replay":
+        fail("bad-l1-sum-norm-rejected must use finite_operator_bad_l1_sum_norm_replay validation")
     data = bad_l1.get("data", {})
     bad_u = require_fraction_vector("bad l1 u", data.get("u"))
     bad_v = require_fraction_vector("bad l1 v", data.get("v"))
@@ -10825,23 +10827,53 @@ def validate_finite_operator(expected: dict[str, Any]) -> None:
         fail("bad-l1-sum-norm-rejected must preserve the true triangle inequality")
     if computed_norm_sum <= claimed_sum_norm_bound:
         fail("bad-l1-sum-norm-rejected must document a false norm upper bound")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad l1 smt2_artifact", smt2_artifact)
+    notes = bad_l1.get("notes", "")
+    if "separate qf-lra-bad-l1-sum-norm" not in notes:
+        fail("bad-l1-sum-norm-rejected notes must name the separate qf-lra-bad-l1-sum-norm row")
+
+    qf_bad_l1 = checks["qf-lra-bad-l1-sum-norm"]
+    if qf_bad_l1["expected_result"] != "unsat":
+        fail("qf-lra-bad-l1-sum-norm must expect unsat")
+    if qf_bad_l1.get("proof_status") != "checked":
+        fail("qf-lra-bad-l1-sum-norm must be checked")
+    if qf_bad_l1["validation"] != "qf_lra_finite_operator_bad_l1_sum_norm_refutation":
+        fail("qf-lra-bad-l1-sum-norm must use qf_lra_finite_operator_bad_l1_sum_norm_refutation validation")
+    qf_data = qf_bad_l1.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-l1-sum-norm-rejected":
+        fail("qf-lra-bad-l1-sum-norm must cite bad-l1-sum-norm-rejected")
+    qf_computed_norm_sum = require_fraction(
+        "qf-lra bad l1 computed_norm_sum",
+        qf_data.get("computed_norm_sum"),
+    )
+    qf_claimed_sum_norm_bound = require_fraction(
+        "qf-lra bad l1 claimed_sum_norm_bound",
+        qf_data.get("claimed_sum_norm_bound"),
+    )
+    if qf_computed_norm_sum != computed_norm_sum:
+        fail("qf-lra-bad-l1-sum-norm computed_norm_sum must match replay")
+    if qf_claimed_sum_norm_bound != claimed_sum_norm_bound:
+        fail("qf-lra-bad-l1-sum-norm claimed_sum_norm_bound must match replay")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf-lra bad l1 farkas_conflict", conflict)
+    if conflict != "sum_norm = 5 and sum_norm <= 4":
+        fail("qf-lra-bad-l1-sum-norm must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad l1 smt2_artifact", smt2_artifact)
     expected_smt2 = (
         "artifacts/examples/math/finite-operator-v0/smt2/"
         "bad-l1-sum-norm-farkas-conflict.smt2"
     )
     if smt2_artifact != expected_smt2:
-        fail("bad-l1-sum-norm-rejected smt2_artifact must name the checked source artifact")
-    check_source("bad l1 smt2_artifact", smt2_artifact)
-    regression = data.get("farkas_regression")
-    require_string("bad l1 farkas_regression", regression)
+        fail("qf-lra-bad-l1-sum-norm smt2_artifact must name the checked source artifact")
+    check_source("qf-lra bad l1 smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad l1 farkas_regression", regression)
     if "finite_operator_bad_l1_sum_norm_artifact_emits_checked_farkas" not in regression:
-        fail("bad-l1-sum-norm-rejected must link the Farkas regression")
-    certificate = data.get("certificate")
-    require_string("bad l1 certificate", certificate)
+        fail("qf-lra-bad-l1-sum-norm must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad l1 certificate", certificate)
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
-        fail("bad-l1-sum-norm-rejected certificate must document checked Farkas evidence")
+        fail("qf-lra-bad-l1-sum-norm certificate must document checked Farkas evidence")
 
     operator = checks["matrix-operator-bound"]
     if operator["expected_result"] != "sat":
@@ -10871,8 +10903,12 @@ def validate_finite_operator(expected: dict[str, Any]) -> None:
         fail("matrix operator witness violates the claimed norm bound")
 
     bad_bound = checks["bad-operator-bound-rejected"]
-    if bad_bound["expected_result"] != "unsat" or bad_bound.get("proof_status") != "checked":
-        fail("bad-operator-bound-rejected must be a checked unsat row")
+    if bad_bound["expected_result"] != "unsat":
+        fail("bad-operator-bound-rejected must expect unsat")
+    if bad_bound.get("proof_status") != "replay-only":
+        fail("bad-operator-bound-rejected must be replay-only")
+    if bad_bound["validation"] != "finite_operator_bad_operator_bound_replay":
+        fail("bad-operator-bound-rejected must use finite_operator_bad_operator_bound_replay validation")
     data = bad_bound.get("data", {})
     matrix = require_fraction_matrix("bad operator matrix", data.get("matrix"))
     vector = require_fraction_vector("bad operator vector", data.get("vector"))
@@ -10915,23 +10951,53 @@ def validate_finite_operator(expected: dict[str, Any]) -> None:
         fail("bad-operator-bound-rejected computed bound is incorrect")
     if computed_image_norm <= claimed_bound:
         fail("bad-operator-bound-rejected must document a false upper bound")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad operator smt2_artifact", smt2_artifact)
+    notes = bad_bound.get("notes", "")
+    if "separate qf-lra-bad-operator-bound" not in notes:
+        fail("bad-operator-bound-rejected notes must name the separate qf-lra-bad-operator-bound row")
+
+    qf_bad_operator = checks["qf-lra-bad-operator-bound"]
+    if qf_bad_operator["expected_result"] != "unsat":
+        fail("qf-lra-bad-operator-bound must expect unsat")
+    if qf_bad_operator.get("proof_status") != "checked":
+        fail("qf-lra-bad-operator-bound must be checked")
+    if qf_bad_operator["validation"] != "qf_lra_finite_operator_bad_operator_bound_refutation":
+        fail("qf-lra-bad-operator-bound must use qf_lra_finite_operator_bad_operator_bound_refutation validation")
+    qf_data = qf_bad_operator.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-operator-bound-rejected":
+        fail("qf-lra-bad-operator-bound must cite bad-operator-bound-rejected")
+    qf_computed_image_norm = require_fraction(
+        "qf-lra bad operator computed_image_norm",
+        qf_data.get("computed_image_norm"),
+    )
+    qf_claimed_bound = require_fraction(
+        "qf-lra bad operator claimed_bound",
+        qf_data.get("claimed_bound"),
+    )
+    if qf_computed_image_norm != computed_image_norm:
+        fail("qf-lra-bad-operator-bound computed_image_norm must match replay")
+    if qf_claimed_bound != claimed_bound:
+        fail("qf-lra-bad-operator-bound claimed_bound must match replay")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf-lra bad operator farkas_conflict", conflict)
+    if conflict != "image_norm = 3 and image_norm <= 2":
+        fail("qf-lra-bad-operator-bound must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad operator smt2_artifact", smt2_artifact)
     expected_smt2 = (
         "artifacts/examples/math/finite-operator-v0/smt2/"
         "bad-operator-bound-farkas-conflict.smt2"
     )
     if smt2_artifact != expected_smt2:
-        fail("bad-operator-bound-rejected smt2_artifact must name the checked source artifact")
-    check_source("bad operator smt2_artifact", smt2_artifact)
-    regression = data.get("farkas_regression")
-    require_string("bad operator farkas_regression", regression)
+        fail("qf-lra-bad-operator-bound smt2_artifact must name the checked source artifact")
+    check_source("qf-lra bad operator smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad operator farkas_regression", regression)
     if "finite_operator_bad_operator_bound_artifact_emits_checked_farkas" not in regression:
-        fail("bad-operator-bound-rejected must link the Farkas regression")
-    certificate = data.get("certificate")
-    require_string("bad operator certificate", certificate)
-    if "UnsatFarkas" not in certificate:
-        fail("bad-operator-bound-rejected certificate must document Farkas evidence")
+        fail("qf-lra-bad-operator-bound must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad operator certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-operator-bound certificate must document Farkas evidence")
 
     chebyshev = checks["chebyshev-recurrence-witness"]
     if chebyshev["expected_result"] != "sat":
@@ -10956,10 +11022,12 @@ def validate_finite_operator(expected: dict[str, Any]) -> None:
     chebyshev_source_values = chebyshev_values
 
     bad_chebyshev = checks["bad-chebyshev-t3-rejected"]
-    if bad_chebyshev["expected_result"] != "unsat" or bad_chebyshev.get("proof_status") != "checked":
-        fail("bad-chebyshev-t3-rejected must be a checked unsat row")
-    if bad_chebyshev["validation"] != "exact_rational_chebyshev_bad_value_refutation":
-        fail("bad-chebyshev-t3-rejected must use exact_rational_chebyshev_bad_value_refutation validation")
+    if bad_chebyshev["expected_result"] != "unsat":
+        fail("bad-chebyshev-t3-rejected must expect unsat")
+    if bad_chebyshev.get("proof_status") != "replay-only":
+        fail("bad-chebyshev-t3-rejected must be replay-only")
+    if bad_chebyshev["validation"] != "finite_operator_bad_chebyshev_t3_replay":
+        fail("bad-chebyshev-t3-rejected must use finite_operator_bad_chebyshev_t3_replay validation")
     data = bad_chebyshev.get("data", {})
     if data.get("source_witness") != "chebyshev-half-values":
         fail("bad-chebyshev-t3-rejected must cite the chebyshev-half-values witness")
@@ -10985,23 +11053,56 @@ def validate_finite_operator(expected: dict[str, Any]) -> None:
     require_string("bad Chebyshev recurrence", recurrence)
     if recurrence != "T(n+1) = 2*x*T(n) - T(n-1)":
         fail("bad-chebyshev-t3-rejected recurrence text is incorrect")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad Chebyshev smt2_artifact", smt2_artifact)
+    notes = bad_chebyshev.get("notes", "")
+    if "separate qf-lra-bad-chebyshev-t3" not in notes:
+        fail("bad-chebyshev-t3-rejected notes must name the separate qf-lra-bad-chebyshev-t3 row")
+
+    qf_bad_chebyshev = checks["qf-lra-bad-chebyshev-t3"]
+    if qf_bad_chebyshev["expected_result"] != "unsat":
+        fail("qf-lra-bad-chebyshev-t3 must expect unsat")
+    if qf_bad_chebyshev.get("proof_status") != "checked":
+        fail("qf-lra-bad-chebyshev-t3 must be checked")
+    if qf_bad_chebyshev["validation"] != "qf_lra_finite_operator_bad_chebyshev_t3_refutation":
+        fail("qf-lra-bad-chebyshev-t3 must use qf_lra_finite_operator_bad_chebyshev_t3_refutation validation")
+    qf_data = qf_bad_chebyshev.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-chebyshev-t3-rejected":
+        fail("qf-lra-bad-chebyshev-t3 must cite bad-chebyshev-t3-rejected")
+    qf_target_index = require_int("qf-lra bad Chebyshev target_index", qf_data.get("target_index"))
+    qf_computed_value = require_fraction(
+        "qf-lra bad Chebyshev computed_value",
+        qf_data.get("computed_value"),
+    )
+    qf_claimed_value = require_fraction(
+        "qf-lra bad Chebyshev claimed_value",
+        qf_data.get("claimed_value"),
+    )
+    if qf_target_index != target_index:
+        fail("qf-lra-bad-chebyshev-t3 target_index must match replay")
+    if qf_computed_value != computed_value:
+        fail("qf-lra-bad-chebyshev-t3 computed_value must match replay")
+    if qf_claimed_value != claimed_value:
+        fail("qf-lra-bad-chebyshev-t3 claimed_value must match replay")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf-lra bad Chebyshev farkas_conflict", conflict)
+    if conflict != "t3_shifted = 0 and t3_shifted = 1/2":
+        fail("qf-lra-bad-chebyshev-t3 must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad Chebyshev smt2_artifact", smt2_artifact)
     expected_smt2 = (
         "artifacts/examples/math/finite-operator-v0/smt2/"
         "bad-chebyshev-t3-farkas-conflict.smt2"
     )
     if smt2_artifact != expected_smt2:
-        fail("bad-chebyshev-t3-rejected smt2_artifact must name the checked source artifact")
-    check_source("bad Chebyshev smt2_artifact", smt2_artifact)
-    regression = data.get("farkas_regression")
-    require_string("bad Chebyshev farkas_regression", regression)
+        fail("qf-lra-bad-chebyshev-t3 smt2_artifact must name the checked source artifact")
+    check_source("qf-lra bad Chebyshev smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad Chebyshev farkas_regression", regression)
     if "finite_operator_bad_chebyshev_t3_artifact_emits_checked_farkas" not in regression:
-        fail("bad-chebyshev-t3-rejected must link the Farkas regression")
-    certificate = data.get("certificate")
-    require_string("bad Chebyshev certificate", certificate)
-    if "UnsatFarkas" not in certificate:
-        fail("bad-chebyshev-t3-rejected certificate must document Farkas evidence")
+        fail("qf-lra-bad-chebyshev-t3 must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad Chebyshev certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-chebyshev-t3 certificate must document Farkas evidence")
 
 
 def validate_finite_chebyshev_systems(expected: dict[str, Any]) -> None:

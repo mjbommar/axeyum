@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 668 expected checks.
+- 671 expected checks.
 - 322 checked proof/evidence rows.
-- 275 replay-only rows.
+- 278 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -243,7 +243,7 @@ Exit criteria:
 | `numerical_analysis` | residuals, Euler steps, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | maintain landed finite dynamics/Euler bridge and keep numerical-honesty rows distinct from promoted exact residual/error certificates; bounded dynamics now checks false transition-step, threshold-step, and invariant-bound arithmetic, finite line-search and finite Wolfe now check descent-direction, accepted-candidate, exact-minimizer, sufficient-decrease, and curvature arithmetic conflicts, and finite proximal-gradient now checks false composite-decrease arithmetic | QF_LRA/Farkas, replay, Lean horizon |
 | `differential_equations_and_dynamical_systems` | bounded recurrences and Euler traces | maintain landed finite dynamics/Euler and bounded-family/asymptotic-boundary bridges; bounded dynamics now has checked bad transition-step, bad threshold-step, and bad invariant-bound rows; add only distinct transition, reachability, invariant, stochastic, finite-error, or theorem-boundary pressure | QF_LRA/Farkas, replay, Lean horizon |
 | `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, circle, inversion, and cyclic rational geometry | maintain landed coordinate/oriented replay and finite circle/inversion/cyclic replay bridge rows; add only distinct nontrivial affine-coordinate, circle-line correspondence, higher-degree polynomial-geometry, or theorem-reconstruction pressure beyond the current midpoint-coordinate, affine collinearity-determinant, area-scaling, circle-line, square angle-dot, and Ptolemy rows | QF_LRA/Farkas, finite replay |
-| `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now has checked bad `l1` norm, bad operator-bound, and bad Chebyshev-prefix rows, inner-product now has checked bad negative-norm and projection-orthogonality rows, and finite-Chebyshev now has checked duplicate-node, bad-interpolation, and bad-alternation rows; add only distinct norm, projection, recurrence, alternation variants, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
+| `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now keeps bad `l1` norm, bad operator-bound, and bad Chebyshev-prefix rows as exact replay, with separate checked `qf-lra-*` Farkas rows; inner-product now has checked bad negative-norm and projection-orthogonality rows, and finite-Chebyshev now has checked duplicate-node, bad-interpolation, and bad-alternation rows; add only distinct norm, projection, recurrence, alternation variants, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
 
 ## Curriculum Node Build Ledger
 
@@ -1168,8 +1168,8 @@ Pick one row per commit unless the change is purely navigational.
      expected-rank contradictions without claiming asymptotic spectral laws,
      universality, concentration theorems, simulation quality, or numerical
      eigensolver behavior.
-133. Landed: extend `finite-operator-v0` with a checked bad Chebyshev-prefix
-     row. Exact recurrence replay at `x=1/2` computes `T3=-1`, while the
+133. Landed: extend `finite-operator-v0` with a checked `qf-lra-*` bad
+     Chebyshev-prefix row. Exact recurrence replay at `x=1/2` computes `T3=-1`, while the
      malformed source SMT-LIB artifact claims the shifted value
      `T3+1=1/2`; the shared QF_LRA/Farkas route now checks the recurrence
      value conflict without promoting Haar-space, minimax, Banach/Hilbert, or

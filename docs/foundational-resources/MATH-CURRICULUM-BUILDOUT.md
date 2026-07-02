@@ -2501,8 +2501,9 @@ The consumer query layer now also exposes functional-analysis/operator
 readiness: `CONSUMER-QUERIES.md` shows the Farkas field summary,
 operator/Chebyshev bridge lookup, concept-scoped
 `bridge_finite_operator_chebyshev` pack and checked-row drill-downs, and
-checked finite-operator norm/bound/Chebyshev-prefix, inner-product, Chebyshev, spectral, and
-characteristic-polynomial Farkas rows. The foundational-resource smoke check
+routed finite-operator norm/bound/Chebyshev-prefix rows with exact replay split
+from checked `qf-lra-*` Farkas evidence, plus inner-product, Chebyshev, spectral,
+and characteristic-polynomial Farkas rows. The foundational-resource smoke check
 runs those same queries so finite-dimensional operator bounds, inner-product
 positivity and projection-orthogonality, finite Chebyshev-prefix conflicts,
 Chebyshev duplicate-node grids,
@@ -2521,9 +2522,10 @@ QF_LIA/Diophantine, Lean-horizon, and numerical-honesty boundaries.
 The learner layer now also has
 [`chebyshev-operator-index.md`](../learn/math/chebyshev-operator-index.md),
 which groups finite operator bounds, Chebyshev recurrence values,
-bad Chebyshev-prefix values, Vandermonde interpolation matrices, alternating residuals, spectral rows, and
-characteristic-polynomial arithmetic by exact replay, QF_LRA/Farkas evidence,
-and functional-analysis theorem horizons.
+bad Chebyshev-prefix values, Vandermonde interpolation matrices, alternating
+residuals, spectral rows, and characteristic-polynomial arithmetic by exact
+replay, explicit checked QF_LRA/Farkas rows, and functional-analysis theorem
+horizons.
 The learner layer now also has
 [`random-matrix-moment-index.md`](../learn/math/random-matrix-moment-index.md),
 which groups finite matrix-valued atom tables, exact trace/determinant

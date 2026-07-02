@@ -1753,13 +1753,14 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-operator-v0 \
   --route Farkas \
   --proof-status checked \
-  --text Chebyshev \
+  --text qf-lra-bad-chebyshev-t3 \
   --require-any
 ```
 
-To display concrete checked finite-operator norm/bound, inner-product
-positivity/projection, Chebyshev, spectral, and matrix-invariant rows, drill
-into checked Farkas examples:
+To display concrete finite-operator norm/bound rows, use the checked `qf-lra-*`
+drilldowns for proof evidence and the replay-only rows for the exact computed
+values. The same section also exposes inner-product positivity/projection,
+Chebyshev, spectral, and matrix-invariant Farkas rows:
 
 ```sh
 python3 scripts/query-foundational-resources.py checks \
@@ -2022,7 +2023,7 @@ python3 scripts/query-foundational-resources.py concepts --field functional_anal
 python3 scripts/query-foundational-resources.py concepts --field functional_analysis_and_operator_theory --text Chebyshev --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_operator_chebyshev --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_operator_chebyshev --route Farkas --proof-status checked --require-any >/dev/null
-python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0 --route Farkas --proof-status checked --text Chebyshev --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0 --route Farkas --proof-status checked --text qf-lra-bad-chebyshev-t3 --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field functional_analysis_and_operator_theory --route Farkas --proof-status checked --require-any >/dev/null
 ```
 

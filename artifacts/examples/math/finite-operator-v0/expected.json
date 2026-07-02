@@ -53,8 +53,8 @@
       "id": "bad-l1-sum-norm-rejected",
       "claim": "The listed vector sum has l1 norm at most 4.",
       "expected_result": "unsat",
-      "validation": "exact_rational_l1_bad_bound_refutation",
-      "proof_status": "checked",
+      "validation": "finite_operator_bad_l1_sum_norm_replay",
+      "proof_status": "replay-only",
       "data": {
         "u": ["1", "2"],
         "v": ["3", "-1"],
@@ -63,12 +63,26 @@
         "computed_norm_v": "4",
         "computed_norm_sum": "5",
         "computed_triangle_bound": "7",
+        "claimed_sum_norm_bound": "4"
+      },
+      "notes": "Exact norm replay computes ||u+v||_1 = 5, while the malformed row claims it is at most 4. The separate qf-lra-bad-l1-sum-norm row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-l1-sum-norm",
+      "claim": "The fixed malformed finite-operator l1 norm upper-bound claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_finite_operator_bad_l1_sum_norm_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-l1-sum-norm-rejected",
+        "computed_norm_sum": "5",
         "claimed_sum_norm_bound": "4",
+        "farkas_conflict": "sum_norm = 5 and sum_norm <= 4",
         "smt2_artifact": "artifacts/examples/math/finite-operator-v0/smt2/bad-l1-sum-norm-farkas-conflict.smt2",
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_l1_sum_norm_artifact_emits_checked_farkas",
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "Exact norm replay computes ||u+v||_1 = 5, while the malformed row claims it is at most 4; the source QF_LRA artifact isolates that final inequality conflict for Farkas checking."
+      "notes": "The Axeyum regression refutes sum_norm = 5 together with sum_norm <= 4 using rechecked Farkas evidence."
     },
     {
       "id": "matrix-operator-bound",
@@ -92,8 +106,8 @@
       "id": "bad-chebyshev-t3-rejected",
       "claim": "The listed Chebyshev prefix at x = 1/2 cannot have T3 equal to -1/2.",
       "expected_result": "unsat",
-      "validation": "exact_rational_chebyshev_bad_value_refutation",
-      "proof_status": "checked",
+      "validation": "finite_operator_bad_chebyshev_t3_replay",
+      "proof_status": "replay-only",
       "data": {
         "source_witness": "chebyshev-half-values",
         "x": "1/2",
@@ -101,19 +115,34 @@
         "target_index": 3,
         "computed_value": "-1",
         "claimed_value": "-1/2",
-        "recurrence": "T(n+1) = 2*x*T(n) - T(n-1)",
+        "recurrence": "T(n+1) = 2*x*T(n) - T(n-1)"
+      },
+      "notes": "Exact recurrence replay computes T3(1/2) = -1, while the malformed row claims T3(1/2) = -1/2. The separate qf-lra-bad-chebyshev-t3 row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-chebyshev-t3",
+      "claim": "The fixed malformed finite Chebyshev T3 value claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_finite_operator_bad_chebyshev_t3_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-chebyshev-t3-rejected",
+        "target_index": 3,
+        "computed_value": "-1",
+        "claimed_value": "-1/2",
+        "farkas_conflict": "t3_shifted = 0 and t3_shifted = 1/2",
         "smt2_artifact": "artifacts/examples/math/finite-operator-v0/smt2/bad-chebyshev-t3-farkas-conflict.smt2",
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_chebyshev_t3_artifact_emits_checked_farkas",
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "Exact recurrence replay computes T3(1/2) = -1, while the malformed row claims T3(1/2) = -1/2; the source QF_LRA artifact isolates the equivalent shifted equality conflict for Farkas checking."
+      "notes": "The Axeyum regression refutes the shifted Chebyshev equality conflict using rechecked Farkas evidence."
     },
     {
       "id": "bad-operator-bound-rejected",
       "claim": "The listed matrix-vector image has infinity norm at most 2.",
       "expected_result": "unsat",
-      "validation": "exact_rational_operator_bad_bound_refutation",
-      "proof_status": "checked",
+      "validation": "finite_operator_bad_operator_bound_replay",
+      "proof_status": "replay-only",
       "data": {
         "matrix": [
           ["1", "-1"],
@@ -125,12 +154,26 @@
         "computed_operator_norm": "3",
         "computed_vector_norm": "2",
         "computed_bound": "6",
+        "claimed_bound": "2"
+      },
+      "notes": "Exact operator replay computes ||A*x||_infty = 3 and row-sum bound 6, while the malformed row claims the image norm is at most 2. The separate qf-lra-bad-operator-bound row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-operator-bound",
+      "claim": "The fixed malformed finite-operator image-norm upper-bound claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_finite_operator_bad_operator_bound_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-operator-bound-rejected",
+        "computed_image_norm": "3",
         "claimed_bound": "2",
+        "farkas_conflict": "image_norm = 3 and image_norm <= 2",
         "smt2_artifact": "artifacts/examples/math/finite-operator-v0/smt2/bad-operator-bound-farkas-conflict.smt2",
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas",
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "Exact operator replay computes ||A*x||_infty = 3 and row-sum bound 6, while the malformed row claims the image norm is at most 2; the source QF_LRA artifact isolates that final inequality conflict for Farkas checking."
+      "notes": "The Axeyum regression refutes image_norm = 3 together with image_norm <= 2 using rechecked Farkas evidence."
     }
   ]
 }

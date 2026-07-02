@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 668 expected checks.
+- 671 expected checks.
 - 322 checked proof/evidence rows.
-- 275 replay-only rows.
+- 278 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1758,8 +1758,8 @@ Pick one item per commit unless the change is purely navigational.
 78. Landed: add functional-analysis/operator field-readiness consumer queries
     through [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational
     smoke check, covering Farkas field readiness, the operator bridge lookup,
-    and checked finite-operator norm/bound, inner-product, Chebyshev, and
-    spectral rows.
+    split finite-operator replay plus checked `qf-lra-*` norm/bound/Chebyshev
+    rows, and checked inner-product, Chebyshev, and spectral rows.
 79. Landed: add topology field-readiness consumer queries through
     [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and the foundational smoke
     check, covering Boolean field readiness, compactness/preimage bridge
@@ -2017,8 +2017,8 @@ Pick one item per commit unless the change is purely navigational.
      both trace-square moment and expected-rank conflicts without promoting
      asymptotic spectral laws, concentration, universality, simulation
      quality, or numerical eigensolver behavior.
-119. Landed: extend `finite-operator-v0` with a checked bad Chebyshev-prefix
-     row. Exact recurrence replay at `x=1/2` computes `T3=-1`, while the
+119. Landed: extend `finite-operator-v0` with a checked `qf-lra-*` bad
+     Chebyshev-prefix row. Exact recurrence replay at `x=1/2` computes `T3=-1`, while the
      malformed source SMT-LIB artifact claims the shifted value
      `T3+1=1/2`; the shared QF_LRA/Farkas route now checks the recurrence
      value conflict without promoting Haar-space, minimax, Banach/Hilbert, or

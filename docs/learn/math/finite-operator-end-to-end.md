@@ -20,11 +20,14 @@ Concept rows:
 | Check | Expected | Evidence Status |
 |---|---|---|
 | `l1-triangle-witness` | `sat` | replay-only |
-| `bad-l1-sum-norm-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-l1-sum-norm-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-l1-sum-norm` | `unsat` | checked QF_LRA/Farkas |
 | `matrix-operator-bound` | `sat` | replay-only |
 | `chebyshev-recurrence-witness` | `sat` | replay-only |
-| `bad-chebyshev-t3-rejected` | `unsat` | checked QF_LRA/Farkas |
-| `bad-operator-bound-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-chebyshev-t3-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-chebyshev-t3` | `unsat` | checked QF_LRA/Farkas |
+| `bad-operator-bound-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-operator-bound` | `unsat` | checked QF_LRA/Farkas |
 
 Every row is finite-dimensional and exact-rational. The pack checks concrete
 vectors, matrices, norms, and recurrence values. It does not prove Banach-space
@@ -64,9 +67,11 @@ The bad norm row keeps the same replayed vectors but claims:
 ||u + v||_1 <= 4
 ```
 
-Replay computes `||u+v||_1 = 5`, so the committed SMT-LIB artifact
+Replay computes `||u+v||_1 = 5`, so `bad-l1-sum-norm-rejected` is rejected by
+exact replay. The separate `qf-lra-bad-l1-sum-norm` row uses the committed
+SMT-LIB artifact
 [`bad-l1-sum-norm-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-operator-v0/smt2/bad-l1-sum-norm-farkas-conflict.smt2)
-isolates the final contradiction:
+to isolate the final contradiction:
 
 ```text
 sum_norm = 5
@@ -118,9 +123,11 @@ The negative row reuses the same matrix-vector source object but claims:
 ||A*x||_infty <= 2
 ```
 
-Replay computes `||A*x||_infty = 3`, so the committed SMT-LIB artifact
+Replay computes `||A*x||_infty = 3`, so `bad-operator-bound-rejected` is
+rejected by exact replay. The separate `qf-lra-bad-operator-bound` row uses the
+committed SMT-LIB artifact
 [`bad-operator-bound-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-operator-v0/smt2/bad-operator-bound-farkas-conflict.smt2)
-isolates the final contradiction:
+to isolate the final contradiction:
 
 ```text
 image_norm = 3
@@ -160,7 +167,9 @@ The bad Chebyshev row reuses the same finite prefix but claims:
 T3(1/2) = -1/2
 ```
 
-Replay computes `T3(1/2) = -1`. The committed SMT-LIB artifact
+Replay computes `T3(1/2) = -1`, so `bad-chebyshev-t3-rejected` is rejected by
+exact recurrence replay. The separate `qf-lra-bad-chebyshev-t3` row uses the
+committed SMT-LIB artifact
 [`bad-chebyshev-t3-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-operator-v0/smt2/bad-chebyshev-t3-farkas-conflict.smt2)
 uses the equivalent shifted contradiction:
 

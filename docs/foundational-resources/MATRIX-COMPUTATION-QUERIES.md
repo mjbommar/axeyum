@@ -51,7 +51,7 @@ when the consumer needs a concrete checked row to display.
 | Integer chain-complex torsion | `bridge_finite_torsion_homology_replay` | `Diophantine` | `checks --concept bridge_finite_torsion_homology_replay --route Diophantine --proof-status checked` |
 | Universal-coefficient shadow | `bridge_finite_universal_coefficient_shadow` | `Alethe` | `checks --concept bridge_finite_universal_coefficient_shadow --route Alethe --proof-status checked` |
 | Modules and tensor bilinearity | `bridge_tensor_bilinearity`; packs `finite-modules-v0`, `finite-tensor-products-v0` | `Alethe` | `packs --concept bridge_tensor_bilinearity --route Alethe`; `checks --pack finite-modules-v0 --route Alethe --proof-status checked --text scalar-closure`; `checks --pack finite-tensor-products-v0 --route Alethe --proof-status checked --text left-additivity` |
-| Operators and Chebyshev systems | `bridge_finite_operator_chebyshev` | `Farkas` | `checks --pack finite-operator-v0 --route Farkas --proof-status checked --text Chebyshev` |
+| Operators and Chebyshev systems | `bridge_finite_operator_chebyshev` | `Farkas` | `checks --pack finite-operator-v0 --route Farkas --proof-status checked --text qf-lra-bad-chebyshev-t3` |
 
 ## Copyable Examples
 
@@ -191,7 +191,7 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-operator-v0 \
   --route Farkas \
   --proof-status checked \
-  --text Chebyshev \
+  --text qf-lra-bad-chebyshev-t3 \
   --require-any
 ```
 

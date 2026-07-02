@@ -12,8 +12,19 @@ The validator recomputes `u + v`, the three `l1` norms, and checks
 Expected result: `unsat`.
 
 The validator reuses the same exact vectors, recomputes `u + v = (4, 1)` and
-`||u + v||_1 = 5`, then checks the source QF_LRA artifact for the malformed
-claim `||u + v||_1 <= 4` through checked Farkas evidence.
+`||u + v||_1 = 5`, then rejects the malformed fixed row that claims
+`||u + v||_1 <= 4`.
+
+This row is replay-only; the separate `qf-lra-bad-l1-sum-norm` row owns the
+proof-object refutation.
+
+## `qf-lra-bad-l1-sum-norm`
+
+Expected result: `unsat`.
+
+The resource-backed Axeyum regression checks the final linear obligation as
+`QF_LRA`: `sum_norm = 5` and `sum_norm <= 4`, requiring rechecked
+`UnsatFarkas` evidence.
 
 ## `matrix-operator-bound`
 
@@ -34,8 +45,18 @@ The validator checks the exact values `T0(1/2)`, `T1(1/2)`, `T2(1/2)`, and
 Expected result: `unsat`.
 
 The validator reuses the same finite Chebyshev prefix, recomputes
-`T3(1/2) = -1`, and checks the source QF_LRA artifact for the malformed claim
-`T3(1/2) = -1/2` through checked Farkas evidence.
+`T3(1/2) = -1`, and rejects the malformed fixed row that claims
+`T3(1/2) = -1/2`.
+
+This row is replay-only; the separate `qf-lra-bad-chebyshev-t3` row owns the
+proof-object refutation.
+
+## `qf-lra-bad-chebyshev-t3`
+
+Expected result: `unsat`.
+
+The resource-backed Axeyum regression checks the shifted Chebyshev value
+conflict as `QF_LRA`, requiring rechecked `UnsatFarkas` evidence.
 
 ## `bad-operator-bound-rejected`
 
@@ -43,5 +64,15 @@ Expected result: `unsat`.
 
 The validator recomputes `A*x = (3, 3)`, `||A*x||_infty = 3`, `||A||_row-sum =
 3`, and `||x||_infty = 2`. The malformed row claims the image norm is at most
-`2`, so the source QF_LRA artifact closes the final contradiction with checked
-Farkas evidence.
+`2`, so exact replay rejects the fixed data row.
+
+This row is replay-only; the separate `qf-lra-bad-operator-bound` row owns the
+proof-object refutation.
+
+## `qf-lra-bad-operator-bound`
+
+Expected result: `unsat`.
+
+The resource-backed Axeyum regression checks the final linear obligation as
+`QF_LRA`: `image_norm = 3` and `image_norm <= 2`, requiring rechecked
+`UnsatFarkas` evidence.

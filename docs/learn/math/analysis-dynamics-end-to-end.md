@@ -51,10 +51,13 @@ Concept rows:
 | `bad-expected-time-rejected` | `unsat` | replay-only |
 | `qf-lra-bad-expected-time` | `unsat` | checked |
 | `matrix-operator-bound` | `sat` | replay-only |
-| `bad-l1-sum-norm-rejected` | `unsat` | checked |
-| `bad-operator-bound-rejected` | `unsat` | checked |
+| `bad-l1-sum-norm-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-l1-sum-norm` | `unsat` | checked |
+| `bad-operator-bound-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-operator-bound` | `unsat` | checked |
 | `chebyshev-recurrence-witness` | `sat` | replay-only |
-| `bad-chebyshev-t3-rejected` | `unsat` | checked |
+| `bad-chebyshev-t3-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-chebyshev-t3` | `unsat` | checked |
 | `vandermonde-unisolvence-witness` | `sat` | replay-only |
 | `interpolation-polynomial-witness` | `sat` | replay-only |
 | `alternating-residual-witness` | `sat` | replay-only |
@@ -130,8 +133,9 @@ infinity norms, the row-sum norm, and the bound:
 
 The bad norm row reuses the exact vector replay but claims `||u+v||_1 <= 4`;
 the bad-bound row reuses the same exact matrix-vector replay but claims
-`||A*x||_infty <= 2`. Exact replay computes `5` and `3`, then the source
-QF_LRA artifacts check the final contradictions through Farkas evidence.
+`||A*x||_infty <= 2`. Exact replay computes `5` and `3`; the separate
+`qf-lra-bad-l1-sum-norm` and `qf-lra-bad-operator-bound` rows check the final
+linear contradictions through Farkas evidence.
 
 For the Chebyshev row, it checks the finite recurrence at `x = 1/2`:
 
@@ -143,7 +147,8 @@ T3 = -1
 ```
 
 The bad Chebyshev-prefix row reuses that finite recurrence replay and rejects
-the malformed value `T3 = -1/2` through checked Farkas evidence.
+the malformed value `T3 = -1/2`; the separate `qf-lra-bad-chebyshev-t3` row
+checks the shifted final contradiction through Farkas evidence.
 
 For the finite Chebyshev-system rows, it checks exact finite unisolvence and
 interpolation:

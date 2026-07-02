@@ -332,7 +332,10 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpai
 python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_tensor_bilinearity --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_tensor_bilinearity --route Alethe --proof-status checked --require-any >/dev/null
-python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0 --route Farkas --proof-status checked --text Chebyshev --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0 --route Farkas --proof-status checked --text qf-lra-bad-l1-sum-norm --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0 --route Farkas --proof-status checked --text qf-lra-bad-operator-bound --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0 --route Farkas --proof-status checked --text qf-lra-bad-chebyshev-t3 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0 --proof-status replay-only --text rejected --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-chebyshev-systems-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack spectral-linear-algebra-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack inner-product-spaces-rational-v0 --route Farkas --proof-status checked --require-any >/dev/null

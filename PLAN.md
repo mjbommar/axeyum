@@ -253,8 +253,8 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-120 concept rows, 108 non-template packs, 668 expected checks (336 `sat`,
-261 `unsat`, 71 `not-run`), 322 checked rows, 275 replay-only rows, and 71
+120 concept rows, 108 non-template packs, 671 expected checks (336 `sat`,
+264 `unsat`, 71 `not-run`), 322 checked rows, 278 replay-only rows, and 71
 Lean-horizon rows. The rules/law JSON layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
@@ -597,9 +597,9 @@ tables, monotone invariant checks, checked QF_LRA/Farkas bad max-error,
 bad terminal-error, and bad-step evidence, and the ODE/numerical-analysis Lean horizon.
 `finite-operator-v0` now also has a standalone finite-dimensional operator
 page for exact `l1` norm replay, row-sum operator-bound replay, finite
-Chebyshev recurrence replay, and checked QF_LRA/Farkas bad `l1` norm,
-bad-bound, and bad Chebyshev-prefix evidence, leaving the broader
-bounded-dynamics/operator page as the cross-resource bridge.
+Chebyshev recurrence replay, replay-only malformed norm/bound/Chebyshev rows,
+and separate checked QF_LRA/Farkas `qf-lra-*` evidence rows, leaving the
+broader bounded-dynamics/operator page as the cross-resource bridge.
 The six active proof-cookbook routes for CNF/LRAT, QF_BV, QF_LIA, QF_LRA,
 QF_UF/Alethe, and Lean horizons now each name concrete math example packs that
 use the route.
