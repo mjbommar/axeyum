@@ -234,6 +234,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Theorem-horizon query guide landed.**
+  `THEOREM-HORIZON-QUERIES.md` now documents how consumers find Lean/theorem
+  boundary rows by route summary, pack route, field, and topic text without
+  treating those rows as checked SMT or replay evidence. The foundational
+  resource smoke script now checks representative Lean-horizon route, pack,
+  topology, graph, and convergence queries. The public summary remains 121
+  concept rows, 75 bridge concepts, 108 packs, 688 expected checks, 322 checked
+  rows, 295 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite countermodel bridge concept landed.**
   The foundational concept atlas now includes
   `bridge_finite_countermodel_replay`, making finite predicate

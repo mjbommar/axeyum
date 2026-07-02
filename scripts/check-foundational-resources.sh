@@ -16,6 +16,11 @@ python3 scripts/query-foundational-resources.py routes --route Diophantine --fie
 python3 scripts/query-foundational-resources.py routes --route Farkas --field linear_algebra --require-any >/dev/null
 python3 scripts/query-foundational-resources.py routes --route Alethe --field abstract_algebra --require-any >/dev/null
 python3 scripts/query-foundational-resources.py routes --route lean --field topology --require-any >/dev/null
+python3 scripts/query-foundational-resources.py routes --route lean --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --route lean-horizon-template --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field topology --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field graph_theory --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --text convergence --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --field probability_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --expected-result unsat --require-any >/dev/null

@@ -13,6 +13,9 @@ The route rows come from proof-cookbook recipe links in committed pack
 metadata. The query helper does not import validators, generators, or solver
 crates.
 
+For consumer queries focused specifically on theorem-boundary rows, see
+[Theorem Horizon Queries](THEOREM-HORIZON-QUERIES.md).
+
 ## Query Pattern
 
 Start with the route summary:

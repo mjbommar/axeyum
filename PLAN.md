@@ -158,6 +158,11 @@ The proof-route query matrix is
 it records route-level summary queries and boundaries for finite replay,
 Boolean CNF/LRAT, QF_BV, QF_LIA/Diophantine, QF_LRA/Farkas, QF_UF/Alethe, and
 Lean-horizon resources.
+The theorem-horizon query guide is
+[`docs/foundational-resources/THEOREM-HORIZON-QUERIES.md`](docs/foundational-resources/THEOREM-HORIZON-QUERIES.md);
+it records route, pack, field, and text queries for `lean-horizon` rows so
+consumers can find theorem boundaries without treating them as checked SMT
+evidence.
 The proof-route family selector is
 [`docs/foundational-resources/PROOF-ROUTE-FAMILY-SELECTION.md`](docs/foundational-resources/PROOF-ROUTE-FAMILY-SELECTION.md);
 it picks one representative replay-heavy family per active proof route and
@@ -278,7 +283,9 @@ finite countermodel lane now also makes explicit finite universes, Boolean
 assignments, predicate extensions, relation tables, function tables, and finite
 order/lattice counterexamples queryable as one checked bridge concept with a
 learner-facing replay guide and a consumer query guide, without changing pack
-or check totals. The
+or check totals. The theorem-horizon lane now also has a consumer query guide
+for finding `lean-horizon` rows by route, field, pack, and topic while keeping
+them out of checked-evidence claims. The
 finite algebra-homomorphism lane now also promotes the
 concrete bad group-homomorphism row through QF_UF/Alethe after exact table
 replay isolates `phi(1+1)=1` versus `phi(1)+phi(1)=0`. The finite

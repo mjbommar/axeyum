@@ -1664,6 +1664,11 @@ Pick one row per commit unless the change is purely navigational.
      function-table QF_UF/Alethe conflicts, and finite order/lattice Boolean
      evidence, while explicitly separating bridge-concept discovery from proof
      route claims.
+192. Landed: add `THEOREM-HORIZON-QUERIES.md` as the consumer-facing query
+     guide for Lean/theorem-boundary rows. It records executable route, pack,
+     field, and topic queries for `lean-horizon` rows and makes explicit that
+     horizon rows are boundary markers, not checked SMT evidence, replay
+     evidence, benchmark claims, or theorem proofs.
 
 ## Validation Checklist
 
