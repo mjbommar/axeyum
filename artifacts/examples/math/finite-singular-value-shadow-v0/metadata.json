@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": "finite-singular-value-shadow-v0",
+  "title": "Finite Singular-Value Shadow Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_functional_analysis_and_operator_theory",
+    "bridge_eigenpair",
+    "bridge_inner_product_projection",
+    "bridge_exact_vs_floating_arithmetic"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "functional_analysis_and_operator_theory"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite numerical replay",
+    "finite rational matrices",
+    "finite-dimensional operator replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-singular-value-shadow-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite singular-value bad spectral-norm bound QF_LRA/Farkas regression seed",
+    "pressure": "Exact singular-value replay computes sigma_max(A) = 3 for a fixed diagonal matrix while the malformed row claims sigma_max(A) <= 2.",
+    "evidence": [
+      "qf-lra-bad-singular-value-bound"
+    ],
+    "next_step": "Promote additional singular-value rows only when they add distinct SVD, norm, rank, perturbation, or proof-route pressure; keep general SVD existence, spectral theorem, pseudospectra, and floating-point SVD algorithms in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/singular-value-shadow-end-to-end.md",
+    "artifacts/examples/math/finite-singular-value-shadow-v0/smt2/bad-singular-value-bound-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "ata-gram-replay",
+    "singular-vector-replay",
+    "svd-reconstruction-replay",
+    "spectral-norm-replay",
+    "condition-number-two-norm-replay",
+    "bad-singular-value-bound-rejected",
+    "qf-lra-bad-singular-value-bound",
+    "general-svd-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational matrix, Gram matrix, singular vectors, singular values, SVD reconstruction, spectral norm, Frobenius norm, and two-norm condition number as deterministic exact-rational replay obligations.",
+    "Route false finite singular-value upper bounds through checked QF_LRA/Farkas evidence after replay computes the exact scalar singular value.",
+    "Expose the pack through matrix computation, spectral, numerical-analysis, functional-operator, and exact-vs-floating learner and consumer query surfaces.",
+    "Keep general SVD existence, spectral theorem, perturbation theory, pseudospectra, rank-revealing algorithms, and floating-point SVD stability marked Lean-horizon or numerical-honesty until formal routes exist."
+  ]
+}

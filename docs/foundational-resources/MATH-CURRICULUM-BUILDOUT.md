@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 117 non-template math example packs validate.
+  Status: 118 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 117 non-template packs have at least one `checked` expected-result row.
+  Status: 118 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3339,6 +3339,15 @@ source-linked QF_LRA/Farkas artifact rejects the malformed upper-bound claim
 `kappa_infinity(A) <= 5`. General perturbation theory, singular-value
 conditioning, pseudospectra, algorithmic stability, and floating-point roundoff
 stay in theorem or numerical-honesty lanes.
+The linear-algebra/numerical-analysis/operator layer now adds
+`finite-singular-value-shadow-v0` as the 118th non-template math pack. Exact
+rational replay checks `A^T A`, singular-vector equations,
+`U*Sigma*V^T = A`, `||A||_2 = 3`, `||A||_F^2 = 10`, and `kappa_2(A) = 3`
+for one diagonal matrix. A source-linked QF_LRA/Farkas artifact rejects the
+malformed upper-bound claim `sigma_max(A) <= 2`. The general SVD theorem,
+spectral theorem, singular-value perturbation theory, pseudospectra,
+rank-revealing algorithms, and floating-point SVD stability stay in theorem or
+numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

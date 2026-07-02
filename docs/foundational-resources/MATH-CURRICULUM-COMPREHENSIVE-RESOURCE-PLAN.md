@@ -172,7 +172,7 @@ Priority work:
 | Node | Build Target | Resource Work | Horizon Boundary |
 |---|---|---|---|
 | `number-theory` | bounded arithmetic families | residues, quadratic residues, sums of squares, bounded Diophantine rows | analytic/algebraic number theory stays horizon |
-| `linear-algebra` | exact matrix computation | LU, rank/nullity, residuals, eigenpairs, characteristic polynomials, finite vector spaces, modules, tensors | spectral theorem, conditioning, and infinite-dimensional results stay horizon |
+| `linear-algebra` | exact matrix computation | LU, rank/nullity, residuals, eigenpairs, singular-value/SVD shadows, characteristic polynomials, finite vector spaces, modules, tensors | spectral theorem, SVD theorem, conditioning, and infinite-dimensional results stay horizon |
 | `calculus` | algebraic and finite algorithm shadows | derivative identities, Riemann sums, Jacobian/Hessian replay, root finding, line search, projected/proximal steps | FTC, differentiability theory, and algorithm convergence stay horizon |
 
 Priority work:
@@ -197,7 +197,7 @@ real use.
 | `discrete_math` | counting, graph resources, recurrences, finite actions | Bool/CNF, QF_LIA, finite replay | recurrence/asymptotic boundaries tied to graph search and generating functions |
 | `graph_theory` | coloring, reachability, traversal cost, matching, cuts, d-separation | Bool/CNF, QF_BV, QF_LIA, replay | more CNF/LRAT rows where the graph is small and educational |
 | `number_theory` | gcd, CRT, residues, bounded Diophantine rows | QF_LIA, QF_BV | grouped arithmetic-certificate cookbook examples |
-| `linear_algebra` | matrices, vector spaces, modules, tensors, spectral rows | QF_LRA/Farkas, replay, QF_UF/Alethe | matrix-corpus boundary and source-linked regressions |
+| `linear_algebra` | matrices, vector spaces, modules, tensors, spectral and singular-value rows | QF_LRA/Farkas, replay, QF_UF/Alethe | matrix-corpus boundary and source-linked regressions |
 | `abstract_algebra` | finite groups/rings/fields, homomorphisms, ideals, modules, tensors | QF_UF/Alethe, QF_BV, replay | orbit/stabilizer, Burnside, quotient/module rows only when reused |
 | `real_analysis` | rational analysis, metric continuity, compactness shadows, optimization shadows | QF_LRA/Farkas, QF_NRA/RCF, Lean horizon | delta-epsilon/metric-ball and convergence-boundary paths |
 | `complex_analysis` | real-pair algebra, transforms, polynomial roots | LRA/NRA real-pair replay, Lean horizon | analytic-horizon rows, not analytic overclaims |
@@ -206,7 +206,7 @@ real use.
 | `probability_theory` | PMFs, kernels, Markov chains, martingales, hitting times, concentration | QF_LRA/Farkas, QF_LIA, replay | exact discrete distribution variants plus limit-theorem horizons |
 | `statistics` | descriptive statistics, exact tests, regression, contingency tables | QF_LIA, QF_LRA, replay | exact finite inference plus numerical/statistical-honesty metadata |
 | `optimization_and_convexity` | LP/Farkas, convexity, KKT, SDP, descent, line search, projections, proximal steps | QF_LRA/Farkas, QF_NRA, Lean horizon | duality/working-set/strong-Wolfe variants only when distinct |
-| `numerical_analysis` | residuals, Euler steps, interval/error recurrence, finite algorithms | QF_LRA/Farkas, replay, Lean horizon | pivoting/stability metadata and exact-vs-floating examples |
+| `numerical_analysis` | residuals, Euler steps, interval/error recurrence, singular-value shadows, finite algorithms | QF_LRA/Farkas, replay, Lean horizon | pivoting/stability metadata and exact-vs-floating examples |
 | `differential_equations_and_dynamical_systems` | recurrences, Euler traces, invariants, finite hitting times | QF_LRA/Farkas, replay, Lean horizon | transition/invariant variants with explicit continuous-theory boundary |
 | `geometry` | coordinate, incidence, affine, rigid, circle, inversion, cyclic geometry | QF_LRA/Farkas, replay, QF_NRA horizon | nontrivial circle-line or polynomial-geometry rows with checked artifacts |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, projections, Chebyshev slices | QF_LRA/Farkas, replay, Lean horizon | finite approximation/alternation rows plus Banach/Hilbert horizons |

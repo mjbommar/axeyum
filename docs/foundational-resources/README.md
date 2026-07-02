@@ -103,7 +103,8 @@ schemas, examples, and validation workflows.
   exact-vs-floating boundary rows.
 - [FUNCTIONAL-OPERATOR-QUERIES.md](FUNCTIONAL-OPERATOR-QUERIES.md) gives
   copyable concept-plus-route queries for finite operators, Chebyshev rows,
-  inner-product/projection rows, spectral rows, and dual/tensor equality rows.
+  inner-product/projection rows, spectral and singular-value rows, and
+  dual/tensor equality rows.
 - [ANALYSIS-NUMERICAL-QUERIES.md](ANALYSIS-NUMERICAL-QUERIES.md) gives
   copyable concept-plus-route queries for bounded real-analysis rows,
   numerical-method rows, residuals, dynamics/Euler rows, and complex real-pair
@@ -410,6 +411,10 @@ schemas, examples, and validation workflows.
   validates exact finite eigenpair replay, orthogonal eigenbasis checks,
   Rayleigh quotients, spectral decomposition replay, and checked rejection of
   false Rayleigh-quotient and eigenpair claims.
+- [`artifacts/examples/math/finite-singular-value-shadow-v0/`](../../artifacts/examples/math/finite-singular-value-shadow-v0/)
+  validates exact `A^T A` replay, singular-vector equations, SVD
+  reconstruction, spectral/Frobenius norm rows, two-norm condition-number
+  replay, and checked rejection of a false largest-singular-value bound.
 - [`artifacts/examples/math/matrix-invariants-v0/`](../../artifacts/examples/math/matrix-invariants-v0/)
   validates exact trace/determinant characteristic-polynomial replay,
   characteristic roots, Cayley-Hamilton replay, finite Gershgorin intervals,
@@ -715,6 +720,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-ideals-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-singular-value-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0

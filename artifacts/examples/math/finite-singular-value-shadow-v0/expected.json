@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-singular-value-shadow-v0",
+  "witnesses": [
+    {
+      "id": "diagonal-singular-value-shadow",
+      "description": "Exact singular-value shadow for A = [[3,0],[0,1]].",
+      "values": {
+        "matrix": [
+          ["3", "0"],
+          ["0", "1"]
+        ],
+        "transpose": [
+          ["3", "0"],
+          ["0", "1"]
+        ],
+        "gram": [
+          ["9", "0"],
+          ["0", "1"]
+        ],
+        "right_singular_vectors": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "left_singular_vectors": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "singular_values": ["3", "1"],
+        "singular_values_squared": ["9", "1"],
+        "u_matrix": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "sigma_matrix": [
+          ["3", "0"],
+          ["0", "1"]
+        ],
+        "v_matrix": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "v_transpose": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "identity": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "spectral_norm": "3",
+        "frobenius_norm_squared": "10",
+        "sigma_max": "3",
+        "sigma_min": "1",
+        "condition_number_2": "3"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "ata-gram-replay",
+      "claim": "The listed Gram matrix is exactly A^T*A for the fixed rational matrix.",
+      "expected_result": "sat",
+      "validation": "exact_rational_ata_gram_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-singular-value-shadow"],
+      "notes": "The validator recomputes A^T and A^T*A exactly over rationals."
+    },
+    {
+      "id": "singular-vector-replay",
+      "claim": "The listed singular vectors and singular values satisfy A^T*A*v_i = sigma_i^2*v_i and A*v_i = sigma_i*u_i.",
+      "expected_result": "sat",
+      "validation": "exact_rational_singular_vector_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-singular-value-shadow"],
+      "notes": "The validator checks the Gram eigenvector equations, the A*v_i equations, and orthonormality of the listed left and right vectors."
+    },
+    {
+      "id": "svd-reconstruction-replay",
+      "claim": "The listed U*Sigma*V^T decomposition reconstructs the fixed matrix.",
+      "expected_result": "sat",
+      "validation": "exact_rational_svd_reconstruction_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-singular-value-shadow"],
+      "notes": "The validator recomputes U^T*U, V^T*V, V^T, and U*Sigma*V^T exactly."
+    },
+    {
+      "id": "spectral-norm-replay",
+      "claim": "The fixed matrix has spectral norm 3 and Frobenius norm squared 10.",
+      "expected_result": "sat",
+      "validation": "exact_rational_spectral_norm_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-singular-value-shadow"],
+      "notes": "The validator recomputes max singular value and the squared-entry sum, and checks that the latter equals the sum of squared singular values."
+    },
+    {
+      "id": "condition-number-two-norm-replay",
+      "claim": "The fixed matrix has two-norm condition number 3.",
+      "expected_result": "sat",
+      "validation": "exact_rational_two_norm_condition_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-singular-value-shadow"],
+      "notes": "The validator recomputes kappa_2(A) = sigma_max / sigma_min for this invertible diagonal matrix."
+    },
+    {
+      "id": "bad-singular-value-bound-rejected",
+      "claim": "The fixed matrix has largest singular value at most 2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_singular_value_bound_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "diagonal-singular-value-shadow",
+        "computed_singular_value_max": "3",
+        "claimed_singular_value_upper_bound": "2"
+      },
+      "notes": "Exact replay computes sigma_max(A) = 3, so the claimed upper bound 2 is rejected; the separate qf-lra-bad-singular-value-bound row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-singular-value-bound",
+      "claim": "The fixed malformed largest-singular-value upper-bound claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "diagonal-singular-value-shadow",
+        "source_replay_row": "bad-singular-value-bound-rejected",
+        "computed_singular_value_max": "3",
+        "claimed_singular_value_upper_bound": "2",
+        "farkas_conflict": "sigma_max = 3 and sigma_max <= 2",
+        "smt2_artifact": "artifacts/examples/math/finite-singular-value-shadow-v0/smt2/bad-singular-value-bound-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_singular_value_shadow_bad_bound_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the largest singular value as 3, while the malformed row claims an upper bound of 2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-svd-theory-lean-horizon",
+      "claim": "General SVD existence, spectral theorem facts, rank-revealing algorithms, perturbation theory, and floating-point SVD stability require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For arbitrary finite-dimensional real or complex matrices, prove existence of singular values/vectors, orthogonal/unitary SVD reconstruction, norm identities, condition-number identities, and perturbation bounds under explicit assumptions.",
+        "future_checker": "Lean theorem statements for exact finite-dimensional inner-product linear algebra plus separate numerical-honesty or QF_FP artifacts for floating-point SVD implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational diagonal matrix, not a theorem about arbitrary matrices or a stability claim for numerical SVD algorithms."
+    }
+  ]
+}

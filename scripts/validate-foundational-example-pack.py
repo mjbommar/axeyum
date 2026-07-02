@@ -12745,6 +12745,221 @@ def vector_add_fraction(left: list[Fraction], right: list[Fraction]) -> list[Fra
     return [left_item + right_item for left_item, right_item in zip(left, right)]
 
 
+def validate_orthonormal_vectors(context: str, vectors: list[list[Fraction]]) -> None:
+    for index, vector in enumerate(vectors):
+        if dot_product(vector, vector) != 1:
+            fail(f"{context} vector {index} must have squared norm 1")
+    for left_index in range(len(vectors)):
+        for right_index in range(left_index + 1, len(vectors)):
+            if dot_product(vectors[left_index], vectors[right_index]) != 0:
+                fail(f"{context} vectors must be pairwise orthogonal")
+
+
+def validate_finite_singular_value_shadow(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    gram = checks["ata-gram-replay"]
+    if gram["expected_result"] != "sat":
+        fail("ata-gram-replay must expect sat")
+    if gram.get("proof_status") != "replay-only":
+        fail("ata-gram-replay must be replay-only")
+    values = single_witness_values(gram, witnesses)
+    matrix = require_fraction_matrix("singular value matrix", values.get("matrix"))
+    transpose = require_fraction_matrix("singular value transpose", values.get("transpose"))
+    gram_matrix = require_fraction_matrix("singular value gram", values.get("gram"))
+    require_square_matrix("singular value matrix", matrix)
+    require_square_matrix("singular value transpose", transpose)
+    require_square_matrix("singular value gram", gram_matrix)
+    if matrix_transpose(matrix) != transpose:
+        fail("ata-gram-replay transpose is incorrect")
+    if mat_mul(transpose, matrix) != gram_matrix:
+        fail("ata-gram-replay gram matrix is not A^T*A")
+
+    vectors = checks["singular-vector-replay"]
+    if vectors["expected_result"] != "sat":
+        fail("singular-vector-replay must expect sat")
+    if vectors.get("proof_status") != "replay-only":
+        fail("singular-vector-replay must be replay-only")
+    values = single_witness_values(vectors, witnesses)
+    right_vectors = require_fraction_vector_list(
+        "right singular vectors",
+        values.get("right_singular_vectors"),
+    )
+    left_vectors = require_fraction_vector_list(
+        "left singular vectors",
+        values.get("left_singular_vectors"),
+    )
+    singular_values = require_fraction_vector(
+        "singular values",
+        values.get("singular_values"),
+    )
+    singular_values_squared = require_fraction_vector(
+        "singular values squared",
+        values.get("singular_values_squared"),
+    )
+    if len(right_vectors) != len(left_vectors) or len(right_vectors) != len(singular_values):
+        fail("singular-vector-replay vector and singular-value counts must match")
+    if len(singular_values_squared) != len(singular_values):
+        fail("singular-vector-replay squared singular-value count must match")
+    validate_orthonormal_vectors("right singular", right_vectors)
+    validate_orthonormal_vectors("left singular", left_vectors)
+    for index, singular_value in enumerate(singular_values):
+        if singular_value <= 0:
+            fail("singular-vector-replay expects positive singular values")
+        if singular_value * singular_value != singular_values_squared[index]:
+            fail(f"singular-vector-replay singular value square {index} is incorrect")
+        right = right_vectors[index]
+        left = left_vectors[index]
+        require_mat_vec_shape("singular Gram vector", gram_matrix, right)
+        require_mat_vec_shape("singular matrix vector", matrix, right)
+        if mat_vec(gram_matrix, right) != scalar_vec(singular_values_squared[index], right):
+            fail(f"singular-vector-replay right vector {index} is not an A^T*A eigenvector")
+        if mat_vec(matrix, right) != scalar_vec(singular_value, left):
+            fail(f"singular-vector-replay A*v_{index} does not equal sigma*u")
+
+    reconstruction = checks["svd-reconstruction-replay"]
+    if reconstruction["expected_result"] != "sat":
+        fail("svd-reconstruction-replay must expect sat")
+    if reconstruction.get("proof_status") != "replay-only":
+        fail("svd-reconstruction-replay must be replay-only")
+    values = single_witness_values(reconstruction, witnesses)
+    u_matrix = require_fraction_matrix("SVD U matrix", values.get("u_matrix"))
+    sigma_matrix = require_fraction_matrix("SVD Sigma matrix", values.get("sigma_matrix"))
+    v_matrix = require_fraction_matrix("SVD V matrix", values.get("v_matrix"))
+    v_transpose = require_fraction_matrix("SVD V transpose", values.get("v_transpose"))
+    identity = require_fraction_matrix("SVD identity", values.get("identity"))
+    require_square_matrix("SVD U matrix", u_matrix)
+    require_square_matrix("SVD Sigma matrix", sigma_matrix)
+    require_square_matrix("SVD V matrix", v_matrix)
+    require_square_matrix("SVD identity", identity)
+    if matrix_transpose(v_matrix) != v_transpose:
+        fail("svd-reconstruction-replay V transpose is incorrect")
+    if mat_mul(matrix_transpose(u_matrix), u_matrix) != identity:
+        fail("svd-reconstruction-replay U is not orthonormal")
+    if mat_mul(matrix_transpose(v_matrix), v_matrix) != identity:
+        fail("svd-reconstruction-replay V is not orthonormal")
+    require_mat_mul_shape("SVD U*Sigma", u_matrix, sigma_matrix)
+    require_mat_mul_shape("SVD U*Sigma*V^T", mat_mul(u_matrix, sigma_matrix), v_transpose)
+    if mat_mul(mat_mul(u_matrix, sigma_matrix), v_transpose) != matrix:
+        fail("svd-reconstruction-replay U*Sigma*V^T does not reconstruct A")
+    for index, singular_value in enumerate(singular_values):
+        if sigma_matrix[index][index] != singular_value:
+            fail("svd-reconstruction-replay diagonal singular values do not match")
+
+    norm = checks["spectral-norm-replay"]
+    if norm["expected_result"] != "sat":
+        fail("spectral-norm-replay must expect sat")
+    if norm.get("proof_status") != "replay-only":
+        fail("spectral-norm-replay must be replay-only")
+    values = single_witness_values(norm, witnesses)
+    spectral_norm = require_fraction("spectral norm", values.get("spectral_norm"))
+    frobenius_norm_squared = require_fraction(
+        "frobenius norm squared",
+        values.get("frobenius_norm_squared"),
+    )
+    if max(singular_values) != spectral_norm:
+        fail("spectral-norm-replay spectral_norm must be the largest singular value")
+    computed_frobenius = sum((entry * entry for row in matrix for entry in row), Fraction(0))
+    if computed_frobenius != frobenius_norm_squared:
+        fail("spectral-norm-replay Frobenius norm squared is incorrect")
+    if sum(singular_values_squared, Fraction(0)) != frobenius_norm_squared:
+        fail("spectral-norm-replay singular-value squares do not sum to Frobenius norm squared")
+
+    condition = checks["condition-number-two-norm-replay"]
+    if condition["expected_result"] != "sat":
+        fail("condition-number-two-norm-replay must expect sat")
+    if condition.get("proof_status") != "replay-only":
+        fail("condition-number-two-norm-replay must be replay-only")
+    values = single_witness_values(condition, witnesses)
+    sigma_max = require_fraction("sigma max", values.get("sigma_max"))
+    sigma_min = require_fraction("sigma min", values.get("sigma_min"))
+    condition_number = require_fraction(
+        "two-norm condition number",
+        values.get("condition_number_2"),
+    )
+    if sigma_max != max(singular_values) or sigma_min != min(singular_values):
+        fail("condition-number-two-norm-replay sigma extrema are incorrect")
+    if sigma_min <= 0:
+        fail("condition-number-two-norm-replay needs positive sigma_min")
+    if sigma_max / sigma_min != condition_number:
+        fail("condition-number-two-norm-replay condition number is incorrect")
+
+    bad = checks["bad-singular-value-bound-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-singular-value-bound-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-singular-value-bound-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_singular_value_bound_replay":
+        fail("bad-singular-value-bound-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "diagonal-singular-value-shadow":
+        fail("bad-singular-value-bound-rejected must cite the singular-value witness")
+    computed_sigma = require_fraction(
+        "bad singular computed_singular_value_max",
+        data.get("computed_singular_value_max"),
+    )
+    claimed_upper = require_fraction(
+        "bad singular claimed_singular_value_upper_bound",
+        data.get("claimed_singular_value_upper_bound"),
+    )
+    if computed_sigma != sigma_max:
+        fail("bad-singular-value-bound-rejected computed sigma_max does not match replay")
+    if computed_sigma <= claimed_upper:
+        fail("bad-singular-value-bound-rejected claimed upper bound unexpectedly holds")
+    if "separate qf-lra-bad-singular-value-bound" not in bad.get("notes", ""):
+        fail("bad-singular-value-bound-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-singular-value-bound"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-singular-value-bound must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-singular-value-bound must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-singular-value-bound must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "diagonal-singular-value-shadow":
+        fail("qf-lra-bad-singular-value-bound must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-singular-value-bound-rejected":
+        fail("qf-lra-bad-singular-value-bound must cite the replay row")
+    qf_computed = require_fraction(
+        "qf singular computed_singular_value_max",
+        qf_data.get("computed_singular_value_max"),
+    )
+    qf_claimed = require_fraction(
+        "qf singular claimed_singular_value_upper_bound",
+        qf_data.get("claimed_singular_value_upper_bound"),
+    )
+    if qf_computed != computed_sigma or qf_claimed != claimed_upper:
+        fail("qf-lra-bad-singular-value-bound data must match the replay row")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf singular smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-singular-value-shadow-v0/smt2/"
+        "bad-singular-value-bound-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-singular-value-bound smt2_artifact must name the checked source artifact")
+    check_source("qf singular smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf singular farkas_regression", regression)
+    if "finite_singular_value_shadow_bad_bound_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-singular-value-bound must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf singular certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-singular-value-bound certificate must document checked Farkas evidence")
+
+    horizon = checks["general-svd-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-svd-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-svd-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("singular horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("singular horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_finite_separation(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -28054,6 +28269,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_newton_step(expected)
     if metadata["id"] == "finite-condition-number-v0":
         validate_finite_condition_number(expected)
+    if metadata["id"] == "finite-singular-value-shadow-v0":
+        validate_finite_singular_value_shadow(expected)
     if metadata["id"] == "metric-continuity-v0":
         validate_metric_continuity(expected)
     if metadata["id"] == "finite-predicate-v0":

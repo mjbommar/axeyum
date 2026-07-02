@@ -123,7 +123,7 @@ Work by layer:
 | Foundations | logic, predicates, proof methods, induction, sets, relations, cardinality | finite countermodel replay, proof-by-refutation, proof-object anatomy, finite quantifier expansion, bounded induction warnings, finite/infinite cardinality boundary |
 | Number systems | naturals, integers, rationals, reals, complex | exact arithmetic, totality conventions, bounded real shadows, delta-epsilon balls, real-pair complex algebra, completeness/analysis horizon |
 | Core structures | divisibility, modular arithmetic, groups, rings, fields, polynomials, sequences, counting | gcd/CRT certificates, finite algebra tables, quotients, modules, tensors, polynomial factor/replay, recurrence prefixes, finite counting and generating functions |
-| Destinations | number theory, linear algebra, calculus | bounded Diophantine checks, matrix computation index, LU checked product-entry rows, rank/residual/eigen/random-matrix rows, exact derivative/integral shadows, root-finding and optimization steps |
+| Destinations | number theory, linear algebra, calculus | bounded Diophantine checks, matrix computation index, LU checked product-entry rows, rank/residual/eigen/singular-value/random-matrix rows, exact derivative/integral shadows, root-finding and optimization steps |
 | Field extensions | graph theory, topology, measure/probability/statistics, optimization, numerical analysis, dynamics, geometry, functional analysis | graph coloring/search/runtime, finite topologies and homology shadows, exact finite probability/measure tables, Farkas optimization rows, Euler/root-finding/line-search rows, coordinate/circle/inversion geometry, finite operator and Chebyshev rows |
 | Rules/law transfer | eligibility, authorization, tax/benefit arithmetic, procurement scoring, future policy packs | finite predicates, thresholds, caps, deadlines, temporal versions, precedence, reachability, monotonicity, and checked proof fixtures reused from math packs |
 
@@ -219,8 +219,8 @@ Stop line:
 Build next:
 
 - keep the matrix index current for LU replay plus checked product-entry rows,
-  rank/nullity, residual, projection, eigenpair, characteristic-polynomial,
-  checked trace-invariant, tensor/module, chain/cochain, operator,
+  rank/nullity, residual, projection, eigenpair, singular-value/SVD,
+  characteristic-polynomial, checked trace-invariant, tensor/module, chain/cochain, operator,
   Chebyshev, and random-matrix rows;
 - add matrix-corpus rows only after the educational pack links the regression
   and the regression links the source pack;

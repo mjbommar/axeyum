@@ -21,6 +21,7 @@ Example packs:
 - [finite-tensor-products-v0](../../../artifacts/examples/math/finite-tensor-products-v0/)
 - [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
 - [finite-condition-number-v0](../../../artifacts/examples/math/finite-condition-number-v0/)
+- [finite-singular-value-shadow-v0](../../../artifacts/examples/math/finite-singular-value-shadow-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
 - [finite-newton-step-v0](../../../artifacts/examples/math/finite-newton-step-v0/)
@@ -367,6 +368,15 @@ The `finite-condition-number-v0` validator checks `A*A^-1 = I`,
 relative bound `1/10 <= 6*(1/60)`. The checked bad row rejects
 `kappa_infinity(A) <= 5` after exact replay computes `6`. For a focused trace,
 read [End To End: Finite Condition Number](condition-number-end-to-end.md).
+
+For singular-value conditioning, `finite-singular-value-shadow-v0` uses one
+diagonal rational matrix `A = [[3,0],[0,1]]`. The validator recomputes
+`A^T A = [[9,0],[0,1]]`, checks singular-vector equations, reconstructs
+`U*Sigma*V^T = A`, and verifies `||A||_2 = 3`, `||A||_F^2 = 10`, and
+`kappa_2(A) = 3`. Its checked bad row rejects `sigma_max(A) <= 2` after exact
+replay computes `3`; the general SVD theorem and numerical SVD stability stay
+in the horizon lane. For a focused trace, read
+[End To End: Finite Singular-Value Shadow](singular-value-shadow-end-to-end.md).
 
 For an operator example, the finite-operator pack checks:
 
@@ -728,6 +738,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/nu
 cargo test -p axeyum-solver --test math_resource_lra_routes numerical_linear_algebra_bad_solution_box_upper_bound_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-condition-number-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_condition_number_bad_condition_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-singular-value-shadow-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_singular_value_shadow_bad_bound_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0
@@ -808,6 +820,7 @@ replay, read
 [Random Matrix Moment Index](random-matrix-moment-index.md),
 [End To End: Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md),
 [End To End: Finite Condition Number](condition-number-end-to-end.md),
+[End To End: Finite Singular-Value Shadow](singular-value-shadow-end-to-end.md),
 [End To End: Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md),
 [End To End: Finite Root Finding](finite-root-finding-end-to-end.md),
 [End To End: Finite Newton Step](newton-step-end-to-end.md),

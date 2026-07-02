@@ -37,12 +37,12 @@ The public query surface reports:
 python3 scripts/query-foundational-resources.py summary
 ```
 
-- 117 non-template math packs.
-- 747 expected checks.
-- 343 checked proof/evidence rows.
-- 324 replay-only rows.
-- 80 Lean-horizon rows.
-- 117 promoted solver-reuse packs.
+- 118 non-template math packs.
+- 755 expected checks.
+- 344 checked proof/evidence rows.
+- 330 replay-only rows.
+- 81 Lean-horizon rows.
+- 118 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 
 Route summaries from `scripts/query-foundational-resources.py routes`:
@@ -52,7 +52,7 @@ Route summaries from `scripts/query-foundational-resources.py routes`:
 | Boolean CNF/LRAT | 16 | 73 | 52 | 15 | 6 |
 | QF_BV bit-blast | 7 | 45 | 34 | 10 | 1 |
 | QF_LIA/Diophantine | 15 | 96 | 63 | 25 | 8 |
-| QF_LRA/Farkas | 66 | 457 | 163 | 244 | 50 |
+| QF_LRA/Farkas | 67 | 465 | 164 | 250 | 51 |
 | QF_UF/Alethe | 19 | 122 | 58 | 48 | 16 |
 | Lean horizon | 87 | 585 | 238 | 267 | 80 |
 

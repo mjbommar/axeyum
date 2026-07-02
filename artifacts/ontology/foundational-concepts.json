@@ -1788,6 +1788,12 @@
           "notes": "Exact matrix inverse, infinity-norm condition number, perturbation-bound replay, and checked bad condition-number bound evidence."
         },
         {
+          "id": "finite-singular-value-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-singular-value-shadow-v0",
+          "notes": "Exact Gram matrix, singular-vector equations, SVD reconstruction, spectral/Frobenius norms, two-norm conditioning, and checked bad singular-value bound evidence."
+        },
+        {
           "id": "finite-recurrence-prefix-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
@@ -2996,6 +3002,12 @@
           "notes": "Infinity-norm condition-number and perturbation-bound rows checked as exact rational matrix arithmetic, not floating-point stability evidence."
         },
         {
+          "id": "finite-singular-value-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-singular-value-shadow-v0",
+          "notes": "Singular-value, spectral-norm, Frobenius-norm, and two-norm condition-number rows checked as exact rational matrix arithmetic, not numerical SVD stability evidence."
+        },
+        {
           "id": "least-squares-regression-v0",
           "status": "validated",
           "path": "artifacts/examples/math/least-squares-regression-v0",
@@ -3025,6 +3037,7 @@
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
             "docs/learn/math/condition-number-end-to-end.md",
+            "docs/learn/math/singular-value-shadow-end-to-end.md",
             "docs/learn/math/exact-statistical-tests-end-to-end.md",
             "docs/foundational-resources/MATH-FIELDS.md"
           ],
@@ -3036,13 +3049,14 @@
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/learn/math/numerical-linear-algebra-end-to-end.md",
         "docs/learn/math/condition-number-end-to-end.md",
+        "docs/learn/math/singular-value-shadow-end-to-end.md",
         "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
         "docs/learn/math/exact-statistical-tests-end-to-end.md",
         "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md"
       ],
       "open_gaps": [
-        "Exact rational replay does not prove floating-point roundoff, conditioning, stability, or convergence guarantees.",
+        "Exact rational replay does not prove floating-point roundoff, conditioning, singular-value perturbation, stability, or convergence guarantees.",
         "QF_FP and numerical experiment metadata need their own trust boundary before floating-point resources can graduate.",
         "Learner pages must label exact rational shadows when a topic is normally taught numerically."
       ],
@@ -7379,7 +7393,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A finite eigenpair row checks A*v = lambda*v exactly for a fixed matrix, and may additionally replay orthogonality, Rayleigh quotient, or spectral-decomposition witnesses within the bounded matrix instance.",
+      "summary": "A finite eigenpair row checks A*v = lambda*v exactly for a fixed matrix, and may additionally replay orthogonality, Rayleigh quotient, spectral-decomposition, singular-vector, or SVD-shadow witnesses within the bounded matrix instance.",
       "prerequisites": [
         "bridge_lu_replay",
         "bridge_residual_bound",
@@ -7395,7 +7409,8 @@
         "LRA (exact rationals)",
         "QF_LRA",
         "NRA shadow",
-        "finite-dimensional operator replay"
+        "finite-dimensional operator replay",
+        "singular-value replay"
       ],
       "example_packs": [
         {
@@ -7403,6 +7418,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/spectral-linear-algebra-v0",
           "notes": "Eigenpair, orthogonal eigenbasis, Rayleigh quotient, spectral decomposition, and bad eigenpair rows."
+        },
+        {
+          "id": "finite-singular-value-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-singular-value-shadow-v0",
+          "notes": "Gram eigenvector, singular-vector, SVD reconstruction, spectral-norm, and bad singular-value bound rows."
         },
         {
           "id": "matrix-invariants-v0",
@@ -7436,9 +7457,10 @@
             "docs/learn/math/matrix-computation-index.md",
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/spectral-linear-algebra-end-to-end.md",
+            "docs/learn/math/singular-value-shadow-end-to-end.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "The finite checker recomputes A*v and lambda*v exactly; the promoted bad-eigenpair row checks the isolated rational component conflict with Farkas evidence. General spectral theorems remain Lean-horizon."
+          "notes": "The finite checker recomputes A*v and lambda*v exactly; the singular-value shadow also replays A^T*A, singular-vector equations, and SVD reconstruction. Promoted bad rows check isolated rational component or scalar-bound conflicts with Farkas evidence. General spectral and SVD theorems remain Lean-horizon."
         }
       ],
       "source_refs": [
@@ -7448,19 +7470,20 @@
         "docs/learn/math/matrix-computation-index.md",
         "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/spectral-linear-algebra-end-to-end.md",
+        "docs/learn/math/singular-value-shadow-end-to-end.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
       "open_gaps": [
-        "Fixed eigenpair replay does not prove existence of eigenvalues, diagonalization, spectral theorem, or stability of numerical eigensolvers.",
-        "Nonlinear characteristic-root reasoning and infinite-dimensional operator theory remain separate theorem horizons."
+        "Fixed eigenpair and singular-value replay does not prove existence of eigenvalues, SVD, diagonalization, spectral theorem, or stability of numerical eigensolvers.",
+        "Nonlinear characteristic-root reasoning, SVD perturbation theory, and infinite-dimensional operator theory remain separate theorem horizons."
       ],
       "graduation": {
         "status": "validated",
         "criteria": [
-          "Rows state A, lambda, v, field/domain, and every side condition such as nonzero vector or orthogonality.",
-          "The validator recomputes A*v = lambda*v exactly and rejects corrupted component claims.",
-          "General spectral theorem statements are linked as Lean-horizon rows, not as finite solver evidence."
+          "Rows state A, lambda or sigma, vectors, field/domain, and every side condition such as nonzero vector, orthogonality, or reconstruction shape.",
+          "The validator recomputes A*v = lambda*v, A^T*A*v = sigma^2*v, A*v = sigma*u, and decomposition products exactly, then rejects corrupted component or scalar-bound claims.",
+          "General spectral theorem and SVD statements are linked as Lean-horizon rows, not as finite solver evidence."
         ]
       }
     },
@@ -9740,7 +9763,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "Finite-dimensional inner-product rows replay exact rational Gram matrices, norm squares, fixed-vector Cauchy-Schwarz checks, orthogonal projections, Gram-Schmidt steps, and exact Walsh-Hadamard transform rows while keeping Hilbert-space theorems as Lean horizons.",
+      "summary": "Finite-dimensional inner-product rows replay exact rational Gram matrices, norm squares, fixed-vector Cauchy-Schwarz checks, orthogonal projections, Gram-Schmidt steps, and exact Walsh-Hadamard transform and SVD-shadow rows while keeping Hilbert-space theorems as Lean horizons.",
       "prerequisites": [
         "curriculum_linear_algebra",
         "curriculum_rationals",
@@ -9759,6 +9782,7 @@
         "Gram matrices",
         "orthogonal projection",
         "orthogonal transforms",
+        "singular-vector replay",
         "QF_LRA",
         "Lean horizon"
       ],
@@ -9798,6 +9822,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-walsh-hadamard-transform-v0",
           "notes": "Exact order-4 Walsh-Hadamard transform, inverse reconstruction, Parseval energy scaling, and bad transform-coefficient evidence."
+        },
+        {
+          "id": "finite-singular-value-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-singular-value-shadow-v0",
+          "notes": "Exact orthonormal singular vectors, SVD reconstruction, spectral/Frobenius norms, and bad singular-value bound evidence."
         }
       ],
       "proof_routes": [
@@ -9814,10 +9844,11 @@
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/inner-product-spaces-end-to-end.md",
             "docs/learn/math/covariance-matrix-end-to-end.md",
+            "docs/learn/math/singular-value-shadow-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "The finite pack recomputes each rational inner-product quantity first; checked Farkas evidence is used only for the small bad positivity, transform-coefficient, or linear-equation conflict."
+          "notes": "The finite pack recomputes each rational inner-product quantity first; checked Farkas evidence is used only for the small bad positivity, transform-coefficient, or singular-value-bound conflict."
         }
       ],
       "source_refs": [
@@ -9830,20 +9861,21 @@
         "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/inner-product-spaces-end-to-end.md",
         "docs/learn/math/covariance-matrix-end-to-end.md",
+        "docs/learn/math/singular-value-shadow-end-to-end.md",
         "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
       "open_gaps": [
         "Finite rational projection replay does not prove the Hilbert projection theorem, Riesz representation, Hahn-Banach, or completeness results.",
-        "Rows involving floating-point orthogonality, conditioning, or numerical stability require separate numerical-honesty metadata.",
-        "General inner-product, duality, and Hilbert-space theorem statements remain Lean-horizon until no-sorry Lean artifacts exist."
+        "Rows involving floating-point orthogonality, conditioning, singular-value perturbation, or numerical stability require separate numerical-honesty metadata.",
+        "General inner-product, duality, SVD, and Hilbert-space theorem statements remain Lean-horizon until no-sorry Lean artifacts exist."
       ],
       "graduation": {
         "status": "validated",
         "criteria": [
           "Rows state the finite vector space, basis, Gram matrix, transform matrix, and exact rational vectors.",
-          "The validator recomputes norm squares, projections, Gram-Schmidt steps, orthogonal transforms, and residuals from source data.",
-          "Malformed finite positivity, projection, or transform-coefficient rows link to checked QF_LRA/Farkas regressions after replay."
+          "The validator recomputes norm squares, projections, Gram-Schmidt steps, orthogonal transforms, SVD-shadow products, and residuals from source data.",
+          "Malformed finite positivity, projection, transform-coefficient, or singular-value-bound rows link to checked QF_LRA/Farkas regressions after replay."
         ]
       }
     },
@@ -9905,6 +9937,12 @@
           "notes": "Fixed spectral rows that share finite-operator and eigenpair vocabulary."
         },
         {
+          "id": "finite-singular-value-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-singular-value-shadow-v0",
+          "notes": "Fixed singular-value and SVD-shadow rows that share finite-operator, inner-product, and spectral-norm vocabulary."
+        },
+        {
           "id": "matrix-invariants-v0",
           "status": "validated",
           "path": "artifacts/examples/math/matrix-invariants-v0",
@@ -9926,6 +9964,7 @@
             "docs/learn/math/chebyshev-operator-index.md",
             "docs/learn/math/finite-operator-end-to-end.md",
             "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
+            "docs/learn/math/singular-value-shadow-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
@@ -9943,6 +9982,7 @@
         "docs/learn/math/chebyshev-operator-index.md",
         "docs/learn/math/finite-operator-end-to-end.md",
         "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
+        "docs/learn/math/singular-value-shadow-end-to-end.md",
         "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
@@ -11419,7 +11459,7 @@
           "id": "finite-operator-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-operator-v0",
-          "notes": "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact condition-number shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."
+          "notes": "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact condition-number and singular-value shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."
         },
         {
           "id": "finite-chebyshev-systems-v0",
@@ -11438,6 +11478,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-dual-spaces-v0",
           "notes": "Exact Finite Dual Space Checks"
+        },
+        {
+          "id": "finite-singular-value-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-singular-value-shadow-v0",
+          "notes": "Finite Singular-Value Shadow Checks"
         },
         {
           "id": "finite-walsh-hadamard-transform-v0",
@@ -11727,7 +11773,7 @@
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number and singular-value shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -11920,6 +11966,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-simplicial-homology-v0",
           "notes": "Exact Finite Simplicial Homology Checks"
+        },
+        {
+          "id": "finite-singular-value-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-singular-value-shadow-v0",
+          "notes": "Finite Singular-Value Shadow Checks"
         },
         {
           "id": "finite-stochastic-kernels-v0",
@@ -12442,7 +12494,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "LU/QR/Cholesky replay, interval bounds, inner-product projections, condition-number and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
+          "notes": "LU/QR/Cholesky replay, interval bounds, inner-product projections, condition-number, singular-value, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -12545,6 +12597,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
           "notes": "Finite Root-Finding Checks"
+        },
+        {
+          "id": "finite-singular-value-shadow-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-singular-value-shadow-v0",
+          "notes": "Finite Singular-Value Shadow Checks"
         },
         {
           "id": "finite-walsh-hadamard-transform-v0",

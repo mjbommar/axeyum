@@ -240,6 +240,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite singular-value shadow resource landed.**
+  `finite-singular-value-shadow-v0` now gives the linear-algebra,
+  numerical-analysis, and functional/operator lanes an exact rational SVD
+  shadow: it checks `A^T A` for `A = [[3,0],[0,1]]`, singular-vector
+  equations, `U*Sigma*V^T = A`, `||A||_2 = 3`, `||A||_F^2 = 10`, and
+  `kappa_2(A) = 3`, then isolates the malformed upper-bound claim
+  `sigma_max(A) <= 2` as a source-linked QF_LRA/Farkas row. The focused learner
+  page and query guides keep exact rational singular-value replay separate from
+  the general SVD theorem, perturbation theory, pseudospectra, rank-revealing
+  algorithms, and floating-point SVD stability. The public summary now reports
+  121 concept rows, 118 packs, 755 expected checks, 344 checked rows,
+  330 replay-only rows, 81 Lean-horizon rows, and 118 promoted solver-reuse
+  packs.
 - **Finite condition-number resource landed.**
   `finite-condition-number-v0` now gives the linear-algebra,
   numerical-analysis, and functional/operator lanes an exact rational
@@ -249,7 +262,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   malformed upper-bound claim `kappa_infinity(A) <= 5`. The focused learner
   page and query guides keep exact rational conditioning separate from
   algorithmic stability, singular-value conditioning, pseudospectra, and
-  floating-point roundoff. The public summary now reports 121 concept rows,
+  floating-point roundoff. The public summary then reported 121 concept rows,
   117 packs, 747 expected checks, 343 checked rows, 324 replay-only rows, 80
   Lean-horizon rows, and 117 promoted solver-reuse packs.
 - **Finite Newton step resource landed.**

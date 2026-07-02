@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 75 bridge-concept rows.
 - 5 example-family rows.
-- 117 non-template math example packs.
-- 747 expected checks.
-- 343 checked proof/evidence rows.
-- 324 replay-only rows.
-- 80 Lean-horizon rows.
-- 117 promoted solver-reuse packs.
+- 118 non-template math example packs.
+- 755 expected checks.
+- 344 checked proof/evidence rows.
+- 330 replay-only rows.
+- 81 Lean-horizon rows.
+- 118 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 117 focused learner-linked packs, with no path-only, index-only, or missing
+- 118 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2383,6 +2383,14 @@ Pick one item per commit unless the change is purely navigational.
      `kappa_infinity(A) <= 5` claim through a source-linked QF_LRA/Farkas
      regression without claiming algorithmic stability, singular-value
      theory, pseudospectra, or floating-point roundoff.
+165. Landed: add `finite-singular-value-shadow-v0` as an exact finite
+     singular-value/SVD-shadow resource. The pack computes `A^T A`, singular
+     vectors, `U*Sigma*V^T`, spectral/Frobenius norms, and a two-norm
+     condition number for one diagonal rational matrix, then promotes the
+     malformed `sigma_max(A) <= 2` claim through a source-linked
+     QF_LRA/Farkas regression without claiming the general SVD theorem,
+     perturbation theory, pseudospectra, rank-revealing algorithms, or
+     floating-point SVD stability.
 
 ## Validation Checklist
 

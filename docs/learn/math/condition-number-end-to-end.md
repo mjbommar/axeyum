@@ -125,9 +125,12 @@ certificate check.
 This pack is useful because it shows how a topic that is usually taught with
 floating-point intuition can be grounded as an exact finite shadow. The checked
 claim is only the rational matrix, inverse, norms, perturbation response, and
-final scalar contradiction. General condition-number theory, singular-value
-conditioning, pseudospectra, backward stability, and IEEE floating-point error
-analysis remain theorem or numerical-honesty horizons.
+final scalar contradiction. For a finite exact singular-value shadow of a
+two-norm condition number, see
+[End To End: Finite Singular-Value Shadow](singular-value-shadow-end-to-end.md).
+General condition-number theory, singular-value perturbation, pseudospectra,
+backward stability, and IEEE floating-point error analysis remain theorem or
+numerical-honesty horizons.
 
 Run the focused checks from the repository root:
 

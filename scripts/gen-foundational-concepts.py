@@ -426,6 +426,10 @@ CURRICULUM_MAP = {
                 "Exact matrix inverse, infinity-norm condition number, perturbation-bound replay, and checked bad condition-number bound evidence.",
             ),
             (
+                "finite-singular-value-shadow-v0",
+                "Exact Gram matrix, singular-vector equations, SVD reconstruction, spectral/Frobenius norms, two-norm conditioning, and checked bad singular-value bound evidence.",
+            ),
+            (
                 "finite-recurrence-prefix-v0",
                 "Finite recurrence prefixes, companion-matrix state replay, and checked affine-step refutations.",
             ),
@@ -535,7 +539,7 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number and singular-value shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, multivariable-calculus and Newton-step shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
@@ -559,7 +563,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "LU/QR/Cholesky replay, interval bounds, inner-product projections, condition-number and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "LU/QR/Cholesky replay, interval bounds, inner-product projections, condition-number, singular-value, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -579,7 +583,7 @@ FIELD_PACKS = {
             "Finite cyclic quadrilateral, diagonal-intersection, opposite-angle, and bad-intersection replay.",
         ),
     ],
-    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact condition-number shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
+    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact condition-number and singular-value shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
 }
 
 FIELD_DECIDABILITY = {
@@ -1471,6 +1475,10 @@ BRIDGE_CONCEPTS = [
                 "Infinity-norm condition-number and perturbation-bound rows checked as exact rational matrix arithmetic, not floating-point stability evidence.",
             ),
             (
+                "finite-singular-value-shadow-v0",
+                "Singular-value, spectral-norm, Frobenius-norm, and two-norm condition-number rows checked as exact rational matrix arithmetic, not numerical SVD stability evidence.",
+            ),
+            (
                 "least-squares-regression-v0",
                 "Normal-equation, residual, and bad RSS-improvement rows checked as exact rational linear algebra, not floating-point regression.",
             ),
@@ -1494,6 +1502,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
                     "docs/learn/math/numerical-linear-algebra-end-to-end.md",
                     "docs/learn/math/condition-number-end-to-end.md",
+                    "docs/learn/math/singular-value-shadow-end-to-end.md",
                     "docs/learn/math/exact-statistical-tests-end-to-end.md",
                     "docs/foundational-resources/MATH-FIELDS.md",
                 ],
@@ -1510,13 +1519,14 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
             "docs/learn/math/condition-number-end-to-end.md",
+            "docs/learn/math/singular-value-shadow-end-to-end.md",
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
             "docs/learn/math/exact-statistical-tests-end-to-end.md",
             "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
-            "Exact rational replay does not prove floating-point roundoff, conditioning, stability, or convergence guarantees.",
+            "Exact rational replay does not prove floating-point roundoff, conditioning, singular-value perturbation, stability, or convergence guarantees.",
             "QF_FP and numerical experiment metadata need their own trust boundary before floating-point resources can graduate.",
             "Learner pages must label exact rational shadows when a topic is normally taught numerically.",
         ],
@@ -5562,8 +5572,8 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "A finite eigenpair row checks A*v = lambda*v exactly for a fixed "
             "matrix, and may additionally replay orthogonality, Rayleigh "
-            "quotient, or spectral-decomposition witnesses within the bounded "
-            "matrix instance."
+            "quotient, spectral-decomposition, singular-vector, or SVD-shadow "
+            "witnesses within the bounded matrix instance."
         ),
         "prerequisites": [
             "bridge_lu_replay",
@@ -5581,11 +5591,16 @@ BRIDGE_CONCEPTS = [
             "QF_LRA",
             "NRA shadow",
             "finite-dimensional operator replay",
+            "singular-value replay",
         ],
         "example_packs": [
             (
                 "spectral-linear-algebra-v0",
                 "Eigenpair, orthogonal eigenbasis, Rayleigh quotient, spectral decomposition, and bad eigenpair rows.",
+            ),
+            (
+                "finite-singular-value-shadow-v0",
+                "Gram eigenvector, singular-vector, SVD reconstruction, spectral-norm, and bad singular-value bound rows.",
             ),
             (
                 "matrix-invariants-v0",
@@ -5613,13 +5628,16 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/matrix-computation-index.md",
                     "docs/learn/math/matrix-corpus-benchmark-boundary.md",
                     "docs/learn/math/spectral-linear-algebra-end-to-end.md",
+                    "docs/learn/math/singular-value-shadow-end-to-end.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
                     "The finite checker recomputes A*v and lambda*v exactly; "
-                    "the promoted bad-eigenpair row checks the isolated rational "
-                    "component conflict with Farkas evidence. General spectral "
-                    "theorems remain Lean-horizon."
+                    "the singular-value shadow also replays A^T*A, "
+                    "singular-vector equations, and SVD reconstruction. "
+                    "Promoted bad rows check isolated rational component or "
+                    "scalar-bound conflicts with Farkas evidence. General "
+                    "spectral and SVD theorems remain Lean-horizon."
                 ),
             }
         ],
@@ -5630,19 +5648,20 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/matrix-computation-index.md",
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/spectral-linear-algebra-end-to-end.md",
+            "docs/learn/math/singular-value-shadow-end-to-end.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Fixed eigenpair replay does not prove existence of eigenvalues, diagonalization, spectral theorem, or stability of numerical eigensolvers.",
-            "Nonlinear characteristic-root reasoning and infinite-dimensional operator theory remain separate theorem horizons.",
+            "Fixed eigenpair and singular-value replay does not prove existence of eigenvalues, SVD, diagonalization, spectral theorem, or stability of numerical eigensolvers.",
+            "Nonlinear characteristic-root reasoning, SVD perturbation theory, and infinite-dimensional operator theory remain separate theorem horizons.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state A, lambda, v, field/domain, and every side condition such as nonzero vector or orthogonality.",
-                "The validator recomputes A*v = lambda*v exactly and rejects corrupted component claims.",
-                "General spectral theorem statements are linked as Lean-horizon rows, not as finite solver evidence.",
+                "Rows state A, lambda or sigma, vectors, field/domain, and every side condition such as nonzero vector, orthogonality, or reconstruction shape.",
+                "The validator recomputes A*v = lambda*v, A^T*A*v = sigma^2*v, A*v = sigma*u, and decomposition products exactly, then rejects corrupted component or scalar-bound claims.",
+                "General spectral theorem and SVD statements are linked as Lean-horizon rows, not as finite solver evidence.",
             ],
         },
     },
@@ -7717,7 +7736,7 @@ BRIDGE_CONCEPTS = [
             "Finite-dimensional inner-product rows replay exact rational Gram "
             "matrices, norm squares, fixed-vector Cauchy-Schwarz checks, "
             "orthogonal projections, Gram-Schmidt steps, and exact "
-            "Walsh-Hadamard transform rows while keeping "
+            "Walsh-Hadamard transform and SVD-shadow rows while keeping "
             "Hilbert-space theorems as Lean horizons."
         ),
         "prerequisites": [
@@ -7738,6 +7757,7 @@ BRIDGE_CONCEPTS = [
             "Gram matrices",
             "orthogonal projection",
             "orthogonal transforms",
+            "singular-vector replay",
             "QF_LRA",
             "Lean horizon",
         ],
@@ -7766,6 +7786,10 @@ BRIDGE_CONCEPTS = [
                 "finite-walsh-hadamard-transform-v0",
                 "Exact order-4 Walsh-Hadamard transform, inverse reconstruction, Parseval energy scaling, and bad transform-coefficient evidence.",
             ),
+            (
+                "finite-singular-value-shadow-v0",
+                "Exact orthonormal singular vectors, SVD reconstruction, spectral/Frobenius norms, and bad singular-value bound evidence.",
+            ),
         ],
         "proof_routes": [
             {
@@ -7781,6 +7805,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/matrix-corpus-benchmark-boundary.md",
                     "docs/learn/math/inner-product-spaces-end-to-end.md",
                     "docs/learn/math/covariance-matrix-end-to-end.md",
+                    "docs/learn/math/singular-value-shadow-end-to-end.md",
                     "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
@@ -7788,7 +7813,7 @@ BRIDGE_CONCEPTS = [
                     "The finite pack recomputes each rational inner-product "
                     "quantity first; checked Farkas evidence is used only for "
                     "the small bad positivity, transform-coefficient, or "
-                    "linear-equation conflict."
+                    "singular-value-bound conflict."
                 ),
             }
         ],
@@ -7802,20 +7827,21 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/inner-product-spaces-end-to-end.md",
             "docs/learn/math/covariance-matrix-end-to-end.md",
+            "docs/learn/math/singular-value-shadow-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
             "Finite rational projection replay does not prove the Hilbert projection theorem, Riesz representation, Hahn-Banach, or completeness results.",
-            "Rows involving floating-point orthogonality, conditioning, or numerical stability require separate numerical-honesty metadata.",
-            "General inner-product, duality, and Hilbert-space theorem statements remain Lean-horizon until no-sorry Lean artifacts exist.",
+            "Rows involving floating-point orthogonality, conditioning, singular-value perturbation, or numerical stability require separate numerical-honesty metadata.",
+            "General inner-product, duality, SVD, and Hilbert-space theorem statements remain Lean-horizon until no-sorry Lean artifacts exist.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
             "Rows state the finite vector space, basis, Gram matrix, transform matrix, and exact rational vectors.",
-            "The validator recomputes norm squares, projections, Gram-Schmidt steps, orthogonal transforms, and residuals from source data.",
-            "Malformed finite positivity, projection, or transform-coefficient rows link to checked QF_LRA/Farkas regressions after replay.",
+            "The validator recomputes norm squares, projections, Gram-Schmidt steps, orthogonal transforms, SVD-shadow products, and residuals from source data.",
+            "Malformed finite positivity, projection, transform-coefficient, or singular-value-bound rows link to checked QF_LRA/Farkas regressions after replay.",
             ],
         },
     },
@@ -7869,6 +7895,10 @@ BRIDGE_CONCEPTS = [
                 "Fixed spectral rows that share finite-operator and eigenpair vocabulary.",
             ),
             (
+                "finite-singular-value-shadow-v0",
+                "Fixed singular-value and SVD-shadow rows that share finite-operator, inner-product, and spectral-norm vocabulary.",
+            ),
+            (
                 "matrix-invariants-v0",
                 "Characteristic-polynomial and finite matrix-invariant rows that supply operator polynomial vocabulary.",
             ),
@@ -7888,6 +7918,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/chebyshev-operator-index.md",
                     "docs/learn/math/finite-operator-end-to-end.md",
                     "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
+                    "docs/learn/math/singular-value-shadow-end-to-end.md",
                     "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
@@ -7910,6 +7941,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/chebyshev-operator-index.md",
             "docs/learn/math/finite-operator-end-to-end.md",
             "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
+            "docs/learn/math/singular-value-shadow-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],

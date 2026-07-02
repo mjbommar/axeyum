@@ -537,6 +537,9 @@ python3 scripts/query-foundational-resources.py checks --pack finite-newton-step
 python3 scripts/query-foundational-resources.py checks --pack finite-condition-number-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-condition-number-v0 --proof-status replay-only --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-condition-number-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-singular-value-shadow-v0 --proof-status replay-only --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-singular-value-shadow-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field numerical_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text residual --require-any >/dev/null
@@ -689,6 +692,7 @@ python3 scripts/query-foundational-resources.py checks --pack bounded-monotone-s
 python3 scripts/query-foundational-resources.py horizon-frontier --text hitting --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-hitting-times-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack spectral-linear-algebra-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack inner-product-spaces-rational-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-dual-spaces-v0 --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-dual-spaces-v0 --route Alethe --proof-status checked --text additivity --require-any >/dev/null

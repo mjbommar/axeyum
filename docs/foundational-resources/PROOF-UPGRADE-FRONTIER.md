@@ -26,10 +26,10 @@ the route named in the pack metadata.
 
 Generated from the current math resource queue:
 
-- math example packs: 117
-- learner-linked packs: 117 focused links
-- packs with non-checked proof rows: 105
-- non-checked proof rows: 398
+- math example packs: 118
+- learner-linked packs: 118 focused links
+- packs with non-checked proof rows: 107
+- non-checked proof rows: 411
 
 Candidate route totals:
 
@@ -38,9 +38,9 @@ Candidate route totals:
 | [Boolean CNF/LRAT](../proof-cookbook/recipes/boolean-cnf-lrat.md) | 16 | Boolean refutations that should carry checked CNF proof objects. |
 | [QF_BV bit-blast](../proof-cookbook/recipes/qf-bv-bitblast.md) | 7 | Finite arithmetic/table obligations that should lower through BV/CNF evidence. |
 | [QF_LIA Diophantine](../proof-cookbook/recipes/qf-lia-diophantine.md) | 15 | Integer equalities, counts, modular constraints, coefficient convolutions, rank obstructions, and torsion boundary-membership obstructions, including finite graph traversal cost counters. |
-| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 65 | Exact rational infeasibility and linear inequality obligations. |
+| [QF_LRA Farkas](../proof-cookbook/recipes/qf-lra-farkas.md) | 67 | Exact rational infeasibility and linear inequality obligations. |
 | [QF_UF/Alethe](../proof-cookbook/recipes/qf-uf-congruence-alethe.md) | 19 | Equality-heavy finite structures and congruence conflicts. |
-| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 86 | General theorem statements that remain outside bounded SMT replay. |
+| [Lean horizon](../proof-cookbook/recipes/lean-horizon-template.md) | 88 | General theorem statements that remain outside bounded SMT replay. |
 
 ## Execution Order
 

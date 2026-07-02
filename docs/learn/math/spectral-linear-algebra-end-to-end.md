@@ -173,11 +173,13 @@ compact-operator spectral theory
 numerical eigensolver correctness
 spectral convergence
 Rayleigh-Ritz optimization theorems
+SVD theorem and singular-value perturbation theory
 ```
 
 Those require Lean resources, proof-producing spectral certificates, or
 carefully scoped numerical metadata. This pack only checks finite rational
-matrix evidence.
+matrix evidence. For one exact finite singular-value/SVD shadow, see
+[End To End: Finite Singular-Value Shadow](singular-value-shadow-end-to-end.md).
 
 ## Run It
 
