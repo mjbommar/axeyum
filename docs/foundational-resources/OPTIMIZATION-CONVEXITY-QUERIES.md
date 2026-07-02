@@ -59,7 +59,7 @@ needs concrete checked rows to display.
 | Optimization Family | Concept Or Pack Filter | Route Filter | Start Query |
 |---|---|---|---|
 | LP objective thresholds and Farkas anatomy | `bridge_lp_objective_farkas` | `Farkas` | `checks --concept bridge_lp_objective_farkas --route Farkas --proof-status checked` |
-| Convexity, separation, KKT, QP, SDP, and finite first-order method shadows | `bridge_rational_convexity_shadow` | `Farkas` | `checks --concept bridge_rational_convexity_shadow --route Farkas --proof-status checked` |
+| Convexity, separation, KKT, QP, SDP, conjugate-gradient, and finite first-order method shadows | `bridge_rational_convexity_shadow` | `Farkas` | `checks --concept bridge_rational_convexity_shadow --route Farkas --proof-status checked` |
 | Affine-threshold convexity display row | pack `convexity-rational-v0`, text `threshold` | `Farkas` | `checks --pack convexity-rational-v0 --route Farkas --proof-status checked --text threshold` |
 | Convex-analysis theorem boundary | pack `convexity-rational-v0` or text `convex-analysis` | `Lean horizon` | `horizon-frontier --pack convexity-rational-v0`; `horizon-frontier --text convex-analysis` |
 | Inner-product projection and least-squares optimality rows | `bridge_inner_product_projection` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked` |
@@ -71,7 +71,7 @@ needs concrete checked rows to display.
 | Degenerate active-set multiplier row | pack `finite-active-set-qp-v0`, text `degenerate` | `Farkas` | `checks --pack finite-active-set-qp-v0 --route Farkas --proof-status checked --text degenerate` |
 | SDP objective/slack/gap display row | pack `finite-sdp-v0` | `Farkas` | `checks --pack finite-sdp-v0 --route Farkas --proof-status checked`; `checks --pack finite-sdp-v0 --route Farkas --proof-status checked --text slack` |
 | Schur-complement positive-definite shadow row | `bridge_schur_complement`; pack `finite-schur-complement-v0` | `Farkas` | `checks --concept bridge_schur_complement --route Farkas --proof-status checked`; `checks --pack finite-schur-complement-v0 --route Farkas --proof-status checked` |
-| Gradient descent and line-search display rows | packs `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0` | `Farkas` | `checks --pack finite-gradient-descent-v0 --route Farkas --proof-status checked`; `checks --pack finite-line-search-v0 --route Farkas --proof-status checked`; `checks --pack finite-line-search-v0 --route Farkas --proof-status checked --text direction`; `checks --pack finite-wolfe-line-search-v0 --route Farkas --proof-status checked` |
+| Conjugate-gradient, gradient-descent, and line-search display rows | packs `finite-conjugate-gradient-v0`, `finite-gradient-descent-v0`, `finite-line-search-v0`, `finite-wolfe-line-search-v0` | `Farkas` | `checks --pack finite-conjugate-gradient-v0 --route Farkas --proof-status checked`; `checks --pack finite-gradient-descent-v0 --route Farkas --proof-status checked`; `checks --pack finite-line-search-v0 --route Farkas --proof-status checked`; `checks --pack finite-line-search-v0 --route Farkas --proof-status checked --text direction`; `checks --pack finite-wolfe-line-search-v0 --route Farkas --proof-status checked` |
 | Projected and proximal gradient display rows | packs `finite-projected-gradient-v0`, `finite-proximal-gradient-v0` | `Farkas` | `checks --pack finite-projected-gradient-v0 --route Farkas --proof-status checked`; `checks --pack finite-projected-gradient-v0 --route Farkas --proof-status checked --text projection`; `checks --pack finite-projected-gradient-v0 --route Farkas --proof-status checked --text decrease`; `checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked`; `checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked --text decrease`; `checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked --text box` |
 
 ## Copyable Examples
@@ -259,6 +259,12 @@ python3 scripts/query-foundational-resources.py horizon-frontier \
 
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-gradient-descent-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-conjugate-gradient-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any

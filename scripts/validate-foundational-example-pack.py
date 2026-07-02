@@ -17018,6 +17018,229 @@ def validate_finite_power_iteration(expected: dict[str, Any]) -> None:
     )
 
 
+def validate_finite_conjugate_gradient(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    initial = checks["initial-residual-replay"]
+    if initial["expected_result"] != "sat":
+        fail("initial-residual-replay must expect sat")
+    if initial.get("proof_status") != "replay-only":
+        fail("initial-residual-replay must be replay-only")
+    values = single_witness_values(initial, witnesses)
+    matrix = require_fraction_matrix("CG matrix", values.get("matrix"))
+    rhs = require_fraction_vector("CG rhs", values.get("rhs"))
+    initial_point = require_fraction_vector("CG initial_point", values.get("initial_point"))
+    r0 = require_fraction_vector("CG r0", values.get("r0"))
+    p0 = require_fraction_vector("CG p0", values.get("p0"))
+    ap0 = require_fraction_vector("CG ap0", values.get("ap0"))
+    r0_norm_squared = require_fraction(
+        "CG r0_norm_squared",
+        values.get("r0_norm_squared"),
+    )
+    p0_ap0 = require_fraction("CG p0_ap0", values.get("p0_ap0"))
+    alpha0 = require_fraction("CG alpha0", values.get("alpha0"))
+    x1 = require_fraction_vector("CG x1", values.get("x1"))
+    r1 = require_fraction_vector("CG r1", values.get("r1"))
+    r1_norm_squared = require_fraction(
+        "CG r1_norm_squared",
+        values.get("r1_norm_squared"),
+    )
+    r1_p0_dot = require_fraction("CG r1_p0_dot", values.get("r1_p0_dot"))
+    beta0 = require_fraction("CG beta0", values.get("beta0"))
+    p1 = require_fraction_vector("CG p1", values.get("p1"))
+    ap1 = require_fraction_vector("CG ap1", values.get("ap1"))
+    p0_ap1 = require_fraction("CG p0_ap1", values.get("p0_ap1"))
+    p1_ap1 = require_fraction("CG p1_ap1", values.get("p1_ap1"))
+    alpha1 = require_fraction("CG alpha1", values.get("alpha1"))
+    x2 = require_fraction_vector("CG x2", values.get("x2"))
+    r2 = require_fraction_vector("CG r2", values.get("r2"))
+    exact_solution = require_fraction_vector(
+        "CG exact_solution",
+        values.get("exact_solution"),
+    )
+    solution_residual = require_fraction_vector(
+        "CG solution_residual",
+        values.get("solution_residual"),
+    )
+
+    require_square_matrix("CG matrix", matrix)
+    if len(matrix) != 2:
+        fail("finite conjugate-gradient replay expects one 2x2 system")
+    if matrix[0][1] != matrix[1][0]:
+        fail("finite conjugate-gradient matrix must be symmetric")
+    det = matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
+    if matrix[0][0] <= 0 or det <= 0:
+        fail("finite conjugate-gradient matrix must be positive definite by leading minors")
+    require_mat_vec_shape("CG initial residual", matrix, initial_point)
+    if len(rhs) != len(matrix):
+        fail("CG rhs height must match matrix height")
+    if vector_sub(rhs, mat_vec(matrix, initial_point)) != r0:
+        fail("initial-residual-replay r0 is not b - A*x0")
+    if p0 != r0:
+        fail("initial-residual-replay p0 must equal r0")
+
+    first_step = checks["first-cg-step-replay"]
+    if first_step["expected_result"] != "sat":
+        fail("first-cg-step-replay must expect sat")
+    if first_step.get("proof_status") != "replay-only":
+        fail("first-cg-step-replay must be replay-only")
+    if single_witness_values(first_step, witnesses) != values:
+        fail("first-cg-step-replay must cite the CG witness")
+    if mat_vec(matrix, p0) != ap0:
+        fail("first-cg-step-replay ap0 is not A*p0")
+    if dot_product(r0, r0) != r0_norm_squared:
+        fail("first-cg-step-replay r0_norm_squared is incorrect")
+    if dot_product(p0, ap0) != p0_ap0:
+        fail("first-cg-step-replay p0_ap0 is incorrect")
+    if p0_ap0 == 0:
+        fail("first-cg-step-replay denominator must be nonzero")
+    if r0_norm_squared / p0_ap0 != alpha0:
+        fail("first-cg-step-replay alpha0 is incorrect")
+    if vector_add_fraction(initial_point, scalar_vec(alpha0, p0)) != x1:
+        fail("first-cg-step-replay x1 is not x0 + alpha0*p0")
+    if vector_sub(r0, scalar_vec(alpha0, ap0)) != r1:
+        fail("first-cg-step-replay r1 is not r0 - alpha0*A*p0")
+
+    orthogonality = checks["residual-orthogonality-replay"]
+    if orthogonality["expected_result"] != "sat":
+        fail("residual-orthogonality-replay must expect sat")
+    if orthogonality.get("proof_status") != "replay-only":
+        fail("residual-orthogonality-replay must be replay-only")
+    if single_witness_values(orthogonality, witnesses) != values:
+        fail("residual-orthogonality-replay must cite the CG witness")
+    if dot_product(r1, p0) != r1_p0_dot:
+        fail("residual-orthogonality-replay r1_p0_dot is incorrect")
+    if r1_p0_dot != 0:
+        fail("residual-orthogonality-replay requires r1^T*p0 = 0")
+
+    beta_direction = checks["beta-direction-replay"]
+    if beta_direction["expected_result"] != "sat":
+        fail("beta-direction-replay must expect sat")
+    if beta_direction.get("proof_status") != "replay-only":
+        fail("beta-direction-replay must be replay-only")
+    if single_witness_values(beta_direction, witnesses) != values:
+        fail("beta-direction-replay must cite the CG witness")
+    if dot_product(r1, r1) != r1_norm_squared:
+        fail("beta-direction-replay r1_norm_squared is incorrect")
+    if r0_norm_squared == 0:
+        fail("beta-direction-replay denominator must be nonzero")
+    if r1_norm_squared / r0_norm_squared != beta0:
+        fail("beta-direction-replay beta0 is incorrect")
+    if vector_add_fraction(r1, scalar_vec(beta0, p0)) != p1:
+        fail("beta-direction-replay p1 is not r1 + beta0*p0")
+
+    conjugacy = checks["search-direction-conjugacy-replay"]
+    if conjugacy["expected_result"] != "sat":
+        fail("search-direction-conjugacy-replay must expect sat")
+    if conjugacy.get("proof_status") != "replay-only":
+        fail("search-direction-conjugacy-replay must be replay-only")
+    if single_witness_values(conjugacy, witnesses) != values:
+        fail("search-direction-conjugacy-replay must cite the CG witness")
+    if mat_vec(matrix, p1) != ap1:
+        fail("search-direction-conjugacy-replay ap1 is not A*p1")
+    if dot_product(p0, ap1) != p0_ap1:
+        fail("search-direction-conjugacy-replay p0_ap1 is incorrect")
+    if p0_ap1 != 0:
+        fail("search-direction-conjugacy-replay requires p0^T*A*p1 = 0")
+
+    second_step = checks["second-step-solution-replay"]
+    if second_step["expected_result"] != "sat":
+        fail("second-step-solution-replay must expect sat")
+    if second_step.get("proof_status") != "replay-only":
+        fail("second-step-solution-replay must be replay-only")
+    if single_witness_values(second_step, witnesses) != values:
+        fail("second-step-solution-replay must cite the CG witness")
+    if dot_product(p1, ap1) != p1_ap1:
+        fail("second-step-solution-replay p1_ap1 is incorrect")
+    if p1_ap1 == 0:
+        fail("second-step-solution-replay denominator must be nonzero")
+    if r1_norm_squared / p1_ap1 != alpha1:
+        fail("second-step-solution-replay alpha1 is incorrect")
+    if vector_add_fraction(x1, scalar_vec(alpha1, p1)) != x2:
+        fail("second-step-solution-replay x2 is not x1 + alpha1*p1")
+    if vector_sub(r1, scalar_vec(alpha1, ap1)) != r2:
+        fail("second-step-solution-replay r2 is not r1 - alpha1*A*p1")
+    if any(item != 0 for item in r2):
+        fail("second-step-solution-replay expects an exact zero residual")
+    if x2 != exact_solution:
+        fail("second-step-solution-replay x2 must match exact_solution")
+    if vector_sub(mat_vec(matrix, exact_solution), rhs) != solution_residual:
+        fail("second-step-solution-replay solution_residual is incorrect")
+    if any(item != 0 for item in solution_residual):
+        fail("second-step-solution-replay exact_solution must solve A*x=b")
+
+    bad = checks["bad-cg-alpha0-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-cg-alpha0-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-cg-alpha0-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_cg_alpha0_replay":
+        fail("bad-cg-alpha0-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-step-spd-cg-transcript":
+        fail("bad-cg-alpha0-rejected must cite the CG witness")
+    computed_alpha0 = require_fraction(
+        "bad CG computed_alpha0",
+        data.get("computed_alpha0"),
+    )
+    claimed_alpha0 = require_fraction(
+        "bad CG claimed_alpha0",
+        data.get("claimed_alpha0"),
+    )
+    if computed_alpha0 != alpha0:
+        fail("bad-cg-alpha0-rejected computed alpha does not match replay")
+    if computed_alpha0 == claimed_alpha0:
+        fail("bad-cg-alpha0-rejected malformed alpha unexpectedly matches")
+    if "separate qf-lra-bad-cg-alpha0" not in bad.get("notes", ""):
+        fail("bad-cg-alpha0-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-cg-alpha0"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-cg-alpha0 must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-cg-alpha0 must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-cg-alpha0 must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-step-spd-cg-transcript":
+        fail("qf-lra-bad-cg-alpha0 must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-cg-alpha0-rejected":
+        fail("qf-lra-bad-cg-alpha0 must cite the replay row")
+    qf_computed = require_fraction("qf CG computed_alpha0", qf_data.get("computed_alpha0"))
+    qf_claimed = require_fraction("qf CG claimed_alpha0", qf_data.get("claimed_alpha0"))
+    if qf_computed != computed_alpha0 or qf_claimed != claimed_alpha0:
+        fail("qf-lra-bad-cg-alpha0 data must match the replay row")
+    if qf_data.get("farkas_conflict") != "cg_alpha0 = 1/4 and cg_alpha0 = 1/3":
+        fail("qf-lra-bad-cg-alpha0 must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf CG smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-conjugate-gradient-v0/smt2/"
+        "bad-cg-alpha0-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-cg-alpha0 smt2_artifact must name the checked source artifact")
+    check_source("qf CG smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf CG farkas_regression", regression)
+    if "finite_conjugate_gradient_bad_alpha0_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-cg-alpha0 must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf CG certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-cg-alpha0 certificate must document checked Farkas evidence")
+
+    horizon = checks["general-conjugate-gradient-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-conjugate-gradient-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-conjugate-gradient-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("CG horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("CG horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_finite_walsh_hadamard_transform(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -29067,6 +29290,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_connectedness(expected)
     if metadata["id"] == "finite-continuous-maps-v0":
         validate_finite_continuous_maps(expected)
+    if metadata["id"] == "finite-conjugate-gradient-v0":
+        validate_finite_conjugate_gradient(expected)
     if metadata["id"] == "finite-quotient-topology-v0":
         validate_finite_quotient_topology(expected)
     if metadata["id"] == "finite-dual-spaces-v0":

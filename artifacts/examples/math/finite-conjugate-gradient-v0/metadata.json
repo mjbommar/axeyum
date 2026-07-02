@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "finite-conjugate-gradient-v0",
+  "title": "Finite Conjugate Gradient Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_optimization_and_convexity",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_residual_bound",
+    "bridge_rational_convexity_shadow",
+    "bridge_exact_vs_floating_arithmetic"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "optimization_and_convexity"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite matrices",
+    "exact rational conjugate gradient",
+    "residual orthogonality replay",
+    "A-conjugacy replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-conjugate-gradient-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite conjugate-gradient bad step-size QF_LRA/Farkas regression seed",
+    "pressure": "Exact CG replay computes alpha0 = 1/4 from r0^T r0 / p0^T A p0 while a malformed row claims alpha0 = 1/3, isolating a compact equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-cg-alpha0"
+    ],
+    "next_step": "Promote additional Krylov or conjugate-gradient rows only when they add distinct residual orthogonality, A-conjugacy, preconditioning, finite termination, or numerical-honesty pressure; keep general convergence, SPD hypotheses, roundoff, and preconditioner theory in Lean or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/conjugate-gradient-end-to-end.md",
+    "artifacts/examples/math/finite-conjugate-gradient-v0/smt2/bad-cg-alpha0-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "initial-residual-replay",
+    "first-cg-step-replay",
+    "residual-orthogonality-replay",
+    "beta-direction-replay",
+    "search-direction-conjugacy-replay",
+    "second-step-solution-replay",
+    "bad-cg-alpha0-rejected",
+    "qf-lra-bad-cg-alpha0",
+    "general-conjugate-gradient-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed SPD rational matrix, right-hand side, initial point, residuals, search directions, step sizes, beta update, A-conjugacy dot product, and exact two-step solution as deterministic exact-rational replay obligations.",
+    "Route the false first step-size row through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes alpha0 = 1/4.",
+    "Expose the pack through the matrix computation, optimization, residual-bound, and exact-vs-floating learner and consumer query surfaces.",
+    "Keep general conjugate-gradient convergence, finite-termination theorems, SPD/preconditioner hypotheses, Krylov subspace theory, roundoff, and floating-point solver stability marked Lean or numerical-honesty horizon."
+  ]
+}

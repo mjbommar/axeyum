@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 122 non-template math example packs validate.
+  Status: 123 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 122 non-template packs have at least one `checked` expected-result row.
+  Status: 123 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3384,6 +3384,15 @@ coordinate claim `3` against the exact value `4`. General power-iteration
 convergence, spectral-gap assumptions, residual-to-eigenvalue error theorems,
 deflation, block iteration, conditioning, and floating-point eigensolver
 stability stay in theorem or numerical-honesty lanes.
+The linear-algebra/numerical-analysis/optimization layer now adds
+`finite-conjugate-gradient-v0` as the 123rd non-template math pack. Exact
+rational replay checks the SPD system `[[4,1],[1,3]] x = [1,2]`, two CG
+step sizes, Fletcher-Reeves `beta`, residual orthogonality, A-conjugacy, and
+the exact solution `[1/11,7/11]`, while a source-linked QF_LRA/Farkas artifact
+rejects the malformed first step-size claim `1/3` against the exact value
+`1/4`. General conjugate-gradient convergence, finite-termination,
+Krylov-minimization, preconditioner, roundoff, and floating-point stability
+claims stay in theorem or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

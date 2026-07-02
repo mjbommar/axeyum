@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 122 non-template math packs.
-- 786 expected checks.
-- 348 checked proof/evidence rows.
-- 353 replay-only rows.
-- 85 Lean-horizon rows.
-- 122 promoted solver-reuse packs.
+- 123 non-template math packs.
+- 795 expected checks.
+- 349 checked proof/evidence rows.
+- 360 replay-only rows.
+- 86 Lean-horizon rows.
+- 123 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 122 focused learner-linked packs, with no path-only, index-only, or missing
+- 123 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 122 current non-template packs satisfy the focused-lesson side of this
+all 123 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2416,6 +2416,16 @@ Pick one row per commit unless the change is purely navigational.
      convergence, spectral-gap assumptions, residual-to-eigenvalue error
      theorems, deflation, block iteration, conditioning, and floating-point
      eigensolver stability.
+281. Landed: add `finite-conjugate-gradient-v0` as an exact finite
+     conjugate-gradient resource. The pack replays
+     `A = [[4,1],[1,3]]`, `b = [1,2]`, `x0 = [0,0]`, two residual updates,
+     two step sizes, Fletcher-Reeves `beta`, residual orthogonality,
+     A-conjugacy, and the exact solution `[1/11,7/11]`, then adds
+     `qf-lra-bad-cg-alpha0` as the source-linked Farkas row for the false
+     first step-size claim `1/3` versus exact `1/4`. The learner and query
+     pages keep exact finite CG replay separate from Krylov minimization,
+     finite-termination theorems, preconditioners, roundoff, and
+     floating-point CG stability.
 
 ## Validation Checklist
 

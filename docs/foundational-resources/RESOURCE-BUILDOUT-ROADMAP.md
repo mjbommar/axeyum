@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 121 non-template math example packs.
-- 777 expected checks.
-- 347 checked proof/evidence rows.
-- 346 replay-only rows.
-- 84 Lean-horizon rows.
-- 121 promoted solver-reuse packs.
+- 123 non-template math example packs.
+- 795 expected checks.
+- 349 checked proof/evidence rows.
+- 360 replay-only rows.
+- 86 Lean-horizon rows.
+- 123 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 121 focused learner-linked packs, with no path-only, index-only, or missing
+- 123 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2414,6 +2414,13 @@ Pick one item per commit unless the change is purely navigational.
      without claiming general elimination correctness, pivoting,
      rank-revealing variants, sparse fill-in, conditioning, or floating-point
      stability.
+169. Landed: add `finite-conjugate-gradient-v0` as an exact finite
+     conjugate-gradient resource. The pack computes one SPD rational solve,
+     two CG step sizes, residual orthogonality, A-conjugacy, and the exact
+     solution, then promotes the malformed first-step-size claim `1/3` versus
+     exact `1/4` through a source-linked QF_LRA/Farkas regression without
+     claiming general CG convergence, Krylov minimization, preconditioners,
+     roundoff, or floating-point stability.
 
 ## Validation Checklist
 

@@ -442,6 +442,10 @@ CURRICULUM_MAP = {
                 "Exact two-step power-iteration replay, normalized iterate, Rayleigh quotient, residual shadow, dominant eigenpair shadow, and checked bad iterate-coordinate evidence.",
             ),
             (
+                "finite-conjugate-gradient-v0",
+                "Exact two-step conjugate-gradient replay, residual orthogonality, A-conjugacy, exact solution, and checked bad step-size evidence.",
+            ),
+            (
                 "finite-jordan-chain-v0",
                 "Exact Jordan block, eigenvector, generalized-eigenvector, nilpotent-part, reconstruction, and checked bad-component evidence.",
             ),
@@ -555,7 +559,7 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU/QR/Cholesky/Schur replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, power-iteration, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU/QR/Cholesky/Schur replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, power-iteration, conjugate-gradient, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, multivariable-calculus and Newton-step shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
@@ -575,12 +579,13 @@ FIELD_PACKS = {
         ("finite-sdp-v0", "Finite SDP primal/dual slack replay with checked bad-objective and bad duality-gap rejections."),
         ("finite-schur-complement-v0", "Finite block Schur-complement and positive-definite shadow replay with checked bad scalar rejection."),
         ("finite-gradient-descent-v0", "Finite gradient-descent step replay with checked bad-decrease, bad step-coordinate, and bad descent-bound rejections."),
+        ("finite-conjugate-gradient-v0", "Finite conjugate-gradient SPD solve replay with residual orthogonality, A-conjugacy, exact solution, and bad step-size rejection."),
         ("finite-line-search-v0", "Finite Armijo line-search replay with checked bad-acceptance, bad descent-direction, and bad accepted-candidate rejections."),
         ("finite-wolfe-line-search-v0", "Finite Wolfe line-search replay with checked bad-minimizer and bad-curvature rejections."),
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU/QR/Cholesky/Schur replay, interval bounds, inner-product projections, condition-number, singular-value, power-iteration, residual, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU/QR/Cholesky/Schur replay, interval bounds, inner-product projections, condition-number, singular-value, power-iteration, conjugate-gradient, residual, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -1496,6 +1501,10 @@ BRIDGE_CONCEPTS = [
                 "Singular-value, spectral-norm, Frobenius-norm, and two-norm condition-number rows checked as exact rational matrix arithmetic, not numerical SVD stability evidence.",
             ),
             (
+                "finite-conjugate-gradient-v0",
+                "Two-step conjugate-gradient rows checked as exact rational matrix arithmetic, not floating-point Krylov solver stability evidence.",
+            ),
+            (
                 "least-squares-regression-v0",
                 "Normal-equation, residual, and bad RSS-improvement rows checked as exact rational linear algebra, not floating-point regression.",
             ),
@@ -1520,6 +1529,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/numerical-linear-algebra-end-to-end.md",
                     "docs/learn/math/condition-number-end-to-end.md",
                     "docs/learn/math/singular-value-shadow-end-to-end.md",
+                    "docs/learn/math/conjugate-gradient-end-to-end.md",
                     "docs/learn/math/exact-statistical-tests-end-to-end.md",
                     "docs/foundational-resources/MATH-FIELDS.md",
                 ],
@@ -1537,13 +1547,14 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
             "docs/learn/math/condition-number-end-to-end.md",
             "docs/learn/math/singular-value-shadow-end-to-end.md",
+            "docs/learn/math/conjugate-gradient-end-to-end.md",
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
             "docs/learn/math/exact-statistical-tests-end-to-end.md",
             "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
-            "Exact rational replay does not prove floating-point roundoff, conditioning, singular-value perturbation, stability, or convergence guarantees.",
+            "Exact rational replay does not prove floating-point roundoff, conditioning, singular-value perturbation, Krylov/preconditioner stability, or convergence guarantees.",
             "QF_FP and numerical experiment metadata need their own trust boundary before floating-point resources can graduate.",
             "Learner pages must label exact rational shadows when a topic is normally taught numerically.",
         ],
@@ -1664,7 +1675,7 @@ BRIDGE_CONCEPTS = [
             "A rational convexity-shadow row checks fixed midpoint/Jensen "
             "instances, finite second differences, affine monotonicity, exact "
             "gradient replay, Hessian-minor witnesses, finite Newton-step "
-            "Hessian solves, finite gradient-descent, "
+            "Hessian solves, finite conjugate-gradient steps, finite gradient-descent, "
             "Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT "
             "stationarity/complementarity, and finite SDP primal/dual slack/gap "
             "rows over rational data while keeping "
@@ -1689,6 +1700,7 @@ BRIDGE_CONCEPTS = [
             "exact rational derivatives",
             "finite grid replay",
             "finite Newton-step replay",
+            "finite conjugate-gradient replay",
             "finite gradient descent replay",
             "finite line search replay",
             "finite Wolfe line search replay",
@@ -1733,6 +1745,10 @@ BRIDGE_CONCEPTS = [
                 "Finite exact quadratic gradient step, descent-bound, bad-decrease, bad step-coordinate, and bad descent-bound rows over exact rationals.",
             ),
             (
+                "finite-conjugate-gradient-v0",
+                "Finite exact SPD conjugate-gradient residuals, step sizes, residual orthogonality, A-conjugacy, exact solution, and bad step-size rows over exact rationals.",
+            ),
+            (
                 "finite-line-search-v0",
                 "Finite exact Armijo rejection/acceptance, bad-acceptance, bad descent-direction, and bad accepted-candidate rows over exact rationals.",
             ),
@@ -1774,6 +1790,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/convexity-rational-end-to-end.md",
                     "docs/learn/math/multivariable-calculus-end-to-end.md",
                     "docs/learn/math/newton-step-end-to-end.md",
+                    "docs/learn/math/conjugate-gradient-end-to-end.md",
                     "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
                     "docs/learn/math/linear-algebra-and-optimization.md",
                     "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
@@ -1783,7 +1800,8 @@ BRIDGE_CONCEPTS = [
                     "The finite checker recomputes midpoint values, grid "
                     "differences, gradients, Jacobians, Hessian minors, and "
                     "normal-equation residuals, finite Newton-step Hessian "
-                    "solves, finite gradient, Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT residuals, and "
+                    "solves, finite conjugate-gradient residuals and "
+                    "A-conjugacy, finite gradient, Armijo/Wolfe line-search, active-set QP, projected-gradient, and proximal-gradient steps, finite KKT residuals, and "
                     "two-by-two SDP slack/objective/gap arithmetic exactly; false linearized "
                     "claims use checked Farkas evidence when promoted."
                 ),
@@ -1796,6 +1814,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/convexity-rational-end-to-end.md",
             "docs/learn/math/multivariable-calculus-end-to-end.md",
             "docs/learn/math/newton-step-end-to-end.md",
+            "docs/learn/math/conjugate-gradient-end-to-end.md",
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
@@ -1803,14 +1822,14 @@ BRIDGE_CONCEPTS = [
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Finite rational convexity shadows do not prove Jensen's theorem, separation theorems, KKT sufficiency, SDP duality, or algorithm convergence.",
+            "Finite rational convexity shadows do not prove Jensen's theorem, separation theorems, KKT sufficiency, SDP duality, conjugate-gradient convergence/finite termination, or algorithm convergence.",
             "Positive-definite Hessian minors and finite midpoint checks are bounded witnesses, not general differentiable-convexity theorems unless a Lean route reconstructs the theorem.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
                 "Rows state the finite rational sample points, polynomial/function values, derivative data, or normal equations.",
-                "The validator recomputes midpoint inequalities, second differences, gradients, Hessian minors, and residual equations exactly.",
+                "The validator recomputes midpoint inequalities, second differences, gradients, Hessian minors, conjugate-gradient steps, and residual equations exactly.",
                 "General convex analysis, KKT, duality, and convergence claims are linked as Lean-horizon rows instead of counted as finite solver evidence.",
             ],
         },
@@ -5604,7 +5623,8 @@ BRIDGE_CONCEPTS = [
             "A residual-bound row checks exact rational residuals, norms, "
             "solution boxes, Jacobi-step error bounds, Hessian linear solves, "
             "condition-number perturbation bounds, power-iteration residual "
-            "shadows, or normal-equation side conditions for a fixed matrix "
+            "shadows, conjugate-gradient residual orthogonality, A-conjugacy, "
+            "or normal-equation side conditions for a fixed matrix "
             "problem, and separates exact "
             "infeasibility from floating error analysis."
         ),
@@ -5626,6 +5646,7 @@ BRIDGE_CONCEPTS = [
             "finite matrices",
             "exact Hessian solves",
             "condition-number replay",
+            "conjugate-gradient replay",
             "bounded recurrence replay",
         ],
         "example_packs": [
@@ -5658,6 +5679,10 @@ BRIDGE_CONCEPTS = [
                 "Two-step power-iteration replay, Rayleigh quotient, residual shadow, normalized iterate, and checked bad iterate-coordinate row.",
             ),
             (
+                "finite-conjugate-gradient-v0",
+                "Two-step conjugate-gradient replay, residual orthogonality, A-conjugacy, exact solution, and checked bad step-size row.",
+            ),
+            (
                 "finite-schur-complement-v0",
                 "Two-by-two block Schur complement, determinant, inverse, positive-definite, and conditional-variance shadows with checked bad scalar evidence.",
             ),
@@ -5677,6 +5702,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/newton-step-end-to-end.md",
                     "docs/learn/math/condition-number-end-to-end.md",
                     "docs/learn/math/power-iteration-end-to-end.md",
+                    "docs/learn/math/conjugate-gradient-end-to-end.md",
                     "docs/learn/math/schur-complement-end-to-end.md",
                     "docs/learn/math/linear-algebra-and-optimization.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
@@ -5685,7 +5711,8 @@ BRIDGE_CONCEPTS = [
                     "Exact residual witnesses replay directly; false bound or "
                     "coefficient claims, including false Newton coordinates, "
                     "and condition-number bounds, "
-                    "or false power-iterate coordinates, "
+                    "false power-iterate coordinates, "
+                    "or false conjugate-gradient step sizes, "
                     "graduate only when the final rational "
                     "linear conflict has rechecked Farkas evidence."
                 ),
@@ -5700,21 +5727,23 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/newton-step-end-to-end.md",
             "docs/learn/math/condition-number-end-to-end.md",
             "docs/learn/math/power-iteration-end-to-end.md",
+            "docs/learn/math/conjugate-gradient-end-to-end.md",
             "docs/learn/math/schur-complement-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "artifacts/examples/math/finite-power-iteration-v0/smt2/bad-power-iterate-coordinate-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-conjugate-gradient-v0/smt2/bad-cg-alpha0-farkas-conflict.smt2",
             "artifacts/examples/math/finite-schur-complement-v0/smt2/bad-schur-complement-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Exact residual and condition-number rows do not certify floating-point roundoff, algorithmic stability, or asymptotic convergence rates.",
+            "Exact residual, condition-number, and conjugate-gradient transcript rows do not certify floating-point roundoff, algorithmic stability, preconditioner correctness, finite-termination theorems, or asymptotic convergence rates.",
             "Nonlinear norm bounds and spectral-condition claims need separate NRA, interval, or Lean-backed routes.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state the matrix, candidate vector, norm or box, and exact rational residual computation.",
+                "Rows state the matrix, candidate vector, norm or box, search direction, step size, and exact rational residual computation.",
                 "Bad residual or coefficient rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed.",
                 "Learner pages label numerical-analysis claims as exact rational shadows unless floating-point evidence exists.",
             ],

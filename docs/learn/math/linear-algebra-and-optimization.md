@@ -25,6 +25,7 @@ Example packs:
 - [finite-condition-number-v0](../../../artifacts/examples/math/finite-condition-number-v0/)
 - [finite-singular-value-shadow-v0](../../../artifacts/examples/math/finite-singular-value-shadow-v0/)
 - [finite-power-iteration-v0](../../../artifacts/examples/math/finite-power-iteration-v0/)
+- [finite-conjugate-gradient-v0](../../../artifacts/examples/math/finite-conjugate-gradient-v0/)
 - [finite-jordan-chain-v0](../../../artifacts/examples/math/finite-jordan-chain-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
@@ -164,6 +165,11 @@ finite-gradient-descent slice adds exact quadratic gradient replay, step-update
 replay, objective-decrease checking, finite descent-bound replay, and a checked
 QF_LRA/Farkas bad-decrease certificate; its theorem boundary is
 [Gradient Descent Convergence Theorem Boundary](gradient-descent-convergence-theorem-boundary.md).
+The finite conjugate-gradient slice adds exact SPD residual replay, two
+step-size updates, residual orthogonality, A-conjugacy, exact solution replay,
+and checked QF_LRA/Farkas bad-step-size evidence; its general convergence,
+finite-termination, Krylov minimization, preconditioner, roundoff, and
+floating-point-stability claims stay as Lean or numerical-honesty horizons.
 The finite line-search slice adds exact Armijo trial rejection, one accepted
 backtracked step, and checked QF_LRA/Farkas bad-acceptance,
 bad-descent-direction, and bad-accepted-candidate certificates; its theorem
@@ -652,6 +658,25 @@ from descent lemmas, convergence rates, stopping criteria, variants, and
 floating-point behavior, read
 [Gradient Descent Convergence Theorem Boundary](gradient-descent-convergence-theorem-boundary.md).
 
+For a finite conjugate-gradient example, encode a two-by-two SPD system and an
+exact rational CG transcript:
+
+```text
+A = [[4, 1], [1, 3]]
+b = [1, 2]
+x0 = [0, 0]
+alpha0 = 1/4
+alpha1 = 4/11
+x2 = [1/11, 7/11]
+```
+
+The `finite-conjugate-gradient-v0` validator recomputes the residuals, search
+directions, dot products, `alpha`/`beta` updates, residual orthogonality,
+A-conjugacy, and exact final solution. Its bad row changes `alpha0` to `1/3`;
+exact replay computes `1/4`, then checks the resulting scalar contradiction
+through QF_LRA/Farkas evidence. For a focused trace, read
+[End To End: Finite Conjugate Gradient](conjugate-gradient-end-to-end.md).
+
 For a finite line-search example, encode a one-dimensional quadratic and one
 Armijo backtracking trace:
 
@@ -832,6 +857,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sp
 cargo test -p axeyum-solver --test math_resource_lra_routes spectral_bad_rayleigh_quotient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-power-iteration-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_power_iteration_bad_coordinate_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-conjugate-gradient-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_conjugate_gradient_bad_alpha0_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0

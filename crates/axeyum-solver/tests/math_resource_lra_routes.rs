@@ -295,6 +295,9 @@ const SPECTRAL_BAD_EIGENPAIR: &str = include_str!(
 const FINITE_POWER_ITERATION_BAD_COORDINATE: &str = include_str!(
     "../../../artifacts/examples/math/finite-power-iteration-v0/smt2/bad-power-iterate-coordinate-farkas-conflict.smt2"
 );
+const FINITE_CONJUGATE_GRADIENT_BAD_ALPHA0: &str = include_str!(
+    "../../../artifacts/examples/math/finite-conjugate-gradient-v0/smt2/bad-cg-alpha0-farkas-conflict.smt2"
+);
 const FINITE_WALSH_HADAMARD_BAD_TRANSFORM_COEFFICIENT: &str = include_str!(
     "../../../artifacts/examples/math/finite-walsh-hadamard-transform-v0/smt2/bad-transform-coefficient-farkas-conflict.smt2"
 );
@@ -1854,6 +1857,14 @@ fn finite_power_iteration_bad_coordinate_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-power-iteration-v0 bad-power-iterate-coordinate SMT-LIB artifact",
         FINITE_POWER_ITERATION_BAD_COORDINATE,
+    );
+}
+
+#[test]
+fn finite_conjugate_gradient_bad_alpha0_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-conjugate-gradient-v0 bad-cg-alpha0 SMT-LIB artifact",
+        FINITE_CONJUGATE_GRADIENT_BAD_ALPHA0,
     );
 }
 

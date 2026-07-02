@@ -909,7 +909,15 @@ Build sequence:
     iteration replay separate from convergence theorems, spectral-gap
     assumptions, residual-to-eigenvalue error bounds, deflation, block
     iteration, conditioning, and floating-point eigensolver stability.
-93. Revisit crate/repo boundaries only after three real consumers or repeated
+93. Landed: add the finite conjugate-gradient resource.
+    `finite-conjugate-gradient-v0` now records one exact two-by-two SPD system,
+    two CG steps, residual orthogonality, A-conjugacy, exact solution replay,
+    and a checked QF_LRA/Farkas artifact for the malformed first-step-size
+    claim `1/4 = 1/3`. The reused residual-bound, rational-convexity, and
+    exact-vs-floating bridges keep exact finite CG replay separate from
+    convergence, finite termination, Krylov minimization, preconditioning,
+    roundoff, and floating-point stability.
+94. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands
