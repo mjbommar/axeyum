@@ -192,6 +192,7 @@ impl CombinedTheoryLia {
             });
         }
 
+        let deadline = self.deadline;
         let cached = self.cache.as_mut().expect("cache populated above");
         run_interface_search(
             arena,
@@ -201,6 +202,7 @@ impl CombinedTheoryLia {
             &cached.pairs,
             &cached.pair_atoms,
             &mut cached.theory,
+            deadline,
         )
     }
 
@@ -378,8 +380,9 @@ pub fn combined_lia_vs_cold_conjunction(
         return None;
     }
 
-    // The cold reference verdict.
-    let cold = verdict_code(&decide_conjunction(arena, &literals));
+    // The cold reference verdict (deadline-free: the trusted reference the warm
+    // oracle must match).
+    let cold = verdict_code(&decide_conjunction(arena, &literals, None));
 
     // The warm oracle over the conjunction's atom set, checked twice so the cache-reuse
     // path is exercised (the second check must hit the warm baseline and still agree).

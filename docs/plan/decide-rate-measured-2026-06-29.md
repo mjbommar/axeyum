@@ -206,3 +206,39 @@ thing — and records that the strings lever, the loudest item by NAS count, has
 
 *Harness:* `target/release/examples/measure_corpus <dir> 2000` and
 `explain_corpus <dir> 2000`. *Owned by Track 1/2.*
+
+## 2026-07-02 append — `bug330` deadline-robustness fixed (item 2 above)
+
+The `QF_AUFLIA` row `cli__regress1__auflia__bug330` overran `config.timeout`
+because the **UFLIA online combination** conjunctive core —
+`decide_conjunction` / `run_interface_search` and its interface case-split DFS —
+carried **no deadline**: it built its `LiaTheory` with `new_with_opaque_apps`
+(no deadline) and the `Search` DFS never checked one, so the opaque-app LIA
+feasibility sub-solves and the case-split recursion (also the Boolean layer's
+per-leaf conjunctive rebuild and the warm `CombinedTheoryLia` oracle) ground on
+past the budget.
+
+**Fix** (`crates/axeyum-solver/src/uflia_online.rs`, `combined_theory_lia.rs`):
+threaded the existing absolute-deadline pattern (`config.timeout → Instant`,
+mirroring `lra.rs`/`abv.rs`) through `decide_conjunction` →
+`run_interface_search` → `Search` — a `past_deadline` check at every DFS node,
+after interface-pair construction, and at entry — and gave the `LiaTheory` the
+same deadline via `.with_deadline(deadline)`. Expiry yields a graceful
+`Unknown` **only**: `LiaTheory::assert` returns `Ok` (not `Err`) on a deadline,
+so no branch can flip to a wrong `Unsat`, and a replaying leaf `Sat` is still
+accepted (a valid model is valid regardless of the clock). The warm
+`CombinedTheoryLia` forwards its own deadline; the cold reference in the
+slice-1 equivalence gate stays deadline-free (`None`).
+
+**Measured (`bug330`, release).** Pre-fix, at a **2 s** budget the solve ground
+**> 90 s** (watchdog-killed) — the reported overshoot. Post-fix the wall
+**tracks the budget**: 2 s → 8.5 s, 4 s → 15.1 s, 0.5 s → 2.9 s (the residual is
+the multi-route *sum*, each route now honouring its own fresh deadline; no
+single route ignores the budget). Division re-measure
+`qf-auflia-cvc5-regress-clean` (`--backend solver --compare-z3 --timeout-ms
+10000 --jobs 4 --rewrite off`): unchanged at **7 files / 5 agree (3 sat, 2
+unsat) / 2 unknown / DISAGREE=0 / PAR-2 5.715 s** — `bug330` stays a hard
+`Unknown` (no decide claimed), but its `solve_ms` fell **35.4 s → 25.5 s** at the
+10 s cap. Gates: `-p axeyum-solver --lib` (640) + `--test uflia_online` (30) +
+new `--test deadline_honored` green; clippy `--all-targets --all-features -D
+warnings` clean; `uflia_differential_fuzz` (z3) 2500 instances **DISAGREE=0**.

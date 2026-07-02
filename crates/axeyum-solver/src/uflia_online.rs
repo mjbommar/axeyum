@@ -114,6 +114,13 @@ const MAX_OPAQUE_BOOLEAN_ATOMS: usize = 128;
 /// layer declines rather than build an unbounded encoding.
 const MAX_BOOLEAN_CLAUSES: usize = 200_000;
 
+/// Whether an absolute wall-clock deadline (if any) has passed. Mirrors the
+/// `past_deadline` helpers in the arithmetic backends: a `None` deadline never
+/// expires, so callers with no `config.timeout` keep their full power.
+fn past_deadline(deadline: Option<Instant>) -> bool {
+    deadline.is_some_and(|d| Instant::now() >= d)
+}
+
 /// A classified literal of the conjunction: the atom term and its asserted polarity.
 ///
 /// `pub(crate)` so the warm [`crate::combined_theory_lia::CombinedTheoryLia`] (the
@@ -190,7 +197,13 @@ pub fn check_qf_uflia_online(
                 opaque_atoms,
             )));
         }
-        return Ok(decide_conjunction(arena, &literals));
+        // Honor `config.timeout` on the array-abstracted / opaque-app conjunctive
+        // combination: an absolute deadline threaded through the interface DFS and
+        // the LIA feasibility sub-solves so a hard relaxation (e.g. `bug330`)
+        // yields a graceful `Unknown` at expiry instead of grinding past the
+        // budget. Expiry only ever produces `Unknown`, never a verdict change.
+        let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+        return Ok(decide_conjunction(arena, &literals, deadline));
     }
 
     // 2. Boolean-structured QF_UFLIA: drive the combination from the real CDCL(T) layer —
@@ -250,7 +263,14 @@ pub fn check_qf_uflia_boolean_prop_metrics(
 /// `DPLL(T)` layer call it). Returns a replay-checked model on `sat`, `Unsat` when every
 /// interface branch is infeasible, and a conservative [`CheckResult::Unknown`] otherwise
 /// (an unsupported atom, the depth cap, or a leaf model that did not replay).
-pub(crate) fn decide_conjunction(arena: &mut TermArena, literals: &[Literal]) -> CheckResult {
+pub(crate) fn decide_conjunction(
+    arena: &mut TermArena,
+    literals: &[Literal],
+    deadline: Option<Instant>,
+) -> CheckResult {
+    if past_deadline(deadline) {
+        return decline("deadline reached before the UFLIA online combination");
+    }
     // 2. Partition the literals; decline an unsupported atom.
     let Some(part) = partition(arena, literals) else {
         return decline("atom outside QF_UFLIA for the online combination path");
@@ -268,6 +288,9 @@ pub(crate) fn decide_conjunction(arena: &mut TermArena, literals: &[Literal]) ->
     let pairs = interface_pairs(&interface);
     if pairs.len() > MAX_SPLIT_DEPTH {
         return decline("too many interface pairs for the online combination split");
+    }
+    if past_deadline(deadline) {
+        return decline("deadline reached building the UFLIA interface pairs");
     }
 
     // 4. The initial EUF assertions (original equalities / disequalities). A
@@ -304,7 +327,7 @@ pub(crate) fn decide_conjunction(arena: &mut TermArena, literals: &[Literal]) ->
         });
     }
 
-    let mut lia = LiaTheory::new_with_opaque_apps(arena, &lia_atom_terms);
+    let mut lia = LiaTheory::new_with_opaque_apps(arena, &lia_atom_terms).with_deadline(deadline);
     for (index, lit) in part.lia.iter().enumerate() {
         if lia.assert(index, lit.value).is_err() {
             return CheckResult::Unsat;
@@ -320,6 +343,7 @@ pub(crate) fn decide_conjunction(arena: &mut TermArena, literals: &[Literal]) ->
         &pairs,
         &pair_atoms,
         &mut lia,
+        deadline,
     )
 }
 
@@ -339,6 +363,7 @@ pub(crate) fn run_interface_search(
     pairs: &[(TermId, TermId)],
     pair_atoms: &[PairAtoms],
     lia: &mut LiaTheory,
+    deadline: Option<Instant>,
 ) -> CheckResult {
     let mut search = Search {
         arena,
@@ -347,6 +372,7 @@ pub(crate) fn run_interface_search(
         euf_assertions,
         pairs,
         pair_atoms,
+        deadline,
     };
     match search.run(lia, &mut Vec::new(), 0) {
         Outcome::Sat(model) => CheckResult::Sat(model),
@@ -376,6 +402,11 @@ struct Search<'a> {
     pairs: &'a [(TermId, TermId)],
     /// The `LiaTheory` atom indices per shared pair.
     pair_atoms: &'a [PairAtoms],
+    /// The absolute wall-clock deadline inherited from `config.timeout`. Checked at
+    /// each recursion node so a hard interface split degrades to a graceful
+    /// `Unknown` at expiry rather than grinding past the budget. Expiry never
+    /// changes a verdict — it only replaces further search with `Unknown`.
+    deadline: Option<Instant>,
 }
 
 /// The result of the interface search at a node.
@@ -395,6 +426,9 @@ impl Search<'_> {
         forced: &mut Vec<(usize, bool)>,
         index: usize,
     ) -> Outcome {
+        if past_deadline(self.deadline) {
+            return Outcome::Unknown("interface split reached its deadline");
+        }
         if forced.len() > MAX_SPLIT_DEPTH {
             return Outcome::Unknown("interface split exceeded the depth bound");
         }
@@ -1511,7 +1545,7 @@ fn cdclt_combined(
             literals.push(Literal { atom, value });
         }
     }
-    match decide_conjunction(arena, &literals) {
+    match decide_conjunction(arena, &literals, deadline) {
         CheckResult::Sat(model) => CheckResult::Sat(model),
         // The Dpll found the combined theory consistent at this leaf, but the conjunctive
         // core could not certify a replaying model. Degrade — never call it Unsat.
@@ -1634,7 +1668,7 @@ pub(crate) fn combined_cdclt_diag(
                 literals.push(Literal { atom, value });
             }
         }
-        match decide_conjunction(arena, &literals) {
+        match decide_conjunction(arena, &literals, None) {
             CheckResult::Sat(_) => 1,
             _ => 2,
         }
