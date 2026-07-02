@@ -285,8 +285,8 @@ Companion maps:
   contraction replay, QF_LRA/Farkas bad residual-bound, solution-box, and
   Jacobi-bound rejections, and the numerical horizon.
 - [Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md):
-  follows exact mean/variance replay, a QF_LRA/Farkas bad-variance
-  certificate, contingency-table margins, Simpson's paradox counts, a
+  follows exact mean/variance replay, exact bad-variance replay, a separate
+  QF_LRA/Farkas bad-variance certificate, contingency-table margins, Simpson's paradox counts, a
   QF_LIA/Diophantine bad total-count certificate,
   least-squares normal equations, residual orthogonality, RSS comparison, and
   QF_LRA/Farkas bad-RSS and bad-coefficients certificates.

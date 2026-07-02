@@ -812,8 +812,9 @@ finite independence replay, total variation replay, and checked QF_LRA/Farkas
 rejection of false normalization, conditional-probability, Bayes-posterior,
 independence, and total-variation claims.
 `artifacts/examples/math/descriptive-statistics-v0/` now validates exact
-mean/variance identities, checked rejection of a bad variance claim,
-contingency-table margins, and a Simpson's paradox count-table witness.
+mean/variance identities, exact bad-variance replay with a separate checked
+QF_LRA/Farkas variance row, contingency-table margins, and a Simpson's paradox
+count-table witness.
 `artifacts/examples/math/least-squares-regression-v0/` now validates exact
 least-squares normal equations, residual orthogonality, mean-baseline RSS
 comparison, checked QF_LRA/Farkas rejection of bad RSS-improvement and bad
@@ -1049,8 +1050,8 @@ Recommended order:
    finite independence, total variation, and checked bad normalization/
    Bayes-posterior/independence/total-variation certificates.
 3. `descriptive-statistics-v0` and `least-squares-regression-v0`:
-   mean/variance identities, checked bad-variance rejection, contingency
-   tables, Simpson witness, least-squares normal equations, residual
+   mean/variance identities, exact bad-variance replay plus a separate checked
+   variance row, contingency tables, Simpson witness, least-squares normal equations, residual
    orthogonality, bad RSS-improvement rejection, and bad-coefficient
    rejection.
 4. `linear-optimization-v0`: LP feasibility, threshold cliffs, Farkas links.
@@ -1322,8 +1323,8 @@ Priority recipes:
    The exact Fisher left-tail p-value contradiction is covered by the
    QF_LRA/Farkas lane. The first secondary statistics exact-rational and
    margin/count rows are now promoted in `descriptive-statistics-v0` for the
-   bad variance and bad contingency total, while broader modular, exact-test,
-   and statistics finite-search rows remain finite replay.
+   explicit `qf-lra-bad-variance` and bad contingency total, while broader
+   modular, exact-test, and statistics finite-search rows remain finite replay.
 5. "Lean horizon" recipe template for induction, topology, measure, and limits.
    Status: landed as
    [Lean Horizon Template](../proof-cookbook/recipes/lean-horizon-template.md)

@@ -22,7 +22,8 @@ Concept rows:
 | Check | Expected | Evidence Status |
 |---|---|---|
 | `mean-variance-identity` | `sat` | replay-only |
-| `bad-variance-rejected` | `unsat` | checked |
+| `bad-variance-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-variance` | `unsat` | checked |
 | `contingency-table-margins` | `sat` | replay-only |
 | `qf-lia-bad-contingency-total` | `unsat` | checked |
 | `simpson-paradox-witness` | `sat` | replay-only |
@@ -55,7 +56,7 @@ population variance = 15/2 - (5/2)^2 = 5/4
 
 This is exact rational replay of a fixed finite sample.
 
-## Check The Bad Variance Certificate
+## Replay The Bad Variance Claim
 
 The bad row claims that the same sample has population variance:
 
@@ -71,7 +72,13 @@ second moment = 15/2
 actual population variance = 5/4
 ```
 
-The solver-form artifact checks only the final linear contradiction:
+This is exact finite replay: the data table is fixed and the validator
+recomputes the statistic before rejecting the malformed `3/2` claim.
+
+## Check The Bad Variance Certificate
+
+The separate `qf-lra-bad-variance` row checks only the final linear
+contradiction:
 
 ```text
 population_variance + mean_square = second_moment
@@ -289,6 +296,7 @@ From the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes least_squares_bad_rss_improvement_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes descriptive_stats_bad_variance_artifact_emits_checked_farkas
 ```
 
 Expected output for each command:

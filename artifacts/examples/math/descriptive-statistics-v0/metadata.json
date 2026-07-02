@@ -33,10 +33,10 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "descriptive statistics bad variance and bad contingency total regression seeds",
-    "pressure": "Exact-rational and integer statistics contradictions: the sample [1,2,3,4] forces Var(X)=5/4 but the malformed row claims 3/2, and the contingency row sums 10 and 10 force total = 20 but the malformed row claims total = 19.",
+    "target": "descriptive statistics separate bad variance and bad contingency total regression seeds",
+    "pressure": "Exact-rational and integer statistics contradictions: the sample [1,2,3,4] forces Var(X)=5/4 while the separate QF_LRA row rejects the fixed malformed claim 3/2, and the contingency row sums 10 and 10 force total = 20 but the malformed row claims total = 19.",
     "evidence": [
-      "bad-variance-rejected",
+      "qf-lra-bad-variance",
       "qf-lia-bad-contingency-total"
     ],
     "next_step": "Promote additional descriptive-statistics rows only when they add distinct integer-count or exact-rational solver pressure; keep inference, estimation, and numerical procedures in numerical-honesty metadata."
@@ -59,6 +59,7 @@
   "expected_results": [
     "mean-variance-identity",
     "bad-variance-rejected",
+    "qf-lra-bad-variance",
     "contingency-table-margins",
     "qf-lia-bad-contingency-total",
     "simpson-paradox-witness"
@@ -66,7 +67,7 @@
   "graduation_criteria": [
     "Encode exact finite descriptive-statistics checks as deterministic QF_LRA/LIA formulas.",
     "Replay count-table and finite-data witnesses through Axeyum model evaluation.",
-    "Route impossible exact-rational statistic constraints through QF_LRA/Farkas certificates.",
+    "Keep malformed finite-statistic replay separate from checked QF_LRA/Farkas rows for isolated exact-rational contradictions.",
     "Route inconsistent integer margin/count constraints through QF_LIA/Diophantine certificates.",
     "Keep promoted impossible margin/count rows tied to checked QF_LIA/Diophantine evidence.",
     "Keep statistical inference and numerical estimation under explicit reproducibility metadata, not proof status.",

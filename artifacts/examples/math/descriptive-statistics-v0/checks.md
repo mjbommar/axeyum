@@ -16,8 +16,18 @@ witness row.
 Expected result: `unsat`.
 
 The validator recomputes the sample mean, second moment, `mean^2`, and
-population variance exactly. The source artifact keeps that replay boundary
-explicit: it only asks QF_LRA to refute
+population variance exactly, then rejects the malformed replay claim
+`population_variance = 3/2`.
+
+Proof route: finite-model replay. This row checks the statistical computation;
+the separate `qf-lra-bad-variance` row owns the proof-object refutation.
+
+## `qf-lra-bad-variance`
+
+Expected result: `unsat`.
+
+The source artifact keeps the replay boundary explicit: it only asks QF_LRA to
+refute
 `population_variance + mean_square = second_moment` together with the false
 claim `population_variance = 3/2`.
 

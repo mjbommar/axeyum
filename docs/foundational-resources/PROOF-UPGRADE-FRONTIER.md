@@ -49,7 +49,7 @@ Classification:
 
 - descriptive-statistics satisfiable witness rows remain finite-model replay;
   exact-rational statistic constraints use QF_LRA/Farkas, with the first bad
-  variance row now source-linked and checked, and
+  variance proof-object row now explicit as `qf-lra-bad-variance`, and
   the first inconsistent integer margin/count row now has a resource-backed
   QF_LIA/Diophantine regression for the bad contingency total;
 - finite-probability satisfiable witness rows remain finite-model replay;
@@ -205,8 +205,9 @@ First targets:
   (source-linked solver-reuse promotions landed for the bad finite tail-bound
   and bad union-bound rows)
 - [descriptive-statistics-v0](../../artifacts/examples/math/descriptive-statistics-v0/)
-  (resource-backed Farkas regression landed for the bad variance row after
-  exact finite-sample replay computes `Var(X) = 5/4`)
+  (resource-backed Farkas regression landed for the explicit
+  `qf-lra-bad-variance` row after exact finite-sample replay computes
+  `Var(X) = 5/4`)
 - [exact-statistical-tests-v0](../../artifacts/examples/math/exact-statistical-tests-v0/)
   (resource-backed Farkas regressions landed for the bad Fisher left-tail row
   after exact fixed-margin replay computes `17/70` and the bad
@@ -667,8 +668,8 @@ First targets:
   even-product parity obstruction)
 - [descriptive-statistics-v0](../../artifacts/examples/math/descriptive-statistics-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the bad
-  contingency-table total row; the exact-rational bad variance row is covered
-  by the QF_LRA/Farkas lane above)
+  contingency-table total row; the exact-rational `qf-lra-bad-variance` row is
+  covered by the QF_LRA/Farkas lane above)
 - [generating-functions-v0](../../artifacts/examples/math/generating-functions-v0/)
   (resource-backed QF_LIA/Diophantine regression landed for the bad finite
   Cauchy-product coefficient row)

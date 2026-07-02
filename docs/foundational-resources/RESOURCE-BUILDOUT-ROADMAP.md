@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 654 expected checks.
+- 655 expected checks.
 - 322 checked proof/evidence rows.
-- 261 replay-only rows.
+- 262 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -2242,6 +2242,13 @@ Pick one item per commit unless the change is purely navigational.
      the bad bottom-right entry claim; the new `qf-lra-bad-lu-product-entry`
      row owns the source SMT-LIB artifact and gives consumers a direct
      pack/route/text query for the checked product-entry conflict.
+154. Landed: split `descriptive-statistics-v0` malformed variance checking
+     into an exact finite-sample replay row plus an explicit QF_LRA/Farkas
+     proof row. The replay row still recomputes the fixed sample mean, second
+     moment, mean square, and population variance; the new
+     `qf-lra-bad-variance` row owns the source SMT-LIB artifact and gives
+     consumers a direct pack/route/text query for the checked variance
+     equation conflict.
 
 ## Validation Checklist
 

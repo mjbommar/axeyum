@@ -24002,10 +24002,10 @@ def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     bad_variance = checks["bad-variance-rejected"]
     if bad_variance["expected_result"] != "unsat":
         fail("bad-variance-rejected must expect unsat")
-    if bad_variance["proof_status"] != "checked":
-        fail("bad-variance-rejected must be checked")
-    if bad_variance["validation"] != "qf_lra_bad_variance_refutation":
-        fail("bad-variance-rejected must use qf_lra_bad_variance_refutation validation")
+    if bad_variance["proof_status"] != "replay-only":
+        fail("bad-variance-rejected must be replay-only")
+    if bad_variance["validation"] != "exact_rational_bad_variance_replay":
+        fail("bad-variance-rejected must use exact_rational_bad_variance_replay validation")
     data = bad_variance.get("data", {})
     bad_sample = require_fraction_vector("bad variance sample", data.get("sample"))
     bad_mean = require_fraction("bad variance mean", data.get("mean"))
@@ -24031,17 +24031,56 @@ def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
         fail("bad-variance-rejected actual variance is incorrect")
     if claimed_variance == actual_variance:
         fail("bad-variance-rejected must document a false variance claim")
-    equation = data.get("farkas_variance_equation")
-    require_string("bad variance farkas_variance_equation", equation)
+    notes = bad_variance.get("notes", "")
+    if "separate qf-lra-bad-variance" not in notes:
+        fail("bad-variance-rejected notes must name the separate qf-lra-bad-variance row")
+
+    qf_lra_variance = checks["qf-lra-bad-variance"]
+    if qf_lra_variance["expected_result"] != "unsat":
+        fail("qf-lra-bad-variance must expect unsat")
+    if qf_lra_variance["proof_status"] != "checked":
+        fail("qf-lra-bad-variance must be checked")
+    if qf_lra_variance["validation"] != "qf_lra_bad_variance_refutation":
+        fail("qf-lra-bad-variance must use qf_lra_bad_variance_refutation validation")
+    qf_data = qf_lra_variance.get("data", {})
+    if qf_data.get("source_witness") != "mean-variance-sample":
+        fail("qf-lra-bad-variance must cite mean-variance-sample")
+    qf_mean = require_fraction("qf-lra bad variance mean", qf_data.get("mean"))
+    qf_mean_square = require_fraction("qf-lra bad variance mean_square", qf_data.get("mean_square"))
+    qf_second_moment = require_fraction("qf-lra bad variance second_moment", qf_data.get("second_moment"))
+    qf_actual_variance = require_fraction(
+        "qf-lra bad variance actual_population_variance",
+        qf_data.get("actual_population_variance"),
+    )
+    qf_claimed_variance = require_fraction(
+        "qf-lra bad variance claimed_population_variance",
+        qf_data.get("claimed_population_variance"),
+    )
+    if qf_mean != bad_mean:
+        fail("qf-lra-bad-variance mean must match bad-variance replay")
+    if qf_mean_square != mean_square:
+        fail("qf-lra-bad-variance mean_square must match bad-variance replay")
+    if qf_second_moment != bad_second_moment:
+        fail("qf-lra-bad-variance second_moment must match bad-variance replay")
+    if qf_actual_variance != actual_variance:
+        fail("qf-lra-bad-variance actual variance must match bad-variance replay")
+    if qf_claimed_variance != claimed_variance:
+        fail("qf-lra-bad-variance claimed variance must match bad-variance replay")
+    equation = qf_data.get("farkas_variance_equation")
+    require_string("qf-lra bad variance farkas_variance_equation", equation)
     if equation != "population_variance + mean_square = second_moment":
-        fail("bad-variance-rejected must document the Farkas variance equation")
-    smt2_artifact = data.get("smt2_artifact")
-    require_string("bad variance smt2_artifact", smt2_artifact)
-    check_source("bad variance smt2_artifact", smt2_artifact)
-    regression = data.get("farkas_regression")
-    require_string("bad variance farkas_regression", regression)
+        fail("qf-lra-bad-variance must document the Farkas variance equation")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad variance smt2_artifact", smt2_artifact)
+    check_source("qf-lra bad variance smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad variance farkas_regression", regression)
     if "descriptive_stats_bad_variance_artifact_emits_checked_farkas" not in regression:
-        fail("bad-variance-rejected must link the Farkas regression")
+        fail("qf-lra-bad-variance must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad variance certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-variance certificate must document checked UnsatFarkas evidence")
 
     contingency = checks["contingency-table-margins"]
     if contingency["expected_result"] != "sat":

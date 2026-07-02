@@ -64,10 +64,26 @@
       "id": "bad-variance-rejected",
       "claim": "The listed finite sample has population variance 3/2.",
       "expected_result": "unsat",
+      "validation": "exact_rational_bad_variance_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "sample": ["1", "2", "3", "4"],
+        "mean": "5/2",
+        "mean_square": "25/4",
+        "second_moment": "15/2",
+        "actual_population_variance": "5/4",
+        "claimed_population_variance": "3/2"
+      },
+      "notes": "The validator recomputes mean = 5/2, E[X^2] = 15/2, mean^2 = 25/4, and Var(X) = 5/4, then rejects the malformed replay claim Var(X) = 3/2. The separate qf-lra-bad-variance row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-variance",
+      "claim": "The fixed malformed variance claim is linearly inconsistent.",
+      "expected_result": "unsat",
       "validation": "qf_lra_bad_variance_refutation",
       "proof_status": "checked",
       "data": {
-        "sample": ["1", "2", "3", "4"],
+        "source_witness": "mean-variance-sample",
         "mean": "5/2",
         "mean_square": "25/4",
         "second_moment": "15/2",
@@ -75,9 +91,10 @@
         "claimed_population_variance": "3/2",
         "farkas_variance_equation": "population_variance + mean_square = second_moment",
         "smt2_artifact": "artifacts/examples/math/descriptive-statistics-v0/smt2/bad-variance-farkas-conflict.smt2",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes descriptive_stats_bad_variance_artifact_emits_checked_farkas"
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes descriptive_stats_bad_variance_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "The validator recomputes mean = 5/2, E[X^2] = 15/2, mean^2 = 25/4, and Var(X) = 5/4; the Axeyum regression checks the final exact-linear contradiction against the malformed claim Var(X) = 3/2 using rechecked Farkas evidence."
+      "notes": "The source SMT-LIB artifact isolates the final exact-linear contradiction after finite replay computes mean^2 = 25/4 and E[X^2] = 15/2."
     },
     {
       "id": "contingency-table-margins",

@@ -587,10 +587,10 @@ rejection of non-separating one-edge and one-vertex cuts.
 validates exact finite probability mass tables, conditional probability, Bayes
 posterior replay, finite independence replay, and total variation replay.
 [`descriptive-statistics-v0`](../../artifacts/examples/math/descriptive-statistics-v0/)
-validates exact mean/variance identities, checked QF_LRA/Farkas rejection of a
-bad variance claim, contingency-table margins, checked QF_LIA/Diophantine
-rejection of a bad total-count claim, and a Simpson's paradox count-table
-witness.
+validates exact mean/variance identities, exact bad-variance replay with a
+separate checked QF_LRA/Farkas variance row, contingency-table margins,
+checked QF_LIA/Diophantine rejection of a bad total-count claim, and a
+Simpson's paradox count-table witness.
 [`least-squares-regression-v0`](../../artifacts/examples/math/least-squares-regression-v0/)
 validates exact least-squares normal equations, residual orthogonality,
 mean-baseline RSS comparison, checked rejection of bad RSS-improvement and bad

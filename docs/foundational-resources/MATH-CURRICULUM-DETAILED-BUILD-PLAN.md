@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 654 expected checks.
+- 655 expected checks.
 - 322 checked proof/evidence rows.
-- 261 replay-only rows.
+- 262 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1055,7 +1055,8 @@ Pick one row per commit unless the change is purely navigational.
      malformed source SMT-LIB artifact claims `3/2`; the shared QF_LRA/Farkas
      route now checks exact-rational statistic contradictions alongside the
      existing QF_LIA/Diophantine contingency-total row without claiming
-     inference, estimation, or asymptotic statistics.
+     inference, estimation, or asymptotic statistics. A later split makes this
+     proof-object row explicit as `qf-lra-bad-variance`.
 120. Landed: extend `exact-statistical-tests-v0` with a checked bad Fisher
      left-tail row. Exact fixed-margin replay computes the one-sided Fisher
      left tail as `(1 + 16) / 70 = 17/70`, while the malformed source SMT-LIB
@@ -1559,9 +1560,18 @@ Pick one row per commit unless the change is purely navigational.
      artifact separately rejects the fixed product-entry equality
      contradiction through the existing
      `linear_algebra_bad_lu_product_entry_artifact_emits_checked_farkas`
-     regression. The public query surface now reports 654 checks, 322 checked
-     rows, 261 replay-only rows, and row-scoped Farkas lookup for the pack
-     returns the product-entry row.
+     regression. The row-scoped Farkas lookup for the pack returns the
+     product-entry row.
+182. Landed: split `descriptive-statistics-v0` bad variance proof-object
+     checking into the explicit `qf-lra-bad-variance` row. Exact finite-sample
+     replay still owns `bad-variance-rejected` by computing mean `5/2`, second
+     moment `15/2`, `mean^2 = 25/4`, and population variance `5/4` while the
+     malformed row claims `3/2`; the source SMT-LIB artifact separately
+     rejects the fixed variance equation through the existing
+     `descriptive_stats_bad_variance_artifact_emits_checked_farkas`
+     regression. The public query surface now reports 655 checks, 322 checked
+     rows, 262 replay-only rows, and row-scoped Farkas lookup for the pack
+     returns the explicit variance row.
 
 ## Validation Checklist
 

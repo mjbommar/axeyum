@@ -205,14 +205,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Descriptive statistics variance Farkas row split landed.**
+  `descriptive-statistics-v0` now keeps `bad-variance-rejected` as exact
+  finite-sample replay: it recomputes mean `5/2`, second moment `15/2`,
+  `mean^2 = 25/4`, and population variance `5/4` while the malformed row
+  claims `3/2`. The checked proof-object path is now the explicit
+  `qf-lra-bad-variance` row linked to the existing QF_LRA/Farkas SMT-LIB
+  artifact and regression. Focused validation passes; the public summary now
+  reports 120 concept rows, 108 packs, 655 expected checks, 322 checked rows,
+  262 replay-only rows, and 71 Lean-horizon rows.
+
 - **Linear algebra LU Farkas row split landed.**
   `linear-algebra-rational-v0` now keeps `bad-lu-product-entry-rejected` as
   exact LU replay: it computes `(L*U)[1,1]=3` while the malformed row claims
   `4`. The checked proof-object path is now the explicit
   `qf-lra-bad-lu-product-entry` row linked to the existing QF_LRA/Farkas
-  SMT-LIB artifact and regression. Focused validation passes; the public
-  summary now reports 120 concept rows, 108 packs, 654 expected checks, 322
-  checked rows, 261 replay-only rows, and 71 Lean-horizon rows.
+  SMT-LIB artifact and regression. Focused validation passes, and the
+  row-scoped Farkas lookup returns the product-entry row.
 
 - **Finite measure complement Farkas row split landed.**
   `finite-measure-v0` now keeps `bad-complement-measure-rejected` as exact
@@ -1039,7 +1048,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Lean-horizon rows.
 
 - **Descriptive-statistics bad variance QF_LRA row landed.**
-  `descriptive-statistics-v0` now has a checked Farkas row for exact finite
+  `descriptive-statistics-v0` gained a checked Farkas row for exact finite
   statistics: replay computes the sample mean `5/2`, second moment `15/2`,
   `mean^2 = 25/4`, and population variance `5/4`, then rejects the malformed
   claim `Var(X) = 3/2`. The source SMT-LIB artifact keeps the nonlinear square
@@ -1047,7 +1056,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `population_variance + mean_square = second_moment`, the shared
   `math_resource_lra_routes` regression parses it and checks `UnsatFarkas`
   evidence, and the validator pins the sample, moments, actual/claimed
-  variance, artifact path, and regression. Generated dashboards and the public
+  variance, artifact path, and regression. A later split makes the proof row
+  explicit as `qf-lra-bad-variance`. Generated dashboards and the public
   query summary now report 111 concept rows, 108 non-template packs, 591
   expected checks, 271 checked rows, 249 replay-only rows, and 71 Lean-horizon
   rows.

@@ -56,7 +56,8 @@ concentration/tail-bound replays, finite filtrations, martingale
 conditional-expectation equalities, square submartingale inequalities, bounded
 stopping-time replay, finite product-measure tables, rectangle probabilities,
 marginals, finite Fubini sums, exact
-mean/variance identities, a checked QF_LRA bad-variance certificate,
+mean/variance identities, exact bad-variance replay with a separate checked
+QF_LRA bad-variance certificate,
 contingency table margins, a checked QF_LIA bad contingency-total certificate,
 least-squares normal equations, checked QF_LRA bad-RSS and bad-coefficients
 certificates, and a Simpson's paradox count-table witness.
@@ -235,8 +236,9 @@ sum_(x,y) f(x,y) R(x,y) = sum_x P(x) * sum_y f(x,y) Q(y) = 3
 ```
 
 For descriptive statistics, it recomputes the mean and population variance of
-`1,2,3,4`, checks the reported margins of a finite contingency table, and emits
-a checked `UnsatFarkas` certificate for a bad variance claim plus a checked
+`1,2,3,4`, checks the reported margins of a finite contingency table, rejects
+a bad variance claim by exact replay, and emits a separate checked
+`UnsatFarkas` certificate for the isolated variance equation plus a checked
 `UnsatDiophantine` certificate for the bad total-count row.
 For DAG examples, the validator enumerates simple skeleton paths and applies
 the collider/non-collider conditioning rules. For random matrices, it

@@ -253,8 +253,8 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-120 concept rows, 108 non-template packs, 654 expected checks (336 `sat`,
-247 `unsat`, 71 `not-run`), 322 checked rows, 261 replay-only rows, and 71
+120 concept rows, 108 non-template packs, 655 expected checks (336 `sat`,
+248 `unsat`, 71 `not-run`), 322 checked rows, 262 replay-only rows, and 71
 Lean-horizon rows. The rules/law JSON layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
@@ -349,8 +349,8 @@ left-tail and probability-ordered two-sided rows after fixed-margin replay
 computes `17/70` rather than `1/4` and `17/35` rather than `1/2`,
 and exact-statistical-tests' bad multinomial row after finite enumeration
 computes `1/9` rather than `1/6`,
-alongside descriptive-statistics' bad variance row after exact finite-sample
-replay computes `Var(X) = 5/4` rather than `3/2`.
+alongside descriptive-statistics' explicit `qf-lra-bad-variance` row after
+exact finite-sample replay computes `Var(X) = 5/4` rather than `3/2`.
 The numerical-analysis QF_LRA/Farkas lane now also promotes
 numerical-linear-algebra's bad solution-box upper-bound row after exact
 linear-system replay computes `x0 = 6/5` rather than satisfying the claimed
