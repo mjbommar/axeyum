@@ -35,6 +35,8 @@ For the detailed operating plan that expands the curriculum into ontology rows,
 example packs, learner pages, proof routes, solver reuse, consumer boundaries,
 rules/law transfer, and future library splits, use the
 [Math Curriculum Resource Buildout Roadmap](RESOURCE-BUILDOUT-ROADMAP.md).
+For the stable JSON/query contract exposed to downstream consumers, use the
+[Public Data Contract](PUBLIC-DATA-CONTRACT.md).
 For the concrete rules/law transfer map from math-resource patterns into
 policy and legal-rule checks, use the
 [Rules/Law Crosswalk](RULES-LAW-CROSSWALK.md).

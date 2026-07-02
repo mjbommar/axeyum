@@ -1,0 +1,146 @@
+# Public Data Contract
+
+This is the R6 consumer boundary for the foundational-resource system. It tells
+downstream tools which committed files are public, which fields are stable
+enough to query, and which claims must stay out of UI copy unless separate
+evidence exists.
+
+The contract is deliberately small:
+
+```text
+public JSON -> tiny consumer/query scripts -> generated or downstream views
+```
+
+It is not a Rust API, not a benchmark corpus, and not a theorem library. Keep
+using JSON until repeated external consumers prove that typed accessors or a
+separate library boundary are worth maintaining.
+
+## Public Files
+
+| File or glob | Role | Schema |
+|---|---|---|
+| `artifacts/ontology/foundational-concepts.json` | Concept, field, bridge, and example-family atlas. | `artifacts/ontology/foundational-concepts.schema.json` |
+| `artifacts/examples/math/*/metadata.json` | Pack-level identity, owners, fragments, trust status, validation command, and solver-reuse disposition. | `artifacts/ontology/foundational-example-pack.schema.json#/metadata` |
+| `artifacts/examples/math/*/expected.json` | Witnesses and expected check rows. | `artifacts/ontology/foundational-example-pack.schema.json#/expected` |
+| `scripts/consume-foundational-resources.py` | Minimal external-consumer smoke test. | no imports from validators/generators |
+| `scripts/query-foundational-resources.py` | Copyable query interface over committed JSON. | public CLI output |
+
+Generated dashboards under `docs/foundational-resources/generated/` are useful
+views, but the JSON files above are the data boundary. If a generated dashboard
+disagrees with JSON, fix the JSON, metadata, generator, or prose source rather
+than treating the dashboard as an independent source of truth.
+
+## Current Contract Snapshot
+
+The consumer smoke currently reports:
+
+```text
+concept_rows=121
+curriculum_rows=23
+field_rows=18
+non_template_packs=108
+packs_with_checked_evidence=108
+schema_versions=atlas:1,metadata:1,expected:1
+expected_result_counts=not-run:71,sat:336,unsat:281
+proof_status_counts=checked:322,lean-horizon:71,replay-only:295
+row_label_counts=checked_refutation:238,checked_witness:84,finite_rejection_replay:43,finite_witness_replay:252,theorem_horizon:71
+pack_label_counts=checked_evidence_pack:108,mixed_trust_story:97,theorem_boundary_included:71
+```
+
+Regenerate this snapshot with:
+
+```sh
+python3 scripts/consume-foundational-resources.py
+```
+
+## Stable Consumer Fields
+
+Concept rows expose:
+
+- `id`, `kind`, `title`, and `domain`;
+- `field_ids`, `curriculum_node`, `curriculum_layer`, `curriculum_area`,
+  `curriculum_status`, and `curriculum_family`;
+- `resource_status`, `decidability`, and `axeyum_fragments`;
+- `example_packs`, `proof_routes`, `source_refs`, `open_gaps`, and
+  `graduation`.
+
+Pack metadata exposes:
+
+- `id`, `title`, `domain`, `claim_status`, and `trust_status`;
+- `concept_ids`, `field_ids`, `curriculum_nodes`, and `axeyum_fragments`;
+- `validator_command`, `source_refs`, `expected_results`, and
+  `graduation_criteria`;
+- optional `solver_reuse` with `status`, `target`, `pressure`, `evidence`, and
+  `next_step`.
+
+Expected rows expose:
+
+- `schema_version`, `pack_id`, `witnesses`, and `checks`;
+- per-check `id`, `claim`, `expected_result`, `validation`, `proof_status`,
+  optional `witnesses`, optional `data`, and `notes`.
+
+Consumers should tolerate additional rows and packs. They should not assume a
+fixed order beyond the query script's sorted table output.
+
+## Status Semantics
+
+`expected_result` and `proof_status` are separate axes.
+
+| Field | Stable values used now | Meaning |
+|---|---|---|
+| `expected_result` | `sat`, `unsat`, `not-run` | The expected outcome for the finite row or theorem boundary. |
+| `proof_status` | `checked`, `replay-only`, `lean-horizon` | The trust story for that row. |
+| `solver_reuse.status` | `promoted` | The pack has a deliberate solver/proof feedback disposition. |
+
+The schemas also reserve values such as `unknown`, `template`, `proof-gap`,
+`not-required`, `candidate`, and `non-benchmark-horizon`. If one appears in the
+non-template public corpus, update this contract and the query guides in the
+same commit.
+
+Use [CLAIM-LABEL-MATRIX.md](CLAIM-LABEL-MATRIX.md) for display wording. The
+executable audit is:
+
+```sh
+python3 scripts/query-foundational-resources.py labels
+```
+
+## Compatibility Rules
+
+A compatible additive change may:
+
+- add concept rows, packs, witnesses, or checks;
+- add optional fields only after updating the schema and consumer docs;
+- add query subcommands or columns if existing output remains usable;
+- increase counts, proof-route coverage, or display-label counts.
+
+A breaking change includes:
+
+- removing or renaming a public field;
+- changing the meaning of `expected_result`, `proof_status`, or
+  `solver_reuse.status`;
+- changing schema version without documenting migration behavior;
+- making `consume-foundational-resources.py` import validators, generators, or
+  solver crates;
+- promoting replay-only, Lean-horizon, solver-reuse, benchmark, or parity
+  claims without the corresponding evidence gate.
+
+When a breaking change is intentional, land it with a plan update and a new
+schema-version/migration note.
+
+## Required Checks
+
+Before committing data-boundary or query changes:
+
+```sh
+git diff --check
+./scripts/check-links.sh
+./scripts/check-foundational-resources.sh
+python3 scripts/consume-foundational-resources.py
+python3 scripts/query-foundational-resources.py summary
+python3 scripts/query-foundational-resources.py labels
+```
+
+For command examples and drilldowns, use
+[CONSUMER-QUERIES.md](CONSUMER-QUERIES.md). For trust wording, use
+[TRUST-BOUNDARY-QUERIES.md](TRUST-BOUNDARY-QUERIES.md) and
+[CLAIM-LABEL-MATRIX.md](CLAIM-LABEL-MATRIX.md).

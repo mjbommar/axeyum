@@ -234,6 +234,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Public data contract landed.**
+  `PUBLIC-DATA-CONTRACT.md` now names the R6 consumer boundary: the public JSON
+  files, stable fields, schema-version expectations, compatibility rules,
+  required smoke commands, and display-label counts. The standalone consumer
+  smoke now reports schema versions, expected-result counts, proof-status
+  counts, row-label counts, and pack-label counts without importing validators,
+  generators, or solver crates.
+
 - **Executable claim-label query landed.**
   `scripts/query-foundational-resources.py labels` now derives row and pack
   display labels from public JSON, reporting checked witnesses, checked

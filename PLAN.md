@@ -200,6 +200,11 @@ display labels so consumers do not turn checked evidence, finite replay,
 Lean-horizon rows, or promoted solver-reuse packs into theorem, benchmark, or
 parity claims; the public consumer query script exposes the same mapping through
 `python3 scripts/query-foundational-resources.py labels`.
+The public data contract is
+[`docs/foundational-resources/PUBLIC-DATA-CONTRACT.md`](docs/foundational-resources/PUBLIC-DATA-CONTRACT.md);
+it defines the JSON files, stable fields, schema/version expectations,
+compatibility rules, smoke commands, and display-label counts that make the
+R6 consumer boundary usable without importing Axeyum internals.
 The curriculum-node query guide is
 [`docs/foundational-resources/CURRICULUM-NODE-QUERIES.md`](docs/foundational-resources/CURRICULUM-NODE-QUERIES.md);
 it records concept, pack, field, route, checked-row, and horizon drilldowns for

@@ -37,9 +37,11 @@ Build from these sources in order:
    coverage and upgrade queues.
 7. [`CLAIM-LABEL-MATRIX.md`](CLAIM-LABEL-MATRIX.md): consumer display policy
    for checked, replay-only, Lean-horizon, and mixed-trust rows.
-8. [`CHECKER-TAMPER-MATRIX.md`](CHECKER-TAMPER-MATRIX.md): route-specific
+8. [`PUBLIC-DATA-CONTRACT.md`](PUBLIC-DATA-CONTRACT.md): stable public JSON
+   files, fields, schema versions, compatibility rules, and smoke commands.
+9. [`CHECKER-TAMPER-MATRIX.md`](CHECKER-TAMPER-MATRIX.md): route-specific
    corrupted-evidence commands and current tamper gaps.
-9. [`RULES-LAW-CROSSWALK.md`](RULES-LAW-CROSSWALK.md): downstream transfer
+10. [`RULES-LAW-CROSSWALK.md`](RULES-LAW-CROSSWALK.md): downstream transfer
    into policy/rule reasoning.
 
 Generated dashboards are evidence, not editable plans. If a dashboard disagrees

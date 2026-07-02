@@ -95,6 +95,9 @@ claim.
 Use [Claim Label Matrix](CLAIM-LABEL-MATRIX.md) when a consumer needs exact
 display wording for checked, replay-only, Lean-horizon, or mixed-trust rows and
 pack cards.
+Use [Public Data Contract](PUBLIC-DATA-CONTRACT.md) when a downstream tool needs
+the stable JSON files, fields, schema versions, compatibility rules, and smoke
+commands for the R6 consumer boundary.
 Use [Fragment Demand Queries](FRAGMENT-DEMAND-QUERIES.md) when a contributor
 needs SMT-fragment drilldowns before mining resources for solver, proof, or
 benchmark pressure.

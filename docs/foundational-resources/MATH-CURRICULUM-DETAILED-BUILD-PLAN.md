@@ -31,6 +31,9 @@ compact checked row.
 Use [CLAIM-LABEL-MATRIX.md](CLAIM-LABEL-MATRIX.md) when a downstream consumer
 needs display wording for checked, replay-only, Lean-horizon, or mixed-trust
 rows.
+Use [PUBLIC-DATA-CONTRACT.md](PUBLIC-DATA-CONTRACT.md) when a downstream
+consumer needs the stable JSON file list, fields, schema versions,
+compatibility rules, and smoke commands for the R6 boundary.
 Use [CHECKER-TAMPER-MATRIX.md](CHECKER-TAMPER-MATRIX.md) to find the
 route-specific corrupted-evidence command before calling a route tamper-covered.
 
@@ -1721,6 +1724,12 @@ Pick one row per commit unless the change is purely navigational.
      claim-label audit. It computes row labels and pack labels from public JSON
      and the foundational smoke gate now requires representative checked,
      replay-only, theorem-horizon, checked-pack, and mixed-trust labels.
+202. Landed: add `PUBLIC-DATA-CONTRACT.md` as the named R6 consumer boundary.
+     It records the public JSON files, stable fields, schema-version
+     expectations, compatibility rules, required smoke commands, and current
+     result/proof/label counts. The standalone consumer smoke now checks and
+     prints schema, expected-result, proof-status, row-label, and pack-label
+     counts without importing validators, generators, or solver crates.
 
 ## Validation Checklist
 

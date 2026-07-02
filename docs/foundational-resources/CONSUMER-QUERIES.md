@@ -14,6 +14,8 @@ The script reads only committed JSON files. It does not import validators,
 generators, solver crates, or dashboard code, so it acts like a small external
 consumer would.
 
+For stable files, fields, schema-version expectations, compatibility rules, and
+required smoke commands, see [PUBLIC-DATA-CONTRACT.md](PUBLIC-DATA-CONTRACT.md).
 For a compact all-field map of the current smoke-checked readiness routes,
 bridge lookups, checked-row drilldowns, and theorem boundaries, see
 [FIELD-READINESS-QUERY-MATRIX.md](FIELD-READINESS-QUERY-MATRIX.md).
