@@ -396,6 +396,21 @@ pub fn check_auto_explained(
 ) -> Result<(CheckResult, RouteTrace), SolverError> {
     let mut trace = RouteTrace::new();
     let result = check_auto_with_recorder(arena, assertions, config, &mut Some(&mut trace))?;
+    // Structural trace invariant: an `Unknown` verdict always ends in a
+    // Declined entry. Individual early-exit paths (an ultra-tight budget can
+    // expire between any two recorded attempts — feature scans, lifting,
+    // preprocessing) each try to record their own decline, but the invariant
+    // is enforced here at the boundary so no present or future early return
+    // can leave a probe-only trace (a slow-runner-only gap the route-trace
+    // tests caught twice).
+    if let CheckResult::Unknown(reason) = &result
+        && !trace
+            .attempts()
+            .iter()
+            .any(|a| matches!(a.outcome, crate::route_trace::RouteOutcome::Declined(_)))
+    {
+        trace.record_declined("dispatch-early-exit", DeclineReason::from_unknown(reason));
+    }
     Ok((result, trace))
 }
 
