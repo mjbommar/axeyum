@@ -27,6 +27,9 @@ For exact Gaussian-elimination row-operation transcripts, see
 [End To End: Finite Gaussian Elimination](gaussian-elimination-end-to-end.md).
 For exact LU factors, pivot products, and triangular solves, see
 [End To End: Finite LU Decomposition](lu-decomposition-end-to-end.md).
+For exact row swaps, pivoted LU factors, determinant signs, and triangular
+solves, see
+[End To End: Finite Pivoted LU Decomposition](pivoted-lu-decomposition-end-to-end.md).
 For exact singular-value, spectral-norm, and SVD reconstruction shadows, see
 [End To End: Finite Singular-Value Shadow](singular-value-shadow-end-to-end.md).
 For exact two-step power iteration, Rayleigh quotient, and residual shadows, see
@@ -68,7 +71,7 @@ Concept rows:
 
 | Theme | Packs | What Is Checked | Route |
 |---|---|---|---|
-| Linear systems, Gaussian elimination, nullspaces, LU, QR, Gram-Schmidt, Givens, Householder, and Cholesky | [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/), [finite-gaussian-elimination-v0](../../../artifacts/examples/math/finite-gaussian-elimination-v0/), [finite-lu-decomposition-v0](../../../artifacts/examples/math/finite-lu-decomposition-v0/), [finite-qr-decomposition-v0](../../../artifacts/examples/math/finite-qr-decomposition-v0/), [finite-gram-schmidt-v0](../../../artifacts/examples/math/finite-gram-schmidt-v0/), [finite-givens-rotation-v0](../../../artifacts/examples/math/finite-givens-rotation-v0/), [finite-householder-reflection-v0](../../../artifacts/examples/math/finite-householder-reflection-v0/), [finite-cholesky-decomposition-v0](../../../artifacts/examples/math/finite-cholesky-decomposition-v0/), [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/) | Fixed `A*x = b`, one exact elimination row operation, pivot multiplier and pivot product replay, LU unit-lower/upper factorization, determinant pivot product, triangular solve replay, back-substitution, `L*U = A`, `Q^T Q = I`, `Q*R = A`, exact Gram-Schmidt projection and normalization replay, exact Givens coordinate zeroing, `G^T G = I`, exact Householder reflector formula and zeroing, `H^T H = I`, `H^2 = I`, `L*L^T = A`, positive leading minors, exact bad elimination/LU/QR/Gram-Schmidt/Givens/Householder/Cholesky replay, separate checked bad scalar, multiplier, coefficient, entry, or product-entry proof rows, bad nullspace component rejection, singular-row inconsistency, LP objective thresholds | finite replay plus QF_LRA/Farkas |
+| Linear systems, Gaussian elimination, nullspaces, LU, pivoted LU, QR, Gram-Schmidt, Givens, Householder, and Cholesky | [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/), [finite-gaussian-elimination-v0](../../../artifacts/examples/math/finite-gaussian-elimination-v0/), [finite-lu-decomposition-v0](../../../artifacts/examples/math/finite-lu-decomposition-v0/), [finite-pivoted-lu-decomposition-v0](../../../artifacts/examples/math/finite-pivoted-lu-decomposition-v0/), [finite-qr-decomposition-v0](../../../artifacts/examples/math/finite-qr-decomposition-v0/), [finite-gram-schmidt-v0](../../../artifacts/examples/math/finite-gram-schmidt-v0/), [finite-givens-rotation-v0](../../../artifacts/examples/math/finite-givens-rotation-v0/), [finite-householder-reflection-v0](../../../artifacts/examples/math/finite-householder-reflection-v0/), [finite-cholesky-decomposition-v0](../../../artifacts/examples/math/finite-cholesky-decomposition-v0/), [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/) | Fixed `A*x = b`, one exact elimination row operation, pivot multiplier and pivot product replay, LU unit-lower/upper factorization, row-swap permutation replay, determinant-sign accounting, `L*U = P*A`, determinant pivot product, triangular solve replay, back-substitution, `L*U = A`, `Q^T Q = I`, `Q*R = A`, exact Gram-Schmidt projection and normalization replay, exact Givens coordinate zeroing, `G^T G = I`, exact Householder reflector formula and zeroing, `H^T H = I`, `H^2 = I`, `L*L^T = A`, positive leading minors, exact bad elimination/LU/pivot-sign/QR/Gram-Schmidt/Givens/Householder/Cholesky replay, separate checked bad scalar, multiplier, coefficient, entry, sign, or product-entry proof rows, bad nullspace component rejection, singular-row inconsistency, LP objective thresholds | finite replay plus QF_LRA/Farkas |
 | Block matrices and Schur complements | [finite-schur-complement-v0](../../../artifacts/examples/math/finite-schur-complement-v0/) | Exact leading-block inverse, one-by-one Schur complement, determinant factorization, two-sided inverse replay, positive-definite shadow, conditional-variance shadow, replay-only bad scalar rejection, and separate checked bad scalar proof row | finite replay plus QF_LRA/Farkas |
 | Residuals, Hessian solves, condition numbers, singular values, power iteration, conjugate gradient, Arnoldi, Lanczos, and numerical shadows | [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/), [finite-condition-number-v0](../../../artifacts/examples/math/finite-condition-number-v0/), [finite-singular-value-shadow-v0](../../../artifacts/examples/math/finite-singular-value-shadow-v0/), [finite-power-iteration-v0](../../../artifacts/examples/math/finite-power-iteration-v0/), [finite-conjugate-gradient-v0](../../../artifacts/examples/math/finite-conjugate-gradient-v0/), [finite-arnoldi-iteration-v0](../../../artifacts/examples/math/finite-arnoldi-iteration-v0/), [finite-lanczos-iteration-v0](../../../artifacts/examples/math/finite-lanczos-iteration-v0/), [finite-newton-step-v0](../../../artifacts/examples/math/finite-newton-step-v0/), [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/) | Exact residual norms, solution boxes, one Jacobi step, infinity-norm condition number, singular-value/SVD shadow replay, spectral and Frobenius norms, two-step power-iteration replay, Rayleigh quotient, finite residual shadow, conjugate-gradient residual orthogonality, A-conjugacy, exact solution replay, Arnoldi orthonormal-basis and Hessenberg-relation replay, Lanczos orthonormal-basis and tridiagonal-relation replay, perturbation-bound replay, Hessian linear solve, Newton direction, normal equations, residual orthogonality, RSS improvement, bad condition-number bound, bad singular-value bound, bad power-iterate coordinate, bad CG step-size, bad Arnoldi coefficient, bad Lanczos coefficient, bad Newton coordinate, and bad RSS rejection | finite replay plus QF_LRA/Farkas |
 | Inner products, projections, and orthogonal transforms | [inner-product-spaces-rational-v0](../../../artifacts/examples/math/inner-product-spaces-rational-v0/), [finite-walsh-hadamard-transform-v0](../../../artifacts/examples/math/finite-walsh-hadamard-transform-v0/), [finite-gram-schmidt-v0](../../../artifacts/examples/math/finite-gram-schmidt-v0/), [finite-givens-rotation-v0](../../../artifacts/examples/math/finite-givens-rotation-v0/), [finite-householder-reflection-v0](../../../artifacts/examples/math/finite-householder-reflection-v0/) | Gram matrices, fixed Cauchy-Schwarz, orthogonal projection, Gram-Schmidt projection/normalization replay, order-4 Walsh-Hadamard transform replay, inverse reconstruction, Parseval energy scaling, exact Givens rotation zeroing, exact Householder reflection formula and zeroing, determinant/norm preservation, bad negative norm, bad projection orthogonality, bad transform coefficient, bad Gram-Schmidt projection coefficient, bad Givens sine coefficient, and bad Householder entry | finite replay plus QF_LRA/Farkas |
@@ -87,11 +90,12 @@ Schur-complement scalar replay,
 determinant or trace formulas for the
 fixed dimension, exact residuals, rational inequalities, and Farkas certificate
 checking when a row is unsatisfiable. The linear-system slice now has one
-Gaussian-elimination transcript with a checked bad eliminated-RHS row, and the
+Gaussian-elimination transcript with a checked bad eliminated-RHS row, the
 LU slice has a positive `L*U = A` replay row, a focused determinant/pivot and
 triangular-solve pack, a bad multiplier proof row, a bad product-entry replay
 row, an explicit checked bad product-entry proof row, and a checked nullspace
-component row, so
+component row, and the pivoted-LU slice adds row-swap permutation replay,
+determinant-sign accounting, `L*U = P*A`, and a checked bad pivot-sign row, so
 consumers can see the replay/certificate boundary without leaving the core
 matrix pack.
 
@@ -137,6 +141,7 @@ The torsion and universal-coefficient part is expanded in
 - [Linear System And LP Replay](linear-system-end-to-end.md)
 - [Finite Gaussian Elimination](gaussian-elimination-end-to-end.md)
 - [Finite LU Decomposition](lu-decomposition-end-to-end.md)
+- [Finite Pivoted LU Decomposition](pivoted-lu-decomposition-end-to-end.md)
 - [Finite QR Decomposition Checks](qr-decomposition-end-to-end.md)
 - [Finite Gram-Schmidt](gram-schmidt-end-to-end.md)
 - [Finite Givens Rotation](givens-rotation-end-to-end.md)
@@ -178,6 +183,7 @@ Run the route-level checks from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gaussian-elimination-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-lu-decomposition-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-pivoted-lu-decomposition-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-qr-decomposition-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gram-schmidt-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-givens-rotation-v0

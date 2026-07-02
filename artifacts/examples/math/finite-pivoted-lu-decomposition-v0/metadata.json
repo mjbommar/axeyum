@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "finite-pivoted-lu-decomposition-v0",
+  "title": "Finite Pivoted LU Decomposition Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_optimization_and_convexity",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_lu_replay"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "optimization_and_convexity"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite matrices",
+    "finite matrix factorization",
+    "permutation matrix replay",
+    "exact rational matrix replay",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-pivoted-lu-decomposition-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite pivoted-LU bad permutation-sign QF_LRA/Farkas regression seed",
+    "pressure": "Exact pivoted-LU replay computes the row-swap determinant as -1 while a malformed row claims +1, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-pivot-sign"
+    ],
+    "next_step": "Promote additional pivoted factorization rows only when they add distinct permutation, pivot-selection, triangular-solve, rank, residual, or block-structure solver pressure; keep pivoting correctness, growth factors, sparse behavior, conditioning, and floating-point stability in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/pivoted-lu-decomposition-end-to-end.md",
+    "artifacts/examples/math/finite-pivoted-lu-decomposition-v0/smt2/bad-pivot-sign-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "pivoted-lu-permutation-witness",
+    "pivoted-lu-shape-witness",
+    "pivoted-lu-product-witness",
+    "pivoted-lu-determinant-sign-witness",
+    "pivoted-lu-triangular-solve-witness",
+    "bad-pivot-sign-rejected",
+    "qf-lra-bad-pivot-sign",
+    "general-pivoted-lu-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational A, P, P*A, L, U, right-hand side, permuted right-hand side, pivots, determinant signs, triangular solve, and product as deterministic exact-rational replay obligations.",
+    "Route the false permutation-sign row through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting determinant.",
+    "Expose the pack through the matrix computation learner and consumer query surfaces.",
+    "Keep pivoted-LU existence, partial/complete pivoting strategy correctness, rank-deficient cases, sparse pivoting, growth-factor bounds, floating-point conditioning, and stability claims marked Lean or numerical-honesty horizon."
+  ]
+}

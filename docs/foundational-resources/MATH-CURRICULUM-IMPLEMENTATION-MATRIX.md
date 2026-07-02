@@ -978,7 +978,19 @@ Build sequence:
     exact finite LU replay separate from general LU existence, pivoting,
     rank-deficient variants, sparse algorithms, conditioning, and
     floating-point stability.
-100. Revisit crate/repo boundaries only after three real consumers or repeated
+100. Landed: add the finite pivoted-LU-decomposition resource.
+    `finite-pivoted-lu-decomposition-v0` now records one exact rational
+    row-swapped factorization transcript: `A = [[1,2],[3,4]]`,
+    `P = [[0,1],[1,0]]`, `P*A = [[3,4],[1,2]]`,
+    `L = [[1,0],[1/3,1]]`, `U = [[3,4],[0,2/3]]`,
+    determinant-sign accounting `det(P) * det(A) = product(pivots) = 2`,
+    triangular solve replay for `b = [3,7]`, and solution `[1,1]`.
+    It includes a checked QF_LRA/Farkas artifact for the malformed pivot-sign
+    claim `det(P) = +1`. The reused matrix and exact-vs-floating bridges keep
+    exact finite pivoted-LU replay separate from pivot-selection correctness,
+    rank-deficient behavior, sparse pivoting, growth-factor bounds,
+    conditioning, and floating-point stability.
+101. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

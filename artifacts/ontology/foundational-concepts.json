@@ -1758,6 +1758,12 @@
           "notes": "Exact rational LU factorization, determinant pivot product, triangular solve replay, and checked bad multiplier evidence."
         },
         {
+          "id": "finite-pivoted-lu-decomposition-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-pivoted-lu-decomposition-v0",
+          "notes": "Exact rational row-swapped LU factorization, permutation determinant, triangular solve replay, and checked bad pivot-sign evidence."
+        },
+        {
           "id": "finite-qr-decomposition-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-qr-decomposition-v0",
@@ -3086,6 +3092,12 @@
           "notes": "LU factorization, determinant pivot-product, and triangular-solve rows checked as exact rational matrix arithmetic, not pivoting or floating-point stability evidence."
         },
         {
+          "id": "finite-pivoted-lu-decomposition-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-pivoted-lu-decomposition-v0",
+          "notes": "Pivoted-LU permutation, determinant-sign, and triangular-solve rows checked as exact rational matrix arithmetic, not pivot-selection or floating-point stability evidence."
+        },
+        {
           "id": "finite-condition-number-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-condition-number-v0",
@@ -3163,6 +3175,7 @@
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
             "docs/learn/math/lu-decomposition-end-to-end.md",
+            "docs/learn/math/pivoted-lu-decomposition-end-to-end.md",
             "docs/learn/math/condition-number-end-to-end.md",
             "docs/learn/math/singular-value-shadow-end-to-end.md",
             "docs/learn/math/conjugate-gradient-end-to-end.md",
@@ -3182,6 +3195,7 @@
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/learn/math/numerical-linear-algebra-end-to-end.md",
         "docs/learn/math/lu-decomposition-end-to-end.md",
+        "docs/learn/math/pivoted-lu-decomposition-end-to-end.md",
         "docs/learn/math/condition-number-end-to-end.md",
         "docs/learn/math/singular-value-shadow-end-to-end.md",
         "docs/learn/math/conjugate-gradient-end-to-end.md",
@@ -3196,7 +3210,7 @@
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md"
       ],
       "open_gaps": [
-        "Exact rational replay does not prove floating-point roundoff, conditioning, singular-value perturbation, LU pivoting/stability, Gram-Schmidt/Givens/Householder/QR stability, Krylov/preconditioner stability, Lanczos breakdown behavior, loss of orthogonality, or convergence guarantees.",
+        "Exact rational replay does not prove floating-point roundoff, conditioning, singular-value perturbation, LU pivot selection/stability, Gram-Schmidt/Givens/Householder/QR stability, Krylov/preconditioner stability, Lanczos breakdown behavior, loss of orthogonality, or convergence guarantees.",
         "QF_FP and numerical experiment metadata need their own trust boundary before floating-point resources can graduate.",
         "Learner pages must label exact rational shadows when a topic is normally taught numerically."
       ],
@@ -7206,7 +7220,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "Claimed Gaussian-elimination transcripts, LU decompositions, QR, Gram-Schmidt, Givens, Householder, and Cholesky factorizations, Schur block identities, and nullspace vectors are checked by exact matrix arithmetic over fixed rational matrices; malformed row-operation, product-entry, scalar, and nullspace-component rows now route through checked QF_LRA/Farkas evidence, while pivoting, singularity, factorization existence, algorithm correctness, conditioning, and stability claims stay separate from the replayed equalities.",
+      "summary": "Claimed Gaussian-elimination transcripts, LU and pivoted-LU decompositions, QR, Gram-Schmidt, Givens, Householder, and Cholesky factorizations, Schur block identities, and nullspace vectors are checked by exact matrix arithmetic over fixed rational matrices; malformed row-operation, product-entry, scalar, and nullspace-component rows now route through checked QF_LRA/Farkas evidence, while pivoting, singularity, factorization existence, algorithm correctness, conditioning, and stability claims stay separate from the replayed equalities.",
       "prerequisites": [
         "bridge_finite_model_replay",
         "curriculum_linear_algebra",
@@ -7223,6 +7237,7 @@
         "exact rational arithmetic",
         "row-operation replay",
         "LU factorization replay",
+        "permutation matrix replay",
         "LRA (exact rationals)",
         "matrix multiplication replay",
         "Gram-Schmidt projection replay",
@@ -7250,6 +7265,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-lu-decomposition-v0",
           "notes": "Exact LU unit-lower/upper factorization, determinant pivot product, triangular solve, and checked bad multiplier evidence."
+        },
+        {
+          "id": "finite-pivoted-lu-decomposition-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-pivoted-lu-decomposition-v0",
+          "notes": "Exact pivoted-LU permutation replay, determinant-sign accounting, triangular solve, and checked bad pivot-sign evidence."
         },
         {
           "id": "finite-qr-decomposition-v0",
@@ -7314,6 +7335,7 @@
             "docs/learn/math/linear-system-end-to-end.md",
             "docs/learn/math/gaussian-elimination-end-to-end.md",
             "docs/learn/math/lu-decomposition-end-to-end.md",
+            "docs/learn/math/pivoted-lu-decomposition-end-to-end.md",
             "docs/learn/math/qr-decomposition-end-to-end.md",
             "docs/learn/math/gram-schmidt-end-to-end.md",
             "docs/learn/math/givens-rotation-end-to-end.md",
@@ -7322,7 +7344,7 @@
             "docs/learn/math/schur-complement-end-to-end.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md"
           ],
-          "notes": "The pack validator recomputes row operations, pivots, back-substitution, LU multipliers, L*U, triangular solves, Q*R, Q^T*Q, Gram-Schmidt projection coefficients, G^T*G, G*x, H^T*H, H*x, L*L^T, Schur complements, determinant factors, leading principal minors, A*x, and A*v exactly over rationals; separate qf-lra row-operation, product-entry, coefficient, scalar, nullspace-component, and infeasible linear-system rows use the QF_LRA/Farkas route."
+          "notes": "The pack validator recomputes row operations, pivots, back-substitution, LU multipliers, permutation matrices, L*U, triangular solves, determinant signs, Q*R, Q^T*Q, Gram-Schmidt projection coefficients, G^T*G, G*x, H^T*H, H*x, L*L^T, Schur complements, determinant factors, leading principal minors, A*x, and A*v exactly over rationals; separate qf-lra row-operation, product-entry, coefficient, scalar, nullspace-component, and infeasible linear-system rows use the QF_LRA/Farkas route."
         }
       ],
       "source_refs": [
@@ -7333,6 +7355,7 @@
         "docs/learn/math/linear-system-end-to-end.md",
         "docs/learn/math/gaussian-elimination-end-to-end.md",
         "docs/learn/math/lu-decomposition-end-to-end.md",
+        "docs/learn/math/pivoted-lu-decomposition-end-to-end.md",
         "docs/learn/math/qr-decomposition-end-to-end.md",
         "docs/learn/math/gram-schmidt-end-to-end.md",
         "docs/learn/math/givens-rotation-end-to-end.md",
@@ -7344,6 +7367,7 @@
         "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-nullspace-component-farkas-conflict.smt2",
         "artifacts/examples/math/finite-gaussian-elimination-v0/smt2/bad-eliminated-rhs-farkas-conflict.smt2",
         "artifacts/examples/math/finite-lu-decomposition-v0/smt2/bad-lu-multiplier-farkas-conflict.smt2",
+        "artifacts/examples/math/finite-pivoted-lu-decomposition-v0/smt2/bad-pivot-sign-farkas-conflict.smt2",
         "artifacts/examples/math/finite-qr-decomposition-v0/smt2/bad-qr-product-entry-farkas-conflict.smt2",
         "artifacts/examples/math/finite-gram-schmidt-v0/smt2/bad-gram-schmidt-r12-farkas-conflict.smt2",
         "artifacts/examples/math/finite-givens-rotation-v0/smt2/bad-givens-sine-farkas-conflict.smt2",
@@ -7353,14 +7377,14 @@
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md"
       ],
       "open_gaps": [
-        "Gaussian elimination, LU, QR, Gram-Schmidt, Givens, Householder, Cholesky, and Schur replay check fixed transcripts, factorizations, multipliers, triangular solves, projection coefficients, rotations, reflections, or block identities; they do not prove existence, pivoting strategy correctness, LU/QR/Gram-Schmidt/Givens/Householder/Cholesky algorithm correctness, conditioning, or numerical stability.",
+        "Gaussian elimination, LU, pivoted LU, QR, Gram-Schmidt, Givens, Householder, Cholesky, and Schur replay check fixed transcripts, factorizations, multipliers, permutations, determinant signs, triangular solves, projection coefficients, rotations, reflections, or block identities; they do not prove existence, pivoting strategy correctness, LU/QR/Gram-Schmidt/Givens/Householder/Cholesky algorithm correctness, conditioning, or numerical stability.",
         "Ill-conditioned and floating-point claims need separate numerical-honesty metadata before they become solver or learner claims."
       ],
       "graduation": {
         "status": "validated",
         "criteria": [
-          "Rows state the exact matrix entries, elimination row operations, lower/upper or orthogonal/upper-triangular factors, LU multipliers, triangular solves, Gram-Schmidt projection coefficients, Givens rotation coefficients, Householder reflector data, and rational arithmetic domain.",
-          "The validator recomputes row operations, pivot products, back-substitution, LU multipliers, L*U, triangular solves, Q^T*Q, Q*R, Gram-Schmidt projections, G^T*G, G*x, H^T*H, H*x, L*L^T, Schur complements, determinant factors, inverses, and positive leading principal minors, and separate qf-lra row-operation, product-entry, multiplier, coefficient, or scalar rows reject corrupted equalities through checked QF_LRA/Farkas evidence.",
+          "Rows state the exact matrix entries, elimination row operations, lower/upper or orthogonal/upper-triangular factors, LU multipliers, permutation matrices, triangular solves, Gram-Schmidt projection coefficients, Givens rotation coefficients, Householder reflector data, and rational arithmetic domain.",
+          "The validator recomputes row operations, pivot products, back-substitution, LU multipliers, permutation products, determinant signs, L*U, triangular solves, Q^T*Q, Q*R, Gram-Schmidt projections, G^T*G, G*x, H^T*H, H*x, L*L^T, Schur complements, determinant factors, inverses, and positive leading principal minors, and separate qf-lra row-operation, product-entry, multiplier, coefficient, sign, or scalar rows reject corrupted equalities through checked QF_LRA/Farkas evidence.",
           "Singularity, factorization existence, algorithm correctness, pivoting, conditioning, and stability claims remain separate proof-horizon or numerical-analysis rows."
         ]
       }
@@ -12304,7 +12328,7 @@
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU and pivoted-LU decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -12509,6 +12533,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-operator-v0",
           "notes": "Finite-Dimensional Operator And Chebyshev Checks"
+        },
+        {
+          "id": "finite-pivoted-lu-decomposition-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-pivoted-lu-decomposition-v0",
+          "notes": "Finite Pivoted LU Decomposition Checks"
         },
         {
           "id": "finite-power-iteration-v0",
@@ -13091,7 +13121,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "Gaussian elimination, LU decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, residual, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
+          "notes": "Gaussian elimination, LU and pivoted-LU decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, residual, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -13212,6 +13242,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-operator-v0",
           "notes": "Finite-Dimensional Operator And Chebyshev Checks"
+        },
+        {
+          "id": "finite-pivoted-lu-decomposition-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-pivoted-lu-decomposition-v0",
+          "notes": "Finite Pivoted LU Decomposition Checks"
         },
         {
           "id": "finite-power-iteration-v0",
@@ -13502,6 +13538,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-lu-decomposition-v0",
           "notes": "Finite LU Decomposition Checks"
+        },
+        {
+          "id": "finite-pivoted-lu-decomposition-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-pivoted-lu-decomposition-v0",
+          "notes": "Finite Pivoted LU Decomposition Checks"
         },
         {
           "id": "finite-qr-decomposition-v0",

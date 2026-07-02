@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-pivoted-lu-decomposition-v0",
+  "witnesses": [
+    {
+      "id": "two-by-two-pivoted-lu-factorization",
+      "description": "Exact rational row-swapped LU factorization and triangular-solve data for a fixed 2x2 system.",
+      "values": {
+        "matrix": [
+          ["1", "2"],
+          ["3", "4"]
+        ],
+        "permutation": [
+          ["0", "1"],
+          ["1", "0"]
+        ],
+        "permuted_matrix": [
+          ["3", "4"],
+          ["1", "2"]
+        ],
+        "l": [
+          ["1", "0"],
+          ["1/3", "1"]
+        ],
+        "u": [
+          ["3", "4"],
+          ["0", "2/3"]
+        ],
+        "rhs": ["3", "7"],
+        "permuted_rhs": ["7", "3"],
+        "pivots": ["3", "2/3"],
+        "forward_solution": ["7", "2/3"],
+        "solution": ["1", "1"],
+        "det_matrix": "-2",
+        "det_permutation": "-1",
+        "pivot_product": "2",
+        "product": [
+          ["3", "4"],
+          ["1", "2"]
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "pivoted-lu-permutation-witness",
+      "claim": "The fixed rational P matrix swaps the two rows, and P*A plus P*b match the listed pivoted system.",
+      "expected_result": "sat",
+      "validation": "exact_rational_pivoted_lu_permutation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-pivoted-lu-factorization"],
+      "notes": "The validator checks that P is a permutation matrix, then recomputes P*A and P*b exactly."
+    },
+    {
+      "id": "pivoted-lu-shape-witness",
+      "claim": "The fixed rational L and U matrices have unit-lower and upper-triangular shape.",
+      "expected_result": "sat",
+      "validation": "exact_rational_pivoted_lu_shape_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-pivoted-lu-factorization"],
+      "notes": "The validator checks unit diagonal and triangular entries exactly."
+    },
+    {
+      "id": "pivoted-lu-product-witness",
+      "claim": "The fixed rational matrices satisfy L*U = P*A.",
+      "expected_result": "sat",
+      "validation": "exact_rational_pivoted_lu_product_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-pivoted-lu-factorization"],
+      "notes": "The validator recomputes both products exactly over rationals."
+    },
+    {
+      "id": "pivoted-lu-determinant-sign-witness",
+      "claim": "The row-swap sign and matrix determinant satisfy det(P)*det(A) = product(pivots) = 2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_pivoted_lu_determinant_sign_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-pivoted-lu-factorization"],
+      "notes": "The validator recomputes det(P), det(A), and the product of U's diagonal pivots."
+    },
+    {
+      "id": "pivoted-lu-triangular-solve-witness",
+      "claim": "Forward and back substitution through the pivoted system give x = [1, 1], which solves A*x = b.",
+      "expected_result": "sat",
+      "validation": "exact_rational_pivoted_lu_triangular_solve_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-pivoted-lu-factorization"],
+      "notes": "The validator checks L*y = P*b, U*x = y, and A*x = b exactly."
+    },
+    {
+      "id": "bad-pivot-sign-rejected",
+      "claim": "The row-swap permutation has determinant +1.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_pivot_sign_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "two-by-two-pivoted-lu-factorization",
+        "computed_det_permutation": "-1",
+        "claimed_det_permutation": "1"
+      },
+      "notes": "Exact replay computes the row-swap determinant as -1, so the claimed value +1 is rejected; the separate qf-lra-bad-pivot-sign row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-pivot-sign",
+      "claim": "The fixed malformed pivot-sign claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "two-by-two-pivoted-lu-factorization",
+        "source_replay_row": "bad-pivot-sign-rejected",
+        "computed_det_permutation": "-1",
+        "claimed_det_permutation": "1",
+        "farkas_conflict": "pivot_det = -1 and pivot_det = 1",
+        "smt2_artifact": "artifacts/examples/math/finite-pivoted-lu-decomposition-v0/smt2/bad-pivot-sign-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_pivoted_lu_decomposition_bad_pivot_sign_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the permutation determinant as -1, while the malformed row claims +1; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-pivoted-lu-theory-lean-horizon",
+      "claim": "General pivoted-LU existence, pivot-selection strategy, rank-deficient cases, sparse pivoting, growth-factor bounds, conditioning, and floating-point stability are theorem/numerical-honesty work.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For arbitrary compatible matrices over exact fields, prove row-permutation LU factorization under explicit pivot assumptions, triangular-solve correctness, determinant-sign accounting, and pivot-selection invariants.",
+        "future_checker": "Lean theorem statements for exact pivoted LU plus separate numerical-honesty artifacts for partial/complete pivoting, growth factors, conditioning, sparse algorithms, and floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational row-swapped factorization transcript, not a theorem about arbitrary pivoted LU or a stability claim for numerical implementations."
+    }
+  ]
+}

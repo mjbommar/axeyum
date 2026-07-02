@@ -19,6 +19,9 @@ const LINEAR_ALGEBRA_BAD_LU_PRODUCT_ENTRY: &str = include_str!(
 const FINITE_LU_DECOMPOSITION_BAD_MULTIPLIER: &str = include_str!(
     "../../../artifacts/examples/math/finite-lu-decomposition-v0/smt2/bad-lu-multiplier-farkas-conflict.smt2"
 );
+const FINITE_PIVOTED_LU_DECOMPOSITION_BAD_PIVOT_SIGN: &str = include_str!(
+    "../../../artifacts/examples/math/finite-pivoted-lu-decomposition-v0/smt2/bad-pivot-sign-farkas-conflict.smt2"
+);
 const LINEAR_ALGEBRA_BAD_NULLSPACE_COMPONENT: &str = include_str!(
     "../../../artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-nullspace-component-farkas-conflict.smt2"
 );
@@ -647,6 +650,14 @@ fn finite_lu_decomposition_bad_multiplier_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-lu-decomposition-v0 bad-lu-multiplier SMT-LIB artifact",
         FINITE_LU_DECOMPOSITION_BAD_MULTIPLIER,
+    );
+}
+
+#[test]
+fn finite_pivoted_lu_decomposition_bad_pivot_sign_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-pivoted-lu-decomposition-v0 bad-pivot-sign SMT-LIB artifact",
+        FINITE_PIVOTED_LU_DECOMPOSITION_BAD_PIVOT_SIGN,
     );
 }
 

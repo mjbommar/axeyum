@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 129 non-template math example packs validate.
+  Status: 130 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 129 non-template packs have at least one `checked` expected-result row.
+  Status: 130 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3455,6 +3455,17 @@ claim `l21 = 3` against the exact value `2`. General LU existence, pivoting
 strategy correctness, rank-deficient variants, sparse algorithms,
 conditioning, and floating-point stability claims stay in theorem or
 numerical-honesty lanes.
+The linear-algebra/numerical-analysis layer now adds
+`finite-pivoted-lu-decomposition-v0` as the 130th non-template math pack. Exact
+rational replay checks the row-swap permutation
+`P = [[0,1],[1,0]]`, `P*A = [[3,4],[1,2]]`,
+`L = [[1,0],[1/3,1]]`, `U = [[3,4],[0,2/3]]`,
+determinant-sign accounting `det(P) * det(A) = product(pivots) = 2`,
+triangular solve replay for `b = [3,7]`, and the solution `[1,1]`, while a
+source-linked QF_LRA/Farkas artifact rejects the malformed pivot-sign claim
+`det(P) = +1` against the exact value `-1`. Pivot-selection correctness,
+rank-deficient behavior, sparse pivot policies, growth factors, conditioning,
+and floating-point stability claims stay in theorem or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

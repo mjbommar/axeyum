@@ -13318,6 +13318,202 @@ def validate_finite_lu_decomposition(expected: dict[str, Any]) -> None:
     require_string("LU horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_pivoted_lu_decomposition(expected: dict[str, Any]) -> None:
+    def det2(context: str, matrix: list[list[Fraction]]) -> Fraction:
+        if len(matrix) != 2 or any(len(row) != 2 for row in matrix):
+            fail(f"{context} expects a 2x2 matrix")
+        return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
+
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    permutation = checks["pivoted-lu-permutation-witness"]
+    if permutation["expected_result"] != "sat":
+        fail("pivoted-lu-permutation-witness must expect sat")
+    if permutation.get("proof_status") != "replay-only":
+        fail("pivoted-lu-permutation-witness must be replay-only")
+    values = single_witness_values(permutation, witnesses)
+    matrix = require_fraction_matrix("pivoted LU matrix A", values.get("matrix"))
+    p_matrix = require_fraction_matrix("pivoted LU permutation", values.get("permutation"))
+    permuted_matrix = require_fraction_matrix(
+        "pivoted LU permuted_matrix",
+        values.get("permuted_matrix"),
+    )
+    l_matrix = require_fraction_matrix("pivoted LU L matrix", values.get("l"))
+    u_matrix = require_fraction_matrix("pivoted LU U matrix", values.get("u"))
+    rhs = require_fraction_vector("pivoted LU rhs", values.get("rhs"))
+    permuted_rhs = require_fraction_vector(
+        "pivoted LU permuted_rhs",
+        values.get("permuted_rhs"),
+    )
+    pivots = require_fraction_vector("pivoted LU pivots", values.get("pivots"))
+    forward_solution = require_fraction_vector(
+        "pivoted LU forward_solution",
+        values.get("forward_solution"),
+    )
+    solution = require_fraction_vector("pivoted LU solution", values.get("solution"))
+    det_matrix = require_fraction("pivoted LU det_matrix", values.get("det_matrix"))
+    det_permutation = require_fraction(
+        "pivoted LU det_permutation",
+        values.get("det_permutation"),
+    )
+    pivot_product = require_fraction(
+        "pivoted LU pivot_product",
+        values.get("pivot_product"),
+    )
+    product = require_fraction_matrix("pivoted LU product", values.get("product"))
+    require_square_matrix("pivoted LU matrix A", matrix)
+    require_square_matrix("pivoted LU permutation", p_matrix)
+    validate_lu_shape(l_matrix, u_matrix)
+    require_mat_mul_shape("pivoted LU P*A", p_matrix, matrix)
+    require_mat_mul_shape("pivoted LU factorization", l_matrix, u_matrix)
+    if len(matrix) != 2 or len(rhs) != 2 or len(solution) != 2:
+        fail("finite pivoted LU replay expects one 2x2 system")
+    if len(pivots) != 2 or len(forward_solution) != 2 or len(permuted_rhs) != 2:
+        fail("finite pivoted LU replay expects two pivots and two-entry solve data")
+    for row in p_matrix:
+        if any(item not in {Fraction(0), Fraction(1)} for item in row):
+            fail("pivoted-lu-permutation-witness P entries must be 0 or 1")
+        if sum(row, Fraction(0)) != 1:
+            fail("pivoted-lu-permutation-witness every P row must sum to 1")
+    for column in zip(*p_matrix):
+        if sum(column, Fraction(0)) != 1:
+            fail("pivoted-lu-permutation-witness every P column must sum to 1")
+    if mat_mul(p_matrix, matrix) != permuted_matrix:
+        fail("pivoted-lu-permutation-witness P*A does not match permuted_matrix")
+    if mat_vec(p_matrix, rhs) != permuted_rhs:
+        fail("pivoted-lu-permutation-witness P*b does not match permuted_rhs")
+
+    shape = checks["pivoted-lu-shape-witness"]
+    if shape["expected_result"] != "sat":
+        fail("pivoted-lu-shape-witness must expect sat")
+    if shape.get("proof_status") != "replay-only":
+        fail("pivoted-lu-shape-witness must be replay-only")
+    if single_witness_values(shape, witnesses) != values:
+        fail("pivoted-lu-shape-witness must cite the pivoted LU witness")
+
+    product_check = checks["pivoted-lu-product-witness"]
+    if product_check["expected_result"] != "sat":
+        fail("pivoted-lu-product-witness must expect sat")
+    if product_check.get("proof_status") != "replay-only":
+        fail("pivoted-lu-product-witness must be replay-only")
+    if single_witness_values(product_check, witnesses) != values:
+        fail("pivoted-lu-product-witness must cite the pivoted LU witness")
+    if mat_mul(l_matrix, u_matrix) != product:
+        fail("pivoted-lu-product-witness product does not equal L*U")
+    if product != permuted_matrix:
+        fail("pivoted-lu-product-witness product must equal P*A")
+
+    determinant = checks["pivoted-lu-determinant-sign-witness"]
+    if determinant["expected_result"] != "sat":
+        fail("pivoted-lu-determinant-sign-witness must expect sat")
+    if determinant.get("proof_status") != "replay-only":
+        fail("pivoted-lu-determinant-sign-witness must be replay-only")
+    if single_witness_values(determinant, witnesses) != values:
+        fail("pivoted-lu-determinant-sign-witness must cite the pivoted LU witness")
+    if det_matrix != det2("pivoted LU matrix A", matrix):
+        fail("pivoted-lu-determinant-sign-witness det(A) is incorrect")
+    if det_permutation != det2("pivoted LU permutation", p_matrix):
+        fail("pivoted-lu-determinant-sign-witness det(P) is incorrect")
+    if pivots != [u_matrix[0][0], u_matrix[1][1]]:
+        fail("pivoted-lu-determinant-sign-witness pivots must be U's diagonal")
+    if pivot_product != pivots[0] * pivots[1]:
+        fail("pivoted-lu-determinant-sign-witness pivot product is incorrect")
+    if det_permutation * det_matrix != pivot_product:
+        fail("pivoted-lu-determinant-sign-witness det(P)*det(A) must equal pivot product")
+
+    triangular_solve = checks["pivoted-lu-triangular-solve-witness"]
+    if triangular_solve["expected_result"] != "sat":
+        fail("pivoted-lu-triangular-solve-witness must expect sat")
+    if triangular_solve.get("proof_status") != "replay-only":
+        fail("pivoted-lu-triangular-solve-witness must be replay-only")
+    if single_witness_values(triangular_solve, witnesses) != values:
+        fail("pivoted-lu-triangular-solve-witness must cite the pivoted LU witness")
+    if mat_vec(l_matrix, forward_solution) != permuted_rhs:
+        fail("pivoted-lu-triangular-solve-witness L*y does not equal P*b")
+    if mat_vec(u_matrix, solution) != forward_solution:
+        fail("pivoted-lu-triangular-solve-witness U*x does not equal y")
+    if mat_vec(matrix, solution) != rhs:
+        fail("pivoted-lu-triangular-solve-witness A*x does not equal rhs")
+
+    bad = checks["bad-pivot-sign-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-pivot-sign-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-pivot-sign-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_pivot_sign_replay":
+        fail("bad-pivot-sign-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-by-two-pivoted-lu-factorization":
+        fail("bad-pivot-sign-rejected must cite two-by-two-pivoted-lu-factorization")
+    computed_sign = require_fraction(
+        "bad pivoted LU computed_det_permutation",
+        data.get("computed_det_permutation"),
+    )
+    claimed_sign = require_fraction(
+        "bad pivoted LU claimed_det_permutation",
+        data.get("claimed_det_permutation"),
+    )
+    if computed_sign != det_permutation:
+        fail("bad-pivot-sign-rejected computed determinant does not match replay")
+    if computed_sign == claimed_sign:
+        fail("bad-pivot-sign-rejected must document a false determinant claim")
+    if "separate qf-lra-bad-pivot-sign" not in bad.get("notes", ""):
+        fail("bad-pivot-sign-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-pivot-sign"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-pivot-sign must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-pivot-sign must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-pivot-sign must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-by-two-pivoted-lu-factorization":
+        fail("qf-lra-bad-pivot-sign must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-pivot-sign-rejected":
+        fail("qf-lra-bad-pivot-sign must cite the replay row")
+    qf_computed = require_fraction(
+        "qf pivoted LU computed_det_permutation",
+        qf_data.get("computed_det_permutation"),
+    )
+    qf_claimed = require_fraction(
+        "qf pivoted LU claimed_det_permutation",
+        qf_data.get("claimed_det_permutation"),
+    )
+    if qf_computed != computed_sign or qf_claimed != claimed_sign:
+        fail("qf-lra-bad-pivot-sign data must match the replay row")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf pivoted LU smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-pivoted-lu-decomposition-v0/smt2/"
+        "bad-pivot-sign-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-pivot-sign smt2_artifact must name the checked source artifact")
+    check_source("qf pivoted LU smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf pivoted LU farkas_regression", regression)
+    if "finite_pivoted_lu_decomposition_bad_pivot_sign_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-pivot-sign must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf pivoted LU certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-pivot-sign certificate must document checked Farkas evidence")
+
+    horizon = checks["general-pivoted-lu-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-pivoted-lu-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-pivoted-lu-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "pivoted LU horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string("pivoted LU horizon future_checker", horizon_data.get("future_checker"))
+
+
 def require_fraction_vector_list(context: str, value: Any) -> list[list[Fraction]]:
     if not isinstance(value, list) or not value:
         fail(f"{context} must be a non-empty list of vectors")
@@ -30480,6 +30676,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_gaussian_elimination(expected)
     if metadata["id"] == "finite-lu-decomposition-v0":
         validate_finite_lu_decomposition(expected)
+    if metadata["id"] == "finite-pivoted-lu-decomposition-v0":
+        validate_finite_pivoted_lu_decomposition(expected)
     if metadata["id"] == "finite-gradient-descent-v0":
         validate_finite_gradient_descent(expected)
     if metadata["id"] == "finite-line-search-v0":
