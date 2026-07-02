@@ -168,7 +168,8 @@ including finite random-variable, recurrence/asymptotic, stochastic-kernel, and
 martingale/stopping theory, root-finding convergence/stability, and
 hyperplane-separation/duality, KKT sufficiency, active-set method theory, and
 SDP duality/Slater-condition theory, and gradient-descent convergence/rate
-theory, and line-search termination/convergence theory.
+theory, line-search termination/convergence theory, and Wolfe-line-search
+existence/convergence theory.
 The solver-reuse query guide is
 [`docs/foundational-resources/SOLVER-REUSE-QUERIES.md`](docs/foundational-resources/SOLVER-REUSE-QUERIES.md);
 it records promoted-pack, proof-route, field, and checked-row queries for
@@ -851,7 +852,8 @@ proximal-gradient rows, so downstream
 consumers can discover finite optimization resources without promoting
 duality, KKT sufficiency, SDP strong duality, Slater conditions,
 gradient-descent convergence/rates, line-search termination/convergence,
-method convergence, stability, or benchmark claims.
+Wolfe-line-search existence/convergence, method convergence, stability, or
+benchmark claims.
 The functional-analysis/operator lane now has
 [`FUNCTIONAL-OPERATOR-QUERIES.md`](docs/foundational-resources/FUNCTIONAL-OPERATOR-QUERIES.md),
 and the foundational smoke checks finite operator/Chebyshev, eigenpair,

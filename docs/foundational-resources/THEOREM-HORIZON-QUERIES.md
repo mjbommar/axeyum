@@ -338,6 +338,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Wolfe line-search existence, strong-Wolfe, Zoutendijk-style convergence, and
+rate horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text "Wolfe line-search" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-wolfe-line-search-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Hitting-time, recurrence/transience, and stochastic-process horizons:
 
 ```sh

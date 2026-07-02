@@ -11,6 +11,7 @@ Primary pack:
 Companion lessons and maps:
 
 - [End To End: Finite Line Search Checks](finite-line-search-end-to-end.md)
+- [Wolfe Line Search Theorem Boundary](wolfe-line-search-theorem-boundary.md)
 - [Gradient Descent Convergence Theorem Boundary](gradient-descent-convergence-theorem-boundary.md)
 - [Root-Finding Convergence Theorem Boundary](root-finding-convergence-theorem-boundary.md)
 - [KKT Sufficiency Theorem Boundary](kkt-sufficiency-theorem-boundary.md)

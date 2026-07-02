@@ -361,6 +361,11 @@ is the line minimizer and satisfies curvature even though exact replay computes
 minimizer `alpha = 1/2` and curvature violation `2`; the final contradictions
 are checked through QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md).
+For the theorem boundary that keeps those finite Wolfe minimizer,
+sufficient-decrease, and curvature rows separate from Wolfe existence,
+strong-Wolfe variants, Zoutendijk-style convergence, rates, variants, and
+numerical-stability claims, read
+[Wolfe Line Search Theorem Boundary](wolfe-line-search-theorem-boundary.md).
 
 For a finite projected-gradient check, encode one interval-constrained step:
 

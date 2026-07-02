@@ -120,8 +120,10 @@ bad-descent-direction, and bad-accepted-candidate certificates; its theorem
 boundary is
 [Line Search Convergence Theorem Boundary](line-search-convergence-theorem-boundary.md).
 The finite Wolfe line-search slice adds exact Wolfe
-sufficient-decrease and curvature replay plus checked bad-minimizer and
-bad-curvature certificates. The finite projected-gradient slice adds exact
+sufficient-decrease and curvature replay plus checked bad-minimizer,
+bad sufficient-decrease, and bad-curvature certificates; its theorem boundary is
+[Wolfe Line Search Theorem Boundary](wolfe-line-search-theorem-boundary.md).
+The finite projected-gradient slice adds exact
 interval projection after a trial step, projected objective decrease, and
 checked QF_LRA/Farkas bad-projection plus bad-decrease certificates. The finite proximal-gradient slice adds exact L1 soft-threshold
 replay after a trial step, exact box-plus-L1 constrained replay with an active
@@ -538,6 +540,10 @@ and the bad-row curvature violation for that same full step. The final exact
 linear contradictions are checked through QF_LRA/Farkas evidence. For a
 focused trace, read
 [End To End: Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md).
+For the theorem boundary that keeps those finite Wolfe rows separate from
+Wolfe existence, strong-Wolfe variants, Zoutendijk-style convergence, rates,
+variants, and numerical-stability claims, read
+[Wolfe Line Search Theorem Boundary](wolfe-line-search-theorem-boundary.md).
 
 For a finite projected-gradient example, encode a one-dimensional quadratic and
 an interval constraint:

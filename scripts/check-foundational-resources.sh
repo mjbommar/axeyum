@@ -467,6 +467,8 @@ python3 scripts/query-foundational-resources.py horizon-frontier --text line-sea
 python3 scripts/query-foundational-resources.py checks --pack finite-line-search-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-wolfe-line-search-v0 --route Farkas --proof-status checked --text minimizer --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-wolfe-line-search-v0 --route Farkas --proof-status checked --text sufficient-decrease --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text "Wolfe line-search" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-wolfe-line-search-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-projected-gradient-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked --text decrease --require-any >/dev/null

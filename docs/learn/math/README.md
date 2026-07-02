@@ -300,8 +300,12 @@ Companion maps:
 - [Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md):
   follows exact descent-direction replay, exact line-minimizer replay, Wolfe
   sufficient-decrease and curvature checks, checked QF_LRA/Farkas
-  bad-minimizer and bad-curvature rejections, and the general Wolfe
-  line-search Lean horizon.
+  bad-minimizer, bad sufficient-decrease, and bad-curvature rejections, and the
+  general Wolfe line-search Lean horizon.
+- [Wolfe Line Search Theorem Boundary](wolfe-line-search-theorem-boundary.md):
+  maps those finite descent-direction, line-minimizer, sufficient-decrease, and
+  curvature shadows to the missing Wolfe existence, strong-Wolfe,
+  Zoutendijk-style convergence, rate, variant, and numerical-stability routes.
 - [Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md):
   follows exact gradient replay, one unconstrained trial step, interval
   projection, projected descent, checked QF_LRA/Farkas bad-projection and bad

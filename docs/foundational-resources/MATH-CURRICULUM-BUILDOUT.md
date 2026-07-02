@@ -2583,7 +2583,12 @@ as the focused page that keeps finite descent-direction, Armijo
 rejection/acceptance, and accepted-candidate replay plus checked Farkas bad-row
 evidence separate from line-search termination, sufficient-decrease,
 Wolfe-condition, convergence-rate, variant, and numerical-stability theorem
-claims.
+claims; and
+[`wolfe-line-search-theorem-boundary.md`](../learn/math/wolfe-line-search-theorem-boundary.md)
+as the focused page that keeps finite exact line-minimizer,
+sufficient-decrease, and curvature replay plus checked Farkas bad-row evidence
+separate from Wolfe/strong-Wolfe existence, Zoutendijk-style convergence,
+rates, variants, and numerical-stability theorem claims.
 The functional-analysis/operator consumer layer now also has
 [`FUNCTIONAL-OPERATOR-QUERIES.md`](FUNCTIONAL-OPERATOR-QUERIES.md). The guide
 and resource smoke expose finite operator/Chebyshev rows, eigenpair and
@@ -2735,6 +2740,15 @@ QF_LRA/Farkas rows are linked to copyable queries and graduation criteria while
 keeping line-search termination, sufficient-decrease, Wolfe-condition variants,
 convergence rates, stochastic variants, and numerical-stability claims in
 Lean/theorem-horizon lanes.
+The learner/planning layer now also has
+[`wolfe-line-search-theorem-boundary.md`](../learn/math/wolfe-line-search-theorem-boundary.md),
+which expands the finite Wolfe line-search row into a concrete boundary
+ledger: exact descent-direction replay, exact line-minimizer replay,
+sufficient-decrease replay, curvature replay, and bad minimizer/bad
+sufficient-decrease/bad curvature QF_LRA/Farkas rows are linked to copyable
+queries and graduation criteria while keeping Wolfe/strong-Wolfe existence,
+Zoutendijk-style convergence, rates, stochastic variants, and numerical
+stability claims in Lean/theorem-horizon lanes.
 The learner/planning layer now also has
 [`real-completeness-theorem-boundary.md`](../learn/math/real-completeness-theorem-boundary.md),
 which expands the real-completeness row into a concrete dependency ledger:

@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Wolfe line-search theorem-boundary resource landed.**
+  `wolfe-line-search-theorem-boundary.md` now separates
+  `finite-wolfe-line-search-v0` exact descent-direction replay, exact
+  line-minimizer replay, sufficient-decrease replay, curvature replay, and
+  checked bad minimizer/bad sufficient-decrease/bad curvature QF_LRA/Farkas
+  rows from Wolfe and strong-Wolfe existence, Zoutendijk-style convergence,
+  rate theorems, stochastic/constrained variants, and numerical-stability
+  claims. The theorem horizon, optimization/convexity, learner-map, and smoke
+  query docs now expose the Wolfe boundary directly.
+
 - **Line-search convergence theorem-boundary resource landed.**
   `line-search-convergence-theorem-boundary.md` now separates
   `finite-line-search-v0` exact descent-direction replay, Armijo trial

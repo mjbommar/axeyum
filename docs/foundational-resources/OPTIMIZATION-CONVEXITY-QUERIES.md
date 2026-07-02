@@ -252,6 +252,10 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --require-any
 
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text "Wolfe line-search" \
+  --require-any
+
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-projected-gradient-v0 \
   --route Farkas \

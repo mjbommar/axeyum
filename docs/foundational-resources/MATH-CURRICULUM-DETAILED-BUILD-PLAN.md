@@ -1986,6 +1986,15 @@ Pick one row per commit unless the change is purely navigational.
      rate, variant, and numerical-stability theorem routes, and adds
      line-search-specific horizon queries to the public smoke gate without
      adding a duplicate pack or changing resource counts.
+236. Landed: add `wolfe-line-search-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-wolfe-line-search-v0`. It maps exact
+     Wolfe descent-direction replay, exact line-minimizer replay,
+     sufficient-decrease replay, curvature replay, and checked QF_LRA/Farkas
+     bad minimizer, bad sufficient-decrease, and bad curvature rows to the
+     missing Wolfe/strong-Wolfe existence, Zoutendijk-style convergence,
+     rate, variant, and numerical-stability theorem routes, and adds
+     Wolfe-specific horizon queries to the public smoke gate without adding a
+     duplicate pack or changing resource counts.
 
 ## Validation Checklist
 
