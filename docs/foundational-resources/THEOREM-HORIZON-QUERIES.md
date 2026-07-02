@@ -538,6 +538,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Orientation/area oriented-geometry, affine-volume, determinant/Jacobian,
+change-of-variables, and manifold-orientation horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text oriented \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack orientation-area-geometry-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Circle-geometry tangent, chord, power-of-a-point, cyclic, and inversion
 horizons:
 
@@ -697,6 +711,7 @@ The main learner maps that explain these boundaries are:
 - [Topological Sort Theorem Boundary](../learn/math/topological-sort-theorem-boundary.md)
 - [Graph Search Runtime Theorem Boundary](../learn/math/graph-search-runtime-theorem-boundary.md)
 - [Affine Geometry Theorem Boundary](../learn/math/affine-geometry-theorem-boundary.md)
+- [Orientation And Area Geometry Theorem Boundary](../learn/math/orientation-area-geometry-theorem-boundary.md)
 - [Incidence Geometry Theorem Boundary](../learn/math/incidence-geometry-theorem-boundary.md)
 - [Rigid Configuration Geometry Theorem Boundary](../learn/math/rigid-configuration-geometry-theorem-boundary.md)
 - [Circle Geometry Theorem Boundary](../learn/math/circle-geometry-theorem-boundary.md)

@@ -477,6 +477,11 @@ Companion maps:
   maps finite affine-map, midpoint, collinearity, and
   bad-distance-preservation shadows to the missing affine-combination,
   incidence, ratio, projective, and synthetic-geometry theorem routes.
+- [Orientation And Area Geometry Theorem Boundary](orientation-area-geometry-theorem-boundary.md):
+  maps finite signed-area, affine area-scaling, barycentric, bad-area-scaling,
+  and bad-orientation shadows to the missing oriented-geometry, affine-volume,
+  determinant/Jacobian, change-of-variables, manifold-orientation, and
+  numerical-geometry theorem routes.
 - [Incidence Geometry](incidence-geometry-end-to-end.md): follows exact line
   equations, non-parallel line intersection, point-on-line replay, checked
   QF_LRA/Farkas bad intersection-coordinate and bad-incidence rejection, and

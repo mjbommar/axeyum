@@ -2204,6 +2204,15 @@ Pick one row per commit unless the change is purely navigational.
      manifold, and numerical-geometry theorem layers, and adds pack-specific
      checked-row and horizon-frontier queries to the public smoke gate without
      promoting finite coordinate rows into theorem coverage.
+259. Landed: add `orientation-area-geometry-theorem-boundary.md` as the focused
+     finite/general orientation-and-area theorem-boundary page for
+     `orientation-area-geometry-v0`. It maps exact signed-area/orientation,
+     affine determinant area-scaling, barycentric replay, and scoped
+     QF_LRA/Farkas evidence to the missing oriented-geometry, affine-volume,
+     determinant/Jacobian, change-of-variables, differential/manifold,
+     higher-dimensional, and numerical-geometry theorem layers, and adds
+     pack-specific checked-row and horizon-frontier queries to the public smoke
+     gate without promoting finite coordinate rows into theorem coverage.
 
 ## Validation Checklist
 

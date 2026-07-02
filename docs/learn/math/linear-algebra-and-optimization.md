@@ -53,6 +53,7 @@ Companion index:
 - [Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md)
 - [Linear Algebra Structure Theorem Boundary](linear-algebra-structure-theorem-boundary.md)
 - [Affine Geometry Theorem Boundary](affine-geometry-theorem-boundary.md)
+- [Orientation And Area Geometry Theorem Boundary](orientation-area-geometry-theorem-boundary.md)
 - [Incidence Geometry Theorem Boundary](incidence-geometry-theorem-boundary.md)
 - [Rigid Configuration Geometry Theorem Boundary](rigid-configuration-geometry-theorem-boundary.md)
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
@@ -756,6 +757,7 @@ replay, read
 [End To End: Rational Multivariable Calculus](multivariable-calculus-end-to-end.md),
 [End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md),
 [Affine Geometry Theorem Boundary](affine-geometry-theorem-boundary.md),
+[Orientation And Area Geometry Theorem Boundary](orientation-area-geometry-theorem-boundary.md),
 [End To End: Incidence Geometry](incidence-geometry-end-to-end.md),
 [Incidence Geometry Theorem Boundary](incidence-geometry-theorem-boundary.md),
 [End To End: Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md),

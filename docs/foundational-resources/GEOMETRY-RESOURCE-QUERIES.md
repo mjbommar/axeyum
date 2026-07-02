@@ -57,6 +57,7 @@ needs concrete checked rows to display.
 | Affine-coordinate display rows | pack `affine-geometry-v0` | `Farkas` | `checks --pack affine-geometry-v0 --route Farkas --proof-status checked`; `horizon-frontier --text "affine geometry"` |
 | Incidence display rows | pack `incidence-geometry-v0` | `Farkas` | `checks --pack incidence-geometry-v0 --route Farkas --proof-status checked`; `horizon-frontier --text "incidence geometry"` |
 | Rigid-configuration display rows | pack `rigid-configuration-geometry-v0` | `Farkas` | `checks --pack rigid-configuration-geometry-v0 --route Farkas --proof-status checked`; `horizon-frontier --text rigidity` |
+| Orientation/area display rows | pack `orientation-area-geometry-v0` | `Farkas` | `checks --pack orientation-area-geometry-v0 --route Farkas --proof-status checked`; `horizon-frontier --text oriented` |
 | Circle-specific display rows | pack `finite-circle-geometry-v0` | `Farkas` | `checks --pack finite-circle-geometry-v0 --route Farkas --proof-status checked`; `horizon-frontier --text "circle geometry"` |
 | Inversion-specific display rows | pack `finite-inversion-geometry-v0` | `Farkas` | `checks --pack finite-inversion-geometry-v0 --route Farkas --proof-status checked`; `horizon-frontier --text "inversion geometry"` |
 | Cyclic/Ptolemy display rows | pack `finite-cyclic-geometry-v0` | `Farkas` | `checks --pack finite-cyclic-geometry-v0 --route Farkas --proof-status checked`; `horizon-frontier --text "cyclic geometry"` |
@@ -219,6 +220,35 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
+  --pack orientation-area-geometry-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text oriented \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack orientation-area-geometry-v0 \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack orientation-area-geometry-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text area \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack orientation-area-geometry-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text orientation \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
   --pack finite-circle-geometry-v0 \
   --route Farkas \
   --proof-status checked \
@@ -323,7 +353,8 @@ finite object family.
 They do not prove:
 
 - synthetic or projective geometry theorem schemas;
-- arbitrary affine, incidence, projective, rigidity, circle, inversion,
+- arbitrary affine, incidence, oriented-area, affine-volume,
+  change-of-variables, projective, rigidity, circle, inversion,
   cyclic-quadrilateral, angle, or Ptolemy theorems;
 - differential, global, algebraic, or higher-dimensional geometry;
 - numerical robustness or floating-point geometric predicates;

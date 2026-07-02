@@ -1991,6 +1991,22 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --text distance \
   --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text oriented \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack orientation-area-geometry-v0 \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack orientation-area-geometry-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text area \
+  --require-any
 ```
 
 For functional analysis and operator theory, query the exact-rational route to
@@ -2329,6 +2345,9 @@ python3 scripts/query-foundational-resources.py checks --pack incidence-geometry
 python3 scripts/query-foundational-resources.py horizon-frontier --text rigidity --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack rigid-configuration-geometry-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack rigid-configuration-geometry-v0 --route Farkas --proof-status checked --text distance --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text oriented --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack orientation-area-geometry-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack orientation-area-geometry-v0 --route Farkas --proof-status checked --text area --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_circle_inversion_cyclic_replay --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_circle_inversion_cyclic_replay --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field functional_analysis_and_operator_theory --route Farkas --require-any >/dev/null

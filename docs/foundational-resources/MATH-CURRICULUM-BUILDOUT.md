@@ -2025,6 +2025,13 @@ It keeps exact triangle distance-table, translation-isometry, and congruent
 triangle replay plus checked QF_LRA/Farkas bad-row evidence separate from
 graph rigidity, rigid-motion classification, synthetic-rigidity,
 higher-dimensional, manifold, and numerical-geometry theorem coverage.
+`orientation-area-geometry-theorem-boundary.md` now gives
+`orientation-area-geometry-v0` a focused finite/general orientation and area
+trust map. It keeps exact signed-area/orientation replay, affine determinant
+area-scaling replay, barycentric replay, and checked QF_LRA/Farkas bad-row
+evidence separate from oriented-geometry, affine-volume, determinant/Jacobian,
+change-of-variables, differential/manifold, higher-dimensional, and
+numerical-geometry theorem coverage.
 `metric-continuity-v0` now has a learner-facing end-to-end lesson for finite
 metric-table replay, finite Lipschitz checks, epsilon-delta containment,
 open-ball preimage replay, checked QF_LRA/Farkas bad-delta and bad-preimage
@@ -2667,6 +2674,15 @@ distance-table QF_LRA/Farkas rows are linked to copyable queries and
 graduation criteria while keeping graph rigidity, rigid-motion
 classification, synthetic-rigidity, higher-dimensional, manifold, and
 numerical-geometry claims in Lean/theorem-horizon lanes.
+The learner/planning layer now also has
+[`orientation-area-geometry-theorem-boundary.md`](../learn/math/orientation-area-geometry-theorem-boundary.md),
+which expands the finite orientation/area row into a concrete boundary ledger:
+signed-area/orientation replay, affine determinant area scaling, barycentric
+replay, and bad affine-area-scaling plus bad-orientation QF_LRA/Farkas rows are
+linked to copyable queries and graduation criteria while keeping
+oriented-geometry, affine-volume, determinant/Jacobian, change-of-variables,
+differential/manifold, higher-dimensional, and numerical-geometry claims in
+Lean/theorem-horizon lanes.
 The learner/planning layer now also has
 [`circle-geometry-theorem-boundary.md`](../learn/math/circle-geometry-theorem-boundary.md),
 which expands the finite circle-geometry row into a concrete boundary ledger:

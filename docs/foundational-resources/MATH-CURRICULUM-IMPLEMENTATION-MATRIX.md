@@ -735,7 +735,14 @@ Build sequence:
     rigid-motion-classification, synthetic-rigidity, higher-dimensional,
     manifold, and numerical-geometry theorem routes, with pack-specific
     checked-row and horizon-frontier queries.
-71. Revisit crate/repo boundaries only after three real consumers or repeated
+71. Landed: add the orientation/area geometry theorem-boundary page.
+    `orientation-area-geometry-theorem-boundary.md` maps exact signed-area,
+    affine determinant area-scaling, barycentric replay, and checked
+    QF_LRA/Farkas bad-row evidence to the missing oriented-geometry,
+    affine-volume, determinant/Jacobian, change-of-variables,
+    differential/manifold, higher-dimensional, and numerical-geometry theorem
+    routes, with pack-specific checked-row and horizon-frontier queries.
+72. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

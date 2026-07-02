@@ -234,6 +234,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Orientation/area theorem-boundary resource landed.**
+  `orientation-area-geometry-theorem-boundary.md` now separates
+  `orientation-area-geometry-v0` exact signed-area/orientation,
+  affine-area-scaling, and barycentric replay plus scoped QF_LRA/Farkas
+  evidence from oriented-geometry, affine-volume, determinant/Jacobian,
+  change-of-variables, differential/manifold, higher-dimensional, and
+  numerical-geometry theorem claims. The geometry, theorem-horizon,
+  learner-index, rational-real, linear-algebra, and smoke-query docs now expose
+  the boundary through pack-specific checked-row and horizon-frontier queries.
 - **Rigid-configuration theorem-boundary resource landed.**
   `rigid-configuration-geometry-theorem-boundary.md` now separates
   `rigid-configuration-geometry-v0` exact triangle distance-table,

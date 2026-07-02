@@ -47,6 +47,7 @@ Companion map:
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
 - [Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md)
 - [Affine Geometry Theorem Boundary](affine-geometry-theorem-boundary.md)
+- [Orientation And Area Geometry Theorem Boundary](orientation-area-geometry-theorem-boundary.md)
 - [Incidence Geometry Theorem Boundary](incidence-geometry-theorem-boundary.md)
 - [Rigid Configuration Geometry Theorem Boundary](rigid-configuration-geometry-theorem-boundary.md)
 
@@ -661,6 +662,7 @@ and [Proximal Gradient Convergence Theorem Boundary](proximal-gradient-convergen
 finite coordinate, incidence, rigid-configuration, affine, and oriented geometry replay, read
 [End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md),
 [Affine Geometry Theorem Boundary](affine-geometry-theorem-boundary.md),
+[Orientation And Area Geometry Theorem Boundary](orientation-area-geometry-theorem-boundary.md),
 [End To End: Incidence Geometry](incidence-geometry-end-to-end.md),
 [Incidence Geometry Theorem Boundary](incidence-geometry-theorem-boundary.md), and
 [End To End: Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md), and
