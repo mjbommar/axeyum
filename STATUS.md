@@ -234,6 +234,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Consumer smoke JSON output landed.**
+  `scripts/consume-foundational-resources.py --format json` now emits the same
+  R6 contract snapshot as the text smoke: schema versions, concept and pack
+  counts, expected-result counts, proof-status counts, row-label counts, and
+  pack-label counts. The foundational resource gate now checks both text and
+  JSON output so downstream tools do not need to parse prose.
+
 - **Library-boundary decision refreshed.**
   `LIBRARY-BOUNDARY-DECISION.md` now reflects the 2026-07-02 R6 state: the
   public data contract, executable label audit, stronger dependency-free

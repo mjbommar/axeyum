@@ -81,6 +81,13 @@ JSON output is available when another tool needs stable parsing:
 python3 scripts/query-foundational-resources.py summary --format json
 ```
 
+The standalone consumer smoke also has machine-readable output for contract
+counts, schema versions, and display-label counts:
+
+```sh
+python3 scripts/consume-foundational-resources.py --format json
+```
+
 ## Display Label Audit
 
 ```sh

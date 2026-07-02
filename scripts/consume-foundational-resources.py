@@ -10,7 +10,9 @@ from outside the implementation scripts.
 
 from __future__ import annotations
 
+import argparse
 import json
+import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -39,10 +41,6 @@ def fail(message: str) -> None:
 def load_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
-
-
-def count_text(counter: Counter[str]) -> str:
-    return ",".join(f"{key}:{counter[key]}" for key in sorted(counter))
 
 
 def label_key(label: str) -> str:
@@ -76,7 +74,7 @@ def pack_display_labels(checks: list[dict[str, Any]]) -> list[str]:
     return labels
 
 
-def main() -> int:
+def build_summary() -> dict[str, Any]:
     atlas = load_json(ATLAS)
     if atlas.get("schema_version") != 1:
         fail("foundational atlas schema_version must be 1")
@@ -138,19 +136,67 @@ def main() -> int:
     if missing_from_atlas:
         fail("non-template packs missing from atlas rows: " + ", ".join(missing_from_atlas))
 
+    return {
+        "concept_rows": len(rows),
+        "curriculum_rows": row_counts["curriculum-node"],
+        "field_rows": row_counts["field"],
+        "non_template_packs": len(non_template_pack_ids),
+        "packs_with_checked_evidence": len(checked_pack_ids),
+        "schema_versions": {
+            "atlas": 1,
+            "metadata": 1,
+            "expected": 1,
+        },
+        "expected_result_counts": dict(sorted(result_counts.items())),
+        "proof_status_counts": dict(sorted(proof_counts.items())),
+        "row_label_counts": dict(sorted(row_label_counts.items())),
+        "pack_label_counts": dict(sorted(pack_label_counts.items())),
+    }
+
+
+def format_counts(counts: dict[str, int]) -> str:
+    return ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
+
+
+def print_text_summary(summary: dict[str, Any]) -> None:
     print("foundational resource consumer smoke")
-    print(f"concept_rows={len(rows)}")
-    print(f"curriculum_rows={row_counts['curriculum-node']}")
-    print(f"field_rows={row_counts['field']}")
-    print(f"non_template_packs={len(non_template_pack_ids)}")
-    print(f"packs_with_checked_evidence={len(checked_pack_ids)}")
+    print(f"concept_rows={summary['concept_rows']}")
+    print(f"curriculum_rows={summary['curriculum_rows']}")
+    print(f"field_rows={summary['field_rows']}")
+    print(f"non_template_packs={summary['non_template_packs']}")
+    print(f"packs_with_checked_evidence={summary['packs_with_checked_evidence']}")
+    versions = summary["schema_versions"]
     print("schema_versions=atlas:1,metadata:1,expected:1")
-    print("expected_result_counts=" + count_text(result_counts))
-    print("proof_status_counts=" + count_text(proof_counts))
-    print("row_label_counts=" + count_text(row_label_counts))
-    print("pack_label_counts=" + count_text(pack_label_counts))
+    if versions != {"atlas": 1, "metadata": 1, "expected": 1}:
+        fail("text summary only supports schema version 1")
+    print("expected_result_counts=" + format_counts(summary["expected_result_counts"]))
+    print("proof_status_counts=" + format_counts(summary["proof_status_counts"]))
+    print("row_label_counts=" + format_counts(summary["row_label_counts"]))
+    print("pack_label_counts=" + format_counts(summary["pack_label_counts"]))
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Smoke-test the public foundational-resource JSON contract."
+    )
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    summary = build_summary()
+    if args.format == "json":
+        print(json.dumps(summary, indent=2, sort_keys=True))
+    else:
+        print_text_summary(summary)
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except ConsumerError as error:
+        print(f"error: {error}", file=sys.stderr)
+        raise SystemExit(2)

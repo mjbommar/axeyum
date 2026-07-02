@@ -53,6 +53,12 @@ Regenerate this snapshot with:
 python3 scripts/consume-foundational-resources.py
 ```
 
+Machine-readable output is available for downstream smoke tests:
+
+```sh
+python3 scripts/consume-foundational-resources.py --format json
+```
+
 ## Stable Consumer Fields
 
 Concept rows expose:
@@ -136,6 +142,7 @@ git diff --check
 ./scripts/check-links.sh
 ./scripts/check-foundational-resources.sh
 python3 scripts/consume-foundational-resources.py
+python3 scripts/consume-foundational-resources.py --format json
 python3 scripts/query-foundational-resources.py summary
 python3 scripts/query-foundational-resources.py labels
 ```

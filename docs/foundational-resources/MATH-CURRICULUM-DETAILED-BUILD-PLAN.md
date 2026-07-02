@@ -1735,6 +1735,11 @@ Pick one row per commit unless the change is purely navigational.
      label audit, stronger consumer smoke, current result/proof/label counts,
      and keeps the decision at JSON/query surfaces rather than a new crate or
      repository split.
+204. Landed: add `consume-foundational-resources.py --format json` for
+     machine-readable R6 smoke output. The same dependency-free consumer now
+     emits schema versions, concept and pack counts, expected-result counts,
+     proof-status counts, row-label counts, and pack-label counts as JSON, and
+     the foundational resource gate checks both text and JSON modes.
 
 ## Validation Checklist
 

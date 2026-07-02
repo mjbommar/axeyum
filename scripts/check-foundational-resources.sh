@@ -9,6 +9,7 @@ python3 scripts/validate-foundational-concepts.py
 python3 scripts/validate-foundational-example-pack.py
 python3 scripts/check-foundational-negative-fixtures.py
 python3 scripts/consume-foundational-resources.py
+python3 scripts/consume-foundational-resources.py --format json >/dev/null
 python3 scripts/query-foundational-resources.py summary >/dev/null
 python3 scripts/query-foundational-resources.py routes --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py routes --route qf-bv --require-any >/dev/null
