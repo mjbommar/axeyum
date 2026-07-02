@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-walsh-hadamard-transform-v0",
+  "witnesses": [
+    {
+      "id": "order-four-hadamard-transform",
+      "description": "Exact order-4 Walsh-Hadamard transform data for x = [1, 2, -1, 0].",
+      "values": {
+        "matrix": [
+          ["1", "1", "1", "1"],
+          ["1", "-1", "1", "-1"],
+          ["1", "1", "-1", "-1"],
+          ["1", "-1", "-1", "1"]
+        ],
+        "scale": "4",
+        "identity_scaled": [
+          ["4", "0", "0", "0"],
+          ["0", "4", "0", "0"],
+          ["0", "0", "4", "0"],
+          ["0", "0", "0", "4"]
+        ],
+        "vector": ["1", "2", "-1", "0"],
+        "transform": ["2", "-2", "4", "0"],
+        "inverse_reconstruction": ["1", "2", "-1", "0"],
+        "source_norm_squared": "6",
+        "transform_norm_squared": "24"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "hadamard-orthogonality-witness",
+      "claim": "The fixed order-4 Hadamard matrix satisfies H^T H = 4I.",
+      "expected_result": "sat",
+      "validation": "exact_rational_hadamard_orthogonality_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["order-four-hadamard-transform"],
+      "notes": "The validator recomputes the matrix product exactly over rationals."
+    },
+    {
+      "id": "walsh-transform-witness",
+      "claim": "The fixed vector has Walsh-Hadamard transform [2, -2, 4, 0].",
+      "expected_result": "sat",
+      "validation": "exact_rational_walsh_transform_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["order-four-hadamard-transform"],
+      "notes": "The validator recomputes Hx exactly from the source matrix and vector."
+    },
+    {
+      "id": "inverse-transform-witness",
+      "claim": "Applying H to the transform vector and dividing by 4 reconstructs the source vector.",
+      "expected_result": "sat",
+      "validation": "exact_rational_hadamard_inverse_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["order-four-hadamard-transform"],
+      "notes": "The validator recomputes H*y/4 exactly and compares it with the original vector."
+    },
+    {
+      "id": "parseval-energy-witness",
+      "claim": "The transform energy is four times the source energy: ||Hx||^2 = 4 ||x||^2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_parseval_energy_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["order-four-hadamard-transform"],
+      "notes": "The validator recomputes both squared norms exactly and checks the scale factor."
+    },
+    {
+      "id": "bad-transform-coefficient-rejected",
+      "claim": "The second transform coefficient is -1.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_transform_coefficient_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "order-four-hadamard-transform",
+        "coefficient_index": 1,
+        "actual_coefficient": "-2",
+        "claimed_coefficient": "-1"
+      },
+      "notes": "The validator recomputes Hx and rejects the malformed coefficient claim; the separate qf-lra-bad-transform-coefficient row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-transform-coefficient",
+      "claim": "The fixed malformed transform coefficient claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "order-four-hadamard-transform",
+        "source_replay_row": "bad-transform-coefficient-rejected",
+        "coefficient_index": 1,
+        "actual_coefficient": "-2",
+        "claimed_coefficient": "-1",
+        "smt2_artifact": "artifacts/examples/math/finite-walsh-hadamard-transform-v0/smt2/bad-transform-coefficient-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_walsh_hadamard_bad_transform_coefficient_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the second transform coefficient as -2, while the malformed row claims -1; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
+      "id": "general-walsh-hadamard-theorem-lean-horizon",
+      "claim": "General Walsh-Hadamard transform identities, fast transform algorithms, Fourier-analysis analogues, and numerical stability are theorem/numerical-honesty work.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For all powers-of-two dimensions, the Sylvester Hadamard matrix is orthogonal up to scale, has an inverse H/scale, preserves energy up to scale, and admits a fast recursive transform algorithm.",
+        "future_checker": "Lean theorem statements for recursive Hadamard construction plus separate numerical-honesty artifacts for floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource, not a theorem about all dimensions or an FFT performance/stability claim."
+    }
+  ]
+}

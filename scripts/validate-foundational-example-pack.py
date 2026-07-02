@@ -15609,6 +15609,140 @@ def validate_spectral_linear_algebra(expected: dict[str, Any]) -> None:
         fail("bad-eigenpair-rejected must link the Farkas regression")
 
 
+def validate_finite_walsh_hadamard_transform(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    orthogonality = checks["hadamard-orthogonality-witness"]
+    if orthogonality["expected_result"] != "sat":
+        fail("hadamard-orthogonality-witness must expect sat")
+    values = single_witness_values(orthogonality, witnesses)
+    matrix = require_fraction_matrix("Hadamard matrix", values.get("matrix"))
+    scale = require_fraction("Hadamard scale", values.get("scale"))
+    identity_scaled = require_fraction_matrix("Hadamard identity_scaled", values.get("identity_scaled"))
+    require_square_matrix("Hadamard matrix", matrix)
+    if scale != len(matrix):
+        fail("Hadamard scale must equal the matrix dimension for this pack")
+    if mat_mul(matrix_transpose(matrix), matrix) != identity_scaled:
+        fail("hadamard-orthogonality-witness H^T*H does not match identity_scaled")
+    expected_identity = [
+        [scale if row == column else Fraction(0) for column in range(len(matrix))]
+        for row in range(len(matrix))
+    ]
+    if identity_scaled != expected_identity:
+        fail("hadamard-orthogonality-witness identity_scaled must be scale times I")
+
+    transform_check = checks["walsh-transform-witness"]
+    if transform_check["expected_result"] != "sat":
+        fail("walsh-transform-witness must expect sat")
+    values = single_witness_values(transform_check, witnesses)
+    vector = require_fraction_vector("Walsh source vector", values.get("vector"))
+    transform = require_fraction_vector("Walsh transform", values.get("transform"))
+    require_mat_vec_shape("Walsh transform", matrix, vector)
+    if mat_vec(matrix, vector) != transform:
+        fail("walsh-transform-witness transform does not equal H*x")
+
+    inverse = checks["inverse-transform-witness"]
+    if inverse["expected_result"] != "sat":
+        fail("inverse-transform-witness must expect sat")
+    inverse_reconstruction = require_fraction_vector(
+        "Hadamard inverse reconstruction",
+        values.get("inverse_reconstruction"),
+    )
+    require_mat_vec_shape("Hadamard inverse", matrix, transform)
+    if [item / scale for item in mat_vec(matrix, transform)] != inverse_reconstruction:
+        fail("inverse-transform-witness reconstruction does not equal H*y/scale")
+    if inverse_reconstruction != vector:
+        fail("inverse-transform-witness reconstruction must equal the source vector")
+
+    parseval = checks["parseval-energy-witness"]
+    if parseval["expected_result"] != "sat":
+        fail("parseval-energy-witness must expect sat")
+    source_norm = require_fraction("Walsh source_norm_squared", values.get("source_norm_squared"))
+    transform_norm = require_fraction("Walsh transform_norm_squared", values.get("transform_norm_squared"))
+    if dot_product(vector, vector) != source_norm:
+        fail("parseval-energy-witness source norm is incorrect")
+    if dot_product(transform, transform) != transform_norm:
+        fail("parseval-energy-witness transform norm is incorrect")
+    if transform_norm != scale * source_norm:
+        fail("parseval-energy-witness must satisfy transform_norm = scale * source_norm")
+
+    bad = checks["bad-transform-coefficient-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-transform-coefficient-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-transform-coefficient-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_transform_coefficient_replay":
+        fail("bad-transform-coefficient-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "order-four-hadamard-transform":
+        fail("bad-transform-coefficient-rejected must cite order-four-hadamard-transform")
+    coefficient_index = require_nonnegative_int(
+        "bad transform coefficient_index",
+        data.get("coefficient_index"),
+    )
+    if coefficient_index >= len(transform):
+        fail("bad-transform-coefficient-rejected coefficient_index is out of range")
+    actual_coefficient = require_fraction(
+        "bad transform actual_coefficient",
+        data.get("actual_coefficient"),
+    )
+    claimed_coefficient = require_fraction(
+        "bad transform claimed_coefficient",
+        data.get("claimed_coefficient"),
+    )
+    if transform[coefficient_index] != actual_coefficient:
+        fail("bad-transform-coefficient-rejected actual coefficient does not match replay")
+    if actual_coefficient == claimed_coefficient:
+        fail("bad-transform-coefficient-rejected must document a false coefficient claim")
+    if "separate qf-lra-bad-transform-coefficient" not in bad.get("notes", ""):
+        fail("bad-transform-coefficient-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-transform-coefficient"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-transform-coefficient must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-transform-coefficient must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-transform-coefficient must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "order-four-hadamard-transform":
+        fail("qf-lra-bad-transform-coefficient must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-transform-coefficient-rejected":
+        fail("qf-lra-bad-transform-coefficient must cite the replay row")
+    qf_index = require_nonnegative_int("qf transform coefficient_index", qf_data.get("coefficient_index"))
+    qf_actual = require_fraction("qf transform actual_coefficient", qf_data.get("actual_coefficient"))
+    qf_claimed = require_fraction("qf transform claimed_coefficient", qf_data.get("claimed_coefficient"))
+    if qf_index != coefficient_index or qf_actual != actual_coefficient or qf_claimed != claimed_coefficient:
+        fail("qf-lra-bad-transform-coefficient data must match the replay row")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf transform smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-walsh-hadamard-transform-v0/smt2/"
+        "bad-transform-coefficient-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-transform-coefficient smt2_artifact must name the checked source artifact")
+    check_source("qf transform smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf transform farkas_regression", regression)
+    if "finite_walsh_hadamard_bad_transform_coefficient_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-transform-coefficient must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf transform certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-transform-coefficient certificate must document checked Farkas evidence")
+
+    horizon = checks["general-walsh-hadamard-theorem-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-walsh-hadamard-theorem-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-walsh-hadamard-theorem-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("Walsh horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("Walsh horizon future_checker", horizon_data.get("future_checker"))
+
+
 def require_complex_pair(context: str, value: Any) -> tuple[Fraction, Fraction]:
     pair = require_fraction_vector(context, value)
     if len(pair) != 2:
@@ -27113,6 +27247,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_line_search(expected)
     if metadata["id"] == "finite-wolfe-line-search-v0":
         validate_finite_wolfe_line_search(expected)
+    if metadata["id"] == "finite-walsh-hadamard-transform-v0":
+        validate_finite_walsh_hadamard_transform(expected)
     if metadata["id"] == "finite-projected-gradient-v0":
         validate_finite_projected_gradient(expected)
     if metadata["id"] == "finite-proximal-gradient-v0":

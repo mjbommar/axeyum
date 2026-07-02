@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 75 bridge-concept rows.
 - 5 example-family rows.
-- 111 non-template math example packs.
-- 706 expected checks.
-- 337 checked proof/evidence rows.
-- 295 replay-only rows.
-- 74 Lean-horizon rows.
-- 111 promoted solver-reuse packs.
+- 112 non-template math example packs.
+- 713 expected checks.
+- 338 checked proof/evidence rows.
+- 300 replay-only rows.
+- 75 Lean-horizon rows.
+- 112 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 111 focused learner-linked packs, with no path-only, index-only, or missing
+- 112 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2343,6 +2343,12 @@ Pick one item per commit unless the change is purely navigational.
      `algebra_position < topology_position`, while the theorem boundary keeps
      topological-sort algorithm correctness, finite linear-extension
      existence, and cycle-obstruction completeness in the Lean-horizon lane.
+159. Landed: add `finite-walsh-hadamard-transform-v0` as an exact
+     order-4 transform resource. The pack computes the Walsh-Hadamard
+     transform, inverse reconstruction, and Parseval scaling, then promotes the
+     malformed second coefficient claim through a source-linked QF_LRA/Farkas
+     regression without claiming fast-transform, Fourier-analysis, or
+     infinite-dimensional orthogonal-basis theorems.
 
 ## Validation Checklist
 

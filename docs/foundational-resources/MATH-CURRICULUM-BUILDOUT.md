@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 111 non-template math example packs validate.
+  Status: 112 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 111 non-template packs have at least one `checked` expected-result row.
+  Status: 112 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3286,11 +3286,18 @@ The graph curriculum layer now also promotes `finite-dag-topological-order-v0`
 with `qf-lia-bad-topological-edge-order`. Exact topological-order replay still
 owns vertex coverage, edge-position checking, and cycle-obstruction replay,
 while the source-linked QF_LIA artifact isolates the malformed order as the
-final `2 < 1` edge-position contradiction. This closes the current
-non-benchmark-horizon math pack queue: all 111 non-template math packs now have
+final `2 < 1` edge-position contradiction. That closed the then-current
+non-benchmark-horizon math pack queue: all 111 non-template math packs had
 promoted solver-reuse metadata, while topological-sort algorithm correctness,
 finite linear-extension existence, and cycle-obstruction completeness remain
 Lean-horizon work.
+The linear-algebra/functional-analysis layer now adds
+`finite-walsh-hadamard-transform-v0` as the 112th non-template math pack. Exact
+order-4 replay computes the Walsh-Hadamard transform, inverse reconstruction,
+and Parseval scaling, while a source-linked QF_LRA/Farkas artifact rejects the
+malformed second coefficient claim. Fast transform algorithms, general Fourier
+analysis, and infinite-dimensional orthogonal expansions stay in the
+Lean-horizon lane.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

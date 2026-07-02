@@ -240,6 +240,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Walsh-Hadamard transform resource landed.**
+  `finite-walsh-hadamard-transform-v0` now gives the linear-algebra and
+  functional-analysis lanes an exact order-4 Walsh-Hadamard transform replay:
+  it checks orthogonality, `Hx`, inverse reconstruction, and Parseval scaling,
+  then isolates the malformed second coefficient claim as a source-linked
+  QF_LRA/Farkas row. The focused learner page keeps fast-transform algorithms,
+  Fourier-analysis generalizations, and infinite-dimensional orthogonal
+  expansions in the Lean-horizon lane. The public summary now reports 121
+  concept rows, 112 packs, 713 expected checks, 338 checked rows, 300
+  replay-only rows, 75 Lean-horizon rows, and 112 promoted solver-reuse packs.
 - **Finite DAG topological-order QF_LIA promotion landed.**
   `finite-dag-topological-order-v0` now has
   `qf-lia-bad-topological-edge-order`, a source-linked SMT-LIB artifact and
@@ -248,7 +258,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   checked arithmetic-evidence row; the finite replay rows still own vertex
   coverage, edge-position checking, and cycle-obstruction replay, and
   topological-sort algorithm correctness remains Lean-horizon work. The public
-  summary now reports 121 concept rows, 111 packs, 706 expected checks, 337
+  summary then reported 121 concept rows, 111 packs, 706 expected checks, 337
   checked rows, 295 replay-only rows, 74 Lean-horizon rows, and 111 promoted
   solver-reuse packs, with no non-benchmark-horizon math pack remaining.
 - **Finite shortest-path QF_LRA/Farkas promotion landed.**

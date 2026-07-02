@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "finite-walsh-hadamard-transform-v0",
+  "title": "Finite Walsh-Hadamard Transform Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_functional_analysis_and_operator_theory",
+    "field_real_analysis",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_inner_product_projection"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "functional_analysis_and_operator_theory",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite-dimensional linear algebra",
+    "finite orthogonal transforms",
+    "exact rational matrix replay",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-walsh-hadamard-transform-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Walsh-Hadamard bad transform-coefficient QF_LRA/Farkas regression seed",
+    "pressure": "Exact transform replay computes the second Hadamard coefficient as -2 while a malformed row claims -1, isolating a compact equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-transform-coefficient"
+    ],
+    "next_step": "Promote additional orthogonal-transform rows only when they add distinct exact-linear solver pressure; keep fast Walsh-Hadamard algorithms, Fourier theory, and numerical stability in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/walsh-hadamard-transform-end-to-end.md",
+    "artifacts/examples/math/finite-walsh-hadamard-transform-v0/smt2/bad-transform-coefficient-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "hadamard-orthogonality-witness",
+    "walsh-transform-witness",
+    "inverse-transform-witness",
+    "parseval-energy-witness",
+    "bad-transform-coefficient-rejected",
+    "qf-lra-bad-transform-coefficient",
+    "general-walsh-hadamard-theorem-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed order-4 Hadamard matrix, source vector, transform vector, inverse reconstruction, and energy identity as deterministic exact-rational replay obligations.",
+    "Route the false transform-coefficient row through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting coefficient.",
+    "Expose the pack through the matrix computation learner and consumer query surfaces.",
+    "Keep general Walsh-Hadamard transform theorems, fast algorithms, Fourier-analysis analogues, and numerical stability claims marked Lean/numerical horizon."
+  ]
+}

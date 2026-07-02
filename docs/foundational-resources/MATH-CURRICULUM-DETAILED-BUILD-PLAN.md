@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 75 bridge-concept rows.
 - 5 example-family rows.
-- 111 non-template math packs.
-- 706 expected checks.
-- 337 checked proof/evidence rows.
-- 295 replay-only rows.
-- 74 Lean-horizon rows.
-- 111 promoted solver-reuse packs.
+- 112 non-template math packs.
+- 713 expected checks.
+- 338 checked proof/evidence rows.
+- 300 replay-only rows.
+- 75 Lean-horizon rows.
+- 112 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 111 focused learner-linked packs, with no path-only, index-only, or missing
+- 112 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 111 current non-template packs satisfy the focused-lesson side of this
+all 112 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2318,6 +2318,14 @@ Pick one row per commit unless the change is purely navigational.
      evidence. The finite shortest-path replay rows still own path-length,
      edge-relaxation, and potential-certificate arithmetic, while solver reuse
      is promoted only for the final exact-rational `5 <= 4` contradiction.
+270. Landed: add `finite-walsh-hadamard-transform-v0` as an exact
+     linear-algebra/functional-analysis transform resource. The pack replays
+     the order-4 Walsh-Hadamard matrix, computes `Hx = [2,-2,4,0]`, checks
+     inverse reconstruction and Parseval scaling, and adds
+     `qf-lra-bad-transform-coefficient` as the source-linked Farkas row for
+     the malformed second coefficient claim. The learner page keeps fast
+     Walsh-Hadamard algorithms, general Fourier transforms, and
+     infinite-dimensional orthogonal-expansion theorems in the horizon lane.
 
 ## Validation Checklist
 

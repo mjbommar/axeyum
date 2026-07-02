@@ -1816,6 +1816,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-proximal-gradient-v0",
           "notes": "Exact L1 soft-threshold/composite-decrease proximal-gradient replay and bad proximal-gradient rows."
+        },
+        {
+          "id": "finite-walsh-hadamard-transform-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-walsh-hadamard-transform-v0",
+          "notes": "Exact rational Walsh-Hadamard transform replay, inverse reconstruction, Parseval energy scaling, and checked bad coefficient evidence."
         }
       ],
       "proof_routes": [
@@ -9615,7 +9621,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "Finite-dimensional inner-product rows replay exact rational Gram matrices, norm squares, fixed-vector Cauchy-Schwarz checks, orthogonal projections, and Gram-Schmidt steps while keeping Hilbert-space theorems as Lean horizons.",
+      "summary": "Finite-dimensional inner-product rows replay exact rational Gram matrices, norm squares, fixed-vector Cauchy-Schwarz checks, orthogonal projections, Gram-Schmidt steps, and exact Walsh-Hadamard transform rows while keeping Hilbert-space theorems as Lean horizons.",
       "prerequisites": [
         "curriculum_linear_algebra",
         "curriculum_rationals",
@@ -9633,6 +9639,7 @@
         "finite-dimensional linear algebra",
         "Gram matrices",
         "orthogonal projection",
+        "orthogonal transforms",
         "QF_LRA",
         "Lean horizon"
       ],
@@ -9660,6 +9667,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-dual-spaces-v0",
           "notes": "Finite covector, pairing, annihilator, and transpose rows that supply dual-space vocabulary."
+        },
+        {
+          "id": "finite-walsh-hadamard-transform-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-walsh-hadamard-transform-v0",
+          "notes": "Exact order-4 Walsh-Hadamard transform, inverse reconstruction, Parseval energy scaling, and bad transform-coefficient evidence."
         }
       ],
       "proof_routes": [
@@ -9678,7 +9691,7 @@
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "The finite pack recomputes each rational inner-product quantity first; checked Farkas evidence is used only for the small bad positivity or linear-equation conflict."
+          "notes": "The finite pack recomputes each rational inner-product quantity first; checked Farkas evidence is used only for the small bad positivity, transform-coefficient, or linear-equation conflict."
         }
       ],
       "source_refs": [
@@ -9701,9 +9714,9 @@
       "graduation": {
         "status": "validated",
         "criteria": [
-          "Rows state the finite vector space, basis, Gram matrix, and exact rational vectors.",
-          "The validator recomputes norm squares, projections, Gram-Schmidt steps, and residuals from source data.",
-          "Malformed finite positivity or projection rows link to checked QF_LRA/Farkas regressions after replay."
+          "Rows state the finite vector space, basis, Gram matrix, transform matrix, and exact rational vectors.",
+          "The validator recomputes norm squares, projections, Gram-Schmidt steps, orthogonal transforms, and residuals from source data.",
+          "Malformed finite positivity, projection, or transform-coefficient rows link to checked QF_LRA/Farkas regressions after replay."
         ]
       }
     },
@@ -11294,6 +11307,12 @@
           "notes": "Exact Finite Dual Space Checks"
         },
         {
+          "id": "finite-walsh-hadamard-transform-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-walsh-hadamard-transform-v0",
+          "notes": "Finite Walsh-Hadamard Transform Checks"
+        },
+        {
           "id": "inner-product-spaces-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/inner-product-spaces-rational-v0",
@@ -11575,7 +11594,7 @@
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU replay, rank, inverse, Jacobians, Hessians, projections, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU replay, orthogonal transforms, rank, inverse, Jacobians, Hessians, projections, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -11762,6 +11781,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-vector-spaces-v0",
           "notes": "Exact Finite Vector Space Checks"
+        },
+        {
+          "id": "finite-walsh-hadamard-transform-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-walsh-hadamard-transform-v0",
+          "notes": "Finite Walsh-Hadamard Transform Checks"
         },
         {
           "id": "incidence-geometry-v0",
@@ -12333,6 +12358,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
           "notes": "Finite Root-Finding Checks"
+        },
+        {
+          "id": "finite-walsh-hadamard-transform-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-walsh-hadamard-transform-v0",
+          "notes": "Finite Walsh-Hadamard Transform Checks"
         },
         {
           "id": "finite-wolfe-line-search-v0",
@@ -12989,6 +13020,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-topology-v0",
           "notes": "Finite Topology And Metric-Ball Checks"
+        },
+        {
+          "id": "finite-walsh-hadamard-transform-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-walsh-hadamard-transform-v0",
+          "notes": "Finite Walsh-Hadamard Transform Checks"
         },
         {
           "id": "finite-wolfe-line-search-v0",

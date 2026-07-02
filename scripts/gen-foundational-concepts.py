@@ -445,6 +445,10 @@ CURRICULUM_MAP = {
                 "finite-proximal-gradient-v0",
                 "Exact L1 soft-threshold/composite-decrease proximal-gradient replay and bad proximal-gradient rows.",
             ),
+            (
+                "finite-walsh-hadamard-transform-v0",
+                "Exact rational Walsh-Hadamard transform replay, inverse reconstruction, Parseval energy scaling, and checked bad coefficient evidence.",
+            ),
         ],
     },
     "calculus": {
@@ -503,7 +507,7 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU replay, rank, inverse, Jacobians, Hessians, projections, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU replay, orthogonal transforms, rank, inverse, Jacobians, Hessians, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization and multivariable-calculus shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
@@ -7613,7 +7617,8 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "Finite-dimensional inner-product rows replay exact rational Gram "
             "matrices, norm squares, fixed-vector Cauchy-Schwarz checks, "
-            "orthogonal projections, and Gram-Schmidt steps while keeping "
+            "orthogonal projections, Gram-Schmidt steps, and exact "
+            "Walsh-Hadamard transform rows while keeping "
             "Hilbert-space theorems as Lean horizons."
         ),
         "prerequisites": [
@@ -7633,6 +7638,7 @@ BRIDGE_CONCEPTS = [
             "finite-dimensional linear algebra",
             "Gram matrices",
             "orthogonal projection",
+            "orthogonal transforms",
             "QF_LRA",
             "Lean horizon",
         ],
@@ -7652,6 +7658,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-dual-spaces-v0",
                 "Finite covector, pairing, annihilator, and transpose rows that supply dual-space vocabulary.",
+            ),
+            (
+                "finite-walsh-hadamard-transform-v0",
+                "Exact order-4 Walsh-Hadamard transform, inverse reconstruction, Parseval energy scaling, and bad transform-coefficient evidence.",
             ),
         ],
         "proof_routes": [
@@ -7673,7 +7683,8 @@ BRIDGE_CONCEPTS = [
                 "notes": (
                     "The finite pack recomputes each rational inner-product "
                     "quantity first; checked Farkas evidence is used only for "
-                    "the small bad positivity or linear-equation conflict."
+                    "the small bad positivity, transform-coefficient, or "
+                    "linear-equation conflict."
                 ),
             }
         ],
@@ -7697,9 +7708,9 @@ BRIDGE_CONCEPTS = [
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state the finite vector space, basis, Gram matrix, and exact rational vectors.",
-                "The validator recomputes norm squares, projections, Gram-Schmidt steps, and residuals from source data.",
-                "Malformed finite positivity or projection rows link to checked QF_LRA/Farkas regressions after replay.",
+            "Rows state the finite vector space, basis, Gram matrix, transform matrix, and exact rational vectors.",
+            "The validator recomputes norm squares, projections, Gram-Schmidt steps, orthogonal transforms, and residuals from source data.",
+            "Malformed finite positivity, projection, or transform-coefficient rows link to checked QF_LRA/Farkas regressions after replay.",
             ],
         },
     },

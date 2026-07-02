@@ -14,6 +14,7 @@ Example packs:
 - [finite-vector-spaces-v0](../../../artifacts/examples/math/finite-vector-spaces-v0/)
 - [finite-dual-spaces-v0](../../../artifacts/examples/math/finite-dual-spaces-v0/)
 - [inner-product-spaces-rational-v0](../../../artifacts/examples/math/inner-product-spaces-rational-v0/)
+- [finite-walsh-hadamard-transform-v0](../../../artifacts/examples/math/finite-walsh-hadamard-transform-v0/)
 - [finite-modules-v0](../../../artifacts/examples/math/finite-modules-v0/)
 - [finite-tensor-products-v0](../../../artifacts/examples/math/finite-tensor-products-v0/)
 - [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
@@ -80,7 +81,11 @@ and an explicit QF_UF/Alethe covector-additivity row. The exact rational
 inner-product slice adds symmetric
 positive-definite Gram matrices, Cauchy-Schwarz replay for fixed vectors,
 orthogonal projection replay, Gram-Schmidt orthogonalization replay, and
-QF_LRA/Farkas rejection of an indefinite bilinear form. The finite-module
+QF_LRA/Farkas rejection of an indefinite bilinear form. The finite
+Walsh-Hadamard slice adds exact order-4 orthogonality replay, transform
+coefficients, inverse reconstruction, Parseval energy scaling, and checked
+QF_LRA/Farkas rejection of a false transform coefficient without claiming fast
+transform algorithms or numerical stability. The finite-module
 slice adds ring actions on finite additive groups,
 generated submodules, module homomorphisms, kernel/image replay, quotient-module
 tables, and checked QF_UF/Alethe non-submodule rejection. The finite-tensor-product
@@ -772,6 +777,7 @@ replay, read
 [End To End: Finite Cyclic Geometry](finite-cyclic-geometry-end-to-end.md),
 [Cyclic Geometry Theorem Boundary](cyclic-geometry-theorem-boundary.md),
 [End To End: Rational Inner Product Spaces](inner-product-spaces-end-to-end.md),
+[End To End: Finite Walsh-Hadamard Transform Checks](walsh-hadamard-transform-end-to-end.md),
 [End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md),
 [End To End: Finite Dual Spaces](finite-dual-spaces-end-to-end.md), and
 [End To End: Finite Modules](finite-modules-end-to-end.md). For finite
@@ -791,8 +797,8 @@ moments, and satisfiable finite-dimensional operator rows start as
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md).
 Infeasible rational systems, LP thresholds, bad residual and solution-box bounds, malformed
 eigenpairs, bad Rayleigh-quotient rows, bad characteristic-polynomial rows,
-bad operator-bound and bad Chebyshev-prefix rows, bad KKT stationarity and
-complementarity rows,
+bad operator-bound and bad Chebyshev-prefix rows, bad Walsh-Hadamard
+transform coefficients, bad KKT stationarity and complementarity rows,
 bad proximal residual rows, negative-norm rows, and projection-orthogonality
 examples graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
@@ -817,6 +823,7 @@ theorems, Hilbert projection/Riesz representation results, topological duals,
 module theory, universal coefficient theorem schemas, exact sequences,
 Ext/Tor laws,
 Chebyshev-system/Haar-space theorems, minimax approximation, conditioning,
+Walsh-Hadamard/Fourier transform theorems, fast transform algorithms,
 numerical stability, SDP, general convex analysis, KKT sufficiency, constraint
 qualifications, and algorithm convergence need proof routes or carefully
 bounded numerical-experiment metadata.

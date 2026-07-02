@@ -82,7 +82,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `sequences-and-limits` | sequence-limit shadow, bounded monotone sequence, finite recurrence prefix, real-analysis, generating functions | Bounded Cauchy-tail, monotone-prefix bad-bound, finite recurrence bad-value, and bad affine-step rows landed; add broader convergence-horizon rows only when reused. | Finite replay/LRA for bounded tails and recurrence prefixes; Lean horizon for general convergence and recurrence theory. | Lessons keep finite prefix evidence separate from convergence and closed-form/asymptotic theorems. |
 | `counting` | counting, permutations, actions, generating functions | Landed finite-counting replay bridge for permutation/Pascal rows, pigeonhole, double counting, coefficient extraction, finite orbit counts, and exact tail counts; add narrower asymptotic or recurrence-horizon rows only when reused. | CNF/LRAT for pigeonhole; QF_LIA/Diophantine for finite count contradictions; finite replay for enumerative witnesses. | Count rows include deterministic universe, enumeration, route artifact, and theorem-horizon boundary. |
 | `number-theory` | number theory, modular, gcd, integer LIA | Maintain the landed bounded Diophantine witness/obstruction pair and residue proof-route comparisons; add new families only when they introduce distinct BV/LIA pressure. | QF_LIA/Diophantine; QF_BV for fixed modulus; Lean horizon for deep theorems. | Each row identifies bounded search vs number-theory theorem. |
-| `linear-algebra` | rational matrices, finite vector/dual/module/tensor, spectral, invariants, separation, KKT, active-set QP, SDP, gradient descent, line search, Wolfe line search, projected gradient, proximal gradient, circle tangent/chord checks, inversion vector checks, cyclic diagonal/angle/Ptolemy checks | Landed matrix-computation bridge rows plus algebra-map rows for exact LU replay with a separate checked bad product-entry proof row, nullspace replay with checked bad component evidence, kernel/image, quotient maps, module actions, vector subspace closure, dual covector additivity, tensor bilinearity and left-additivity evidence, inner-product projection-orthogonality replay, separating-hyperplane replay, KKT stationarity/complementarity replay, finite active-face stationarity/slack replay with checked inactive-slack evidence, finite SDP slack/objective replay, finite gradient-step replay, finite Armijo/Wolfe line-search replay, finite projected-gradient interval/decrease replay, finite proximal-gradient soft-threshold/composite-decrease and box-plus-L1 replay, finite circle tangent/chord dot-product replay, finite inversion scalar-vector/determinant replay, and finite cyclic diagonal/angle/Ptolemy replay; split more dual/projection maps only when reuse demands a distinct equality shape. | QF_LRA/Farkas, finite-field replay, QF_UF/Alethe for algebraic table conflicts. | Matrix, LU product-entry, nullspace-component, dot-product, projection-orthogonality, stationarity, complementarity, active-set QP, SDP objective, descent-step, line-search, Wolfe-line-search, projected-gradient, proximal-gradient, finite circle, finite inversion, and finite cyclic rows can become solver regressions with source-pack back-links. |
+| `linear-algebra` | rational matrices, finite vector/dual/module/tensor, spectral, orthogonal transforms, invariants, separation, KKT, active-set QP, SDP, gradient descent, line search, Wolfe line search, projected gradient, proximal gradient, circle tangent/chord checks, inversion vector checks, cyclic diagonal/angle/Ptolemy checks | Landed matrix-computation bridge rows plus algebra-map rows for exact LU replay with a separate checked bad product-entry proof row, nullspace replay with checked bad component evidence, kernel/image, quotient maps, module actions, vector subspace closure, dual covector additivity, tensor bilinearity and left-additivity evidence, inner-product projection-orthogonality replay, Walsh-Hadamard transform/inverse/Parseval replay, separating-hyperplane replay, KKT stationarity/complementarity replay, finite active-face stationarity/slack replay with checked inactive-slack evidence, finite SDP slack/objective replay, finite gradient-step replay, finite Armijo/Wolfe line-search replay, finite projected-gradient interval/decrease replay, finite proximal-gradient soft-threshold/composite-decrease and box-plus-L1 replay, finite circle tangent/chord dot-product replay, finite inversion scalar-vector/determinant replay, and finite cyclic diagonal/angle/Ptolemy replay; split more dual/projection/transform maps only when reuse demands a distinct equality shape. | QF_LRA/Farkas, finite-field replay, QF_UF/Alethe for algebraic table conflicts. | Matrix, LU product-entry, nullspace-component, dot-product, projection-orthogonality, transform-coefficient, stationarity, complementarity, active-set QP, SDP objective, descent-step, line-search, Wolfe-line-search, projected-gradient, proximal-gradient, finite circle, finite inversion, and finite cyclic rows can become solver regressions with source-pack back-links. |
 | `calculus` | algebraic calculus, Riemann sums, multivariable rational calculus, finite root finding, finite active-set QP, finite line search, finite Wolfe line search, finite projected gradient, finite proximal gradient | Add derivative/integral/convergence theorem horizon rows plus exact algebraic and algorithm-step shadows. | LRA/NRA for polynomial shadows; Lean horizon for FTC, differentiability, active-set/Wolfe/line-search/projected/proximal-gradient convergence, and convergence. | Calculus packs never conflate finite symbolic or iterative replay with analytic theorem proof. |
 
 ## Field Extension Matrix
@@ -194,8 +194,8 @@ Build sequence:
    narrow and generated from `scripts/gen-foundational-concepts.py`.
 2. R1 bridge-concept rows landed for linear-algebra computation vocabulary:
    LU replay, rank/nullity replay, residual bounds, Rayleigh/eigenpair witnesses,
-   characteristic-polynomial replay with checked trace-invariant evidence, and
-   finite random-matrix moments.
+   characteristic-polynomial replay with checked trace-invariant evidence,
+   exact Walsh-Hadamard transform replay, and finite random-matrix moments.
 3. R1 bridge-concept rows landed for algebra-map vocabulary: homomorphism
    preservation, kernel/image replay, quotient maps, ideal closure, module
    actions, tensor bilinearity, and finite group actions.
@@ -209,7 +209,8 @@ Build sequence:
    bijection/cardinality, and cardinality theorem horizons. R1 bridge-concept
    rows now also land for coordinate/incidence/rigid/oriented geometry replay,
    finite circle/inversion/cyclic geometry replay, and complex real-pair
-   transform replay, plus finite inner-product/projection and finite
+   transform replay, plus finite inner-product/projection, finite orthogonal
+   transform, and finite
    operator/Chebyshev replay, keeping those field-specific finite shadows
    queryable without overstating synthetic, differential, analytic, Lebesgue,
    optimization duality, KKT, SDP, convergence, Banach, Hilbert,
@@ -564,8 +565,9 @@ Build sequence:
     [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
     `scripts/check-foundational-resources.sh`, covering the Farkas field
     summary, operator bridge lookup, and checked finite-operator,
-    inner-product positivity/projection, Chebyshev, and spectral rows without promoting
-    infinite-dimensional theorem claims.
+    inner-product positivity/projection, Chebyshev, spectral, and
+    Walsh-Hadamard transform rows without promoting infinite-dimensional theorem
+    claims.
 47. Topology field-readiness consumer queries now land in
     [CONSUMER-QUERIES.md](CONSUMER-QUERIES.md) and
     `scripts/check-foundational-resources.sh`, covering the Boolean field

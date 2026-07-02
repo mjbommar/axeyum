@@ -44,7 +44,7 @@ Concept rows:
 |---|---|---|---|
 | Linear systems, nullspaces, and LU | [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/), [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/) | Fixed `A*x = b`, `L*U = A`, exact bad LU product-entry replay, separate checked bad LU product-entry proof row, bad nullspace component rejection, singular-row inconsistency, LP objective thresholds | finite replay plus QF_LRA/Farkas |
 | Residuals and numerical shadows | [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/), [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/) | Exact residual norms, solution boxes, one Jacobi step, normal equations, residual orthogonality, RSS improvement, and bad RSS rejection | finite replay plus QF_LRA/Farkas |
-| Inner products and projections | [inner-product-spaces-rational-v0](../../../artifacts/examples/math/inner-product-spaces-rational-v0/) | Gram matrices, fixed Cauchy-Schwarz, orthogonal projection, Gram-Schmidt, bad negative norm, bad projection orthogonality | finite replay plus QF_LRA/Farkas |
+| Inner products, projections, and orthogonal transforms | [inner-product-spaces-rational-v0](../../../artifacts/examples/math/inner-product-spaces-rational-v0/), [finite-walsh-hadamard-transform-v0](../../../artifacts/examples/math/finite-walsh-hadamard-transform-v0/) | Gram matrices, fixed Cauchy-Schwarz, orthogonal projection, Gram-Schmidt, order-4 Walsh-Hadamard transform replay, inverse reconstruction, Parseval energy scaling, bad negative norm, bad projection orthogonality, and bad transform coefficient | finite replay plus QF_LRA/Farkas |
 | Kernel, image, rank, and duals | [finite-vector-spaces-v0](../../../artifacts/examples/math/finite-vector-spaces-v0/), [finite-dual-spaces-v0](../../../artifacts/examples/math/finite-dual-spaces-v0/) | Finite `F2` vector-space tables, subspaces, linear maps, kernel/image, rank-nullity, covectors, annihilators, transpose maps | finite table replay plus QF_UF/Alethe |
 | Modules and tensors | [finite-modules-v0](../../../artifacts/examples/math/finite-modules-v0/), [finite-tensor-products-v0](../../../artifacts/examples/math/finite-tensor-products-v0/) | Scalar actions, generated submodules, module homomorphisms, quotients, bilinear maps, tensor basis rows, Kronecker products | finite table replay plus QF_UF/Alethe |
 | Spectral rows | [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/), [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/) | Eigenpairs, orthogonal eigenbasis arithmetic, Rayleigh quotients, bad Rayleigh quotients, spectral reconstruction, trace, determinant, characteristic roots, Cayley-Hamilton, Gershgorin intervals, bad trace and bad characteristic-polynomial rows | finite replay plus QF_LRA/Farkas |
@@ -103,6 +103,7 @@ The torsion and universal-coefficient part is expanded in
 - [Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md)
 - [Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md)
 - [Rational Inner Product Spaces](inner-product-spaces-end-to-end.md)
+- [Finite Walsh-Hadamard Transform Checks](walsh-hadamard-transform-end-to-end.md)
 - [Finite Vector Spaces](finite-vector-spaces-end-to-end.md)
 - [Finite Dual Spaces](finite-dual-spaces-end-to-end.md)
 - [Finite Modules](finite-modules-end-to-end.md)
@@ -128,6 +129,7 @@ Run the route-level checks from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/inner-product-spaces-rational-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-walsh-hadamard-transform-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-vector-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dual-spaces-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-modules-v0

@@ -32,11 +32,11 @@ schemas, examples, and validation workflows.
   is the commit-sized build matrix for every curriculum node, math field,
   resource gate, and proof route.
 - [MATH-CURRICULUM-DETAILED-BUILD-PLAN.md](MATH-CURRICULUM-DETAILED-BUILD-PLAN.md)
-  is the current execution ledger for stabilizing the existing 111 math packs,
+  is the current execution ledger for stabilizing the existing 112 math packs,
   resolving unclassified solver-reuse rows, completing learner paths, and
   deepening proof routes field by field.
 - [LEARNER-COVERAGE-AUDIT.md](LEARNER-COVERAGE-AUDIT.md) records the current
-  learner-spine audit: all 111 non-template math packs are focused-lesson
+  learner-spine audit: all 112 non-template math packs are focused-lesson
   linked, with no path-only, index-only, or missing learner buckets.
 - [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md) is the detailed
   operating roadmap for building the curriculum-driven resource system across

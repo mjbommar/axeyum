@@ -2136,8 +2136,9 @@ python3 scripts/query-foundational-resources.py checks \
 
 For functional analysis and operator theory, query the exact-rational route to
 group finite-dimensional operator bounds, inner-product positivity,
-projection-orthogonality, Chebyshev duplicate-node grids, spectral/eigenpair,
-and Rayleigh witnesses while keeping Banach, Hilbert, compact-operator,
+projection-orthogonality, finite Walsh-Hadamard transform coefficients,
+Chebyshev duplicate-node grids, spectral/eigenpair, and Rayleigh witnesses
+while keeping Banach, Hilbert, compact-operator,
 minimax, and infinite-dimensional approximation claims in the proof-horizon
 lane:
 
@@ -2201,11 +2202,18 @@ python3 scripts/query-foundational-resources.py checks \
 To display concrete finite-operator norm/bound rows, use the checked `qf-lra-*`
 drilldowns for proof evidence and the replay-only rows for the exact computed
 values. The same section also exposes inner-product positivity/projection,
-Chebyshev, spectral, and matrix-invariant Farkas rows:
+finite Walsh-Hadamard transform, Chebyshev, spectral, and matrix-invariant
+Farkas rows:
 
 ```sh
 python3 scripts/query-foundational-resources.py checks \
   --field functional_analysis_and_operator_theory \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-walsh-hadamard-transform-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any
@@ -2496,6 +2504,7 @@ python3 scripts/query-foundational-resources.py packs --concept bridge_finite_op
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_operator_chebyshev --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0 --route Farkas --proof-status checked --text qf-lra-bad-chebyshev-t3 --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field functional_analysis_and_operator_theory --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-walsh-hadamard-transform-v0 --route Farkas --proof-status checked --require-any >/dev/null
 ```
 
 That keeps the examples on this page aligned with the committed data boundary
