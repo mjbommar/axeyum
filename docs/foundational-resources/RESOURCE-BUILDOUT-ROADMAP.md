@@ -38,6 +38,8 @@ For executable queries that begin at the curriculum-node layer, use
 [Curriculum Node Queries](CURRICULUM-NODE-QUERIES.md).
 For executable queries that begin at the proof-status/result-status trust
 boundary, use [Trust Boundary Queries](TRUST-BOUNDARY-QUERIES.md).
+For downstream row and pack display labels over the same status fields, use
+[Claim Label Matrix](CLAIM-LABEL-MATRIX.md).
 For executable queries that begin at the SMT-fragment demand layer, use
 [Fragment Demand Queries](FRAGMENT-DEMAND-QUERIES.md).
 For executable queries that begin from malformed claims and checked rejection
@@ -214,6 +216,9 @@ lookups before promoting another certificate row.
 Use [Trust Boundary Queries](TRUST-BOUNDARY-QUERIES.md) when a consumer needs
 status-first checked, replay-only, and Lean-horizon drilldowns before deciding
 what a resource can claim.
+Use [Claim Label Matrix](CLAIM-LABEL-MATRIX.md) when the same consumer needs
+allowed display labels for checked witnesses/refutations, finite replay rows,
+Lean horizons, or mixed-trust pack cards.
 Use [Rejection Case Queries](REJECTION-CASE-QUERIES.md) when a reviewer needs
 route-scoped malformed-claim rows before following cookbook tamper regressions.
 Use [Checker Tamper Matrix](CHECKER-TAMPER-MATRIX.md) when a reviewer needs the

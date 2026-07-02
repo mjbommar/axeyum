@@ -66,6 +66,8 @@ For malformed-claim and route-scoped rejection discovery, use the
 [Rejection Case Queries](REJECTION-CASE-QUERIES.md).
 For checker-tamper coverage across active proof routes, use the
 [Checker Tamper Matrix](CHECKER-TAMPER-MATRIX.md).
+For consumer-facing display labels over result and proof-status pairs, use the
+[Claim Label Matrix](CLAIM-LABEL-MATRIX.md).
 For the compact execution selector that picks one replay-heavy family per proof
 route and states when another negative row should be promoted, use the
 [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md).

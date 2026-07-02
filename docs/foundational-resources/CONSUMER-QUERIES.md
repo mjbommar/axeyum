@@ -33,6 +33,8 @@ For malformed-claim and route-scoped rejection-row queries, see
 [REJECTION-CASE-QUERIES.md](REJECTION-CASE-QUERIES.md).
 For route-specific corrupted-evidence commands and tamper gaps, see
 [CHECKER-TAMPER-MATRIX.md](CHECKER-TAMPER-MATRIX.md).
+For downstream display labels over `expected_result` plus `proof_status` pairs,
+see [CLAIM-LABEL-MATRIX.md](CLAIM-LABEL-MATRIX.md).
 For concept-plus-route matrix discovery, see
 [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md).
 For concept-plus-route probability/statistics discovery, see

@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Claim-label matrix landed.**
+  `CLAIM-LABEL-MATRIX.md` now defines the downstream display policy for
+  `expected_result` plus `proof_status` pairs, mapping checked witnesses,
+  checked refutations, finite witness replay, finite rejection replay, theorem
+  horizons, and mixed pack cards to allowed copy. It keeps checked evidence,
+  finite replay, Lean-horizon rows, solver-reuse promotion, benchmark claims,
+  and parity claims separate. The public resource summary remains 121 concept
+  rows, 75 bridge concepts, 108 packs, 688 expected checks, 322 checked rows,
+  295 replay-only rows, and 71 Lean-horizon rows.
+
 - **Checker-tamper matrix landed.**
   `CHECKER-TAMPER-MATRIX.md` now connects malformed source-row discovery to the
   route-specific corrupted-evidence commands for finite replay fixtures,

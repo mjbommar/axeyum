@@ -32,6 +32,8 @@ The focused query guide for starting from curriculum nodes is
 [CURRICULUM-NODE-QUERIES.md](CURRICULUM-NODE-QUERIES.md).
 The focused guide for status-first trust-boundary queries is
 [TRUST-BOUNDARY-QUERIES.md](TRUST-BOUNDARY-QUERIES.md).
+The focused matrix for downstream display labels over result/proof-status pairs
+is [CLAIM-LABEL-MATRIX.md](CLAIM-LABEL-MATRIX.md).
 The focused guide for SMT-fragment demand queries is
 [FRAGMENT-DEMAND-QUERIES.md](FRAGMENT-DEMAND-QUERIES.md).
 The focused guide for malformed-claim and route-scoped rejection queries is
@@ -372,6 +374,9 @@ Near-term boundary:
 - [TRUST-BOUNDARY-QUERIES.md](TRUST-BOUNDARY-QUERIES.md) is the status-first
   guide for consumers that need to separate checked evidence, replay-only rows,
   and Lean-horizon boundaries before display or promotion.
+- [CLAIM-LABEL-MATRIX.md](CLAIM-LABEL-MATRIX.md) is the display-policy guide
+  for turning `expected_result` plus `proof_status` pairs into allowed row and
+  pack labels without implying theorem, benchmark, or parity coverage.
 - [FRAGMENT-DEMAND-QUERIES.md](FRAGMENT-DEMAND-QUERIES.md) is the fragment
   demand guide for contributors mining Bool, QF_BV, QF_LIA, QF_LRA, QF_UF,
   finite replay, and Lean-horizon pressure through public JSON rows.

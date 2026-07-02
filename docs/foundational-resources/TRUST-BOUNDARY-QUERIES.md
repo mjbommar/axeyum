@@ -9,10 +9,13 @@ route-specific guides:
 - [Solver Reuse Queries](SOLVER-REUSE-QUERIES.md)
 - [Proof Upgrade Queries](PROOF-UPGRADE-QUERIES.md)
 - [Curriculum Node Queries](CURRICULUM-NODE-QUERIES.md)
+- [Claim Label Matrix](CLAIM-LABEL-MATRIX.md)
 
 Use this guide when a downstream consumer needs to decide what can be shown as
 checked evidence, what is finite replay, and what is only a theorem/proof
 horizon.
+Use the claim-label matrix when the same consumer needs exact badge or card
+wording for those statuses.
 
 ## Boundary
 

@@ -193,6 +193,12 @@ The checker-tamper matrix is
 it maps each active proof route from malformed source-row discovery to the
 focused corrupted-evidence command, and records routes that still need a tamper
 regression before they can be called tamper-covered.
+The claim-label matrix is
+[`docs/foundational-resources/CLAIM-LABEL-MATRIX.md`](docs/foundational-resources/CLAIM-LABEL-MATRIX.md);
+it maps `expected_result` plus `proof_status` pairs to allowed downstream
+display labels so consumers do not turn checked evidence, finite replay,
+Lean-horizon rows, or promoted solver-reuse packs into theorem, benchmark, or
+parity claims.
 The curriculum-node query guide is
 [`docs/foundational-resources/CURRICULUM-NODE-QUERIES.md`](docs/foundational-resources/CURRICULUM-NODE-QUERIES.md);
 it records concept, pack, field, route, checked-row, and horizon drilldowns for

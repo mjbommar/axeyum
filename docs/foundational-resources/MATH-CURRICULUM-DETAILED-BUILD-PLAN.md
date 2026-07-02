@@ -28,6 +28,9 @@ upgrades. Use
 [PROOF-ROUTE-FAMILY-SELECTION.md](PROOF-ROUTE-FAMILY-SELECTION.md) to choose the
 representative replay-heavy family per active proof route before adding another
 compact checked row.
+Use [CLAIM-LABEL-MATRIX.md](CLAIM-LABEL-MATRIX.md) when a downstream consumer
+needs display wording for checked, replay-only, Lean-horizon, or mixed-trust
+rows.
 Use [CHECKER-TAMPER-MATRIX.md](CHECKER-TAMPER-MATRIX.md) to find the
 route-specific corrupted-evidence command before calling a route tamper-covered.
 
@@ -1709,6 +1712,11 @@ Pick one row per commit unless the change is purely navigational.
      DRAT, QF_LIA/Diophantine, QF_LRA/Farkas, QF_UF/Alethe, array ROW, and
      Lean-horizon tamper boundaries so reviewers can distinguish source-row
      rejection from checker-tamper rejection.
+200. Landed: add `CLAIM-LABEL-MATRIX.md` as the consumer display-label policy
+     for result/proof-status pairs. It defines allowed labels for checked
+     witnesses, checked refutations, finite witness replay, finite rejection
+     replay, theorem horizons, and mixed-trust pack cards while keeping solver
+     reuse, benchmark, parity, and theorem claims separate.
 
 ## Validation Checklist
 
