@@ -204,3 +204,54 @@ different compiled functions, one reading memory — same function), and the
 compiled IHL trick `(p0<<2)&60` **equivalent to the spec** `zext(p0&0x0f)*4`, plus
 range properties; fuzz cross-check vs concrete C-semantics oracles. O3 scoreboard;
 O4 gates.
+
+## P — symbolic buffer indices: bounds safety at the LLVM level
+
+O handled *constant* offsets; P handles `p[i]` with a **symbolic** index — which
+unlocks the real prize: proving **memory-access bounds safety on compiled code**
+(the Heartbleed-shaped check, one level below the Rust `#[verify]` version).
+
+Measured (2026-07-01), `unsigned char get(const u8 *p, unsigned i){ return p[i]; }`
+compiles to a `getelementptr` with a *register* offset:
+
+```llvm
+%3 = zext i32 %1 to i64
+%4 = getelementptr inbounds nuw i8, ptr %0, i64 %3   ; offset is a value, not a constant
+%5 = load i8, ptr %4
+```
+
+and `p[i & 3]` inserts `%3 = and i32 %1, 3` before the `zext` — the masked
+(safe) form.
+
+**Reflection scheme (finite ite-table load, stays in QF_BV):** track each pointer
+register's offset as a **BV term** (constant `gep` → `off + K`; register `gep` →
+`off + reg`, where `reg` is lowered by the existing `zext`/`and`/… handling). A
+symbolic `load i8` over a known-size-N buffer becomes an `ite`-table select over
+the N byte symbols (`ite(off==0, b0, ite(off==1, b1, …))`) — no array theory
+needed for a fixed-size buffer — *and* the load's offset term is recorded so the
+safety property can reference it.
+
+**The bounds demo (the point):** the safety spec is *"every load offset is `< N`"*
+(the user's spec, not in the IR). Then:
+
+- `get_masked` (`p[i & 3]`, N = 4): `offset = zext(i & 3)` → **`offset < 4` Proved**
+  for all `i` — the mask makes the access provably in-bounds.
+- `get` (`p[i]`, unguarded, N = 4): `offset = zext(i)` → **`offset < 4` Disproved**,
+  with a concrete out-of-bounds `i ≥ 4` countermodel — the Heartbleed-shaped bug on
+  real compiled code.
+
+**Honest scope:** finite fixed-size buffer (the ite-table is `O(N)`); still
+read-only `i8`, no stores, no bounds *model* beyond the verifier-supplied N; a
+genuinely unbounded/symbolic-size buffer is the array-theory route
+(`Sort::Array`, `select`, `eliminate_arrays` — all present in the solver) and is
+the deferred next step. Fixtures committed (CI-robust).
+
+**P plan:** P2 the symbolic-index reflector (offset-term tracking + ite-table
+load) + the in-bounds proof / OOB-witness pair + value fuzz cross-check; P3
+scoreboard; P4 gates.
+
+## P — symbolic indices + bounds safety (discharge `inbounds`, don't trust it)
+
+O handled constant offsets. Real parsers also index with *data*:
+`p[i]` compiles (measured 2026-07-01) to `zext i32 %i to i64` →
+`getelementptr inbounds n
