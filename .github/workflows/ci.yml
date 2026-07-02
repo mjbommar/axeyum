@@ -33,7 +33,17 @@ jobs:
   test:
     name: test (stable)
     runs-on: ubuntu-latest
+    env:
+      # ~175 test binaries + a from-source z3 (`--all-features`) overflow the
+      # 14 GB runner disk with debuginfo on ("No space left on device", and
+      # lld dying with SIGBUS mid-link). Tests don't need debuginfo in CI.
+      CARGO_PROFILE_DEV_DEBUG: 0
+      CARGO_PROFILE_TEST_DEBUG: 0
     steps:
+      - name: free runner disk (preinstalled toolsets we never use)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc                       /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h /
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
