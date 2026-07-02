@@ -1403,8 +1403,9 @@ impl TermArena {
     /// sort (a nested sequence or array element is deferred, exactly as nested
     /// arrays are).
     pub fn seq_unit(&mut self, x: TermId) -> Result<TermId, IrError> {
-        let element = ArraySortKey::from_sort(self.sort_of(x))
-            .ok_or(IrError::Unsupported("seq.unit over a nested sequence/array element"))?;
+        let element = ArraySortKey::from_sort(self.sort_of(x)).ok_or(IrError::Unsupported(
+            "seq.unit over a nested sequence/array element",
+        ))?;
         Ok(self.app(Op::SeqUnit, &[x], Sort::Seq(element)))
     }
 

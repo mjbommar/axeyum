@@ -311,7 +311,7 @@ pub enum Op {
     },
     // --- sequences (ADR-0051, P2.7) ----------------------------------------
     /// `str.len`: the length of a sequence, as an `Int`. The single argument is
-    /// any [`Sort::Seq`]; the result is [`Sort::Int`] (the shared `len` term that
+    /// any `Sort::Seq`; the result is `Sort::Int` (the shared `len` term that
     /// bridges the sequence theory and LIA, Nelson–Oppen-style).
     SeqLen,
     /// `seq.empty`: the empty sequence of element key `element` (a nullary

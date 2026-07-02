@@ -314,7 +314,11 @@ fn run_core(
                         let mut bytes = x.to_be_bytes();
                         // Most-significant *kept* byte sits at index 32 - keep.
                         let sign_idx = 32 - keep;
-                        let fill = if bytes[sign_idx] & 0x80 != 0 { 0xff } else { 0x00 };
+                        let fill = if bytes[sign_idx] & 0x80 != 0 {
+                            0xff
+                        } else {
+                            0x00
+                        };
                         for byte in bytes.iter_mut().take(sign_idx) {
                             *byte = fill;
                         }
@@ -595,7 +599,8 @@ fn run_core(
                 // Capped against adversarial lengths; the modeled domain (the only
                 // place a witness is replayed) is well within the cap.
                 let (dest, off, len) = (pop!(), pop!(), pop!());
-                if let (Some(d), Some(o), Some(l)) = (dest.to_usize(), off.to_usize(), len.to_usize())
+                if let (Some(d), Some(o), Some(l)) =
+                    (dest.to_usize(), off.to_usize(), len.to_usize())
                 {
                     for i in 0..l.min(COPY_CAP_BYTES) {
                         let b = env.calldata.get(o + i).copied().unwrap_or(0);
@@ -606,7 +611,8 @@ fn run_core(
             Op::CodeCopy => {
                 // Copy code[offset..offset+length] (zero-padded) into memory.
                 let (dest, off, len) = (pop!(), pop!(), pop!());
-                if let (Some(d), Some(o), Some(l)) = (dest.to_usize(), off.to_usize(), len.to_usize())
+                if let (Some(d), Some(o), Some(l)) =
+                    (dest.to_usize(), off.to_usize(), len.to_usize())
                 {
                     for i in 0..l.min(COPY_CAP_BYTES) {
                         let b = program.code.get(o + i).copied().unwrap_or(0);

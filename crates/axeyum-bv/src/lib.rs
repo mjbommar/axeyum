@@ -815,8 +815,7 @@ impl<'a> LoweringBuilder<'a> {
         op: Op,
         operands: &[Vec<AigLit>],
     ) -> Result<Vec<AigLit>, BitLowerError> {
-        let bits =
-            match op {
+        let bits = match op {
                 Op::BoolNot => vec![expect_bool(term, &operands[0])?.negated()],
                 Op::BoolAnd => vec![self.aig.and(
                     expect_bool(term, &operands[0])?,

@@ -21,7 +21,10 @@ fn unwrap_or_takes_value_in_range(x: u8) -> u8 {
 fn unwrap_or_takes_value_in_range_verifies() {
     match unwrap_or_takes_value_in_range__axeyum_verdict() {
         Verdict::Verified { certified, .. } => {
-            assert!(certified, "unwrap_or_takes_value_in_range proof must re-check");
+            assert!(
+                certified,
+                "unwrap_or_takes_value_in_range proof must re-check"
+            );
         }
         other => panic!("unwrap_or_takes_value_in_range must verify, got {other:?}"),
     }

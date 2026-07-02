@@ -50,11 +50,11 @@ jobs:
       - run: cargo run -p axeyum-bench --features z3 -- corpus/micro --backend z3 --timeout-ms 1000 --out /tmp/axeyum-bench-micro-z3.json
 
   msrv:
-    name: check (MSRV 1.85, default features)
+    name: check (MSRV 1.88, default features)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: dtolnay/rust-toolchain@1.88.0
       - uses: Swatinem/rust-cache@v2
       # The MSRV promise covers the default (pure Rust) build — the product
       # per ADR-0002. Optional native-oracle features track stable Rust.

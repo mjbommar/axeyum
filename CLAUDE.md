@@ -83,8 +83,8 @@ cargo deny check                                  # needs cargo-deny installed
 cargo build --target wasm32-unknown-unknown -p axeyum-solver
 ```
 
-Local default toolchain may be nightly; CI runs stable plus an MSRV (1.85)
-check. Edition 2024, resolver 3.
+Local default toolchain may be nightly; CI runs stable plus an MSRV (1.88 —
+let-chains are used workspace-wide) check. Edition 2024, resolver 3.
 
 ## Layout
 

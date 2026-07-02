@@ -56,7 +56,10 @@ fn saturating_does_not_decrease(x: u8) -> u8 {
 fn saturating_does_not_decrease_verifies() {
     match saturating_does_not_decrease__axeyum_verdict() {
         Verdict::Verified { certified, .. } => {
-            assert!(certified, "saturating_does_not_decrease proof must re-check");
+            assert!(
+                certified,
+                "saturating_does_not_decrease proof must re-check"
+            );
         }
         other => panic!("saturating_does_not_decrease must verify, got {other:?}"),
     }

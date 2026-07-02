@@ -2647,10 +2647,14 @@ mod tests {
             "bounded run overran its budget: {elapsed:?} for a {budget:?} budget"
         );
 
-        // Generous budget on the same instance still decides it (pigeonhole UNSAT).
+        // Generous budget on the same instance still decides it (pigeonhole
+        // UNSAT). The solve takes ~50 s on a fast dev box, so 60 s flaked on
+        // slower CI runners (deadline hit mid-solve → "boolean skeleton
+        // undecided" Unknown); the budget is generous relative to the
+        // *slowest* environment, not the fastest.
         let mut arena2 = TermArena::new();
         let assertions2 = build_heavy_qf_uf(&mut arena2);
-        let generous = SolverConfig::default().with_timeout(Duration::from_secs(60));
+        let generous = SolverConfig::default().with_timeout(Duration::from_secs(600));
         assert_eq!(
             check_qf_uf_with_config(&mut arena2, &assertions2, &generous),
             CheckResult::Unsat,

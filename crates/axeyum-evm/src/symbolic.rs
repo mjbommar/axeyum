@@ -738,11 +738,12 @@ fn run_from(
                 let b = pop_or_unknown!();
                 let x = pop_or_unknown!();
                 // Sign-extend x keeping `(bb+1)` low bytes, for a constant bb < 31.
-                let sext_keeping = |arena: &mut TermArena, bb: u32| -> Result<TermId, SolverError> {
-                    let keep = (bb + 1) * 8;
-                    let low = arena.extract(keep - 1, 0, x)?;
-                    Ok(arena.sign_ext(W - keep, low)?)
-                };
+                let sext_keeping =
+                    |arena: &mut TermArena, bb: u32| -> Result<TermId, SolverError> {
+                        let keep = (bb + 1) * 8;
+                        let low = arena.extract(keep - 1, 0, x)?;
+                        Ok(arena.sign_ext(W - keep, low)?)
+                    };
                 if let Some(bb) = concrete_usize(arena, b) {
                     let result = if bb >= 31 {
                         x // `bb < 31`, so the cast below is exact.
@@ -1080,9 +1081,7 @@ fn run_from(
                 let ro = ret_off.and_then(|t| concrete_usize(arena, t));
                 match (rl, ro) {
                     (Some(0), _) => {} // no return data — fully modeled
-                    (Some(len), Some(off))
-                        if len % 32 == 0 && len / 32 <= MAX_RETURN_WORDS =>
-                    {
+                    (Some(len), Some(off)) if len % 32 == 0 && len / 32 <= MAX_RETURN_WORDS => {
                         for k in 0..(len / 32) {
                             let (val, vsym) = env.fresh_env(arena)?;
                             state.env_syms.push(vsym);
@@ -1122,9 +1121,7 @@ fn run_from(
                 let l = concrete_usize(arena, len);
                 match (d, o, l) {
                     (_, _, Some(0)) => {} // nothing to copy
-                    (Some(d), Some(o), Some(l))
-                        if l % 32 == 0 && l / 32 <= MAX_COPY_WORDS =>
-                    {
+                    (Some(d), Some(o), Some(l)) if l % 32 == 0 && l / 32 <= MAX_COPY_WORDS => {
                         for k in 0..(l / 32) {
                             let word = calldata_word(arena, env, state.tx, o + 32 * k)?;
                             let at = d + 32 * k;
@@ -1151,9 +1148,7 @@ fn run_from(
                 let l = concrete_usize(arena, len);
                 match (d, o, l) {
                     (_, _, Some(0)) => {}
-                    (Some(d), Some(o), Some(l))
-                        if l % 32 == 0 && l / 32 <= MAX_COPY_WORDS =>
-                    {
+                    (Some(d), Some(o), Some(l)) if l % 32 == 0 && l / 32 <= MAX_COPY_WORDS => {
                         for k in 0..(l / 32) {
                             let mut bytes = [0u8; 32];
                             for (i, b) in bytes.iter_mut().enumerate() {

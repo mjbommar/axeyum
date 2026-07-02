@@ -616,9 +616,7 @@ impl Lowerer {
                     // Coerce an untyped int literal RHS to the target's type, as
                     // the let-init and compound-assignment paths do.
                     let (val, _ty) = if is_untyped_int_lit(&assign.right) {
-                        if let (Some(lty), Expr::Lit(el)) =
-                            (self.lookup(&name), &*assign.right)
-                        {
+                        if let (Some(lty), Expr::Lit(el)) = (self.lookup(&name), &*assign.right) {
                             if lty.width.is_some() {
                                 lower_lit_as(&el.lit, lty, el.span())?
                             } else {
@@ -955,11 +953,7 @@ impl Lowerer {
             let mut body = Vec::new();
             match &*arm.body {
                 Expr::Block(b) => body = self.lower_block(&b.block)?,
-                other => self.lower_stmt(
-                    &Stmt::Expr(other.clone(), None),
-                    false,
-                    &mut body,
-                )?,
+                other => self.lower_stmt(&Stmt::Expr(other.clone(), None), false, &mut body)?,
             }
             self.pop_scope();
             match &arm.pat {
@@ -1088,9 +1082,8 @@ impl Lowerer {
                 "axeyum::verify: `match` on `checked_*` must have exactly `Some(x)` and `None` arms",
             ));
         }
-        let path_is = |p: &syn::Path, name: &str| {
-            p.segments.last().is_some_and(|s| s.ident == name)
-        };
+        let path_is =
+            |p: &syn::Path, name: &str| p.segments.last().is_some_and(|s| s.ident == name);
         let mut some_arm: Option<(String, &syn::Arm)> = None;
         let mut none_arm: Option<&syn::Arm> = None;
         for arm in &em.arms {
@@ -1127,9 +1120,8 @@ impl Lowerer {
                 }
             }
         }
-        let (bind, some_a) = some_arm.ok_or_else(|| {
-            syn::Error::new(em.span(), "axeyum::verify: missing `Some(x)` arm")
-        })?;
+        let (bind, some_a) = some_arm
+            .ok_or_else(|| syn::Error::new(em.span(), "axeyum::verify: missing `Some(x)` arm"))?;
         let none_a = none_arm
             .ok_or_else(|| syn::Error::new(em.span(), "axeyum::verify: missing `None` arm"))?;
 

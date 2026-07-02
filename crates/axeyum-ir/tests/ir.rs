@@ -80,10 +80,10 @@ fn string_sort_is_declarable_and_displays(/* P2.7 A.1a / ADR-0051 */) {
     let s = a.declare("str", Sort::string()).unwrap();
     let t = a.var(s);
     assert_eq!(a.sort_of(t), Sort::string());
-    // Copy semantics preserved (a plain assignment, not a move).
+    // Copy semantics preserved (`s2` stays usable after the assignment).
     let s2 = Sort::string();
-    let _copy = s2;
-    assert_eq!(s2, Sort::string());
+    let copied = s2;
+    assert_eq!(copied, s2);
 }
 
 #[test]
@@ -128,9 +128,9 @@ fn seq_concat_of_mismatched_sorts_errors(/* P2.7 A.1b */) {
     ));
     // Two sequences with different element sorts differ.
     let c8b = a.bv_const(8, 2).unwrap();
-    let seq8 = a.seq_unit(c8b).unwrap();
+    let seq_of_bytes = a.seq_unit(c8b).unwrap();
     assert!(matches!(
-        a.seq_concat(seq18, seq8),
+        a.seq_concat(seq18, seq_of_bytes),
         Err(IrError::SortsDiffer(_, _))
     ));
 }

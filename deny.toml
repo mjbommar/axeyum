@@ -29,6 +29,9 @@ confidence-threshold = 0.8
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# Workspace path dependencies carry no version and are reported as wildcards by
+# newer cargo-deny releases; they are not registry wildcards — allow them.
+allow-wildcard-paths = true
 
 [sources]
 unknown-registry = "deny"

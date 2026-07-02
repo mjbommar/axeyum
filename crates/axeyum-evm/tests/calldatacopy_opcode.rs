@@ -41,7 +41,18 @@ fn revert_gated_on_copied_calldata_is_found() {
 fn calldatacopy_safe_contract_is_no_longer_unknown() {
     // calldatacopy(0,0,32); pop-free no-op; stop — uses CALLDATACOPY, no bug.
     let bytecode = [
-        PUSH1, 0x20, PUSH1, 0x00, PUSH1, 0x00, CALLDATACOPY, PUSH1, 0x00, MLOAD, POP, STOP,
+        PUSH1,
+        0x20,
+        PUSH1,
+        0x00,
+        PUSH1,
+        0x00,
+        CALLDATACOPY,
+        PUSH1,
+        0x00,
+        MLOAD,
+        POP,
+        STOP,
     ];
     let report = analyze(&bytecode, &AnalyzeConfig::default());
     assert!(!report.has_findings());

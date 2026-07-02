@@ -178,10 +178,7 @@ impl Lowerer<'_> {
                 }
                 .map_err(|e| ir(&e))?;
                 // The result is a bool (whether the op overflows).
-                Ok(SymVal {
-                    term,
-                    ty: Ty::Bool,
-                })
+                Ok(SymVal { term, ty: Ty::Bool })
             }
             Expr::Rotate { left, by, operand } => {
                 let v = self.lower_expr(operand)?;
@@ -443,12 +440,7 @@ impl Lowerer<'_> {
     /// panic class is recorded — saturating ops never panic. The overflow
     /// predicates (`bv_*addo`/`*subo`/`*mulo`) are the same ones the checked ops
     /// use, so this is exact w.r.t. Rust's `saturating_*` semantics.
-    fn lower_saturating(
-        &mut self,
-        op: BinOp,
-        a: SymVal,
-        b: SymVal,
-    ) -> Result<TermId, LowerError> {
+    fn lower_saturating(&mut self, op: BinOp, a: SymVal, b: SymVal) -> Result<TermId, LowerError> {
         let width =
             a.ty.width()
                 .ok_or_else(|| LowerError::TypeError("saturating op on a bool".into()))?;

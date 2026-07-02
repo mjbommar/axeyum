@@ -298,8 +298,9 @@ fn reachable_panic_in_dispatch_arm_is_never_verified() {
             }
             (k, op, a, b)
         };
-        let arms: Vec<(u128, BinOp, u128, u128)> =
-            (0..n_arms).map(|i| mk_arm(&mut rng, i as u128 + 1)).collect();
+        let arms: Vec<(u128, BinOp, u128, u128)> = (0..n_arms)
+            .map(|i| mk_arm(&mut rng, i as u128 + 1))
+            .collect();
         let wild = {
             let (_, op, a, b) = mk_arm(&mut rng, 0);
             (op, a, b)
@@ -385,10 +386,7 @@ fn wrapping_value_matches_concrete_modular_result() {
                 Stmt::Assert(Expr::Binary {
                     op: BinOp::Ne,
                     lhs: Box::new(Expr::Var("c".to_string())),
-                    rhs: Box::new(Expr::IntLit {
-                        value: expect,
-                        ty,
-                    }),
+                    rhs: Box::new(Expr::IntLit { value: expect, ty }),
                 }),
             ],
         };
@@ -626,7 +624,10 @@ fn abs_desugar_min_overflow_and_value() {
             width: w,
             signed: true,
         };
-        let a_expr = Expr::IntLit { value: bits(a, w), ty };
+        let a_expr = Expr::IntLit {
+            value: bits(a, w),
+            ty,
+        };
         // ite(a < 0, -a, a)
         let abs_expr = Expr::Ite {
             cond: Box::new(Expr::Binary {
