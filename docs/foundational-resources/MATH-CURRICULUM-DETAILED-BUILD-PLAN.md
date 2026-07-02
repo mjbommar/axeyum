@@ -2121,6 +2121,15 @@ Pick one row per commit unless the change is purely navigational.
      average-case, heuristic, and parallel-search layers, and adds
      runtime-specific checked-row and horizon-frontier queries to the public
      smoke gate without adding a duplicate pack.
+251. Landed: add `cardinality-theorem-boundary.md` as the focused
+     finite/infinite-cardinality theorem-boundary page for
+     `finite-cardinality-v0` and `cardinality-principles-v0`. It maps
+     checked finite function/count replay, Boolean/CNF no-injection evidence,
+     and QF_LIA/Diophantine overlap-additivity evidence to the missing
+     Cantor diagonalization, Cantor-Schroeder-Bernstein, countability, choice,
+     and infinite cardinal-arithmetic layers, and adds cardinality-specific
+     checked-row, route-specific, and horizon-frontier queries to the public
+     smoke gate without promoting finite rows into theorem claims.
 
 ## Validation Checklist
 

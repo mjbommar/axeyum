@@ -589,7 +589,11 @@ Lean-horizon. `cardinality-principles-v0` now validates finite
 inclusion-exclusion, disjoint-union additivity, bipartite-edge double
 counting, powerset cardinality, checked false disjoint-additivity rejection,
 a source-linked QF_LIA/Diophantine overlap-additivity count contradiction, and
-an arbitrary-cardinality Lean-horizon row. `induction-obligations-v0` now
+an arbitrary-cardinality Lean-horizon row. The focused
+`cardinality-theorem-boundary.md` learner page now maps those finite rows to
+the missing Cantor diagonalization, Cantor-Schroeder-Bernstein, countability,
+choice, and infinite cardinal-arithmetic theorem layers without promoting the
+finite checks into theorem claims. `induction-obligations-v0` now
 validates exact prefix-sum base-case replay, bounded step-obligation
 enumeration with a source-linked checked QF_LIA arithmetic bad-step count
 regression, bounded conclusion checking, a bad-step counterexample witness,
@@ -1608,7 +1612,8 @@ full-schema Lean-horizon examples.
 finite inclusion-exclusion, disjoint-union additivity, bipartite-edge double
 counting, powerset enumeration, invalid additivity counterexamples, a checked
 QF_LIA/Diophantine overlap-additivity count obstruction, and
-infinite-cardinality Lean-horizon examples.
+infinite-cardinality Lean-horizon examples; `cardinality-theorem-boundary.md`
+now gives those rows a focused finite/infinite-cardinality trust map.
 `calculus-riemann-sum-v0` now deepens the calculus curriculum row with exact
 finite Riemann sums, midpoint/trapezoid replay, antiderivative endpoint
 replay, monotone lower/upper sums, false integral counterexamples, and

@@ -73,6 +73,7 @@ for finite counting and bounded arithmetic obligations.
 | Bounded induction and arithmetic obligations | `bridge_bounded_induction_obligation` | `LIA` | `checks --concept bridge_bounded_induction_obligation --route LIA --proof-status checked` |
 | Finite predicate and quantifier expansion | `bridge_finite_quantifier_expansion` | `Alethe` | `checks --concept bridge_finite_quantifier_expansion --route Alethe --proof-status checked` |
 | Finite bijection, cardinality, powerset, and inclusion-exclusion rows | `bridge_finite_bijection_cardinality` | any checked route | `checks --concept bridge_finite_bijection_cardinality --proof-status checked` |
+| Cardinality theorem boundary | packs `finite-cardinality-v0`, `cardinality-principles-v0` | `lean-horizon` | `horizon-frontier --text Cantor`; `checks --pack finite-cardinality-v0 --proof-status lean-horizon`; `checks --pack cardinality-principles-v0 --proof-status lean-horizon` |
 | Finite Boolean algebra rows | `bridge_finite_boolean_algebra` | `boolean` | `checks --concept bridge_finite_boolean_algebra --route boolean --proof-status checked` |
 | Finite order and lattice rows | pack `finite-order-lattices-v0` | `Alethe`; `boolean` | `checks --pack finite-order-lattices-v0 --route Alethe --proof-status checked --text antisymmetry`; `checks --pack finite-order-lattices-v0 --route boolean --proof-status checked --text top` |
 | Finite counting, pigeonhole, binomial, and generating-function rows | `bridge_finite_counting_replay` | `Diophantine`; `boolean` | `checks --concept bridge_finite_counting_replay --route Diophantine --proof-status checked`; `checks --concept bridge_finite_counting_replay --route boolean --proof-status checked` |
@@ -148,7 +149,46 @@ python3 scripts/query-foundational-resources.py checks \
   --concept bridge_finite_bijection_cardinality \
   --proof-status checked \
   --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-cardinality-v0 \
+  --route boolean \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack cardinality-principles-v0 \
+  --route Diophantine \
+  --proof-status checked \
+  --require-any
 ```
+
+Display the finite/infinite cardinality theorem boundary:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text Cantor \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-cardinality-v0 \
+  --expected-result not-run \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack cardinality-principles-v0 \
+  --expected-result not-run \
+  --proof-status lean-horizon \
+  --require-any
+```
+
+Use
+[Cardinality Theorem Boundary](../learn/math/cardinality-theorem-boundary.md)
+when a consumer needs display wording that keeps finite function-graph replay,
+finite count replay, Boolean/CNF evidence, and QF_LIA/Diophantine evidence
+separate from Cantor diagonalization, Cantor-Schroeder-Bernstein, countability,
+choice, and infinite cardinal arithmetic.
 
 Display finite Boolean-algebra rows:
 

@@ -567,6 +567,10 @@ Companion maps:
   inclusion-exclusion, disjoint-union additivity, double-counting, powerset
   cardinality, an overlapping-set counterexample to false additivity, and a
   checked QF_LIA/Diophantine overlap-additivity contradiction.
+- [Cardinality Theorem Boundary](cardinality-theorem-boundary.md): maps finite
+  bijection/function-space checks and finite cardinality-principle replay to
+  the missing Cantor, Schroeder-Bernstein, countability, choice, and infinite
+  cardinal-arithmetic theorem layers.
 - [Finite Rings](finite-rings-end-to-end.md): follows `Z/4Z` ring-table replay,
   zero-divisor witness replay, and checked non-distributive-table rejection.
 - [Finite Fields](finite-fields-end-to-end.md): follows `F_7` inverse-table

@@ -63,7 +63,10 @@ finite injection and surjection refutations, and an infinite-cardinality
 Lean-horizon row. The cardinality-principles pack checks inclusion-exclusion,
 disjoint-union additivity, double counting, powerset cardinality, invalid
 additivity counterexamples, and a checked QF_LIA/Diophantine overlap-additivity
-count contradiction. The
+count contradiction. The focused
+[Cardinality Theorem Boundary](cardinality-theorem-boundary.md) keeps those
+finite rows separate from Cantor diagonalization, Cantor-Schroeder-Bernstein,
+countability, choice, and infinite cardinal arithmetic. The
 topology pack checks empty/universe membership, closure under finite unions and
 intersections, closure/interior computation, and finite metric balls. The
 finite-quotient-topology pack checks quotient-map fibers, same-fiber
@@ -416,6 +419,7 @@ and measure replay, read
 [End To End: Finite Order Lattices](finite-order-lattices-end-to-end.md),
 [End To End: Finite Cardinality](finite-cardinality-end-to-end.md),
 [End To End: Cardinality Principles](cardinality-principles-end-to-end.md),
+[Cardinality Theorem Boundary](cardinality-theorem-boundary.md),
 [End To End: Finite Algebra Homomorphisms](finite-algebra-homomorphisms-end-to-end.md),
 [End To End: Finite Quotient Topology](finite-quotient-topology-end-to-end.md),
 [End To End: Finite Specialization Order](finite-specialization-order-end-to-end.md),
@@ -449,7 +453,8 @@ certificate-anatomy page now shows the shared QF_UF proof-object boundary for
 quotient-map congruence and tamper rejection. The next finite-structure gaps
 are narrower EUF/Alethe anatomy for secondary algebra/topology packs and Lean
 artifacts for infinite theorems. ZFC, ordinals, choice,
-infinite cardinality, general monoid, permutation-group, and group-action theorems,
+infinite cardinality, Cantor-style cardinality theorems, general monoid,
+permutation-group, and group-action theorems,
 complete-lattice fixed-point theorems, arbitrary
 topological spaces, general compactness, general connectedness,
 continuous-image/homeomorphism theorems, homology invariance, exact sequences,

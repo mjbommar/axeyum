@@ -164,7 +164,8 @@ it records route, pack, field, and text queries for `lean-horizon` rows so
 consumers can find theorem boundaries without treating them as checked SMT
 evidence; the public query script also exposes
 `horizon-frontier` for theorem-boundary rows with finite-shadow contrast,
-including finite random-variable, recurrence/asymptotic, stochastic-kernel, and
+including finite/infinite cardinality, finite random-variable,
+recurrence/asymptotic, stochastic-kernel, and
 martingale/stopping theory, root-finding convergence/stability, and
 hyperplane-separation/duality, KKT sufficiency, active-set method theory, and
 SDP duality/Slater-condition theory, and gradient-descent convergence/rate

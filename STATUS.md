@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Cardinality theorem-boundary resource landed.**
+  `cardinality-theorem-boundary.md` now separates
+  `finite-cardinality-v0` and `cardinality-principles-v0` checked finite
+  function/count replay, Boolean/CNF no-injection evidence, and
+  QF_LIA/Diophantine overlap-additivity evidence from Cantor
+  diagonalization, Cantor-Schroeder-Bernstein, countability, choice, and
+  infinite cardinal-arithmetic claims. The foundations/discrete query guide,
+  theorem-horizon guide, learner map, and smoke query docs now expose the
+  cardinality boundary through checked-row, route-specific, and
+  horizon-frontier queries.
+
 - **Graph-search runtime theorem-boundary resource landed.**
   `graph-search-runtime-theorem-boundary.md` now separates
   `graph-search-runtime-v0` checked finite BFS/DFS visited-counter replay,

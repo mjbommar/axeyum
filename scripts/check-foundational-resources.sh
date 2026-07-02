@@ -179,6 +179,14 @@ python3 scripts/query-foundational-resources.py concepts --field set_theory_and_
 python3 scripts/query-foundational-resources.py checks --field set_theory_and_foundations --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_quantifier_expansion --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_bijection_cardinality --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-cardinality-v0 --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack cardinality-principles-v0 --route Diophantine --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text Cantor --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-cardinality-v0 --proof-status lean-horizon --expected-result not-run --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack cardinality-principles-v0 --proof-status lean-horizon --expected-result not-run --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-cardinality-v0 --proof-status checked --text injection --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack cardinality-principles-v0 --proof-status checked --text powerset --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack cardinality-principles-v0 --proof-status checked --text overlap --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_boolean_algebra --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-order-lattices-v0 --route Alethe --proof-status checked --text antisymmetry --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-permutation-groups-v0 --route Alethe --proof-status checked --text injectivity --require-any >/dev/null
