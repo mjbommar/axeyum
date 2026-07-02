@@ -57,6 +57,7 @@ python3 scripts/query-foundational-resources.py concepts --field logic_and_proof
 python3 scripts/query-foundational-resources.py checks --field logic_and_proof --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_boolean_cnf_lrat_anatomy --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_refutation_query --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_countermodel_replay --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_proof_pattern --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_bounded_induction_obligation --route LIA --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field set_theory_and_foundations --route Alethe --require-any >/dev/null

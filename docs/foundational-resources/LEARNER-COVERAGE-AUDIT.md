@@ -29,7 +29,7 @@ python3 scripts/query-foundational-resources.py summary
 
 Current summary:
 
-- 120 concept rows.
+- 121 concept rows.
 - 108 non-template math packs.
 - 688 expected checks.
 - 322 checked proof/evidence rows.

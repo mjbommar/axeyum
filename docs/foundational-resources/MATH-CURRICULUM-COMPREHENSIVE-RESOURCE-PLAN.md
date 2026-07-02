@@ -45,7 +45,7 @@ with prose, fix the JSON, metadata, generator, or prose source.
 
 As of 2026-07-02, the public resource query reports:
 
-- 120 concept rows: 23 curriculum nodes, 18 math fields, 74 bridge concepts, and
+- 121 concept rows: 23 curriculum nodes, 18 math fields, 75 bridge concepts, and
   5 example families.
 - 108 non-template math packs.
 - 688 expected checks: 336 `sat`, 281 `unsat`, and 71 `not-run`.

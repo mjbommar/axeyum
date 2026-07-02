@@ -44,7 +44,7 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 74 bridge-concept rows.
+- 75 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
 - 688 expected checks.
@@ -1647,6 +1647,15 @@ Pick one row per commit unless the change is purely navigational.
      `math_resource_lra_routes` regressions. The public query surface now
      reports 688 checks, 322 checked rows, 295 replay-only rows, and row-scoped
      Farkas lookup returns explicit finite-separation proof rows.
+190. Landed: add `bridge_finite_countermodel_replay` as a validated R1 bridge
+     concept for predicate/proof/foundations resources. It groups
+     `finite-predicate-v0`, `logic-basics-v0`,
+     `proof-methods-patterns-v0`, `relations-functions-v0`, and
+     `finite-order-lattices-v0` under explicit finite countermodel replay and
+     bounded no-countermodel certificate routes. The public query surface now
+     reports 121 concept rows, 75 bridge concepts, 108 packs, and the
+     concept-scoped countermodel query returns checked rows without changing
+     pack/check totals.
 
 ## Validation Checklist
 

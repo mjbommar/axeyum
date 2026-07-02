@@ -13,14 +13,14 @@ Which checked finite proof, set, counting, or discrete rows match this proof rou
 ```
 
 The current surface is finite and route-explicit: Boolean truth-table and
-CNF/LRAT-style refutation rows, finite proof-pattern replay, bounded induction
-obligations, finite predicate/quantifier expansion, finite set identities,
-cardinality and bijection replay, Boolean-algebra rows, finite counting and
-pigeonhole rows, partition/equivalence-class roundtrips, and finite
-relation/function/image/preimage tables. Full proof automation, ZFC, ordinals,
-choice, infinite cardinal arithmetic, unbounded induction, asymptotic
-enumeration, and broad combinatorial theorem families remain in the
-proof-horizon lane.
+CNF/LRAT-style refutation rows, finite countermodel replay, finite
+proof-pattern replay, bounded induction obligations, finite
+predicate/quantifier expansion, finite set identities, cardinality and
+bijection replay, Boolean-algebra rows, finite counting and pigeonhole rows,
+partition/equivalence-class roundtrips, and finite relation/function/image/
+preimage tables. Full proof automation, ZFC, ordinals, choice, infinite
+cardinal arithmetic, unbounded induction, asymptotic enumeration, and broad
+combinatorial theorem families remain in the proof-horizon lane.
 
 ## Query Shape
 
@@ -68,6 +68,7 @@ for finite counting and bounded arithmetic obligations.
 |---|---|---|---|
 | Boolean proof, CNF, and LRAT-anatomy rows | `bridge_boolean_cnf_lrat_anatomy` | `boolean` | `checks --concept bridge_boolean_cnf_lrat_anatomy --route boolean --proof-status checked` |
 | Refutation-as-query examples | `bridge_refutation_query` | `boolean` | `checks --concept bridge_refutation_query --route boolean --proof-status checked` |
+| Finite countermodel replay | `bridge_finite_countermodel_replay` | any checked route | `checks --concept bridge_finite_countermodel_replay --proof-status checked` |
 | Finite proof-pattern replay | `bridge_finite_proof_pattern` | any checked route | `checks --concept bridge_finite_proof_pattern --proof-status checked` |
 | Bounded induction and arithmetic obligations | `bridge_bounded_induction_obligation` | `LIA` | `checks --concept bridge_bounded_induction_obligation --route LIA --proof-status checked` |
 | Finite predicate and quantifier expansion | `bridge_finite_quantifier_expansion` | `Alethe` | `checks --concept bridge_finite_quantifier_expansion --route Alethe --proof-status checked` |
@@ -92,6 +93,15 @@ python3 scripts/query-foundational-resources.py checks \
 python3 scripts/query-foundational-resources.py checks \
   --concept bridge_refutation_query \
   --route boolean \
+  --proof-status checked \
+  --require-any
+```
+
+Display finite countermodel rows:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_countermodel_replay \
   --proof-status checked \
   --require-any
 ```

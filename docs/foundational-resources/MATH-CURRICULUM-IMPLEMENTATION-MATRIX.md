@@ -62,7 +62,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | Curriculum Node | Current Resource Surface | Next Build Work | Proof / Evidence Route | Graduation Signal |
 |---|---|---|---|---|
 | `propositional-logic` | `logic-basics-v0`, Boolean learner path | Add proof-object walkthrough for CNF refutation anatomy. | Boolean CNF/LRAT or DRAT; model replay for SAT rows. | Corrupted certificate test fails; lesson names encoder-vs-checker boundary. |
-| `predicate-logic` | `finite-predicate-v0` | Add bridge concept rows for finite quantifier expansion and countermodel replay. | Finite expansion plus QF_UF/Alethe for equality-heavy fragments. | Pack rows distinguish finite-domain validity from first-order validity. |
+| `predicate-logic` | `finite-predicate-v0` | Landed bridge rows for finite quantifier expansion and finite countermodel replay. | Finite expansion plus QF_UF/Alethe for equality-heavy fragments. | Pack rows distinguish finite-domain validity from first-order validity. |
 | `proof-methods` | `proof-methods-refutation-v0`, `proof-methods-patterns-v0` | Turn direct/contrapositive/cases/contradiction into reusable proof-pattern rows. | CNF/LRAT for refutation examples; Lean horizon for natural deduction. | Learner page can trace proof method -> solver query -> checked evidence. |
 | `induction` | `induction-obligations-v0`, `induction-patterns-v0` | Split bounded base/step checks from induction-schema reconstruction targets. | QF_LIA for finite obstructions; Lean horizon for general induction. | No pack claims full induction from bounded prefixes. |
 | `sets` | finite sets, lattices, cardinality/topology packs | Add concept rows for Boolean algebra, finite lattice laws, compactness shadows, and counterexample replay. | CNF/LRAT for Boolean refutations including finite open-cover misses; QF_UF/Alethe for lattice/order conflicts. | Every false set/lattice/topology identity has either evidence or an explicit route gap. |
@@ -704,7 +704,13 @@ Build sequence:
     derivative shadows, and rational polynomial-geometry obligations, with
     concept-scoped Diophantine and Farkas checked-row queries and general
     factorization/algebraic-closure claims kept in the Lean-horizon lane.
-67. Revisit crate/repo boundaries only after three real consumers or repeated
+67. Landed: add the finite countermodel replay bridge row.
+    `bridge_finite_countermodel_replay` groups explicit finite universes,
+    Boolean assignments, predicate extensions, relation/function tables, and
+    finite order/lattice counterexamples under one checked concept-scoped query
+    while keeping arbitrary first-order validity and induction schemas in the
+    Lean-horizon lane.
+68. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

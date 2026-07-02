@@ -47,7 +47,7 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 74 bridge-concept rows.
+- 75 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
 - 688 expected checks.
@@ -117,7 +117,7 @@ Near-term concept-row families:
 
 | Family | Why It Matters | First Rows |
 |---|---|---|
-| finite model replay and proof methods | Repeated witness-check and finite-proof stories across foundation packs | model replay, counterexample replay, refutation-as-query, finite proof-pattern replay, finite quantifier expansion, bounded induction obligations |
+| finite model replay and proof methods | Repeated witness-check and finite-proof stories across foundation packs | model replay, finite countermodel replay, counterexample replay, refutation-as-query, finite proof-pattern replay, finite quantifier expansion, bounded induction obligations |
 | proof object anatomy | Explains checked UNSAT beyond "solver says no" | landed rows for Boolean CNF DRAT/LRAT, QF_LRA Farkas, QF_UF Alethe, and QF_BV bit-blast certificate anatomy |
 | set/foundations structure vocabulary | Keeps finite set checks, function-table replay, finite cardinality, and infinite theorem horizons from blurring together | landed rows for finite Boolean algebra, finite partition/relation roundtrips, finite image/preimage/inverse tables, finite bijection/cardinality, and cardinality theorem horizons |
 | algebraic structure maps | Current algebra packs are broad | homomorphism, kernel/image, quotient, action, ideal, module, tensor |

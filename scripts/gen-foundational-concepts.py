@@ -653,6 +653,7 @@ BRIDGE_CONCEPTS = [
             "curriculum_proof_methods",
         ],
         "unlocks": [
+            "bridge_finite_countermodel_replay",
             "bridge_bounded_theorem_shadow",
             "curriculum_predicate_logic",
         ],
@@ -719,6 +720,117 @@ BRIDGE_CONCEPTS = [
         },
     },
     {
+        "id": "bridge_finite_countermodel_replay",
+        "title": "Finite Countermodel Replay",
+        "field_ids": ["logic_and_proof", "set_theory_and_foundations", "discrete_math"],
+        "resource_status": "validated",
+        "summary": (
+            "A finite countermodel row fixes an explicit universe, predicate "
+            "extension, relation table, function table, or Boolean assignment, "
+            "then replays why that finite object falsifies the proposed "
+            "universal, implication, algebraic, or order claim."
+        ),
+        "prerequisites": [
+            "bridge_counterexample_proof",
+            "bridge_finite_model_replay",
+            "curriculum_predicate_logic",
+        ],
+        "unlocks": [
+            "bridge_refutation_query",
+            "bridge_finite_quantifier_expansion",
+            "bridge_bounded_induction_obligation",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite predicate logic",
+            "finite countermodel replay",
+            "truth-table enumeration",
+            "finite relations",
+            "QF_UF",
+            "Bool / CNF",
+        ],
+        "example_packs": [
+            (
+                "finite-predicate-v0",
+                "Two-element predicate rows that replay forall/exists expansion and finite counterexamples.",
+            ),
+            (
+                "logic-basics-v0",
+                "Truth-table countermodel searches for tautology and equivalence claims.",
+            ),
+            (
+                "proof-methods-patterns-v0",
+                "Invalid-converse and proof-pattern rows where one assignment witnesses failure.",
+            ),
+            (
+                "relations-functions-v0",
+                "Finite relation and function tables that witness failed relation or inverse claims.",
+            ),
+            (
+                "finite-order-lattices-v0",
+                "Finite order/lattice tables with bad-order and top-element countermodel rows.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite countermodel replay",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py",
+                "lean_status": "not-required",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/learn/math/finite-predicate-end-to-end.md",
+                    "docs/learn/math/proof-methods-patterns-end-to-end.md",
+                    "docs/foundational-resources/FOUNDATIONS-DISCRETE-QUERIES.md",
+                ],
+                "notes": (
+                    "The validator checks the explicit finite assignment, "
+                    "predicate extension, relation, or function table against "
+                    "the original row before the countermodel is trusted."
+                ),
+            },
+            {
+                "name": "finite no-countermodel certificate",
+                "status": "checked",
+                "checker": "example-pack validator plus Boolean CNF/LRAT or QF_UF/Alethe regression when the row is UNSAT",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+                    "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+                    "docs/learn/math/logic-basics-end-to-end.md",
+                    "docs/learn/math/finite-order-lattices-end-to-end.md",
+                ],
+                "notes": (
+                    "When the finite row says no countermodel exists, the "
+                    "resource keeps the finite universe explicit and checks a "
+                    "small certificate or replay route for that bounded claim."
+                ),
+            },
+        ],
+        "source_refs": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/boolean-cnf-lrat.md",
+            "docs/proof-cookbook/recipes/qf-uf-congruence-alethe.md",
+            "docs/learn/math/finite-predicate-end-to-end.md",
+            "docs/learn/math/proof-methods-patterns-end-to-end.md",
+            "docs/learn/math/logic-basics-end-to-end.md",
+            "docs/foundational-resources/FOUNDATIONS-DISCRETE-QUERIES.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        ],
+        "open_gaps": [
+            "A finite countermodel refutes only the stated finite or bounded claim unless a separate theorem connects it to the general statement.",
+            "Countermodel rendering back to source-language explanations is still a consumer-layer responsibility for rules/law and external catalogs.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows name the finite universe and the assignment, predicate, relation, function, or table being replayed.",
+                "The validator rejects corrupted countermodel data or mismatched finite domains.",
+                "Learner pages separate finite countermodels from arbitrary first-order validity and induction schemas.",
+            ],
+        },
+    },
+    {
         "id": "bridge_refutation_query",
         "title": "Refutation As Query",
         "field_ids": ["logic_and_proof", "discrete_math"],
@@ -730,7 +842,7 @@ BRIDGE_CONCEPTS = [
             "UNSAT certificate or a replayed countermodel."
         ),
         "prerequisites": [
-            "bridge_counterexample_proof",
+            "bridge_finite_countermodel_replay",
             "curriculum_propositional_logic",
             "curriculum_proof_methods",
         ],
@@ -902,6 +1014,7 @@ BRIDGE_CONCEPTS = [
         ),
         "prerequisites": [
             "bridge_refutation_query",
+            "bridge_finite_countermodel_replay",
             "bridge_finite_model_replay",
             "curriculum_predicate_logic",
         ],

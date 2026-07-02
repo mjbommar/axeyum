@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite countermodel bridge concept landed.**
+  The foundational concept atlas now includes
+  `bridge_finite_countermodel_replay`, making finite predicate
+  countermodels, Boolean no-countermodel searches, proof-pattern
+  counterexamples, relation/function table failures, and finite order/lattice
+  countermodel rows queryable as one reusable concept. The foundations/discrete
+  query guide and foundational-resource smoke script now include the
+  concept-scoped checked-row query. The public summary now reports 121 concept
+  rows, 75 bridge concepts, 108 packs, 688 expected checks, 322 checked rows,
+  295 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite-separation Farkas rows split landed.**
   `finite-separation-v0` now keeps
   `bad-convex-combination-point-rejected` and `bad-separator-rejected` as
