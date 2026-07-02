@@ -472,6 +472,16 @@ fn check_auto_with_recorder(
                 dispatch_reduced(arena, assertions, &reduced, &trail, config, deadline, rec)
             }
             Ok(None) => {
+                // Telemetry: record the budget decline so a trace never ends
+                // with only the probe entry under an ultra-tight budget.
+                with_recorder(rec, |t| {
+                    t.record_declined(
+                        "preprocess",
+                        DeclineReason::from_unknown(&timeout_reason(
+                            "preprocessing timeout before reduced dispatch",
+                        )),
+                    );
+                });
                 return Ok(CheckResult::Unknown(timeout_reason(
                     "preprocessing timeout before reduced dispatch",
                 )));
@@ -1685,6 +1695,17 @@ fn check_auto_dispatch(
     let assertions = &lifted;
     let dispatch_deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     let Some(features) = Features::scan_within(arena, assertions, dispatch_deadline) else {
+        // Telemetry: an ultra-tight budget can expire during the feature scan
+        // itself — record the budget decline so a trace never ends with only a
+        // probe entry (a slow-runner-only gap the route-trace tests caught).
+        with_recorder(rec, |t| {
+            t.record_declined(
+                "feature-scan",
+                DeclineReason::from_unknown(&timeout_reason(
+                    "auto-dispatch timeout while scanning lifted theory features",
+                )),
+            );
+        });
         return Ok(CheckResult::Unknown(timeout_reason(
             "auto-dispatch timeout while scanning lifted theory features",
         )));
