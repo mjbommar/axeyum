@@ -9,6 +9,11 @@
 //! this is source-level DRY, not a public API.)
 #![allow(dead_code)] // each front end uses a subset of the shared vocabulary.
 
+/// The single-block LLVM-IR reflector (parse `define … ret` → term).
+pub mod llvm;
+/// The `switchInt` / straight-line `BinaryOp` MIR reflector.
+pub mod mir;
+
 use axeyum_ir::{Assignment, TermArena, TermId, Value, eval};
 use axeyum_solver::{ProofOutcome, SolverConfig, prove};
 
