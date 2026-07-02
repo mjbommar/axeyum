@@ -17971,6 +17971,226 @@ def validate_finite_givens_rotation(expected: dict[str, Any]) -> None:
     require_string("Givens horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_householder_reflection(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    formula = checks["householder-formula-witness"]
+    if formula["expected_result"] != "sat":
+        fail("householder-formula-witness must expect sat")
+    if formula.get("proof_status") != "replay-only":
+        fail("householder-formula-witness must be replay-only")
+    values = single_witness_values(formula, witnesses)
+    reflector_vector = require_fraction_vector(
+        "Householder reflector_vector",
+        values.get("reflector_vector"),
+    )
+    reflector_denominator = require_fraction(
+        "Householder reflector_denominator",
+        values.get("reflector_denominator"),
+    )
+    householder = require_fraction_matrix("Householder matrix", values.get("householder"))
+    householder_transpose = require_fraction_matrix(
+        "Householder householder_transpose",
+        values.get("householder_transpose"),
+    )
+    identity = require_fraction_matrix("Householder identity", values.get("identity"))
+    source_vector = require_fraction_vector(
+        "Householder source_vector",
+        values.get("source_vector"),
+    )
+    reflected_vector = require_fraction_vector(
+        "Householder reflected_vector",
+        values.get("reflected_vector"),
+    )
+    inverse_reconstruction = require_fraction_vector(
+        "Householder inverse_reconstruction",
+        values.get("inverse_reconstruction"),
+    )
+    source_norm_squared = require_fraction(
+        "Householder source_norm_squared",
+        values.get("source_norm_squared"),
+    )
+    reflected_norm_squared = require_fraction(
+        "Householder reflected_norm_squared",
+        values.get("reflected_norm_squared"),
+    )
+    determinant = require_fraction("Householder determinant", values.get("determinant"))
+
+    require_square_matrix("Householder matrix", householder)
+    if len(householder) != 2:
+        fail("finite Householder replay expects one 2x2 reflection")
+    if len(reflector_vector) != len(householder):
+        fail("Householder reflector vector dimension must match the matrix")
+    require_mat_vec_shape("Householder source", householder, source_vector)
+    require_mat_vec_shape("Householder reflected", householder, reflected_vector)
+    expected_identity = [
+        [Fraction(1) if row == column else Fraction(0) for column in range(len(householder))]
+        for row in range(len(householder))
+    ]
+    if identity != expected_identity:
+        fail("householder-formula-witness identity must be the exact identity matrix")
+    if dot_product(reflector_vector, reflector_vector) != reflector_denominator:
+        fail("householder-formula-witness reflector_denominator must equal v^T*v")
+    if reflector_denominator == 0:
+        fail("householder-formula-witness reflector_denominator must be nonzero")
+    derived = []
+    for row_index, row in enumerate(identity):
+        derived_row = []
+        for column_index, identity_entry in enumerate(row):
+            derived_row.append(
+                identity_entry
+                - Fraction(2) * reflector_vector[row_index] * reflector_vector[column_index]
+                / reflector_denominator
+            )
+        derived.append(derived_row)
+    if householder != derived:
+        fail("householder-formula-witness matrix does not equal I - 2*v*v^T/(v^T*v)")
+
+    orthogonality = checks["householder-orthogonality-witness"]
+    if orthogonality["expected_result"] != "sat":
+        fail("householder-orthogonality-witness must expect sat")
+    if orthogonality.get("proof_status") != "replay-only":
+        fail("householder-orthogonality-witness must be replay-only")
+    if single_witness_values(orthogonality, witnesses) != values:
+        fail("householder-orthogonality-witness must cite the Householder witness")
+    if householder_transpose != matrix_transpose(householder):
+        fail("householder-orthogonality-witness householder_transpose is incorrect")
+    if householder_transpose != householder:
+        fail("householder-orthogonality-witness expects a symmetric reflection")
+    if mat_mul(householder_transpose, householder) != identity:
+        fail("householder-orthogonality-witness H^T*H does not equal identity")
+
+    zeroing = checks["householder-zeroing-witness"]
+    if zeroing["expected_result"] != "sat":
+        fail("householder-zeroing-witness must expect sat")
+    if zeroing.get("proof_status") != "replay-only":
+        fail("householder-zeroing-witness must be replay-only")
+    if single_witness_values(zeroing, witnesses) != values:
+        fail("householder-zeroing-witness must cite the Householder witness")
+    if mat_vec(householder, source_vector) != reflected_vector:
+        fail("householder-zeroing-witness reflected_vector does not equal H*x")
+    if len(reflected_vector) != 2 or reflected_vector[1] != 0:
+        fail("householder-zeroing-witness expects the second coordinate to be zero")
+
+    involution = checks["householder-involution-witness"]
+    if involution["expected_result"] != "sat":
+        fail("householder-involution-witness must expect sat")
+    if involution.get("proof_status") != "replay-only":
+        fail("householder-involution-witness must be replay-only")
+    if single_witness_values(involution, witnesses) != values:
+        fail("householder-involution-witness must cite the Householder witness")
+    if mat_mul(householder, householder) != identity:
+        fail("householder-involution-witness H^2 does not equal identity")
+    if mat_vec(householder, reflected_vector) != inverse_reconstruction:
+        fail("householder-involution-witness reconstruction is not H*y")
+    if inverse_reconstruction != source_vector:
+        fail("householder-involution-witness must reconstruct the source vector")
+
+    det_check = checks["householder-determinant-witness"]
+    if det_check["expected_result"] != "sat":
+        fail("householder-determinant-witness must expect sat")
+    if det_check.get("proof_status") != "replay-only":
+        fail("householder-determinant-witness must be replay-only")
+    if single_witness_values(det_check, witnesses) != values:
+        fail("householder-determinant-witness must cite the Householder witness")
+    if matrix_determinant(householder) != determinant:
+        fail("householder-determinant-witness determinant is incorrect")
+    if determinant != -1:
+        fail("householder-determinant-witness expects determinant -1")
+    if dot_product(source_vector, source_vector) != source_norm_squared:
+        fail("householder-determinant-witness source norm square is incorrect")
+    if dot_product(reflected_vector, reflected_vector) != reflected_norm_squared:
+        fail("householder-determinant-witness reflected norm square is incorrect")
+    if source_norm_squared != reflected_norm_squared:
+        fail("householder-determinant-witness expects norm preservation")
+
+    bad = checks["bad-householder-entry-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-householder-entry-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-householder-entry-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_householder_entry_replay":
+        fail("bad-householder-entry-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-by-two-householder-zeroing":
+        fail("bad-householder-entry-rejected must cite two-by-two-householder-zeroing")
+    entry = data.get("entry")
+    if not isinstance(entry, list) or len(entry) != 2:
+        fail("bad-householder-entry-rejected entry must be a row/column pair")
+    row_index = require_nonnegative_int("bad Householder entry row", entry[0])
+    column_index = require_nonnegative_int("bad Householder entry column", entry[1])
+    if row_index >= len(householder) or column_index >= len(householder[row_index]):
+        fail("bad-householder-entry-rejected entry is out of range")
+    computed_entry = require_fraction("bad Householder computed_entry", data.get("computed_entry"))
+    claimed_entry = require_fraction("bad Householder claimed_entry", data.get("claimed_entry"))
+    if householder[row_index][column_index] != computed_entry:
+        fail("bad-householder-entry-rejected computed entry does not match replay")
+    if computed_entry == claimed_entry:
+        fail("bad-householder-entry-rejected must document a false entry claim")
+    if "separate qf-lra-bad-householder-entry" not in bad.get("notes", ""):
+        fail("bad-householder-entry-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-householder-entry"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-householder-entry must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-householder-entry must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-householder-entry must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-by-two-householder-zeroing":
+        fail("qf-lra-bad-householder-entry must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-householder-entry-rejected":
+        fail("qf-lra-bad-householder-entry must cite the replay row")
+    if qf_data.get("entry") != entry:
+        fail("qf-lra-bad-householder-entry entry must match the replay row")
+    qf_computed = require_fraction(
+        "qf Householder computed_entry",
+        qf_data.get("computed_entry"),
+    )
+    qf_claimed = require_fraction(
+        "qf Householder claimed_entry",
+        qf_data.get("claimed_entry"),
+    )
+    if qf_computed != computed_entry or qf_claimed != claimed_entry:
+        fail("qf-lra-bad-householder-entry data must match the replay row")
+    if (
+        qf_data.get("farkas_conflict")
+        != "householder_entry_00 = -3/5 and householder_entry_00 = -4/5"
+    ):
+        fail("qf-lra-bad-householder-entry must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Householder smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-householder-reflection-v0/smt2/"
+        "bad-householder-entry-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-householder-entry smt2_artifact must name the checked source artifact")
+    check_source("qf Householder smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Householder farkas_regression", regression)
+    if "finite_householder_reflection_bad_entry_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-householder-entry must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Householder certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-householder-entry certificate must document checked Farkas evidence")
+
+    horizon = checks["general-householder-qr-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-householder-qr-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-householder-qr-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "Householder horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string("Householder horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_finite_qr_decomposition(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -29910,6 +30130,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_walsh_hadamard_transform(expected)
     if metadata["id"] == "finite-givens-rotation-v0":
         validate_finite_givens_rotation(expected)
+    if metadata["id"] == "finite-householder-reflection-v0":
+        validate_finite_householder_reflection(expected)
     if metadata["id"] == "finite-qr-decomposition-v0":
         validate_finite_qr_decomposition(expected)
     if metadata["id"] == "finite-projected-gradient-v0":

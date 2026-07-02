@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 126 non-template math example packs validate.
+  Status: 127 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 126 non-template packs have at least one `checked` expected-result row.
+  Status: 127 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3424,6 +3424,17 @@ malformed sine coefficient claim `s = 3/5` against the exact value `4/5`.
 General Givens/QR algorithms, pivoting, conditioning, finite-precision
 orthogonality, and floating-point stability claims stay in theorem or
 numerical-honesty lanes.
+The linear-algebra/numerical-analysis/operator layer now adds
+`finite-householder-reflection-v0` as the 127th non-template math pack. Exact
+rational replay checks the reflector vector `v = [2,1]`, denominator
+`v^T*v = 5`, Householder matrix
+`H = [[-3/5,-4/5],[-4/5,3/5]]`, symmetry, orthogonality `H^T*H = I`, zeroing
+`H*[3,4] = [-5,0]`, involution `H^2 = I`, determinant `-1`, and norm
+preservation, while a source-linked QF_LRA/Farkas artifact rejects the
+malformed top-left entry claim `H[0,0] = -4/5` against the exact value
+`-3/5`. General Householder/QR algorithms, pivoting, conditioning,
+finite-precision orthogonality, and floating-point stability claims stay in
+theorem or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

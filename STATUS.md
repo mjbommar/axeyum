@@ -240,6 +240,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Householder-reflection resource landed.**
+  `finite-householder-reflection-v0` now gives the linear-algebra,
+  numerical-analysis, and operator-theory lanes an exact rational reflection
+  transcript: it checks `v = [2,1]`, `v^T*v = 5`,
+  `H = [[-3/5,-4/5],[-4/5,3/5]]`, `H^T = H`, `H^T*H = I`,
+  `H*[3,4] = [-5,0]`, `H^2 = I`, determinant `-1`, and norm preservation,
+  then isolates the malformed top-left entry claim `H[0,0] = -4/5` versus
+  exact `-3/5` as a source-linked QF_LRA/Farkas row. The focused learner page,
+  matrix/operator query guides, concept bridges, validator, and
+  `math_resource_lra_routes` regression keep fixed finite Householder replay
+  separate from general Householder/QR algorithms, pivoting, conditioning, and
+  floating-point stability. The public summary now reports 122 concept rows,
+  127 packs, 826 expected checks, 353 checked rows, 383 replay-only rows, 90
+  Lean-horizon rows, and 127 promoted solver-reuse packs.
 - **Finite Givens-rotation resource landed.**
   `finite-givens-rotation-v0` now gives the linear-algebra,
   numerical-analysis, and operator-theory lanes an exact rational orthogonal
@@ -251,9 +265,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   matrix/operator query guides, concept bridges, validator, and
   `math_resource_lra_routes` regression keep fixed finite Givens replay
   separate from general QR algorithms, pivoting, conditioning, and
-  floating-point stability. The public summary now reports 122 concept rows,
-  126 packs, 818 expected checks, 352 checked rows, 377 replay-only rows, 89
-  Lean-horizon rows, and 126 promoted solver-reuse packs.
+  floating-point stability.
 - **Finite Lanczos-iteration resource landed.**
   `finite-lanczos-iteration-v0` now gives the linear-algebra,
   numerical-analysis, and operator-theory lanes an exact rational symmetric

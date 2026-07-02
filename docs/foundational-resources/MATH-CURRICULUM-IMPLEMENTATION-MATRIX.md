@@ -948,7 +948,17 @@ Build sequence:
     finite-operator/Chebyshev, and exact-vs-floating bridges keep exact finite
     Givens replay separate from QR algorithms, pivoting, conditioning, and
     floating-point stability.
-97. Revisit crate/repo boundaries only after three real consumers or repeated
+97. Landed: add the finite Householder-reflection resource.
+    `finite-householder-reflection-v0` now records one exact rational
+    reflector-formula transcript: `v = [2,1]`, `v^T*v = 5`,
+    `H = [[-3/5,-4/5],[-4/5,3/5]]`, `H^T = H`, `H^T*H = I`,
+    `H*[3,4] = [-5,0]`, involution, determinant `-1`, and norm
+    preservation. It includes a checked QF_LRA/Farkas artifact for the
+    malformed top-left entry claim `H[0,0] = -4/5`. The reused matrix,
+    inner-product, finite-operator/Chebyshev, and exact-vs-floating bridges
+    keep exact finite Householder replay separate from QR algorithms,
+    pivoting, conditioning, and floating-point stability.
+98. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

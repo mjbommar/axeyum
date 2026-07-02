@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "finite-householder-reflection-v0",
+  "title": "Finite Householder Reflection Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_functional_analysis_and_operator_theory",
+    "field_optimization_and_convexity",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_lu_replay",
+    "bridge_inner_product_projection",
+    "bridge_exact_vs_floating_arithmetic"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "functional_analysis_and_operator_theory",
+    "optimization_and_convexity"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite matrices",
+    "finite orthogonal transforms",
+    "exact rational Householder reflection",
+    "exact rational matrix replay",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-householder-reflection-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Householder bad reflection entry QF_LRA/Farkas regression seed",
+    "pressure": "Exact Householder replay computes the top-left reflection entry as -3/5 while a malformed row claims -4/5, isolating a compact equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-householder-entry"
+    ],
+    "next_step": "Promote additional orthogonal-factorization rows only when they add distinct reflector, zeroing, product, least-squares, residual, or numerical-honesty pressure; keep Householder/QR algorithm correctness, pivoting, conditioning, and floating-point stability in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/householder-reflection-end-to-end.md",
+    "artifacts/examples/math/finite-householder-reflection-v0/smt2/bad-householder-entry-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "householder-formula-witness",
+    "householder-orthogonality-witness",
+    "householder-zeroing-witness",
+    "householder-involution-witness",
+    "householder-determinant-witness",
+    "bad-householder-entry-rejected",
+    "qf-lra-bad-householder-entry",
+    "general-householder-qr-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational reflector vector, denominator, Householder matrix, source vector, reflected vector, inverse reconstruction, determinant, and orthogonality identity as deterministic exact-rational replay obligations.",
+    "Route the false reflection-entry row through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes H[0,0] = -3/5.",
+    "Expose the pack through matrix computation, QR/factorization, orthogonal-transform, and exact-vs-floating learner and consumer query surfaces.",
+    "Keep general Householder/QR algorithm correctness, pivoting, conditioning, and floating-point stability marked Lean or numerical-honesty horizon."
+  ]
+}

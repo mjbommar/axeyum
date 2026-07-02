@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-householder-reflection-v0",
+  "witnesses": [
+    {
+      "id": "two-by-two-householder-zeroing",
+      "description": "Exact rational two-by-two Householder reflection that maps [3,4] to [-5,0].",
+      "values": {
+        "reflector_vector": ["2", "1"],
+        "reflector_denominator": "5",
+        "householder": [
+          ["-3/5", "-4/5"],
+          ["-4/5", "3/5"]
+        ],
+        "householder_transpose": [
+          ["-3/5", "-4/5"],
+          ["-4/5", "3/5"]
+        ],
+        "identity": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "source_vector": ["3", "4"],
+        "reflected_vector": ["-5", "0"],
+        "inverse_reconstruction": ["3", "4"],
+        "source_norm_squared": "25",
+        "reflected_norm_squared": "25",
+        "determinant": "-1"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "householder-formula-witness",
+      "claim": "The fixed matrix equals I - 2*v*v^T/(v^T*v) for v = [2,1].",
+      "expected_result": "sat",
+      "validation": "exact_rational_householder_formula_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-householder-zeroing"],
+      "notes": "The validator recomputes the denominator v^T*v and every Householder matrix entry exactly over rationals."
+    },
+    {
+      "id": "householder-orthogonality-witness",
+      "claim": "The fixed Householder reflection satisfies H^T*H = I and H^T = H.",
+      "expected_result": "sat",
+      "validation": "exact_rational_householder_orthogonality_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-householder-zeroing"],
+      "notes": "The validator recomputes the transpose and matrix product exactly over rationals."
+    },
+    {
+      "id": "householder-zeroing-witness",
+      "claim": "The fixed Householder reflection maps [3,4] to [-5,0].",
+      "expected_result": "sat",
+      "validation": "exact_rational_householder_zeroing_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-householder-zeroing"],
+      "notes": "The validator recomputes H*x and checks that the second coordinate is zero."
+    },
+    {
+      "id": "householder-involution-witness",
+      "claim": "Applying the fixed Householder reflection twice reconstructs [3,4].",
+      "expected_result": "sat",
+      "validation": "exact_rational_householder_involution_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-householder-zeroing"],
+      "notes": "The validator recomputes H^2 and H*(H*x) exactly."
+    },
+    {
+      "id": "householder-determinant-witness",
+      "claim": "The fixed Householder reflection has determinant -1 and preserves squared norm.",
+      "expected_result": "sat",
+      "validation": "exact_rational_householder_determinant_norm_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-householder-zeroing"],
+      "notes": "The validator recomputes det(H), ||x||^2, and ||H*x||^2 exactly."
+    },
+    {
+      "id": "bad-householder-entry-rejected",
+      "claim": "The top-left entry of the Householder reflection is -4/5.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_householder_entry_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "two-by-two-householder-zeroing",
+        "entry": [0, 0],
+        "computed_entry": "-3/5",
+        "claimed_entry": "-4/5"
+      },
+      "notes": "The validator recomputes the Householder matrix and rejects the malformed entry claim; the separate qf-lra-bad-householder-entry row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-householder-entry",
+      "claim": "The fixed malformed Householder entry claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "two-by-two-householder-zeroing",
+        "source_replay_row": "bad-householder-entry-rejected",
+        "entry": [0, 0],
+        "computed_entry": "-3/5",
+        "claimed_entry": "-4/5",
+        "farkas_conflict": "householder_entry_00 = -3/5 and householder_entry_00 = -4/5",
+        "smt2_artifact": "artifacts/examples/math/finite-householder-reflection-v0/smt2/bad-householder-entry-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_householder_reflection_bad_entry_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes H[0,0] as -3/5, while the malformed row claims -4/5; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
+      "id": "general-householder-qr-theory-lean-horizon",
+      "claim": "General Householder QR algorithms, pivoting policies, least-squares theorem use, conditioning, and floating-point stability require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For all suitable finite matrices, prove that a sequence of exact Householder reflections can zero selected subdiagonal blocks and compose into an orthogonal factor for QR; separately state pivoting, rank-deficient, least-squares, and floating-point variants with explicit hypotheses.",
+        "future_checker": "Lean theorem statements for exact Householder/QR construction plus separate numerical-honesty or QF_FP artifacts for floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one 2D rational reflection, not a theorem about arbitrary QR algorithms, pivoting, least-squares solves, or finite-precision stability."
+    }
+  ]
+}

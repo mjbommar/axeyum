@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 126 non-template math packs.
-- 818 expected checks.
-- 352 checked proof/evidence rows.
-- 377 replay-only rows.
-- 89 Lean-horizon rows.
-- 126 promoted solver-reuse packs.
+- 127 non-template math packs.
+- 826 expected checks.
+- 353 checked proof/evidence rows.
+- 383 replay-only rows.
+- 90 Lean-horizon rows.
+- 127 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 126 focused learner-linked packs, with no path-only, index-only, or missing
+- 127 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 126 current non-template packs satisfy the focused-lesson side of this
+all 127 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2454,6 +2454,15 @@ Pick one row per commit unless the change is purely navigational.
      adds `qf-lra-bad-givens-sine` as the source-linked Farkas row for the
      false sine coefficient claim `s = 3/5` versus exact `4/5`. The learner
      and query pages keep exact finite Givens replay separate from general QR
+     algorithms, pivoting, conditioning, and floating-point stability.
+285. Landed: add `finite-householder-reflection-v0` as an exact finite
+     Householder-reflection resource. The pack replays `v = [2,1]`,
+     `v^T*v = 5`, `H = [[-3/5,-4/5],[-4/5,3/5]]`, symmetry,
+     orthogonality, `H*[3,4] = [-5,0]`, involution, determinant `-1`, and
+     norm preservation, then adds `qf-lra-bad-householder-entry` as the
+     source-linked Farkas row for the false top-left entry claim
+     `H[0,0] = -4/5` versus exact `-3/5`. The learner and query pages keep
+     exact finite Householder replay separate from general Householder/QR
      algorithms, pivoting, conditioning, and floating-point stability.
 
 ## Validation Checklist

@@ -30,20 +30,20 @@ python3 scripts/query-foundational-resources.py summary
 Current summary:
 
 - 122 concept rows.
-- 126 non-template math packs.
-- 818 expected checks.
-- 352 checked proof/evidence rows.
-- 377 replay-only rows.
-- 89 Lean-horizon rows.
-- 126 promoted solver-reuse packs.
+- 127 non-template math packs.
+- 826 expected checks.
+- 353 checked proof/evidence rows.
+- 383 replay-only rows.
+- 90 Lean-horizon rows.
+- 127 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 
 The generated learner dashboard reports:
 
 ```text
-math example packs: 126
+math example packs: 127
 Learner Status Totals:
-- focused: 126
+- focused: 127
 ```
 
 `focused` means the pack is explicitly mentioned by at least one
