@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-lanczos-iteration-v0",
+  "witnesses": [
+    {
+      "id": "two-step-lanczos-transcript",
+      "description": "Exact rational two-step Lanczos transcript for a fixed 2x2 symmetric matrix and starting vector.",
+      "values": {
+        "matrix": [
+          ["2", "1"],
+          ["1", "2"]
+        ],
+        "q1": ["1", "0"],
+        "aq1": ["2", "1"],
+        "alpha1": "2",
+        "residual1": ["0", "1"],
+        "residual1_norm_squared": "1",
+        "beta1": "1",
+        "q2": ["0", "1"],
+        "q1_norm_squared": "1",
+        "q2_norm_squared": "1",
+        "q1_q2_dot": "0",
+        "aq2": ["1", "2"],
+        "alpha2": "2",
+        "residual2": ["0", "0"],
+        "residual2_norm_squared": "0",
+        "beta2": "0",
+        "basis_matrix": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "tridiagonal_matrix": [
+          ["2", "1"],
+          ["1", "2"]
+        ],
+        "a_times_basis": [
+          ["2", "1"],
+          ["1", "2"]
+        ],
+        "basis_times_tridiagonal": [
+          ["2", "1"],
+          ["1", "2"]
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "initial-lanczos-vector-replay",
+      "claim": "The starting Lanczos vector q1 is unit length and A*q1 = [2,1] for a symmetric matrix.",
+      "expected_result": "sat",
+      "validation": "exact_rational_lanczos_initial_vector_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-step-lanczos-transcript"],
+      "notes": "The validator checks matrix symmetry, q1^T*q1, and the first matrix-vector product exactly."
+    },
+    {
+      "id": "first-lanczos-step-replay",
+      "claim": "The first Lanczos step has alpha1 = 2, residual [0,1], beta1 = 1, and q2 = [0,1].",
+      "expected_result": "sat",
+      "validation": "exact_rational_lanczos_first_step_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-step-lanczos-transcript"],
+      "notes": "The validator recomputes alpha1 = q1^T*A*q1, v = A*q1 - alpha1*q1, beta1^2 = v^T*v, and q2 = v/beta1."
+    },
+    {
+      "id": "lanczos-orthonormal-basis-replay",
+      "claim": "The two Lanczos basis vectors are orthonormal.",
+      "expected_result": "sat",
+      "validation": "exact_rational_lanczos_orthonormal_basis_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-step-lanczos-transcript"],
+      "notes": "The validator checks q1^T*q1 = 1, q2^T*q2 = 1, and q1^T*q2 = 0."
+    },
+    {
+      "id": "second-lanczos-step-replay",
+      "claim": "The second Lanczos step has alpha2 = 2 and a zero final residual.",
+      "expected_result": "sat",
+      "validation": "exact_rational_lanczos_second_step_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-step-lanczos-transcript"],
+      "notes": "The validator recomputes A*q2, alpha2 = q2^T*A*q2, residual2 = A*q2 - beta1*q1 - alpha2*q2, and beta2 = 0."
+    },
+    {
+      "id": "tridiagonal-relation-replay",
+      "claim": "For this full 2D basis, A*Q = Q*T with T = [[2,1],[1,2]].",
+      "expected_result": "sat",
+      "validation": "exact_rational_lanczos_tridiagonal_relation_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-step-lanczos-transcript"],
+      "notes": "The validator recomputes both sides of the finite tridiagonal relation exactly."
+    },
+    {
+      "id": "bad-lanczos-beta1-rejected",
+      "claim": "The first Lanczos off-diagonal coefficient is beta1 = 2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_lanczos_beta1_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "two-step-lanczos-transcript",
+        "computed_beta1": "1",
+        "claimed_beta1": "2"
+      },
+      "notes": "Exact replay computes beta1 as 1, so the claimed value 2 is rejected; the separate qf-lra-bad-lanczos-beta1 row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-lanczos-beta1",
+      "claim": "The fixed malformed Lanczos beta1 claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "two-step-lanczos-transcript",
+        "source_replay_row": "bad-lanczos-beta1-rejected",
+        "computed_beta1": "1",
+        "claimed_beta1": "2",
+        "farkas_conflict": "lanczos_beta1 = 1 and lanczos_beta1 = 2",
+        "smt2_artifact": "artifacts/examples/math/finite-lanczos-iteration-v0/smt2/bad-lanczos-beta1-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_lanczos_iteration_bad_beta1_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes beta1 = 1, while the malformed row claims 2; the source QF_LRA artifact isolates that tridiagonal-coefficient contradiction for Farkas checking."
+    },
+    {
+      "id": "general-lanczos-theory-lean-horizon",
+      "claim": "General Lanczos tridiagonalization theorems, Ritz value convergence, breakdown/restart policies, finite-precision loss of orthogonality, and floating-point Krylov stability require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For finite-dimensional self-adjoint operators and exact arithmetic, prove the Lanczos relation A*Q_k = Q_k*T_k + beta_k*q_{k+1}*e_k^T, orthonormality preservation under nonzero residuals, and symmetric tridiagonal T_k; separately state breakdown, restart, and floating-point variants with explicit hypotheses.",
+        "future_checker": "Lean theorem statements for exact Lanczos theory plus separate numerical-honesty or QF_FP artifacts for floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one 2x2 rational symmetric Lanczos transcript, not a theorem about arbitrary self-adjoint operators, Ritz convergence, breakdown behavior, or finite-precision orthogonalization stability."
+    }
+  ]
+}

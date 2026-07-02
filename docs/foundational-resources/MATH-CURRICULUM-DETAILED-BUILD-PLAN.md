@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 124 non-template math packs.
-- 803 expected checks.
-- 350 checked proof/evidence rows.
-- 366 replay-only rows.
-- 87 Lean-horizon rows.
-- 124 promoted solver-reuse packs.
+- 125 non-template math packs.
+- 811 expected checks.
+- 351 checked proof/evidence rows.
+- 372 replay-only rows.
+- 88 Lean-horizon rows.
+- 125 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 124 focused learner-linked packs, with no path-only, index-only, or missing
+- 125 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 124 current non-template packs satisfy the focused-lesson side of this
+all 125 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2436,6 +2436,17 @@ Pick one row per commit unless the change is purely navigational.
      query pages keep exact finite Krylov/Hessenberg replay separate from
      Arnoldi/GMRES convergence, Ritz-value theory, restart strategies,
      reorthogonalization, and floating-point stability.
+283. Landed: add `finite-lanczos-iteration-v0` as an exact finite Lanczos
+     resource. The pack replays the symmetric matrix `A = [[2,1],[1,2]]`,
+     `q1 = [1,0]`, `A*q1 = [2,1]`, `alpha1 = 2`, residual `[0,1]`,
+     `beta1 = 1`, `q2 = [0,1]`, `alpha2 = 2`, exact termination
+     residual `[0,0]`, orthonormality, and the exact tridiagonal relation
+     `A*Q = Q*T`, then adds `qf-lra-bad-lanczos-beta1` as the source-linked
+     Farkas row for the false off-diagonal coefficient claim `beta1 = 2`
+     versus exact `1`. The learner and query pages keep exact finite
+     symmetric Krylov/tridiagonal replay separate from Lanczos convergence,
+     Ritz-value theory, breakdown/restart behavior, finite-precision
+     orthogonality, and floating-point stability.
 
 ## Validation Checklist
 

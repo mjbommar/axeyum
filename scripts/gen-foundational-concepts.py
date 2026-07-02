@@ -450,6 +450,10 @@ CURRICULUM_MAP = {
                 "Exact two-step Arnoldi replay, orthonormal Krylov basis, Hessenberg relation, and checked bad subdiagonal-coefficient evidence.",
             ),
             (
+                "finite-lanczos-iteration-v0",
+                "Exact two-step Lanczos replay for a symmetric matrix, orthonormal Krylov basis, tridiagonal relation, and checked bad off-diagonal-coefficient evidence.",
+            ),
+            (
                 "finite-jordan-chain-v0",
                 "Exact Jordan block, eigenvector, generalized-eigenvector, nilpotent-part, reconstruction, and checked bad-component evidence.",
             ),
@@ -563,7 +567,7 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU/QR/Cholesky/Schur replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU/QR/Cholesky/Schur replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, multivariable-calculus and Newton-step shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
@@ -589,7 +593,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU/QR/Cholesky/Schur replay, interval bounds, inner-product projections, condition-number, singular-value, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, residual, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU/QR/Cholesky/Schur replay, interval bounds, inner-product projections, condition-number, singular-value, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, residual, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -609,7 +613,7 @@ FIELD_PACKS = {
             "Finite cyclic quadrilateral, diagonal-intersection, opposite-angle, and bad-intersection replay.",
         ),
     ],
-    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact condition-number, singular-value, power-iteration, Arnoldi/Hessenberg, and Jordan/nilpotent shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
+    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact condition-number, singular-value, power-iteration, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan/nilpotent shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
 }
 
 FIELD_DECIDABILITY = {
@@ -1513,6 +1517,10 @@ BRIDGE_CONCEPTS = [
                 "Two-step Arnoldi rows checked as exact rational dot-product and Hessenberg arithmetic, not floating-point orthogonalization stability evidence.",
             ),
             (
+                "finite-lanczos-iteration-v0",
+                "Two-step Lanczos rows checked as exact rational symmetric-matrix and tridiagonal arithmetic, not floating-point Krylov stability evidence.",
+            ),
+            (
                 "least-squares-regression-v0",
                 "Normal-equation, residual, and bad RSS-improvement rows checked as exact rational linear algebra, not floating-point regression.",
             ),
@@ -1539,6 +1547,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/singular-value-shadow-end-to-end.md",
                     "docs/learn/math/conjugate-gradient-end-to-end.md",
                     "docs/learn/math/arnoldi-iteration-end-to-end.md",
+                    "docs/learn/math/lanczos-iteration-end-to-end.md",
                     "docs/learn/math/exact-statistical-tests-end-to-end.md",
                     "docs/foundational-resources/MATH-FIELDS.md",
                 ],
@@ -1558,13 +1567,14 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/singular-value-shadow-end-to-end.md",
             "docs/learn/math/conjugate-gradient-end-to-end.md",
             "docs/learn/math/arnoldi-iteration-end-to-end.md",
+            "docs/learn/math/lanczos-iteration-end-to-end.md",
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
             "docs/learn/math/exact-statistical-tests-end-to-end.md",
             "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
-            "Exact rational replay does not prove floating-point roundoff, conditioning, singular-value perturbation, Krylov/preconditioner stability, loss of orthogonality, or convergence guarantees.",
+            "Exact rational replay does not prove floating-point roundoff, conditioning, singular-value perturbation, Krylov/preconditioner stability, Lanczos breakdown behavior, loss of orthogonality, or convergence guarantees.",
             "QF_FP and numerical experiment metadata need their own trust boundary before floating-point resources can graduate.",
             "Learner pages must label exact rational shadows when a topic is normally taught numerically.",
         ],
@@ -5634,7 +5644,8 @@ BRIDGE_CONCEPTS = [
             "solution boxes, Jacobi-step error bounds, Hessian linear solves, "
             "condition-number perturbation bounds, power-iteration residual "
             "shadows, conjugate-gradient residual orthogonality, A-conjugacy, "
-            "Arnoldi orthogonalization/Hessenberg residuals, or "
+            "Arnoldi orthogonalization/Hessenberg residuals, "
+            "Lanczos tridiagonal residuals, or "
             "normal-equation side conditions for a fixed matrix "
             "problem, and separates exact "
             "infeasibility from floating error analysis."
@@ -5659,6 +5670,7 @@ BRIDGE_CONCEPTS = [
             "condition-number replay",
             "conjugate-gradient replay",
             "Arnoldi/Hessenberg replay",
+            "Lanczos/tridiagonal replay",
             "bounded recurrence replay",
         ],
         "example_packs": [
@@ -5699,6 +5711,10 @@ BRIDGE_CONCEPTS = [
                 "Two-step Arnoldi replay, orthonormal Krylov basis, Hessenberg relation, and checked bad subdiagonal-coefficient row.",
             ),
             (
+                "finite-lanczos-iteration-v0",
+                "Two-step Lanczos replay for a symmetric matrix, orthonormal Krylov basis, tridiagonal relation, and checked bad off-diagonal-coefficient row.",
+            ),
+            (
                 "finite-schur-complement-v0",
                 "Two-by-two block Schur complement, determinant, inverse, positive-definite, and conditional-variance shadows with checked bad scalar evidence.",
             ),
@@ -5720,6 +5736,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/power-iteration-end-to-end.md",
                     "docs/learn/math/conjugate-gradient-end-to-end.md",
                     "docs/learn/math/arnoldi-iteration-end-to-end.md",
+                    "docs/learn/math/lanczos-iteration-end-to-end.md",
                     "docs/learn/math/schur-complement-end-to-end.md",
                     "docs/learn/math/linear-algebra-and-optimization.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
@@ -5731,6 +5748,7 @@ BRIDGE_CONCEPTS = [
                     "false power-iterate coordinates, "
                     "or false conjugate-gradient step sizes, "
                     "or false Arnoldi Hessenberg coefficients, "
+                    "or false Lanczos tridiagonal coefficients, "
                     "graduate only when the final rational "
                     "linear conflict has rechecked Farkas evidence."
                 ),
@@ -5747,23 +5765,25 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/power-iteration-end-to-end.md",
             "docs/learn/math/conjugate-gradient-end-to-end.md",
             "docs/learn/math/arnoldi-iteration-end-to-end.md",
+            "docs/learn/math/lanczos-iteration-end-to-end.md",
             "docs/learn/math/schur-complement-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "artifacts/examples/math/finite-power-iteration-v0/smt2/bad-power-iterate-coordinate-farkas-conflict.smt2",
             "artifacts/examples/math/finite-conjugate-gradient-v0/smt2/bad-cg-alpha0-farkas-conflict.smt2",
             "artifacts/examples/math/finite-arnoldi-iteration-v0/smt2/bad-arnoldi-h21-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-lanczos-iteration-v0/smt2/bad-lanczos-beta1-farkas-conflict.smt2",
             "artifacts/examples/math/finite-schur-complement-v0/smt2/bad-schur-complement-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Exact residual, condition-number, conjugate-gradient, and Arnoldi transcript rows do not certify floating-point roundoff, algorithmic stability, loss of orthogonality, preconditioner correctness, finite-termination theorems, or asymptotic convergence rates.",
+            "Exact residual, condition-number, conjugate-gradient, Arnoldi, and Lanczos transcript rows do not certify floating-point roundoff, algorithmic stability, loss of orthogonality, preconditioner correctness, finite-termination theorems, breakdown behavior, or asymptotic convergence rates.",
             "Nonlinear norm bounds and spectral-condition claims need separate NRA, interval, or Lean-backed routes.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state the matrix, candidate vector, norm or box, search direction, step size, Arnoldi basis, Hessenberg coefficient, and exact rational residual computation.",
+                "Rows state the matrix, candidate vector, norm or box, search direction, step size, Arnoldi or Lanczos basis, Hessenberg or tridiagonal coefficient, and exact rational residual computation.",
                 "Bad residual or coefficient rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed.",
                 "Learner pages label numerical-analysis claims as exact rational shadows unless floating-point evidence exists.",
             ],
@@ -5777,7 +5797,7 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "A finite eigenpair row checks A*v = lambda*v exactly for a fixed "
             "matrix, and may additionally replay orthogonality, Rayleigh "
-            "quotient, power-iteration residuals, Arnoldi/Hessenberg reductions, spectral-decomposition, generalized-eigenvector, "
+            "quotient, power-iteration residuals, Arnoldi/Hessenberg reductions, Lanczos/tridiagonal reductions, spectral-decomposition, generalized-eigenvector, "
             "nilpotent-part, singular-vector, or SVD-shadow "
             "witnesses within the bounded matrix instance."
         ),
@@ -5799,6 +5819,7 @@ BRIDGE_CONCEPTS = [
             "finite-dimensional operator replay",
             "singular-value replay",
             "Arnoldi/Hessenberg replay",
+            "Lanczos/tridiagonal replay",
             "Jordan-chain replay",
         ],
         "example_packs": [
@@ -5813,6 +5834,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-arnoldi-iteration-v0",
                 "Two-step Arnoldi transcript, orthonormal Krylov basis, Hessenberg relation, and checked bad h21 row.",
+            ),
+            (
+                "finite-lanczos-iteration-v0",
+                "Two-step symmetric Lanczos transcript, orthonormal Krylov basis, tridiagonal relation, and checked bad beta1 row.",
             ),
             (
                 "finite-jordan-chain-v0",
@@ -5850,6 +5875,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/spectral-linear-algebra-end-to-end.md",
                     "docs/learn/math/power-iteration-end-to-end.md",
                     "docs/learn/math/arnoldi-iteration-end-to-end.md",
+                    "docs/learn/math/lanczos-iteration-end-to-end.md",
                     "docs/learn/math/jordan-chain-end-to-end.md",
                     "docs/learn/math/singular-value-shadow-end-to-end.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
@@ -5866,6 +5892,8 @@ BRIDGE_CONCEPTS = [
                     "dominant eigenpair witness. "
                     "The Arnoldi shadow replays an orthonormal Krylov basis "
                     "and finite Hessenberg relation. "
+                    "The Lanczos shadow replays the symmetric specialization "
+                    "with a tridiagonal relation. "
                     "Promoted bad rows check isolated rational component or "
                     "scalar-bound conflicts with Farkas evidence. General "
                     "spectral and SVD theorems remain Lean-horizon."
@@ -5881,22 +5909,24 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/spectral-linear-algebra-end-to-end.md",
             "docs/learn/math/power-iteration-end-to-end.md",
             "docs/learn/math/arnoldi-iteration-end-to-end.md",
+            "docs/learn/math/lanczos-iteration-end-to-end.md",
             "docs/learn/math/jordan-chain-end-to-end.md",
             "docs/learn/math/singular-value-shadow-end-to-end.md",
             "artifacts/examples/math/finite-power-iteration-v0/smt2/bad-power-iterate-coordinate-farkas-conflict.smt2",
             "artifacts/examples/math/finite-arnoldi-iteration-v0/smt2/bad-arnoldi-h21-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-lanczos-iteration-v0/smt2/bad-lanczos-beta1-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Fixed eigenpair, power-iteration, Arnoldi, Jordan-chain, and singular-value replay does not prove existence of eigenvalues, power-iteration convergence, Arnoldi/Ritz convergence, Jordan normal form, SVD, diagonalization, spectral theorem, or stability of numerical eigensolvers.",
+            "Fixed eigenpair, power-iteration, Arnoldi, Lanczos, Jordan-chain, and singular-value replay does not prove existence of eigenvalues, power-iteration convergence, Arnoldi/Ritz convergence, Lanczos/Ritz convergence, Jordan normal form, SVD, diagonalization, spectral theorem, or stability of numerical eigensolvers.",
             "Nonlinear characteristic-root reasoning, algebraic/geometric multiplicity theorems, residual-to-eigenvalue error bounds, SVD perturbation theory, and infinite-dimensional operator theory remain separate theorem horizons.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
                 "Rows state A, lambda or sigma, vectors, field/domain, and every side condition such as nonzero vector, generalized-chain relation, nilpotency, orthogonality, or reconstruction shape.",
-                "The validator recomputes A*v = lambda*v, power-iteration steps, Rayleigh quotients, Arnoldi orthogonalization, Hessenberg relations, residuals, generalized-eigenvector chain equations, nilpotent powers, A^T*A*v = sigma^2*v, A*v = sigma*u, and decomposition products exactly, then rejects corrupted component or scalar-bound claims.",
+                "The validator recomputes A*v = lambda*v, power-iteration steps, Rayleigh quotients, Arnoldi orthogonalization, Lanczos tridiagonalization, Hessenberg/tridiagonal relations, residuals, generalized-eigenvector chain equations, nilpotent powers, A^T*A*v = sigma^2*v, A*v = sigma*u, and decomposition products exactly, then rejects corrupted component or scalar-bound claims.",
                 "General spectral theorem, power-iteration convergence, Jordan normal form, and SVD statements are linked as Lean-horizon rows, not as finite solver evidence.",
             ],
         },
@@ -7981,7 +8011,7 @@ BRIDGE_CONCEPTS = [
             "Finite-dimensional inner-product rows replay exact rational Gram "
             "matrices, norm squares, fixed-vector Cauchy-Schwarz checks, "
             "orthogonal projections, Gram-Schmidt steps, and exact "
-            "Walsh-Hadamard transform, Arnoldi orthogonalization, and SVD-shadow rows while keeping "
+            "Walsh-Hadamard transform, Arnoldi/Lanczos orthogonalization, and SVD-shadow rows while keeping "
             "Hilbert-space theorems as Lean horizons."
         ),
         "prerequisites": [
@@ -8003,6 +8033,7 @@ BRIDGE_CONCEPTS = [
             "orthogonal projection",
             "orthogonal transforms",
             "Arnoldi orthogonalization",
+            "Lanczos orthogonalization",
             "singular-vector replay",
             "QF_LRA",
             "Lean horizon",
@@ -8037,6 +8068,10 @@ BRIDGE_CONCEPTS = [
                 "Exact Arnoldi orthonormal basis, projection coefficients, Hessenberg relation, and bad subdiagonal-coefficient evidence.",
             ),
             (
+                "finite-lanczos-iteration-v0",
+                "Exact Lanczos orthonormal basis, alpha/beta coefficients, tridiagonal relation, and bad off-diagonal-coefficient evidence.",
+            ),
+            (
                 "finite-singular-value-shadow-v0",
                 "Exact orthonormal singular vectors, SVD reconstruction, spectral/Frobenius norms, and bad singular-value bound evidence.",
             ),
@@ -8056,6 +8091,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/inner-product-spaces-end-to-end.md",
                     "docs/learn/math/covariance-matrix-end-to-end.md",
                     "docs/learn/math/arnoldi-iteration-end-to-end.md",
+                    "docs/learn/math/lanczos-iteration-end-to-end.md",
                     "docs/learn/math/singular-value-shadow-end-to-end.md",
                     "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
@@ -8064,7 +8100,7 @@ BRIDGE_CONCEPTS = [
                     "The finite pack recomputes each rational inner-product "
                     "quantity first; checked Farkas evidence is used only for "
                     "the small bad positivity, transform-coefficient, or "
-                    "Arnoldi coefficient, or singular-value-bound conflict."
+                    "Arnoldi or Lanczos coefficient, or singular-value-bound conflict."
                 ),
             }
         ],
@@ -8079,21 +8115,22 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/inner-product-spaces-end-to-end.md",
             "docs/learn/math/covariance-matrix-end-to-end.md",
             "docs/learn/math/arnoldi-iteration-end-to-end.md",
+            "docs/learn/math/lanczos-iteration-end-to-end.md",
             "docs/learn/math/singular-value-shadow-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
             "Finite rational projection replay does not prove the Hilbert projection theorem, Riesz representation, Hahn-Banach, or completeness results.",
-            "Rows involving floating-point orthogonality, Arnoldi loss of orthogonality, conditioning, singular-value perturbation, or numerical stability require separate numerical-honesty metadata.",
+            "Rows involving floating-point orthogonality, Arnoldi/Lanczos loss of orthogonality, conditioning, singular-value perturbation, or numerical stability require separate numerical-honesty metadata.",
             "General inner-product, duality, SVD, and Hilbert-space theorem statements remain Lean-horizon until no-sorry Lean artifacts exist.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
             "Rows state the finite vector space, basis, Gram matrix, transform matrix, and exact rational vectors.",
-            "The validator recomputes norm squares, projections, Gram-Schmidt steps, Arnoldi projections, orthogonal transforms, SVD-shadow products, and residuals from source data.",
-            "Malformed finite positivity, projection, transform-coefficient, Arnoldi-coefficient, or singular-value-bound rows link to checked QF_LRA/Farkas regressions after replay.",
+            "The validator recomputes norm squares, projections, Gram-Schmidt steps, Arnoldi/Lanczos projections, orthogonal transforms, SVD-shadow products, and residuals from source data.",
+            "Malformed finite positivity, projection, transform-coefficient, Arnoldi/Lanczos-coefficient, or singular-value-bound rows link to checked QF_LRA/Farkas regressions after replay.",
             ],
         },
     },
@@ -8110,7 +8147,8 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "Finite operator rows replay exact rational norm and matrix-action "
             "bounds, finite Arnoldi rows replay orthogonal Krylov bases and "
-            "Hessenberg relations, finite Jordan rows replay nilpotent parts and "
+            "Hessenberg relations, finite Lanczos rows replay symmetric "
+            "tridiagonal reductions, finite Jordan rows replay nilpotent parts and "
             "generalized-eigenvector chains, while finite Chebyshev rows replay polynomial bases, "
             "interpolation matrices, duplicate-node failures, and alternating "
             "residual witnesses."
@@ -8131,6 +8169,7 @@ BRIDGE_CONCEPTS = [
         "axeyum_fragments": [
             "finite-dimensional operators",
             "Arnoldi/Hessenberg replay",
+            "Lanczos/tridiagonal replay",
             "nilpotent operator replay",
             "generalized eigenvectors",
             "Chebyshev polynomial recurrence",
@@ -8146,6 +8185,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-arnoldi-iteration-v0",
                 "Finite Arnoldi orthogonal Krylov basis, Hessenberg relation, and bad subdiagonal-coefficient rows.",
+            ),
+            (
+                "finite-lanczos-iteration-v0",
+                "Finite Lanczos orthogonal Krylov basis, symmetric tridiagonal relation, and bad off-diagonal-coefficient rows.",
             ),
             (
                 "finite-chebyshev-systems-v0",
@@ -8183,6 +8226,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/chebyshev-operator-index.md",
                     "docs/learn/math/finite-operator-end-to-end.md",
                     "docs/learn/math/arnoldi-iteration-end-to-end.md",
+                    "docs/learn/math/lanczos-iteration-end-to-end.md",
                     "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
                     "docs/learn/math/singular-value-shadow-end-to-end.md",
                     "docs/learn/math/jordan-chain-end-to-end.md",
@@ -8191,7 +8235,7 @@ BRIDGE_CONCEPTS = [
                 ],
                 "notes": (
                     "Finite operator and Chebyshev packs replay the exact "
-                    "matrix, norm, Arnoldi/Hessenberg, recurrence, or interpolation calculation; "
+                    "matrix, norm, Arnoldi/Hessenberg, Lanczos/tridiagonal, recurrence, or interpolation calculation; "
                     "the Jordan-chain pack replays the exact nilpotent "
                     "matrix action and similarity reconstruction "
                     "before handing the resulting small rational conflict to "
@@ -8210,6 +8254,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/chebyshev-operator-index.md",
             "docs/learn/math/finite-operator-end-to-end.md",
             "docs/learn/math/arnoldi-iteration-end-to-end.md",
+            "docs/learn/math/lanczos-iteration-end-to-end.md",
             "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
             "docs/learn/math/singular-value-shadow-end-to-end.md",
             "docs/learn/math/jordan-chain-end-to-end.md",
@@ -8217,16 +8262,16 @@ BRIDGE_CONCEPTS = [
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Finite operator, Arnoldi, and Jordan-chain replay does not prove Banach-space, Hilbert-space, compact-operator, spectral theorem, Arnoldi/Ritz convergence, GMRES behavior, or Jordan normal form claims.",
+            "Finite operator, Arnoldi, Lanczos, and Jordan-chain replay does not prove Banach-space, Hilbert-space, compact-operator, spectral theorem, Arnoldi/Ritz convergence, Lanczos/Ritz convergence, GMRES behavior, or Jordan normal form claims.",
             "Finite Chebyshev grid replay does not prove Haar, minimax, alternation, or infinite-dimensional approximation theorems.",
             "General functional-analysis theorem statements remain Lean-horizon until no-sorry Lean artifacts exist.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state the finite vector space, operator matrix, Arnoldi coefficients, nilpotent part, norm, polynomial basis, or sample grid being replayed.",
-                "The validator recomputes matrix actions, Arnoldi orthogonalization, Hessenberg relations, generalized-chain equations, nilpotent powers, norms, recurrence values, interpolation rows, and alternating residual witnesses.",
-                "Malformed finite operator, Arnoldi coefficient, recurrence, or interpolation rows link to checked QF_LRA/Farkas regressions after replay.",
+                "Rows state the finite vector space, operator matrix, Arnoldi or Lanczos coefficients, nilpotent part, norm, polynomial basis, or sample grid being replayed.",
+                "The validator recomputes matrix actions, Arnoldi/Lanczos orthogonalization, Hessenberg/tridiagonal relations, generalized-chain equations, nilpotent powers, norms, recurrence values, interpolation rows, and alternating residual witnesses.",
+                "Malformed finite operator, Arnoldi/Lanczos coefficient, recurrence, or interpolation rows link to checked QF_LRA/Farkas regressions after replay.",
             ],
         },
     },

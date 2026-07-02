@@ -927,7 +927,18 @@ Build sequence:
     finite-operator/Chebyshev, and exact-vs-floating bridges keep exact finite
     Arnoldi replay separate from GMRES convergence, Ritz-value theory,
     restart/reorthogonalization strategies, and floating-point stability.
-95. Revisit crate/repo boundaries only after three real consumers or repeated
+95. Landed: add the finite Lanczos-iteration resource.
+    `finite-lanczos-iteration-v0` now records one exact two-by-two symmetric
+    Krylov transcript: `A = [[2,1],[1,2]]`, `q1 = [1,0]`, the first
+    alpha/beta step, `beta1 = 1`, `q2 = [0,1]`, the second alpha step,
+    exact termination residual, an orthonormal basis, and `A*Q = Q*T` for the
+    symmetric tridiagonal `T`. It includes a checked QF_LRA/Farkas artifact
+    for the malformed off-diagonal coefficient claim `beta1 = 2`. The reused
+    residual-bound, eigenpair, inner-product, finite-operator/Chebyshev, and
+    exact-vs-floating bridges keep exact finite Lanczos replay separate from
+    convergence, Ritz-value theory, breakdown/restart behavior,
+    finite-precision loss of orthogonality, and floating-point stability.
+96. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 124 non-template math example packs.
-- 803 expected checks.
-- 350 checked proof/evidence rows.
-- 366 replay-only rows.
-- 87 Lean-horizon rows.
-- 124 promoted solver-reuse packs.
+- 125 non-template math example packs.
+- 811 expected checks.
+- 351 checked proof/evidence rows.
+- 372 replay-only rows.
+- 88 Lean-horizon rows.
+- 125 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 124 focused learner-linked packs, with no path-only, index-only, or missing
+- 125 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2430,6 +2430,15 @@ Pick one item per commit unless the change is purely navigational.
      source-linked QF_LRA/Farkas regression without claiming general
      Arnoldi/GMRES convergence, Ritz-value theory, restart or
      reorthogonalization behavior, or floating-point stability.
+171. Landed: add `finite-lanczos-iteration-v0` as an exact finite
+     Lanczos/Krylov resource. The pack computes one rational symmetric-matrix
+     transcript for `A = [[2,1],[1,2]]`, including `q1`, `q2`, coefficients
+     `alpha1`, `beta1`, `alpha2`, exact termination residual, orthonormality,
+     and the exact tridiagonal relation `A*Q = Q*T`, then promotes the
+     malformed off-diagonal coefficient claim `beta1 = 2` versus exact `1`
+     through a source-linked QF_LRA/Farkas regression without claiming general
+     Lanczos convergence, Ritz-value theory, breakdown/restart behavior,
+     finite-precision orthogonality, or floating-point stability.
 
 ## Validation Checklist
 

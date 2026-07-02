@@ -27,6 +27,7 @@ Example packs:
 - [finite-power-iteration-v0](../../../artifacts/examples/math/finite-power-iteration-v0/)
 - [finite-conjugate-gradient-v0](../../../artifacts/examples/math/finite-conjugate-gradient-v0/)
 - [finite-arnoldi-iteration-v0](../../../artifacts/examples/math/finite-arnoldi-iteration-v0/)
+- [finite-lanczos-iteration-v0](../../../artifacts/examples/math/finite-lanczos-iteration-v0/)
 - [finite-jordan-chain-v0](../../../artifacts/examples/math/finite-jordan-chain-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
@@ -177,6 +178,13 @@ relation, and checked QF_LRA/Farkas bad-subdiagonal-coefficient evidence; its
 general Arnoldi decomposition, Ritz convergence, GMRES minimization, restart,
 reorthogonalization, and floating-point stability claims stay as Lean or
 numerical-honesty horizons.
+The finite Lanczos slice adds the symmetric-matrix specialization: exact
+alpha/beta coefficient replay, orthonormal-basis checking, a full
+two-dimensional tridiagonal relation, and checked QF_LRA/Farkas bad
+off-diagonal-coefficient evidence. Its general Lanczos tridiagonalization,
+Ritz convergence, breakdown/restart behavior, finite-precision orthogonality,
+and floating-point stability claims stay as Lean or numerical-honesty
+horizons.
 The finite line-search slice adds exact Armijo trial rejection, one accepted
 backtracked step, and checked QF_LRA/Farkas bad-acceptance,
 bad-descent-direction, and bad-accepted-candidate certificates; its theorem
@@ -703,6 +711,25 @@ the second Hessenberg column, and `A*Q = Q*H`. Its bad row changes `h21` to
 through QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Arnoldi Iteration](arnoldi-iteration-end-to-end.md).
 
+For a finite Lanczos example, encode a two-by-two symmetric matrix and a
+normalized start vector:
+
+```text
+A = [[2, 1], [1, 2]]
+q1 = [1, 0]
+alpha1 = 2
+beta1 = 1
+q2 = [0, 1]
+T = [[2, 1], [1, 2]]
+```
+
+The `finite-lanczos-iteration-v0` validator recomputes symmetry, `A*q1`,
+`alpha1`, the residual norm, `beta1`, the normalized second basis vector,
+orthonormality, the second Lanczos step, and `A*Q = Q*T`. Its bad row changes
+`beta1` to `2`; exact replay computes `1`, then checks the resulting scalar
+contradiction through QF_LRA/Farkas evidence. For a focused trace, read
+[End To End: Finite Lanczos Iteration](lanczos-iteration-end-to-end.md).
+
 For a finite line-search example, encode a one-dimensional quadratic and one
 Armijo backtracking trace:
 
@@ -887,6 +914,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_conjugate_gradient_bad_alpha0_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-arnoldi-iteration-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_arnoldi_iteration_bad_h21_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-lanczos-iteration-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_lanczos_iteration_bad_beta1_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0

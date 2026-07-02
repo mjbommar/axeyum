@@ -301,6 +301,9 @@ const FINITE_CONJUGATE_GRADIENT_BAD_ALPHA0: &str = include_str!(
 const FINITE_ARNOLDI_ITERATION_BAD_H21: &str = include_str!(
     "../../../artifacts/examples/math/finite-arnoldi-iteration-v0/smt2/bad-arnoldi-h21-farkas-conflict.smt2"
 );
+const FINITE_LANCZOS_ITERATION_BAD_BETA1: &str = include_str!(
+    "../../../artifacts/examples/math/finite-lanczos-iteration-v0/smt2/bad-lanczos-beta1-farkas-conflict.smt2"
+);
 const FINITE_WALSH_HADAMARD_BAD_TRANSFORM_COEFFICIENT: &str = include_str!(
     "../../../artifacts/examples/math/finite-walsh-hadamard-transform-v0/smt2/bad-transform-coefficient-farkas-conflict.smt2"
 );
@@ -1876,6 +1879,14 @@ fn finite_arnoldi_iteration_bad_h21_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-arnoldi-iteration-v0 bad-arnoldi-h21 SMT-LIB artifact",
         FINITE_ARNOLDI_ITERATION_BAD_H21,
+    );
+}
+
+#[test]
+fn finite_lanczos_iteration_bad_beta1_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-lanczos-iteration-v0 bad-lanczos-beta1 SMT-LIB artifact",
+        FINITE_LANCZOS_ITERATION_BAD_BETA1,
     );
 }
 

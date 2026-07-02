@@ -17449,6 +17449,227 @@ def validate_finite_arnoldi_iteration(expected: dict[str, Any]) -> None:
     require_string("Arnoldi horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_lanczos_iteration(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    initial = checks["initial-lanczos-vector-replay"]
+    if initial["expected_result"] != "sat":
+        fail("initial-lanczos-vector-replay must expect sat")
+    if initial.get("proof_status") != "replay-only":
+        fail("initial-lanczos-vector-replay must be replay-only")
+    values = single_witness_values(initial, witnesses)
+    matrix = require_fraction_matrix("Lanczos matrix", values.get("matrix"))
+    q1 = require_fraction_vector("Lanczos q1", values.get("q1"))
+    aq1 = require_fraction_vector("Lanczos aq1", values.get("aq1"))
+    alpha1 = require_fraction("Lanczos alpha1", values.get("alpha1"))
+    residual1 = require_fraction_vector("Lanczos residual1", values.get("residual1"))
+    residual1_norm_squared = require_fraction(
+        "Lanczos residual1_norm_squared",
+        values.get("residual1_norm_squared"),
+    )
+    beta1 = require_fraction("Lanczos beta1", values.get("beta1"))
+    q2 = require_fraction_vector("Lanczos q2", values.get("q2"))
+    q1_norm_squared = require_fraction(
+        "Lanczos q1_norm_squared",
+        values.get("q1_norm_squared"),
+    )
+    q2_norm_squared = require_fraction(
+        "Lanczos q2_norm_squared",
+        values.get("q2_norm_squared"),
+    )
+    q1_q2_dot = require_fraction("Lanczos q1_q2_dot", values.get("q1_q2_dot"))
+    aq2 = require_fraction_vector("Lanczos aq2", values.get("aq2"))
+    alpha2 = require_fraction("Lanczos alpha2", values.get("alpha2"))
+    residual2 = require_fraction_vector("Lanczos residual2", values.get("residual2"))
+    residual2_norm_squared = require_fraction(
+        "Lanczos residual2_norm_squared",
+        values.get("residual2_norm_squared"),
+    )
+    beta2 = require_fraction("Lanczos beta2", values.get("beta2"))
+    basis_matrix = require_fraction_matrix(
+        "Lanczos basis_matrix",
+        values.get("basis_matrix"),
+    )
+    tridiagonal_matrix = require_fraction_matrix(
+        "Lanczos tridiagonal_matrix",
+        values.get("tridiagonal_matrix"),
+    )
+    a_times_basis = require_fraction_matrix(
+        "Lanczos a_times_basis",
+        values.get("a_times_basis"),
+    )
+    basis_times_tridiagonal = require_fraction_matrix(
+        "Lanczos basis_times_tridiagonal",
+        values.get("basis_times_tridiagonal"),
+    )
+
+    require_square_matrix("Lanczos matrix", matrix)
+    if len(matrix) != 2:
+        fail("finite Lanczos replay expects one 2x2 matrix")
+    if matrix_transpose(matrix) != matrix:
+        fail("initial-lanczos-vector-replay requires a symmetric matrix")
+    require_mat_vec_shape("Lanczos q1", matrix, q1)
+    if dot_product(q1, q1) != q1_norm_squared:
+        fail("initial-lanczos-vector-replay q1_norm_squared is incorrect")
+    if q1_norm_squared != 1:
+        fail("initial-lanczos-vector-replay q1 must be unit length")
+    if mat_vec(matrix, q1) != aq1:
+        fail("initial-lanczos-vector-replay aq1 is not A*q1")
+
+    first = checks["first-lanczos-step-replay"]
+    if first["expected_result"] != "sat":
+        fail("first-lanczos-step-replay must expect sat")
+    if first.get("proof_status") != "replay-only":
+        fail("first-lanczos-step-replay must be replay-only")
+    if single_witness_values(first, witnesses) != values:
+        fail("first-lanczos-step-replay must cite the Lanczos witness")
+    if dot_product(q1, aq1) != alpha1:
+        fail("first-lanczos-step-replay alpha1 is incorrect")
+    if vector_sub(aq1, scalar_vec(alpha1, q1)) != residual1:
+        fail("first-lanczos-step-replay residual1 is incorrect")
+    if dot_product(residual1, residual1) != residual1_norm_squared:
+        fail("first-lanczos-step-replay residual norm square is incorrect")
+    if beta1 <= 0:
+        fail("first-lanczos-step-replay beta1 must be positive for this pack")
+    if beta1 * beta1 != residual1_norm_squared:
+        fail("first-lanczos-step-replay beta1^2 must equal residual norm square")
+    if scalar_vec(Fraction(1, 1) / beta1, residual1) != q2:
+        fail("first-lanczos-step-replay q2 is not residual1/beta1")
+
+    orthonormal = checks["lanczos-orthonormal-basis-replay"]
+    if orthonormal["expected_result"] != "sat":
+        fail("lanczos-orthonormal-basis-replay must expect sat")
+    if orthonormal.get("proof_status") != "replay-only":
+        fail("lanczos-orthonormal-basis-replay must be replay-only")
+    if single_witness_values(orthonormal, witnesses) != values:
+        fail("lanczos-orthonormal-basis-replay must cite the Lanczos witness")
+    if dot_product(q2, q2) != q2_norm_squared:
+        fail("lanczos-orthonormal-basis-replay q2_norm_squared is incorrect")
+    if q2_norm_squared != 1:
+        fail("lanczos-orthonormal-basis-replay q2 must be unit length")
+    if dot_product(q1, q2) != q1_q2_dot:
+        fail("lanczos-orthonormal-basis-replay q1_q2_dot is incorrect")
+    if q1_q2_dot != 0:
+        fail("lanczos-orthonormal-basis-replay requires q1^T*q2 = 0")
+
+    second = checks["second-lanczos-step-replay"]
+    if second["expected_result"] != "sat":
+        fail("second-lanczos-step-replay must expect sat")
+    if second.get("proof_status") != "replay-only":
+        fail("second-lanczos-step-replay must be replay-only")
+    if single_witness_values(second, witnesses) != values:
+        fail("second-lanczos-step-replay must cite the Lanczos witness")
+    require_mat_vec_shape("Lanczos q2", matrix, q2)
+    if mat_vec(matrix, q2) != aq2:
+        fail("second-lanczos-step-replay aq2 is not A*q2")
+    if dot_product(q2, aq2) != alpha2:
+        fail("second-lanczos-step-replay alpha2 is incorrect")
+    computed_residual2 = vector_sub(
+        vector_sub(aq2, scalar_vec(beta1, q1)),
+        scalar_vec(alpha2, q2),
+    )
+    if computed_residual2 != residual2:
+        fail("second-lanczos-step-replay residual2 is incorrect")
+    if dot_product(residual2, residual2) != residual2_norm_squared:
+        fail("second-lanczos-step-replay residual2 norm square is incorrect")
+    if beta2 * beta2 != residual2_norm_squared:
+        fail("second-lanczos-step-replay beta2^2 must equal residual2 norm square")
+    if beta2 != 0:
+        fail("second-lanczos-step-replay expects exact two-dimensional termination")
+    if any(item != 0 for item in residual2):
+        fail("second-lanczos-step-replay residual2 must be zero")
+
+    relation = checks["tridiagonal-relation-replay"]
+    if relation["expected_result"] != "sat":
+        fail("tridiagonal-relation-replay must expect sat")
+    if relation.get("proof_status") != "replay-only":
+        fail("tridiagonal-relation-replay must be replay-only")
+    if single_witness_values(relation, witnesses) != values:
+        fail("tridiagonal-relation-replay must cite the Lanczos witness")
+    computed_basis = [[q1[row], q2[row]] for row in range(len(q1))]
+    if basis_matrix != computed_basis:
+        fail("tridiagonal-relation-replay basis_matrix must have q1 and q2 as columns")
+    expected_tridiagonal = [[alpha1, beta1], [beta1, alpha2]]
+    if tridiagonal_matrix != expected_tridiagonal:
+        fail("tridiagonal-relation-replay tridiagonal_matrix entries are incorrect")
+    if matrix_transpose(tridiagonal_matrix) != tridiagonal_matrix:
+        fail("tridiagonal-relation-replay requires symmetric tridiagonal matrix")
+    if mat_mul(matrix, basis_matrix) != a_times_basis:
+        fail("tridiagonal-relation-replay a_times_basis is not A*Q")
+    if mat_mul(basis_matrix, tridiagonal_matrix) != basis_times_tridiagonal:
+        fail("tridiagonal-relation-replay basis_times_tridiagonal is not Q*T")
+    if a_times_basis != basis_times_tridiagonal:
+        fail("tridiagonal-relation-replay requires A*Q = Q*T")
+
+    bad = checks["bad-lanczos-beta1-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-lanczos-beta1-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-lanczos-beta1-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_lanczos_beta1_replay":
+        fail("bad-lanczos-beta1-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-step-lanczos-transcript":
+        fail("bad-lanczos-beta1-rejected must cite the Lanczos witness")
+    computed_beta1 = require_fraction("bad Lanczos computed_beta1", data.get("computed_beta1"))
+    claimed_beta1 = require_fraction("bad Lanczos claimed_beta1", data.get("claimed_beta1"))
+    if computed_beta1 != beta1:
+        fail("bad-lanczos-beta1-rejected computed beta1 does not match replay")
+    if computed_beta1 == claimed_beta1:
+        fail("bad-lanczos-beta1-rejected malformed beta1 unexpectedly matches")
+    if "separate qf-lra-bad-lanczos-beta1" not in bad.get("notes", ""):
+        fail("bad-lanczos-beta1-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-lanczos-beta1"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-lanczos-beta1 must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-lanczos-beta1 must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-lanczos-beta1 must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-step-lanczos-transcript":
+        fail("qf-lra-bad-lanczos-beta1 must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-lanczos-beta1-rejected":
+        fail("qf-lra-bad-lanczos-beta1 must cite the replay row")
+    qf_computed = require_fraction("qf Lanczos computed_beta1", qf_data.get("computed_beta1"))
+    qf_claimed = require_fraction("qf Lanczos claimed_beta1", qf_data.get("claimed_beta1"))
+    if qf_computed != computed_beta1 or qf_claimed != claimed_beta1:
+        fail("qf-lra-bad-lanczos-beta1 data must match the replay row")
+    if qf_data.get("farkas_conflict") != "lanczos_beta1 = 1 and lanczos_beta1 = 2":
+        fail("qf-lra-bad-lanczos-beta1 must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Lanczos smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-lanczos-iteration-v0/smt2/"
+        "bad-lanczos-beta1-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-lanczos-beta1 smt2_artifact must name the checked source artifact")
+    check_source("qf Lanczos smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Lanczos farkas_regression", regression)
+    if "finite_lanczos_iteration_bad_beta1_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-lanczos-beta1 must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Lanczos certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-lanczos-beta1 certificate must document checked Farkas evidence")
+
+    horizon = checks["general-lanczos-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-lanczos-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-lanczos-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "Lanczos horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string("Lanczos horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_finite_walsh_hadamard_transform(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -29496,6 +29717,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_compactness(expected)
     if metadata["id"] == "finite-arnoldi-iteration-v0":
         validate_finite_arnoldi_iteration(expected)
+    if metadata["id"] == "finite-lanczos-iteration-v0":
+        validate_finite_lanczos_iteration(expected)
     if metadata["id"] == "finite-connectedness-v0":
         validate_finite_connectedness(expected)
     if metadata["id"] == "finite-continuous-maps-v0":
