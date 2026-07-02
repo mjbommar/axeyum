@@ -20,6 +20,7 @@ Example packs:
 - [finite-product-measure-v0](../../../artifacts/examples/math/finite-product-measure-v0/)
 - [finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/)
 - [descriptive-statistics-v0](../../../artifacts/examples/math/descriptive-statistics-v0/)
+- [finite-covariance-matrix-v0](../../../artifacts/examples/math/finite-covariance-matrix-v0/)
 - [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/)
 - [exact-statistical-tests-v0](../../../artifacts/examples/math/exact-statistical-tests-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
@@ -65,6 +66,9 @@ stopping-time replay, finite product-measure tables, rectangle probabilities,
 marginals, finite Fubini sums, exact
 mean/variance identities, exact bad-variance replay with a separate checked
 QF_LRA bad-variance certificate,
+finite covariance-matrix replay over exact rational sample rows, centered
+Gram matrices, positive-semidefinite shadows, and a checked QF_LRA
+bad-covariance-entry certificate,
 contingency table margins, a checked QF_LIA bad contingency-total certificate,
 least-squares normal equations, checked QF_LRA bad-RSS and bad-coefficients
 certificates, and a Simpson's paradox count-table witness.
@@ -310,6 +314,10 @@ For descriptive statistics, it recomputes the mean and population variance of
 a bad variance claim by exact replay, and emits a separate checked
 `UnsatFarkas` certificate for the isolated variance equation plus a checked
 `UnsatDiophantine` certificate for the bad total-count row.
+For finite covariance, it recomputes the sample mean vector, centered rows,
+centered Gram matrix, covariance matrix, and two-by-two
+positive-semidefinite shadow, then emits checked `UnsatFarkas` evidence for
+the malformed off-diagonal covariance entry.
 For DAG examples, the validator enumerates simple skeleton paths and applies
 the collider/non-collider conditioning rules. For random matrices, it
 recomputes weighted trace, determinant, Gram, and rank claims from exact
@@ -337,6 +345,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_product_measure_bad_marginal_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
@@ -362,6 +371,8 @@ For exact finite product-measure and Fubini replay, read
 [Fubini Tonelli Theorem Boundary](fubini-tonelli-theorem-boundary.md).
 For exact finite statistics and regression replay, read
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md).
+For exact finite covariance replay, read
+[End To End: Finite Covariance Matrix](covariance-matrix-end-to-end.md).
 For finite matrix-valued probability tables, read
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md).
 For the cross-pack finite random-matrix query map, read
@@ -381,14 +392,14 @@ topology-to-measure bridge, read
 ## Proof Upgrade Notes
 
 Finite probability tables, random variables, kernels, martingales, product
-measures, Markov chains, d-separation rows, exact statistics, and random-matrix
-moments first use
+measures, Markov chains, d-separation rows, exact statistics, finite
+covariance matrices, and random-matrix moments first use
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md):
 the validator recomputes exact atom-table sums and finite path conditions.
 Malformed probability normalization, Bayes-posterior rows, measure-complement
 rows, conditional expectation tables, stochastic rows, expected hitting-time
-equations, tail bounds, regression coefficients, and random-matrix moment/rank
-rows graduate through
+equations, tail bounds, regression coefficients, covariance entries, and
+random-matrix moment/rank rows graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
 Discrete count contradictions such as contingency totals and exact tail counts
 use
@@ -409,7 +420,8 @@ expectation, regular conditional probabilities, disintegration theorems,
 general Markov kernels, recurrence/transience classifications,
 infinite-horizon hitting probabilities, general martingale convergence,
 optional stopping, Doob inequalities, MCMC, HMC, variational inference,
-asymptotic statistical tests, calibration, causal identification, do-calculus,
-and floating-point diagnostics are not proof claims. They need either
+asymptotic statistical tests, covariance-estimator consistency, PCA theorem
+claims, calibration, causal identification, do-calculus, and floating-point
+diagnostics are not proof claims. They need either
 Lean-backed probability/measure formalization or explicit reproducibility
 metadata with seeds and tolerances.

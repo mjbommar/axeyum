@@ -131,6 +131,7 @@ python3 scripts/query-foundational-resources.py packs --curriculum-node calculus
 python3 scripts/query-foundational-resources.py fields --field probability_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field probability_theory --text probability --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field probability_theory --text random --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field probability_theory --text covariance --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field probability_theory --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-probability-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-probability-v0 --text Bayes --require-any >/dev/null
@@ -167,6 +168,8 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_tail_cou
 python3 scripts/query-foundational-resources.py packs --concept bridge_random_matrix_finite_moment --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_random_matrix_finite_moment --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack random-matrix-finite-v0 --route Farkas --proof-status checked --text rank --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-covariance-matrix-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_random_matrix_finite_moment --route Farkas --proof-status checked --text covariance --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field logic_and_proof --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field logic_and_proof --text proof --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field logic_and_proof --route boolean --proof-status checked --require-any >/dev/null
@@ -319,8 +322,10 @@ python3 scripts/query-foundational-resources.py checks --pack finite-hitting-tim
 python3 scripts/query-foundational-resources.py fields --field statistics --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field statistics --text tail --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field statistics --text finite --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field statistics --text covariance --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field statistics --text random --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field statistics --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-covariance-matrix-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack descriptive-statistics-v0 --route Farkas --proof-status checked --text qf-lra-bad-variance --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack least-squares-regression-v0 --route Farkas --proof-status checked --text RSS --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack exact-statistical-tests-v0 --route Farkas --proof-status checked --text Fisher --require-any >/dev/null
@@ -337,8 +342,10 @@ python3 scripts/query-foundational-resources.py fields --field linear_algebra --
 python3 scripts/query-foundational-resources.py fields --field linear_algebra --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field linear_algebra --text rank --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field linear_algebra --text projection --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field linear_algebra --text covariance --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field linear_algebra --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field linear_algebra --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-covariance-matrix-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_lu_replay --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack linear-algebra-rational-v0 --route Farkas --proof-status checked --text product-entry --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack linear-algebra-rational-v0 --route Farkas --proof-status checked --text nullspace --require-any >/dev/null

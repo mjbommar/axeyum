@@ -32,14 +32,14 @@ The committed public query boundary currently reports:
 
 - 121 concept rows: 23 curriculum nodes, 18 field rows, 75 bridge concepts, and
   5 example-family rows.
-- 114 non-template math example packs.
-- 726 expected checks: 353 `sat`, 296 `unsat`, and 77 `not-run`.
-- 340 checked proof/evidence rows, 309 replay-only rows, and 77 Lean-horizon
+- 115 non-template math example packs.
+- 733 expected checks: 357 `sat`, 298 `unsat`, and 78 `not-run`.
+- 341 checked proof/evidence rows, 314 replay-only rows, and 78 Lean-horizon
   rows.
-- 114 promoted solver-reuse packs.
+- 115 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 114 focused learner-linked packs, with no path-only, index-only, or missing
+- 115 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The seed phase is complete. The build problem is now depth, navigation, proof
@@ -91,7 +91,7 @@ pack metadata.
 
 ## Stage 1: Normalize Navigation
 
-Goal: make the existing 114 packs easy to discover by curriculum layer, field,
+Goal: make the existing 115 packs easy to discover by curriculum layer, field,
 concept, proof route, and solver pressure.
 
 Work:

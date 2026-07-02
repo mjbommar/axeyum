@@ -240,6 +240,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite covariance matrix resource landed.**
+  `finite-covariance-matrix-v0` now gives the statistics, probability, and
+  linear-algebra lanes an exact finite-sample covariance replay: it checks the
+  rational sample mean vector, centered rows, centered Gram matrix, population
+  covariance matrix, and two-by-two positive-semidefinite shadow, then isolates
+  the malformed off-diagonal covariance entry as a source-linked
+  QF_LRA/Farkas row. The focused learner page keeps statistical inference,
+  covariance-estimator consistency, PCA theorem claims, random-matrix
+  asymptotics, and floating-point covariance algorithms in theorem or
+  numerical-honesty lanes. The public summary now reports 121 concept rows,
+  115 packs, 733 expected checks, 341 checked rows, 314 replay-only rows, 78
+  Lean-horizon rows, and 115 promoted solver-reuse packs.
 - **Finite Cholesky decomposition resource landed.**
   `finite-cholesky-decomposition-v0` now gives the matrix-computation,
   numerical-linear-algebra, and optimization lanes an exact rational Cholesky
@@ -248,10 +260,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   the malformed bottom-right product entry as a source-linked QF_LRA/Farkas
   row. The focused learner page keeps Cholesky existence, uniqueness
   conventions, algorithm correctness, conditioning, and floating-point
-  stability in theorem or numerical-honesty lanes. The public summary now
-  reports 121 concept rows, 114 packs, 726 expected checks, 340 checked rows,
-  309 replay-only rows, 77 Lean-horizon rows, and 114 promoted solver-reuse
-  packs.
+  stability in theorem or numerical-honesty lanes. That Cholesky landing is now
+  superseded by the covariance counters in the current summary above.
 - **Finite QR decomposition resource landed.**
   `finite-qr-decomposition-v0` now gives the matrix-computation and numerical
   linear-algebra lanes an exact rational QR factorization replay: it checks

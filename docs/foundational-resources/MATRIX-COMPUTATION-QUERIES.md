@@ -47,7 +47,7 @@ when the consumer needs a concrete checked row to display.
 | Rank, kernel, image, vector-space, and dual rows | `bridge_rank_nullity`; pack `finite-vector-spaces-v0` | `Alethe` | `packs --concept bridge_rank_nullity --route Alethe`; `checks --pack finite-vector-spaces-v0 --route Alethe --proof-status checked --text addition-closure` |
 | Rayleigh quotients, eigenpairs, and matrix invariants | `bridge_eigenpair` | `Farkas` | `checks --concept bridge_eigenpair --route Farkas --proof-status checked` |
 | Orthogonal transforms and Parseval scaling | `bridge_inner_product_projection`; pack `finite-walsh-hadamard-transform-v0` | `Farkas` | `checks --pack finite-walsh-hadamard-transform-v0 --route Farkas --proof-status checked`; `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked --text transform` |
-| Finite random-matrix moments and ranks | `bridge_random_matrix_finite_moment` | `Farkas` | `checks --pack random-matrix-finite-v0 --route Farkas --proof-status checked --text rank` |
+| Finite random-matrix moments, ranks, and covariance | `bridge_random_matrix_finite_moment` | `Farkas` | `checks --pack random-matrix-finite-v0 --route Farkas --proof-status checked --text rank`; `checks --pack finite-covariance-matrix-v0 --route Farkas --proof-status checked` |
 | Inner products and projections | `bridge_inner_product_projection` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked` |
 | Integer chain-complex torsion | `bridge_finite_torsion_homology_replay` | `Diophantine` | `checks --concept bridge_finite_torsion_homology_replay --route Diophantine --proof-status checked` |
 | Universal-coefficient shadow | `bridge_finite_universal_coefficient_shadow` | `Alethe` | `checks --concept bridge_finite_universal_coefficient_shadow --route Alethe --proof-status checked` |
@@ -179,6 +179,12 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --text rank \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-covariance-matrix-v0 \
+  --route Farkas \
+  --proof-status checked \
   --require-any
 ```
 

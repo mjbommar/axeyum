@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 75 bridge-concept rows.
 - 5 example-family rows.
-- 114 non-template math packs.
-- 726 expected checks.
-- 340 checked proof/evidence rows.
-- 309 replay-only rows.
-- 77 Lean-horizon rows.
-- 114 promoted solver-reuse packs.
+- 115 non-template math packs.
+- 733 expected checks.
+- 341 checked proof/evidence rows.
+- 314 replay-only rows.
+- 78 Lean-horizon rows.
+- 115 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 114 focused learner-linked packs, with no path-only, index-only, or missing
+- 115 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 114 current non-template packs satisfy the focused-lesson side of this
+all 115 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2341,6 +2341,15 @@ Pick one row per commit unless the change is purely navigational.
      product-entry claim `9` versus the exact value `10`. The learner page
      keeps Cholesky existence, algorithm correctness, conditioning, and
      floating-point stability in theorem or numerical-honesty lanes.
+273. Landed: add `finite-covariance-matrix-v0` as an exact finite-sample
+     covariance resource. The pack replays the sample mean vector, centered
+     rows, centered Gram matrix, covariance matrix, and two-by-two
+     positive-semidefinite shadow, then adds
+     `qf-lra-bad-covariance-entry` as the source-linked Farkas row for the
+     malformed off-diagonal covariance claim `1/2` versus the exact value
+     `4/9`. The learner page keeps estimator consistency, PCA theorem
+     claims, random-matrix asymptotics, and floating-point covariance
+     algorithms in theorem or numerical-honesty lanes.
 
 ## Validation Checklist
 

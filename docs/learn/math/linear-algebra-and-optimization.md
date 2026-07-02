@@ -34,6 +34,7 @@ Example packs:
 - [spectral-linear-algebra-v0](../../../artifacts/examples/math/spectral-linear-algebra-v0/)
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
+- [finite-covariance-matrix-v0](../../../artifacts/examples/math/finite-covariance-matrix-v0/)
 - [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/)
 - [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
 - [finite-universal-coefficient-shadow-v0](../../../artifacts/examples/math/finite-universal-coefficient-shadow-v0/)
@@ -156,10 +157,12 @@ upper multiplier, composite-decrease replay, and checked QF_LRA/Farkas
 bad-proximal-point, bad composite-decrease, and bad box-proximal-point
 certificates; its theorem boundary is
 [Proximal Gradient Convergence Theorem Boundary](proximal-gradient-convergence-theorem-boundary.md).
-The finite random-matrix slice adds exact
+The finite random-matrix and covariance slices add exact
 matrix-valued probability tables, trace/determinant moments, expected Gram
-matrices, rank distributions, and checked QF_LRA/Farkas bad trace-square and
-bad expected-rank certificates. The spectral slice checks exact finite
+matrices, rank distributions, sample means, centered Gram matrices,
+covariance matrices, positive-semidefinite shadows, and checked QF_LRA/Farkas
+bad trace-square, bad expected-rank, and bad covariance-entry certificates.
+The spectral slice checks exact finite
 eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotients, and
 `P*D*P^-1` reconstruction for a fixed rational matrix, plus a QF_LRA/Farkas
 bad-Rayleigh-quotient certificate and a bad-eigenpair certificate. The matrix-invariants
@@ -710,6 +713,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/sp
 cargo test -p axeyum-solver --test math_resource_lra_routes spectral_bad_rayleigh_quotient_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-universal-coefficient-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/multivariable-calculus-rational-v0
@@ -754,6 +758,7 @@ replay, read
 [End To End: Matrix Invariants](matrix-invariants-end-to-end.md),
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md),
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md),
+[End To End: Finite Covariance Matrix](covariance-matrix-end-to-end.md),
 [Random Matrix Moment Index](random-matrix-moment-index.md),
 [End To End: Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md),
 [End To End: Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md),
@@ -803,13 +808,15 @@ finite Chebyshev-system interpolation and alternation replay, read
 
 ## Proof Upgrade Notes
 
-Exact rational matrix witnesses, projections, residuals, spectra, random-matrix
-moments, and satisfiable finite-dimensional operator rows start as
+Exact rational matrix witnesses, projections, residuals, spectra,
+random-matrix moments, finite covariance rows, and satisfiable
+finite-dimensional operator rows start as
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md).
 Infeasible rational systems, LP thresholds, bad residual and solution-box bounds, malformed
 eigenpairs, bad Rayleigh-quotient rows, bad characteristic-polynomial rows,
 bad operator-bound and bad Chebyshev-prefix rows, bad Walsh-Hadamard
-transform coefficients, bad QR/Cholesky product entries, bad KKT stationarity and complementarity rows,
+transform coefficients, bad QR/Cholesky product entries, bad covariance
+entries, bad KKT stationarity and complementarity rows,
 bad proximal residual rows, negative-norm rows, and projection-orthogonality
 examples graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).

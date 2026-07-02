@@ -37,6 +37,9 @@ const CONVEXITY_BAD_AFFINE_THRESHOLD: &str = include_str!(
 const DESCRIPTIVE_STATS_BAD_VARIANCE: &str = include_str!(
     "../../../artifacts/examples/math/descriptive-statistics-v0/smt2/bad-variance-farkas-conflict.smt2"
 );
+const FINITE_COVARIANCE_MATRIX_BAD_ENTRY: &str = include_str!(
+    "../../../artifacts/examples/math/finite-covariance-matrix-v0/smt2/bad-covariance-entry-farkas-conflict.smt2"
+);
 const LEAST_SQUARES_BAD_RSS_IMPROVEMENT: &str = include_str!(
     "../../../artifacts/examples/math/least-squares-regression-v0/smt2/bad-rss-improvement-farkas-conflict.smt2"
 );
@@ -704,6 +707,14 @@ fn descriptive_stats_bad_variance_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "descriptive-statistics-v0 bad-variance SMT-LIB artifact",
         DESCRIPTIVE_STATS_BAD_VARIANCE,
+    );
+}
+
+#[test]
+fn finite_covariance_matrix_bad_entry_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-covariance-matrix-v0 bad-covariance-entry SMT-LIB artifact",
+        FINITE_COVARIANCE_MATRIX_BAD_ENTRY,
     );
 }
 

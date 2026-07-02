@@ -841,7 +841,15 @@ Build sequence:
     matrix-factorization bridge keeps exact finite replay separate from
     general Cholesky existence, algorithm correctness, conditioning, and
     stability theorem claims.
-85. Revisit crate/repo boundaries only after three real consumers or repeated
+85. Landed: add the finite covariance matrix resource.
+    `finite-covariance-matrix-v0` now records exact finite sample rows, the
+    mean vector, centered rows, the centered Gram matrix, the covariance
+    matrix, and a two-by-two positive-semidefinite shadow, plus a checked
+    QF_LRA/Farkas artifact for the malformed off-diagonal covariance claim
+    `4/9 = 1/2`. The reused finite-moment and inner-product bridges keep exact
+    finite replay separate from covariance-estimator consistency, PCA,
+    random-matrix asymptotics, and floating-point covariance algorithms.
+86. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

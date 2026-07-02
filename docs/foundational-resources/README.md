@@ -36,7 +36,7 @@ schemas, examples, and validation workflows.
   resolving unclassified solver-reuse rows, completing learner paths, and
   deepening proof routes field by field.
 - [LEARNER-COVERAGE-AUDIT.md](LEARNER-COVERAGE-AUDIT.md) records the current
-  learner-spine audit: all 114 non-template math packs are focused-lesson
+  learner-spine audit: all 115 non-template math packs are focused-lesson
   linked, with no path-only, index-only, or missing learner buckets.
 - [RESOURCE-BUILDOUT-ROADMAP.md](RESOURCE-BUILDOUT-ROADMAP.md) is the detailed
   operating roadmap for building the curriculum-driven resource system across
@@ -81,7 +81,8 @@ schemas, examples, and validation workflows.
 - [PROBABILITY-STATISTICS-QUERIES.md](PROBABILITY-STATISTICS-QUERIES.md) gives
   copyable concept-plus-route queries for finite probability tables, measure
   additivity, product/integration, pushforwards, stochastic kernels, tail
-  counts, exact tests, and finite random-matrix moments.
+  counts, exact tests, finite covariance matrices, and finite random-matrix
+  moments.
 - [MEASURE-THEORY-QUERIES.md](MEASURE-THEORY-QUERIES.md) gives copyable
   concept-plus-route queries for finite measure additivity, product/integration,
   pushforwards, conditional expectation, martingales, kernels, hitting times,
@@ -417,6 +418,10 @@ schemas, examples, and validation workflows.
   validates exact finite random-matrix moments, expected Gram matrices, rank
   probabilities, and checked rejection of false trace-square and expected-rank
   claims.
+- [`artifacts/examples/math/finite-covariance-matrix-v0/`](../../artifacts/examples/math/finite-covariance-matrix-v0/)
+  validates exact finite-sample means, centered rows, centered Gram and
+  covariance matrices, a two-by-two positive-semidefinite shadow, and checked
+  rejection of a false covariance-entry claim.
 - [`artifacts/examples/math/finite-markov-chain-v0/`](../../artifacts/examples/math/finite-markov-chain-v0/)
   validates exact stochastic matrices, finite-horizon distribution evolution,
   stationary distributions, replayed rejection of a malformed transition row
@@ -712,6 +717,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/nu
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/spectral-linear-algebra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0

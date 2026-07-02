@@ -25889,6 +25889,173 @@ def require_success_total(context: str, item: dict[str, Any], prefix: str) -> tu
     return successes, total
 
 
+def matrix_column_sums_fraction(matrix: list[list[Fraction]]) -> list[Fraction]:
+    if not matrix:
+        fail("matrix column sums require a nonempty matrix")
+    return [sum((row[column] for row in matrix), Fraction(0)) for column in range(len(matrix[0]))]
+
+
+def matrix_column_means(matrix: list[list[Fraction]]) -> list[Fraction]:
+    return [total / Fraction(len(matrix)) for total in matrix_column_sums_fraction(matrix)]
+
+
+def matrix_subtract_row_vector(matrix: list[list[Fraction]], vector: list[Fraction]) -> list[list[Fraction]]:
+    if not matrix:
+        fail("matrix/vector subtraction requires a nonempty matrix")
+    if len(matrix[0]) != len(vector):
+        fail("matrix/vector subtraction dimension mismatch")
+    return [[entry - vector[column] for column, entry in enumerate(row)] for row in matrix]
+
+
+def matrix_divide_scalar(matrix: list[list[Fraction]], scalar: Fraction) -> list[list[Fraction]]:
+    if scalar == 0:
+        fail("matrix scalar division by zero")
+    return [[entry / scalar for entry in row] for row in matrix]
+
+
+def validate_finite_covariance_matrix(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    mean_check = checks["sample-mean-vector-witness"]
+    if mean_check["expected_result"] != "sat":
+        fail("sample-mean-vector-witness must expect sat")
+    if mean_check.get("proof_status") != "replay-only":
+        fail("sample-mean-vector-witness must be replay-only")
+    values = single_witness_values(mean_check, witnesses)
+    sample = require_fraction_matrix("covariance sample_matrix", values.get("sample_matrix"))
+    mean = require_fraction_vector("covariance mean", values.get("mean"))
+    centered = require_fraction_matrix("covariance centered rows", values.get("centered"))
+    centered_gram = require_fraction_matrix("covariance centered_gram", values.get("centered_gram"))
+    denominator = require_fraction("covariance population_denominator", values.get("population_denominator"))
+    covariance = require_fraction_matrix("covariance matrix", values.get("covariance"))
+    leading_minors = require_fraction_vector(
+        "covariance leading_principal_minors",
+        values.get("leading_principal_minors"),
+    )
+    if not sample:
+        fail("sample-mean-vector-witness sample must be nonempty")
+    if len(mean) != len(sample[0]):
+        fail("sample-mean-vector-witness mean width must match sample width")
+    if matrix_column_means(sample) != mean:
+        fail("sample-mean-vector-witness mean does not match sample")
+
+    centered_check = checks["centered-sample-witness"]
+    if centered_check["expected_result"] != "sat":
+        fail("centered-sample-witness must expect sat")
+    if centered_check.get("proof_status") != "replay-only":
+        fail("centered-sample-witness must be replay-only")
+    if matrix_subtract_row_vector(sample, mean) != centered:
+        fail("centered-sample-witness centered rows do not equal sample rows minus mean")
+    if any(total != 0 for total in matrix_column_sums_fraction(centered)):
+        fail("centered-sample-witness centered column sums must be zero")
+
+    covariance_check = checks["covariance-matrix-witness"]
+    if covariance_check["expected_result"] != "sat":
+        fail("covariance-matrix-witness must expect sat")
+    if covariance_check.get("proof_status") != "replay-only":
+        fail("covariance-matrix-witness must be replay-only")
+    if denominator != Fraction(len(sample)):
+        fail("covariance-matrix-witness denominator must equal the sample count")
+    require_mat_mul_shape("covariance centered Gram", matrix_transpose(centered), centered)
+    computed_gram = mat_mul(matrix_transpose(centered), centered)
+    if computed_gram != centered_gram:
+        fail("covariance-matrix-witness centered Gram matrix is incorrect")
+    if matrix_divide_scalar(centered_gram, denominator) != covariance:
+        fail("covariance-matrix-witness covariance matrix is incorrect")
+    if covariance != matrix_transpose(covariance):
+        fail("covariance-matrix-witness covariance matrix must be symmetric")
+
+    psd = checks["covariance-positive-semidefinite-shadow-witness"]
+    if psd["expected_result"] != "sat":
+        fail("covariance-positive-semidefinite-shadow-witness must expect sat")
+    if psd.get("proof_status") != "replay-only":
+        fail("covariance-positive-semidefinite-shadow-witness must be replay-only")
+    if len(covariance) != 2 or len(covariance[0]) != 2 or len(covariance[1]) != 2:
+        fail("covariance-positive-semidefinite-shadow-witness is intentionally a 2x2 shadow")
+    expected_minors = [
+        covariance[0][0],
+        covariance[0][0] * covariance[1][1] - covariance[0][1] * covariance[1][0],
+    ]
+    if leading_minors != expected_minors:
+        fail("covariance-positive-semidefinite-shadow-witness leading minors do not match replay")
+    if any(covariance[index][index] < 0 for index in range(len(covariance))):
+        fail("covariance-positive-semidefinite-shadow-witness diagonal entries must be nonnegative")
+    if any(minor <= 0 for minor in leading_minors):
+        fail("covariance-positive-semidefinite-shadow-witness leading minors must be positive")
+
+    bad = checks["bad-covariance-entry-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-covariance-entry-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-covariance-entry-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_covariance_entry_replay":
+        fail("bad-covariance-entry-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "three-point-two-dimensional-sample":
+        fail("bad-covariance-entry-rejected must cite three-point-two-dimensional-sample")
+    entry = data.get("entry")
+    if not isinstance(entry, list) or len(entry) != 2:
+        fail("bad-covariance-entry-rejected entry must be a row/column pair")
+    row_index = require_nonnegative_int("bad covariance entry row", entry[0])
+    column_index = require_nonnegative_int("bad covariance entry column", entry[1])
+    if row_index >= len(covariance) or column_index >= len(covariance[row_index]):
+        fail("bad-covariance-entry-rejected entry is out of range")
+    computed_entry = require_fraction("bad covariance computed_entry", data.get("computed_entry"))
+    claimed_entry = require_fraction("bad covariance claimed_entry", data.get("claimed_entry"))
+    if covariance[row_index][column_index] != computed_entry:
+        fail("bad-covariance-entry-rejected computed entry does not match replay")
+    if computed_entry == claimed_entry:
+        fail("bad-covariance-entry-rejected must document a false entry claim")
+    if "separate qf-lra-bad-covariance-entry" not in bad.get("notes", ""):
+        fail("bad-covariance-entry-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-covariance-entry"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-covariance-entry must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-covariance-entry must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-covariance-entry must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "three-point-two-dimensional-sample":
+        fail("qf-lra-bad-covariance-entry must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-covariance-entry-rejected":
+        fail("qf-lra-bad-covariance-entry must cite the replay row")
+    if qf_data.get("entry") != entry:
+        fail("qf-lra-bad-covariance-entry entry must match the replay row")
+    qf_computed = require_fraction("qf covariance computed_entry", qf_data.get("computed_entry"))
+    qf_claimed = require_fraction("qf covariance claimed_entry", qf_data.get("claimed_entry"))
+    if qf_computed != computed_entry or qf_claimed != claimed_entry:
+        fail("qf-lra-bad-covariance-entry data must match the replay row")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf covariance smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-covariance-matrix-v0/smt2/"
+        "bad-covariance-entry-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-covariance-entry smt2_artifact must name the checked source artifact")
+    check_source("qf covariance smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf covariance farkas_regression", regression)
+    if "finite_covariance_matrix_bad_entry_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-covariance-entry must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf covariance certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-covariance-entry certificate must document checked Farkas evidence")
+
+    horizon = checks["general-covariance-statistics-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-covariance-statistics-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-covariance-statistics-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("covariance horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("covariance horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -27593,6 +27760,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_conditional_expectation(expected)
     if metadata["id"] == "finite-concentration-v0":
         validate_finite_concentration(expected)
+    if metadata["id"] == "finite-covariance-matrix-v0":
+        validate_finite_covariance_matrix(expected)
     if metadata["id"] == "finite-martingales-v0":
         validate_finite_martingales(expected)
     if metadata["id"] == "finite-random-variables-v0":

@@ -1,12 +1,16 @@
 # End To End: Descriptive Statistics And Regression
 
-This lesson follows two exact finite statistics resources from mean/variance
+This lesson follows exact finite statistics resources from mean/variance
 and count-table replay to least-squares normal equations, residual
 orthogonality, checked bad RSS-improvement, and checked bad regression
-coefficients. It uses
+coefficients. The adjacent covariance lesson follows the same exact-rational
+statistics pattern for sample means, centered Gram matrices, and covariance
+entries. It uses
 [descriptive-statistics-v0](../../../artifacts/examples/math/descriptive-statistics-v0/)
 and
 [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/).
+For covariance, read
+[End To End: Finite Covariance Matrix](covariance-matrix-end-to-end.md).
 
 Concept rows:
 
@@ -294,6 +298,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes least_squares_bad_rss_improvement_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes descriptive_stats_bad_variance_artifact_emits_checked_farkas

@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "finite-covariance-matrix-v0",
+  "title": "Exact Finite Covariance Matrix Checks",
+  "domain": "statistics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_statistics",
+    "field_probability_theory",
+    "field_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_counting",
+    "curriculum_linear_algebra",
+    "bridge_random_matrix_finite_moment",
+    "bridge_inner_product_projection"
+  ],
+  "field_ids": [
+    "statistics",
+    "probability_theory",
+    "linear_algebra"
+  ],
+  "curriculum_nodes": [
+    "rationals",
+    "counting",
+    "linear-algebra"
+  ],
+  "axeyum_fragments": [
+    "finite sample tables",
+    "finite matrices",
+    "exact rational expectation",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite covariance bad entry QF_LRA/Farkas regression seed",
+    "pressure": "Exact finite-sample replay computes the off-diagonal covariance entry as 4/9 while a malformed row claims 1/2, isolating a compact equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-covariance-entry"
+    ],
+    "next_step": "Promote additional covariance or Gram rows only when they add distinct finite-sample, positive-semidefinite, PCA, or random-matrix solver pressure; keep inference, asymptotics, estimator consistency, and floating-point covariance algorithms in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/covariance-matrix-end-to-end.md",
+    "artifacts/examples/math/finite-covariance-matrix-v0/smt2/bad-covariance-entry-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "sample-mean-vector-witness",
+    "centered-sample-witness",
+    "covariance-matrix-witness",
+    "covariance-positive-semidefinite-shadow-witness",
+    "bad-covariance-entry-rejected",
+    "qf-lra-bad-covariance-entry",
+    "general-covariance-statistics-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational sample table, mean vector, centered rows, centered Gram matrix, covariance matrix, and leading principal minors as deterministic exact-rational replay obligations.",
+    "Route the false covariance-entry row through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting entry.",
+    "Expose the pack through the probability/statistics and matrix computation learner and consumer query surfaces.",
+    "Keep statistical inference, estimator consistency, PCA theorem claims, random-matrix asymptotics, and floating-point covariance algorithms marked Lean or numerical-honesty horizon."
+  ]
+}

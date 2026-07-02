@@ -41,10 +41,10 @@ These rows live in the
 |---|---|---|---|
 | Is a matrix-valued distribution normalized? | `random-matrix-finite-v0`, `finite-probability-v0` | exact rational atom-sum replay | continuous distributions and measure-theoretic probability |
 | What are the listed matrix moments? | `random-matrix-finite-v0` | finite enumeration of trace, trace-square, determinant, and weighted expectations | asymptotic spectral laws |
-| What is the expected Gram matrix? | `random-matrix-finite-v0` | exact `A^T*A` replay for every atom and weighted matrix addition | covariance/operator limit theorems |
+| What is the expected Gram or covariance matrix? | `random-matrix-finite-v0`, `finite-covariance-matrix-v0` | exact `A^T*A` replay for every atom, centered-row Gram replay, and covariance entry replay | covariance/operator limit theorems |
 | What is the rank distribution? | `random-matrix-finite-v0` | exact finite rank computation by rational row reduction, expectation replay, and checked rejection of a bad expected rank | rank laws for matrix ensembles |
 | Is a moment or rank claim false? | `random-matrix-finite-v0` | exact replay computes the value, then checked QF_LRA/Farkas rejects the conflicting value | concentration or universality theorems |
-| Which adjacent packs reuse the same finite-table pattern? | `descriptive-statistics-v0`, `finite-concentration-v0`, `finite-random-variables-v0` | exact finite statistic, tail, or pushforward replay | asymptotic inference and stochastic-process limits |
+| Which adjacent packs reuse the same finite-table pattern? | `descriptive-statistics-v0`, `finite-covariance-matrix-v0`, `finite-concentration-v0`, `finite-random-variables-v0` | exact finite statistic, covariance, tail, or pushforward replay | asymptotic inference and stochastic-process limits |
 
 ## Checkable Shapes
 
@@ -127,6 +127,9 @@ random-matrix limit law.
 Start with [Finite Random Matrices](random-matrix-finite-end-to-end.md) for the
 single-pack trace through atom tables, moments, expected Gram matrices, rank
 probabilities, bad expected-rank rejection, and bad trace-square rejection.
+Use [Finite Covariance Matrix](covariance-matrix-end-to-end.md) for the
+finite-sample mean, centered Gram, covariance, positive-semidefinite shadow,
+and bad covariance-entry row.
 
 Use [Probability And Statistics](probability-and-statistics.md) for the
 surrounding finite-probability cluster: finite mass tables, random variables,
@@ -147,6 +150,7 @@ python3 scripts/query-foundational-resources.py concepts --field probability_the
 python3 scripts/query-foundational-resources.py packs --concept bridge_random_matrix_finite_moment --route Farkas --require-any
 python3 scripts/query-foundational-resources.py checks --concept bridge_random_matrix_finite_moment --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack random-matrix-finite-v0 --route Farkas --proof-status checked --text rank --require-any
+python3 scripts/query-foundational-resources.py checks --pack finite-covariance-matrix-v0 --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --field probability_theory --route Farkas --proof-status checked --require-any
 ```
 
@@ -154,6 +158,7 @@ python3 scripts/query-foundational-resources.py checks --field probability_theor
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0
 ```
 
 Expected shape:

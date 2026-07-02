@@ -18,7 +18,8 @@ probability mass tables, finite measure additivity, product measures,
 pushforward distributions, simple-function integration, conditional
 expectation, finite martingale/stopping rows, finite distribution-distance
 rows, stochastic kernels, finite Markov chains, finite hitting times,
-concentration/tail-count rows, exact tests, and finite random-matrix moments.
+concentration/tail-count rows, exact tests, finite covariance matrices, and
+finite random-matrix moments.
 Continuous distributions, sampling guarantees, asymptotic inference, MCMC/VI,
 stochastic-process limits, random-matrix limit laws, and floating-point
 statistical-library behavior remain in proof-horizon or numerical-honesty
@@ -76,7 +77,7 @@ needs concrete checked rows to display.
 | Conditional-expectation theorem boundary | pack `finite-conditional-expectation-v0` | `Lean horizon` | `horizon-frontier --pack finite-conditional-expectation-v0`; `checks --pack finite-conditional-expectation-v0 --proof-status lean-horizon` |
 | Stochastic kernels, finite Markov chains, hitting times, and recurrence rows | `bridge_stochastic_kernel` | `Farkas` | `checks --concept bridge_stochastic_kernel --route Farkas --proof-status checked` |
 | Tail counts, exact tests, finite concentration, and variance rows | `bridge_tail_count_obstruction` | `Farkas` | `checks --concept bridge_tail_count_obstruction --route Farkas --proof-status checked` |
-| Random-matrix finite moments and expected-rank rows | `bridge_random_matrix_finite_moment` | `Farkas` | `checks --concept bridge_random_matrix_finite_moment --route Farkas --proof-status checked` |
+| Random-matrix finite moments, covariance matrices, and expected-rank rows | `bridge_random_matrix_finite_moment` | `Farkas` | `checks --concept bridge_random_matrix_finite_moment --route Farkas --proof-status checked`; `checks --pack finite-covariance-matrix-v0 --route Farkas --proof-status checked` |
 
 ## Copyable Examples
 
@@ -270,6 +271,12 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py checks \
   --concept bridge_random_matrix_finite_moment \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-covariance-matrix-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any

@@ -1734,6 +1734,12 @@
           "notes": "Exact rational Gram matrices, Cauchy-Schwarz replay, orthogonal projections, and Gram-Schmidt checks."
         },
         {
+          "id": "finite-covariance-matrix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-covariance-matrix-v0",
+          "notes": "Exact finite-sample mean, centered Gram, covariance matrix, positive-semidefinite shadow, and checked bad covariance-entry evidence."
+        },
+        {
           "id": "finite-qr-decomposition-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-qr-decomposition-v0",
@@ -2854,6 +2860,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-chebyshev-systems-v0",
           "notes": "Finite determinant conflict that uses the same checked QF_LRA/Farkas route."
+        },
+        {
+          "id": "finite-covariance-matrix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-covariance-matrix-v0",
+          "notes": "Malformed covariance-entry row checked through exact rational Farkas evidence after finite sample replay."
         }
       ],
       "proof_routes": [
@@ -7499,7 +7511,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A finite random-matrix row enumerates an explicit matrix-valued distribution and recomputes exact expectations, moments, ranks, determinants, or Gram matrices without simulation or asymptotics.",
+      "summary": "A finite random-matrix row enumerates an explicit matrix-valued distribution and recomputes exact expectations, moments, ranks, determinants, Gram matrices, or finite covariance matrices without simulation or asymptotics.",
       "prerequisites": [
         "bridge_rank_nullity",
         "bridge_residual_bound",
@@ -7538,6 +7550,12 @@
           "notes": "Exact finite statistic rows that share expectation and moment vocabulary."
         },
         {
+          "id": "finite-covariance-matrix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-covariance-matrix-v0",
+          "notes": "Exact finite-sample mean, centered Gram, covariance matrix, PSD shadow, and checked bad covariance-entry evidence."
+        },
+        {
           "id": "finite-concentration-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-concentration-v0",
@@ -7558,6 +7576,7 @@
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/random-matrix-moment-index.md",
             "docs/learn/math/random-matrix-finite-end-to-end.md",
+            "docs/learn/math/covariance-matrix-end-to-end.md",
             "docs/learn/math/probability-and-statistics.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
@@ -7572,6 +7591,7 @@
         "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/random-matrix-moment-index.md",
         "docs/learn/math/random-matrix-finite-end-to-end.md",
+        "docs/learn/math/covariance-matrix-end-to-end.md",
         "docs/learn/math/probability-and-statistics.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
@@ -9695,6 +9715,12 @@
           "notes": "Normal-equation and finite regression rows that use projection-style exact linear replay."
         },
         {
+          "id": "finite-covariance-matrix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-covariance-matrix-v0",
+          "notes": "Centered Gram, covariance matrix, and PSD shadow rows over exact finite samples."
+        },
+        {
           "id": "finite-dual-spaces-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-dual-spaces-v0",
@@ -9720,6 +9746,7 @@
             "docs/learn/math/matrix-computation-index.md",
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/inner-product-spaces-end-to-end.md",
+            "docs/learn/math/covariance-matrix-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
@@ -9735,6 +9762,7 @@
         "docs/learn/math/matrix-computation-index.md",
         "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/inner-product-spaces-end-to-end.md",
+        "docs/learn/math/covariance-matrix-end-to-end.md",
         "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
@@ -11626,7 +11654,7 @@
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, orthogonal transforms, rank, inverse, Jacobians, Hessians, projections, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, Jacobians, Hessians, projections, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -11699,6 +11727,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-circle-geometry-v0",
           "notes": "Finite Circle Geometry Checks"
+        },
+        {
+          "id": "finite-covariance-matrix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-covariance-matrix-v0",
+          "notes": "Exact Finite Covariance Matrix Checks"
         },
         {
           "id": "finite-cyclic-geometry-v0",
@@ -12716,7 +12750,7 @@
           "id": "finite-probability-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-probability-v0",
-          "notes": "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, conditioning, independence, Bayes rule, product measures, and exact discrete distributions."
+          "notes": "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, product measures, and exact discrete distributions."
         },
         {
           "id": "counting-v0",
@@ -12747,6 +12781,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-conditional-expectation-v0",
           "notes": "Finite Conditional Expectation Checks"
+        },
+        {
+          "id": "finite-covariance-matrix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-covariance-matrix-v0",
+          "notes": "Exact Finite Covariance Matrix Checks"
         },
         {
           "id": "finite-hitting-times-v0",
@@ -13516,7 +13556,7 @@
           "id": "descriptive-statistics-v0",
           "status": "validated",
           "path": "artifacts/examples/math/descriptive-statistics-v0",
-          "notes": "Mean/variance identities, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, and Simpson witnesses."
+          "notes": "Mean/variance/covariance identities, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, and Simpson witnesses."
         },
         {
           "id": "exact-statistical-tests-v0",
@@ -13535,6 +13575,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-conditional-expectation-v0",
           "notes": "Finite Conditional Expectation Checks"
+        },
+        {
+          "id": "finite-covariance-matrix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-covariance-matrix-v0",
+          "notes": "Exact Finite Covariance Matrix Checks"
         },
         {
           "id": "finite-hitting-times-v0",

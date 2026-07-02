@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-covariance-matrix-v0",
+  "witnesses": [
+    {
+      "id": "three-point-two-dimensional-sample",
+      "description": "A three-observation two-dimensional rational sample with exact mean, centered rows, Gram matrix, and covariance matrix.",
+      "values": {
+        "sample_matrix": [
+          ["1", "0"],
+          ["2", "1"],
+          ["4", "1"]
+        ],
+        "mean": ["7/3", "2/3"],
+        "centered": [
+          ["-4/3", "-2/3"],
+          ["-1/3", "1/3"],
+          ["5/3", "1/3"]
+        ],
+        "centered_gram": [
+          ["14/3", "4/3"],
+          ["4/3", "2/3"]
+        ],
+        "population_denominator": "3",
+        "covariance": [
+          ["14/9", "4/9"],
+          ["4/9", "2/9"]
+        ],
+        "leading_principal_minors": [
+          "14/9",
+          "4/27"
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "sample-mean-vector-witness",
+      "claim": "The listed sample has the stated mean vector.",
+      "expected_result": "sat",
+      "validation": "exact_rational_sample_mean_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-point-two-dimensional-sample"],
+      "notes": "The validator recomputes each mean coordinate exactly over rationals."
+    },
+    {
+      "id": "centered-sample-witness",
+      "claim": "The listed centered rows equal each sample row minus the mean and sum to zero.",
+      "expected_result": "sat",
+      "validation": "exact_rational_centered_sample_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-point-two-dimensional-sample"],
+      "notes": "The validator checks row-by-row centering and zero column sums exactly."
+    },
+    {
+      "id": "covariance-matrix-witness",
+      "claim": "The listed covariance matrix is the centered Gram matrix divided by the population denominator.",
+      "expected_result": "sat",
+      "validation": "exact_rational_covariance_matrix_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-point-two-dimensional-sample"],
+      "notes": "The validator recomputes (X - mu)^T (X - mu) and divides by the number of observations."
+    },
+    {
+      "id": "covariance-positive-semidefinite-shadow-witness",
+      "claim": "The fixed 2x2 covariance matrix has positive leading principal minors.",
+      "expected_result": "sat",
+      "validation": "exact_rational_covariance_psd_shadow_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["three-point-two-dimensional-sample"],
+      "notes": "The validator recomputes the two leading principal minors exactly; this is a fixed finite shadow, not a theorem about arbitrary covariance matrices."
+    },
+    {
+      "id": "bad-covariance-entry-rejected",
+      "claim": "The off-diagonal covariance entry is 1/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_covariance_entry_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "three-point-two-dimensional-sample",
+        "entry": [0, 1],
+        "computed_entry": "4/9",
+        "claimed_entry": "1/2"
+      },
+      "notes": "The validator recomputes the covariance matrix and rejects the malformed covariance-entry claim; the separate qf-lra-bad-covariance-entry row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-covariance-entry",
+      "claim": "The fixed malformed covariance-entry claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "three-point-two-dimensional-sample",
+        "source_replay_row": "bad-covariance-entry-rejected",
+        "entry": [0, 1],
+        "computed_entry": "4/9",
+        "claimed_entry": "1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-covariance-matrix-v0/smt2/bad-covariance-entry-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_covariance_matrix_bad_entry_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the covariance entry as 4/9, while the malformed row claims 1/2; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
+      "id": "general-covariance-statistics-lean-horizon",
+      "claim": "Statistical inference, PCA, asymptotic covariance theory, estimator consistency, and floating-point covariance algorithms are theorem/numerical-honesty work.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For finite-dimensional random vectors, covariance matrices are positive semidefinite, support PCA/spectral decompositions under stated assumptions, and sample covariance estimators satisfy statistical guarantees only under explicit probabilistic hypotheses.",
+        "future_checker": "Lean theorem statements for covariance PSD and PCA/spectral facts plus separate numerical-honesty artifacts for floating-point covariance implementations."
+      },
+      "notes": "The finite exact row is a checked resource, not a theorem about arbitrary covariance matrices, inference procedures, asymptotic statistics, or floating-point algorithms."
+    }
+  ]
+}

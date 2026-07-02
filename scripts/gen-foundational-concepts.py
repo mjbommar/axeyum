@@ -390,6 +390,10 @@ CURRICULUM_MAP = {
                 "Exact rational Gram matrices, Cauchy-Schwarz replay, orthogonal projections, and Gram-Schmidt checks.",
             ),
             (
+                "finite-covariance-matrix-v0",
+                "Exact finite-sample mean, centered Gram, covariance matrix, positive-semidefinite shadow, and checked bad covariance-entry evidence.",
+            ),
+            (
                 "finite-qr-decomposition-v0",
                 "Exact rational QR replay, orthogonality checks, upper-triangular factor checks, and checked bad product-entry evidence.",
             ),
@@ -515,14 +519,14 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, orthogonal transforms, rank, inverse, Jacobians, Hessians, projections, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, Jacobians, Hessians, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization and multivariable-calculus shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
-    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, conditioning, independence, Bayes rule, product measures, and exact discrete distributions."),
-    "statistics": ("descriptive-statistics-v0", "Mean/variance identities, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, and Simpson witnesses."),
+    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, product measures, and exact discrete distributions."),
+    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance identities, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, and Simpson witnesses."),
     "optimization_and_convexity": [
         ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
         ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and checked bad midpoint-convexity plus affine-threshold rejection."),
@@ -1344,6 +1348,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-chebyshev-systems-v0",
                 "Finite determinant conflict that uses the same checked QF_LRA/Farkas route.",
+            ),
+            (
+                "finite-covariance-matrix-v0",
+                "Malformed covariance-entry row checked through exact rational Farkas evidence after finite sample replay.",
             ),
         ],
         "proof_routes": [
@@ -5677,7 +5685,8 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "A finite random-matrix row enumerates an explicit matrix-valued "
             "distribution and recomputes exact expectations, moments, ranks, "
-            "determinants, or Gram matrices without simulation or asymptotics."
+            "determinants, Gram matrices, or finite covariance matrices without "
+            "simulation or asymptotics."
         ),
         "prerequisites": [
             "bridge_rank_nullity",
@@ -5711,6 +5720,10 @@ BRIDGE_CONCEPTS = [
                 "Exact finite statistic rows that share expectation and moment vocabulary.",
             ),
             (
+                "finite-covariance-matrix-v0",
+                "Exact finite-sample mean, centered Gram, covariance matrix, PSD shadow, and checked bad covariance-entry evidence.",
+            ),
+            (
                 "finite-concentration-v0",
                 "Finite tail-bound and union-bound rows that separate exact enumeration from concentration theorem horizons.",
             ),
@@ -5729,6 +5742,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/matrix-corpus-benchmark-boundary.md",
                     "docs/learn/math/random-matrix-moment-index.md",
                     "docs/learn/math/random-matrix-finite-end-to-end.md",
+                    "docs/learn/math/covariance-matrix-end-to-end.md",
                     "docs/learn/math/probability-and-statistics.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
@@ -5748,6 +5762,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/random-matrix-moment-index.md",
             "docs/learn/math/random-matrix-finite-end-to-end.md",
+            "docs/learn/math/covariance-matrix-end-to-end.md",
             "docs/learn/math/probability-and-statistics.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
@@ -7682,6 +7697,10 @@ BRIDGE_CONCEPTS = [
                 "Normal-equation and finite regression rows that use projection-style exact linear replay.",
             ),
             (
+                "finite-covariance-matrix-v0",
+                "Centered Gram, covariance matrix, and PSD shadow rows over exact finite samples.",
+            ),
+            (
                 "finite-dual-spaces-v0",
                 "Finite covector, pairing, annihilator, and transpose rows that supply dual-space vocabulary.",
             ),
@@ -7703,6 +7722,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/matrix-computation-index.md",
                     "docs/learn/math/matrix-corpus-benchmark-boundary.md",
                     "docs/learn/math/inner-product-spaces-end-to-end.md",
+                    "docs/learn/math/covariance-matrix-end-to-end.md",
                     "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
@@ -7723,6 +7743,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/matrix-computation-index.md",
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/inner-product-spaces-end-to-end.md",
+            "docs/learn/math/covariance-matrix-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
