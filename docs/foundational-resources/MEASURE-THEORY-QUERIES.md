@@ -157,6 +157,10 @@ python3 scripts/query-foundational-resources.py checks \
   --text qf-lra-bad-stopped-expectation \
   --require-any
 
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text martingale \
+  --require-any
+
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-stochastic-kernels-v0 \
   --route Farkas \
@@ -183,6 +187,12 @@ These queries prove discoverability of finite checked measure rows, not
 theorem coverage. They can support a catalog, learner page, route-specific
 regression search, or sibling resource that wants examples by finite measure
 object family.
+
+For the finite martingale boundary, read
+[Martingale Theorem Boundary](../learn/math/martingale-theorem-boundary.md)
+before treating finite filtration, submartingale, bounded-stopping, or checked
+bad-row resources as evidence for martingale convergence, optional stopping,
+Doob inequalities, stochastic integration, or continuous-time martingales.
 
 They do not prove:
 

@@ -31,6 +31,7 @@ Companion map:
 
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
 - [Hitting-Time Theorem Boundary](hitting-time-theorem-boundary.md)
+- [Martingale Theorem Boundary](martingale-theorem-boundary.md)
 - [Concentration Theorem Boundary](concentration-theorem-boundary.md)
 
 ## What Axeyum Checks
@@ -248,6 +249,11 @@ bad martingale rows are replay-only; the separate
 
 For a focused finite martingale trace, read
 [End To End: Finite Martingales](finite-martingales-end-to-end.md).
+For the theorem boundary that keeps these finite filtration,
+submartingale, bounded-stopping, and checked bad-row resources separate from
+martingale convergence, optional-stopping, Doob-inequality,
+stochastic-integration, and continuous-time claims, read
+[Martingale Theorem Boundary](martingale-theorem-boundary.md).
 
 For finite integration, it checks exact weighted sums such as:
 

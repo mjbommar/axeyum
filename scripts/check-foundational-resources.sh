@@ -213,6 +213,8 @@ python3 scripts/query-foundational-resources.py checks --pack finite-euler-metho
 python3 scripts/query-foundational-resources.py checks --pack finite-euler-method-v0 --proof-status replay-only --text rejected --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text ODE --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-euler-method-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text martingale --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-martingales-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-markov-chain-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-stochastic-kernels-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-hitting-times-v0 --route Farkas --proof-status checked --require-any >/dev/null

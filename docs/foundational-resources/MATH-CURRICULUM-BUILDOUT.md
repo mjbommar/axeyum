@@ -2022,6 +2022,11 @@ filtrations, adaptedness, martingale conditional-expectation equalities,
 square-submartingale inequalities, bounded stopping replay, checked bad
 stopped-expectation and martingale rejection with QF_LRA/Farkas evidence, and
 the general martingale Lean horizon.
+It also has a focused martingale theorem-boundary page that keeps finite
+filtration/adaptedness replay, martingale equalities, square-submartingale
+inequalities, bounded stopping, and checked bad-row Farkas evidence separate
+from martingale convergence, optional stopping, Doob inequalities, stochastic
+integration, and continuous-time martingale claims.
 `finite-stochastic-kernels-v0` now has a learner-facing end-to-end lesson for
 row-normalized finite kernels, pushforward distributions, joint
 factorization/disintegration, kernel composition, replayed bad kernel-row and
@@ -2660,6 +2665,16 @@ equations, checked bad survival-mass and bad expected-time Farkas rows, the
 `general-hitting-theory-lean-horizon` metadata row, copyable queries, and
 graduation criteria for future no-`sorry` recurrence/transience,
 optional-stopping, mixing, and potential-theory routes.
+The learner/planning layer now also has
+[`martingale-theorem-boundary.md`](../learn/math/martingale-theorem-boundary.md),
+which narrows the stochastic-process theorem boundary to
+`finite-martingales-v0`: finite filtration/adaptedness replay, martingale
+equalities, square-submartingale inequalities, bounded stopping, checked bad
+stopped-expectation and bad martingale Farkas rows, the
+`general-martingale-lean-horizon` metadata row, copyable queries, and
+graduation criteria for future no-`sorry` martingale convergence,
+optional-stopping, Doob-inequality, stochastic-integration, and
+continuous-time martingale routes.
 The learner/planning layer now also has
 [`algebra-equality-certificate-boundary.md`](../learn/math/algebra-equality-certificate-boundary.md),
 which turns the algebra queue rule into an explicit promotion boundary:

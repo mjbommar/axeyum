@@ -62,6 +62,11 @@ Companion maps:
   separates finite first-hit, survival-mass, absorption-probability, and
   expected-time replay from recurrence, transience, optional-stopping, mixing,
   and potential-theory targets.
+- [Martingale Theorem Boundary](martingale-theorem-boundary.md):
+  separates finite filtration, martingale, submartingale, bounded-stopping,
+  and checked bad-row replay from martingale convergence, optional-stopping,
+  Doob-inequality, stochastic-integration, and continuous-time theorem
+  targets.
 - [Euler Method Theorem Boundary](euler-method-theorem-boundary.md):
   separates finite explicit-Euler transition/error replay from continuous ODE,
   convergence, stability, stiffness, floating-point, and PDE theorem targets.
@@ -501,6 +506,10 @@ Companion maps:
   square-submartingale inequalities, bounded stopping replay, checked bad
   stopped-expectation and martingale rejection, and the general martingale Lean
   horizon.
+- [Martingale Theorem Boundary](martingale-theorem-boundary.md): maps those
+  finite martingale and bounded-stopping shadows to the missing martingale
+  convergence, optional-stopping, Doob-inequality, stochastic-integration, and
+  continuous-time proof routes.
 - [Finite Stochastic Kernels](finite-stochastic-kernels-end-to-end.md): follows
   row-normalized finite kernels, pushforward distributions, joint
   factorization/disintegration, kernel composition, replayed bad kernel-row

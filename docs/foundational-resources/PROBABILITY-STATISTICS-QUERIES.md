@@ -143,6 +143,20 @@ python3 scripts/query-foundational-resources.py horizon-frontier \
   --require-any
 ```
 
+Display finite martingale rows, then the theorem boundary:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-martingales-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text martingale \
+  --require-any
+```
+
 Display checked finite measure rows:
 
 ```sh
@@ -239,6 +253,12 @@ For the finite hitting-time boundary, read
 [Hitting-Time Theorem Boundary](../learn/math/hitting-time-theorem-boundary.md)
 before displaying recurrence, transience, optional-stopping, mixing, or
 potential-theory language next to finite first-hit and expected-time rows.
+
+For the finite martingale boundary, read
+[Martingale Theorem Boundary](../learn/math/martingale-theorem-boundary.md)
+before displaying martingale convergence, optional-stopping,
+Doob-inequality, stochastic-integration, or continuous-time martingale
+language next to finite filtration and bounded-stopping rows.
 
 They do not prove:
 

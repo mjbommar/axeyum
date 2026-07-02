@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Martingale theorem-boundary resource landed.**
+  `martingale-theorem-boundary.md` now separates
+  `finite-martingales-v0` finite filtration/adaptedness replay,
+  martingale equalities, square-submartingale inequalities, bounded stopping,
+  checked bad stopped-expectation and bad martingale QF_LRA/Farkas rows from
+  martingale convergence, optional-stopping, Doob-inequality,
+  stochastic-integration, and continuous-time theorem claims. The theorem
+  horizon, probability/statistics, measure-theory, learner-map, and smoke
+  query docs now expose the martingale boundary directly.
+
 - **Hitting-time theorem-boundary resource landed.**
   `hitting-time-theorem-boundary.md` now separates
   `finite-hitting-times-v0` finite first-hit distribution replay, survival

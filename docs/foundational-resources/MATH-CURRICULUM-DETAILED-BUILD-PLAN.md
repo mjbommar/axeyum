@@ -1886,6 +1886,15 @@ Pick one row per commit unless the change is purely navigational.
      transience, optional-stopping, mixing, and Markov-chain potential-theory
      routes, and adds hitting-specific horizon queries to the public smoke
      gate without adding a duplicate pack or changing resource counts.
+225. Landed: add `martingale-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-martingales-v0`. It maps finite
+     filtration/adaptedness replay, martingale equalities,
+     square-submartingale inequalities, bounded stopping, and checked
+     QF_LRA/Farkas bad stopped-expectation and bad martingale rows to the
+     missing martingale-convergence, optional-stopping, Doob-inequality,
+     stochastic-integration, and continuous-time theorem routes, and adds
+     martingale-specific horizon queries to the public smoke gate without
+     adding a duplicate pack or changing resource counts.
 
 ## Validation Checklist
 
