@@ -184,7 +184,8 @@ QF_LRA/Farkas evidence; its theorem boundary is
 The finite cyclic-geometry slice checks an inscribed square as exact vector
 data: radius-squared rows, diagonal midpoints, diagonal dot products, and
 opposite-angle dot products, then rejects bad diagonal-intersection and
-opposite-angle rows through QF_LRA/Farkas evidence.
+opposite-angle rows through QF_LRA/Farkas evidence; its theorem boundary is
+[Cyclic Geometry Theorem Boundary](cyclic-geometry-theorem-boundary.md).
 
 This is a strong resource path because the trusted checker can be small: matrix
 multiplication, vector norms, linear inequalities, and certificate arithmetic.
@@ -464,6 +465,11 @@ Ptolemy right-hand side `24`; exact replay computes `0`, `0`, and `25`
 respectively. The final conflicts are checked through QF_LRA/Farkas evidence.
 For a focused trace, read
 [End To End: Finite Cyclic Geometry](finite-cyclic-geometry-end-to-end.md).
+For the theorem boundary that keeps those finite cyclic rows separate from
+cyclic-quadrilateral criteria, inscribed-angle facts, Ptolemy, converse
+Ptolemy, angle-chasing, circle-line, synthetic-geometry, and
+numerical-geometry theorems, read
+[Cyclic Geometry Theorem Boundary](cyclic-geometry-theorem-boundary.md).
 
 For a finite SDP example, encode a two-by-two trace-one PSD matrix and dual
 slack:
@@ -750,6 +756,7 @@ replay, read
 [End To End: Finite Inversion Geometry](finite-inversion-geometry-end-to-end.md),
 [Inversion Geometry Theorem Boundary](inversion-geometry-theorem-boundary.md),
 [End To End: Finite Cyclic Geometry](finite-cyclic-geometry-end-to-end.md),
+[Cyclic Geometry Theorem Boundary](cyclic-geometry-theorem-boundary.md),
 [End To End: Rational Inner Product Spaces](inner-product-spaces-end-to-end.md),
 [End To End: Finite Vector Spaces](finite-vector-spaces-end-to-end.md),
 [End To End: Finite Dual Spaces](finite-dual-spaces-end-to-end.md), and

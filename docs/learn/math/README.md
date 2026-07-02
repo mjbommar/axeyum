@@ -443,6 +443,12 @@ Companion maps:
   right-angle replay, rational Ptolemy replay, checked QF_LRA/Farkas bad
   diagonal-intersection, bad opposite-angle, and bad Ptolemy rejection, and the
   general cyclic-geometry Lean horizon.
+- [Cyclic Geometry Theorem Boundary](cyclic-geometry-theorem-boundary.md):
+  maps those finite cyclic quadrilateral, diagonal, opposite-angle, Ptolemy,
+  bad-diagonal, bad-angle, and bad-Ptolemy coordinate shadows to the missing
+  cyclic-quadrilateral criteria, inscribed-angle, Ptolemy, converse-Ptolemy,
+  angle-chasing, circle-line, synthetic-geometry, and numerical-geometry
+  theorem routes.
 - [Rational Multivariable Calculus](multivariable-calculus-end-to-end.md):
   follows exact polynomial gradient replay, directional derivatives, Jacobian
   chain-rule matrix multiplication, Hessian minor checks, QF_LRA/Farkas

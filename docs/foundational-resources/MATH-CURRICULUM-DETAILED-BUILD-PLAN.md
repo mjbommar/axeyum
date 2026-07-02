@@ -2033,6 +2033,16 @@ Pick one row per commit unless the change is purely navigational.
      and numerical-geometry theorem routes, and adds inversion-specific
      horizon queries to the public smoke gate without adding a duplicate pack
      or changing resource counts.
+241. Landed: add `cyclic-geometry-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-cyclic-geometry-v0`. It maps exact
+     cyclic-quadrilateral replay, diagonal-intersection replay,
+     opposite-angle replay, rational Ptolemy replay, and checked QF_LRA/Farkas
+     bad diagonal, bad angle, and bad Ptolemy rows to the missing cyclic
+     criteria, inscribed-angle, Ptolemy, converse-Ptolemy, angle-chasing,
+     circle-line correspondence, synthetic-geometry, projective-geometry, and
+     numerical-geometry theorem routes, and adds cyclic-specific horizon
+     queries to the public smoke gate without adding a duplicate pack or
+     changing resource counts.
 
 ## Validation Checklist
 

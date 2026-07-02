@@ -548,6 +548,11 @@ diagonal lengths = 5, 5
 The bad Ptolemy row claims the replayed right-hand side is `24`; exact replay
 computes `25`, and the source QF_LRA artifact checks that final equality
 conflict with `UnsatFarkas` evidence.
+For the theorem boundary that keeps those finite cyclic rows separate from
+cyclic-quadrilateral criteria, inscribed-angle facts, Ptolemy, converse
+Ptolemy, angle-chasing, circle-line, synthetic-geometry, and
+numerical-geometry theorems, read
+[Cyclic Geometry Theorem Boundary](cyclic-geometry-theorem-boundary.md).
 
 Run the checks from the repository root:
 
@@ -657,7 +662,8 @@ For finite inversion replay, read
 [End To End: Finite Inversion Geometry](finite-inversion-geometry-end-to-end.md)
 and [Inversion Geometry Theorem Boundary](inversion-geometry-theorem-boundary.md).
 For finite cyclic quadrilateral replay, read
-[End To End: Finite Cyclic Geometry](finite-cyclic-geometry-end-to-end.md).
+[End To End: Finite Cyclic Geometry](finite-cyclic-geometry-end-to-end.md) and
+[Cyclic Geometry Theorem Boundary](cyclic-geometry-theorem-boundary.md).
 
 ## Horizon
 

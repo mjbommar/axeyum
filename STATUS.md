@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Cyclic-geometry theorem-boundary resource landed.**
+  `cyclic-geometry-theorem-boundary.md` now separates
+  `finite-cyclic-geometry-v0` exact cyclic-quadrilateral replay,
+  diagonal-intersection replay, opposite-angle replay, rational Ptolemy replay,
+  and checked bad diagonal/bad angle/bad Ptolemy QF_LRA/Farkas rows from cyclic
+  quadrilateral criteria, inscribed-angle theorems, Ptolemy, converse Ptolemy,
+  angle-chasing, circle-line correspondence, synthetic-geometry,
+  projective-geometry, and numerical-geometry theorem claims. The theorem
+  horizon, geometry, learner-map, and smoke query docs now expose the cyclic
+  boundary directly.
+
 - **Inversion-geometry theorem-boundary resource landed.**
   `inversion-geometry-theorem-boundary.md` now separates
   `finite-inversion-geometry-v0` exact inverse-image replay,

@@ -408,6 +408,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Cyclic-geometry inscribed-angle, Ptolemy, angle-chasing, and circle-line
+correspondence horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text "cyclic geometry" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-cyclic-geometry-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Hitting-time, recurrence/transience, and stochastic-process horizons:
 
 ```sh
@@ -485,6 +499,7 @@ The main learner maps that explain these boundaries are:
 - [Proximal Gradient Convergence Theorem Boundary](../learn/math/proximal-gradient-convergence-theorem-boundary.md)
 - [Circle Geometry Theorem Boundary](../learn/math/circle-geometry-theorem-boundary.md)
 - [Inversion Geometry Theorem Boundary](../learn/math/inversion-geometry-theorem-boundary.md)
+- [Cyclic Geometry Theorem Boundary](../learn/math/cyclic-geometry-theorem-boundary.md)
 - [Random Variable Theorem Boundary](../learn/math/random-variable-theorem-boundary.md)
 - [Stochastic Kernel Theorem Boundary](../learn/math/stochastic-kernel-theorem-boundary.md)
 - [Hitting-Time Theorem Boundary](../learn/math/hitting-time-theorem-boundary.md)

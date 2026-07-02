@@ -498,6 +498,11 @@ python3 scripts/query-foundational-resources.py horizon-frontier --text "inversi
 python3 scripts/query-foundational-resources.py checks --pack finite-inversion-geometry-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-inversion-geometry-v0 --route Farkas --proof-status checked --text "x-coordinate" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-inversion-geometry-v0 --route Farkas --proof-status checked --text product --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text "cyclic geometry" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-cyclic-geometry-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-cyclic-geometry-v0 --route Farkas --proof-status checked --text diagonal --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-cyclic-geometry-v0 --route Farkas --proof-status checked --text "dot product" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-cyclic-geometry-v0 --route Farkas --proof-status checked --text Ptolemy --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field functional_analysis_and_operator_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field functional_analysis_and_operator_theory --text operator --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field functional_analysis_and_operator_theory --text Chebyshev --require-any >/dev/null

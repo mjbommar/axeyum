@@ -2569,6 +2569,16 @@ rows are linked to copyable queries and graduation criteria while keeping
 involution, circle-line correspondence, angle-preservation, power-of-a-point,
 generalized circle-inversion, synthetic-geometry, projective-geometry, and
 numerical-geometry claims in Lean/theorem-horizon lanes.
+The learner/planning layer now also has
+[`cyclic-geometry-theorem-boundary.md`](../learn/math/cyclic-geometry-theorem-boundary.md),
+which expands the finite cyclic-geometry row into a concrete boundary ledger:
+cyclic quadrilateral replay, diagonal-intersection replay, opposite-angle
+replay, rational Ptolemy replay, and bad diagonal/bad angle/bad Ptolemy
+QF_LRA/Farkas rows are linked to copyable queries and graduation criteria while
+keeping cyclic-quadrilateral criteria, inscribed-angle facts, Ptolemy,
+converse Ptolemy, angle-chasing, circle-line correspondence,
+synthetic-geometry, projective-geometry, and numerical-geometry claims in
+Lean/theorem-horizon lanes.
 The graph/discrete consumer layer now also has
 [`GRAPH-DISCRETE-QUERIES.md`](GRAPH-DISCRETE-QUERIES.md). The guide and
 resource smoke expose `bridge_finite_graph_replay_obstruction` through
