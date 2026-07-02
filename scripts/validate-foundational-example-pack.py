@@ -6076,8 +6076,8 @@ def validate_finite_group_actions(expected: dict[str, Any]) -> None:
         fail("burnside direct orbit enumeration disagrees with orbit count")
 
     bad = checks["bad-action-rejected"]
-    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
-        fail("bad-action-rejected must be a checked unsat row")
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "replay-only":
+        fail("bad-action-rejected must be a replay-only unsat row")
     data = bad.get("data", {})
     if not isinstance(data, dict):
         fail("bad-action-rejected data must be an object")
@@ -6097,9 +6097,59 @@ def validate_finite_group_actions(expected: dict[str, Any]) -> None:
     if action[(identity, failing_point)] == failing_point:
         fail("bad-action-rejected identity action unexpectedly holds")
 
+    bad_identity_alethe = checks["qf-uf-bad-identity-action"]
+    if bad_identity_alethe["expected_result"] != "unsat" or bad_identity_alethe.get("proof_status") != "checked":
+        fail("qf-uf-bad-identity-action must be a checked unsat row")
+    if bad_identity_alethe["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-bad-identity-action must use qf_uf_congruence_alethe validation")
+    data = bad_identity_alethe.get("data", {})
+    if not isinstance(data, dict):
+        fail("qf-uf-bad-identity-action data must be an object")
+    qf_group = require_string_list("qf-uf bad identity group_carrier", data.get("group_carrier"))
+    if qf_group != group:
+        fail("qf-uf-bad-identity-action group_carrier must match bad-action-rejected")
+    qf_points = require_string_list("qf-uf bad identity set", data.get("set"))
+    if qf_points != points:
+        fail("qf-uf-bad-identity-action set must match bad-action-rejected")
+    qf_failing_law = data.get("failing_law")
+    qf_identity = data.get("identity_element")
+    qf_failing_point = data.get("failing_point")
+    qf_expected = data.get("expected")
+    qf_actual = data.get("actual")
+    require_string("qf-uf bad identity failing_law", qf_failing_law)
+    require_string("qf-uf bad identity identity_element", qf_identity)
+    require_string("qf-uf bad identity failing_point", qf_failing_point)
+    require_string("qf-uf bad identity expected", qf_expected)
+    require_string("qf-uf bad identity actual", qf_actual)
+    if qf_failing_law != failing_law:
+        fail("qf-uf-bad-identity-action failing_law must match bad-action-rejected")
+    if qf_identity != identity:
+        fail("qf-uf-bad-identity-action identity_element must match bad-action-rejected")
+    if qf_failing_point != failing_point:
+        fail("qf-uf-bad-identity-action failing_point must match bad-action-rejected")
+    if qf_expected != failing_point:
+        fail("qf-uf-bad-identity-action expected value must be the failing point")
+    if qf_actual != actual:
+        fail("qf-uf-bad-identity-action actual must match bad-action-rejected")
+    claim = data.get("alethe_identity_claim")
+    require_string("qf-uf bad identity alethe_identity_claim", claim)
+    if claim != "e.01 = 01":
+        fail("qf-uf-bad-identity-action must document the Alethe identity claim")
+    smt2_artifact = data.get("smt2_artifact")
+    require_string("qf-uf bad identity smt2_artifact", smt2_artifact)
+    check_source("qf-uf bad identity smt2_artifact", smt2_artifact)
+    regression = data.get("proof_regression")
+    require_string("qf-uf bad identity proof_regression", regression)
+    if "finite_group_actions_bad_identity_emits_checked_alethe" not in regression:
+        fail("qf-uf-bad-identity-action must link the Alethe regression")
+    certificate = data.get("certificate")
+    require_string("qf-uf bad identity certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
+        fail("qf-uf-bad-identity-action certificate must document zero-trust Alethe evidence")
+
     bad_compatibility = checks["bad-compatibility-rejected"]
-    if bad_compatibility["expected_result"] != "unsat" or bad_compatibility.get("proof_status") != "checked":
-        fail("bad-compatibility-rejected must be a checked unsat row")
+    if bad_compatibility["expected_result"] != "unsat" or bad_compatibility.get("proof_status") != "replay-only":
+        fail("bad-compatibility-rejected must be a replay-only unsat row")
     if bad_compatibility["validation"] != "finite_group_action_compatibility_refutation":
         fail("bad-compatibility-rejected must use finite_group_action_compatibility_refutation validation")
     data = bad_compatibility.get("data", {})
@@ -6142,21 +6192,71 @@ def validate_finite_group_actions(expected: dict[str, Any]) -> None:
         fail("bad-compatibility-rejected compatibility unexpectedly holds")
     if action_law_failures(group, identity, operation, points, action) == []:
         fail("bad-compatibility-rejected malformed table unexpectedly satisfies action laws")
+
+    bad_compatibility_alethe = checks["qf-uf-bad-action-compatibility"]
+    if (
+        bad_compatibility_alethe["expected_result"] != "unsat"
+        or bad_compatibility_alethe.get("proof_status") != "checked"
+    ):
+        fail("qf-uf-bad-action-compatibility must be a checked unsat row")
+    if bad_compatibility_alethe["validation"] != "qf_uf_congruence_alethe":
+        fail("qf-uf-bad-action-compatibility must use qf_uf_congruence_alethe validation")
+    data = bad_compatibility_alethe.get("data", {})
+    if not isinstance(data, dict):
+        fail("qf-uf-bad-action-compatibility data must be an object")
+    qf_group = require_string_list("qf-uf bad compatibility group_carrier", data.get("group_carrier"))
+    if qf_group != group:
+        fail("qf-uf-bad-action-compatibility group_carrier must match bad-compatibility-rejected")
+    qf_points = require_string_list("qf-uf bad compatibility set", data.get("set"))
+    if qf_points != points:
+        fail("qf-uf-bad-action-compatibility set must match bad-compatibility-rejected")
+    qf_failing_law = data.get("failing_law")
+    qf_left_element = data.get("left_element")
+    qf_right_element = data.get("right_element")
+    qf_product_element = data.get("product_element")
+    qf_failing_point = data.get("failing_point")
+    qf_intermediate = data.get("intermediate")
+    qf_lhs = data.get("lhs")
+    qf_rhs = data.get("rhs")
+    require_string("qf-uf bad compatibility failing_law", qf_failing_law)
+    require_string("qf-uf bad compatibility left_element", qf_left_element)
+    require_string("qf-uf bad compatibility right_element", qf_right_element)
+    require_string("qf-uf bad compatibility product_element", qf_product_element)
+    require_string("qf-uf bad compatibility failing_point", qf_failing_point)
+    require_string("qf-uf bad compatibility intermediate", qf_intermediate)
+    require_string("qf-uf bad compatibility lhs", qf_lhs)
+    require_string("qf-uf bad compatibility rhs", qf_rhs)
+    if qf_failing_law != failing_law:
+        fail("qf-uf-bad-action-compatibility failing_law must match bad-compatibility-rejected")
+    if qf_left_element != left_element:
+        fail("qf-uf-bad-action-compatibility left_element must match bad-compatibility-rejected")
+    if qf_right_element != right_element:
+        fail("qf-uf-bad-action-compatibility right_element must match bad-compatibility-rejected")
+    if qf_product_element != product_element:
+        fail("qf-uf-bad-action-compatibility product_element must match bad-compatibility-rejected")
+    if qf_failing_point != failing_point:
+        fail("qf-uf-bad-action-compatibility failing_point must match bad-compatibility-rejected")
+    if qf_intermediate != intermediate:
+        fail("qf-uf-bad-action-compatibility intermediate must match bad-compatibility-rejected")
+    if qf_lhs != lhs:
+        fail("qf-uf-bad-action-compatibility lhs must match bad-compatibility-rejected")
+    if qf_rhs != rhs:
+        fail("qf-uf-bad-action-compatibility rhs must match bad-compatibility-rejected")
     claim = data.get("alethe_compatibility_claim")
-    require_string("bad compatibility alethe_compatibility_claim", claim)
+    require_string("qf-uf bad compatibility alethe_compatibility_claim", claim)
     if claim != "s.(s.01) = (s*s).01":
-        fail("bad-compatibility-rejected must document the Alethe compatibility claim")
+        fail("qf-uf-bad-action-compatibility must document the Alethe compatibility claim")
     smt2_artifact = data.get("smt2_artifact")
-    require_string("bad compatibility smt2_artifact", smt2_artifact)
-    check_source("bad compatibility smt2_artifact", smt2_artifact)
+    require_string("qf-uf bad compatibility smt2_artifact", smt2_artifact)
+    check_source("qf-uf bad compatibility smt2_artifact", smt2_artifact)
     regression = data.get("proof_regression")
-    require_string("bad compatibility proof_regression", regression)
+    require_string("qf-uf bad compatibility proof_regression", regression)
     if "finite_group_actions_bad_compatibility_emits_checked_alethe" not in regression:
-        fail("bad-compatibility-rejected must link the Alethe regression")
+        fail("qf-uf-bad-action-compatibility must link the Alethe regression")
     certificate = data.get("certificate")
-    require_string("bad compatibility certificate", certificate)
-    if "UnsatAletheProof" not in certificate or "Evidence::check" not in certificate:
-        fail("bad-compatibility-rejected certificate must document zero-trust Alethe evidence")
+    require_string("qf-uf bad compatibility certificate", certificate)
+    if "UnsatAletheProof" not in certificate or "no trusted reduction" not in certificate:
+        fail("qf-uf-bad-action-compatibility certificate must document zero-trust Alethe evidence")
 
     horizon = checks["general-group-action-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

@@ -192,8 +192,8 @@ s(11) = 11
 The `finite-group-actions-v0` validator checks that `e` acts as the identity,
 that `(g*h).x = g.(h.x)` for the listed group table, and that the resulting
 function tables produce the claimed orbits and stabilizers. It also has
-checked QF_UF/Alethe rows for malformed identity-action and compatibility
-tables.
+exact replay rows for malformed identity-action and compatibility tables, plus
+explicit checked QF_UF/Alethe rows for the isolated equality conflicts.
 
 For finite order theory, encode the four-element Boolean lattice:
 

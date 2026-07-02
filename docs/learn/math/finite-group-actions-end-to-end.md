@@ -21,12 +21,16 @@ Concept rows:
 | `c2-swap-action-laws` | `sat` | checked |
 | `orbit-stabilizer-replay` | `sat` | checked |
 | `burnside-orbit-count-replay` | `sat` | checked |
-| `bad-action-rejected` | `unsat` | checked |
-| `bad-compatibility-rejected` | `unsat` | checked |
+| `bad-action-rejected` | `unsat` | replay-only |
+| `qf-uf-bad-identity-action` | `unsat` | checked |
+| `bad-compatibility-rejected` | `unsat` | replay-only |
+| `qf-uf-bad-action-compatibility` | `unsat` | checked |
 | `general-group-action-theory-lean-horizon` | `not-run` | lean-horizon |
 
-The checked rows are finite table replay. The pack does not claim general
-orbit-stabilizer or Burnside/Cauchy-Frobenius theorems for arbitrary groups.
+The finite rows replay table facts. The separate QF_UF/Alethe rows check the
+isolated equality conflicts after replay has found the malformed entry. The
+pack does not claim general orbit-stabilizer or Burnside/Cauchy-Frobenius
+theorems for arbitrary groups.
 
 ## Encode
 
@@ -134,7 +138,9 @@ e.01 = 10
 ```
 
 That violates the required law `e.x = x`. The checker rejects the malformed
-table as an `unsat` claim without needing to search for a better action.
+table as an `unsat` claim without needing to search for a better action. The
+separate `qf-uf-bad-identity-action` row checks the isolated equality conflict
+with QF_UF/Alethe evidence.
 
 ## Reject Bad Compatibility
 
@@ -153,9 +159,9 @@ s.(s.01) = s.10 = 10
 (s*s).01 = e.01 = 01
 ```
 
-The finite replay finds that concrete mismatch first. The linked QF_UF/Alethe
-artifact then checks the isolated equality conflict
-`s.(s.01) = (s*s).01`.
+The finite replay finds that concrete mismatch first. The separate
+`qf-uf-bad-action-compatibility` row links the QF_UF/Alethe artifact that
+checks the isolated equality conflict `s.(s.01) = (s*s).01`.
 
 ## Run It
 
@@ -180,8 +186,8 @@ untrusted fast search -> candidate action table
 trusted small checking -> group laws, action laws, orbit/stabilizer, Burnside replay
 ```
 
-The two checked QF_UF/Alethe rows are certificate checks over small equality
-conflicts after finite replay has already identified the malformed table entry.
+The two QF_UF/Alethe rows are certificate checks over small equality conflicts
+after finite replay has already identified the malformed table entry.
 
 General group-action theory, stabilizer-subgroup theorems, quotient actions,
 Burnside/Cauchy-Frobenius in full generality, representation-theoretic

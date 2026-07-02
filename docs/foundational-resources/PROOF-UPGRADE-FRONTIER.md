@@ -578,8 +578,9 @@ First targets:
   `qf-uf-bad-bilinear-left-additivity` for the bad bilinear left-additivity
   conflict)
 - [finite-group-actions-v0](../../artifacts/examples/math/finite-group-actions-v0/)
-  (resource-backed QF_UF/Alethe regressions landed for the bad identity-action
-  and action-compatibility conflicts)
+  (resource-backed QF_UF/Alethe regressions landed as
+  `qf-uf-bad-identity-action` and `qf-uf-bad-action-compatibility` for the bad
+  identity-action and action-compatibility conflicts)
 - [finite-continuous-maps-v0](../../artifacts/examples/math/finite-continuous-maps-v0/)
   (resource-backed QF_UF/Alethe regression landed as the explicit
   `qf-uf-bad-preimage-membership` row for the malformed preimage-membership
@@ -601,8 +602,8 @@ First targets:
 Secondary targets:
 
 - initial module/ideal/tensor equality-heavy secondary set is covered, including
-  the finite-ideals quotient representative congruence row and the finite
-  group-action identity and compatibility rows; the topology lane now has a
+  the finite-ideals quotient representative congruence row and the explicit
+  finite group-action identity and compatibility QF_UF rows; the topology lane now has a
   queryable continuous-map preimage-membership row, quotient-open-status,
   specialization-antisymmetry, cohomology coboundary-value, and finite
   universal-coefficient group-identity EUF certificates.

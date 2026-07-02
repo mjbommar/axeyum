@@ -37,8 +37,8 @@
     "target": "finite group-action bad identity and bad compatibility QF_UF/Alethe regression seeds",
     "pressure": "The identity element of a fixed finite group action must fix every point, and compatibility must satisfy g.(h.x) = (g*h).x; the EUF rows refute a malformed identity table and a malformed compatibility table after finite replay identifies the failing point.",
     "evidence": [
-      "bad-action-rejected",
-      "bad-compatibility-rejected"
+      "qf-uf-bad-identity-action",
+      "qf-uf-bad-action-compatibility"
     ],
     "next_step": "Promote additional group-action rows only when they add distinct congruence pressure beyond identity and compatibility; keep orbit-stabilizer, Burnside/Cauchy-Frobenius, quotient actions, and representation theory in the Lean-horizon lane."
   },
@@ -60,13 +60,15 @@
     "orbit-stabilizer-replay",
     "burnside-orbit-count-replay",
     "bad-action-rejected",
+    "qf-uf-bad-identity-action",
     "bad-compatibility-rejected",
+    "qf-uf-bad-action-compatibility",
     "general-group-action-theory-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode fixed finite group actions as deterministic table obligations.",
     "Replay action-law, orbit, stabilizer, orbit-stabilizer, and Burnside rows through Axeyum model evaluation over finite tables.",
-    "Route malformed finite identity-action and action-compatibility rows through checked QF_UF/Alethe evidence once exact table replay identifies the failing point.",
+    "Keep malformed finite identity-action and action-compatibility table rows as exact replay, with separate checked QF_UF/Alethe rows for the isolated equality conflicts once replay identifies the failing point.",
     "Keep arbitrary group-action theorems, Burnside/Cauchy-Frobenius in full generality, group actions on algebraic/topological structures, and representation theory under Lean horizon until formal routes exist."
   ]
 }

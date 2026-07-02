@@ -179,8 +179,9 @@ orbits = (4 + 2) / 2 = 3
 The `finite-group-actions-v0` pack checks the identity and compatibility
 action laws, recomputes the sample orbit and stabilizer, verifies
 `|orbit(x)| * |stabilizer(x)| = |G|`, recomputes all action orbits, and
-checks Burnside's fixed-point average. Its checked Alethe rows reject both a
-malformed identity action and a malformed compatibility table.
+checks Burnside's fixed-point average. Exact replay rejects malformed identity
+and compatibility tables; the explicit `qf-uf-bad-identity-action` and
+`qf-uf-bad-action-compatibility` rows check the isolated equality conflicts.
 
 For a finite ring example, use `Z/4Z`:
 

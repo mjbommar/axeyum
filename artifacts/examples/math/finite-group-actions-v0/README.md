@@ -11,8 +11,10 @@ It checks:
 - orbit and stabilizer recomputation for a chosen point;
 - orbit-stabilizer cardinality replay;
 - Burnside fixed-point average for the action quotient count;
-- checked QF_UF/Alethe rejection of a malformed identity-action table;
-- checked QF_UF/Alethe rejection of a malformed action-compatibility table;
+- exact replay rejection of a malformed identity-action table;
+- checked QF_UF/Alethe rejection of the isolated identity-action conflict;
+- exact replay rejection of a malformed action-compatibility table;
+- checked QF_UF/Alethe rejection of the isolated action-compatibility conflict;
 - general group-action theorems as Lean horizon.
 
 Run from the repository root:

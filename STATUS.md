@@ -205,6 +205,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite group-action Alethe rows split landed.**
+  `finite-group-actions-v0` now keeps malformed identity-action and
+  compatibility-table rejections as exact finite replay, and exposes the
+  proof-object checks as the explicit `qf-uf-bad-identity-action` and
+  `qf-uf-bad-action-compatibility` rows. Focused validation passes; the public
+  summary now reports 120 concept rows, 108 packs, 652 expected checks, 322
+  checked rows, 259 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite monoid associativity Alethe row split landed.**
   `finite-monoids-v0` now keeps the malformed associativity-table rejection as
   exact finite replay and exposes the QF_UF/Alethe proof-object check as the

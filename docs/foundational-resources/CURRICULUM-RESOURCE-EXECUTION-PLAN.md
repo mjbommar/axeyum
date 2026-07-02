@@ -619,9 +619,10 @@ Next buildout:
    proof-certificate routes. Boolean CNF/LRAT, QF_BV DRAT, QF_LRA/Farkas,
    QF_LIA/Diophantine, and QF_UF/Alethe now each mutate an emitted resource
    certificate and require independent checker rejection.
-15. Landed: promote `finite-group-actions-v0` through a source-linked
-   QF_UF/Alethe regression for the `bad-action-rejected` identity-action
-   conflict and the `bad-compatibility-rejected` action-compatibility conflict:
+15. Landed: promote `finite-group-actions-v0` through source-linked
+   QF_UF/Alethe regressions for the explicit `qf-uf-bad-identity-action`
+   identity-action conflict and `qf-uf-bad-action-compatibility`
+   action-compatibility conflict:
    `artifacts/examples/math/finite-group-actions-v0/smt2/bad-identity-action-alethe-conflict.smt2`
    and
    `artifacts/examples/math/finite-group-actions-v0/smt2/bad-compatibility-action-alethe-conflict.smt2`

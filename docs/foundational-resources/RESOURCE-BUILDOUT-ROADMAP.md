@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 650 expected checks.
+- 652 expected checks.
 - 322 checked proof/evidence rows.
-- 257 replay-only rows.
+- 259 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1296,9 +1296,9 @@ Pick one item per commit unless the change is purely navigational.
     relation/function, equivalence-class, function-composition, finite
     cardinality, and cardinality-principle packs to shared set-theory boundary
     vocabulary.
-17. Landed: promote `finite-group-actions-v0` through a source-linked
-    QF_UF/Alethe regression for `bad-action-rejected` and
-    `bad-compatibility-rejected`. The artifacts
+17. Landed: promote `finite-group-actions-v0` through source-linked
+    QF_UF/Alethe regressions for `qf-uf-bad-identity-action` and
+    `qf-uf-bad-action-compatibility`. The artifacts
     `artifacts/examples/math/finite-group-actions-v0/smt2/bad-identity-action-alethe-conflict.smt2`
     and
     `artifacts/examples/math/finite-group-actions-v0/smt2/bad-compatibility-action-alethe-conflict.smt2`
@@ -2223,6 +2223,13 @@ Pick one item per commit unless the change is purely navigational.
      `b*(b*b) = b`; the new `qf-uf-bad-monoid-associativity` row isolates the
      associativity equality contradiction for checked Alethe evidence and
      gives consumers a direct pack/route/text query.
+151. Landed: split `finite-group-actions-v0` malformed identity-action and
+     action-compatibility rows into exact replay rows plus explicit
+     QF_UF/Alethe proof rows. The checked rows are now
+     `qf-uf-bad-identity-action` and `qf-uf-bad-action-compatibility`; the
+     replay rows still own the finite table computations that expose the bad
+     entries. This keeps solver-reuse evidence pointed at checked proof
+     artifacts while preserving learner-visible replay.
 
 ## Validation Checklist
 

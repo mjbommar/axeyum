@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 650 expected checks.
+- 652 expected checks.
 - 322 checked proof/evidence rows.
-- 257 replay-only rows.
+- 259 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1531,6 +1531,18 @@ Pick one row per commit unless the change is purely navigational.
      regression. The public query surface now reports 650 checks, 322 checked
      rows, 257 replay-only rows, and row-scoped Alethe lookup for the pack
      returns the associativity row.
+179. Landed: split `finite-group-actions-v0` identity-action and
+     compatibility proof-object checks into explicit QF_UF/Alethe rows. The
+     malformed table rows remain exact finite replay: identity replay computes
+     `e.01 = 10` instead of `01`, and compatibility replay computes
+     `s.(s.01)=10` while `(s*s).01=e.01=01`. The new
+     `qf-uf-bad-identity-action` and `qf-uf-bad-action-compatibility` rows link
+     the source SMT-LIB artifacts and the existing
+     `finite_group_actions_bad_identity_emits_checked_alethe` /
+     `finite_group_actions_bad_compatibility_emits_checked_alethe`
+     regressions. The public query surface now reports 652 checks, 322 checked
+     rows, 259 replay-only rows, and row-scoped Alethe lookup for identity and
+     compatibility.
 
 ## Validation Checklist
 

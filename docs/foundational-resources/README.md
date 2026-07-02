@@ -439,7 +439,8 @@ schemas, examples, and validation workflows.
   validate the finite algebra and discrete core: finite group/monoid/ring/field
   table checks, finite transformation-composition monoids, unit/idempotent
   replay, finite permutation group composition/cycle/sign replay, finite
-  group-action law replay, checked bad identity-action and compatibility rows,
+  group-action law replay, exact bad identity-action and compatibility replay
+  plus explicit QF_UF/Alethe equality-conflict rows,
   orbit/stabilizer and Burnside counting, finite
   homomorphism/kernel/quotient replay, finite ideal and quotient-ring replay,
   finite vector-space, dual-space, inner-product, and
