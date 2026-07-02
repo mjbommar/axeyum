@@ -766,6 +766,10 @@ that keeps finite matching replay, augmenting-path replay, and the `K3`
 perfect-matching CNF refutation separate from Hall/Tutte theorem coverage,
 matching algorithms, weighted matching, flow reductions, graph minors, and
 asymptotic claims.
+It also exposes a focused reachability trust boundary that keeps finite
+BFS/DFS/no-path/cut replay and the disconnected no-path CNF refutation separate
+from BFS/DFS correctness, all-pairs/dynamic reachability, graph-family,
+graph-minor, and asymptotic claims.
 `bad-dfs-cost-bound-rejected` now has a source-linked
 QF_LIA artifact checked by the `math_resource_lia_routes` arithmetic-DPLL
 regression and `diophantine-gcd-obstruction` now has a source-linked QF_LIA

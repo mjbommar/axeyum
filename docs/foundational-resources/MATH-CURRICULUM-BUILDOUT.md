@@ -2063,6 +2063,10 @@ the general generating-function Lean horizon.
 `graph-reachability-v0` now has a learner-facing end-to-end lesson for finite
 BFS shortest-distance replay, deterministic DFS traversal replay, checked
 disconnected no-path refutation, and edge-cut separation.
+It also has a focused reachability trust-boundary page that keeps finite
+BFS/DFS/no-path/cut replay and the disconnected no-path CNF row separate from
+BFS/DFS correctness, all-pairs/dynamic reachability, graph-family, graph-minor,
+and asymptotic claims.
 `graph-search-runtime-v0` now has a learner-facing end-to-end lesson for
 finite BFS/DFS visited-node counter replay, shortcut-tail family checks,
 checked bad DFS-bound rejection, a source-linked QF_LIA arithmetic-DPLL

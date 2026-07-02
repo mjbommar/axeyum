@@ -99,6 +99,10 @@ Companion maps:
 - [Graph Traversal Runtime Index](graph-traversal-runtime-index.md): separates
   finite reachability, BFS/DFS traces, visited-node counters, checked LIA cost
   refutations, and asymptotic runtime horizons.
+- [Graph Reachability Certificate Trust Boundary](graph-reachability-certificate-trust-boundary.md):
+  separates finite BFS/DFS/no-path/cut replay and the disconnected no-path CNF
+  row from general reachability, BFS/DFS correctness, graph-family, and
+  asymptotic claims.
 - [Graph Cut Certificate Trust Boundary](graph-cut-certificate-trust-boundary.md):
   separates finite edge/vertex cut replay and one-edge CNF blocker evidence
   from Menger-style cut theorems, max-flow/min-cut, scalable algorithms,
@@ -164,6 +168,10 @@ Companion maps:
 - [Graph Reachability And Traversal](graph-reachability-end-to-end.md):
   follows BFS shortest-distance replay, deterministic DFS traversal replay,
   disconnected no-path refutation, and edge-cut separation over finite graphs.
+- [Graph Reachability Certificate Trust Boundary](graph-reachability-certificate-trust-boundary.md):
+  maps those finite reachability/traversal rows to the missing BFS/DFS
+  correctness, all-pairs/dynamic reachability, graph-family, and asymptotic
+  layers without promoting them to theorem claims.
 - [Graph Search Runtime Counters](graph-search-runtime-end-to-end.md):
   follows finite BFS and DFS visited-node counter replay, shortcut-tail family
   checks, checked QF_LIA arithmetic-DPLL bad DFS-bound rejection, and the

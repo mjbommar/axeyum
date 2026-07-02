@@ -2095,6 +2095,14 @@ Pick one row per commit unless the change is purely navigational.
      and asymptotic layers, and adds matching-specific checked-row queries to
      the public smoke gate without adding a duplicate pack or inventing a
      theorem horizon row for this pack.
+248. Landed: add `graph-reachability-certificate-trust-boundary.md` as the
+     focused reachability trust-boundary page for `graph-reachability-v0`. It
+     maps checked finite BFS shortest-distance replay, deterministic DFS order
+     replay, disconnected no-path CNF/DRAT/LRAT refutation, and edge-cut
+     separation replay to the missing BFS/DFS correctness, all-pairs/dynamic
+     reachability, graph-family, graph-minor, and asymptotic layers, and adds
+     reachability-specific checked-row queries to the public smoke gate without
+     adding a duplicate pack or inventing a theorem horizon row for this pack.
 
 ## Validation Checklist
 

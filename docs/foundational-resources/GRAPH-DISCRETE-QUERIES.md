@@ -76,6 +76,8 @@ needs concrete checked rows to display.
 | All checked graph rows | field `graph_theory` | any route | `checks --field graph_theory --expected-result unsat --proof-status checked` |
 | Runtime-specific rows | pack `graph-search-runtime-v0` | `LIA` | `checks --pack graph-search-runtime-v0 --route LIA --proof-status checked` |
 | Coloring-specific rows | pack `graph-coloring-v0` | `boolean`; `qf-bv` | `checks --pack graph-coloring-v0 --route boolean --proof-status checked`; `checks --pack graph-coloring-v0 --route qf-bv --proof-status checked` |
+| Reachability checked finite rows | pack `graph-reachability-v0` | finite graph replay | `checks --pack graph-reachability-v0 --proof-status checked` |
+| Reachability CNF no-path refutation | pack `graph-reachability-v0` | `boolean` | `checks --pack graph-reachability-v0 --route boolean --proof-status checked` |
 | Matching checked finite rows | pack `graph-matching-v0` | finite graph replay | `checks --pack graph-matching-v0 --proof-status checked` |
 | Matching CNF perfect-matching refutation | pack `graph-matching-v0` | `boolean` | `checks --pack graph-matching-v0 --route boolean --proof-status checked` |
 | Graph-cut checked finite rows | pack `graph-cut-v0` | finite graph replay | `checks --pack graph-cut-v0 --proof-status checked` |
@@ -103,6 +105,66 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --require-any
 ```
+
+Display checked finite reachability and traversal rows:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-reachability-v0 \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-reachability-v0 \
+  --expected-result sat \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-reachability-v0 \
+  --expected-result unsat \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-reachability-v0 \
+  --route boolean \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-reachability-v0 \
+  --proof-status checked \
+  --text "shortest path" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-reachability-v0 \
+  --proof-status checked \
+  --text DFS \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-reachability-v0 \
+  --proof-status checked \
+  --text disconnected \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-reachability-v0 \
+  --proof-status checked \
+  --text "edge cut" \
+  --require-any
+```
+
+Use
+[Graph Reachability Certificate Trust Boundary](../learn/math/graph-reachability-certificate-trust-boundary.md)
+when a consumer needs display wording that keeps finite BFS distance replay,
+deterministic DFS replay, disconnected no-path CNF evidence, and edge-cut
+replay separate from BFS/DFS correctness, all-pairs/dynamic reachability,
+graph-family claims, graph minors, and asymptotic runtime claims. The current
+`graph-reachability-v0` pack intentionally has no `horizon-frontier --text
+reachability` command because no theorem row is committed for this pack.
 
 Display checked matching and augmenting-path rows:
 

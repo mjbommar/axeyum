@@ -4,6 +4,8 @@ This lesson follows one finite graph resource from raw edge lists to shortest
 paths, deterministic traversal replay, no-path refutation, and edge-cut
 separation. It uses
 [graph-reachability-v0](../../../artifacts/examples/math/graph-reachability-v0/).
+For the focused display and proof-scope boundary, see
+[Graph Reachability Certificate Trust Boundary](graph-reachability-certificate-trust-boundary.md).
 
 Concept rows:
 

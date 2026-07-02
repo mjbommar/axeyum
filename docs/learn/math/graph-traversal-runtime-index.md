@@ -82,6 +82,11 @@ Start with
 basic finite graph replay: BFS shortest distance, DFS traversal order,
 disconnected no-path refutation, and edge-cut separation.
 
+Use [Graph Reachability Certificate Trust Boundary](graph-reachability-certificate-trust-boundary.md)
+when a consumer needs display wording that keeps those finite replay rows and
+the disconnected no-path CNF refutation separate from BFS/DFS correctness,
+all-pairs/dynamic reachability, graph-family, and asymptotic claims.
+
 Then read
 [Graph Search Runtime Counters](graph-search-runtime-end-to-end.md) for the
 runtime-counter slice. It separates three statements that are often blurred:
@@ -123,6 +128,8 @@ python3 scripts/query-foundational-resources.py concepts --field graph_theory --
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_graph_replay_obstruction --route LIA --require-any
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route LIA --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_graph_replay_obstruction --route LIA --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py checks --pack graph-reachability-v0 --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py checks --pack graph-reachability-v0 --route boolean --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --proof-status checked --require-any
 ```

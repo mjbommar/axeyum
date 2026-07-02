@@ -32,6 +32,7 @@ Example packs:
 Companion map:
 
 - [Graph Traversal Runtime Index](graph-traversal-runtime-index.md)
+- [Graph Reachability Certificate Trust Boundary](graph-reachability-certificate-trust-boundary.md)
 - [Graph Matching Certificate Trust Boundary](graph-matching-certificate-trust-boundary.md)
 - [Graph Cut Certificate Trust Boundary](graph-cut-certificate-trust-boundary.md)
 - [D-Separation Causal Trust Boundary](d-separation-causal-trust-boundary.md)
@@ -57,8 +58,13 @@ The graph coloring pack replays a
 coloring witness against every edge, rejects an invalid coloring, and checks a
 tiny `K3` two-colorability refutation by exhaustive finite search. The graph
 reachability pack checks finite BFS distances, deterministic DFS traversal
-order, disconnected no-path claims, and edge-cut separation. The graph search
-runtime pack adds finite visited-node counters for BFS and DFS target discovery,
+order, disconnected no-path claims, and edge-cut separation. Its focused trust
+boundary is
+[Graph Reachability Certificate Trust Boundary](graph-reachability-certificate-trust-boundary.md),
+which keeps finite BFS/DFS/no-path/cut replay and the disconnected no-path CNF
+row separate from BFS/DFS correctness, graph-search theorem, graph-family, and
+asymptotic claims. The graph search runtime pack adds finite visited-node
+counters for BFS and DFS target discovery,
 checks a shortcut-tail family, and rejects a false DFS cost bound with a
 checked QF_LIA arithmetic-DPLL regression. The graph
 matching pack checks finite matching witnesses, invalid overlapping edges,
@@ -318,6 +324,7 @@ For a fuller trace from data row to replay result and evidence status, read
 [End To End: Counting And Pigeonhole](counting-pigeonhole-end-to-end.md),
 [End To End: Triangle Coloring](graph-coloring-end-to-end.md),
 [End To End: Graph Reachability And Traversal](graph-reachability-end-to-end.md),
+[Graph Reachability Certificate Trust Boundary](graph-reachability-certificate-trust-boundary.md),
 [End To End: Graph Search Runtime Counters](graph-search-runtime-end-to-end.md),
 [End To End: Graph Matching And Augmenting Paths](graph-matching-end-to-end.md),
 [Graph Matching Certificate Trust Boundary](graph-matching-certificate-trust-boundary.md),

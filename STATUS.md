@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Graph-reachability certificate trust-boundary resource landed.**
+  `graph-reachability-certificate-trust-boundary.md` now separates
+  `graph-reachability-v0` checked finite BFS shortest-distance replay,
+  deterministic DFS order replay, disconnected no-path CNF/DRAT/LRAT
+  refutation, and edge-cut separation replay from BFS/DFS correctness,
+  all-pairs/dynamic reachability, graph-family, graph-minor, and asymptotic
+  claims. The graph/discrete query guide, learner map, traversal index, and
+  smoke query docs now expose the reachability trust boundary without adding a
+  false theorem horizon row.
+
 - **Graph-matching certificate trust-boundary resource landed.**
   `graph-matching-certificate-trust-boundary.md` now separates
   `graph-matching-v0` checked finite maximum-matching replay,
