@@ -411,6 +411,8 @@ python3 scripts/query-foundational-resources.py checks --pack finite-root-findin
 python3 scripts/query-foundational-resources.py checks --pack finite-root-finding-v0 --route Farkas --proof-status checked --text qf-lra-bad-newton-step --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-root-finding-v0 --route Farkas --proof-status checked --text qf-lra-bad-bisection-width --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-root-finding-v0 --proof-status replay-only --text rejected --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text root-finding --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-root-finding-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field numerical_analysis --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field numerical_analysis --text residual --require-any >/dev/null

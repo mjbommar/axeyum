@@ -115,6 +115,10 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --text width \
   --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text root-finding \
+  --require-any
 ```
 
 Display the checked convexity threshold conflict row:
@@ -257,6 +261,7 @@ They do not prove:
 - LP or convex-program strong duality;
 - KKT sufficiency or active-set method correctness;
 - SDP strong duality or semidefinite optimization theory;
+- root-finding convergence, error-bound, or numerical-stability theorems;
 - gradient descent, line-search, Wolfe, projected-gradient, or
   proximal-gradient convergence;
 - floating-point stability, conditioning, performance, or benchmark parity;

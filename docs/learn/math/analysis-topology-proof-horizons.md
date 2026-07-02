@@ -225,6 +225,10 @@ selected-width claim `1/3` after bisection replay computes `1/2`; separate
 checked `qf-lra-*` rows own the fixed scalar Farkas contradictions. This is
 finite numerical evidence, not a bisection convergence theorem, Newton
 convergence theorem, or floating-point stability guarantee.
+For the theorem boundary that keeps the finite bisection/Newton rows separate
+from root-existence, uniqueness, convergence-rate, error-bound, and
+floating-point stability claims, read
+[Root-Finding Convergence Theorem Boundary](root-finding-convergence-theorem-boundary.md).
 
 For a finite generating-function shadow, encode a sequence prefix as a fixed
 coefficient list:

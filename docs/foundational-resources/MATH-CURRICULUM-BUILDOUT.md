@@ -2238,6 +2238,10 @@ bisection-width source rows as replay-only rows after exact replay computes
 the next iterate `17/12`, selected width `1/2`, and width excess `1/6`;
 separate checked `qf-lra-*` rows route the fixed scalar contradictions through
 the same Farkas evidence path.
+It also has a focused root-finding convergence theorem-boundary page that
+keeps finite bisection/Newton replay and checked bad-row Farkas evidence
+separate from root-existence, uniqueness, convergence-rate, error-bound, and
+floating-point stability claims.
 `finite-separation-v0` now keeps its bad convex-combination and bad separator
 source rows as replay-only rows after exact convex-hull replay computes point
 `(1/3,1/3)`, x-coordinate error `1/6`, outside score `4`, and score excess
@@ -2655,6 +2659,14 @@ root-finding, optimization, measure/probability, functional-analysis/operator,
 and dynamics finite shadows to checked evidence routes, missing Lean/theorem
 dependencies, and next build artifacts without counting finite checks as
 general theorem proofs.
+The learner/planning layer now also has
+[`root-finding-convergence-theorem-boundary.md`](../learn/math/root-finding-convergence-theorem-boundary.md),
+which expands the finite root-finding row into a concrete boundary ledger:
+exact bisection replay, exact Newton-step replay, residual-decrease replay,
+bad-Newton-step and bad-bisection-width QF_LRA/Farkas rows are linked to
+copyable queries and graduation criteria while keeping root-existence,
+uniqueness, convergence, rate, error-bound, and floating-point-stability
+claims in theorem/numerical-honesty lanes.
 The learner/planning layer now also has
 [`real-completeness-theorem-boundary.md`](../learn/math/real-completeness-theorem-boundary.md),
 which expands the real-completeness row into a concrete dependency ledger:

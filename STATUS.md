@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Root-finding convergence theorem-boundary resource landed.**
+  `root-finding-convergence-theorem-boundary.md` now separates
+  `finite-root-finding-v0` exact bisection replay, Newton-step replay,
+  residual-decrease replay, and checked bad Newton-step/bad bisection-width
+  QF_LRA/Farkas rows from root-existence, uniqueness, bisection convergence,
+  Newton convergence, convergence-rate, error-bound, and floating-point
+  stability theorem claims. The theorem horizon, analysis/numerical,
+  optimization/convexity, learner-map, and smoke query docs now expose the
+  root-finding boundary directly.
+
 - **Recurrence/asymptotic theorem-boundary resource landed.**
   `recurrence-asymptotic-theorem-boundary.md` now separates
   `finite-recurrence-prefix-v0` finite Fibonacci prefix replay, affine

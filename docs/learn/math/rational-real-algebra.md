@@ -198,6 +198,10 @@ after exact replay computes `x_1 = 17/12`, and reject the false selected-width
 claim `1/3` after replay computes `1/2`, then check the final contradictions
 with QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Root Finding](finite-root-finding-end-to-end.md).
+For the theorem boundary that keeps those finite rows separate from
+root-existence, convergence-rate, error-bound, and floating-point stability
+claims, read
+[Root-Finding Convergence Theorem Boundary](root-finding-convergence-theorem-boundary.md).
 
 For finite separation, encode a rational triangle, convex weights, and a
 separator:

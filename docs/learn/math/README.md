@@ -242,6 +242,10 @@ Companion maps:
   bisection bracket update, one Newton iterate, residual decrease replay,
   replay-only bad-step and bad bisection-width source rows, separate checked
   `qf-lra-*` Farkas proof rows, and the convergence/stability Lean horizon.
+- [Root-Finding Convergence Theorem Boundary](root-finding-convergence-theorem-boundary.md):
+  maps those finite bisection/Newton shadows to the missing root-existence,
+  uniqueness, convergence-rate, error-bound, and floating-point stability
+  routes.
 - [Finite Hyperplane Separation](finite-separation-end-to-end.md): follows
   exact convex-combination replay, separating-hyperplane scores, supporting
   face replay, replay-only bad convex-combination and bad-separator source

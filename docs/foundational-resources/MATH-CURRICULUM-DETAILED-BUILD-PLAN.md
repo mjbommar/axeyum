@@ -1922,6 +1922,15 @@ Pick one row per commit unless the change is purely navigational.
      asymptotic-growth, convergence, and stability theorem routes, and adds
      recurrence-specific horizon queries to the public smoke gate without
      adding a duplicate pack or changing resource counts.
+229. Landed: add `root-finding-convergence-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-root-finding-v0`. It maps exact
+     bisection replay, Newton-step replay, residual-decrease replay, replay-only
+     bad Newton-step and bad bisection-width rows, and checked QF_LRA/Farkas
+     bad-row proof rows to the missing root-existence, uniqueness, bisection
+     convergence, Newton convergence, convergence-rate, error-bound, and
+     floating-point stability theorem routes, and adds root-finding-specific
+     horizon queries to the public smoke gate without adding a duplicate pack
+     or changing resource counts.
 
 ## Validation Checklist
 

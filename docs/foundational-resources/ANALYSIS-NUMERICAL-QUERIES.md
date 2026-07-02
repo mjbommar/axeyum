@@ -191,6 +191,10 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --text width \
   --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text root-finding \
+  --require-any
 ```
 
 Display checked finite dynamics, recurrence, and Euler rows:
