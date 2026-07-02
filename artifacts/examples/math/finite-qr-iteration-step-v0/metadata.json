@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "finite-qr-iteration-step-v0",
+  "title": "Finite QR Iteration Step Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_functional_analysis_and_operator_theory",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_eigenpair",
+    "bridge_exact_vs_floating_arithmetic"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "functional_analysis_and_operator_theory"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite matrices",
+    "finite-dimensional operator replay",
+    "QR iteration replay",
+    "orthogonal similarity replay",
+    "exact rational matrix replay",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-qr-iteration-step-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite QR-iteration bad next-step entry QF_LRA/Farkas regression seed",
+    "pressure": "Exact QR-step replay reads A1[0,0] as 7/5 while a malformed row claims 2, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-qr-step-entry"
+    ],
+    "next_step": "Promote additional QR-iteration rows only when they add distinct shifted-step, Hessenberg, deflation, residual-bound, convergence, or floating-point stability pressure; keep convergence, Schur-theorem, and numerical stability claims in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/qr-iteration-step-end-to-end.md",
+    "artifacts/examples/math/finite-qr-iteration-step-v0/smt2/bad-qr-step-entry-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "qr-step-shape-witness",
+    "qr-step-factorization-witness",
+    "qr-step-update-witness",
+    "qr-step-similarity-witness",
+    "qr-step-invariant-witness",
+    "bad-qr-step-entry-rejected",
+    "qf-lra-bad-qr-step-entry",
+    "general-qr-iteration-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational A0, Q, Q^T, R, A1, trace, determinant, and similarity rows as deterministic exact-rational replay obligations.",
+    "Route the false next-step entry row through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay reads the conflicting entry.",
+    "Expose the pack through the matrix computation learner and consumer query surfaces.",
+    "Keep QR iteration convergence, shift strategies, deflation, Schur theorem coverage, loss-of-orthogonality analysis, and floating-point stability claims marked Lean or numerical-honesty horizon."
+  ]
+}

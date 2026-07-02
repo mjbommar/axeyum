@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-qr-iteration-step-v0",
+  "witnesses": [
+    {
+      "id": "rational-qr-iteration-step",
+      "description": "Exact rational unshifted QR iteration step for a fixed 2x2 matrix.",
+      "values": {
+        "matrix": [
+          ["3", "2"],
+          ["-4", "-1"]
+        ],
+        "q_matrix": [
+          ["3/5", "4/5"],
+          ["-4/5", "3/5"]
+        ],
+        "q_transpose": [
+          ["3/5", "-4/5"],
+          ["4/5", "3/5"]
+        ],
+        "r_matrix": [
+          ["5", "2"],
+          ["0", "1"]
+        ],
+        "identity": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "factorization_product": [
+          ["3", "2"],
+          ["-4", "-1"]
+        ],
+        "next_matrix": [
+          ["7/5", "26/5"],
+          ["-4/5", "3/5"]
+        ],
+        "step_product": [
+          ["7/5", "26/5"],
+          ["-4/5", "3/5"]
+        ],
+        "similarity_product": [
+          ["7/5", "26/5"],
+          ["-4/5", "3/5"]
+        ],
+        "r_diagonal": ["5", "1"],
+        "trace_matrix": "2",
+        "trace_next_matrix": "2",
+        "determinant_matrix": "5",
+        "determinant_next_matrix": "5"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "qr-step-shape-witness",
+      "claim": "The fixed rational matrix Q is orthogonal and R is upper triangular.",
+      "expected_result": "sat",
+      "validation": "exact_rational_qr_step_shape_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-qr-iteration-step"],
+      "notes": "The validator recomputes Q^T, Q^T*Q, Q*Q^T, upper-triangular shape, and the listed R diagonal exactly."
+    },
+    {
+      "id": "qr-step-factorization-witness",
+      "claim": "The fixed rational matrices satisfy Q*R = A0.",
+      "expected_result": "sat",
+      "validation": "exact_rational_qr_step_factorization_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-qr-iteration-step"],
+      "notes": "The validator recomputes the QR product exactly over rationals."
+    },
+    {
+      "id": "qr-step-update-witness",
+      "claim": "The fixed rational matrices satisfy R*Q = A1.",
+      "expected_result": "sat",
+      "validation": "exact_rational_qr_step_update_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-qr-iteration-step"],
+      "notes": "The validator recomputes the unshifted QR step exactly over rationals."
+    },
+    {
+      "id": "qr-step-similarity-witness",
+      "claim": "The fixed rational matrices satisfy Q^T*A0*Q = A1.",
+      "expected_result": "sat",
+      "validation": "exact_rational_qr_step_similarity_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-qr-iteration-step"],
+      "notes": "The validator checks that the QR step is the corresponding orthogonal similarity transform for this fixed matrix."
+    },
+    {
+      "id": "qr-step-invariant-witness",
+      "claim": "The fixed QR step preserves trace and determinant.",
+      "expected_result": "sat",
+      "validation": "exact_rational_qr_step_invariant_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-qr-iteration-step"],
+      "notes": "The validator recomputes trace(A0), trace(A1), det(A0), and det(A1) exactly."
+    },
+    {
+      "id": "bad-qr-step-entry-rejected",
+      "claim": "The top-left entry of the next QR-step matrix is 2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_qr_step_entry_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "rational-qr-iteration-step",
+        "entry": [0, 0],
+        "computed_entry": "7/5",
+        "claimed_entry": "2"
+      },
+      "notes": "Exact replay reads A1[0,0] as 7/5, so the claimed value 2 is rejected; the separate qf-lra-bad-qr-step-entry row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-qr-step-entry",
+      "claim": "The fixed malformed QR-step entry claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "rational-qr-iteration-step",
+        "source_replay_row": "bad-qr-step-entry-rejected",
+        "entry": [0, 0],
+        "computed_entry": "7/5",
+        "claimed_entry": "2",
+        "farkas_conflict": "qr_step_a00 = 7/5 and qr_step_a00 = 2",
+        "smt2_artifact": "artifacts/examples/math/finite-qr-iteration-step-v0/smt2/bad-qr-step-entry-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_qr_iteration_step_bad_entry_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the listed next-step entry as 7/5, while the malformed row claims 2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-qr-iteration-theory-lean-horizon",
+      "claim": "General QR iteration convergence, shift strategies, deflation, Schur-form convergence, loss-of-orthogonality bounds, and floating-point eigensolver stability require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For suitable finite-dimensional real or complex matrices and explicit hypotheses, prove QR iteration preserves similarity and characterize convergence to Schur or diagonal form, including shifted and deflated variants.",
+        "future_checker": "Lean theorem statements for exact QR iteration and Schur convergence plus separate numerical-honesty artifacts for floating-point QR implementations, loss-of-orthogonality, and shift heuristics."
+      },
+      "notes": "The finite exact row is a checked resource for one rational QR step, not a theorem about QR iteration convergence or a stability claim for numerical eigensolvers."
+    }
+  ]
+}

@@ -319,6 +319,9 @@ const FINITE_REAL_SCHUR_DECOMPOSITION_BAD_SUPERDIAGONAL: &str = include_str!(
 const FINITE_POLAR_DECOMPOSITION_BAD_DIAGONAL: &str = include_str!(
     "../../../artifacts/examples/math/finite-polar-decomposition-v0/smt2/bad-polar-diagonal-farkas-conflict.smt2"
 );
+const FINITE_QR_ITERATION_STEP_BAD_ENTRY: &str = include_str!(
+    "../../../artifacts/examples/math/finite-qr-iteration-step-v0/smt2/bad-qr-step-entry-farkas-conflict.smt2"
+);
 const FINITE_POWER_ITERATION_BAD_COORDINATE: &str = include_str!(
     "../../../artifacts/examples/math/finite-power-iteration-v0/smt2/bad-power-iterate-coordinate-farkas-conflict.smt2"
 );
@@ -1954,6 +1957,14 @@ fn finite_polar_decomposition_bad_diagonal_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-polar-decomposition-v0 bad-diagonal SMT-LIB artifact",
         FINITE_POLAR_DECOMPOSITION_BAD_DIAGONAL,
+    );
+}
+
+#[test]
+fn finite_qr_iteration_step_bad_entry_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-qr-iteration-step-v0 bad-entry SMT-LIB artifact",
+        FINITE_QR_ITERATION_STEP_BAD_ENTRY,
     );
 }
 

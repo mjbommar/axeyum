@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 134 non-template math packs.
-- 879 expected checks.
-- 360 checked proof/evidence rows.
-- 422 replay-only rows.
-- 97 Lean-horizon rows.
-- 134 promoted solver-reuse packs.
+- 135 non-template math packs.
+- 887 expected checks.
+- 361 checked proof/evidence rows.
+- 428 replay-only rows.
+- 98 Lean-horizon rows.
+- 135 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 134 focused learner-linked packs, with no path-only, index-only, or missing
+- 135 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 134 current non-template packs satisfy the focused-lesson side of this
+all 135 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2542,6 +2542,15 @@ Pick one row per commit unless the change is purely navigational.
      keep exact finite polar replay separate from polar decomposition theorem,
      partial-isometry variants, square-root functional calculus, iterative
      algorithms, perturbation theory, and floating-point stability.
+293. Landed: add `finite-qr-iteration-step-v0` as an exact finite QR-step
+     resource. The pack replays `Q*R = A0`, `R*Q = A1`,
+     `Q^T*A0*Q = A1`, trace preservation, and determinant preservation, then
+     adds `qf-lra-bad-qr-step-entry` as the source-linked Farkas row for the
+     false next-step entry claim `A1[0,0] = 2` versus exact `7/5`. The learner
+     and query pages keep exact finite QR-step replay separate from
+     QR-iteration convergence, shifted/deflated variants, Schur theorem
+     reconstruction, loss-of-orthogonality analysis, and floating-point
+     eigensolver stability.
 
 ## Validation Checklist
 

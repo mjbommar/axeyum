@@ -14622,6 +14622,214 @@ def validate_finite_polar_decomposition(expected: dict[str, Any]) -> None:
     require_string("polar horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_qr_iteration_step(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    shape = checks["qr-step-shape-witness"]
+    if shape["expected_result"] != "sat":
+        fail("qr-step-shape-witness must expect sat")
+    if shape.get("proof_status") != "replay-only":
+        fail("qr-step-shape-witness must be replay-only")
+    values = single_witness_values(shape, witnesses)
+    matrix = require_fraction_matrix("QR-step matrix A0", values.get("matrix"))
+    q_matrix = require_fraction_matrix("QR-step Q", values.get("q_matrix"))
+    q_transpose = require_fraction_matrix("QR-step Q^T", values.get("q_transpose"))
+    r_matrix = require_fraction_matrix("QR-step R", values.get("r_matrix"))
+    identity = require_fraction_matrix("QR-step identity", values.get("identity"))
+    factorization_product = require_fraction_matrix(
+        "QR-step factorization product",
+        values.get("factorization_product"),
+    )
+    next_matrix = require_fraction_matrix("QR-step next matrix", values.get("next_matrix"))
+    step_product = require_fraction_matrix("QR-step product", values.get("step_product"))
+    similarity_product = require_fraction_matrix(
+        "QR-step similarity product",
+        values.get("similarity_product"),
+    )
+    r_diagonal = require_fraction_vector("QR-step R diagonal", values.get("r_diagonal"))
+    trace_matrix = require_fraction("QR-step trace_matrix", values.get("trace_matrix"))
+    trace_next_matrix = require_fraction(
+        "QR-step trace_next_matrix",
+        values.get("trace_next_matrix"),
+    )
+    determinant_matrix = require_fraction(
+        "QR-step determinant_matrix",
+        values.get("determinant_matrix"),
+    )
+    determinant_next_matrix = require_fraction(
+        "QR-step determinant_next_matrix",
+        values.get("determinant_next_matrix"),
+    )
+
+    require_square_matrix("QR-step matrix A0", matrix)
+    require_square_matrix("QR-step Q", q_matrix)
+    require_square_matrix("QR-step R", r_matrix)
+    require_square_matrix("QR-step identity", identity)
+    require_square_matrix("QR-step next matrix", next_matrix)
+    if len(matrix) != 2:
+        fail("finite QR-step replay expects one 2x2 matrix")
+    if len(q_matrix) != len(matrix) or len(r_matrix) != len(matrix):
+        fail("QR-step matrices must have matching dimensions")
+    expected_identity = [
+        [Fraction(1) if row == column else Fraction(0) for column in range(len(matrix))]
+        for row in range(len(matrix))
+    ]
+    if identity != expected_identity:
+        fail("qr-step-shape-witness identity must be the exact identity matrix")
+    if q_transpose != matrix_transpose(q_matrix):
+        fail("qr-step-shape-witness q_transpose is incorrect")
+    if mat_mul(q_transpose, q_matrix) != identity:
+        fail("qr-step-shape-witness Q^T*Q does not equal identity")
+    if mat_mul(q_matrix, q_transpose) != identity:
+        fail("qr-step-shape-witness Q*Q^T does not equal identity")
+    if len(r_diagonal) != len(r_matrix):
+        fail("qr-step-shape-witness must list one R diagonal entry per dimension")
+    for row_index, row in enumerate(r_matrix):
+        for column_index, entry in enumerate(row):
+            if row_index > column_index and entry != 0:
+                fail("qr-step-shape-witness R must be upper triangular")
+            if row_index == column_index and entry != r_diagonal[row_index]:
+                fail("qr-step-shape-witness R diagonal does not match r_diagonal")
+
+    factorization = checks["qr-step-factorization-witness"]
+    if factorization["expected_result"] != "sat":
+        fail("qr-step-factorization-witness must expect sat")
+    if factorization.get("proof_status") != "replay-only":
+        fail("qr-step-factorization-witness must be replay-only")
+    if single_witness_values(factorization, witnesses) != values:
+        fail("qr-step-factorization-witness must cite the QR-step witness")
+    if mat_mul(q_matrix, r_matrix) != factorization_product:
+        fail("qr-step-factorization-witness product does not equal Q*R")
+    if factorization_product != matrix:
+        fail("qr-step-factorization-witness product must equal A0")
+
+    update = checks["qr-step-update-witness"]
+    if update["expected_result"] != "sat":
+        fail("qr-step-update-witness must expect sat")
+    if update.get("proof_status") != "replay-only":
+        fail("qr-step-update-witness must be replay-only")
+    if single_witness_values(update, witnesses) != values:
+        fail("qr-step-update-witness must cite the QR-step witness")
+    if mat_mul(r_matrix, q_matrix) != step_product:
+        fail("qr-step-update-witness product does not equal R*Q")
+    if step_product != next_matrix:
+        fail("qr-step-update-witness product must equal A1")
+
+    similarity = checks["qr-step-similarity-witness"]
+    if similarity["expected_result"] != "sat":
+        fail("qr-step-similarity-witness must expect sat")
+    if similarity.get("proof_status") != "replay-only":
+        fail("qr-step-similarity-witness must be replay-only")
+    if single_witness_values(similarity, witnesses) != values:
+        fail("qr-step-similarity-witness must cite the QR-step witness")
+    if mat_mul(mat_mul(q_transpose, matrix), q_matrix) != similarity_product:
+        fail("qr-step-similarity-witness product does not equal Q^T*A0*Q")
+    if similarity_product != next_matrix:
+        fail("qr-step-similarity-witness product must equal A1")
+
+    invariants = checks["qr-step-invariant-witness"]
+    if invariants["expected_result"] != "sat":
+        fail("qr-step-invariant-witness must expect sat")
+    if invariants.get("proof_status") != "replay-only":
+        fail("qr-step-invariant-witness must be replay-only")
+    if single_witness_values(invariants, witnesses) != values:
+        fail("qr-step-invariant-witness must cite the QR-step witness")
+    computed_trace = sum(
+        (matrix[index][index] for index in range(len(matrix))),
+        Fraction(0),
+    )
+    computed_next_trace = sum(
+        (next_matrix[index][index] for index in range(len(next_matrix))),
+        Fraction(0),
+    )
+    if computed_trace != trace_matrix:
+        fail("qr-step-invariant-witness trace(A0) is incorrect")
+    if computed_next_trace != trace_next_matrix:
+        fail("qr-step-invariant-witness trace(A1) is incorrect")
+    if trace_matrix != trace_next_matrix:
+        fail("qr-step-invariant-witness trace must be preserved")
+    if matrix_determinant(matrix) != determinant_matrix:
+        fail("qr-step-invariant-witness det(A0) is incorrect")
+    if matrix_determinant(next_matrix) != determinant_next_matrix:
+        fail("qr-step-invariant-witness det(A1) is incorrect")
+    if determinant_matrix != determinant_next_matrix:
+        fail("qr-step-invariant-witness determinant must be preserved")
+
+    bad = checks["bad-qr-step-entry-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-qr-step-entry-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-qr-step-entry-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_qr_step_entry_replay":
+        fail("bad-qr-step-entry-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "rational-qr-iteration-step":
+        fail("bad-qr-step-entry-rejected must cite rational-qr-iteration-step")
+    entry = data.get("entry")
+    if not isinstance(entry, list) or len(entry) != 2:
+        fail("bad-qr-step-entry-rejected entry must be a row/column pair")
+    row_index = require_nonnegative_int("bad QR-step entry row", entry[0])
+    column_index = require_nonnegative_int("bad QR-step entry column", entry[1])
+    if row_index >= len(next_matrix) or column_index >= len(next_matrix[row_index]):
+        fail("bad-qr-step-entry-rejected entry is out of range")
+    computed_entry = require_fraction("bad QR-step computed_entry", data.get("computed_entry"))
+    claimed_entry = require_fraction("bad QR-step claimed_entry", data.get("claimed_entry"))
+    if next_matrix[row_index][column_index] != computed_entry:
+        fail("bad-qr-step-entry-rejected computed value does not match replay")
+    if computed_entry == claimed_entry:
+        fail("bad-qr-step-entry-rejected must document a false entry claim")
+    if "separate qf-lra-bad-qr-step-entry" not in bad.get("notes", ""):
+        fail("bad-qr-step-entry-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-qr-step-entry"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-qr-step-entry must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-qr-step-entry must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-qr-step-entry must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "rational-qr-iteration-step":
+        fail("qf-lra-bad-qr-step-entry must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-qr-step-entry-rejected":
+        fail("qf-lra-bad-qr-step-entry must cite the replay row")
+    if qf_data.get("entry") != entry:
+        fail("qf-lra-bad-qr-step-entry entry must match the replay row")
+    qf_computed = require_fraction("qf QR-step computed_entry", qf_data.get("computed_entry"))
+    qf_claimed = require_fraction("qf QR-step claimed_entry", qf_data.get("claimed_entry"))
+    if qf_computed != computed_entry or qf_claimed != claimed_entry:
+        fail("qf-lra-bad-qr-step-entry data must match the replay row")
+    if qf_data.get("farkas_conflict") != "qr_step_a00 = 7/5 and qr_step_a00 = 2":
+        fail("qf-lra-bad-qr-step-entry must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf QR-step smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-qr-iteration-step-v0/smt2/"
+        "bad-qr-step-entry-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-qr-step-entry smt2_artifact must name the checked source artifact")
+    check_source("qf QR-step smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf QR-step farkas_regression", regression)
+    if "finite_qr_iteration_step_bad_entry_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-qr-step-entry must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf QR-step certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-qr-step-entry certificate must document checked Farkas evidence")
+
+    horizon = checks["general-qr-iteration-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-qr-iteration-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-qr-iteration-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("QR-step horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("QR-step horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_finite_jordan_chain(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -31625,6 +31833,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_real_schur_decomposition(expected)
     if metadata["id"] == "finite-polar-decomposition-v0":
         validate_finite_polar_decomposition(expected)
+    if metadata["id"] == "finite-qr-iteration-step-v0":
+        validate_finite_qr_iteration_step(expected)
     if metadata["id"] == "finite-jordan-chain-v0":
         validate_finite_jordan_chain(expected)
     if metadata["id"] == "metric-continuity-v0":

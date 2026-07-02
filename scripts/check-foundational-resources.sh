@@ -702,6 +702,9 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs
 python3 scripts/query-foundational-resources.py checks --pack finite-polar-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-polar-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-polar-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-qr-iteration-step-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-qr-iteration-step-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-qr-iteration-step-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-power-iteration-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-arnoldi-iteration-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-lanczos-iteration-v0 --route Farkas --proof-status checked --require-any >/dev/null
@@ -751,6 +754,7 @@ python3 scripts/query-foundational-resources.py checks --pack spectral-linear-al
 python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-orthogonal-diagonalization-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-real-schur-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-polar-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-qr-iteration-step-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-power-iteration-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-jordan-chain-v0 --route Farkas --proof-status checked --text qf-lra-bad-jordan-chain --require-any >/dev/null
