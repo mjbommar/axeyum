@@ -112,14 +112,14 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
-Display the focused finite affine-recurrence refutation:
+Display the focused finite affine-recurrence proof row:
 
 ```sh
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-recurrence-prefix-v0 \
   --route Farkas \
   --proof-status checked \
-  --text affine \
+  --text qf-lra-bad-affine-step \
   --require-any
 ```
 

@@ -595,8 +595,9 @@ tail-gap replay, checked QF_LRA/Farkas rejection of false upper-bound and
 tail-gap rows, and a monotone-convergence Lean-horizon row.
 `finite-recurrence-prefix-v0` now
 validates Fibonacci prefix replay, affine recurrence replay,
-companion-matrix state replay, checked QF_LRA/Farkas rejection of false
-finite recurrence-value and affine-step claims, and a recurrence-theory
+companion-matrix state replay, replay-only rejection of false finite
+recurrence-value and affine-step source claims, separate checked
+QF_LRA/Farkas proof rows for those contradictions, and a recurrence-theory
 Lean-horizon row.
 `finite-root-finding-v0` now validates one exact bisection step, one exact
 Newton step, fixed residual-decrease replay, checked QF_LRA/Farkas rejection
@@ -754,8 +755,9 @@ Recommended order:
     bad tail-gap QF_LRA/Farkas rejections, and monotone-convergence
     Lean-horizon metadata.
 20. `finite-recurrence-prefix-v0` (landed): Fibonacci prefix replay, affine
-    recurrence replay, companion-matrix state replay, checked bad finite-value
-    and bad affine-step QF_LRA/Farkas rejections, and recurrence-theory
+    recurrence replay, companion-matrix state replay, replay-only bad
+    finite-value and bad affine-step source rows with separate checked
+    `qf-lra-*` Farkas proof rows, and recurrence-theory
     Lean-horizon metadata.
 21. `finite-root-finding-v0` (landed): exact bisection and Newton-step
     replay, fixed residual decrease, checked bad Newton-step and bad
@@ -2131,10 +2133,10 @@ same checked Farkas evidence path using the final output-bound contradiction.
 same checked Farkas evidence path after exact finite-prefix replay computes
 `a_6 = 6/7`, and now routes its bad finite tail-gap row after exact replay
 computes `a_2 = 2/3` and gap excess `1/12`.
-`finite-recurrence-prefix-v0` now routes its bad finite-value and bad
-affine-step rows through the same checked Farkas evidence path after exact
-recurrence replay computes `F_6 = 8` and `x_4 = 15` instead of the malformed
-affine claim `14`.
+`finite-recurrence-prefix-v0` now keeps its bad finite-value and bad
+affine-step source rows as replay-only rows after exact recurrence replay
+computes `F_6 = 8` and `x_4 = 15`; separate checked `qf-lra-*` rows route the
+fixed scalar contradictions through the same Farkas evidence path.
 `finite-root-finding-v0` now routes its bad Newton-step and bad
 bisection-width rows through the same checked Farkas evidence path after exact
 replay computes the next iterate `17/12` and the selected width `1/2`.

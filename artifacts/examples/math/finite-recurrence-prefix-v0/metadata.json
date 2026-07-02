@@ -36,11 +36,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite recurrence-prefix bad value and bad affine-step QF_LRA/Farkas regression seeds",
+    "target": "finite recurrence-prefix replay rows plus explicit bad value and bad affine-step QF_LRA/Farkas regression seeds",
     "pressure": "Exact finite replay computes Fibonacci F_6 = 8 while one malformed row claims F_6 = 9; exact affine recurrence replay computes x_4 = 15 while another malformed row claims x_4 = 14.",
     "evidence": [
-      "bad-fibonacci-value-rejected",
-      "bad-affine-step-rejected"
+      "qf-lra-bad-fibonacci-value",
+      "qf-lra-bad-affine-step"
     ],
     "next_step": "Promote additional recurrence rows only when they add distinct matrix-state, invariant, exact-sum, or closed-prefix boundary pressure beyond the current Fibonacci and affine-step rows; keep closed forms, asymptotics, convergence, and stability theorems in the Lean-horizon lane."
   },
@@ -63,13 +63,16 @@
     "affine-recurrence-prefix-replay",
     "companion-matrix-prefix-replay",
     "bad-fibonacci-value-rejected",
+    "qf-lra-bad-fibonacci-value",
     "bad-affine-step-rejected",
+    "qf-lra-bad-affine-step",
     "general-recurrence-theory-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite recurrence prefixes and companion-matrix steps as deterministic exact-rational replay rows.",
     "Replay finite recurrence witnesses through Axeyum model evaluation.",
-    "Route false finite recurrence-value and affine-step claims through checked QF_LRA/Farkas evidence after replay computes the offending value.",
+    "Keep false finite recurrence-value and affine-step source claims as replay-only rows that compute the offending value.",
+    "Route the resulting fixed contradictions through separate checked QF_LRA/Farkas evidence rows.",
     "Keep induction over all n, closed-form solving, asymptotics, convergence, and stability theorems marked Lean-horizon."
   ]
 }

@@ -64,24 +64,38 @@
       "claim": "The Fibonacci prefix has F_6 = 9.",
       "expected_result": "unsat",
       "validation": "finite_bad_recurrence_value_refutation",
-      "proof_status": "checked",
+      "proof_status": "replay-only",
       "data": {
         "source_witness": "fibonacci-prefix",
         "witness_index": 6,
         "computed_value": "8",
+        "claimed_value": "9"
+      },
+      "notes": "Exact replay computes F_6 = 8. The separate qf-lra-bad-fibonacci-value row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-fibonacci-value",
+      "claim": "The fixed QF_LRA conflict F_6 = 8 and F_6 = 9 is unsatisfiable.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_finite_recurrence_prefix_bad_value_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-fibonacci-value-rejected",
+        "computed_value": "8",
         "claimed_value": "9",
+        "farkas_conflict": "f6 = 8 and f6 = 9",
         "smt2_artifact": "artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-fibonacci-value-farkas-conflict.smt2",
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas",
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "Exact replay computes F_6 = 8; the source artifact checks that the same value cannot also be 9."
+      "notes": "This proof row isolates the false Fibonacci value as a small QF_LRA/Farkas contradiction after the replay row has computed the prefix value."
     },
     {
       "id": "bad-affine-step-rejected",
       "claim": "The affine recurrence prefix has x_4 = 14.",
       "expected_result": "unsat",
       "validation": "finite_bad_affine_step_refutation",
-      "proof_status": "checked",
+      "proof_status": "replay-only",
       "data": {
         "source_witness": "affine-plus-one-prefix",
         "step_index": 3,
@@ -90,12 +104,27 @@
         "increment": "1",
         "computed_next": "15",
         "claimed_next": "14",
+        "transition_residual": "1"
+      },
+      "notes": "Exact affine recurrence replay computes x_4 = 2*7 + 1 = 15, so the malformed claim x_4 = 14 leaves residual 1. The separate qf-lra-bad-affine-step row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-affine-step",
+      "claim": "The fixed QF_LRA conflict transition_residual = 1 and transition_residual <= 0 is unsatisfiable.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_finite_recurrence_prefix_bad_affine_step_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-affine-step-rejected",
+        "computed_next": "15",
+        "claimed_next": "14",
         "transition_residual": "1",
+        "farkas_conflict": "transition_residual = 1 and transition_residual <= 0",
         "smt2_artifact": "artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-affine-step-farkas-conflict.smt2",
         "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_affine_step_artifact_emits_checked_farkas",
         "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "Exact affine recurrence replay computes x_4 = 2*7 + 1 = 15, so the malformed claim x_4 = 14 leaves residual 1; the source artifact checks the impossible nonpositive-residual claim through QF_LRA/Farkas evidence."
+      "notes": "This proof row isolates the false affine-step residual as a small QF_LRA/Farkas contradiction after the replay row has computed x_4."
     },
     {
       "id": "general-recurrence-theory-lean-horizon",

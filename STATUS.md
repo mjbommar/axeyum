@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite-recurrence Farkas rows split landed.**
+  `finite-recurrence-prefix-v0` now keeps `bad-fibonacci-value-rejected` and
+  `bad-affine-step-rejected` as exact replay rows: they compute `F_6 = 8`,
+  `x_4 = 15`, and transition residual `1` before rejecting malformed claims.
+  The checked proof-object paths are now the explicit
+  `qf-lra-bad-fibonacci-value` and `qf-lra-bad-affine-step` rows linked to the
+  QF_LRA/Farkas SMT-LIB artifacts and regressions. Focused validation and the
+  recurrence `math_resource_lra_routes` regressions pass; the public summary
+  now reports 120 concept rows, 108 packs, 682 expected checks, 322 checked
+  rows, 289 replay-only rows, and 71 Lean-horizon rows.
+
 - **Bounded-dynamics Farkas rows split landed.**
   `bounded-dynamics-v0` now keeps `bad-transition-step-rejected`,
   `bad-threshold-step-rejected`, and `bad-invariant-bound-rejected` as exact

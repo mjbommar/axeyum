@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 680 expected checks.
+- 682 expected checks.
 - 322 checked proof/evidence rows.
-- 287 replay-only rows.
+- 289 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -669,9 +669,10 @@ Build next:
 - Promote exact rational bad-bound rows through QF_LRA/Farkas.
 - Keep `sequence-limit-shadow-v0`'s promoted bounded Cauchy-tail and bad
   reciprocal-tail rows plus `bounded-monotone-sequence-v0`'s bad upper-bound
-  and bad tail-gap rows tied to source QF_LRA/Farkas artifacts; keep `finite-recurrence-prefix-v0`'s bad
-  finite-value and bad affine-step rows tied to their source QF_LRA/Farkas
-  artifacts; keep
+  and bad tail-gap rows tied to source QF_LRA/Farkas artifacts; keep
+  `finite-recurrence-prefix-v0`'s bad finite-value and bad affine-step source
+  rows replay-only with separate checked `qf-lra-*` proof rows tied to their
+  source QF_LRA/Farkas artifacts; keep
   `finite-root-finding-v0`'s bad Newton-step and bad bisection-width rows tied
   to their source QF_LRA/Farkas artifacts; keep `finite-separation-v0`'s bad
   convex-combination and bad separator rows tied to their source QF_LRA/Farkas
@@ -1423,8 +1424,9 @@ Pick one item per commit unless the change is purely navigational.
     source-linked QF_LRA/Farkas regression for `bad-upper-bound-rejected`.
 34. Landed: add `finite-recurrence-prefix-v0` with Fibonacci prefix replay,
     affine recurrence replay, companion-matrix state replay, and a
-    source-linked QF_LRA/Farkas regression for `bad-fibonacci-value-rejected`;
-    later extended with `bad-affine-step-rejected`.
+    source-linked QF_LRA/Farkas regression for a false Fibonacci value; later
+    extended with a false affine step. These now live as replay-only malformed
+    source rows plus separate checked `qf-lra-*` proof rows.
 35. Landed: promote `multivariable-calculus-rational-v0` through a
     source-linked QF_LRA/Farkas regression for `bad-gradient-rejected`. The
     artifact

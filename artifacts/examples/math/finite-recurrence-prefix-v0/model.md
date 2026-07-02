@@ -36,8 +36,9 @@ The committed witness checks:
 
 ## Bad Fibonacci Row
 
-Exact replay computes `F_6 = 8`. The checked bad row asserts `F_6 = 9` over the
-same source artifact, producing a tiny QF_LRA/Farkas contradiction.
+Exact replay computes `F_6 = 8`. The malformed source row records the rejected
+claim `F_6 = 9`; the separate `qf-lra-bad-fibonacci-value` row owns the source
+SMT-LIB artifact and checked QF_LRA/Farkas contradiction.
 
 ## Bad Affine Step Row
 
@@ -47,6 +48,6 @@ Exact affine recurrence replay computes:
 x_4 = 2*x_3 + 1 = 2*7 + 1 = 15
 ```
 
-The checked bad row asserts the malformed claim `x_4 = 14`, leaving residual
-`1`. The source artifact checks that this positive residual cannot also be
-nonpositive.
+The malformed source row records the rejected claim `x_4 = 14`, leaving
+residual `1`. The separate `qf-lra-bad-affine-step` row owns the source
+SMT-LIB artifact that checks this positive residual cannot also be nonpositive.

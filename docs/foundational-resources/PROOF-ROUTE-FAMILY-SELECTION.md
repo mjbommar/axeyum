@@ -32,9 +32,9 @@ python3 scripts/query-foundational-resources.py summary
 ```
 
 - 108 non-template math packs.
-- 680 expected checks.
+- 682 expected checks.
 - 322 checked proof/evidence rows.
-- 287 replay-only rows.
+- 289 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 

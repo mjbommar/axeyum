@@ -121,15 +121,14 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
-Display checked finite recurrence-prefix rows, including affine-step
-refutations:
+Display the checked finite recurrence-prefix affine-step proof row:
 
 ```sh
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-recurrence-prefix-v0 \
   --route Farkas \
   --proof-status checked \
-  --text affine \
+  --text qf-lra-bad-affine-step \
   --require-any
 ```
 

@@ -2911,7 +2911,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "finite-recurrence-prefix-v0",
-                "Finite Fibonacci and affine recurrence prefixes plus checked bad finite-value and bad affine-step rows.",
+                "Finite Fibonacci and affine recurrence prefixes, replay-only bad source rows, and separate checked qf-lra recurrence proof rows.",
             ),
             (
                 "generating-functions-v0",
@@ -5929,7 +5929,7 @@ BRIDGE_CONCEPTS = [
         "example_packs": [
             (
                 "finite-recurrence-prefix-v0",
-                "Fibonacci prefix, affine recurrence, companion-matrix prefix, and checked bad finite-value plus bad affine-step rows.",
+                "Fibonacci prefix, affine recurrence, companion-matrix prefix, replay-only bad source rows, and separate checked qf-lra proof rows.",
             ),
             (
                 "bounded-dynamics-v0",

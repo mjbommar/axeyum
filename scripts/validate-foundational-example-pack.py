@@ -9970,11 +9970,16 @@ def validate_finite_recurrence_prefix(expected: dict[str, Any]) -> None:
             fail(f"companion-matrix-prefix-replay transition {index}->{index + 1} is incorrect")
 
     bad = checks["bad-fibonacci-value-rejected"]
-    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
-        fail("bad-fibonacci-value-rejected must be a checked unsat row")
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "replay-only":
+        fail("bad-fibonacci-value-rejected must be a replay-only unsat row")
+    if bad.get("validation") != "finite_bad_recurrence_value_refutation":
+        fail("bad-fibonacci-value-rejected must use finite_bad_recurrence_value_refutation")
     data = bad.get("data", {})
     if data.get("source_witness") != "fibonacci-prefix":
         fail("bad-fibonacci-value-rejected must cite the fibonacci-prefix source witness")
+    for checked_key in ("smt2_artifact", "farkas_regression", "certificate"):
+        if checked_key in data:
+            fail("bad-fibonacci-value-rejected must leave checked evidence to qf-lra-bad-fibonacci-value")
     witness_index = require_nonnegative_int("bad Fibonacci witness_index", data.get("witness_index"))
     computed_value = require_fraction("bad Fibonacci computed_value", data.get("computed_value"))
     claimed_value = require_fraction("bad Fibonacci claimed_value", data.get("claimed_value"))
@@ -9984,29 +9989,55 @@ def validate_finite_recurrence_prefix(expected: dict[str, Any]) -> None:
         fail("bad-fibonacci-value-rejected computed_value does not match replay")
     if claimed_value == computed_value:
         fail("bad-fibonacci-value-rejected claimed value unexpectedly matches replay")
-    smt2_artifact = data.get("smt2_artifact")
+    notes = bad.get("notes")
+    require_string("bad Fibonacci notes", notes)
+    if "qf-lra-bad-fibonacci-value" not in notes:
+        fail("bad-fibonacci-value-rejected notes must point to the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-fibonacci-value"]
+    if qf_bad["expected_result"] != "unsat" or qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-fibonacci-value must be a checked unsat row")
+    if qf_bad.get("validation") != "qf_lra_finite_recurrence_prefix_bad_value_refutation":
+        fail("qf-lra-bad-fibonacci-value must use its qf_lra validation")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-fibonacci-value-rejected":
+        fail("qf-lra-bad-fibonacci-value must cite the source replay row")
+    qf_computed_value = require_fraction("qf bad Fibonacci computed_value", qf_data.get("computed_value"))
+    qf_claimed_value = require_fraction("qf bad Fibonacci claimed_value", qf_data.get("claimed_value"))
+    if qf_computed_value != computed_value:
+        fail("qf-lra-bad-fibonacci-value computed_value must match the replay row")
+    if qf_claimed_value != claimed_value:
+        fail("qf-lra-bad-fibonacci-value claimed_value must match the replay row")
+    if qf_data.get("farkas_conflict") != "f6 = 8 and f6 = 9":
+        fail("qf-lra-bad-fibonacci-value must document the expected Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
     require_string("bad Fibonacci smt2_artifact", smt2_artifact)
     if (
         smt2_artifact
         != "artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-fibonacci-value-farkas-conflict.smt2"
     ):
-        fail("bad-fibonacci-value-rejected smt2_artifact must name the checked QF_LRA artifact")
+        fail("qf-lra-bad-fibonacci-value smt2_artifact must name the checked QF_LRA artifact")
     check_source("bad Fibonacci smt2_artifact", smt2_artifact)
-    farkas_regression = data.get("farkas_regression")
+    farkas_regression = qf_data.get("farkas_regression")
     require_string("bad Fibonacci farkas_regression", farkas_regression)
     if "finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas" not in farkas_regression:
-        fail("bad-fibonacci-value-rejected must link the LRA route regression")
-    certificate = data.get("certificate")
+        fail("qf-lra-bad-fibonacci-value must link the LRA route regression")
+    certificate = qf_data.get("certificate")
     require_string("bad Fibonacci certificate", certificate)
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
-        fail("bad-fibonacci-value-rejected certificate must document checked Farkas evidence")
+        fail("qf-lra-bad-fibonacci-value certificate must document checked Farkas evidence")
 
     bad_affine = checks["bad-affine-step-rejected"]
-    if bad_affine["expected_result"] != "unsat" or bad_affine.get("proof_status") != "checked":
-        fail("bad-affine-step-rejected must be a checked unsat row")
+    if bad_affine["expected_result"] != "unsat" or bad_affine.get("proof_status") != "replay-only":
+        fail("bad-affine-step-rejected must be a replay-only unsat row")
+    if bad_affine.get("validation") != "finite_bad_affine_step_refutation":
+        fail("bad-affine-step-rejected must use finite_bad_affine_step_refutation")
     data = bad_affine.get("data", {})
     if data.get("source_witness") != "affine-plus-one-prefix":
         fail("bad-affine-step-rejected must cite the affine-plus-one-prefix source witness")
+    for checked_key in ("smt2_artifact", "farkas_regression", "certificate"):
+        if checked_key in data:
+            fail("bad-affine-step-rejected must leave checked evidence to qf-lra-bad-affine-step")
     step_index = require_nonnegative_int("bad affine step_index", data.get("step_index"))
     previous_value = require_fraction("bad affine previous_value", data.get("previous_value"))
     bad_multiplier = require_fraction("bad affine multiplier", data.get("multiplier"))
@@ -10033,22 +10064,49 @@ def validate_finite_recurrence_prefix(expected: dict[str, Any]) -> None:
         fail("bad-affine-step-rejected transition_residual is incorrect")
     if transition_residual <= 0:
         fail("bad-affine-step-rejected must document a positive transition residual")
-    smt2_artifact = data.get("smt2_artifact")
+    notes = bad_affine.get("notes")
+    require_string("bad affine step notes", notes)
+    if "qf-lra-bad-affine-step" not in notes:
+        fail("bad-affine-step-rejected notes must point to the checked qf-lra row")
+
+    qf_bad_affine = checks["qf-lra-bad-affine-step"]
+    if qf_bad_affine["expected_result"] != "unsat" or qf_bad_affine.get("proof_status") != "checked":
+        fail("qf-lra-bad-affine-step must be a checked unsat row")
+    if qf_bad_affine.get("validation") != "qf_lra_finite_recurrence_prefix_bad_affine_step_refutation":
+        fail("qf-lra-bad-affine-step must use its qf_lra validation")
+    qf_data = qf_bad_affine.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-affine-step-rejected":
+        fail("qf-lra-bad-affine-step must cite the source replay row")
+    qf_computed_next = require_fraction("qf bad affine computed_next", qf_data.get("computed_next"))
+    qf_claimed_next = require_fraction("qf bad affine claimed_next", qf_data.get("claimed_next"))
+    qf_transition_residual = require_fraction(
+        "qf bad affine transition_residual",
+        qf_data.get("transition_residual"),
+    )
+    if qf_computed_next != computed_next:
+        fail("qf-lra-bad-affine-step computed_next must match the replay row")
+    if qf_claimed_next != claimed_next:
+        fail("qf-lra-bad-affine-step claimed_next must match the replay row")
+    if qf_transition_residual != transition_residual:
+        fail("qf-lra-bad-affine-step transition_residual must match the replay row")
+    if qf_data.get("farkas_conflict") != "transition_residual = 1 and transition_residual <= 0":
+        fail("qf-lra-bad-affine-step must document the expected Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
     require_string("bad affine step smt2_artifact", smt2_artifact)
     if (
         smt2_artifact
         != "artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-affine-step-farkas-conflict.smt2"
     ):
-        fail("bad-affine-step-rejected smt2_artifact must name the checked QF_LRA artifact")
+        fail("qf-lra-bad-affine-step smt2_artifact must name the checked QF_LRA artifact")
     check_source("bad affine step smt2_artifact", smt2_artifact)
-    farkas_regression = data.get("farkas_regression")
+    farkas_regression = qf_data.get("farkas_regression")
     require_string("bad affine step farkas_regression", farkas_regression)
     if "finite_recurrence_prefix_bad_affine_step_artifact_emits_checked_farkas" not in farkas_regression:
-        fail("bad-affine-step-rejected must link the LRA route regression")
-    certificate = data.get("certificate")
+        fail("qf-lra-bad-affine-step must link the LRA route regression")
+    certificate = qf_data.get("certificate")
     require_string("bad affine step certificate", certificate)
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
-        fail("bad-affine-step-rejected certificate must document checked Farkas evidence")
+        fail("qf-lra-bad-affine-step certificate must document checked Farkas evidence")
 
     horizon = checks["general-recurrence-theory-lean-horizon"]
     if horizon["expected_result"] != "not-run":

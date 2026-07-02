@@ -8,7 +8,8 @@ horizons.
 ## Audience
 
 - Learners moving from sequences and counting into linear algebra.
-- Resource authors who need a small recurrence example with a checked bad row.
+- Resource authors who need a small recurrence example with replay-only bad
+  source rows and separate checked proof rows.
 - Solver developers looking for exact-rational replay rows that can become
   QF_LRA/Farkas regressions.
 
@@ -21,10 +22,13 @@ horizons.
 - `companion-matrix-prefix-replay`: checks the Fibonacci companion matrix on
   fixed two-dimensional state vectors.
 - `bad-fibonacci-value-rejected`: rejects the malformed claim `F_6 = 9` after
-  replay computes `F_6 = 8`, with checked QF_LRA/Farkas evidence.
+  replay computes `F_6 = 8`.
+- `qf-lra-bad-fibonacci-value`: checks the resulting fixed `F_6 = 8` and
+  `F_6 = 9` contradiction through QF_LRA/Farkas evidence.
 - `bad-affine-step-rejected`: rejects the malformed affine recurrence claim
-  `x_4 = 14` after replay computes `x_4 = 15`, with checked QF_LRA/Farkas
-  evidence.
+  `x_4 = 14` after replay computes `x_4 = 15`.
+- `qf-lra-bad-affine-step`: checks the resulting positive-residual conflict
+  through QF_LRA/Farkas evidence.
 - `general-recurrence-theory-lean-horizon`: names the future Lean route for
   induction, closed forms, asymptotics, and stability/convergence theorems.
 
@@ -39,4 +43,5 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_pr
 
 Untrusted search may propose a prefix, matrix trace, or contradiction route.
 The trusted work is small: exact recurrence replay, exact matrix-vector
-multiplication, and checked `UnsatFarkas` evidence over the source SMT-LIB row.
+multiplication, and checked `UnsatFarkas` evidence over explicit proof rows
+that cite the replay source rows.

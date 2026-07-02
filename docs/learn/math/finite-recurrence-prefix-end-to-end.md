@@ -1,7 +1,8 @@
 # End To End: Finite Recurrence Prefixes
 
 This lesson follows one recurrence resource from exact prefix replay through
-checked bad-value and bad affine-step rejections. It uses the
+replay-only bad source rows and separate checked bad-value and bad affine-step
+proof rows. It uses the
 [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 pack.
 
@@ -22,8 +23,10 @@ Concept rows:
 | `fibonacci-prefix-replay` | `sat` | replay-only |
 | `affine-recurrence-prefix-replay` | `sat` | replay-only |
 | `companion-matrix-prefix-replay` | `sat` | replay-only |
-| `bad-fibonacci-value-rejected` | `unsat` | checked QF_LRA/Farkas |
-| `bad-affine-step-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-fibonacci-value-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-fibonacci-value` | `unsat` | checked QF_LRA/Farkas |
+| `bad-affine-step-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-affine-step` | `unsat` | checked QF_LRA/Farkas |
 | `general-recurrence-theory-lean-horizon` | `not-run` | Lean horizon |
 
 Every positive row is a finite list or finite matrix-step check. The pack does
@@ -96,7 +99,7 @@ matrix-vector multiplication over exact rationals.
 
 ## Check The Fibonacci Refutation
 
-The promoted bad row claims:
+The malformed replay row claims:
 
 ```text
 F_6 = 9
@@ -108,7 +111,8 @@ Exact replay computes:
 F_6 = 8
 ```
 
-The committed SMT-LIB artifact
+The separate `qf-lra-bad-fibonacci-value` proof row owns the committed SMT-LIB
+artifact
 [`bad-fibonacci-value-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-fibonacci-value-farkas-conflict.smt2)
 records the tiny contradiction:
 
@@ -118,11 +122,11 @@ f6 = 9
 ```
 
 Axeyum may search for the contradiction, but the accepted evidence is checked
-`UnsatFarkas` arithmetic over the original source artifact.
+`UnsatFarkas` arithmetic over the explicit proof row's source artifact.
 
 ## Check The Affine Step Refutation
 
-The second promoted bad row claims:
+The second malformed replay row claims:
 
 ```text
 x_4 = 14
@@ -136,7 +140,8 @@ x_4 = 2*x_3 + 1 = 15
 15 - 14 = 1
 ```
 
-The committed SMT-LIB artifact
+The separate `qf-lra-bad-affine-step` proof row owns the committed SMT-LIB
+artifact
 [`bad-affine-step-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-recurrence-prefix-v0/smt2/bad-affine-step-farkas-conflict.smt2)
 records the tiny contradiction:
 
@@ -146,7 +151,7 @@ transition_residual <= 0
 ```
 
 The solver search is still untrusted. The accepted evidence is independently
-checked `UnsatFarkas` arithmetic over the source artifact.
+checked `UnsatFarkas` arithmetic over the explicit proof row's source artifact.
 
 ## Run It
 
@@ -167,7 +172,7 @@ validated 1 foundational example pack(s)
 
 ```text
 untrusted fast search -> proposed prefix, matrix trace, or Farkas certificate
-trusted small checking -> exact recurrence replay, matrix-vector replay, checked QF_LRA evidence
+trusted small checking -> exact recurrence replay, matrix-vector replay, checked QF_LRA proof rows
 remaining horizon -> induction over all n, closed forms, asymptotics, convergence, stability
 ```
 

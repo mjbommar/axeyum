@@ -189,10 +189,11 @@ A = [[1,1],[1,0]]
 ```
 
 The `finite-recurrence-prefix-v0` validator checks the Fibonacci prefix, the
-affine recurrence, and the companion-matrix state trace. Its checked bad rows
-reject the false claim `F_6 = 9` after exact replay computes `F_6 = 8`, and
-reject the false affine-step claim `x_4 = 14` after exact replay computes
-`x_4 = 15`. This is finite recurrence evidence, not a closed form, asymptotic
+affine recurrence, and the companion-matrix state trace. Its malformed source
+rows reject the false claim `F_6 = 9` after exact replay computes `F_6 = 8`,
+and reject the false affine-step claim `x_4 = 14` after exact replay computes
+`x_4 = 15`; separate `qf-lra-*` proof rows own the checked Farkas artifacts.
+This is finite recurrence evidence, not a closed form, asymptotic
 estimate, or convergence theorem.
 
 For a finite root-finding shadow, encode one exact bisection update and one

@@ -4551,7 +4551,7 @@
           "id": "finite-recurrence-prefix-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
-          "notes": "Finite Fibonacci and affine recurrence prefixes plus checked bad finite-value and bad affine-step rows."
+          "notes": "Finite Fibonacci and affine recurrence prefixes, replay-only bad source rows, and separate checked qf-lra recurrence proof rows."
         },
         {
           "id": "generating-functions-v0",
@@ -7765,7 +7765,7 @@
           "id": "finite-recurrence-prefix-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
-          "notes": "Fibonacci prefix, affine recurrence, companion-matrix prefix, and checked bad finite-value plus bad affine-step rows."
+          "notes": "Fibonacci prefix, affine recurrence, companion-matrix prefix, replay-only bad source rows, and separate checked qf-lra proof rows."
         },
         {
           "id": "bounded-dynamics-v0",

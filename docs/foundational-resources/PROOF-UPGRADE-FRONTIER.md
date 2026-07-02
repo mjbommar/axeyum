@@ -258,9 +258,10 @@ First targets:
   tail-gap rows after exact finite-prefix and finite-tail replay compute the
   offending sequence values)
 - [finite-recurrence-prefix-v0](../../artifacts/examples/math/finite-recurrence-prefix-v0/)
-  (source-linked Farkas regressions landed for the bad finite recurrence value
-  and bad affine-step rows after exact prefix replay computes `F_6 = 8` and
-  affine replay computes `x_4 = 15`)
+  (source-linked Farkas regressions landed as separate `qf-lra-*` proof rows
+  for the bad finite recurrence value and bad affine-step source rows after
+  exact prefix replay computes `F_6 = 8` and affine replay computes
+  `x_4 = 15`)
 - [finite-root-finding-v0](../../artifacts/examples/math/finite-root-finding-v0/)
   (source-linked Farkas regressions landed for the bad Newton-step and bad
   bisection-width rows after exact root-finding replay computes the next

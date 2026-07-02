@@ -38,8 +38,9 @@ injection from three pigeons into two holes. The generating-functions pack
 checks finite coefficient extraction, Cauchy product convolution, a bounded
 Fibonacci generating-function identity, and a bad convolution coefficient. The
 finite-recurrence-prefix pack checks Fibonacci and affine recurrence prefixes,
-plus a companion-matrix state trace, and rejects a bad finite Fibonacci value
-with checked QF_LRA/Farkas evidence. The
+plus a companion-matrix state trace, rejects malformed finite Fibonacci and
+affine-step source rows by exact replay, and exposes separate checked
+QF_LRA/Farkas proof rows. The
 finite-permutation-groups pack adds symmetry data: it checks `S3` as bijective
 function tables, recomputes cycle lengths and parity signs, and replays the
 natural action's orbit and stabilizer. The finite-group-actions pack adds
@@ -116,9 +117,10 @@ x = [0, 1, 3, 7, 15]  where x_{n+1} = 2*x_n + 1
 ```
 
 The `finite-recurrence-prefix-v0` pack recomputes each prefix and the
-Fibonacci companion-matrix trace. Its bad rows reject `F_6 = 9` after replay
-computes `F_6 = 8`, and reject `x_4 = 14` after affine recurrence replay
-computes `x_4 = 15`.
+Fibonacci companion-matrix trace. Its malformed source rows reject `F_6 = 9`
+after replay computes `F_6 = 8`, and reject `x_4 = 14` after affine recurrence
+replay computes `x_4 = 15`; separate `qf-lra-*` rows own the checked proof
+artifacts.
 
 For orbit counting,
 first encode finite permutations as bijections:
