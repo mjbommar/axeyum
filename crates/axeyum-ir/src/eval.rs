@@ -19,6 +19,22 @@ use crate::value::{ArrayValue, FuncValue, GenericArrayValue, Value};
 pub struct Assignment {
     bindings: HashMap<SymbolId, Value>,
     functions: HashMap<FuncId, FuncValue>,
+    /// Model-chosen interpretation of real division-by-zero, keyed by the
+    /// **numerator** value. SMT-LIB leaves real `(/ x 0)` unspecified (a
+    /// consistent function of `x` only); the evaluator's *total* convention is
+    /// `x/0 = 0`, but a model may carry the solver's chosen value for each
+    /// forced `x/0`. In `Op::RealDiv`, a zero denominator consults this map by
+    /// the numerator value: a hit returns the chosen quotient, a miss keeps the
+    /// total `0` convention. An absent/empty map is exactly the total
+    /// convention, so this is backwards compatible — the interpretation is part
+    /// of the model, like [`FuncValue`]. Boxed lazily so the common
+    /// witness-free assignment pays one `Option` word, not a `HashMap`.
+    #[allow(
+        clippy::box_collection,
+        reason = "deliberate: keeps `Assignment` (embedded in downstream error \
+                  types) at one extra word instead of a full inline HashMap"
+    )]
+    real_div_zero: Option<Box<HashMap<Rational, Rational>>>,
 }
 
 impl Assignment {
@@ -51,6 +67,31 @@ impl Assignment {
     /// Iterates over bound uninterpreted-function interpretations.
     pub fn functions(&self) -> impl Iterator<Item = (FuncId, &FuncValue)> + '_ {
         self.functions.iter().map(|(func, value)| (*func, value))
+    }
+
+    /// Records the model-chosen value of `(/ numerator 0)` — the interpretation
+    /// of real division-by-zero for this numerator value (see the field docs).
+    /// Replaces any previous binding for the same numerator.
+    pub fn set_real_div_zero(&mut self, numerator: Rational, quotient: Rational) {
+        self.real_div_zero
+            .get_or_insert_with(Box::default)
+            .insert(numerator, quotient);
+    }
+
+    /// The model-chosen value of `(/ numerator 0)`, if the model fixes one for
+    /// this numerator value; `None` falls back to the total `x/0 = 0` convention.
+    pub fn real_div_zero(&self, numerator: Rational) -> Option<Rational> {
+        self.real_div_zero
+            .as_ref()
+            .and_then(|map| map.get(&numerator).copied())
+    }
+
+    /// Iterates over the recorded real division-by-zero interpretations
+    /// (`numerator -> quotient`).
+    pub fn real_div_zeros(&self) -> impl Iterator<Item = (Rational, Rational)> + '_ {
+        self.real_div_zero
+            .iter()
+            .flat_map(|map| map.iter().map(|(&n, &q)| (n, q)))
     }
 
     /// Number of bound symbols.
@@ -262,6 +303,15 @@ pub fn eval_with_memo(
                                 // replay through the same path.
                                 interp.apply_value(&vals)
                             }
+                            // Model-interpreted real division-by-zero (P2.5
+                            // free-division witnesses, see [`real_div_zero_hit`]);
+                            // a miss delegates to `apply`'s total `x/0 = 0`
+                            // convention (an empty map is exactly the prior
+                            // behavior).
+                            Op::RealDiv => match real_div_zero_hit(&vals, assignment) {
+                                Some(value) => value,
+                                None => apply(*op, &vals)?,
+                            },
                             Op::DtConstruct {
                                 constructor,
                                 datatype,
@@ -315,6 +365,27 @@ pub fn eval_with_memo(
     }
 
     Ok(memo[&term].clone())
+}
+
+/// The model-chosen value of a real division whose divisor is `0`, if the
+/// assignment carries an interpretation for this numerator value (P2.5
+/// free-division witnesses).
+///
+/// Real `(/ x 0)` is unspecified in SMT-LIB — a consistent function of the
+/// numerator. The total convention is `x/0 = 0` (see `apply`), but the model
+/// may carry a first-class interpretation of the division-at-zero value keyed
+/// by the numerator. On a zero divisor with a rational numerator this consults
+/// it: a hit returns `Some(chosen quotient)`; anything else (non-zero divisor,
+/// algebraic operand, no entry) returns `None` and the caller delegates to
+/// `apply` (the total `0` convention + overflow / algebraic handling).
+fn real_div_zero_hit(vals: &[Value], assignment: &Assignment) -> Option<Value> {
+    let (Value::Real(num), Value::Real(den)) = (vals.first()?, vals.get(1)?) else {
+        return None;
+    };
+    if !den.is_zero() {
+        return None;
+    }
+    assignment.real_div_zero(*num).map(Value::Real)
 }
 
 /// The largest bit-vector width a quantifier may range over in the evaluator

@@ -218,5 +218,12 @@ fn replay_preprocessed_model(
             out.set(symbol, value);
         }
     }
+    // Carry the free-division `/0` witness (P2.5): the replay above succeeded
+    // *under* this interpretation (the evaluator consults it for a zero
+    // divisor), so dropping it here would hand the caller a model that no
+    // longer replays — a wrong `sat` through the preprocessed path.
+    for (numerator, quotient) in reconstructed.real_div_zeros() {
+        out.set_real_div_zero(numerator, quotient);
+    }
     Ok(CheckResult::Sat(out))
 }

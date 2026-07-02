@@ -1,7 +1,7 @@
 //! Nonlinear real arithmetic via linear abstraction + replay (sound, incomplete).
 #![allow(clippy::many_single_char_names)]
 
-use axeyum_ir::{Rational, Sort, TermArena};
+use axeyum_ir::{Rational, Sort, TermArena, Value, eval};
 use axeyum_solver::{CheckResult, SolverConfig, check_with_nra};
 
 fn real(arena: &mut TermArena, name: &str) -> axeyum_ir::TermId {
@@ -368,27 +368,16 @@ fn real_division_inconsistent_is_unsat() {
 }
 
 #[test]
-fn real_division_by_zero_is_sound_unknown() {
+fn real_division_by_zero_now_sat_with_witness() {
     // y == 0 AND x == 5 AND x/y == 100.
     //
-    // This case sits on a genuine semantic divergence that the solver reconciles
-    // to a *sound* `unknown` rather than a definite verdict:
-    //
-    //   * axeyum's ground evaluator — the trusted soundness anchor for every `sat`
-    //     replay (see `axeyum-ir` `real_division_evaluates_exactly`) — COMMITS to
-    //     the totality convention `x / 0 = 0` (like SMT-LIB `bvudiv x 0 = all-ones`).
-    //     Under that convention `5 / 0 = 0 ≠ 100`, so the query is unsatisfiable and
-    //     no model can replay it.
-    //   * SMT-LIB / Z3 leave real `/0` *unspecified* (a free value), so Z3 reports
-    //     `sat` (pick the division result to be 100).
-    //
-    // A definite `unsat` would DISAGREE with Z3 (a wrong-unsat); a `sat` cannot
-    // produce a model the `/0 = 0` evaluator will accept (and the differential
-    // fuzz's replay anchor would refute it). The only verdict sound under BOTH
-    // commitments is `unknown`. Recovering these as real `sat`s requires
-    // first-class free-division witnesses (the model carrying the chosen `x/0`
-    // value so the evaluator can validate it) — a tracked NRA follow-up, not a
-    // wrong verdict today.
+    // SMT-LIB leaves real `(/ x 0)` *unspecified* (a consistent function of the
+    // numerator), so Z3 reports `sat` (pick the division result to be 100). The
+    // ground evaluator's total convention is `x / 0 = 0`, so historically axeyum
+    // reconciled this to a sound `unknown`. It is now a first-class `sat`: the
+    // returned model carries the free-division `/0` witness (the chosen value of
+    // `5/0`), and the evaluator consults it, so every original assertion — with
+    // real division intact — replays to `true`.
     let mut a = TermArena::new();
     let x = real(&mut a, "x");
     let y = real(&mut a, "y");
@@ -399,12 +388,75 @@ fn real_division_by_zero_is_sound_unknown() {
     let yc = a.eq(y, zero).unwrap();
     let xc = a.eq(x, five).unwrap();
     let dc = a.eq(d, hundred).unwrap();
-    let r = check_with_nra(&mut a, &[yc, xc, dc], &SolverConfig::default()).unwrap();
-    // Sound reconciliation: never a wrong verdict. `unknown` today; a future
-    // free-division-witness route may promote this to `sat` (matching Z3).
+    let asserts = [yc, xc, dc];
+    let r = check_with_nra(&mut a, &asserts, &SolverConfig::default()).unwrap();
+    let CheckResult::Sat(model) = r else {
+        panic!("forced x/0 = 100 is sat under SMT-LIB free-division semantics, got {r:?}");
+    };
+    // The witnessing model must replay every ORIGINAL assertion (division intact)
+    // to `true` under the ground evaluator — the soundness anchor.
+    let assignment = model.to_assignment();
+    for &asrt in &asserts {
+        assert_eq!(
+            eval(&a, asrt, &assignment).unwrap(),
+            Value::Bool(true),
+            "the sat model must satisfy every original (real-division) assertion"
+        );
+    }
+    // And the witness is exactly the chosen value of 5/0 = 100.
+    assert_eq!(
+        model.real_div_zero(Rational::integer(5)),
+        Some(Rational::integer(100))
+    );
+}
+
+#[test]
+fn real_division_by_zero_multi_occurrence_is_consistent() {
+    // y == 0 AND x == 5 AND x/y == 100 AND x/y > 50: the SAME `x/0` is used twice
+    // and both atoms must agree on its chosen value (via the division-congruence
+    // axioms). Sat, with a single consistent witness.
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let d = a.real_div(x, y).unwrap();
+    let zero = a.real_const(Rational::integer(0));
+    let five = a.real_const(Rational::integer(5));
+    let fifty = a.real_const(Rational::integer(50));
+    let hundred = a.real_const(Rational::integer(100));
+    let yc = a.eq(y, zero).unwrap();
+    let xc = a.eq(x, five).unwrap();
+    let dc = a.eq(d, hundred).unwrap();
+    let dg = a.real_gt(d, fifty).unwrap(); // (x/0) > 50, same term
+    let asserts = [yc, xc, dc, dg];
+    let r = check_with_nra(&mut a, &asserts, &SolverConfig::default()).unwrap();
+    let CheckResult::Sat(model) = r else {
+        panic!("consistent multi-occurrence x/0 is sat, got {r:?}");
+    };
+    let assignment = model.to_assignment();
+    for &asrt in &asserts {
+        assert_eq!(eval(&a, asrt, &assignment).unwrap(), Value::Bool(true));
+    }
+}
+
+#[test]
+fn real_division_by_zero_contradictory_atoms_is_not_wrong_sat() {
+    // y == 0 AND x/y == 100 AND x/y == 200 on the SAME term: the two atoms pin the
+    // single free value of x/0 to two different constants — no model (congruence
+    // forces one value). Must NOT be a wrong `sat`; a sound `unsat`/`unknown`.
+    let mut a = TermArena::new();
+    let x = real(&mut a, "x");
+    let y = real(&mut a, "y");
+    let d = a.real_div(x, y).unwrap();
+    let zero = a.real_const(Rational::integer(0));
+    let hundred = a.real_const(Rational::integer(100));
+    let twohundred = a.real_const(Rational::integer(200));
+    let yc = a.eq(y, zero).unwrap();
+    let d1 = a.eq(d, hundred).unwrap();
+    let d2 = a.eq(d, twohundred).unwrap();
+    let r = check_with_nra(&mut a, &[yc, d1, d2], &SolverConfig::default()).unwrap();
     assert!(
-        matches!(r, CheckResult::Unknown(_)),
-        "x/0 divergence must be a sound unknown, not a wrong verdict, got {r:?}"
+        !matches!(r, CheckResult::Sat(_)),
+        "x/0 cannot equal both 100 and 200; must not be a wrong sat, got {r:?}"
     );
 }
 

@@ -742,6 +742,13 @@ fn dispatch_reduced(
             out.set_function(func, interp.clone());
         }
     }
+    // Same for the free-division `/0` witness (P2.5): the replay above succeeded
+    // *under* this interpretation (the evaluator consults it on a zero divisor),
+    // so dropping it would hand back a model that no longer replays — a wrong
+    // `sat` through the preprocessed path.
+    for (numerator, quotient) in reconstructed.real_div_zeros() {
+        out.set_real_div_zero(numerator, quotient);
+    }
     Ok(CheckResult::Sat(out))
 }
 

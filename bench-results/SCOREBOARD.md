@@ -44,7 +44,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_NIA | `qf-nia-cvc5-regress-clean` | 39 | 21 | 54% | 10 | 8 | 20 | 0 | z3-binary | 6.577 |
 | QF_NIA | `qf-nia-curated-iand` | 3 | 1 | 33% | 2 | 0 | 0 | 0 | :status | 13.333 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
-| QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 9 | 24% | 27 | 1 | 9 | 0 | z3-binary | 15.166 |
+| QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 21 | 55% | 16 | 1 | 21 | 0 | z3-binary | 8.660 |
 | QF_S | `qf-s-cvc5-regress-clean` | 134 | 48 | 36% | 24 | 62 | 48 | 0 | z3-library+binary | 6.676 |
 | QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | 6 | 1 | 26 | 0 | z3-library+binary | 3.751 |
 | QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 11 | 22% | 10 | 29 | 11 | 0 | z3-library+binary | 9.537 |
@@ -60,7 +60,21 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 0 | 0% | 2 | 0 | 0 | 0 | :status | 20.000 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 663 decided, 611 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 675 decided, 623 oracle-compared, **0 disagreements.**
+
+### QF_NRA row re-measured 2026-07-02 (free-division `/0` witnesses + prior landings)
+
+The first-class free-division witness landing (forced-div-by-zero promotes
+`unknown` → `sat`; see
+[P2.5 § 08](../docs/plan/track-2-theories/P2.5-nra/08-evaluation-and-soundness.md))
+re-measured `qf-nra-cvc5-regress-clean` on the committed 10 s bench route:
+**9 → 21 decided (24% → 55%), PAR-2 15.166 → 8.660, DISAGREE=0.** Attribution is
+honest: the witness change itself moves **+1** (`cli__regress1__arith__div.06`,
+`n=0 ∧ x/n=0 ∧ y/n=1`, declared/Z3 `sat`) against a same-command HEAD re-run
+(20 decided) — the other +11 vs the stale committed row are the prior
+sign-refutation + coprime-split CAD landings that had not yet been re-measured
+on this route. `issue9164-2` (nested `1/(a/b)`) still declines: it needs the
+FM → simplex lever in addition to the `/0` witness.
 
 ### String rows re-measured 2026-07-02 (ADR-0052 gate — soundness over decide-rate)
 

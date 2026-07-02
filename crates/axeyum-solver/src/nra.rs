@@ -31,7 +31,9 @@
 
 use std::collections::{BTreeSet, HashMap};
 
-use axeyum_ir::{IrError, Op, Sort, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{
+    Assignment, IrError, Op, Rational, Sort, TermArena, TermId, TermNode, Value, eval,
+};
 use axeyum_rewrite::replace_subterms;
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
@@ -105,6 +107,11 @@ const MAX_BNB_DEPTH: usize = 6;
 const MAX_CROSS_PRODUCTS: usize = 2;
 
 type Bounds = HashMap<TermId, (axeyum_ir::Rational, axeyum_ir::Rational)>;
+
+/// One eliminated real division: `(dividend, divisor, result-var)` — the fresh
+/// `!div_i` variable standing for `dividend / divisor` (see
+/// [`eliminate_real_div`]).
+type DivTerm = (TermId, TermId, TermId);
 
 /// Decides a (possibly nonlinear) real-arithmetic query by linear abstraction of
 /// nonlinear products, `McCormick` envelopes, spatial branch-and-bound, and replay.
@@ -199,15 +206,21 @@ fn check_with_nra_impl(
     // Eliminate real division: `x/y → r` with `(y = 0) ∨ (x = r·y)` (+ the division
     // congruence axioms in `eliminate_real_div`). The eliminated form drives the
     // abstraction/relaxation below; every `sat` candidate is replayed against
-    // `original` (with division), never the eliminated form.
-    let assertions = &eliminate_real_div(arena, &original)?;
+    // `original` (with division), never the eliminated form. `div_terms` records
+    // each eliminated `(x, y, r)` so a `sat` model can be enriched with the
+    // free-division `/0` witness (numerator value → chosen `r`).
+    let (elim, div_terms) = eliminate_real_div(arena, &original)?;
+    let assertions = &elim;
 
     let products = nonlinear_products(arena, assertions);
     if products.is_empty() {
         // Already linear (after elimination). The LRA loop replays internally
-        // against the eliminated form; the `check_with_nra` wrapper's final guard
-        // re-checks any `sat` against `original`, so div-by-zero stays sound.
-        return check_with_lra_dpll_within(arena, assertions, config, deadline);
+        // against the eliminated form; enrich any `sat` with the `/0` witness so
+        // the `check_with_nra` wrapper's final guard (which re-checks against
+        // `original`, with division) accepts a forced `x/0` model instead of
+        // rejecting it under the total `x/0 = 0` convention.
+        let res = check_with_lra_dpll_within(arena, assertions, config, deadline)?;
+        return Ok(attach_div_zero_witness(arena, res, &original, &div_terms));
     }
 
     // Abstract each distinct nonlinear product with a fresh real variable,
@@ -353,7 +366,8 @@ fn check_with_nra_impl(
         // Replay target = the TRUE original (with division), so a candidate is
         // accepted only if it satisfies the real `x/y` semantics — never the
         // div-eliminated form (which a `y=0`/free-`r` spurious model would satisfy).
-        arena, &base, &triples, &products, &original, config, &bounds, 0, deadline,
+        // `div_terms` lets a `sat` replay consult the free-division `/0` witness.
+        arena, &base, &triples, &div_terms, &products, &original, config, &bounds, 0, deadline,
     )
 }
 
@@ -369,6 +383,7 @@ fn branch_and_bound(
     arena: &mut TermArena,
     base: &[TermId],
     triples: &[(TermId, TermId, TermId)],
+    div_terms: &[DivTerm],
     products: &BTreeSet<TermId>,
     original: &[TermId],
     config: &SolverConfig,
@@ -390,7 +405,7 @@ fn branch_and_bound(
     };
 
     match solve_relaxation(
-        arena, base, triples, products, original, bounds, config, deadline,
+        arena, base, triples, div_terms, products, original, bounds, config, deadline,
     )? {
         CheckResult::Sat(model) => Ok(CheckResult::Sat(model)),
         CheckResult::Unsat => Ok(CheckResult::Unsat),
@@ -413,6 +428,7 @@ fn branch_and_bound(
                     arena,
                     base,
                     triples,
+                    div_terms,
                     products,
                     original,
                     config,
@@ -443,6 +459,7 @@ fn solve_relaxation(
     arena: &mut TermArena,
     base: &[TermId],
     triples: &[(TermId, TermId, TermId)],
+    div_terms: &[DivTerm],
     products: &BTreeSet<TermId>,
     original: &[TermId],
     bounds: &Bounds,
@@ -484,21 +501,14 @@ fn solve_relaxation(
         let CheckResult::Sat(model) = result else {
             return Ok(result); // unsat/unknown transfer (the box is a relaxation)
         };
-        let assignment = model.to_assignment();
-        if original
-            .iter()
-            .all(|&a| matches!(eval(arena, a, &assignment), Ok(Value::Bool(true))))
+        let mut assignment = model.to_assignment();
+        // Enrich with the free-division `/0` witness and replay against the
+        // original: a verified candidate (or a conflicting-witness decline)
+        // finishes here; a failed replay falls through to point-lemma refinement.
+        if let Some(result) =
+            replay_with_div_zero_witness(arena, &mut assignment, original, div_terms)
         {
-            let mut out = Model::new();
-            for (symbol, name, _sort) in arena.symbols() {
-                if name.starts_with("!nra_") {
-                    continue;
-                }
-                if let Some(value) = assignment.get(symbol) {
-                    out.set(symbol, value);
-                }
-            }
-            return Ok(CheckResult::Sat(out));
+            return Ok(result);
         }
         let mut added = false;
         for &(pa, pb, r) in triples {
@@ -608,10 +618,14 @@ fn rat_width(lo: axeyum_ir::Rational, hi: axeyum_ir::Rational) -> Option<axeyum_
 /// `(y = 0) ∨ (x = r·y)` — the exact SMT-LIB semantics (division by zero is an
 /// unspecified value, so `r` is left free there). The `r·y` term is a `RealMul`
 /// the nonlinear abstraction then handles. Equisatisfiable; soundness preserved.
+///
+/// Also returns the `(dividend, divisor, result-var)` triple for each distinct
+/// eliminated division, so a `sat` model of the eliminated form can be enriched
+/// with the free-division `/0` witness (see [`div_zero_witness`]).
 fn eliminate_real_div(
     arena: &mut TermArena,
     assertions: &[TermId],
-) -> Result<Vec<TermId>, SolverError> {
+) -> Result<(Vec<TermId>, Vec<DivTerm>), SolverError> {
     // Collect distinct RealDiv subterms.
     let mut divs: Vec<TermId> = Vec::new();
     let mut seen = BTreeSet::new();
@@ -630,7 +644,7 @@ fn eliminate_real_div(
         }
     }
     if divs.is_empty() {
-        return Ok(assertions.to_vec());
+        return Ok((assertions.to_vec(), Vec::new()));
     }
 
     let err = |e: IrError| SolverError::Backend(e.to_string());
@@ -687,7 +701,133 @@ fn eliminate_real_div(
     for c in constraints {
         out.push(replace_subterms(arena, c, &map, &mut memo).map_err(err)?);
     }
-    Ok(out)
+    Ok((out, div_terms))
+}
+
+/// Builds the free-division `/0` witness from a model of the div-eliminated form.
+///
+/// SMT-LIB leaves real `(/ x 0)` unspecified (a consistent function of the
+/// numerator). `eliminate_real_div` models this with a fresh `r` and the
+/// division-congruence axioms, so the solved model already carries the chosen
+/// `r`. For each eliminated `(x, y, r)` whose divisor `y` evaluates to `0` under
+/// the model, this records `value(x) → value(r)` — the interpretation the
+/// evaluator consults for `x/0`. Returns:
+///
+/// - `Some(map)` — a consistent witness (empty when no divisor is `0`).
+/// - `None` — two occurrences with the **same** numerator value disagree on `r`.
+///   The division-congruence axioms make this impossible in a real model; a hit
+///   signals a broken invariant, so the caller declines to `unknown` (never
+///   guesses a value).
+fn div_zero_witness(
+    arena: &TermArena,
+    assignment: &Assignment,
+    div_terms: &[DivTerm],
+) -> Option<HashMap<Rational, Rational>> {
+    let mut map: HashMap<Rational, Rational> = HashMap::new();
+    for &(x, y, r) in div_terms {
+        let Some(yv) = real_value(arena, y, assignment) else {
+            continue;
+        };
+        if !yv.is_zero() {
+            continue; // exact division; no interpretation needed
+        }
+        let (Some(xv), Some(rv)) = (
+            real_value(arena, x, assignment),
+            real_value(arena, r, assignment),
+        ) else {
+            continue;
+        };
+        match map.get(&xv) {
+            Some(&prev) if prev != rv => return None, // congruence violation
+            _ => {
+                map.insert(xv, rv);
+            }
+        }
+    }
+    Some(map)
+}
+
+/// Enriches a `sat` candidate assignment (of the div-eliminated form) with the
+/// free-division `/0` witness and replays it against the ORIGINAL
+/// (real-division) assertions under the ground evaluator. Returns:
+///
+/// - `Some(Sat(model))` — the witness is consistent and every original
+///   assertion evaluates `true`; the model omits the fresh internal vars
+///   (`!nra_` product abstraction, `!div_` division elimination — the latter's
+///   chosen value is exposed as the first-class `/0` witness, not a symbol)
+///   and carries the witness so the outer `check_with_nra` guard (and any
+///   downstream consumer) validates the original division terms.
+/// - `Some(Unknown(..))` — two occurrences with the same numerator disagree on
+///   the divided value (a division-congruence violation, impossible in a real
+///   model): decline loudly rather than guess.
+/// - `None` — the candidate genuinely fails the original semantics even with
+///   the witness; the caller may keep refining.
+///
+/// On `Some(_)` the assignment has been enriched with the witness in place.
+fn replay_with_div_zero_witness(
+    arena: &TermArena,
+    assignment: &mut Assignment,
+    original: &[TermId],
+    div_terms: &[DivTerm],
+) -> Option<CheckResult> {
+    let Some(witness) = div_zero_witness(arena, assignment, div_terms) else {
+        return Some(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: "nra: conflicting free-division /0 witness (two occurrences with the same \
+                     numerator disagree on the divided value — a division-congruence violation)"
+                .to_owned(),
+        }));
+    };
+    for (&num, &q) in &witness {
+        assignment.set_real_div_zero(num, q);
+    }
+    let all_true = original
+        .iter()
+        .all(|&a| matches!(eval(arena, a, &*assignment), Ok(Value::Bool(true))));
+    if !all_true {
+        return None;
+    }
+    let mut out = Model::new();
+    for (symbol, name, _sort) in arena.symbols() {
+        if name.starts_with("!nra_") || name.starts_with("!div_") {
+            continue;
+        }
+        if let Some(value) = assignment.get(symbol) {
+            out.set(symbol, value);
+        }
+    }
+    for (&num, &q) in &witness {
+        out.set_real_div_zero(num, q);
+    }
+    Some(CheckResult::Sat(out))
+}
+
+/// If `result` is a `sat` model of the div-eliminated form, enrich it with the
+/// free-division `/0` witness and re-verify against the ORIGINAL (real-division)
+/// assertions ([`replay_with_div_zero_witness`]); a candidate that fails even
+/// with the witness becomes a first-class `unknown`, never a wrong `sat`.
+/// `unsat`/`unknown` pass through unchanged. Used on the
+/// linear-after-elimination path, mirroring the in-loop enrichment in
+/// [`solve_relaxation`].
+fn attach_div_zero_witness(
+    arena: &TermArena,
+    result: CheckResult,
+    original: &[TermId],
+    div_terms: &[DivTerm],
+) -> CheckResult {
+    let CheckResult::Sat(model) = result else {
+        return result;
+    };
+    let mut assignment = model.to_assignment();
+    match replay_with_div_zero_witness(arena, &mut assignment, original, div_terms) {
+        Some(result) => result,
+        None => CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: "nra: sat candidate failed replay against the original (real-division) \
+                     semantics even with the free-division /0 witness"
+                .to_owned(),
+        }),
+    }
 }
 
 /// The model value of a real term, if it evaluates to a `Real`.

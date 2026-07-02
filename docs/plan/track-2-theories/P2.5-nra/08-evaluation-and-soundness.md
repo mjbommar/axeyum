@@ -270,6 +270,71 @@ matching Z3, while the congruence axioms keep multi-occurrence `x/0` consistent.
 This is the div analogue of a first-class uninterpreted-function interpretation in
 the model; scope it alongside the Phase-B lemma work.
 
+#### LANDED 2026-07-02 — first-class `/0` division witnesses (`unknown → sat`)
+
+The recovery route above shipped. The interpretation is now an **additive part of
+the model**, exactly like an uninterpreted-function interpretation:
+
+- **`axeyum-ir` (`Assignment`, `eval.rs`):** a new `real_div_zero` map (numerator
+  value → chosen quotient; lazily boxed so the common witness-free assignment
+  pays one word) with `set_real_div_zero` / `real_div_zero` / `real_div_zeros`
+  accessors. `Op::RealDiv`
+  now consults it when the denominator evaluates to `0`: a hit by the **numerator
+  value** returns the chosen quotient, a miss keeps the total `x/0 = 0` convention.
+  An empty map is byte-for-byte today's behavior, so the evaluator stays the trust
+  anchor — the witness is model data, not an evaluator change.
+- **`axeyum-solver` (`Model`):** carries the same map (sorted for determinism by an
+  overflow-free `(numerator, denominator)` key, *not* the panic-prone `Rational`
+  `Ord`), plumbed through `to_assignment`.
+- **`nra.rs`:** after the internal engine returns `Sat` on the div-**eliminated**
+  form, `div_zero_witness` reads each eliminated `(x, y, r)` whose divisor `y`
+  evaluates to `0` and records `value(x) → value(r)`. Two occurrences with the same
+  numerator value that disagree on `r` (a division-congruence violation — impossible
+  in a real model given the Ackermann axioms) **decline loudly to `unknown`**, never
+  guess. The witness is injected into the replay assignment (so the in-engine replay
+  against the *original* division semantics accepts the forced `x/0` model) and
+  attached to the returned `Model` (so the outer `check_with_nra` guard and any
+  consumer validate it). Internal `!div_` vars are no longer leaked as model symbols.
+
+- **Witness plumbing through the preprocessed dispatch** (the fuzz caught this):
+  the first cut passed the direct `check_with_nra` tests but the
+  `nra_differential_fuzz` sweep failed at seed 51 (`1/w < 0`, `w` free) with a
+  **wrong sat** — through the default `solve` route, the preprocessing layers
+  (`dispatch_reduced` in `auto.rs`, `replay_preprocessed_model` in
+  `preprocess.rs`) rebuild the returned `Model` symbol-by-symbol and were
+  **dropping the witness after their own replay had already passed under it**
+  (the reconstruction trail clones the assignment, witness included). Both
+  rebuild sites now carry `real_div_zeros` through — exactly as
+  `dispatch_reduced` already carried uninterpreted-function interpretations for
+  the same reason.
+
+Soundness is unchanged in kind: `sat` still requires a replay-checked model under the
+ground evaluator, now with the witness consulted; no `unsat` path is touched (the
+witness helpers only transform `Sat` results). For **nested** divisions the witness
+build can mis-key an entry (the divisor is evaluated before enrichment), but that is
+decline-only: the enriched replay against the original assertions is the acceptance
+gate, so a bad witness can only miss (`unknown`), never fabricate a `sat`. Gates:
+`axeyum-ir` full suite green (incl. new hit/miss eval test); `axeyum-solver` lib
+640/640 + full integration sweep (one pre-existing red in
+`pbls.rs::returns_unknown_for_an_unsupported_sort`, confirmed failing at clean HEAD,
+unrelated); `nra` integration green with the div-by-zero test rewritten to assert
+`sat` + a replaying witness, plus multi-occurrence-consistency and
+contradictory-atoms (no-wrong-sat) cases; **both** `nra_differential_fuzz` and
+`nia_differential_fuzz` (z3-gated, division shapes included) green on the final code
+— **DISAGREE = 0, every axeyum `Sat` replayed**; clippy `-D warnings` clean.
+
+**Measured effect** (`cvc5-regress-clean` QF_NRA, `--backend solver --compare-z3`,
+10 s, 4 jobs, via `scripts/mem-run.sh`): **decided 20 → 21 (sat 9 → 10), unknown
+17 → 16, PAR-2 9.194 → 8.660, DISAGREE = 0** against a same-command clean-HEAD
+re-run. The mover is `cli__regress1__arith__div.06` (`n=0 ∧ x/n=0 ∧ y/n=1`,
+declared/Z3 `sat`) — exactly the forced-div-by-zero class. `issue9164-2`
+(`1/(a/b) > a²/a`, nested division) still declines: it additionally needs the
+FM → simplex lever above. The committed baseline
+`bench-results/baselines/qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json` and the
+[SCOREBOARD](../../../../bench-results/SCOREBOARD.md) QF_NRA row are refreshed (the
+row also absorbs the prior sign-refutation/coprime-split landings that had not been
+re-measured on this route: committed row 9 → 21 decided).
+
 ## Per-phase soundness obligations
 
 | Phase | `sat` checkable by | `unsat` certified by | `unknown` triggers |

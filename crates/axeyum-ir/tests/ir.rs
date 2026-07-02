@@ -1588,6 +1588,52 @@ fn real_division_evaluates_exactly() {
 }
 
 #[test]
+fn real_division_by_zero_consults_model_interpretation() {
+    // SMT-LIB leaves real `(/ x 0)` unspecified. A model may carry a
+    // first-class interpretation keyed by the numerator value: a hit returns the
+    // chosen quotient, a miss keeps the total `x/0 = 0` convention.
+    let mut a = TermArena::new();
+    let five = a.real_const(Rational::new(5, 1));
+    let seven = a.real_const(Rational::new(7, 1));
+    let zero = a.real_const(Rational::new(0, 1));
+    let five_over_zero = a.real_div(five, zero).unwrap();
+    let seven_over_zero = a.real_div(seven, zero).unwrap();
+
+    // Empty map: exactly the total convention (backwards compatible).
+    let empty = Assignment::new();
+    assert_eq!(
+        eval(&a, five_over_zero, &empty).unwrap(),
+        Value::Real(Rational::new(0, 1))
+    );
+
+    // With an interpretation for numerator 5 → 100: the hit is returned, while a
+    // numerator with no entry (7) still uses the total `0` convention (miss).
+    let mut asg = Assignment::new();
+    asg.set_real_div_zero(Rational::new(5, 1), Rational::new(100, 1));
+    assert_eq!(
+        asg.real_div_zero(Rational::new(5, 1)),
+        Some(Rational::new(100, 1))
+    );
+    assert_eq!(asg.real_div_zero(Rational::new(7, 1)), None);
+    assert_eq!(
+        eval(&a, five_over_zero, &asg).unwrap(),
+        Value::Real(Rational::new(100, 1))
+    );
+    assert_eq!(
+        eval(&a, seven_over_zero, &asg).unwrap(),
+        Value::Real(Rational::new(0, 1))
+    );
+
+    // A non-zero divisor is unaffected by the interpretation (exact division).
+    let two = a.real_const(Rational::new(2, 1));
+    let five_over_two = a.real_div(five, two).unwrap();
+    assert_eq!(
+        eval(&a, five_over_two, &asg).unwrap(),
+        Value::Real(Rational::new(5, 2))
+    );
+}
+
+#[test]
 fn float_sort_is_represented_as_a_bit_vector() {
     // ADR-0026: a floating-point sort lowers structurally to BitVec(exp + sig).
     let f32 = Sort::Float { exp: 8, sig: 24 };
