@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 653 expected checks.
+- 654 expected checks.
 - 322 checked proof/evidence rows.
-- 260 replay-only rows.
+- 261 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -378,8 +378,8 @@ Nodes: number theory, linear algebra, calculus.
 Current resource surface:
 
 - Bounded number-theory checks.
-- Exact rational linear algebra with checked bad LU product-entry and
-  nullspace-component evidence.
+- Exact rational linear algebra with exact bad LU product-entry replay plus a
+  separate checked product-entry proof row and nullspace-component evidence.
 - Finite vector/dual/module/tensor resources.
 - Inner-product, spectral, matrix-invariant, numerical-linear-algebra, and
   random-matrix finite packs.
@@ -393,8 +393,8 @@ Build next:
   residue, CRT, quadratic residue, sum-of-squares, and modular obstruction
   families.
 - Treat linear algebra as the bridge from education to solver-friendly matrix
-  corpora: LU/nullspace replay plus checked bad product-entry and
-  nullspace-component evidence, rank/nullity, residual bounds, eigenpair
+  corpora: LU/nullspace replay plus a separate checked bad product-entry proof
+  row and checked nullspace-component evidence, rank/nullity, residual bounds, eigenpair
   checks, characteristic polynomial, tensor maps, and finite-field linear
   algebra.
 - Treat calculus as exact algebraic shadow plus explicit proof horizon:
@@ -2236,6 +2236,12 @@ Pick one item per commit unless the change is purely navigational.
      claimed complement measure; the new `qf-lra-bad-complement-measure` row
      owns the source SMT-LIB artifact and gives consumers a direct
      pack/route/text query for the checked complement-additivity conflict.
+153. Landed: split `linear-algebra-rational-v0` malformed LU product-entry
+     checking into an exact replay row plus an explicit QF_LRA/Farkas proof
+     row. The replay row still recomputes the fixed `L*U` product and exposes
+     the bad bottom-right entry claim; the new `qf-lra-bad-lu-product-entry`
+     row owns the source SMT-LIB artifact and gives consumers a direct
+     pack/route/text query for the checked product-entry conflict.
 
 ## Validation Checklist
 

@@ -5109,9 +5109,9 @@ BRIDGE_CONCEPTS = [
                 ],
                 "notes": (
                     "The pack validator recomputes L*U, A*x, and A*v exactly "
-                    "over rationals; bad LU product-entry, bad nullspace-"
-                    "component, and bad infeasible linear-system rows use the "
-                    "separate QF_LRA/Farkas route."
+                    "over rationals; a separate qf-lra-bad-lu-product-entry "
+                    "row, the bad nullspace-component row, and bad infeasible "
+                    "linear-system rows use the QF_LRA/Farkas route."
                 ),
             }
         ],
@@ -5134,7 +5134,7 @@ BRIDGE_CONCEPTS = [
             "status": "validated",
             "criteria": [
                 "Rows state the exact matrix entries, lower/upper factors, and rational arithmetic domain.",
-                "The validator recomputes L*U and rejects the corrupted product-entry row through checked QF_LRA/Farkas evidence.",
+                "The validator recomputes L*U, and the separate qf-lra-bad-lu-product-entry row rejects the corrupted equality through checked QF_LRA/Farkas evidence.",
                 "Singularity, pivoting, and stability claims remain separate proof-horizon or numerical-analysis rows.",
             ],
         },

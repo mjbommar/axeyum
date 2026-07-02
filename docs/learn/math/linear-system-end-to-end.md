@@ -19,14 +19,16 @@ Concept rows:
 |---|---|---|
 | `matrix-vector-solution` | `sat` | replay-only |
 | `lu-factorization-witness` | `sat` | replay-only |
-| `bad-lu-product-entry-rejected` | `unsat` | checked |
+| `bad-lu-product-entry-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-lu-product-entry` | `unsat` | checked |
 | `bad-nullspace-component-rejected` | `unsat` | checked |
 | `singular-system-inconsistent` | `unsat` | checked |
 | `objective-threshold-farkas-infeasible` | `unsat` | checked |
 
-The matrix-vector and positive LU rows are exact arithmetic replay. The bad LU
-product entry, bad nullspace component, inconsistent system, and LP threshold
-rows carry checked Farkas evidence for fixed linear rational systems.
+The matrix-vector, positive LU, and bad LU product-entry rows are exact
+arithmetic replay. The separate QF_LRA bad LU row, bad nullspace component,
+inconsistent system, and LP threshold rows carry checked Farkas evidence for
+fixed linear rational systems.
 
 ## Encode
 
@@ -74,9 +76,10 @@ U = [[2, 1],
      [0, 1]]
 ```
 
-The positive row recomputes `L*U = A`. The checked negative row isolates the
+The positive row recomputes `L*U = A`. The bad replay row isolates the
 bottom-right product entry: exact replay gives `(L*U)[1,1] = 3`, while the
-malformed claim says that same entry is `4`.
+malformed claim says that same entry is `4`. The separate checked QF_LRA row
+owns the source artifact for that final equality conflict.
 
 The nullspace row uses:
 
@@ -104,9 +107,9 @@ For the bad LU row, the checker recomputes:
 (L*U)[1,1] = 2*1 + 1*1 = 3
 ```
 
-The source SMT-LIB artifact then forces the same product entry to equal both
-`3` and `4`, and the route regression requires independently rechecked
-`UnsatFarkas` evidence.
+The source SMT-LIB artifact, linked by `qf-lra-bad-lu-product-entry`, then
+forces the same product entry to equal both `3` and `4`, and the route
+regression requires independently rechecked `UnsatFarkas` evidence.
 
 For the bad nullspace row, the checker recomputes:
 

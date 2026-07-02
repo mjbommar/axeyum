@@ -168,6 +168,7 @@ python3 scripts/query-foundational-resources.py concepts --field linear_algebra 
 python3 scripts/query-foundational-resources.py checks --field linear_algebra --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field linear_algebra --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_lu_replay --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack linear-algebra-rational-v0 --route Farkas --proof-status checked --text product-entry --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack linear-algebra-rational-v0 --route Farkas --proof-status checked --text nullspace --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_rank_nullity --route Alethe --require-any >/dev/null

@@ -205,14 +205,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Linear algebra LU Farkas row split landed.**
+  `linear-algebra-rational-v0` now keeps `bad-lu-product-entry-rejected` as
+  exact LU replay: it computes `(L*U)[1,1]=3` while the malformed row claims
+  `4`. The checked proof-object path is now the explicit
+  `qf-lra-bad-lu-product-entry` row linked to the existing QF_LRA/Farkas
+  SMT-LIB artifact and regression. Focused validation passes; the public
+  summary now reports 120 concept rows, 108 packs, 654 expected checks, 322
+  checked rows, 261 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite measure complement Farkas row split landed.**
   `finite-measure-v0` now keeps `bad-complement-measure-rejected` as exact
   finite replay: it computes `mu(A)=1/3`, `mu(A^c)=2/3`, and `mu(U)=1` while
   the malformed row claims `mu(A^c)=1/2`. The checked proof-object path is now
   the explicit `qf-lra-bad-complement-measure` row linked to the existing
-  QF_LRA/Farkas SMT-LIB artifact and regression. Focused validation passes; the
-  public summary now reports 120 concept rows, 108 packs, 653 expected checks,
-  322 checked rows, 260 replay-only rows, and 71 Lean-horizon rows.
+  QF_LRA/Farkas SMT-LIB artifact and regression. Focused validation passes, and
+  the row-scoped Farkas lookup returns the complement row.
 
 - **Finite group-action Alethe rows split landed.**
   `finite-group-actions-v0` now keeps malformed identity-action and

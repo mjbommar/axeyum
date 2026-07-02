@@ -193,7 +193,8 @@ First targets:
   order-transitivity refutations)
 - [linear-algebra-rational-v0](../../artifacts/examples/math/linear-algebra-rational-v0/)
   (source-linked solver-reuse promotions landed for the singular inconsistent
-  system, bad LU product-entry row, and bad nullspace-component row)
+  system, explicit `qf-lra-bad-lu-product-entry` row, and
+  bad nullspace-component row)
 - [linear-optimization-v0](../../artifacts/examples/math/linear-optimization-v0/)
   (source-linked solver-reuse promotion landed for the objective-threshold
   conflict)

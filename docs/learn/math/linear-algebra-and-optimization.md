@@ -56,8 +56,8 @@ Companion index:
 ## What Axeyum Checks
 
 The linear path uses exact rational matrices. It replays `A*x = b`, checks
-`L*U = A`, rejects a malformed LU product entry through checked
-QF_LRA/Farkas evidence, rejects a malformed nullspace component after exact
+`L*U = A`, rejects a malformed LU product entry by exact replay plus a separate
+checked QF_LRA/Farkas row, rejects a malformed nullspace component after exact
 kernel replay, validates a row-scaling inconsistency certificate, checks LP
 feasibility witnesses, checks a tiny Farkas infeasibility certificate, and
 replays finite convexity/threshold and finite-dimensional norm/operator

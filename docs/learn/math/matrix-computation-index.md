@@ -39,7 +39,7 @@ Concept rows:
 
 | Theme | Packs | What Is Checked | Route |
 |---|---|---|---|
-| Linear systems, nullspaces, and LU | [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/), [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/) | Fixed `A*x = b`, `L*U = A`, bad LU product-entry rejection, bad nullspace component rejection, singular-row inconsistency, LP objective thresholds | finite replay plus QF_LRA/Farkas |
+| Linear systems, nullspaces, and LU | [linear-algebra-rational-v0](../../../artifacts/examples/math/linear-algebra-rational-v0/), [linear-optimization-v0](../../../artifacts/examples/math/linear-optimization-v0/) | Fixed `A*x = b`, `L*U = A`, exact bad LU product-entry replay, separate checked bad LU product-entry proof row, bad nullspace component rejection, singular-row inconsistency, LP objective thresholds | finite replay plus QF_LRA/Farkas |
 | Residuals and numerical shadows | [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/), [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/) | Exact residual norms, solution boxes, one Jacobi step, normal equations, residual orthogonality, RSS improvement, and bad RSS rejection | finite replay plus QF_LRA/Farkas |
 | Inner products and projections | [inner-product-spaces-rational-v0](../../../artifacts/examples/math/inner-product-spaces-rational-v0/) | Gram matrices, fixed Cauchy-Schwarz, orthogonal projection, Gram-Schmidt, bad negative norm, bad projection orthogonality | finite replay plus QF_LRA/Farkas |
 | Kernel, image, rank, and duals | [finite-vector-spaces-v0](../../../artifacts/examples/math/finite-vector-spaces-v0/), [finite-dual-spaces-v0](../../../artifacts/examples/math/finite-dual-spaces-v0/) | Finite `F2` vector-space tables, subspaces, linear maps, kernel/image, rank-nullity, covectors, annihilators, transpose maps | finite table replay plus QF_UF/Alethe |
@@ -54,10 +54,11 @@ Concept rows:
 For exact rational rows, the trusted work is small arithmetic: matrix-vector
 multiplication, matrix multiplication, determinant or trace formulas for the
 fixed dimension, exact residuals, rational inequalities, and Farkas certificate
-checking when a row is unsatisfiable. The LU slice now has both a positive
-`L*U = A` replay row, a checked bad product-entry row, and a checked nullspace
-component row, so consumers can see the replay/certificate boundary without
-leaving the core matrix pack.
+checking when a row is unsatisfiable. The LU slice now has a positive
+`L*U = A` replay row, a bad product-entry replay row, an explicit checked
+bad product-entry proof row, and a checked nullspace component row, so
+consumers can see the replay/certificate boundary without leaving the core
+matrix pack.
 
 For finite algebraic rows, the trusted work is table replay: enumerate the
 finite carrier, recompute addition, scalar action, function evaluation,

@@ -47,9 +47,9 @@ U = [[2, 1],
 the pack checks `L*U = A` exactly, with `L` lower triangular and unit diagonal
 and `U` upper triangular.
 
-### Bad LU Product Entry
+### Bad LU Product Entry Replay
 
-The same `L` and `U` factors also support a checked negative row. Exact replay
+The same `L` and `U` factors also support a replayed negative row. Exact replay
 computes
 
 ```text
@@ -57,9 +57,11 @@ computes
 ```
 
 so the malformed claim that the bottom-right product entry is `4` is
-inconsistent. The source SMT-LIB artifact isolates the final equality conflict,
-and the Axeyum route regression checks `UnsatFarkas` evidence for that fixed
-formula.
+inconsistent.
+
+The separate `qf-lra-bad-lu-product-entry` row links the source SMT-LIB
+artifact that isolates the final equality conflict, and the Axeyum route
+regression checks `UnsatFarkas` evidence for that fixed formula.
 
 ### Bad Nullspace Component
 
@@ -107,4 +109,4 @@ rechecked independently.
 
 These fixed checks are not general theorem proofs. They are exact replay
 targets; the listed inconsistent linear system, nullspace component conflict,
-and bad LU row now have QF_LRA/Farkas evidence.
+and explicit bad LU QF_LRA row now have Farkas evidence.

@@ -18,12 +18,17 @@ triangular and unit diagonal and `U` upper triangular.
 
 Expected result: `unsat`.
 
-The checked query rejects a malformed LU product row. Exact replay computes
-`(L*U)[1,1] = 3` for the listed factors, while the malformed row asserts that
-the same product entry is `4`.
+Exact replay rejects a malformed LU product row. It computes `(L*U)[1,1] = 3`
+for the listed factors, while the malformed row asserts that the same product
+entry is `4`.
+
+## `qf-lra-bad-lu-product-entry`
+
+Expected result: `unsat`.
 
 The resource-backed Axeyum regression parses the source SMT-LIB artifact for
-that exact equality conflict and requires rechecked `UnsatFarkas` evidence.
+the exact equality conflict `(L*U)[1,1] = 3` and `(L*U)[1,1] = 4`, and requires
+rechecked `UnsatFarkas` evidence.
 
 ## `bad-nullspace-component-rejected`
 

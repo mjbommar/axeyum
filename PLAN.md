@@ -253,8 +253,8 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-120 concept rows, 108 non-template packs, 653 expected checks (336 `sat`,
-246 `unsat`, 71 `not-run`), 322 checked rows, 260 replay-only rows, and 71
+120 concept rows, 108 non-template packs, 654 expected checks (336 `sat`,
+247 `unsat`, 71 `not-run`), 322 checked rows, 261 replay-only rows, and 71
 Lean-horizon rows. The rules/law JSON layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
@@ -272,9 +272,12 @@ and finite cup-product extensions. The
 finite algebra-homomorphism lane now also promotes the
 concrete bad group-homomorphism row through QF_UF/Alethe after exact table
 replay isolates `phi(1+1)=1` versus `phi(1)+phi(1)=0`. The finite
-linear-algebra lane now also promotes the bad nullspace-component row through
-QF_LRA/Farkas after exact matrix replay computes `A*v = 0` for
-`v = [2, -1]` while the bad row claims the first component is `1`. The finite
+linear-algebra lane now also promotes the explicit
+`qf-lra-bad-lu-product-entry` row after exact LU replay computes
+`(L*U)[1,1] = 3` while the malformed row claims `4`, and the bad
+nullspace-component row through QF_LRA/Farkas after exact matrix replay
+computes `A*v = 0` for `v = [2, -1]` while the bad row claims the first
+component is `1`. The finite
 metric-continuity lane now also promotes the bad open-ball preimage row through
 QF_LRA/Farkas after exact finite replay computes the output-ball preimage as
 `{p0, p1}` while the bad row claims `p2` is inside even though

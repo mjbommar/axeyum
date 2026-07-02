@@ -10552,8 +10552,8 @@ def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
         fail("LU witness does not satisfy L*U = A")
 
     bad_lu = checks["bad-lu-product-entry-rejected"]
-    if bad_lu["expected_result"] != "unsat" or bad_lu.get("proof_status") != "checked":
-        fail("bad-lu-product-entry-rejected must be a checked unsat row")
+    if bad_lu["expected_result"] != "unsat" or bad_lu.get("proof_status") != "replay-only":
+        fail("bad-lu-product-entry-rejected must be a replay-only unsat row")
     data = bad_lu.get("data", {})
     matrix = require_fraction_matrix("bad LU matrix", data.get("matrix"))
     l_matrix = require_fraction_matrix("bad LU L matrix", data.get("l"))
@@ -10577,17 +10577,39 @@ def validate_linear_algebra_rational(expected: dict[str, Any]) -> None:
         fail("bad-lu-product-entry-rejected computed_entry does not match L*U")
     if claimed_entry == computed_entry:
         fail("bad-lu-product-entry-rejected claim unexpectedly matches the LU product entry")
+
+    bad_lu_farkas = checks["qf-lra-bad-lu-product-entry"]
+    if bad_lu_farkas["expected_result"] != "unsat" or bad_lu_farkas.get("proof_status") != "checked":
+        fail("qf-lra-bad-lu-product-entry must be a checked unsat row")
+    if bad_lu_farkas.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-lu-product-entry must use exact_rational_farkas_evidence validation")
+    data = bad_lu_farkas.get("data", {})
+    if data.get("source_witness") != "lu-factorization-witness":
+        fail("qf-lra-bad-lu-product-entry must cite the LU factorization source witness")
+    qf_entry = data.get("entry")
+    if qf_entry != entry:
+        fail("qf-lra-bad-lu-product-entry entry must match bad LU replay")
+    qf_computed_entry = require_fraction("qf-lra bad LU computed_entry", data.get("computed_entry"))
+    qf_claimed_entry = require_fraction("qf-lra bad LU claimed_entry", data.get("claimed_entry"))
+    if qf_computed_entry != computed_entry:
+        fail("qf-lra-bad-lu-product-entry computed_entry must match bad LU replay")
+    if qf_claimed_entry != claimed_entry:
+        fail("qf-lra-bad-lu-product-entry claimed_entry must match bad LU replay")
+    if qf_computed_entry == qf_claimed_entry:
+        fail("qf-lra-bad-lu-product-entry must be linearly contradictory")
     smt2_artifact = data.get("smt2_artifact")
-    require_string("bad LU smt2_artifact", smt2_artifact)
+    require_string("qf-lra bad LU smt2_artifact", smt2_artifact)
     if smt2_artifact != "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-lu-product-entry-farkas-conflict.smt2":
-        fail("bad-lu-product-entry-rejected smt2_artifact must name the checked QF_LRA artifact")
-    check_source("bad LU smt2_artifact", smt2_artifact)
+        fail("qf-lra-bad-lu-product-entry smt2_artifact must name the checked QF_LRA artifact")
+    check_source("qf-lra bad LU smt2_artifact", smt2_artifact)
     farkas_regression = data.get("farkas_regression")
-    require_string("bad LU farkas_regression", farkas_regression)
+    require_string("qf-lra bad LU farkas_regression", farkas_regression)
     if "linear_algebra_bad_lu_product_entry_artifact_emits_checked_farkas" not in farkas_regression:
-        fail("bad-lu-product-entry-rejected must link the Farkas regression")
-    if "UnsatFarkas" not in bad_lu.get("notes", ""):
-        fail("bad-lu-product-entry-rejected notes must name UnsatFarkas evidence")
+        fail("qf-lra-bad-lu-product-entry must link the Farkas regression")
+    certificate = data.get("certificate")
+    require_string("qf-lra bad LU certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-lu-product-entry certificate must document checked Farkas evidence")
 
     bad_nullspace = checks["bad-nullspace-component-rejected"]
     if bad_nullspace["expected_result"] != "unsat" or bad_nullspace.get("proof_status") != "checked":

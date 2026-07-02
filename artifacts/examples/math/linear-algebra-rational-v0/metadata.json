@@ -30,10 +30,10 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "singular rational linear system, nullspace, and bad LU product-entry QF_LRA/Farkas regression seeds",
+    "target": "singular rational linear system, nullspace, and separate bad LU product-entry QF_LRA/Farkas regression seeds",
     "pressure": "Three exact rational matrix conflicts: a singular system where x + y = 1 and 2x + 2y = 3 force incompatible scaled right-hand sides, a fixed LU product where the bottom-right entry computes to 3 but a malformed row claims 4, and a nullspace vector where A*v = 0 with first component 2 but a malformed row claims 1.",
     "evidence": [
-      "bad-lu-product-entry-rejected",
+      "qf-lra-bad-lu-product-entry",
       "bad-nullspace-component-rejected",
       "singular-system-inconsistent"
     ],
@@ -56,13 +56,15 @@
     "matrix-vector-solution",
     "lu-factorization-witness",
     "bad-lu-product-entry-rejected",
+    "qf-lra-bad-lu-product-entry",
     "bad-nullspace-component-rejected",
     "singular-system-inconsistent"
   ],
   "graduation_criteria": [
     "Encode the matrix equations as deterministic QF_LRA formulas.",
     "Replay SAT witnesses through Axeyum model evaluation.",
-    "Keep the inconsistent linear-system, nullspace-component, and malformed LU product-entry rows on Axeyum's checked Farkas evidence path.",
+    "Keep the malformed LU finite-product replay separate from the checked QF_LRA/Farkas row for the isolated product-entry contradiction.",
+    "Keep the inconsistent linear-system and nullspace-component rows on Axeyum's checked Farkas evidence path.",
     "Promote common exact matrix helpers into a reusable example-pack utility only after more packs need them."
   ]
 }

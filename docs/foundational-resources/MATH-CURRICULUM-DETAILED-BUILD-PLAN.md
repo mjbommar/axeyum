@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 653 expected checks.
+- 654 expected checks.
 - 322 checked proof/evidence rows.
-- 260 replay-only rows.
+- 261 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1550,9 +1550,18 @@ Pick one row per commit unless the change is purely navigational.
      `mu(A^c)=1/2`; the source SMT-LIB artifact separately rejects the fixed
      complement-additivity contradiction through the existing
      `finite_measure_bad_complement_artifact_emits_checked_farkas`
-     regression. The public query surface now reports 653 checks, 322 checked
-     rows, 260 replay-only rows, and row-scoped Farkas lookup for the pack
-     returns the complement row.
+     regression. The row-scoped Farkas lookup for the pack returns the
+     complement row.
+181. Landed: split `linear-algebra-rational-v0` bad LU product-entry checking
+     into the explicit `qf-lra-bad-lu-product-entry` row. Exact LU replay still
+     owns `bad-lu-product-entry-rejected` by computing `(L*U)[1,1]=3` for the
+     listed factors while the malformed row claims `4`; the source SMT-LIB
+     artifact separately rejects the fixed product-entry equality
+     contradiction through the existing
+     `linear_algebra_bad_lu_product_entry_artifact_emits_checked_farkas`
+     regression. The public query surface now reports 654 checks, 322 checked
+     rows, 261 replay-only rows, and row-scoped Farkas lookup for the pack
+     returns the product-entry row.
 
 ## Validation Checklist
 

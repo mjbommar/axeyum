@@ -57,7 +57,7 @@
       "claim": "The listed L and U multiply to a matrix whose bottom-right entry is 4.",
       "expected_result": "unsat",
       "validation": "exact_rational_bad_lu_product_entry_refutation",
-      "proof_status": "checked",
+      "proof_status": "replay-only",
       "data": {
         "matrix": [
           ["2", "1"],
@@ -73,11 +73,26 @@
         ],
         "entry": [1, 1],
         "computed_entry": "3",
+        "claimed_entry": "4"
+      },
+      "notes": "The validator recomputes L*U exactly, checks that the selected product entry is 3, and rejects the malformed claim 4. This row is exact matrix replay; the separate QF_LRA row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-lu-product-entry",
+      "claim": "The fixed malformed LU product-entry claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "lu-factorization-witness",
+        "entry": [1, 1],
+        "computed_entry": "3",
         "claimed_entry": "4",
         "smt2_artifact": "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-lu-product-entry-farkas-conflict.smt2",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_bad_lu_product_entry_artifact_emits_checked_farkas"
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_bad_lu_product_entry_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "The validator recomputes L*U exactly, checks that the selected product entry is 3, and rejects the malformed claim 4; the Axeyum regression parses the source artifact and requires independently checked UnsatFarkas evidence."
+      "notes": "Exact replay computes the LU product entry; the source QF_LRA artifact isolates the malformed equality and checks it with Farkas evidence."
     },
     {
       "id": "bad-nullspace-component-rejected",
