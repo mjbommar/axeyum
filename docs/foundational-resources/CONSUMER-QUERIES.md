@@ -79,6 +79,37 @@ JSON output is available when another tool needs stable parsing:
 python3 scripts/query-foundational-resources.py summary --format json
 ```
 
+## Display Label Audit
+
+```sh
+python3 scripts/query-foundational-resources.py labels
+```
+
+This answers: "Which labels may a downstream UI or generated page display for
+the current rows and packs?" Labels are derived from `expected_result` plus
+`proof_status`, not from route text alone.
+
+For concrete checked-refutation rows:
+
+```sh
+python3 scripts/query-foundational-resources.py labels \
+  --scope rows \
+  --label "checked refutation" \
+  --require-any
+```
+
+For mixed-trust pack cards:
+
+```sh
+python3 scripts/query-foundational-resources.py labels \
+  --scope packs \
+  --label "mixed trust story" \
+  --require-any
+```
+
+Use [CLAIM-LABEL-MATRIX.md](CLAIM-LABEL-MATRIX.md) before turning these labels
+into user-facing copy.
+
 ## Solver-Reuse Candidates
 
 ```sh

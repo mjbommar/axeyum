@@ -1717,6 +1717,10 @@ Pick one row per commit unless the change is purely navigational.
      witnesses, checked refutations, finite witness replay, finite rejection
      replay, theorem horizons, and mixed-trust pack cards while keeping solver
      reuse, benchmark, parity, and theorem claims separate.
+201. Landed: add `query-foundational-resources.py labels` as the executable
+     claim-label audit. It computes row labels and pack labels from public JSON
+     and the foundational smoke gate now requires representative checked,
+     replay-only, theorem-horizon, checked-pack, and mixed-trust labels.
 
 ## Validation Checklist
 

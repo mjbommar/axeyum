@@ -234,6 +234,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Executable claim-label query landed.**
+  `scripts/query-foundational-resources.py labels` now derives row and pack
+  display labels from public JSON, reporting checked witnesses, checked
+  refutations, finite witness replay, finite rejection replay, theorem
+  horizons, checked evidence packs, theorem-boundary packs, and mixed-trust
+  packs. The foundational resource smoke gate now requires representative
+  label rows and pack labels, keeping the display policy executable instead of
+  prose-only.
+
 - **Claim-label matrix landed.**
   `CLAIM-LABEL-MATRIX.md` now defines the downstream display policy for
   `expected_result` plus `proof_status` pairs, mapping checked witnesses,

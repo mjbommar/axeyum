@@ -108,6 +108,18 @@ Do not write:
 Use these commands to audit label inputs:
 
 ```sh
+python3 scripts/query-foundational-resources.py labels
+
+python3 scripts/query-foundational-resources.py labels \
+  --scope rows \
+  --label "checked refutation" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py labels \
+  --scope packs \
+  --label "mixed trust story" \
+  --require-any
+
 python3 scripts/query-foundational-resources.py summary
 
 python3 scripts/query-foundational-resources.py checks \

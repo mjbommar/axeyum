@@ -218,7 +218,8 @@ status-first checked, replay-only, and Lean-horizon drilldowns before deciding
 what a resource can claim.
 Use [Claim Label Matrix](CLAIM-LABEL-MATRIX.md) when the same consumer needs
 allowed display labels for checked witnesses/refutations, finite replay rows,
-Lean horizons, or mixed-trust pack cards.
+Lean horizons, or mixed-trust pack cards; use
+`query-foundational-resources.py labels` to audit the labels from JSON.
 Use [Rejection Case Queries](REJECTION-CASE-QUERIES.md) when a reviewer needs
 route-scoped malformed-claim rows before following cookbook tamper regressions.
 Use [Checker Tamper Matrix](CHECKER-TAMPER-MATRIX.md) when a reviewer needs the

@@ -53,6 +53,14 @@ python3 scripts/query-foundational-resources.py packs --proof-status checked --r
 python3 scripts/query-foundational-resources.py packs --proof-status replay-only --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --expected-result not-run --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py labels --require-any >/dev/null
+python3 scripts/query-foundational-resources.py labels --scope rows --label "checked witness" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py labels --scope rows --label "checked refutation" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py labels --scope rows --label "finite witness replay" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py labels --scope rows --label "finite rejection replay" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py labels --scope rows --label "theorem horizon" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py labels --scope packs --label "checked evidence pack" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py labels --scope packs --label "mixed trust story" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --proof-status checked --expected-result unsat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field probability_theory --proof-status replay-only --expected-result sat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field topology --proof-status lean-horizon --expected-result not-run --require-any >/dev/null

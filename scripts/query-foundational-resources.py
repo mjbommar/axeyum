@@ -31,6 +31,13 @@ ROUTE_ALIASES = {
     "qf-lra-farkas": {"qf-lra", "lra", "farkas"},
     "qf-uf-congruence-alethe": {"qf-uf", "uf", "euf", "alethe", "congruence"},
 }
+ROW_LABELS = {
+    ("sat", "checked"): "checked witness",
+    ("sat", "replay-only"): "finite witness replay",
+    ("unsat", "checked"): "checked refutation",
+    ("unsat", "replay-only"): "finite rejection replay",
+    ("not-run", "lean-horizon"): "theorem horizon",
+}
 
 
 class QueryError(Exception):
@@ -54,6 +61,30 @@ def count_text(counter: Counter[str]) -> str:
     if not counter:
         return "-"
     return ",".join(f"{key}:{counter[key]}" for key in sorted(counter))
+
+
+def row_display_label(result: str, proof_status: str) -> str:
+    return ROW_LABELS.get((result, proof_status), "invalid or future status")
+
+
+def pack_display_labels(checks: list[dict[str, Any]]) -> list[str]:
+    proof_statuses = {
+        check.get("proof_status", "")
+        for check in checks
+        if check.get("proof_status")
+    }
+    labels = []
+    if "checked" in proof_statuses:
+        labels.append("checked evidence pack")
+    elif "replay-only" in proof_statuses:
+        labels.append("finite replay pack")
+    if "lean-horizon" in proof_statuses:
+        labels.append("theorem boundary included")
+    if len(proof_statuses) > 1:
+        labels.append("mixed trust story")
+    if not labels:
+        labels.append("invalid or future status")
+    return labels
 
 
 def contains_text(values: list[str], needle: str | None) -> bool:
@@ -672,6 +703,61 @@ def command_routes(args: argparse.Namespace) -> int:
     )
 
 
+def command_labels(args: argparse.Namespace) -> int:
+    store = ResourceStore()
+
+    if args.scope == "summary":
+        row_counts: Counter[str] = Counter()
+        pack_counts: Counter[str] = Counter()
+        for check in store.check_rows():
+            row_counts[row_display_label(check["result"], check["proof"])] += 1
+        for pack in store.packs:
+            pack_counts.update(pack_display_labels(pack["checks"]))
+        rows = [
+            {"scope": "row", "label": label, "count": count}
+            for label, count in sorted(row_counts.items())
+        ]
+        rows.extend(
+            {"scope": "pack", "label": label, "count": count}
+            for label, count in sorted(pack_counts.items())
+        )
+        if args.label:
+            rows = [row for row in rows if row["label"] == args.label]
+        return emit(rows, ["scope", "label", "count"], args)
+
+    if args.scope == "rows":
+        rows = []
+        for row in store.check_rows():
+            label = row_display_label(row["result"], row["proof"])
+            if args.label and label != args.label:
+                continue
+            if args.pack and row["pack"] != args.pack:
+                continue
+            rows.append(clean_row({**row, "label": label}))
+        return emit(
+            rows,
+            ["pack", "check", "result", "proof", "label", "validation", "claim"],
+            args,
+        )
+
+    rows = []
+    for row in store.pack_rows():
+        pack = row["_pack"]
+        labels = pack_display_labels(pack["checks"])
+        if args.label and args.label not in labels:
+            continue
+        if args.pack and row["pack"] != args.pack:
+            continue
+        row["primary_label"] = labels[0]
+        row["labels"] = labels
+        rows.append(clean_row(row))
+    return emit(
+        rows,
+        ["pack", "primary_label", "labels", "results", "proof", "solver_reuse", "path"],
+        args,
+    )
+
+
 def clean_row(row: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in row.items() if not key.startswith("_")}
 
@@ -766,6 +852,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_output_args(routes, default_limit=DEFAULT_LIMIT)
     routes.set_defaults(func=command_routes)
+
+    labels = subparsers.add_parser("labels", help="audit row and pack display labels")
+    labels.add_argument(
+        "--scope",
+        choices=["summary", "rows", "packs"],
+        default="summary",
+        help="summarize label counts, list check rows, or list pack labels",
+    )
+    labels.add_argument("--label", help="exact display label")
+    labels.add_argument("--pack", help="exact example-pack id")
+    add_output_args(labels, default_limit=DEFAULT_LIMIT)
+    labels.set_defaults(func=command_labels)
     return parser
 
 
