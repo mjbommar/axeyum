@@ -39,11 +39,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-concentration-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite concentration bad tail/union-bound QF_LRA/Farkas regression seeds",
-    "pressure": "Exact finite replay computes tail probability 1/4 and union probability 3/4, but malformed concentration rows claim tail_probability <= 1/8 and union_probability <= 1/2.",
+    "target": "finite concentration separate bad tail and union-bound QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed finite concentration rows where exact replay computes tail probability 1/4 and union probability 3/4, while separate QF_LRA rows reject the fixed false claims tail_probability <= 1/8 and union_probability <= 1/2.",
     "evidence": [
-      "bad-concentration-bound-rejected",
-      "bad-union-bound-rejected"
+      "qf-lra-bad-concentration-bound",
+      "qf-lra-bad-union-bound"
     ],
     "next_step": "Promote additional finite concentration rows only when they add distinct exact-linear or integer-count solver pressure; keep Chernoff, Hoeffding, LLN, CLT, martingale concentration, and asymptotic inference in the Lean-horizon or numerical-honesty lanes."
   },
@@ -66,13 +66,15 @@
     "chebyshev-inequality-witness",
     "union-bound-witness",
     "bad-concentration-bound-rejected",
+    "qf-lra-bad-concentration-bound",
     "bad-union-bound-rejected",
+    "qf-lra-bad-union-bound",
     "general-concentration-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite tail events, expectations, variances, and event unions as exact rational tables.",
     "Replay Markov, Chebyshev, and union-bound inequalities by exact rational arithmetic.",
-    "Keep bad finite tail-bound and union-bound rows on Axeyum's checked Farkas evidence path after replay computes the source probabilities.",
+    "Keep malformed finite tail-bound and union-bound replay separate from checked QF_LRA/Farkas rows for isolated exact-linear contradictions.",
     "Keep Chernoff/Hoeffding bounds, laws of large numbers, CLT, martingale inequalities, and asymptotic statistics marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

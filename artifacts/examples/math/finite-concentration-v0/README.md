@@ -9,7 +9,8 @@ The examples are:
 - a Markov inequality witness for a nonnegative finite random variable;
 - a Chebyshev inequality witness for a finite centered variable;
 - a union-bound witness for two finite events;
-- checked rejection of false concentration and union bounds;
+- replay-only rejection of false concentration and union bounds;
+- separate checked `QF_LRA`/Farkas rows for the false final bounds;
 - a concentration/limit-theorem Lean-horizon row.
 
 ## Concepts
@@ -30,8 +31,8 @@ The validator checks normalized atom probabilities, recomputes finite
 expectations, variances, tail events, event unions, and each listed bound using
 exact rational arithmetic. The bad-bound rows are checked by recomputing the
 actual tail and union probabilities and confirming each exceeds the claimed
-bound. Those rows also have Axeyum regressions that take the replayed
-probability, build the false `QF_LRA` bound claim, emit `UnsatFarkas`
+bound. Separate `qf-lra-*` rows have Axeyum regressions that take the replayed
+probabilities, build the false `QF_LRA` bound claims, emit `UnsatFarkas`
 evidence, and recheck that evidence independently.
 
 This pack is finite checked evidence. It is not a proof of general
@@ -42,6 +43,6 @@ Validation:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-concentration-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_tail_bound_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_tail_bound_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_union_bound_artifact_emits_checked_farkas
 ```

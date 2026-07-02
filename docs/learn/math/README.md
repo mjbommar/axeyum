@@ -467,8 +467,9 @@ Companion maps:
   expected-time rejection, and the general hitting-theory Lean horizon.
 - [Finite Concentration](finite-concentration-end-to-end.md): follows exact
   finite Markov, Chebyshev, and union-bound replay over rational atom tables,
-  checked bad concentration-bound rejection, and the general concentration
-  Lean horizon.
+  replayed bad tail and union-bound rejections, separate checked
+  QF_LRA/Farkas final-bound refutations, and the general concentration Lean
+  horizon.
 - [Finite Markov Chains](finite-markov-chain-end-to-end.md): follows exact
   row-stochastic transition matrices, finite-horizon distribution replay,
   stationary distributions, checked bad transition-row and bad stationary

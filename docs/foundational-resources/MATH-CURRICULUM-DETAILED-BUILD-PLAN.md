@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 662 expected checks.
+- 664 expected checks.
 - 322 checked proof/evidence rows.
-- 269 replay-only rows.
+- 271 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1099,12 +1099,14 @@ Pick one row per commit unless the change is purely navigational.
      stochastic-row and false stationary-distribution contradictions without
      claiming countably infinite chains, mixing times, convergence theorems,
      recurrence/transience, or stochastic-process limit laws.
-125. Landed: extend `finite-concentration-v0` with a checked bad union-bound
-     row. Exact finite event replay computes `P(A union B)=3/4` while the
-     malformed source SMT-LIB artifact claims `P(A union B) <= 1/2`; the
-     shared QF_LRA/Farkas route now checks both tail and union finite
-     concentration contradictions without claiming Chernoff/Hoeffding/LLN/CLT,
-     martingale concentration, asymptotics, or general limit theorems.
+125. Landed: split `finite-concentration-v0` so bad finite tail-bound and
+     union-bound rows remain exact replay, while
+     `qf-lra-bad-concentration-bound` and `qf-lra-bad-union-bound` own the
+     checked proof-object refutations. Exact finite replay computes
+     `P(X >= 2)=1/4` and `P(A union B)=3/4`; the shared QF_LRA/Farkas route
+     checks the fixed false final bounds without claiming Chernoff/Hoeffding/
+     LLN/CLT, martingale concentration, asymptotics, or general limit
+     theorems.
 126. Landed: extend `finite-stochastic-kernels-v0` with a checked bad
      composition-entry row. Exact two-step kernel replay computes
      `(K;L)(rainy, early)=22/75`, while the malformed source SMT-LIB artifact

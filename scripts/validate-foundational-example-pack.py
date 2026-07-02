@@ -22583,6 +22583,10 @@ def validate_finite_concentration(expected: dict[str, Any]) -> None:
     bad = checks["bad-concentration-bound-rejected"]
     if bad["expected_result"] != "unsat":
         fail("bad-concentration-bound-rejected must expect unsat")
+    if bad["proof_status"] != "replay-only":
+        fail("bad-concentration-bound-rejected must be replay-only")
+    if bad["validation"] != "finite_bad_concentration_bound_replay":
+        fail("bad-concentration-bound-rejected must use finite_bad_concentration_bound_replay validation")
     data = bad.get("data", {})
     atoms = require_probability_atoms("bad concentration atoms", data.get("atoms"), require_events=False)
     require_normalized_atoms("bad-concentration-bound-rejected", atoms)
@@ -22612,10 +22616,57 @@ def validate_finite_concentration(expected: dict[str, Any]) -> None:
         fail("bad-concentration-bound-rejected markov_bound is incorrect")
     if actual_tail_probability <= claimed_bound:
         fail("bad-concentration-bound-rejected must document a false upper bound")
+    notes = bad.get("notes", "")
+    if "separate qf-lra-bad-concentration-bound" not in notes:
+        fail("bad-concentration-bound-rejected notes must name the separate qf-lra-bad-concentration-bound row")
+
+    qf_bad = checks["qf-lra-bad-concentration-bound"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-concentration-bound must expect unsat")
+    if qf_bad["proof_status"] != "checked":
+        fail("qf-lra-bad-concentration-bound must be checked")
+    if qf_bad["validation"] != "qf_lra_bad_concentration_bound_refutation":
+        fail("qf-lra-bad-concentration-bound must use qf_lra_bad_concentration_bound_refutation validation")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-point-markov-variable":
+        fail("qf-lra-bad-concentration-bound must cite two-point-markov-variable")
+    if qf_data.get("source_replay_row") != "bad-concentration-bound-rejected":
+        fail("qf-lra-bad-concentration-bound must cite bad-concentration-bound-rejected")
+    qf_actual_tail_probability = require_fraction(
+        "qf-lra bad concentration actual_tail_probability",
+        qf_data.get("actual_tail_probability"),
+    )
+    qf_claimed_bound = require_fraction(
+        "qf-lra bad concentration claimed_bound",
+        qf_data.get("claimed_bound"),
+    )
+    if qf_actual_tail_probability != actual_tail_probability:
+        fail("qf-lra-bad-concentration-bound actual_tail_probability must match replay")
+    if qf_claimed_bound != claimed_bound:
+        fail("qf-lra-bad-concentration-bound claimed_bound must match replay")
+    equation = qf_data.get("farkas_tail_probability_equation")
+    require_string("qf-lra bad concentration farkas_tail_probability_equation", equation)
+    if equation != "tail_probability = actual_tail_probability":
+        fail("qf-lra-bad-concentration-bound must document the Farkas tail-probability equation")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad concentration smt2_artifact", smt2_artifact)
+    check_source("qf-lra bad concentration smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad concentration farkas_regression", regression)
+    if "finite_concentration_bad_tail_bound_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-concentration-bound must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad concentration certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-concentration-bound certificate must document checked UnsatFarkas evidence")
 
     bad_union = checks["bad-union-bound-rejected"]
     if bad_union["expected_result"] != "unsat":
         fail("bad-union-bound-rejected must expect unsat")
+    if bad_union["proof_status"] != "replay-only":
+        fail("bad-union-bound-rejected must be replay-only")
+    if bad_union["validation"] != "finite_bad_union_bound_replay":
+        fail("bad-union-bound-rejected must use finite_bad_union_bound_replay validation")
     data = bad_union.get("data", {})
     atoms = require_probability_atoms("bad union atoms", data.get("atoms"), require_events=False)
     require_normalized_atoms("bad-union-bound-rejected", atoms)
@@ -22645,11 +22696,49 @@ def validate_finite_concentration(expected: dict[str, Any]) -> None:
         fail("bad-union-bound-rejected valid union bound must still hold")
     if actual_union_probability <= claimed_union_bound:
         fail("bad-union-bound-rejected must document a false union upper bound")
-    require_string("bad union smt2_artifact", data.get("smt2_artifact"))
-    check_source("bad union smt2_artifact", data["smt2_artifact"])
-    require_string("bad union farkas_regression", data.get("farkas_regression"))
-    if "finite_concentration_bad_union_bound_artifact_emits_checked_farkas" not in data["farkas_regression"]:
-        fail("bad-union-bound-rejected must link the Farkas regression")
+    notes = bad_union.get("notes", "")
+    if "separate qf-lra-bad-union-bound" not in notes:
+        fail("bad-union-bound-rejected notes must name the separate qf-lra-bad-union-bound row")
+
+    qf_bad_union = checks["qf-lra-bad-union-bound"]
+    if qf_bad_union["expected_result"] != "unsat":
+        fail("qf-lra-bad-union-bound must expect unsat")
+    if qf_bad_union["proof_status"] != "checked":
+        fail("qf-lra-bad-union-bound must be checked")
+    if qf_bad_union["validation"] != "qf_lra_bad_union_bound_refutation":
+        fail("qf-lra-bad-union-bound must use qf_lra_bad_union_bound_refutation validation")
+    qf_data = qf_bad_union.get("data", {})
+    if qf_data.get("source_witness") != "two-event-union-bound":
+        fail("qf-lra-bad-union-bound must cite two-event-union-bound")
+    if qf_data.get("source_replay_row") != "bad-union-bound-rejected":
+        fail("qf-lra-bad-union-bound must cite bad-union-bound-rejected")
+    qf_actual_union_probability = require_fraction(
+        "qf-lra bad union actual_union_probability",
+        qf_data.get("actual_union_probability"),
+    )
+    qf_claimed_union_bound = require_fraction(
+        "qf-lra bad union claimed_union_bound",
+        qf_data.get("claimed_union_bound"),
+    )
+    if qf_actual_union_probability != actual_union_probability:
+        fail("qf-lra-bad-union-bound actual_union_probability must match replay")
+    if qf_claimed_union_bound != claimed_union_bound:
+        fail("qf-lra-bad-union-bound claimed_union_bound must match replay")
+    equation = qf_data.get("farkas_union_probability_equation")
+    require_string("qf-lra bad union farkas_union_probability_equation", equation)
+    if equation != "union_probability = actual_union_probability":
+        fail("qf-lra-bad-union-bound must document the Farkas union-probability equation")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad union smt2_artifact", smt2_artifact)
+    check_source("qf-lra bad union smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad union farkas_regression", regression)
+    if "finite_concentration_bad_union_bound_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-union-bound must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad union certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-union-bound certificate must document checked UnsatFarkas evidence")
 
     horizon = checks["general-concentration-lean-horizon"]
     if horizon["expected_result"] != "not-run":

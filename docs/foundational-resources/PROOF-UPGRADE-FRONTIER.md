@@ -202,8 +202,9 @@ First targets:
   (source-linked solver-reuse promotions landed for the bad midpoint-convexity
   and bad affine-threshold rows)
 - [finite-concentration-v0](../../artifacts/examples/math/finite-concentration-v0/)
-  (source-linked solver-reuse promotions landed for the bad finite tail-bound
-  and bad union-bound rows)
+  (exact replay remains in the bad finite tail-bound and bad union-bound rows;
+  source-linked solver-reuse promotions now live in
+  `qf-lra-bad-concentration-bound` and `qf-lra-bad-union-bound`)
 - [descriptive-statistics-v0](../../artifacts/examples/math/descriptive-statistics-v0/)
   (resource-backed Farkas regression landed for the explicit
   `qf-lra-bad-variance` row after exact finite-sample replay computes

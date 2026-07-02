@@ -205,6 +205,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite concentration Farkas rows split landed.**
+  `finite-concentration-v0` now keeps `bad-concentration-bound-rejected` and
+  `bad-union-bound-rejected` as exact finite replay: they recompute
+  `P(X >= 2)=1/4` instead of accepting the claimed `1/8`, and
+  `P(A union B)=3/4` instead of accepting the claimed `1/2`. The checked
+  proof-object paths are now the explicit
+  `qf-lra-bad-concentration-bound` and `qf-lra-bad-union-bound` rows linked
+  to the existing QF_LRA/Farkas SMT-LIB artifacts and regressions. Focused
+  validation passes; the public summary now reports 120 concept rows, 108
+  packs, 664 expected checks, 322 checked rows, 271 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Finite hitting-time Farkas rows split landed.**
   `finite-hitting-times-v0` now keeps `bad-survival-mass-rejected` and
   `bad-expected-time-rejected` as exact finite replay: they recompute

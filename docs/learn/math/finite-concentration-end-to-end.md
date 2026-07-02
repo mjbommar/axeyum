@@ -20,7 +20,10 @@ Concept rows:
 | `markov-inequality-witness` | `sat` | replay-only |
 | `chebyshev-inequality-witness` | `sat` | replay-only |
 | `union-bound-witness` | `sat` | replay-only |
-| `bad-concentration-bound-rejected` | `unsat` | checked |
+| `bad-concentration-bound-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-concentration-bound` | `unsat` | checked |
+| `bad-union-bound-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-union-bound` | `unsat` | checked |
 | `general-concentration-lean-horizon` | `not-run` | lean-horizon |
 
 Every checked row is exact finite rational arithmetic over explicitly listed
@@ -171,8 +174,8 @@ and rejects the claim because:
 The candidate tail bound is untrusted; the small checker rebuilds the event
 probability directly from the atom table.
 
-The solver regression then checks the final false bound as linear rational
-arithmetic:
+The checked `qf-lra-bad-concentration-bound` row then checks the final false
+bound as linear rational arithmetic:
 
 ```text
 tail_probability = 1/4
@@ -181,6 +184,37 @@ tail_probability <= 1/8
 
 The search result is not trusted by itself. The trusted part is the independent
 Farkas certificate check over exact rational multipliers.
+
+## Reject A False Union Bound
+
+The negative union row reuses the four-atom event table but claims:
+
+```text
+P(A union B) <= 1/2
+```
+
+The checker recomputes:
+
+```text
+P(A union B) = 3/4
+```
+
+and rejects the claim because:
+
+```text
+3/4 > 1/2
+```
+
+The source event table replay is still separate from the proof object. The
+checked `qf-lra-bad-union-bound` row isolates the final contradiction:
+
+```text
+union_probability = 3/4
+union_probability <= 1/2
+```
+
+The regression parses the committed SMT-LIB artifact and accepts the result
+only after the emitted `UnsatFarkas` evidence is rechecked.
 
 ## Name The Lean Horizon
 
@@ -194,6 +228,7 @@ variances
 finite tail events
 finite event unions
 bad tail-bound refutations
+bad union-bound refutations
 ```
 
 The following remain proof-assistant targets:
@@ -216,6 +251,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-concentration-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_tail_bound_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_union_bound_artifact_emits_checked_farkas
 ```
 
@@ -238,4 +274,5 @@ remaining horizon -> general concentration and limit theorems
 The graduation target is to encode finite tail events, expectations,
 variances, and event unions as exact rational tables, replay Markov,
 Chebyshev, and union-bound inequalities by exact rational arithmetic, and emit
-checked counterexample evidence for false tail and union bounds.
+checked QF_LRA/Farkas evidence for false tail and union bounds in separate
+proof-object rows.

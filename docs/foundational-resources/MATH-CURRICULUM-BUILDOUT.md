@@ -1962,8 +1962,8 @@ expected hitting-time equations, checked QF_LRA/Farkas bad survival-mass and
 bad expected-time rejection, and the general hitting-theory Lean horizon.
 `finite-concentration-v0` now has a learner-facing end-to-end lesson for exact
 finite Markov, Chebyshev, and union-bound replay over rational atom tables,
-checked bad concentration-bound rejection, and the general concentration Lean
-horizon.
+replayed bad tail and union-bound rejections, separate checked QF_LRA/Farkas
+final-bound refutations, and the general concentration Lean horizon.
 `finite-markov-chain-v0` now has a learner-facing end-to-end lesson for exact
 row-stochastic transition matrices, finite-horizon distribution replay,
 stationary distributions, checked QF_LRA/Farkas bad transition-row and
@@ -2072,10 +2072,11 @@ same source-linked checked Farkas evidence path after reducing the midpoint
 inequality to division-free linear form, and now routes a bad affine-threshold
 row through the same path after exact replay computes the shortfall
 `1 - g(1/2) = 3/2`.
-`finite-concentration-v0` now routes its bad finite tail-bound and bad
-union-bound rows through source-linked checked Farkas evidence paths after
+`finite-concentration-v0` now keeps its bad finite tail-bound and bad
+union-bound rows as exact replay, while `qf-lra-bad-concentration-bound` and
+`qf-lra-bad-union-bound` carry source-linked checked Farkas evidence after
 finite replay computes the tail probability and the exact event-union
-probability, and its metadata promotes those rows for solver reuse.
+probability.
 `finite-probability-v0` now routes its bad normalization row through the same
 checked Farkas evidence path after exact replay computes the atom total.
 It also routes bad conditional-probability and diagnostic-test Bayes posterior

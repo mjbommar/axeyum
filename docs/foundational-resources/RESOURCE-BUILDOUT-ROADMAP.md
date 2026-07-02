@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 662 expected checks.
+- 664 expected checks.
 - 322 checked proof/evidence rows.
-- 269 replay-only rows.
+- 271 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1355,10 +1355,10 @@ Pick one item per commit unless the change is purely navigational.
     promoted --require-any` proves promoted rows are consumer-readable, but no
     external consumer or repeated typed API need justifies a crate or repo split.
 25. Landed: promote `finite-concentration-v0` through a source-linked
-    QF_LRA/Farkas regression for `bad-concentration-bound-rejected`. The artifact
+    QF_LRA/Farkas regression for `qf-lra-bad-concentration-bound`. The artifact
     `artifacts/examples/math/finite-concentration-v0/smt2/bad-concentration-bound-farkas-conflict.smt2`
     is checked by
-    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_tail_bound_emits_checked_farkas`.
+    `cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_tail_bound_artifact_emits_checked_farkas`.
 26. Landed: promote `finite-conditional-expectation-v0` through source-linked
     QF_LRA/Farkas regressions for `bad-conditional-expectation-rejected`,
     `bad-total-expectation-rejected`, `bad-tower-property-rejected`, and

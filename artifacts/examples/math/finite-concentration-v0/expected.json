@@ -83,8 +83,8 @@
       "id": "bad-concentration-bound-rejected",
       "claim": "The two-point variable has P(X >= 2) <= 1/8.",
       "expected_result": "unsat",
-      "validation": "finite_bad_concentration_bound_refutation",
-      "proof_status": "checked",
+      "validation": "finite_bad_concentration_bound_replay",
+      "proof_status": "replay-only",
       "data": {
         "atoms": [
           {"id": "low", "probability": "3/4"},
@@ -94,17 +94,34 @@
         "threshold": "2",
         "claimed_bound": "1/8",
         "actual_tail_probability": "1/4",
-        "markov_bound": "1/2",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_tail_bound_emits_checked_farkas"
+        "markov_bound": "1/2"
       },
-      "notes": "The validator rejects the claimed bound because the recomputed tail probability is 1/4; the Axeyum regression refutes the final linear claim tail_probability <= 1/8 with rechecked Farkas evidence."
+      "notes": "The validator rejects the claimed bound because the recomputed tail probability is 1/4. The separate qf-lra-bad-concentration-bound row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-concentration-bound",
+      "claim": "The fixed malformed concentration tail-bound claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_bad_concentration_bound_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "two-point-markov-variable",
+        "source_replay_row": "bad-concentration-bound-rejected",
+        "actual_tail_probability": "1/4",
+        "claimed_bound": "1/8",
+        "farkas_tail_probability_equation": "tail_probability = actual_tail_probability",
+        "smt2_artifact": "artifacts/examples/math/finite-concentration-v0/smt2/bad-concentration-bound-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_tail_bound_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "The source SMT-LIB artifact isolates the final exact-linear contradiction after finite replay computes tail probability as 1/4."
     },
     {
       "id": "bad-union-bound-rejected",
       "claim": "The listed finite events have P(A union B) <= 1/2.",
       "expected_result": "unsat",
-      "validation": "finite_bad_union_bound_refutation",
-      "proof_status": "checked",
+      "validation": "finite_bad_union_bound_replay",
+      "proof_status": "replay-only",
       "data": {
         "atoms": [
           {"id": "a", "probability": "1/4", "events": ["A"]},
@@ -116,11 +133,27 @@
         "event_probabilities": {"A": "1/2", "B": "1/2"},
         "actual_union_probability": "3/4",
         "claimed_union_bound": "1/2",
-        "valid_union_bound": "1",
-        "smt2_artifact": "artifacts/examples/math/finite-concentration-v0/smt2/bad-union-bound-farkas-conflict.smt2",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_union_bound_artifact_emits_checked_farkas"
+        "valid_union_bound": "1"
       },
-      "notes": "The validator rejects the claimed bound because exact finite event replay gives P(A union B)=3/4; the Axeyum regression refutes the final linear claim union_probability <= 1/2 with rechecked Farkas evidence."
+      "notes": "The validator rejects the claimed bound because exact finite event replay gives P(A union B)=3/4. The separate qf-lra-bad-union-bound row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-union-bound",
+      "claim": "The fixed malformed union-bound claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_bad_union_bound_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "two-event-union-bound",
+        "source_replay_row": "bad-union-bound-rejected",
+        "actual_union_probability": "3/4",
+        "claimed_union_bound": "1/2",
+        "farkas_union_probability_equation": "union_probability = actual_union_probability",
+        "smt2_artifact": "artifacts/examples/math/finite-concentration-v0/smt2/bad-union-bound-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_concentration_bad_union_bound_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "The source SMT-LIB artifact isolates the final exact-linear contradiction after finite replay computes union probability as 3/4."
     },
     {
       "id": "general-concentration-lean-horizon",

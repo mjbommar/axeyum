@@ -27,6 +27,12 @@ Expected result: `unsat`.
 
 The validator rejects the claimed tail bound because the actual finite tail
 probability is `1/4`, which is greater than the claimed `1/8`.
+This row is replay-only; the separate `qf-lra-bad-concentration-bound` row
+owns the proof-object refutation.
+
+## `qf-lra-bad-concentration-bound`
+
+Expected result: `unsat`.
 
 The resource-backed Axeyum regression checks the final bound obligation as
 `QF_LRA`: `tail_probability = 1/4` and `tail_probability <= 1/8`, requiring
@@ -38,6 +44,12 @@ Expected result: `unsat`.
 
 The finite event table has `P(A union B) = 3/4`, so the claimed bound `1/2` is
 false even though the valid union-bound sum `P(A) + P(B) = 1` still holds.
+This row is replay-only; the separate `qf-lra-bad-union-bound` row owns the
+proof-object refutation.
+
+## `qf-lra-bad-union-bound`
+
+Expected result: `unsat`.
 
 The resource-backed Axeyum regression checks the final union-bound
 contradiction as `QF_LRA`: `4 * union_probability = 3` and

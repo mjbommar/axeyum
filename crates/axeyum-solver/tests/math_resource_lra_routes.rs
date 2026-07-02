@@ -265,6 +265,9 @@ const FINITE_CHEBYSHEV_BAD_INTERPOLATION_SAMPLE: &str = include_str!(
 const FINITE_CHEBYSHEV_BAD_ALTERNATING_RESIDUAL: &str = include_str!(
     "../../../artifacts/examples/math/finite-chebyshev-systems-v0/smt2/bad-alternating-residual-farkas-conflict.smt2"
 );
+const FINITE_CONCENTRATION_BAD_TAIL_BOUND: &str = include_str!(
+    "../../../artifacts/examples/math/finite-concentration-v0/smt2/bad-concentration-bound-farkas-conflict.smt2"
+);
 const FINITE_CONCENTRATION_BAD_UNION_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/finite-concentration-v0/smt2/bad-union-bound-farkas-conflict.smt2"
 );
@@ -1148,17 +1151,10 @@ fn finite_operator_bad_chebyshev_t3_artifact_emits_checked_farkas() {
 }
 
 #[test]
-fn finite_concentration_bad_tail_bound_emits_checked_farkas() {
-    let mut arena = TermArena::new();
-    let tail_probability = real(&mut arena, "tail_probability");
-    let tail_is_quarter = eq_ratio(&mut arena, tail_probability, 1, 4);
-    let claimed_bound = arena.real_ratio(1, 8);
-    let false_tail_bound = arena.real_le(tail_probability, claimed_bound).unwrap();
-
-    assert_farkas_checked(
-        "finite-concentration-v0 bad-concentration-bound-rejected",
-        &arena,
-        &[tail_is_quarter, false_tail_bound],
+fn finite_concentration_bad_tail_bound_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-concentration-v0 bad-concentration-bound SMT-LIB artifact",
+        FINITE_CONCENTRATION_BAD_TAIL_BOUND,
     );
 }
 

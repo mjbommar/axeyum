@@ -58,7 +58,10 @@ Concept rows:
 | `markov-inequality-witness` | `sat` | replay-only |
 | `chebyshev-inequality-witness` | `sat` | replay-only |
 | `union-bound-witness` | `sat` | replay-only |
-| `bad-concentration-bound-rejected` | `unsat` | checked |
+| `bad-concentration-bound-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-concentration-bound` | `unsat` | checked |
+| `bad-union-bound-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-union-bound` | `unsat` | checked |
 | `finite-martingale-witness` | `sat` | replay-only |
 | `square-submartingale-witness` | `sat` | replay-only |
 | `bounded-stopping-replay` | `sat` | replay-only |
@@ -322,8 +325,9 @@ P(X >= 2) = 1/4
 E[X] / 2 = 1/2
 ```
 
-It also checks a finite Chebyshev row, a finite union-bound row, and rejects the
-false claim `P(X >= 2) <= 1/8`.
+It also checks a finite Chebyshev row, a finite union-bound row, rejects the
+false claims `P(X >= 2) <= 1/8` and `P(A union B) <= 1/2` by replay, and puts
+the final contradictions in separate checked QF_LRA/Farkas rows.
 
 For a fuller focused trace, read
 [End To End: Finite Concentration](finite-concentration-end-to-end.md).
