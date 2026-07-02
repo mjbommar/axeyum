@@ -1851,6 +1851,12 @@ Pick one row per commit unless the change is purely navigational.
      the diagnostic-test posterior `2/13`, the malformed posterior `1/5`, and
      the checked QF_LRA/Farkas bad-posterior row without adding a duplicate
      pack or changing resource counts.
+220. Landed: add `chebyshev-theorem-boundary.md` as the focused theorem-boundary
+     page for the finite Chebyshev/operator cluster. It maps finite recurrence,
+     Vandermonde, interpolation, and alternating-residual checks to the missing
+     Haar-space, minimax, alternation, compactness, and function-space theorem
+     route, and adds Chebyshev-specific horizon queries to the public smoke
+     gate without adding a duplicate pack or changing resource counts.
 
 ## Validation Checklist
 

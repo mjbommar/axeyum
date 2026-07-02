@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Chebyshev theorem-boundary resource landed.**
+  `chebyshev-theorem-boundary.md` now separates finite Chebyshev recurrence,
+  Vandermonde, interpolation, and alternating-residual replay from Haar-space,
+  minimax, alternation, compactness, and function-space theorem targets. The
+  Chebyshev/operator learner index, theorem-horizon query guide, functional
+  operator query guide, and foundational smoke gate now expose the
+  Chebyshev-specific horizon row next to its checked finite QF_LRA/Farkas
+  shadows. This is a learner/query-depth increment over existing promoted
+  packs; public resource counts do not change.
+
 - **Finite Bayes learner/query resource landed.**
   `finite-bayes-update-end-to-end.md` now follows the existing promoted
   `finite-probability-v0` Bayes rows through exact rational posterior replay

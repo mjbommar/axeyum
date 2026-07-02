@@ -475,6 +475,8 @@ python3 scripts/query-foundational-resources.py checks --pack finite-chebyshev-s
 python3 scripts/query-foundational-resources.py checks --pack finite-chebyshev-systems-v0 --route Farkas --proof-status checked --text qf-lra-bad-interpolation-sample --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-chebyshev-systems-v0 --route Farkas --proof-status checked --text qf-lra-bad-alternating-residual --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-chebyshev-systems-v0 --proof-status replay-only --text rejected --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text Chebyshev --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-chebyshev-systems-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack spectral-linear-algebra-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack inner-product-spaces-rational-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-dual-spaces-v0 --route Alethe --proof-status checked --require-any >/dev/null

@@ -100,6 +100,19 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Display the Chebyshev theorem boundary beside its finite checked shadows:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text Chebyshev \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-chebyshev-systems-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Display eigenpair, Rayleigh, operator, and invariant rows:
 
 ```sh

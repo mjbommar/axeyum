@@ -149,6 +149,10 @@ for Vandermonde unisolvence, interpolation values, alternating residuals, and
 replay-only duplicate-node, bad interpolation-sample, and bad
 alternation-magnitude rejection with separate checked QF_LRA/Farkas rows.
 
+Use [Chebyshev Theorem Boundary](chebyshev-theorem-boundary.md) when the
+question is no longer "does this finite grid replay?" but "what theorem would
+be needed before this becomes a Haar, minimax, or alternation proof claim?"
+
 Use [Matrix Computation Index](matrix-computation-index.md) when you want the
 surrounding matrix-resource cluster: residuals, projections, eigenpairs,
 characteristic polynomials, random matrices, chain/cochain matrices, modules,
@@ -168,6 +172,7 @@ python3 scripts/query-foundational-resources.py packs --concept bridge_finite_op
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_operator_chebyshev --route Farkas --proof-status checked --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-operator-v0 --route Farkas --proof-status checked --text qf-lra-bad-chebyshev-t3 --require-any
 python3 scripts/query-foundational-resources.py checks --field functional_analysis_and_operator_theory --route Farkas --proof-status checked --require-any
+python3 scripts/query-foundational-resources.py horizon-frontier --text Chebyshev --require-any
 ```
 
 ## Replay It

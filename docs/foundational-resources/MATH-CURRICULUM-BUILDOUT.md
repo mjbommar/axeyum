@@ -1937,6 +1937,12 @@ It also has a focused finite Bayes-update page for the diagnostic-test
 posterior `2/13`, the malformed posterior `1/5`, and the checked
 QF_LRA/Farkas bad-posterior route, so consumers can find the Bayes trust
 boundary without treating the broad probability lesson as a textbook chapter.
+`finite-chebyshev-systems-v0` and `finite-operator-v0` now also have a focused
+Chebyshev theorem-boundary page. It keeps finite recurrence, Vandermonde,
+interpolation, and alternating-residual replay separate from Haar-space,
+minimax, alternation, compactness, and function-space theorem targets, and
+links the public horizon query for the Chebyshev row to the existing checked
+finite QF_LRA/Farkas shadows.
 `equivalence-classes-v0` now has an Alethe certificate anatomy lesson that
 follows the quotient-map congruence conflict through source SMT-LIB, emitted
 zero-trust `UnsatAletheProof` evidence, and same-artifact truncated-proof

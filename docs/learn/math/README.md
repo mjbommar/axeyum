@@ -45,6 +45,10 @@ Companion maps:
   connects finite operator bounds, Chebyshev recurrences, interpolation
   matrices, alternating residuals, spectral rows, checked Farkas evidence, and
   functional-analysis theorem horizons.
+- [Chebyshev Theorem Boundary](chebyshev-theorem-boundary.md):
+  separates finite Chebyshev recurrence/interpolation/alternation replay from
+  Haar-space, minimax, alternation, compactness, and function-space theorem
+  targets.
 - [Random Matrix Moment Index](random-matrix-moment-index.md):
   connects finite matrix-valued atom tables, exact moments, expected Gram
   matrices, rank-mixture probabilities, checked bad trace-square and
@@ -574,6 +578,9 @@ Companion maps:
   exact Vandermonde unisolvence, interpolation, alternating residual signs,
   checked QF_LRA/Farkas duplicate-node determinant and bad interpolation-sample
   rejections, and the Chebyshev/Haar/minimax Lean horizon.
+- [Chebyshev Theorem Boundary](chebyshev-theorem-boundary.md): maps those
+  finite checked shadows to the missing Haar-space, minimax, alternation, and
+  compactness proof route.
 
 ## How To Read These Pages
 

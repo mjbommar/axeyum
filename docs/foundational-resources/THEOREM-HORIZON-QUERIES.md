@@ -186,12 +186,26 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Chebyshev/Haar/minimax horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text Chebyshev \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-chebyshev-systems-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 ## Read With The Learner Maps
 
 The main learner maps that explain these boundaries are:
 
 - [Analysis And Calculus Theorem Horizon Map](../learn/math/analysis-calculus-theorem-horizon-map.md)
 - [Real Completeness Theorem Boundary](../learn/math/real-completeness-theorem-boundary.md)
+- [Chebyshev Theorem Boundary](../learn/math/chebyshev-theorem-boundary.md)
 - [Analysis And Topology Proof Horizons](../learn/math/analysis-topology-proof-horizons.md)
 - [Matrix Corpus And Benchmark Boundary](../learn/math/matrix-corpus-benchmark-boundary.md)
 - [Finite Countermodel Replay](../learn/math/finite-countermodel-replay.md)
