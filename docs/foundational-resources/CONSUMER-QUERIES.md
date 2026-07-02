@@ -21,6 +21,8 @@ For proof-route summaries and route-specific boundaries, see
 [PROOF-ROUTE-QUERY-MATRIX.md](PROOF-ROUTE-QUERY-MATRIX.md).
 For promoted solver-reuse pack mining by route, field, and checked row, see
 [SOLVER-REUSE-QUERIES.md](SOLVER-REUSE-QUERIES.md).
+For replay-only queues and certificate-upgrade candidate queries, see
+[PROOF-UPGRADE-QUERIES.md](PROOF-UPGRADE-QUERIES.md).
 For concept-plus-route matrix discovery, see
 [MATRIX-COMPUTATION-QUERIES.md](MATRIX-COMPUTATION-QUERIES.md).
 For concept-plus-route probability/statistics discovery, see

@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Proof-upgrade query guide landed.**
+  `PROOF-UPGRADE-QUERIES.md` now documents how proof contributors find
+  replay-only UNSAT rows, route-relevant packs with replay rows, checked-row
+  contrasts, and Lean-horizon boundaries before promoting another certificate
+  row. The foundational resource smoke script now checks representative
+  replay-only row queues, route-relevant replay pack queries, and checked
+  evidence contrasts. The public summary remains 121 concept rows, 75 bridge
+  concepts, 108 packs, 688 expected checks, 322 checked rows, 295 replay-only
+  rows, and 71 Lean-horizon rows.
+
 - **Solver-reuse query guide landed.**
   `SOLVER-REUSE-QUERIES.md` now documents how solver, proof, benchmark, and
   fuzzing contributors find promoted packs by solver-reuse status, proof route,

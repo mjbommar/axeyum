@@ -11,6 +11,8 @@ Use this file when choosing the next commit-sized proof-resource increment.
 Use [Proof Upgrade Frontier](PROOF-UPGRADE-FRONTIER.md) for the full route
 ledger and [Learner And Proof Upgrade Dashboard](generated/learner-proof-upgrade-dashboard.md)
 for generated counts.
+Use [Proof Upgrade Queries](PROOF-UPGRADE-QUERIES.md) for executable
+replay-only row, route-relevant pack, checked-row, and horizon lookups.
 Use [Proof Route Learner Snippets](../learn/math/proof-route-learner-snippets.md)
 when a focused learner page needs compact route wording.
 

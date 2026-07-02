@@ -197,6 +197,9 @@ compact selector for the current representative proof families before adding
 another checked negative row.
 Use [Proof Route Learner Snippets](../learn/math/proof-route-learner-snippets.md)
 for compact learner-facing route wording on focused pack pages.
+Use [Proof Upgrade Queries](PROOF-UPGRADE-QUERIES.md) when a contributor needs
+executable replay-only row, route-relevant pack, checked-row, and horizon
+lookups before promoting another certificate row.
 
 Route plan:
 

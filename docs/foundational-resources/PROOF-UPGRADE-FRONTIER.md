@@ -6,6 +6,9 @@ evidence. The generated truth source is
 [learner-proof-upgrade-dashboard.md](generated/learner-proof-upgrade-dashboard.md);
 this file explains which route to work first, what artifact should be emitted,
 and how a pack graduates.
+For executable query commands over replay-only rows, route-relevant packs, and
+checked evidence contrasts, use
+[Proof Upgrade Queries](PROOF-UPGRADE-QUERIES.md).
 For the compact route-by-route family selector, use
 [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md).
 For reusable learner-facing route snippets, use

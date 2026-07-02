@@ -28,6 +28,15 @@ python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --
 python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --field graph_theory --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --route Farkas --expected-result unsat --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --route Alethe --expected-result unsat --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --proof-status replay-only --expected-result unsat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field probability_theory --proof-status replay-only --expected-result unsat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field abstract_algebra --proof-status replay-only --expected-result unsat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --field topology --proof-status replay-only --expected-result unsat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --proof-status replay-only --route Farkas --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --proof-status replay-only --route Alethe --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --proof-status replay-only --route Diophantine --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --proof-status replay-only --route qf-bv --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --proof-status replay-only --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --field probability_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --expected-result unsat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --kind example-family --format json --require-any >/dev/null

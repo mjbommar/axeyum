@@ -1674,6 +1674,11 @@ Pick one row per commit unless the change is purely navigational.
      field, and checked-row queries for mining solver-reuse resources while
      making explicit that educational rows are not theorem, benchmark, or
      parity claims until the appropriate evidence and measurement gates exist.
+194. Landed: add `PROOF-UPGRADE-QUERIES.md` as the focused proof-upgrade query
+     guide. It records executable route-summary, replay-only row, route-relevant
+     pack, checked-row contrast, and horizon queries so contributors can choose
+     certificate upgrades without treating every replay-only row as a gap or
+     over-promoting finite examples.
 
 ## Validation Checklist
 

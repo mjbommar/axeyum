@@ -202,6 +202,9 @@ The live route-by-route execution frontier is
 [PROOF-UPGRADE-FRONTIER.md](PROOF-UPGRADE-FRONTIER.md); the generated queue it
 interprets is
 [generated/learner-proof-upgrade-dashboard.md](generated/learner-proof-upgrade-dashboard.md).
+The executable query surface for finding replay-only rows, route-relevant
+packs, checked evidence contrasts, and horizon boundaries is
+[PROOF-UPGRADE-QUERIES.md](PROOF-UPGRADE-QUERIES.md).
 The compact representative-family selector is
 [PROOF-ROUTE-FAMILY-SELECTION.md](PROOF-ROUTE-FAMILY-SELECTION.md).
 The reusable learner-facing route wording lives in

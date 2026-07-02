@@ -54,6 +54,8 @@ For Lean/theorem-boundary discovery, use the
 [Theorem Horizon Queries](THEOREM-HORIZON-QUERIES.md).
 For solver/proof contributors mining promoted resource packs, use the
 [Solver Reuse Queries](SOLVER-REUSE-QUERIES.md).
+For proof contributors choosing certificate-upgrade candidates, use the
+[Proof Upgrade Queries](PROOF-UPGRADE-QUERIES.md).
 For the compact execution selector that picks one replay-heavy family per proof
 route and states when another negative row should be promoted, use the
 [Proof Route Family Selection](PROOF-ROUTE-FAMILY-SELECTION.md).
