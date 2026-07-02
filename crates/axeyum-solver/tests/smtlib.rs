@@ -1078,10 +1078,11 @@ fn decides_string_disequality_sat() {
 
 /// `str.len` returns an Int (via `bv2nat`) composing with integer arithmetic
 /// (ADR-0029). The SAT direction decides — useful for generating strings with
-/// length properties. The conflicting direction may return `Unknown`: a bounded
-/// integer-blast can't soundly conclude `unsat` (ADR-0014) and the simplex path
-/// doesn't see the string BV constraints — a known BV+LIA combination gap.
-/// `Unknown` is sound; what matters is it is never a wrong `sat`.
+/// length properties. The conflicting direction **decides `unsat`** since the
+/// `bv2nat`-linear blast (P2.7 A.2): every integer atom here is linear over
+/// `bv2nat(len_field)` terms, so the query rewrites to an equivalent pure-BV
+/// query the SAT path refutes — closing the former BV+LIA combination gap
+/// (the gap-analysis "Gap 10" marker).
 #[test]
 fn str_len_sat_direction_decides() {
     let sat = run("\
@@ -1107,7 +1108,7 @@ fn str_len_sat_direction_decides() {
         sat2.result
     );
 
-    // Conflicting length: decided soundly — Unsat or (soundly) Unknown, never sat.
+    // Conflicting length: decided `unsat` via the bv2nat-linear blast.
     let conflict = run("\
 (declare-const s String)
 (assert (= s \"ab\"))
@@ -1115,11 +1116,8 @@ fn str_len_sat_direction_decides() {
 (check-sat)
 ");
     assert!(
-        matches!(
-            conflict.result,
-            CheckResult::Unsat | CheckResult::Unknown(_)
-        ),
-        "len(\"ab\")==3 must not be wrongly sat, got {:?}",
+        matches!(conflict.result, CheckResult::Unsat),
+        "len(\"ab\")==3 must decide unsat (P2.7 A.2), got {:?}",
         conflict.result
     );
 }

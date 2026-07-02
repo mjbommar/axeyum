@@ -12,13 +12,15 @@
 //! is replayed against the original term through the ground evaluator.
 
 use axeyum_cnf::{check_alethe, write_alethe};
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 
-use axeyum_ir::{FuncValue, Sort, TermArena, TermId, Value, render, well_founded_default};
+use axeyum_ir::{
+    FuncValue, Op, Sort, TermArena, TermId, TermNode, Value, render, well_founded_default,
+};
 use axeyum_smtlib::{Script, ScriptCommand, parse_script};
 
 use crate::auto::{solve, unsat_core};
-use crate::backend::{CheckResult, SolverConfig, SolverError};
+use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::optimize::{OptOutcome, maximize_bv, maximize_lia, minimize_bv, minimize_lia};
 
 /// The result of deciding an SMT-LIB script, with the script's own declarations.
@@ -54,6 +56,277 @@ pub struct SmtLibModel {
 struct SmtLibSingleQuery {
     assertions: Vec<TermId>,
     assertion_names: Vec<Option<String>>,
+}
+
+/// The bounded-string `unsat` gate (P2.7 A.2), extracted from a parsed
+/// [`Script`] so it can be applied per `check-sat` alongside a disjoint
+/// `&mut script.arena` borrow.
+///
+/// ADR-0029's contract is "strings up to `max_len` decide soundly; longer ones
+/// are `Unsupported`, never wrong" — but an `unsat` of the *lowered* query is a
+/// priori only `unsat` **within the encoding bound**: the packed representation
+/// asserts `len(s) ≤ max_len` as an encoding artifact, while in the real
+/// (unbounded) string theory a longer witness may exist (e.g. `(= (str.len s)
+/// 9)` with `STRING_MAX_LEN = 8` is `sat`). [`StringGate::confirm`] keeps an
+/// `unsat` only when it is provably bound-independent.
+struct StringGate {
+    /// The script used the bounded string/sequence encoding at all.
+    active: bool,
+    /// `original → abstraction` rewrite pairs ([`Script::len_abstraction_map`]).
+    map: HashMap<TermId, TermId>,
+    /// Universally-true abstraction side facts ([`Script::len_abstraction_facts`]).
+    facts: Vec<TermId>,
+    /// Encoding-bound facts ([`Script::len_abstraction_bounds`]) — bite-detector
+    /// input only, never part of the sound abstraction.
+    bounds: Vec<TermId>,
+    /// A coarsely-abstracted atom (`str.<`/`str.<=`/`str.in_re`) is present:
+    /// the length abstraction may miss a bound bite, so only a step-1-confirmed
+    /// `unsat` may pass ([`Script::len_abstraction_coarse`]).
+    coarse: bool,
+}
+
+impl StringGate {
+    fn from_script(script: &Script) -> Self {
+        StringGate {
+            active: script.uses_bounded_strings,
+            map: script.len_abstraction_map.iter().copied().collect(),
+            facts: script.len_abstraction_facts.clone(),
+            bounds: script.len_abstraction_bounds.clone(),
+            coarse: script.len_abstraction_coarse,
+        }
+    }
+
+    /// Decides `assertions`, downgrading a bound-suspect `unsat` to `unknown`:
+    ///
+    /// 1. **Unbounded length abstraction**: rewrite the active assertions
+    ///    through the abstraction map (string atoms → `fresh_bool ∧ implied
+    ///    length fact`; `str.len`-bridges → shared unbounded length variables)
+    ///    plus the side facts, and re-decide. The rewritten query carries *no*
+    ///    encoding bound and is a relaxation of the real string semantics, so
+    ///    its `unsat` transfers — the bounded `unsat` is confirmed.
+    /// 2. **Content-driven check**: relax every integer atom crossing the BV→Int
+    ///    bridge (`bv2nat`) to a fresh Boolean and re-decide. Still-`unsat`
+    ///    means the refutation never needed the bound-suspect integer channel —
+    ///    the verdict surface predating the `bv2nat` blast (whose residual
+    ///    pure-BV bound-bite class is tracked separately as the ADR-0029
+    ///    contract-repair follow-up).
+    /// 3. Otherwise the refutation leaned on the integer channel in a way the
+    ///    unbounded abstraction cannot confirm — report an honest `unknown`.
+    fn confirm(
+        &self,
+        arena: &mut TermArena,
+        assertions: &[TermId],
+        config: &SolverConfig,
+        result: CheckResult,
+    ) -> Result<CheckResult, SolverError> {
+        if !self.active || !matches!(result, CheckResult::Unsat) {
+            return Ok(result);
+        }
+        // Quantifier guard: the abstraction map replaces *atoms*, and an atom
+        // inside a quantifier body may depend on the bound variable — a single
+        // fresh Boolean cannot represent it for every instantiation, so the
+        // rewritten query would not be a relaxation. Skip the abstraction-based
+        // steps (1/1.5) and fall through to the wholesale atom relaxation of
+        // step 2, which never descends into a quantifier.
+        let has_quantifier = {
+            let mut seen: std::collections::HashSet<TermId> = std::collections::HashSet::new();
+            let mut stack: Vec<TermId> = assertions.to_vec();
+            let mut found = false;
+            while let Some(t) = stack.pop() {
+                if !seen.insert(t) {
+                    continue;
+                }
+                if let TermNode::App { op, args } = arena.node(t) {
+                    if matches!(op, Op::Forall(_) | Op::Exists(_)) {
+                        found = true;
+                        break;
+                    }
+                    stack.extend(args.iter().copied());
+                }
+            }
+            found
+        };
+        // Step 1 — the unbounded length abstraction refutes?
+        if !has_quantifier && !self.map.is_empty() {
+            let mut memo: HashMap<TermId, TermId> = HashMap::new();
+            let mut abstracted = Vec::with_capacity(assertions.len() + self.facts.len());
+            for &a in assertions {
+                abstracted.push(
+                    axeyum_rewrite::replace_subterms(arena, a, &self.map, &mut memo)
+                        .map_err(|e| SolverError::Backend(e.to_string()))?,
+                );
+            }
+            abstracted.extend(self.facts.iter().copied());
+            if matches!(solve(arena, &abstracted, config)?, CheckResult::Unsat) {
+                return Ok(CheckResult::Unsat);
+            }
+            // Step 1.5 — bound-bite detector: the same length system WITH the
+            // encoding bounds (`len(v) ≤ max_len`) being unsatisfiable — while
+            // step 1 could not refute it unbounded — proves the recorded length
+            // facts force some length past the encoding bound. The bounded
+            // `unsat` is then an artifact of the encoding (a real model may use
+            // longer strings), so downgrade. A downgrade is always sound.
+            if !self.bounds.is_empty() {
+                let mut with_bounds = abstracted;
+                with_bounds.extend(self.bounds.iter().copied());
+                if matches!(solve(arena, &with_bounds, config)?, CheckResult::Unsat) {
+                    return Ok(CheckResult::Unknown(UnknownReason {
+                        kind: UnknownKind::Incomplete,
+                        detail: "bounded-string unsat is an encoding-bound artifact: the                                  recorded length facts force a length past the bound                                  (P2.7 A.2 bite detector)"
+                            .to_owned(),
+                    }));
+                }
+            }
+        }
+        // A coarsely-abstracted atom (`str.<`, `str.in_re`) means the length
+        // abstraction can miss a bound bite (a real model may exist only past
+        // the bound while every recorded fact fits within it — e.g.
+        // `"aaaaaaaa" < s < "aaaaaaab"` needs `len(s) ≥ 9` with no length fact
+        // saying so). Only the step-1 confirmation is sound then.
+        if self.coarse {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: "bounded-string unsat with a coarsely-abstracted atom \
+                         (str.</str.<=/str.in_re); not confirmed bound-independent \
+                         (P2.7 A.2)"
+                    .to_owned(),
+            }));
+        }
+        // Step 2 — content-driven (no integer channel needed)?
+        match relax_bridge_atoms(arena, assertions)? {
+            None => Ok(CheckResult::Unsat),
+            Some(relaxed) => {
+                if matches!(solve(arena, &relaxed, config)?, CheckResult::Unsat) {
+                    return Ok(CheckResult::Unsat);
+                }
+                Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail: "bounded-string unsat within the encoding bound; not confirmed \
+                             bound-independent by the unbounded length abstraction (P2.7 A.2)"
+                        .to_owned(),
+                }))
+            }
+        }
+    }
+}
+
+/// Applies the bounded-string `unsat` gate (P2.7 A.2 / ADR-0052) to a verdict
+/// obtained by solving a parsed [`Script`]'s (possibly rewritten) assertions
+/// directly — for harnesses (e.g. `axeyum-bench`) that bypass [`solve_smtlib`]
+/// and call [`crate::solve`] on `script.arena` themselves. A non-`unsat`
+/// verdict and a string-free script pass through unchanged; a bounded-string
+/// `unsat` is confirmed bound-independent or downgraded to an honest
+/// `unknown`, exactly as at the [`solve_smtlib`] front door.
+///
+/// # Errors
+///
+/// Any [`SolverError`] from the confirmation solves.
+pub fn confirm_bounded_string_verdict(
+    script: &mut Script,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    result: CheckResult,
+) -> Result<CheckResult, SolverError> {
+    let gate = StringGate::from_script(script);
+    gate.confirm(&mut script.arena, assertions, config, result)
+}
+
+/// Replaces every Boolean atom whose subtree crosses the BV→Int bridge
+/// (`bv2nat`) with a fresh Boolean variable, recursing only through the pure
+/// propositional connectives. Returns `Ok(None)` when no assertion contains a
+/// bridge (nothing to relax). The result is a **relaxation**: a model of the
+/// original extends by assigning each fresh Boolean its atom's truth value, so
+/// `unsat` of the relaxed query implies `unsat` of the original.
+fn relax_bridge_atoms(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<Option<Vec<TermId>>, SolverError> {
+    fn has_bridge(arena: &TermArena, t: TermId, memo: &mut HashMap<TermId, bool>) -> bool {
+        if let Some(&b) = memo.get(&t) {
+            return b;
+        }
+        let b = match arena.node(t) {
+            TermNode::App { op, args } => {
+                matches!(op, Op::Bv2Nat) || {
+                    let args = args.clone();
+                    args.iter().any(|&a| has_bridge(arena, a, memo))
+                }
+            }
+            _ => false,
+        };
+        memo.insert(t, b);
+        b
+    }
+
+    fn relax(
+        arena: &mut TermArena,
+        t: TermId,
+        bridge_memo: &mut HashMap<TermId, bool>,
+        memo: &mut HashMap<TermId, TermId>,
+        fresh: &mut u32,
+        changed: &mut bool,
+    ) -> Result<TermId, SolverError> {
+        if let Some(&r) = memo.get(&t) {
+            return Ok(r);
+        }
+        if !has_bridge(arena, t, bridge_memo) {
+            memo.insert(t, t);
+            return Ok(t);
+        }
+        let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
+        let node = arena.node(t).clone();
+        let out = match node {
+            TermNode::App { op, args }
+                if matches!(
+                    op,
+                    Op::BoolNot | Op::BoolAnd | Op::BoolOr | Op::BoolXor | Op::BoolImplies
+                ) || (matches!(op, Op::Ite | Op::Eq)
+                    && arena.sort_of(args[args.len() - 1]) == Sort::Bool) =>
+            {
+                let mut new_args = Vec::with_capacity(args.len());
+                for &a in &args {
+                    new_args.push(relax(arena, a, bridge_memo, memo, fresh, changed)?);
+                }
+                axeyum_rewrite::build_app(arena, op, &new_args).map_err(err)?
+            }
+            // Any other Boolean node containing a bridge (an Int comparison,
+            // a quantifier, …) becomes a fresh, unconstrained Boolean.
+            _ => {
+                let n = *fresh;
+                *fresh += 1;
+                let sym = arena
+                    .declare(&format!("!strgate.{n}"), Sort::Bool)
+                    .map_err(err)?;
+                *changed = true;
+                arena.var(sym)
+            }
+        };
+        memo.insert(t, out);
+        Ok(out)
+    }
+
+    let mut bridge_memo = HashMap::new();
+    if !assertions
+        .iter()
+        .any(|&a| has_bridge(arena, a, &mut bridge_memo))
+    {
+        return Ok(None);
+    }
+    let mut memo = HashMap::new();
+    let mut fresh = 0u32;
+    let mut changed = false;
+    let mut out = Vec::with_capacity(assertions.len());
+    for &a in assertions {
+        out.push(relax(
+            arena,
+            a,
+            &mut bridge_memo,
+            &mut memo,
+            &mut fresh,
+            &mut changed,
+        )?);
+    }
+    Ok(Some(out))
 }
 
 fn smtlib_single_query(script: &Script) -> Result<SmtLibSingleQuery, SolverError> {
@@ -141,7 +414,9 @@ fn smtlib_single_query(script: &Script) -> Result<SmtLibSingleQuery, SolverError
 pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome, SolverError> {
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
     let query = smtlib_single_query(&script)?;
+    let gate = StringGate::from_script(&script);
     let result = solve(&mut script.arena, &query.assertions, config)?;
+    let result = gate.confirm(&mut script.arena, &query.assertions, config, result)?;
     Ok(SmtLibOutcome {
         result,
         logic: script.logic,
@@ -424,7 +699,10 @@ pub fn solve_smtlib_get_info(
         .any(|key| key == ":reason-unknown")
     {
         let query = smtlib_single_query(&script)?;
-        reason_unknown = Some(match solve(&mut script.arena, &query.assertions, config)? {
+        let gate = StringGate::from_script(&script);
+        let solved = solve(&mut script.arena, &query.assertions, config)?;
+        let solved = gate.confirm(&mut script.arena, &query.assertions, config, solved)?;
+        reason_unknown = Some(match solved {
             CheckResult::Unknown(reason) if reason.detail.is_empty() => {
                 format!("{:?}", reason.kind)
             }
@@ -598,6 +876,18 @@ pub fn solve_smtlib_unsat_core(
 ) -> Result<Option<Vec<String>>, SolverError> {
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
     let query = smtlib_single_query(&script)?;
+    // Bounded-string gate (P2.7 A.2): a core is only meaningful for a
+    // bound-independent `unsat`, so confirm the verdict first.
+    let gate = StringGate::from_script(&script);
+    if gate.active {
+        let result = solve(&mut script.arena, &query.assertions, config)?;
+        if !matches!(
+            gate.confirm(&mut script.arena, &query.assertions, config, result)?,
+            CheckResult::Unsat
+        ) {
+            return Ok(None);
+        }
+    }
     let Some(core) = unsat_core(&mut script.arena, &query.assertions, config)? else {
         return Ok(None);
     };
@@ -646,10 +936,24 @@ pub fn solve_smtlib_unsat_core(
 /// [`SolverError::Parse`] for malformed/unsupported text.
 pub fn solve_smtlib_get_proof(
     input: &str,
-    _config: &SolverConfig,
+    config: &SolverConfig,
 ) -> Result<Option<String>, SolverError> {
-    let script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
     let query = smtlib_single_query(&script)?;
+    // Bounded-string gate (P2.7 A.2): a proof of the *lowered* (bounded) query
+    // is not a proof for the script unless the `unsat` is bound-independent —
+    // confirm before emitting (e.g. a bit-blast refutation of `len(s) = 9`
+    // against the encoding bound proves nothing about the real string theory).
+    let gate = StringGate::from_script(&script);
+    if gate.active {
+        let result = solve(&mut script.arena, &query.assertions, config)?;
+        if !matches!(
+            gate.confirm(&mut script.arena, &query.assertions, config, result)?,
+            CheckResult::Unsat
+        ) {
+            return Ok(None);
+        }
+    }
     let arena = &script.arena;
     let assertions = &query.assertions;
 
@@ -713,6 +1017,7 @@ pub fn solve_smtlib_incremental(
     config: &SolverConfig,
 ) -> Result<Vec<CheckResult>, SolverError> {
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    let gate = StringGate::from_script(&script);
     let mut stack: Vec<axeyum_ir::TermId> = Vec::new();
     let mut scopes: Vec<usize> = Vec::new(); // assertion-stack depth at each open push
     let mut results = Vec::new();
@@ -732,14 +1037,16 @@ pub fn solve_smtlib_incremental(
                 }
             }
             ScriptCommand::CheckSat => {
-                results.push(solve(&mut script.arena, &stack, config)?);
+                let result = solve(&mut script.arena, &stack, config)?;
+                results.push(gate.confirm(&mut script.arena, &stack, config, result)?);
             }
             ScriptCommand::CheckSatAssuming(assumptions) => {
                 // Decide the active assertions together with the assumptions, but
                 // do not retain them: solve a temporary stack, then discard.
                 let mut with = stack.clone();
                 with.extend_from_slice(assumptions);
-                results.push(solve(&mut script.arena, &with, config)?);
+                let result = solve(&mut script.arena, &with, config)?;
+                results.push(gate.confirm(&mut script.arena, &with, config, result)?);
             }
             ScriptCommand::ResetAssertions => {
                 // Remove all assertions and open scopes (declarations stay interned

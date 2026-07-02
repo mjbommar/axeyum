@@ -285,11 +285,16 @@ fn gen_atom(rng: &mut Lcg, num_vars: usize) -> String {
             gen_regex(rng, 2)
         ),
         _ => {
-            // (= (str.len s) k) — a common, decidable length constraint.
+            // (= (str.len s) k) — a common length constraint. The range
+            // deliberately reaches past STRING_MAX_LEN = 8 (P2.7 A.2): an
+            // over-bound `k` is `sat` in the real theory (Z3 answers `sat`)
+            // while the bounded encoding cannot witness it, so this probes the
+            // bounded-`unsat` gate — a wrong `unsat` here is the exact
+            // bound-bite class the gate exists to prevent.
             format!(
                 "(= (str.len {}) {})",
                 gen_str_expr(rng, num_vars, depth),
-                rng.in_range(0, 5)
+                rng.in_range(0, 11)
             )
         }
     }

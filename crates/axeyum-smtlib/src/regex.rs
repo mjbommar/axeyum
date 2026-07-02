@@ -461,6 +461,95 @@ fn literal_regex(bytes: &[u8]) -> Regex {
     }
 }
 
+/// The **match-length interval** of a `RegLan` s-expression: every word in the
+/// regex's language has `min ≤ |w|` and, when the second component is `Some`,
+/// `|w| ≤ max`. Returns `None` when the regex is outside the supported fragment,
+/// denotes the empty language, or a length overflows — no fact is derived then.
+///
+/// Both bounds are deliberately allowed to be *loose* in the sound direction
+/// (`min` may be under-, `max` over-approximated): they feed the P2.7 A.2
+/// length abstraction as facts **implied by** a positive `str.in_re` atom, so
+/// only true-of-every-word bounds are ever produced (`Comp` → `min 0`/no max,
+/// `Diff(a, b)` → `a`'s interval, `Inter` → max-of-mins / min-of-maxes).
+pub(crate) fn in_re_length_interval(re: &crate::sexpr::SExpr) -> Option<(u64, Option<u64>)> {
+    let view = from_sexpr(re);
+    let regex = parse_regex(&view).ok()?;
+    regex_len_interval(&regex)
+}
+
+/// [`in_re_length_interval`] over the parsed AST. `None` = empty language (or
+/// overflow): no word exists, so no interval fact is derived.
+fn regex_len_interval(re: &Regex) -> Option<(u64, Option<u64>)> {
+    match re {
+        Regex::Empty => Some((0, Some(0))),
+        Regex::None => None,
+        Regex::Char(_) => Some((1, Some(1))),
+        Regex::Concat(parts) => {
+            let mut min = 0u64;
+            let mut max = Some(0u64);
+            for p in parts {
+                let (pmin, pmax) = regex_len_interval(p)?;
+                min = min.checked_add(pmin)?;
+                max = match (max, pmax) {
+                    (Some(a), Some(b)) => Some(a.checked_add(b)?),
+                    _ => None,
+                };
+            }
+            Some((min, max))
+        }
+        Regex::Union(parts) => {
+            // Members denoting ∅ contribute no words; a union of only ∅ is ∅.
+            let mut acc: Option<(u64, Option<u64>)> = None;
+            for p in parts {
+                let Some((pmin, pmax)) = regex_len_interval(p) else {
+                    continue;
+                };
+                acc = Some(match acc {
+                    None => (pmin, pmax),
+                    Some((amin, amax)) => (
+                        amin.min(pmin),
+                        match (amax, pmax) {
+                            (Some(a), Some(b)) => Some(a.max(b)),
+                            _ => None,
+                        },
+                    ),
+                });
+            }
+            acc
+        }
+        Regex::Inter(parts) => {
+            // A word is in *every* member: the tightest sound interval is
+            // max-of-mins / min-of-maxes. Any ∅ member makes the whole ∅.
+            let mut min = 0u64;
+            let mut max: Option<u64> = None;
+            for p in parts {
+                let (pmin, pmax) = regex_len_interval(p)?;
+                min = min.max(pmin);
+                max = match (max, pmax) {
+                    (Some(a), Some(b)) => Some(a.min(b)),
+                    (one, other) => one.or(other),
+                };
+            }
+            Some((min, max))
+        }
+        // Complement contains ε or arbitrarily long words in general, and
+        // `R*` always admits ε and unbounded repetition — for both, the only
+        // universally-true interval is the trivial one.
+        Regex::Comp(_) | Regex::Star(_) => Some((0, None)),
+        // `a \ b ⊆ a`, so `a`'s interval is sound.
+        Regex::Diff(a, _) => regex_len_interval(a),
+        // R? = R | ε: min 0; max is R's max (ε-only when R denotes ∅).
+        Regex::Opt(inner) => Some(match regex_len_interval(inner) {
+            Some((_, imax)) => (0, imax),
+            None => (0, Some(0)),
+        }),
+        Regex::Plus(inner) => {
+            let (imin, _) = regex_len_interval(inner)?;
+            Some((imin, None))
+        }
+    }
+}
+
 /// Parses a `RegLan` s-expression into a [`Regex`]. Declines (clean
 /// [`SmtError::Unsupported`]) any construct outside the supported fragment, so a
 /// regex the encoding cannot prove correct never produces a verdict.

@@ -89,6 +89,35 @@ pub struct Script {
     /// The ordered `assert`/`push`/`pop`/`check-sat` sequence — the incremental
     /// view of the script (ADR-0009 lifecycle), for per-`check-sat` solving.
     pub commands: Vec<ScriptCommand>,
+    /// Whether the script used the bounded string/sequence encoding (ADR-0029) —
+    /// a declared `String`/`(Seq E)` symbol or any `str.*`/`seq.*` operator. When
+    /// `true`, an `unsat` of the *lowered* query is only `unsat` **within the
+    /// encoding bound**; the solver front door must confirm it bound-independent
+    /// (see [`Script::len_abstraction_map`]) or report `unknown` (P2.7 A.2).
+    pub uses_bounded_strings: bool,
+    /// The unbounded length-abstraction rewrite map (P2.7 A.2): `original term →
+    /// abstracted term` pairs, where a hooked string atom maps to `fresh_bool ∧
+    /// implied_length_fact` and a string↔`Int` bridge term (`str.len`,
+    /// `str.to_int`, …) maps to its unbounded integer abstraction (a shared
+    /// length variable with the `len(x++y) = len(x)+len(y)` homomorphism, or a
+    /// free integer). Rewriting an assertion through this map (root-first) yields
+    /// a **relaxation** with *no encoding bound*: `unsat` of the rewritten active
+    /// assertion stack (plus [`Script::len_abstraction_facts`]) transfers soundly
+    /// to the real (unbounded) string semantics.
+    pub len_abstraction_map: Vec<(TermId, TermId)>,
+    /// Globally-true side facts for the abstraction variables (`len(v) ≥ 0`, a
+    /// literal's exact length, …); conjoin with the rewritten assertions.
+    pub len_abstraction_facts: Vec<TermId>,
+    /// **Encoding-bound** facts (`len(v) ≤ max_len`) — true of the bounded
+    /// encoding only, never of the real theory. For the solver's bound-bite
+    /// detector: the abstraction being unsatisfiable *with* these while not
+    /// provably unsatisfiable *without* them shows the encoding bound bit, so
+    /// a bounded `unsat` must downgrade to `unknown`.
+    pub len_abstraction_bounds: Vec<TermId>,
+    /// A coarsely-abstracted string atom (`str.<`/`str.<=`/`str.in_re`) is
+    /// present: the length abstraction may miss a bound bite, so only a
+    /// confirmed (abstraction-refuted) `unsat` may pass the gate.
+    pub len_abstraction_coarse: bool,
 }
 
 /// Parses an SMT-LIB script.
@@ -127,6 +156,11 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
     // (mirroring [`build_seq_info`]). A modulus over the bit-width cap, a non-prime
     // "field", or a width collision makes the whole script a clean `Unsupported`.
     let ff = build_ff_info(&exprs)?;
+    // The unbounded length-abstraction builder (P2.7 A.2): string/sequence
+    // operator hooks record abstraction twins as terms are built; exported on
+    // the Script at the end. Interior-mutable so it threads as `&LenAbs`
+    // (mirroring `SeqInfo`); a no-op for string-free scripts.
+    let lenabs = LenAbs::default();
     let mut script = Script::default();
     let mut aliases: HashMap<String, TermId> = HashMap::new();
     let mut macros: HashMap<String, MacroDef<'_>> = HashMap::new();
@@ -147,9 +181,16 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
             &mut named,
             &seq,
             &ff,
+            &lenabs,
             command,
         )?;
     }
+    let (len_map, len_facts, len_bounds, len_coarse, ops_used) = lenabs.export();
+    script.len_abstraction_map = len_map;
+    script.len_abstraction_facts = len_facts;
+    script.len_abstraction_bounds = len_bounds;
+    script.len_abstraction_coarse = len_coarse;
+    script.uses_bounded_strings |= ops_used;
     // Eager `seq.nth` Ackermann congruence (ADR-0029 slice 2): two `seq.nth`
     // applications with provably-equal sequence and index operands must return the
     // same (otherwise-unconstrained) out-of-bounds value. The constraints only pin
@@ -1146,6 +1187,7 @@ fn parse_command<'a>(
     named: &mut HashMap<String, TermId>,
     seq: &SeqInfo,
     ff: &FfInfo,
+    lenabs: &LenAbs,
     command: &'a SExpr,
 ) -> Result<(), SmtError> {
     let items = command
@@ -1232,6 +1274,7 @@ fn parse_command<'a>(
                 named,
                 seq,
                 ff,
+                lenabs,
             )?;
             script.objectives.push((t, head == "maximize"));
         }
@@ -1264,7 +1307,16 @@ fn parse_command<'a>(
                 .and_then(SExpr::list)
                 .ok_or_else(|| SmtError::Syntax("get-value expects (t …)".to_owned()))?;
             for t in list {
-                let term = parse_term(&mut script.arena, t, aliases, macros, named, seq, ff)?;
+                let term = parse_term(
+                    &mut script.arena,
+                    t,
+                    aliases,
+                    macros,
+                    named,
+                    seq,
+                    ff,
+                    lenabs,
+                )?;
                 script.get_value_terms.push(term);
             }
         }
@@ -1284,6 +1336,7 @@ fn parse_command<'a>(
                     named,
                     seq,
                     ff,
+                    lenabs,
                 )?);
             }
             script.check_sats += 1;
@@ -1301,13 +1354,33 @@ fn parse_command<'a>(
         "declare-datatype" => parse_declare_datatype(script, sort_aliases, items)?,
         "declare-datatypes" => parse_declare_datatypes(script, sort_aliases, items)?,
         "define-fun" => {
-            parse_define_fun(script, aliases, macros, sort_aliases, named, seq, ff, items)?;
+            parse_define_fun(
+                script,
+                aliases,
+                macros,
+                sort_aliases,
+                named,
+                seq,
+                ff,
+                lenabs,
+                items,
+            )?;
         }
         // `(define-const c S body)` is exact sugar for `(define-fun c () S body)`
         // (SMT-LIB §3.7.2 abbreviation): a nullary definition. We reuse the
         // no-args alias path verbatim, so soundness is identical to `define-fun`.
         "define-const" => {
-            parse_define_const(script, aliases, macros, sort_aliases, named, seq, ff, items)?;
+            parse_define_const(
+                script,
+                aliases,
+                macros,
+                sort_aliases,
+                named,
+                seq,
+                ff,
+                lenabs,
+                items,
+            )?;
         }
         "define-sort" => parse_define_sort(script, sort_aliases, items)?,
         // `(declare-sort U 0)` — an arity-0 uninterpreted sort. Arity ≥ 1
@@ -1317,7 +1390,16 @@ fn parse_command<'a>(
             exact_len(items, 2, head)?;
             let body = sexpr_at(items, 1)?;
             let name = named_label(body);
-            let t = parse_term(&mut script.arena, body, aliases, macros, named, seq, ff)?;
+            let t = parse_term(
+                &mut script.arena,
+                body,
+                aliases,
+                macros,
+                named,
+                seq,
+                ff,
+                lenabs,
+            )?;
             script.assertions.push(t);
             script.assertion_names.push(name);
             script.commands.push(ScriptCommand::Assert(t));
@@ -1611,6 +1693,7 @@ fn seq_decl_elem_width(sort: &SExpr) -> Option<u32> {
 /// incremental views so `=`/`distinct` and the `seq.*` operators decide via the
 /// BV path (ADR-0029). Shared by `declare-const`/0-ary `declare-fun` of `(Seq E)`.
 fn declare_seq_symbol(script: &mut Script, name: &str, ew: u32) -> Result<(), SmtError> {
+    script.uses_bounded_strings = true;
     let m = seq_max_len_for(ew).ok_or_else(|| {
         SmtError::Unsupported(format!(
             "sequence element width {ew} exceeds the packed-sort bit ceiling (ADR-0029)"
@@ -1633,6 +1716,7 @@ fn declare_seq_symbol(script: &mut Script, name: &str, ew: u32) -> Result<(), Sm
 /// the `str.*` operators decide via the BV path (ADR-0029). Shared by
 /// `declare-const ... String` and 0-ary `declare-fun ... String`.
 fn declare_string_symbol(script: &mut Script, name: &str) -> Result<(), SmtError> {
+    script.uses_bounded_strings = true;
     let sym = script.arena.declare(name, Sort::BitVec(STRING_TOTAL))?;
     record_model_symbol(script, sym);
     let v = script.arena.var(sym);
@@ -1702,6 +1786,7 @@ fn parse_define_fun<'a>(
     named: &mut HashMap<String, TermId>,
     seq: &SeqInfo,
     ff: &FfInfo,
+    lenabs: &LenAbs,
     items: &'a [SExpr],
 ) -> Result<(), SmtError> {
     exact_len(items, 5, "define-fun")?;
@@ -1720,6 +1805,7 @@ fn parse_define_fun<'a>(
             named,
             seq,
             ff,
+            lenabs,
             name,
             declared_sort,
             body_expr,
@@ -1752,6 +1838,7 @@ fn parse_define_const<'a>(
     named: &mut HashMap<String, TermId>,
     seq: &SeqInfo,
     ff: &FfInfo,
+    lenabs: &LenAbs,
     items: &'a [SExpr],
 ) -> Result<(), SmtError> {
     exact_len(items, 4, "define-const")?;
@@ -1765,6 +1852,7 @@ fn parse_define_const<'a>(
         named,
         seq,
         ff,
+        lenabs,
         name,
         declared_sort,
         body_expr,
@@ -1779,6 +1867,7 @@ fn parse_define_fun_alias(
     named: &mut HashMap<String, TermId>,
     seq: &SeqInfo,
     ff: &FfInfo,
+    lenabs: &LenAbs,
     name: &str,
     declared_sort: Sort,
     body_expr: &SExpr,
@@ -1791,6 +1880,7 @@ fn parse_define_fun_alias(
         named,
         seq,
         ff,
+        lenabs,
     )?;
     let body_sort = script.arena.sort_of(body);
     if body_sort != declared_sort {
@@ -2162,6 +2252,7 @@ fn parse_term<'a>(
     named: &mut HashMap<String, TermId>,
     seq: &SeqInfo,
     ff: &FfInfo,
+    lenabs: &LenAbs,
 ) -> Result<TermId, SmtError> {
     let mut frames: Vec<Frame> = vec![Frame::Eval(root)];
     let mut results: Vec<TermId> = Vec::new();
@@ -2176,6 +2267,7 @@ fn parse_term<'a>(
                 macros,
                 named,
                 ff,
+                lenabs,
                 &scopes,
                 &mut frames,
                 &mut results,
@@ -2191,13 +2283,50 @@ fn parse_term<'a>(
             }
             Frame::Apply { items, argc } => {
                 let args = results.split_off(results.len() - argc);
-                results.push(apply_op(arena, seq, ff, items, &args)?);
+                results.push(apply_op(arena, seq, ff, lenabs, items, &args)?);
             }
             Frame::ApplyInRe { re_expr } => {
                 let s = results
                     .pop()
                     .ok_or_else(|| SmtError::Syntax("str.in_re string operand".to_owned()))?;
-                results.push(crate::regex::encode_in_re(arena, s, re_expr)?);
+                lenabs.mark_used();
+                let atom = crate::regex::encode_in_re(arena, s, re_expr)?;
+                // P2.7 A.2: `s ∈ R ⟹ min(R) ≤ len(s) [≤ max(R)]` — the regex's
+                // match-length interval feeds the unbounded length abstraction,
+                // so a long-forcing regex (e.g. a 10-char literal concat over an
+                // 8-bounded variable) trips the bound-bite detector instead of
+                // surfacing a bound-induced `unsat`.
+                let mut fact: Option<TermId> = None;
+                if let Some((min, max)) = crate::regex::in_re_length_interval(re_expr) {
+                    let ls = lenabs.len_expr_string(arena, s)?;
+                    if min > 0 {
+                        let c = arena.int_const(i128::from(min));
+                        fact = Some(arena.int_le(c, ls)?);
+                    }
+                    if let Some(mx) = max {
+                        let c = arena.int_const(i128::from(mx));
+                        let ub = arena.int_le(ls, c)?;
+                        fact = Some(match fact {
+                            Some(lb) => arena.and(lb, ub)?,
+                            None => ub,
+                        });
+                    }
+                }
+                // The atom must enter the abstraction map even fact-less —
+                // kept verbatim it would smuggle the encoding bound back in.
+                // A symbolic regex atom is always *coarse*: its interval
+                // cannot see union gaps (e.g. `ab | a^9`), so an unconfirmed
+                // bounded `unsat` on such a script must downgrade. A ground
+                // atom (literal string operand) or a constant-folded one is
+                // exact at every bound and stays verbatim.
+                if !packed_const(arena, s) && !matches!(arena.node(atom), TermNode::BoolConst(_)) {
+                    lenabs.coarse.set(true);
+                    match fact {
+                        Some(f) => lenabs.note_atom_fact(arena, atom, f)?,
+                        None => lenabs.note_atom_free(arena, atom)?,
+                    }
+                }
+                results.push(atom);
             }
             Frame::ApplyReplaceRe { re_expr, all } => {
                 // Operands were queued `s` then `t`, so the stack top is `t`.
@@ -2207,6 +2336,7 @@ fn parse_term<'a>(
                 let s = results
                     .pop()
                     .ok_or_else(|| SmtError::Syntax("str.replace_re string operand".to_owned()))?;
+                lenabs.mark_used();
                 let out = if all {
                     string_replace_re_all(arena, s, re_expr, t)?
                 } else {
@@ -2322,13 +2452,14 @@ fn queue_eval<'a>(
     macros: &HashMap<String, MacroDef<'a>>,
     named: &HashMap<String, TermId>,
     ff: &FfInfo,
+    lenabs: &LenAbs,
     scopes: &[HashMap<&'a str, TermId>],
     frames: &mut Vec<Frame<'a>>,
     results: &mut Vec<TermId>,
 ) -> Result<(), SmtError> {
     match expr {
         SExpr::Atom(a) => results.push(parse_atom(arena, a, aliases, named, scopes)?),
-        SExpr::List(items) => queue_list_eval(arena, items, macros, ff, frames, results)?,
+        SExpr::List(items) => queue_list_eval(arena, items, macros, ff, lenabs, frames, results)?,
     }
     Ok(())
 }
@@ -2339,6 +2470,7 @@ fn queue_list_eval<'a>(
     items: &'a [SExpr],
     macros: &HashMap<String, MacroDef<'a>>,
     ff: &FfInfo,
+    lenabs: &LenAbs,
     frames: &mut Vec<Frame<'a>>,
     results: &mut Vec<TermId>,
 ) -> Result<(), SmtError> {
@@ -2380,7 +2512,12 @@ fn queue_list_eval<'a>(
                 items[2]
             ))
         })?;
-        results.push(seq_empty(arena, ew)?);
+        // P2.7 A.2: the empty sequence has length exactly 0.
+        lenabs.mark_used();
+        let empty = seq_empty(arena, ew)?;
+        let zero = arena.int_const(0);
+        lenabs.note_len(empty, zero);
+        results.push(empty);
     } else if head.atom() == Some("as")
         && items.len() == 3
         && !ff.is_empty()
@@ -3064,6 +3201,227 @@ fn string_max_len(arena: &TermArena, v: TermId) -> Result<u32, SmtError> {
             "string operator applied to a non-string operand of sort {s:?} (ADR-0029)"
         ))),
     }
+}
+
+/// Parse-time builder for the **unbounded length abstraction** (P2.7 A.2).
+///
+/// Threaded through the parse as `&LenAbs` (interior-mutable, mirroring
+/// [`SeqInfo`]'s `nth_apps`): the string/sequence operator hooks record, per
+/// hooked term, its abstraction twin — a shared *unbounded* integer length
+/// expression for string-valued terms, `fresh_bool ∧ implied_length_fact` for
+/// string atoms, and a free integer for content bridges (`str.to_int`, …). The
+/// map is exported on [`Script::len_abstraction_map`]; rewriting an assertion
+/// through it (root-first) yields a **relaxation of the real (unbounded) string
+/// semantics**, so an `unsat` of the rewritten active stack (plus the facts)
+/// confirms a bounded `unsat` bound-independent.
+///
+/// Soundness of each entry (the relaxation argument — every real model of the
+/// unbounded theory extends to a model of the abstraction):
+///
+/// - a string atom `A` maps to `B ∧ fact` with `B` fresh and `fact` implied by
+///   `A` in the unbounded theory: extend the model by `B := value(A)` (if `A`
+///   holds, `fact` holds, so `B ∧ fact = A = true`; if not, `B ∧ fact = A =
+///   false`) — faithful under any Boolean structure, negation included;
+/// - a string-valued term's length expression is its true length under the
+///   homomorphism (`len(x ++ y) = len(x) + len(y)`, `len(lit) = |lit|`,
+///   `len(seq.unit e) = 1`) or an otherwise-fresh `len ≥ 0` variable;
+/// - a content bridge (`str.to_int`/`to_code`/`indexof`/`seq.nth`) maps to a
+///   wholly-free integer (assign it the term's real value);
+/// - the exported facts (`len ≥ 0`, literal lengths) are universally true of
+///   real lengths.
+#[derive(Default)]
+struct LenAbs {
+    /// String/sequence-valued term → its abstraction-side `Int` length
+    /// expression.
+    len_of: std::cell::RefCell<HashMap<TermId, TermId>>,
+    /// Original term (string atom or `Int` bridge) → replacement, in
+    /// first-recorded order (deterministic export).
+    repl: std::cell::RefCell<Vec<(TermId, TermId)>>,
+    /// Globally-true side facts (`len(v) ≥ 0`, …).
+    facts: std::cell::RefCell<Vec<TermId>>,
+    /// **Encoding-bound** facts (`len(v) ≤ max_len`) — true of the *bounded
+    /// encoding only*, never of the real theory. Used exclusively by the
+    /// solver's bound-bite detector (a length system unsatisfiable *with* these
+    /// but not *without* proves the encoding bound bit, so a bounded `unsat`
+    /// must downgrade to `unknown`); never part of the sound abstraction.
+    bounds: std::cell::RefCell<Vec<TermId>>,
+    /// Fresh-symbol counter (deterministic `!lenabs.N` names).
+    fresh: std::cell::Cell<u32>,
+    /// A **coarsely-abstracted** string atom is present (`str.<`/`str.<=` —
+    /// no length implication exists — or `str.in_re`, whose match-length
+    /// interval cannot see union gaps): for these, the length abstraction may
+    /// miss a bound bite (a real model may exist only past the bound while
+    /// bound-fitting lengths satisfy every recorded fact), so an *unconfirmed*
+    /// bounded `unsat` must downgrade rather than pass through.
+    coarse: std::cell::Cell<bool>,
+    /// Any genuine string/sequence *operator* was hooked. (Declared
+    /// `String`/`(Seq E)` symbols set [`Script::uses_bounded_strings`]
+    /// directly; the `=`-hook deliberately does **not** set this, so a
+    /// string-*shaped* user bit-vector width never activates the gate.)
+    used: std::cell::Cell<bool>,
+}
+
+impl LenAbs {
+    fn mark_used(&self) {
+        self.used.set(true);
+    }
+
+    /// Declares a fresh abstraction symbol of `sort`; `nonneg` adds the
+    /// universally-true `0 ≤ v` length fact.
+    fn fresh_var(
+        &self,
+        arena: &mut TermArena,
+        sort: Sort,
+        nonneg: bool,
+    ) -> Result<TermId, SmtError> {
+        let n = self.fresh.get();
+        self.fresh.set(n + 1);
+        let sym = arena.declare(&format!("!lenabs.{n}"), sort)?;
+        let v = arena.var(sym);
+        if nonneg {
+            let zero = arena.int_const(0);
+            let fact = arena.int_le(zero, v)?;
+            self.facts.borrow_mut().push(fact);
+        }
+        Ok(v)
+    }
+
+    /// The abstraction-side length expression of a **packed string** term:
+    /// a recorded expression (concat sums, literals), the decoded exact length
+    /// of a constant, or a fresh `≥ 0` length variable (with its encoding
+    /// bound `≤ max_len` recorded on the bite-detector side).
+    fn len_expr_string(&self, arena: &mut TermArena, t: TermId) -> Result<TermId, SmtError> {
+        if let Some(&e) = self.len_of.borrow().get(&t) {
+            return Ok(e);
+        }
+        let e = if let Some(len) = packed_string_len(arena, t) {
+            arena.int_const(i128::from(len))
+        } else {
+            let v = self.fresh_var(arena, Sort::Int, true)?;
+            if let Ok(m) = string_max_len(arena, t) {
+                let cap = arena.int_const(i128::from(m));
+                let bound = arena.int_le(v, cap)?;
+                self.bounds.borrow_mut().push(bound);
+            }
+            v
+        };
+        self.len_of.borrow_mut().insert(t, e);
+        Ok(e)
+    }
+
+    /// The abstraction-side length expression of a **packed sequence** term.
+    /// (No constant decoding in this slice — an unrecorded term gets a fresh
+    /// `≥ 0` variable, which is always sound.)
+    fn len_expr_seq(&self, arena: &mut TermArena, t: TermId) -> Result<TermId, SmtError> {
+        if let Some(&e) = self.len_of.borrow().get(&t) {
+            return Ok(e);
+        }
+        let e = self.fresh_var(arena, Sort::Int, true)?;
+        self.len_of.borrow_mut().insert(t, e);
+        Ok(e)
+    }
+
+    /// Records a string/sequence-valued result's length expression (skipped if
+    /// the hash-consed term was already recorded).
+    fn note_len(&self, t: TermId, expr: TermId) {
+        self.len_of.borrow_mut().entry(t).or_insert(expr);
+    }
+
+    /// Records `original → replacement` for the exported abstraction map.
+    fn note_repl(&self, original: TermId, replacement: TermId) {
+        let mut repl = self.repl.borrow_mut();
+        if !repl.iter().any(|&(o, _)| o == original) {
+            repl.push((original, replacement));
+        }
+    }
+
+    /// Hooks a string atom with **no** derivable length fact: `atom →
+    /// fresh_bool`. Every string atom must enter the map — an atom left
+    /// verbatim would keep its *bounded* encoding inside the "unbounded"
+    /// abstraction, breaking the relaxation (a real model with over-bound
+    /// strings could fail the kept atom's packed lowering, letting the confirm
+    /// step wrongly bless a bound-induced `unsat`).
+    fn note_atom_free(&self, arena: &mut TermArena, atom: TermId) -> Result<(), SmtError> {
+        // A constant-folded atom is exact (no bound sensitivity, nothing to
+        // relax) — keep it verbatim and do not mark the script coarse.
+        if matches!(arena.node(atom), TermNode::BoolConst(_)) {
+            return Ok(());
+        }
+        self.coarse.set(true);
+        let b = self.fresh_var(arena, Sort::Bool, false)?;
+        self.note_repl(atom, b);
+        Ok(())
+    }
+
+    /// Hooks a string atom: `atom → fresh_bool ∧ fact`.
+    fn note_atom_fact(
+        &self,
+        arena: &mut TermArena,
+        atom: TermId,
+        fact: TermId,
+    ) -> Result<(), SmtError> {
+        // A constant-folded atom is exact — keep it verbatim (replacing the
+        // interned `true`/`false` would rewrite every other use of the
+        // constant too).
+        if matches!(arena.node(atom), TermNode::BoolConst(_)) {
+            return Ok(());
+        }
+        let b = self.fresh_var(arena, Sort::Bool, false)?;
+        let repl = arena.and(b, fact)?;
+        self.note_repl(atom, repl);
+        Ok(())
+    }
+
+    /// Hooks a content bridge (`str.to_int`, `str.indexof`, `seq.nth`, …): the
+    /// `Int`-valued term maps to a wholly-free integer.
+    fn note_bridge_free(&self, arena: &mut TermArena, t: TermId) -> Result<(), SmtError> {
+        self.mark_used();
+        let v = self.fresh_var(arena, Sort::Int, false)?;
+        self.note_repl(t, v);
+        Ok(())
+    }
+
+    /// Exports `(map, facts, bounds, coarse, used)` for the [`Script`] fields.
+    fn export(self) -> LenAbsExport {
+        (
+            self.repl.into_inner(),
+            self.facts.into_inner(),
+            self.bounds.into_inner(),
+            self.coarse.get(),
+            self.used.get(),
+        )
+    }
+}
+
+/// The [`LenAbs::export`] payload: `(map, facts, bounds, coarse, used)` for
+/// the corresponding [`Script`] fields.
+type LenAbsExport = (Vec<(TermId, TermId)>, Vec<TermId>, Vec<TermId>, bool, bool);
+
+/// Whether `t` is a bit-vector *constant* (narrow or wide) — a ground string
+/// operand, whose atoms are exact at every bound (literals are within the
+/// bound by construction, so no encoding artifact can flip them).
+fn packed_const(arena: &TermArena, t: TermId) -> bool {
+    matches!(
+        arena.node(t),
+        TermNode::BvConst { .. } | TermNode::WideBvConst(_)
+    )
+}
+
+/// Whether `t`'s sort is a packed-string-shaped bit-vector width.
+fn string_shaped(arena: &TermArena, t: TermId) -> bool {
+    matches!(arena.sort_of(t), Sort::BitVec(w) if string_max_len_of(w).is_some())
+}
+
+/// The exact length of a **constant** packed string, decoded from its low
+/// length-field bits; `None` for non-constants, wide constants, or a value
+/// whose decoded length exceeds its own bound (not a valid packed string).
+fn packed_string_len(arena: &TermArena, t: TermId) -> Option<u32> {
+    let TermNode::BvConst { width, value } = arena.node(t) else {
+        return None;
+    };
+    let m = string_max_len_of(*width)?;
+    let len = u32::try_from(value & ((1u128 << len_width(m)) - 1)).ok()?;
+    (len <= m).then_some(len)
 }
 
 /// Packs a string literal's bytes into the canonical bit-vector representation
@@ -6796,12 +7154,18 @@ fn seq_coerce_elem(arena: &mut TermArena, e: TermId, ew: u32) -> Result<TermId, 
 /// Dispatches a `seq.*` operator over its packed-sequence/element arguments.
 /// Returns `None` if `op` is not a sequence operator (so the caller continues its
 /// normal dispatch). A modeled-but-unsound corner declines via `Err(Unsupported)`.
+#[allow(clippy::too_many_lines)]
 fn apply_seq_op(
     arena: &mut TermArena,
     seq: &SeqInfo,
+    lenabs: &LenAbs,
     op: &str,
     args: &[TermId],
 ) -> Result<Option<TermId>, SmtError> {
+    // P2.7 A.2: any `seq.*` operator marks the bounded encoding as used.
+    if op.starts_with("seq.") {
+        lenabs.mark_used();
+    }
     let need = |k: usize| -> Result<(), SmtError> {
         if args.len() == k {
             Ok(())
@@ -6812,9 +7176,25 @@ fn apply_seq_op(
     let term = match op {
         "seq.len" => {
             need(1)?;
-            seq_len(arena, seq, args[0])?
+            let r = seq_len(arena, seq, args[0])?;
+            // P2.7 A.2: bridge to the shared unbounded length expression.
+            lenabs.mark_used();
+            let e = lenabs.len_expr_seq(arena, args[0])?;
+            lenabs.note_repl(r, e);
+            r
         }
-        "seq.++" | "seq.concat" => seq_concat(arena, seq, args)?,
+        "seq.++" | "seq.concat" => {
+            let r = seq_concat(arena, seq, args)?;
+            // P2.7 A.2: `len(x ++ y) = len(x) + len(y)` in the abstraction.
+            lenabs.mark_used();
+            let mut sum = lenabs.len_expr_seq(arena, args[0])?;
+            for &a in &args[1..] {
+                let e = lenabs.len_expr_seq(arena, a)?;
+                sum = arena.int_add(sum, e)?;
+            }
+            lenabs.note_len(r, sum);
+            r
+        }
         "seq.unit" => {
             need(1)?;
             // The element type is not recoverable from the element alone (an `Int`
@@ -6828,7 +7208,11 @@ fn apply_seq_op(
                 )
             })?;
             let elem = seq_coerce_elem(arena, args[0], ew)?;
-            seq_unit(arena, elem)?
+            let r = seq_unit(arena, elem)?;
+            lenabs.mark_used();
+            let one = arena.int_const(1);
+            lenabs.note_len(r, one);
+            r
         }
         "seq.extract" => {
             need(3)?;
@@ -6836,15 +7220,33 @@ fn apply_seq_op(
         }
         "seq.prefixof" => {
             need(2)?;
-            seq_prefixof(arena, seq, args[0], args[1])?
+            let atom = seq_prefixof(arena, seq, args[0], args[1])?;
+            lenabs.mark_used();
+            let lx = lenabs.len_expr_seq(arena, args[0])?;
+            let ly = lenabs.len_expr_seq(arena, args[1])?;
+            let fact = arena.int_le(lx, ly)?;
+            lenabs.note_atom_fact(arena, atom, fact)?;
+            atom
         }
         "seq.suffixof" => {
             need(2)?;
-            seq_suffixof(arena, seq, args[0], args[1])?
+            let atom = seq_suffixof(arena, seq, args[0], args[1])?;
+            lenabs.mark_used();
+            let lx = lenabs.len_expr_seq(arena, args[0])?;
+            let ly = lenabs.len_expr_seq(arena, args[1])?;
+            let fact = arena.int_le(lx, ly)?;
+            lenabs.note_atom_fact(arena, atom, fact)?;
+            atom
         }
         "seq.contains" => {
             need(2)?;
-            seq_contains(arena, seq, args[0], args[1])?
+            let atom = seq_contains(arena, seq, args[0], args[1])?;
+            lenabs.mark_used();
+            let ly = lenabs.len_expr_seq(arena, args[1])?;
+            let lx = lenabs.len_expr_seq(arena, args[0])?;
+            let fact = arena.int_le(ly, lx)?;
+            lenabs.note_atom_fact(arena, atom, fact)?;
+            atom
         }
         // `(seq.nth s i)` — the `i`-th element, the SMT-LIB **partial** function:
         // in-bounds the element, out-of-bounds a fresh *unconstrained* value with
@@ -6852,7 +7254,13 @@ fn apply_seq_op(
         // `unsat`, so the out-of-bounds case is modeled, not faked.
         "seq.nth" => {
             need(2)?;
-            seq_nth(arena, seq, args[0], args[1])?
+            let r = seq_nth(arena, seq, args[0], args[1])?;
+            if arena.sort_of(r) == Sort::Int {
+                lenabs.note_bridge_free(arena, r)?;
+            } else {
+                lenabs.mark_used();
+            }
+            r
         }
         // `(seq.at s i)` — the **total** unit-sub-sequence at `i` (empty when
         // out-of-bounds); mirrors `str.at` (slice 2).
@@ -7060,6 +7468,7 @@ fn apply_op(
     arena: &mut TermArena,
     seq: &SeqInfo,
     ff: &FfInfo,
+    lenabs: &LenAbs,
     items: &[SExpr],
     args: &[TermId],
 ) -> Result<TermId, SmtError> {
@@ -7072,7 +7481,7 @@ fn apply_op(
     // the script declares a sequence sort (else `seq` is empty and this returns
     // `None`, leaving the normal dispatch untouched).
     if !seq.is_empty()
-        && let Some(t) = apply_seq_op(arena, seq, op, args)?
+        && let Some(t) = apply_seq_op(arena, seq, lenabs, op, args)?
     {
         return Ok(t);
     }
@@ -7106,6 +7515,13 @@ fn apply_op(
         }
         Ok(acc)
     };
+    // P2.7 A.2: any `str.*` operator marks the script as using the bounded
+    // string encoding, activating the bounded-`unsat` confirmation gate — the
+    // ops without dedicated abstraction hooks (substr, replace, at, …) must
+    // still flag the bound.
+    if op.starts_with("str.") {
+        lenabs.mark_used();
+    }
     Ok(match op {
         "not" => {
             need(1)?;
@@ -7118,39 +7534,81 @@ fn apply_op(
             need(1)?;
             let m = string_max_len(arena, args[0])?;
             let len = string_len_field(arena, args[0], m)?;
-            arena.bv2nat(len)?
+            let r = arena.bv2nat(len)?;
+            // P2.7 A.2: the Int-valued bridge maps to the shared *unbounded*
+            // length expression of its operand in the length abstraction.
+            lenabs.mark_used();
+            let e = lenabs.len_expr_string(arena, args[0])?;
+            lenabs.note_repl(r, e);
+            r
         }
         // `str.prefixof x y` — pure BV/Bool over packed strings; decides both
         // directions (no Int bridge, no theory-combination gap).
         "str.prefixof" => {
             need(2)?;
-            string_prefixof(arena, args[0], args[1])?
+            let atom = string_prefixof(arena, args[0], args[1])?;
+            // P2.7 A.2: `prefixof(x, y) ⟹ len(x) ≤ len(y)` (unbounded).
+            lenabs.mark_used();
+            let lx = lenabs.len_expr_string(arena, args[0])?;
+            let ly = lenabs.len_expr_string(arena, args[1])?;
+            let fact = arena.int_le(lx, ly)?;
+            lenabs.note_atom_fact(arena, atom, fact)?;
+            atom
         }
         // `str.contains x y` — y occurs in x; pure BV/Bool, decides both directions.
         "str.contains" => {
             need(2)?;
-            string_contains(arena, args[0], args[1])?
+            let atom = string_contains(arena, args[0], args[1])?;
+            // P2.7 A.2: `contains(x, y) ⟹ len(y) ≤ len(x)` (unbounded).
+            lenabs.mark_used();
+            let ly = lenabs.len_expr_string(arena, args[1])?;
+            let lx = lenabs.len_expr_string(arena, args[0])?;
+            let fact = arena.int_le(ly, lx)?;
+            lenabs.note_atom_fact(arena, atom, fact)?;
+            atom
         }
         "str.suffixof" => {
             need(2)?;
-            string_suffixof(arena, args[0], args[1])?
+            let atom = string_suffixof(arena, args[0], args[1])?;
+            // P2.7 A.2: `suffixof(x, y) ⟹ len(x) ≤ len(y)` (unbounded).
+            lenabs.mark_used();
+            let lx = lenabs.len_expr_string(arena, args[0])?;
+            let ly = lenabs.len_expr_string(arena, args[1])?;
+            let fact = arena.int_le(lx, ly)?;
+            lenabs.note_atom_fact(arena, atom, fact)?;
+            atom
         }
         // `str.at s k` — a constant index folds directly; a non-constant `Int`
         // index is an Int-equality mux over the ≤`m` positions (ADR-0029 slice 3).
         // Returns a length-≤1 packed string.
         "str.at" => {
             need(2)?;
-            match arena.node(args[1]) {
+            let r = match arena.node(args[1]) {
                 TermNode::IntConst(k) => string_at_const(arena, args[0], *k)?,
                 _ => string_at_int(arena, args[0], args[1])?,
-            }
+            };
+            // P2.7 A.2: `len(str.at s k) ≤ 1` universally (empty when
+            // out-of-bounds, one char otherwise).
+            let lr = lenabs.len_expr_string(arena, r)?;
+            let one = arena.int_const(1);
+            let fact = arena.int_le(lr, one)?;
+            lenabs.facts.borrow_mut().push(fact);
+            r
         }
         // `str.substr s off n` — bounded substring, total function: "" unless
         // `0 ≤ off < |s|` and `n > 0`; else `s[off .. min(off+n,|s|)]`. The
         // `off`/`n` indices may be arbitrary `Int`s (ADR-0029 slice 3).
         "str.substr" => {
             need(3)?;
-            string_substr(arena, args[0], args[1], args[2])?
+            let r = string_substr(arena, args[0], args[1], args[2])?;
+            // P2.7 A.2: a substring is never longer than its string —
+            // universally true, so a pinned over-bound substring result trips
+            // the bite detector instead of a bound-induced `unsat`.
+            let lr = lenabs.len_expr_string(arena, r)?;
+            let ls = lenabs.len_expr_string(arena, args[0])?;
+            let fact = arena.int_le(lr, ls)?;
+            lenabs.facts.borrow_mut().push(fact);
+            r
         }
         // `str.replace s a b` — replace the FIRST occurrence of `a` in `s` with
         // `b` (first leftmost; `a` empty → prepend `b`; not found → `s`). A
@@ -7159,7 +7617,16 @@ fn apply_op(
         // could exceed the cap (ADR-0029 slice 4).
         "str.replace" => {
             need(3)?;
-            string_replace(arena, args[0], args[1], args[2])?
+            let r = string_replace(arena, args[0], args[1], args[2])?;
+            // P2.7 A.2: `len(replace(s, a, b)) ≤ len(s) + len(b)` universally
+            // (first occurrence replaced, `a = ""` prepends `b`, else no-op).
+            let lr = lenabs.len_expr_string(arena, r)?;
+            let ls = lenabs.len_expr_string(arena, args[0])?;
+            let lb = lenabs.len_expr_string(arena, args[2])?;
+            let cap = arena.int_add(ls, lb)?;
+            let fact = arena.int_le(lr, cap)?;
+            lenabs.facts.borrow_mut().push(fact);
+            r
         }
         // `(str.indexof s t i)` / `(str.indexof s t)` — the position of the FIRST
         // occurrence of `t` in `s` at-or-after offset `i` (offset 0 in the 2-arg
@@ -7167,13 +7634,15 @@ fn apply_op(
         // layout, the `Int` result composing with arithmetic; sound for literal or
         // symbolic operands (ADR-0029 slice 5).
         "str.indexof" => {
-            if args.len() == 2 {
+            let r = if args.len() == 2 {
                 let zero = arena.int_const(0);
                 string_indexof(arena, args[0], args[1], zero)?
             } else {
                 need(3)?;
                 string_indexof(arena, args[0], args[1], args[2])?
-            }
+            };
+            lenabs.note_bridge_free(arena, r)?;
+            r
         }
         // `(str.replace_all s a b)` — replace ALL non-overlapping occurrences of
         // `a` with `b` (`a = ""` is the identity; not found → `s`). Wired for the
@@ -7187,23 +7656,44 @@ fn apply_op(
         // (0..=255) when `|s| = 1` (ADR-0029 slice 3).
         "str.to_code" => {
             need(1)?;
-            string_to_code(arena, args[0])?
+            let r = string_to_code(arena, args[0])?;
+            lenabs.note_bridge_free(arena, r)?;
+            r
         }
         // `str.from_code i` — the length-1 string of code point `i` (conservative
         // to ASCII `0..=127`, else ""), the partial inverse of `str.to_code`.
         "str.from_code" => {
             need(1)?;
-            string_from_code(arena, args[0])?
+            let r = string_from_code(arena, args[0])?;
+            // `len(str.from_code i) ≤ 1` universally.
+            let lr = lenabs.len_expr_string(arena, r)?;
+            let one = arena.int_const(1);
+            let fact = arena.int_le(lr, one)?;
+            lenabs.facts.borrow_mut().push(fact);
+            r
         }
         // `str.<` / `str.<=` — lexicographic order over the packed bytes; pure
         // BV/Bool, decides both directions (ADR-0029 slice 3).
         "str.<" => {
             need(2)?;
-            string_lt(arena, args[0], args[1])?
+            let atom = string_lt(arena, args[0], args[1])?;
+            // No sound length implication from lexicographic order, but a
+            // *symbolic* atom must still be relaxed to a free Boolean in the
+            // abstraction (kept verbatim it would smuggle the encoding bound
+            // back in). A ground atom (both operands literal) is exact at
+            // every bound — keep it, don't mark the script coarse.
+            if !(packed_const(arena, args[0]) && packed_const(arena, args[1])) {
+                lenabs.note_atom_free(arena, atom)?;
+            }
+            atom
         }
         "str.<=" => {
             need(2)?;
-            string_le(arena, args[0], args[1])?
+            let atom = string_le(arena, args[0], args[1])?;
+            if !(packed_const(arena, args[0]) && packed_const(arena, args[1])) {
+                lenabs.note_atom_free(arena, atom)?;
+            }
+            atom
         }
         // `str.to_int s` — the decimal value of a non-empty all-ASCII-digit `s`,
         // else `-1` (SMT-LIB total function; leading zeros valid). A bounded Horner
@@ -7212,7 +7702,9 @@ fn apply_op(
         // pack time, so `string_to_int` only ever sees a representable operand.
         "str.to_int" => {
             need(1)?;
-            string_to_int(arena, args[0])?
+            let r = string_to_int(arena, args[0])?;
+            lenabs.note_bridge_free(arena, r)?;
+            r
         }
         // `str.from_int i` — the canonical decimal string of `i ≥ 0` (no leading
         // zeros, `0 → "0"`), else `""` for `i < 0` (SMT-LIB total function). A
@@ -7230,7 +7722,18 @@ fn apply_op(
         }
         // `str.++` — variable concatenation grows into a wider packed sort; a run
         // of constant operands folds to a literal (ADR-0029 slice 2).
-        "str.concat" | "str.++" => string_concat(arena, args)?,
+        "str.concat" | "str.++" => {
+            let r = string_concat(arena, args)?;
+            // P2.7 A.2: `len(x ++ y) = len(x) + len(y)` in the abstraction.
+            lenabs.mark_used();
+            let mut sum = lenabs.len_expr_string(arena, args[0])?;
+            for &a in &args[1..] {
+                let e = lenabs.len_expr_string(arena, a)?;
+                sum = arena.int_add(sum, e)?;
+            }
+            lenabs.note_len(r, sum);
+            r
+        }
         // `(and x)` / `(or x)` with a single operand denote `x`: an n-ary
         // connective folded over one argument is that argument (the identity of
         // `∧`/`∨`). SMT-LIB's `:left-assoc` grammar nominally wants ≥2 operands,
@@ -7264,16 +7767,34 @@ fn apply_op(
             };
             let eq_pair =
                 |arena: &mut TermArena, p: TermId, q: TermId| -> Result<TermId, SmtError> {
+                    // P2.7 A.2: `x = y ⟹ len(x) = len(y)` (unbounded). Sound
+                    // even for a string-*shaped* user bit-vector (equal BVs have
+                    // equal decoded fields), so this hook does not `mark_used`.
                     if let Some(e) = seq_aware_eq(arena, seq, p, q)? {
+                        let lp = lenabs.len_expr_seq(arena, p)?;
+                        let lq = lenabs.len_expr_seq(arena, q)?;
+                        let fact = arena.eq(lp, lq)?;
+                        lenabs.note_atom_fact(arena, e, fact)?;
                         return Ok(e);
                     }
-                    match string_aware_eq(arena, p, q)? {
-                        Some(e) => Ok(e),
-                        None => match self_store_array_equality(arena, p, q)? {
-                            Some(e) => Ok(e),
-                            None => arena.eq(p, q).map_err(SmtError::Ir),
-                        },
+                    if let Some(e) = string_aware_eq(arena, p, q)? {
+                        let lp = lenabs.len_expr_string(arena, p)?;
+                        let lq = lenabs.len_expr_string(arena, q)?;
+                        let fact = arena.eq(lp, lq)?;
+                        lenabs.note_atom_fact(arena, e, fact)?;
+                        return Ok(e);
                     }
+                    if let Some(e) = self_store_array_equality(arena, p, q)? {
+                        return Ok(e);
+                    }
+                    let e = arena.eq(p, q).map_err(SmtError::Ir)?;
+                    if string_shaped(arena, p) && string_shaped(arena, q) {
+                        let lp = lenabs.len_expr_string(arena, p)?;
+                        let lq = lenabs.len_expr_string(arena, q)?;
+                        let fact = arena.eq(lp, lq)?;
+                        lenabs.note_atom_fact(arena, e, fact)?;
+                    }
+                    Ok(e)
                 };
             let mut acc = eq_pair(arena, eq_args[0], eq_args[1])?;
             for pair in eq_args.windows(2).skip(1) {
@@ -7291,13 +7812,31 @@ fn apply_op(
             let mut acc = None;
             for i in 0..args.len() {
                 for j in i + 1..args.len() {
+                    // P2.7 A.2: the pairwise equality atoms enter the length
+                    // abstraction exactly like the `=` operator's (equal
+                    // strings have equal lengths; the fact is sound under the
+                    // enclosing negation — see `LenAbs`).
                     let e = if let Some(e) = seq_aware_eq(arena, seq, args[i], args[j])? {
+                        let lp = lenabs.len_expr_seq(arena, args[i])?;
+                        let lq = lenabs.len_expr_seq(arena, args[j])?;
+                        let fact = arena.eq(lp, lq)?;
+                        lenabs.note_atom_fact(arena, e, fact)?;
+                        e
+                    } else if let Some(e) = string_aware_eq(arena, args[i], args[j])? {
+                        let lp = lenabs.len_expr_string(arena, args[i])?;
+                        let lq = lenabs.len_expr_string(arena, args[j])?;
+                        let fact = arena.eq(lp, lq)?;
+                        lenabs.note_atom_fact(arena, e, fact)?;
                         e
                     } else {
-                        match string_aware_eq(arena, args[i], args[j])? {
-                            Some(e) => e,
-                            None => arena.eq(args[i], args[j])?,
+                        let e = arena.eq(args[i], args[j])?;
+                        if string_shaped(arena, args[i]) && string_shaped(arena, args[j]) {
+                            let lp = lenabs.len_expr_string(arena, args[i])?;
+                            let lq = lenabs.len_expr_string(arena, args[j])?;
+                            let fact = arena.eq(lp, lq)?;
+                            lenabs.note_atom_fact(arena, e, fact)?;
                         }
+                        e
                     };
                     let ne = arena.not(e)?;
                     acc = Some(match acc {

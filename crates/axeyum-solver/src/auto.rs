@@ -1791,6 +1791,64 @@ fn check_auto_dispatch(
         return Ok(result);
     }
     if features.has_int {
+        // Complete blast of the linear-over-`bv2nat` integer fragment (the
+        // `str.len` gap, P2.7 A.2): the bounded string front-end lowers
+        // `str.len` to `bv2nat(len_field)`, so a string query's integer atoms
+        // are linear constraints over `bv2nat` terms and constants with no free
+        // `Int` symbols. On that fragment every integer value is provably
+        // bounded, so the atoms rewrite to **equivalent** pure-BV comparisons
+        // at an overflow-safe width (same symbols, no fresh declarations) and
+        // the SAT path decides BOTH directions — closing the `str.len`-unsat
+        // BV+LIA combination gap the range refuter below cannot (it never sees
+        // the BV-side facts). Out-of-fragment queries decline (`None`) and fall
+        // through unchanged. Every `sat` is replay-checked against the original
+        // assertions (equivalence makes it pass; a failure is converted to a
+        // decline, never a wrong `sat`).
+        if features.has_bv_or_float
+            && !features.has_function
+            && !features.has_array
+            && !features.has_uninterpreted_sort
+            && !features.has_datatype
+            && let Some(blasted) = crate::bv2nat_blast::blast_bv2nat_linear(arena, assertions)?
+        {
+            let mut backend = SatBvBackend::new();
+            match check_with_all_theories(&mut backend, arena, &blasted, DEFAULT_INT_WIDTH, config)
+            {
+                Ok(CheckResult::Sat(model)) => {
+                    let assignment = model.to_assignment();
+                    let all_true = assertions
+                        .iter()
+                        .all(|&a| matches!(eval(arena, a, &assignment), Ok(Value::Bool(true))));
+                    if all_true {
+                        with_recorder(rec, |t| t.record_decided("bv2nat-blast", Verdict::Sat));
+                        return Ok(CheckResult::Sat(model));
+                    }
+                    // Should be unreachable (the blast is an equivalence); a
+                    // replay failure is a loud decline, never a wrong `sat`.
+                    with_recorder(rec, |t| {
+                        t.record_declined(
+                            "bv2nat-blast",
+                            DeclineReason::from_unknown(&UnknownReason {
+                                kind: UnknownKind::Incomplete,
+                                detail: "bv2nat-blast sat candidate failed replay against the \
+                                         original assertions"
+                                    .to_owned(),
+                            }),
+                        );
+                    });
+                }
+                Ok(CheckResult::Unsat) => {
+                    with_recorder(rec, |t| t.record_decided("bv2nat-blast", Verdict::Unsat));
+                    return Ok(CheckResult::Unsat);
+                }
+                Ok(CheckResult::Unknown(reason)) => {
+                    with_recorder(rec, |t| {
+                        t.record_declined("bv2nat-blast", DeclineReason::from_unknown(&reason));
+                    });
+                }
+                Err(e) => return Err(e),
+            }
+        }
         // `bv2nat(b)` finite-range refutation (G2): a `bv2nat(b)` of a `W`-bit
         // vector is in `[0, 2^W - 1]`, but the exact integer refuters below only
         // linearize integer *symbols* and reject a raw `bv2nat` subterm, so an

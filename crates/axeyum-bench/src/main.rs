@@ -813,7 +813,39 @@ mod run {
         })
     }
 
+    /// Applies the bounded-string `unsat` gate (P2.7 A.2 / ADR-0052) to a solve
+    /// record, mirroring the `solve_smtlib` front door: an `unsat` on a script
+    /// that used the bounded string/sequence encoding is confirmed
+    /// bound-independent or downgraded to `unknown` (an encoding-bound artifact
+    /// is never measured as a decision). A confirmation error downgrades too —
+    /// conservative, never a fabricated verdict.
+    fn gate_bounded_string_record(
+        script: &mut Script,
+        solved_assertions: &[TermId],
+        config: &SolverConfig,
+        record: &mut SolveRecord,
+    ) {
+        if record.outcome != "unsat" || !script.uses_bounded_strings {
+            return;
+        }
+        let confirmed = axeyum_solver::confirm_bounded_string_verdict(
+            script,
+            solved_assertions,
+            config,
+            CheckResult::Unsat,
+        );
+        if !matches!(confirmed, Ok(CheckResult::Unsat)) {
+            record.outcome = "unknown";
+            record.detail = Some(
+                "bounded-string unsat not confirmed bound-independent (P2.7 A.2 \
+                 gate); reported unknown"
+                    .to_owned(),
+            );
+        }
+    }
+
     /// Runs one instance and returns its JSON record.
+    #[allow(clippy::too_many_lines)]
     fn run_one(
         backend: &mut dyn SolverBackend,
         compare_backend: &mut Option<Box<dyn SolverBackend>>,
@@ -844,7 +876,7 @@ mod run {
         let config = solver_config(args, timeout);
         let plan_config = PlanSolveConfig::from_args(args);
         let original_solve = if args.rewrite == RewriteMode::Default {
-            Some(solve_planned(
+            let mut original = solve_planned(
                 backend,
                 &script.arena,
                 &script.assertions,
@@ -852,11 +884,19 @@ mod run {
                 &config,
                 plan_config,
                 None,
-            ))
+            );
+            // Same bounded-string gate as the primary solve below, so the
+            // rewrite-decision comparison never flags a gate downgrade as a
+            // rewrite-induced verdict change.
+            let original_assertions = script.assertions.clone();
+            gate_bounded_string_record(&mut script, &original_assertions, &config, {
+                &mut original.solve
+            });
+            Some(original)
         } else {
             None
         };
-        let primary_solve = solve_planned(
+        let mut primary_solve = solve_planned(
             backend,
             &script.arena,
             &rewrite.assertions,
@@ -865,6 +905,17 @@ mod run {
             plan_config,
             preprocess_trail.as_ref(),
         );
+        // Bounded-string gate (P2.7 A.2 / ADR-0052): harness parity with the
+        // `solve_smtlib` front door — a bounded-string `unsat` is only measured
+        // as `unsat` when confirmed bound-independent; otherwise it is an
+        // encoding-bound artifact (the real string theory may be `sat`) and is
+        // recorded `unknown`. Without this, the harness would credit — and the
+        // z3-binary oracle would flag — verdicts the shipped front door never
+        // returns.
+        let gated_assertions = rewrite.assertions.clone();
+        gate_bounded_string_record(&mut script, &gated_assertions, &config, {
+            &mut primary_solve.solve
+        });
         if let Some(original) = &original_solve {
             compare_rewrite_decision(&original.solve, &primary_solve.solve, summary);
         }
