@@ -5,6 +5,9 @@ This lesson follows
 from exact line-equation replay to checked false intersection-coordinate and
 point-on-line claims. It is a small coordinate resource for `field_geometry`,
 not a synthetic geometry chapter.
+For the focused boundary between these finite coordinate rows and general
+projective, synthetic, and configuration theorems, use
+[Incidence Geometry Theorem Boundary](incidence-geometry-theorem-boundary.md).
 
 Concept rows:
 

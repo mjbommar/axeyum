@@ -582,6 +582,10 @@ python3 scripts/query-foundational-resources.py horizon-frontier --text "affine 
 python3 scripts/query-foundational-resources.py checks --pack affine-geometry-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack affine-geometry-v0 --route Farkas --proof-status checked --text midpoint --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack affine-geometry-v0 --route Farkas --proof-status checked --text distance --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text "incidence geometry" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack incidence-geometry-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack incidence-geometry-v0 --route Farkas --proof-status checked --text intersection --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack incidence-geometry-v0 --route Farkas --proof-status checked --text incidence --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_coordinate_orientation_geometry --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_coordinate_orientation_geometry --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_circle_inversion_cyclic_replay --route Farkas --require-any >/dev/null

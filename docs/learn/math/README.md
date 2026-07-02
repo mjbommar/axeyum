@@ -481,6 +481,11 @@ Companion maps:
   equations, non-parallel line intersection, point-on-line replay, checked
   QF_LRA/Farkas bad intersection-coordinate and bad-incidence rejection, and
   the projective/synthetic geometry Lean horizon.
+- [Incidence Geometry Theorem Boundary](incidence-geometry-theorem-boundary.md):
+  maps finite line-equation, intersection, point-on-line, bad-intersection,
+  and bad-incidence shadows to the missing projective-duality, configuration,
+  synthetic-incidence, algebraic-incidence, and numerical-geometry theorem
+  routes.
 - [Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md):
   follows triangle distance-table replay, translation isometry replay,
   congruent-triangle distance replay, checked QF_LRA/Farkas bad

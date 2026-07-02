@@ -2013,6 +2013,12 @@ midpoint-preservation, collinearity, and fixed distance replay plus checked
 QF_LRA/Farkas bad-row evidence separate from affine-combination, incidence,
 ratio, projective, synthetic, differential, and numerical-geometry theorem
 coverage.
+`incidence-geometry-theorem-boundary.md` now gives `incidence-geometry-v0` a
+focused finite/general incidence-geometry trust map. It keeps exact line
+equation, non-parallel intersection, and point-on-line replay plus checked
+QF_LRA/Farkas bad-row evidence separate from projective duality, named
+configuration, synthetic-incidence, algebraic-incidence, and
+numerical-geometry theorem coverage.
 `metric-continuity-v0` now has a learner-facing end-to-end lesson for finite
 metric-table replay, finite Lipschitz checks, epsilon-delta containment,
 open-ball preimage replay, checked QF_LRA/Farkas bad-delta and bad-preimage
@@ -2637,6 +2643,15 @@ bad distance-preservation QF_LRA/Farkas rows are linked to copyable queries and
 graduation criteria while keeping affine-combination, incidence, ratio,
 projective, synthetic, differential, and numerical-geometry claims in
 Lean/theorem-horizon lanes.
+The learner/planning layer now also has
+[`incidence-geometry-theorem-boundary.md`](../learn/math/incidence-geometry-theorem-boundary.md),
+which expands the finite incidence-geometry row into a concrete boundary
+ledger: line-equation replay, non-parallel line-intersection replay,
+point-on-line replay, and bad intersection-coordinate plus bad-incidence
+QF_LRA/Farkas rows are linked to copyable queries and graduation criteria
+while keeping projective duality, named configuration, synthetic-incidence,
+algebraic-incidence, and numerical-geometry claims in Lean/theorem-horizon
+lanes.
 The learner/planning layer now also has
 [`circle-geometry-theorem-boundary.md`](../learn/math/circle-geometry-theorem-boundary.md),
 which expands the finite circle-geometry row into a concrete boundary ledger:

@@ -53,6 +53,7 @@ Companion index:
 - [Matrix Corpus And Benchmark Boundary](matrix-corpus-benchmark-boundary.md)
 - [Linear Algebra Structure Theorem Boundary](linear-algebra-structure-theorem-boundary.md)
 - [Affine Geometry Theorem Boundary](affine-geometry-theorem-boundary.md)
+- [Incidence Geometry Theorem Boundary](incidence-geometry-theorem-boundary.md)
 - [Analysis And Calculus Theorem Horizon Map](analysis-calculus-theorem-horizon-map.md)
 
 ## What Axeyum Checks
@@ -755,6 +756,7 @@ replay, read
 [End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md),
 [Affine Geometry Theorem Boundary](affine-geometry-theorem-boundary.md),
 [End To End: Incidence Geometry](incidence-geometry-end-to-end.md),
+[Incidence Geometry Theorem Boundary](incidence-geometry-theorem-boundary.md),
 [End To End: Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md),
 [End To End: Finite Circle Geometry](finite-circle-geometry-end-to-end.md),
 [Circle Geometry Theorem Boundary](circle-geometry-theorem-boundary.md),

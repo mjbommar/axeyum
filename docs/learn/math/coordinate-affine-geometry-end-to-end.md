@@ -10,6 +10,8 @@ and
 For exact point-on-line and line-intersection replay, use
 [incidence-geometry-v0](../../../artifacts/examples/math/incidence-geometry-v0/)
 and [Incidence Geometry](incidence-geometry-end-to-end.md).
+For the theorem boundary around finite incidence rows, use
+[Incidence Geometry Theorem Boundary](incidence-geometry-theorem-boundary.md).
 For exact distance-table and finite isometry replay, use
 [rigid-configuration-geometry-v0](../../../artifacts/examples/math/rigid-configuration-geometry-v0/)
 and

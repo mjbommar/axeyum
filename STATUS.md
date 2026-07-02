@@ -234,6 +234,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Incidence-geometry theorem-boundary resource landed.**
+  `incidence-geometry-theorem-boundary.md` now separates
+  `incidence-geometry-v0` exact line-equation, non-parallel intersection, and
+  point-on-line replay plus scoped QF_LRA/Farkas evidence from projective
+  duality, named configuration, synthetic-incidence, algebraic-incidence, and
+  numerical-geometry theorem claims. The geometry, theorem-horizon,
+  learner-index, rational-real, linear-algebra, and smoke-query docs now
+  expose the boundary through pack-specific checked-row and horizon-frontier
+  queries.
 - **Affine-geometry theorem-boundary resource landed.**
   `affine-geometry-theorem-boundary.md` now separates `affine-geometry-v0`
   exact affine-map, midpoint, collinearity, and fixed distance replay plus

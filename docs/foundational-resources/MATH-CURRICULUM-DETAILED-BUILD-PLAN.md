@@ -2186,6 +2186,15 @@ Pick one row per commit unless the change is purely navigational.
      layers, and adds pack-specific checked-row and horizon-frontier queries
      to the public smoke gate without promoting finite coordinate rows into
      theorem coverage.
+257. Landed: add `incidence-geometry-theorem-boundary.md` as the focused
+     finite/general incidence-geometry theorem-boundary page for
+     `incidence-geometry-v0`. It maps exact line-equation replay,
+     non-parallel line-intersection replay, point-on-line replay, and scoped
+     QF_LRA/Farkas evidence to the missing projective-duality, named
+     configuration, synthetic-incidence, algebraic-incidence, and
+     numerical-geometry theorem layers, and adds pack-specific checked-row and
+     horizon-frontier queries to the public smoke gate without promoting
+     finite coordinate rows into theorem coverage.
 
 ## Validation Checklist
 

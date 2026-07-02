@@ -721,7 +721,14 @@ Build sequence:
     evidence to the missing affine-combination, incidence, ratio, projective,
     synthetic, differential, and numerical-geometry theorem routes, with
     pack-specific checked-row and horizon-frontier queries.
-69. Revisit crate/repo boundaries only after three real consumers or repeated
+69. Landed: add the incidence-geometry theorem-boundary page.
+    `incidence-geometry-theorem-boundary.md` maps exact line-equation,
+    non-parallel intersection, and point-on-line replay plus checked
+    QF_LRA/Farkas bad-row evidence to the missing projective-duality, named
+    configuration, synthetic-incidence, algebraic-incidence, and
+    numerical-geometry theorem routes, with pack-specific checked-row and
+    horizon-frontier queries.
+70. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

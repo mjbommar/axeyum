@@ -510,6 +510,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Incidence-geometry projective-duality, configuration, and synthetic-incidence
+horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text "incidence geometry" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack incidence-geometry-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Circle-geometry tangent, chord, power-of-a-point, cyclic, and inversion
 horizons:
 
@@ -669,6 +683,7 @@ The main learner maps that explain these boundaries are:
 - [Topological Sort Theorem Boundary](../learn/math/topological-sort-theorem-boundary.md)
 - [Graph Search Runtime Theorem Boundary](../learn/math/graph-search-runtime-theorem-boundary.md)
 - [Affine Geometry Theorem Boundary](../learn/math/affine-geometry-theorem-boundary.md)
+- [Incidence Geometry Theorem Boundary](../learn/math/incidence-geometry-theorem-boundary.md)
 - [Circle Geometry Theorem Boundary](../learn/math/circle-geometry-theorem-boundary.md)
 - [Inversion Geometry Theorem Boundary](../learn/math/inversion-geometry-theorem-boundary.md)
 - [Cyclic Geometry Theorem Boundary](../learn/math/cyclic-geometry-theorem-boundary.md)
