@@ -191,6 +191,10 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --require-any
 
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text active-set \
+  --require-any
+
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-active-set-qp-v0 \
   --route Farkas \

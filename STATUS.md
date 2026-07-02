@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Active-set method theorem-boundary resource landed.**
+  `active-set-method-theorem-boundary.md` now separates
+  `finite-active-set-qp-v0` finite unconstrained minimizer replay,
+  active-face candidate replay, active-set KKT replay, inactive-slack replay,
+  degenerate active-bound replay, and checked bad inactive-slack/bad
+  free-gradient/bad degenerate-multiplier QF_LRA/Farkas rows from active-set
+  correctness, finite termination, anti-cycling, degeneracy handling,
+  convergence, warm-start, and numerical-stability theorem claims. The theorem
+  horizon, optimization/convexity, learner-map, and smoke query docs now expose
+  the active-set boundary directly.
+
 - **KKT sufficiency theorem-boundary resource landed.**
   `kkt-sufficiency-theorem-boundary.md` now separates `finite-kkt-v0`
   finite constrained-quadratic grid replay, exact stationarity replay,

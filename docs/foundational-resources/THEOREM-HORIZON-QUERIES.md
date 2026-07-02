@@ -285,6 +285,19 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Active-set method, degeneracy, and convergence horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text active-set \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-active-set-qp-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Hitting-time, recurrence/transience, and stochastic-process horizons:
 
 ```sh
@@ -353,6 +366,7 @@ The main learner maps that explain these boundaries are:
 - [Root-Finding Convergence Theorem Boundary](../learn/math/root-finding-convergence-theorem-boundary.md)
 - [Hyperplane Separation Theorem Boundary](../learn/math/hyperplane-separation-theorem-boundary.md)
 - [KKT Sufficiency Theorem Boundary](../learn/math/kkt-sufficiency-theorem-boundary.md)
+- [Active-Set Method Theorem Boundary](../learn/math/active-set-method-theorem-boundary.md)
 - [Random Variable Theorem Boundary](../learn/math/random-variable-theorem-boundary.md)
 - [Stochastic Kernel Theorem Boundary](../learn/math/stochastic-kernel-theorem-boundary.md)
 - [Hitting-Time Theorem Boundary](../learn/math/hitting-time-theorem-boundary.md)

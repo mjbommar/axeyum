@@ -268,6 +268,10 @@ evidence. A second row checks a degenerate tight active bound with zero
 multiplier and rejects a false positive multiplier by checked Farkas evidence.
 For a focused trace, read
 [End To End: Finite Active-Set QP Checks](finite-active-set-qp-end-to-end.md).
+For the theorem boundary that keeps those finite working-set rows separate
+from active-set correctness, finite-termination, anti-cycling, degeneracy,
+convergence, and numerical-stability claims, read
+[Active-Set Method Theorem Boundary](active-set-method-theorem-boundary.md).
 
 For a finite SDP check, encode one trace-one primal matrix and dual slack:
 

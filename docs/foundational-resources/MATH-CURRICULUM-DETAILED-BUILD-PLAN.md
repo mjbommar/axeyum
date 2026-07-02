@@ -1949,6 +1949,16 @@ Pick one row per commit unless the change is purely navigational.
      SDP/KKT-specialization, and optimization-convergence theorem routes, and
      adds KKT-specific horizon queries to the public smoke gate without adding
      a duplicate pack or changing resource counts.
+232. Landed: add `active-set-method-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-active-set-qp-v0`. It maps finite
+     unconstrained-minimizer replay, active-face candidate replay, active-set
+     KKT replay, inactive-slack replay, degenerate active-bound replay, and
+     checked QF_LRA/Farkas bad inactive-slack, bad free-gradient, and bad
+     degenerate-multiplier rows to the missing active-set correctness, finite
+     termination, anti-cycling, degeneracy handling, convergence, warm-start,
+     and numerical-stability theorem routes, and adds active-set-specific
+     horizon queries to the public smoke gate without adding a duplicate pack
+     or changing resource counts.
 
 ## Validation Checklist
 

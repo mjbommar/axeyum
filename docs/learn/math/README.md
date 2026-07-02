@@ -268,6 +268,10 @@ Companion maps:
   constraint slack, degenerate active-bound replay, checked QF_LRA/Farkas
   bad-free-gradient and bad-degenerate-multiplier rejection, and the general
   active-set method Lean horizon.
+- [Active-Set Method Theorem Boundary](active-set-method-theorem-boundary.md):
+  maps those finite working-set, slack, KKT, and degenerate-bound shadows to
+  the missing active-set correctness, finite-termination, anti-cycling,
+  degeneracy, convergence, and numerical-stability routes.
 - [Finite SDP Checks](finite-sdp-end-to-end.md): follows two-by-two PSD replay,
   objective, dual-slack, and gap replay, checked QF_LRA/Farkas bad-objective
   bad-duality-gap, and bad-slack-entry rejections, and the general SDP duality

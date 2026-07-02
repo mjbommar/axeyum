@@ -101,7 +101,10 @@ certificates; its theorem boundary is
 [KKT Sufficiency Theorem Boundary](kkt-sufficiency-theorem-boundary.md).
 The finite active-set QP slice adds exact active-face replay, inactive-constraint slack
 checking, degenerate active-bound replay, and checked QF_LRA/Farkas
-bad-free-gradient plus bad-degenerate-multiplier certificates. The finite
+bad-free-gradient, bad inactive-slack, and bad-degenerate-multiplier
+certificates; its theorem boundary is
+[Active-Set Method Theorem Boundary](active-set-method-theorem-boundary.md).
+The finite
 SDP slice adds two-by-two PSD replay, trace/objective arithmetic, dual-slack
 matrix replay, zero duality-gap checking, and checked QF_LRA/Farkas
 bad-objective, bad-duality-gap, and bad-slack-entry certificates. The finite-gradient-descent slice adds exact

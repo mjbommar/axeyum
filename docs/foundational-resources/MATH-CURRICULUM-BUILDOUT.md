@@ -2264,6 +2264,11 @@ and bad degenerate-multiplier rows through the same checked Farkas evidence path
 after exact active-face replay computes free-coordinate stationarity error `2`,
 inactive lower-bound slack `1`, and degenerate active-bound replay computes
 false positive-multiplier error `1`.
+It also has a focused active-set method theorem-boundary page that keeps finite
+unconstrained-minimizer, active-face, active-set KKT, inactive-slack,
+degenerate-bound, and checked bad-row Farkas evidence separate from active-set
+correctness, finite termination, anti-cycling, degeneracy handling,
+convergence, warm-start, and numerical-stability claims.
 `finite-sdp-v0` now routes its bad objective, bad duality-gap, and bad
 slack-entry rows through
 the same checked Farkas evidence path after exact SDP replay computes objective
@@ -2691,6 +2696,16 @@ replay, and bad stationarity/bad complementarity QF_LRA/Farkas rows are linked
 to copyable queries and graduation criteria while keeping KKT
 necessity/sufficiency, constraint qualifications, duality, sensitivity,
 SDP/KKT specialization, and optimization-convergence claims in
+Lean/theorem-horizon lanes.
+The learner/planning layer now also has
+[`active-set-method-theorem-boundary.md`](../learn/math/active-set-method-theorem-boundary.md),
+which expands the finite active-set QP row into a concrete boundary ledger:
+unconstrained-minimizer replay, active-face replay, active-set KKT replay,
+inactive-slack replay, degenerate-bound replay, and bad inactive-slack,
+bad-free-gradient, and bad-degenerate-multiplier QF_LRA/Farkas rows are linked
+to copyable queries and graduation criteria while keeping active-set
+correctness, finite termination, anti-cycling, degeneracy handling,
+convergence, warm-start, and numerical-stability claims in
 Lean/theorem-horizon lanes.
 The learner/planning layer now also has
 [`real-completeness-theorem-boundary.md`](../learn/math/real-completeness-theorem-boundary.md),
