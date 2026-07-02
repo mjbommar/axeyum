@@ -272,7 +272,9 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_metric_b
 python3 scripts/query-foundational-resources.py checks --pack metric-continuity-v0 --route Farkas --proof-status checked --text preimage --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_bounded_epsilon_delta_shadow --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack sequence-limit-shadow-v0 --route Farkas --proof-status checked --text reciprocal --require-any >/dev/null
-python3 scripts/query-foundational-resources.py checks --pack bounded-monotone-sequence-v0 --route Farkas --proof-status checked --text tail --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack bounded-monotone-sequence-v0 --route Farkas --proof-status checked --text qf-lra-bad-upper-bound --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack bounded-monotone-sequence-v0 --route Farkas --proof-status checked --text qf-lra-bad-tail-gap --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack bounded-monotone-sequence-v0 --proof-status replay-only --text rejected --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack calculus-algebraic-shadow-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack calculus-riemann-sum-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-root-finding-v0 --route Farkas --proof-status checked --require-any >/dev/null

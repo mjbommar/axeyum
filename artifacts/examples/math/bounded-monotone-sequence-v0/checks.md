@@ -26,9 +26,15 @@ The validator checks one finite tail against one epsilon by recomputing
 Expected result: `unsat`.
 
 Finite replay computes `a_6 = 6/7`. The malformed row claims `5/6` is an upper
-bound for the prefix. Since `6/7 <= 5/6` is false, the committed SMT-LIB
-artifact checks the final exact-rational contradiction through QF_LRA/Farkas
-evidence.
+bound for the prefix.
+
+## `qf-lra-bad-upper-bound`
+
+Expected result: `unsat`.
+
+The checked proof row cites `bad-upper-bound-rejected` and uses the committed
+SMT-LIB artifact to check the final exact-rational contradiction through
+QF_LRA/Farkas evidence.
 
 ## `bad-tail-gap-rejected`
 
@@ -36,9 +42,15 @@ Expected result: `unsat`.
 
 Finite replay computes `a_2 = 2/3`, so the gap to the proposed limit `1` is
 `1/3`. The malformed row claims the finite tail starting at `n = 2` is within
-`epsilon = 1/4`. Since the gap exceeds epsilon by `1/12`, the committed SMT-LIB
-artifact checks the final exact-rational contradiction through QF_LRA/Farkas
-evidence.
+`epsilon = 1/4`.
+
+## `qf-lra-bad-tail-gap`
+
+Expected result: `unsat`.
+
+Since the gap exceeds epsilon by `1/12`, the checked proof row cites
+`bad-tail-gap-rejected` and uses the committed SMT-LIB artifact to check the
+final exact-rational contradiction through QF_LRA/Farkas evidence.
 
 ## `monotone-convergence-lean-horizon`
 

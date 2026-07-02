@@ -337,7 +337,7 @@ CURRICULUM_MAP = {
         "extra_packs": [
             (
                 "bounded-monotone-sequence-v0",
-                "Finite monotone-prefix, supremum, tail-gap, bad upper-bound, and bad tail-gap checks.",
+                "Finite monotone-prefix, supremum, tail-gap, replay-only bad source rows, and separate checked qf-lra proof rows.",
             ),
             (
                 "finite-recurrence-prefix-v0",
@@ -3107,7 +3107,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "bounded-monotone-sequence-v0",
-                "Finite monotone-prefix, finite supremum, tail-gap, and bad tail-gap checks for monotone-convergence shadows.",
+                "Finite monotone-prefix, finite supremum, tail-gap, and separate checked qf-lra proof rows for monotone-convergence shadows.",
             ),
             (
                 "finite-recurrence-prefix-v0",
@@ -3295,7 +3295,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "bounded-monotone-sequence-v0",
-                "Finite monotone-prefix, bad upper-bound, and bad tail-gap checks for monotone-convergence shadows.",
+                "Finite monotone-prefix plus replay-only bad upper-bound and bad tail-gap rows with separate checked qf-lra proof rows.",
             ),
         ],
         "proof_routes": [
@@ -3562,7 +3562,7 @@ BRIDGE_CONCEPTS = [
             ),
             (
                 "bounded-monotone-sequence-v0",
-                "Finite tail-gap replay and checked bad tail-gap row.",
+                "Finite tail-gap replay and separate checked qf-lra bad-tail-gap proof row.",
             ),
             (
                 "real-analysis-rational-v0",

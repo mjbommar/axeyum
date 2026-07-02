@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 682 expected checks.
+- 684 expected checks.
 - 322 checked proof/evidence rows.
-- 289 replay-only rows.
+- 291 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -296,8 +296,9 @@ Pick one row per commit unless the change is purely navigational.
    Cauchy-tail and bad reciprocal-tail bound QF_LRA/Farkas artifacts and route
    regressions.
 8. Landed: add `bounded-monotone-sequence-v0` with finite monotone-prefix,
-   finite supremum, finite tail-gap replay, a checked bad upper-bound
-   QF_LRA/Farkas artifact, and a monotone-convergence Lean-horizon row.
+   finite supremum, finite tail-gap replay, replay-only bad upper-bound and
+   bad tail-gap source rows with separate checked `qf-lra-*` Farkas proof
+   rows, and a monotone-convergence Lean-horizon row.
 9. Landed: add `finite-recurrence-prefix-v0` with Fibonacci prefix replay,
    affine recurrence replay, companion-matrix state replay, checked bad
    finite-value and bad affine-step QF_LRA/Farkas artifacts, and a
@@ -1619,6 +1620,15 @@ Pick one row per commit unless the change is purely navigational.
      `math_resource_lra_routes` regressions. The public query surface now
      reports 682 checks, 322 checked rows, 289 replay-only rows, and row-scoped
      Farkas lookup returns explicit recurrence proof rows.
+187. Landed: split `bounded-monotone-sequence-v0` bad upper-bound and bad
+     finite tail-gap proof-object checking into explicit `qf-lra-*` rows. Exact
+     finite replay still owns the malformed source rows by computing
+     `a_6 = 6/7`, `a_2 = 2/3`, tail gap `1/3`, and tail excess `1/12`, while
+     the QF_LRA/Farkas rows separately reject the fixed upper-bound inequality
+     and nonpositive-excess conflicts through the existing
+     `math_resource_lra_routes` regressions. The public query surface now
+     reports 684 checks, 322 checked rows, 291 replay-only rows, and row-scoped
+     Farkas lookup returns explicit bounded-monotone proof rows.
 
 ## Validation Checklist
 

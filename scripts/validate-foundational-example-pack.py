@@ -9819,11 +9819,16 @@ def validate_bounded_monotone_sequence(expected: dict[str, Any]) -> None:
         fail("tail-gap-below-epsilon found a finite tail gap outside epsilon")
 
     bad = checks["bad-upper-bound-rejected"]
-    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "checked":
-        fail("bad-upper-bound-rejected must be a checked unsat row")
+    if bad["expected_result"] != "unsat" or bad.get("proof_status") != "replay-only":
+        fail("bad-upper-bound-rejected must be a replay-only unsat row")
+    if bad.get("validation") != "finite_bad_monotone_upper_bound_refutation":
+        fail("bad-upper-bound-rejected must use finite_bad_monotone_upper_bound_refutation")
     data = bad.get("data", {})
     if data.get("source_witness") != "rational-monotone-prefix":
         fail("bad-upper-bound-rejected must cite the rational-monotone-prefix source witness")
+    for checked_key in ("smt2_artifact", "farkas_regression", "certificate"):
+        if checked_key in data:
+            fail("bad-upper-bound-rejected must leave checked evidence to qf-lra-bad-upper-bound")
     claimed_upper_bound = require_fraction(
         "bad upper bound claimed_upper_bound",
         data.get("claimed_upper_bound"),
@@ -9836,26 +9841,64 @@ def validate_bounded_monotone_sequence(expected: dict[str, Any]) -> None:
         fail("bad-upper-bound-rejected witness_value does not match replay")
     if witness_value <= claimed_upper_bound:
         fail("bad-upper-bound-rejected witness must violate the claimed upper bound")
-    smt2_artifact = data.get("smt2_artifact")
+    notes = bad.get("notes")
+    require_string("bad upper bound notes", notes)
+    if "qf-lra-bad-upper-bound" not in notes:
+        fail("bad-upper-bound-rejected notes must point to the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-upper-bound"]
+    if qf_bad["expected_result"] != "unsat" or qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-upper-bound must be a checked unsat row")
+    if qf_bad.get("validation") != "qf_lra_bounded_monotone_sequence_bad_upper_bound_refutation":
+        fail("qf-lra-bad-upper-bound must use its qf_lra validation")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-upper-bound-rejected":
+        fail("qf-lra-bad-upper-bound must cite the source replay row")
+    qf_claimed_upper_bound = require_fraction(
+        "qf bad upper bound claimed_upper_bound",
+        qf_data.get("claimed_upper_bound"),
+    )
+    qf_witness_value = require_fraction(
+        "qf bad upper bound witness_value",
+        qf_data.get("witness_value"),
+    )
+    if qf_claimed_upper_bound != claimed_upper_bound:
+        fail("qf-lra-bad-upper-bound claimed_upper_bound must match the replay row")
+    if qf_witness_value != witness_value:
+        fail("qf-lra-bad-upper-bound witness_value must match the replay row")
+    if (
+        qf_data.get("farkas_conflict")
+        != "witness_value = 6/7 and claimed_upper_bound = 5/6 and witness_value <= claimed_upper_bound"
+    ):
+        fail("qf-lra-bad-upper-bound must document the expected Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
     require_string("bad upper bound smt2_artifact", smt2_artifact)
-    if smt2_artifact != "artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-upper-bound-farkas-conflict.smt2":
-        fail("bad-upper-bound-rejected smt2_artifact must name the checked QF_LRA artifact")
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-upper-bound-farkas-conflict.smt2"
+    ):
+        fail("qf-lra-bad-upper-bound smt2_artifact must name the checked QF_LRA artifact")
     check_source("bad upper bound smt2_artifact", smt2_artifact)
-    farkas_regression = data.get("farkas_regression")
+    farkas_regression = qf_data.get("farkas_regression")
     require_string("bad upper bound farkas_regression", farkas_regression)
     if "bounded_monotone_sequence_bad_upper_bound_artifact_emits_checked_farkas" not in farkas_regression:
-        fail("bad-upper-bound-rejected must link the LRA route regression")
-    certificate = data.get("certificate")
+        fail("qf-lra-bad-upper-bound must link the LRA route regression")
+    certificate = qf_data.get("certificate")
     require_string("bad upper bound certificate", certificate)
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
-        fail("bad-upper-bound-rejected certificate must document checked Farkas evidence")
+        fail("qf-lra-bad-upper-bound certificate must document checked Farkas evidence")
 
     bad_tail = checks["bad-tail-gap-rejected"]
-    if bad_tail["expected_result"] != "unsat" or bad_tail.get("proof_status") != "checked":
-        fail("bad-tail-gap-rejected must be a checked unsat row")
+    if bad_tail["expected_result"] != "unsat" or bad_tail.get("proof_status") != "replay-only":
+        fail("bad-tail-gap-rejected must be a replay-only unsat row")
+    if bad_tail.get("validation") != "finite_bad_tail_gap_refutation":
+        fail("bad-tail-gap-rejected must use finite_bad_tail_gap_refutation")
     data = bad_tail.get("data", {})
     if data.get("source_witness") != "bounded-tail-gap":
         fail("bad-tail-gap-rejected must cite the bounded-tail-gap source witness")
+    for checked_key in ("smt2_artifact", "farkas_regression", "certificate"):
+        if checked_key in data:
+            fail("bad-tail-gap-rejected must leave checked evidence to qf-lra-bad-tail-gap")
     claimed_start_index = require_nonnegative_int(
         "bad tail gap claimed_start_index",
         data.get("claimed_start_index"),
@@ -9887,19 +9930,49 @@ def validate_bounded_monotone_sequence(expected: dict[str, Any]) -> None:
         fail("bad-tail-gap-rejected tail_excess is incorrect")
     if tail_excess <= 0:
         fail("bad-tail-gap-rejected must document a positive epsilon violation")
-    smt2_artifact = data.get("smt2_artifact")
+    notes = bad_tail.get("notes")
+    require_string("bad tail gap notes", notes)
+    if "qf-lra-bad-tail-gap" not in notes:
+        fail("bad-tail-gap-rejected notes must point to the checked qf-lra row")
+
+    qf_bad_tail = checks["qf-lra-bad-tail-gap"]
+    if qf_bad_tail["expected_result"] != "unsat" or qf_bad_tail.get("proof_status") != "checked":
+        fail("qf-lra-bad-tail-gap must be a checked unsat row")
+    if qf_bad_tail.get("validation") != "qf_lra_bounded_monotone_sequence_bad_tail_gap_refutation":
+        fail("qf-lra-bad-tail-gap must use its qf_lra validation")
+    qf_data = qf_bad_tail.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-tail-gap-rejected":
+        fail("qf-lra-bad-tail-gap must cite the source replay row")
+    qf_tail_gap = require_fraction("qf bad tail gap tail_gap", qf_data.get("tail_gap"))
+    qf_epsilon = require_fraction("qf bad tail gap epsilon", qf_data.get("epsilon"))
+    qf_tail_excess = require_fraction(
+        "qf bad tail gap tail_excess",
+        qf_data.get("tail_excess"),
+    )
+    if qf_tail_gap != tail_gap:
+        fail("qf-lra-bad-tail-gap tail_gap must match the replay row")
+    if qf_epsilon != bad_epsilon:
+        fail("qf-lra-bad-tail-gap epsilon must match the replay row")
+    if qf_tail_excess != tail_excess:
+        fail("qf-lra-bad-tail-gap tail_excess must match the replay row")
+    if qf_data.get("farkas_conflict") != "tail_excess = 1/12 and tail_excess <= 0":
+        fail("qf-lra-bad-tail-gap must document the expected Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
     require_string("bad tail gap smt2_artifact", smt2_artifact)
-    if smt2_artifact != "artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-tail-gap-farkas-conflict.smt2":
-        fail("bad-tail-gap-rejected smt2_artifact must name the checked QF_LRA artifact")
+    if (
+        smt2_artifact
+        != "artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-tail-gap-farkas-conflict.smt2"
+    ):
+        fail("qf-lra-bad-tail-gap smt2_artifact must name the checked QF_LRA artifact")
     check_source("bad tail gap smt2_artifact", smt2_artifact)
-    farkas_regression = data.get("farkas_regression")
+    farkas_regression = qf_data.get("farkas_regression")
     require_string("bad tail gap farkas_regression", farkas_regression)
     if "bounded_monotone_sequence_bad_tail_gap_artifact_emits_checked_farkas" not in farkas_regression:
-        fail("bad-tail-gap-rejected must link the LRA route regression")
-    certificate = data.get("certificate")
+        fail("qf-lra-bad-tail-gap must link the LRA route regression")
+    certificate = qf_data.get("certificate")
     require_string("bad tail gap certificate", certificate)
     if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
-        fail("bad-tail-gap-rejected certificate must document checked Farkas evidence")
+        fail("qf-lra-bad-tail-gap certificate must document checked Farkas evidence")
 
     horizon = checks["monotone-convergence-lean-horizon"]
     if horizon["expected_result"] != "not-run":

@@ -30,11 +30,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-monotone-sequence-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "bounded monotone-sequence bad upper-bound and bad tail-gap QF_LRA/Farkas regression seeds",
+    "target": "bounded monotone-sequence replay rows plus explicit bad upper-bound and bad tail-gap QF_LRA/Farkas regression seeds",
     "pressure": "Exact finite replay computes a_6 = 6/7 for the prefix a_n=n/(n+1), while one malformed row claims the prefix is bounded above by 5/6; exact finite-tail replay computes a_2 = 2/3 with gap 1/3 to limit 1, while another malformed row claims a tail starting at n=2 is within epsilon 1/4.",
     "evidence": [
-      "bad-upper-bound-rejected",
-      "bad-tail-gap-rejected"
+      "qf-lra-bad-upper-bound",
+      "qf-lra-bad-tail-gap"
     ],
     "next_step": "Promote additional sequence rows only when they add distinct bounded-tail variants beyond the current epsilon row, recurrence-prefix, supremum, or exact-sum solver pressure; keep monotone convergence, completeness, compactness, and all quantified infinite-tail theorems in the Lean-horizon lane."
   },
@@ -55,13 +55,16 @@
     "finite-prefix-supremum",
     "tail-gap-below-epsilon",
     "bad-upper-bound-rejected",
+    "qf-lra-bad-upper-bound",
     "bad-tail-gap-rejected",
+    "qf-lra-bad-tail-gap",
     "monotone-convergence-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite monotone-prefix and tail-gap checks as deterministic exact-rational replay rows.",
     "Replay finite sequence witnesses through Axeyum model evaluation.",
-    "Route false finite upper-bound and finite tail-gap claims through checked QF_LRA/Farkas evidence after exact replay computes the offending witness value.",
+    "Keep false finite upper-bound and finite tail-gap source claims as replay-only rows that compute the offending witness value.",
+    "Route the resulting fixed contradictions through separate checked QF_LRA/Farkas evidence rows.",
     "Keep monotone convergence, completeness of the reals, compactness, and quantified infinite-tail theorems marked Lean-horizon."
   ]
 }

@@ -44,8 +44,8 @@ These rows live in the
 
 | Theorem Target | Current Packs | What Axeyum Checks Today | What This Does Not Prove |
 |---|---|---|---|
-| Least-upper-bound completeness | [real-analysis-rational-v0](../../../artifacts/examples/math/real-analysis-rational-v0/), [bounded-monotone-sequence-v0](../../../artifacts/examples/math/bounded-monotone-sequence-v0/) | exact rational interval containment, finite upper-bound checks, finite prefix supremum replay, checked bad upper-bound Farkas evidence | every nonempty bounded real set has a supremum |
-| Cauchy completeness | [sequence-limit-shadow-v0](../../../artifacts/examples/math/sequence-limit-shadow-v0/), [bounded-monotone-sequence-v0](../../../artifacts/examples/math/bounded-monotone-sequence-v0/) | finite pairwise tail-distance enumeration, finite tail-gap replay, checked bad reciprocal-tail and bad tail-gap rows | every real Cauchy sequence converges |
+| Least-upper-bound completeness | [real-analysis-rational-v0](../../../artifacts/examples/math/real-analysis-rational-v0/), [bounded-monotone-sequence-v0](../../../artifacts/examples/math/bounded-monotone-sequence-v0/) | exact rational interval containment, finite upper-bound checks, finite prefix supremum replay, separate checked bad upper-bound Farkas proof row | every nonempty bounded real set has a supremum |
+| Cauchy completeness | [sequence-limit-shadow-v0](../../../artifacts/examples/math/sequence-limit-shadow-v0/), [bounded-monotone-sequence-v0](../../../artifacts/examples/math/bounded-monotone-sequence-v0/) | finite pairwise tail-distance enumeration, finite tail-gap replay, checked bad reciprocal-tail row and separate checked bad tail-gap proof row | every real Cauchy sequence converges |
 | Monotone convergence | [bounded-monotone-sequence-v0](../../../artifacts/examples/math/bounded-monotone-sequence-v0/) | adjacent finite-prefix monotonicity, fixed upper bound replay, finite prefix supremum, one finite tail gap | every bounded monotone real sequence converges to its supremum |
 | Ordered-field and real-closed-field shadows | [reals-rcf-shadow-v0](../../../artifacts/examples/math/reals-rcf-shadow-v0/) | ordered-field replay, nonlinear product replay, quadratic-root witness replay, checked negative-discriminant conflict | completeness of the real numbers or arbitrary real-closed-field theorem coverage |
 | Metric continuity and uniform-continuity prerequisites | [metric-continuity-v0](../../../artifacts/examples/math/metric-continuity-v0/), [real-analysis-rational-v0](../../../artifacts/examples/math/real-analysis-rational-v0/) | fixed finite metric balls, finite epsilon-delta samples, finite open-ball preimage replay, checked bad-delta and bad-preimage Farkas rows | quantified epsilon-delta continuity or uniform continuity on compact sets |
@@ -96,6 +96,7 @@ python3 scripts/query-foundational-resources.py checks \
   --pack bounded-monotone-sequence-v0 \
   --route Farkas \
   --proof-status checked \
+  --text qf-lra-bad-tail-gap \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \

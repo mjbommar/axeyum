@@ -277,13 +277,14 @@ python3 scripts/query-foundational-resources.py checks \
   --pack bounded-monotone-sequence-v0 \
   --route Farkas \
   --proof-status checked \
+  --text qf-lra-bad-upper-bound \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \
   --pack bounded-monotone-sequence-v0 \
   --route Farkas \
   --proof-status checked \
-  --text tail \
+  --text qf-lra-bad-tail-gap \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \

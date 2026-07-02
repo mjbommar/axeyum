@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Bounded-monotone Farkas rows split landed.**
+  `bounded-monotone-sequence-v0` now keeps `bad-upper-bound-rejected` and
+  `bad-tail-gap-rejected` as exact replay rows: they compute `a_6 = 6/7`,
+  `a_2 = 2/3`, tail gap `1/3`, and tail excess `1/12` before rejecting
+  malformed claims. The checked proof-object paths are now the explicit
+  `qf-lra-bad-upper-bound` and `qf-lra-bad-tail-gap` rows linked to the
+  QF_LRA/Farkas SMT-LIB artifacts and regressions. Focused validation and the
+  bounded-monotone `math_resource_lra_routes` regressions pass; the public
+  summary now reports 120 concept rows, 108 packs, 684 expected checks, 322
+  checked rows, 291 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite-recurrence Farkas rows split landed.**
   `finite-recurrence-prefix-v0` now keeps `bad-fibonacci-value-rejected` and
   `bad-affine-step-rejected` as exact replay rows: they compute `F_6 = 8`,

@@ -254,9 +254,9 @@ First targets:
   distance and for the bad reciprocal-tail bound after replay computes
   `a_2 = 1/3`)
 - [bounded-monotone-sequence-v0](../../artifacts/examples/math/bounded-monotone-sequence-v0/)
-  (source-linked Farkas regressions landed for the bad upper-bound and bad
-  tail-gap rows after exact finite-prefix and finite-tail replay compute the
-  offending sequence values)
+  (source-linked Farkas regressions landed as separate `qf-lra-*` proof rows
+  for the bad upper-bound and bad tail-gap source rows after exact
+  finite-prefix and finite-tail replay compute the offending sequence values)
 - [finite-recurrence-prefix-v0](../../artifacts/examples/math/finite-recurrence-prefix-v0/)
   (source-linked Farkas regressions landed as separate `qf-lra-*` proof rows
   for the bad finite recurrence value and bad affine-step source rows after

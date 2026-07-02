@@ -35,7 +35,7 @@ These rows live in the
 |---|---|---|---|
 | Which points are in a ball? | `finite-topology-v0`, `real-analysis-rational-v0`, `metric-continuity-v0` | strict rational distance comparison over a finite carrier | general metric-space topology |
 | Does one fixed delta work? | `real-analysis-rational-v0`, `metric-continuity-v0` | exact rational replay of listed samples; QF_LRA/Farkas for bad deltas | forall-epsilon exists-delta continuity |
-| Does a finite tail satisfy an epsilon bound? | `sequence-limit-shadow-v0`, `bounded-monotone-sequence-v0` | exact finite prefix/tail replay; QF_LRA/Farkas for bad bounds | convergence and completeness theorems |
+| Does a finite tail satisfy an epsilon bound? | `sequence-limit-shadow-v0`, `bounded-monotone-sequence-v0` | exact finite prefix/tail replay; separate QF_LRA/Farkas proof rows for bad bounds | convergence and completeness theorems |
 | Does a cover or separation work? | `finite-compactness-v0`, `finite-connectedness-v0` | finite set-family enumeration; Bool/CNF evidence for bad rows | compactness and connectedness theorems |
 | Is continuity visible topologically? | `metric-continuity-v0`, `finite-continuous-maps-v0` | finite open-ball or open-set preimage replay | arbitrary continuous-map theorems |
 

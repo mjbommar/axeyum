@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 682 expected checks.
+- 684 expected checks.
 - 322 checked proof/evidence rows.
-- 289 replay-only rows.
+- 291 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -669,7 +669,8 @@ Build next:
 - Promote exact rational bad-bound rows through QF_LRA/Farkas.
 - Keep `sequence-limit-shadow-v0`'s promoted bounded Cauchy-tail and bad
   reciprocal-tail rows plus `bounded-monotone-sequence-v0`'s bad upper-bound
-  and bad tail-gap rows tied to source QF_LRA/Farkas artifacts; keep
+  and bad tail-gap source rows replay-only with separate checked `qf-lra-*`
+  proof rows tied to source QF_LRA/Farkas artifacts; keep
   `finite-recurrence-prefix-v0`'s bad finite-value and bad affine-step source
   rows replay-only with separate checked `qf-lra-*` proof rows tied to their
   source QF_LRA/Farkas artifacts; keep
@@ -1421,7 +1422,9 @@ Pick one item per commit unless the change is purely navigational.
     `cargo test -p axeyum-solver --test math_resource_lra_routes sequence_limit_bounded_cauchy_tail_artifact_emits_checked_farkas`.
 33. Landed: add `bounded-monotone-sequence-v0` with finite monotone-prefix
     replay, finite prefix supremum replay, finite tail-gap replay, and a
-    source-linked QF_LRA/Farkas regression for `bad-upper-bound-rejected`.
+    source-linked QF_LRA/Farkas regression for a false upper bound; later
+    extended with a false tail gap. These now live as replay-only malformed
+    source rows plus separate checked `qf-lra-*` proof rows.
 34. Landed: add `finite-recurrence-prefix-v0` with Fibonacci prefix replay,
     affine recurrence replay, companion-matrix state replay, and a
     source-linked QF_LRA/Farkas regression for a false Fibonacci value; later

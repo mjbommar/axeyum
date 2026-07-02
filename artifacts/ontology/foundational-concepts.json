@@ -1489,7 +1489,7 @@
           "id": "bounded-monotone-sequence-v0",
           "status": "validated",
           "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
-          "notes": "Finite monotone-prefix, supremum, tail-gap, bad upper-bound, and bad tail-gap checks."
+          "notes": "Finite monotone-prefix, supremum, tail-gap, replay-only bad source rows, and separate checked qf-lra proof rows."
         },
         {
           "id": "finite-recurrence-prefix-v0",
@@ -4769,7 +4769,7 @@
           "id": "bounded-monotone-sequence-v0",
           "status": "validated",
           "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
-          "notes": "Finite monotone-prefix, finite supremum, tail-gap, and bad tail-gap checks for monotone-convergence shadows."
+          "notes": "Finite monotone-prefix, finite supremum, tail-gap, and separate checked qf-lra proof rows for monotone-convergence shadows."
         },
         {
           "id": "finite-recurrence-prefix-v0",
@@ -4987,7 +4987,7 @@
           "id": "bounded-monotone-sequence-v0",
           "status": "validated",
           "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
-          "notes": "Finite monotone-prefix, bad upper-bound, and bad tail-gap checks for monotone-convergence shadows."
+          "notes": "Finite monotone-prefix plus replay-only bad upper-bound and bad tail-gap rows with separate checked qf-lra proof rows."
         }
       ],
       "proof_routes": [
@@ -5280,7 +5280,7 @@
           "id": "bounded-monotone-sequence-v0",
           "status": "validated",
           "path": "artifacts/examples/math/bounded-monotone-sequence-v0",
-          "notes": "Finite tail-gap replay and checked bad tail-gap row."
+          "notes": "Finite tail-gap replay and separate checked qf-lra bad-tail-gap proof row."
         },
         {
           "id": "real-analysis-rational-v0",

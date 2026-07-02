@@ -1,7 +1,8 @@
 # End To End: Bounded Monotone Sequence
 
 This lesson follows one bounded sequence resource from exact finite-prefix
-replay to checked false upper-bound and tail-gap rejections. It uses the
+replay to replay-only bad source rows and separate checked false upper-bound
+and tail-gap proof rows. It uses the
 [bounded-monotone-sequence-v0](../../../artifacts/examples/math/bounded-monotone-sequence-v0/)
 pack.
 
@@ -21,8 +22,10 @@ Concept rows:
 | `monotone-upper-bound-prefix` | `sat` | replay-only |
 | `finite-prefix-supremum` | `sat` | replay-only |
 | `tail-gap-below-epsilon` | `sat` | replay-only |
-| `bad-upper-bound-rejected` | `unsat` | checked QF_LRA/Farkas |
-| `bad-tail-gap-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-upper-bound-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-upper-bound` | `unsat` | checked QF_LRA/Farkas |
+| `bad-tail-gap-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-tail-gap` | `unsat` | checked QF_LRA/Farkas |
 | `monotone-convergence-lean-horizon` | `not-run` | Lean horizon |
 
 The finite rows check only listed sequence values, listed inequalities, and
@@ -67,7 +70,7 @@ Since `1/5 < 1/4`, this finite tail satisfies the listed epsilon check.
 
 ## Check The Refutation
 
-The promoted bad row keeps the source prefix fixed but claims:
+The malformed replay row keeps the source prefix fixed but claims:
 
 ```text
 upper_bound = 5/6
@@ -79,7 +82,8 @@ Exact replay finds the offending value:
 a_6 = 6/7
 ```
 
-The committed SMT-LIB artifact
+The separate `qf-lra-bad-upper-bound` proof row owns the committed SMT-LIB
+artifact
 [`bad-upper-bound-farkas-conflict.smt2`](../../../artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-upper-bound-farkas-conflict.smt2)
 checks only the final exact-rational contradiction:
 
@@ -88,11 +92,11 @@ checks only the final exact-rational contradiction:
 ```
 
 The solver search is untrusted. The accepted evidence is rechecked
-`UnsatFarkas` arithmetic over the source artifact.
+`UnsatFarkas` arithmetic over the explicit proof row's source artifact.
 
 ## Check The Tail-Gap Refutation
 
-The second promoted bad row claims the finite tail starting at `n = 2` is
+The second malformed replay row claims the finite tail starting at `n = 2` is
 already within `epsilon = 1/4` of the proposed limit `1`.
 
 Exact replay finds:
@@ -103,7 +107,8 @@ a_2 = 2/3
 1/3 - 1/4 = 1/12
 ```
 
-The committed SMT-LIB artifact
+The separate `qf-lra-bad-tail-gap` proof row owns the committed SMT-LIB
+artifact
 [`bad-tail-gap-farkas-conflict.smt2`](../../../artifacts/examples/math/bounded-monotone-sequence-v0/smt2/bad-tail-gap-farkas-conflict.smt2)
 checks only the final exact-rational contradiction:
 
@@ -113,7 +118,8 @@ tail_excess <= 0
 ```
 
 As before, the solver search is not trusted. The accepted evidence is the
-independently rechecked `UnsatFarkas` certificate over the source artifact.
+independently rechecked `UnsatFarkas` certificate over the explicit proof row's
+source artifact.
 
 ## Run It
 
@@ -134,7 +140,7 @@ validated 1 foundational example pack(s)
 
 ```text
 untrusted fast search -> candidate prefix, tail, or Farkas certificate
-trusted small checking -> exact rational sequence replay and checked QF_LRA evidence
+trusted small checking -> exact rational sequence replay and checked QF_LRA proof rows
 remaining horizon -> monotone convergence, completeness, compactness, quantified tails
 ```
 

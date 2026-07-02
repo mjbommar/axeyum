@@ -173,10 +173,11 @@ prefix = 0, 1/2, 2/3, 3/4, 4/5, 5/6, 6/7
 
 The `bounded-monotone-sequence-v0` validator checks adjacent monotonicity,
 the displayed upper bound, the finite prefix supremum, and one finite tail gap
-to the proposed limit. Its bad rows reject the false claim that `5/6` is an
-upper bound after replay finds `a_6 = 6/7`, and reject the false claim that a
-tail starting at `n = 2` is within `epsilon = 1/4` after replay computes gap
-excess `1/12`. This is finite prefix evidence, not the monotone convergence
+to the proposed limit. Its malformed source rows reject the false claim that
+`5/6` is an upper bound after replay finds `a_6 = 6/7`, and reject the false
+claim that a tail starting at `n = 2` is within `epsilon = 1/4` after replay
+computes gap excess `1/12`; separate `qf-lra-*` proof rows own the checked
+Farkas artifacts. This is finite prefix evidence, not the monotone convergence
 theorem.
 
 For a finite recurrence-prefix shadow, encode only the displayed recurrence

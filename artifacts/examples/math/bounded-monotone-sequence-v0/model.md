@@ -37,14 +37,15 @@ The maximum listed tail gap is `1/5`, which is below `1/4`.
 
 ## Bad Upper Bound
 
-The promoted bad row claims the finite prefix is bounded above by `5/6`.
+The malformed source row claims the finite prefix is bounded above by `5/6`.
 Exact replay computes:
 
 ```text
 a_6 = 6/7
 ```
 
-The QF_LRA artifact checks only the final conflict:
+The separate `qf-lra-bad-upper-bound` row owns the QF_LRA artifact that checks
+only the final conflict:
 
 ```text
 6/7 <= 5/6
@@ -52,8 +53,8 @@ The QF_LRA artifact checks only the final conflict:
 
 ## Bad Tail Gap
 
-The promoted bad tail-gap row claims the finite tail starting at `n = 2` is
-already within `epsilon = 1/4` of the proposed limit `1`. Exact replay computes:
+The malformed source row claims the finite tail starting at `n = 2` is already
+within `epsilon = 1/4` of the proposed limit `1`. Exact replay computes:
 
 ```text
 a_2 = 2/3
@@ -61,7 +62,8 @@ a_2 = 2/3
 1/3 - 1/4 = 1/12
 ```
 
-The QF_LRA artifact checks only the final conflict:
+The separate `qf-lra-bad-tail-gap` row owns the QF_LRA artifact that checks
+only the final conflict:
 
 ```text
 tail_excess = 1/12

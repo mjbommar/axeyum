@@ -4,16 +4,16 @@ This pack gives the `sequences-and-limits` curriculum node a focused finite
 shadow of the monotone convergence theorem. It checks a fixed rational prefix
 of `a_n = n/(n+1)`, verifies bounded monotonicity and tail gaps by exact
 rational replay, and routes a false upper-bound claim through checked
-QF_LRA/Farkas evidence. It also routes a false finite tail-gap claim through
-the same checked evidence path.
+QF_LRA/Farkas evidence on a separate proof row. It also routes a false finite
+tail-gap claim through the same checked evidence path.
 
 The pack covers:
 
 - finite monotone-prefix replay;
 - finite prefix supremum replay;
 - bounded tail-gap replay against one epsilon;
-- checked QF_LRA/Farkas rejection of a malformed upper-bound row;
-- checked QF_LRA/Farkas rejection of a malformed tail-gap row;
+- replay-only rejection of malformed upper-bound and tail-gap source rows;
+- separate checked QF_LRA/Farkas proof rows for those fixed contradictions;
 - a Lean-horizon row for the general monotone convergence theorem.
 
 ## Concepts
@@ -30,11 +30,12 @@ checks that each listed value equals `n/(n+1)`, verifies adjacent monotonicity,
 checks the displayed upper bound, recomputes the finite prefix supremum, and
 checks the listed finite tail gaps to the proposed limit.
 
-The promoted bad rows keep the sequence replay outside the solver. Exact
-replay computes `a_6 = 6/7`, and the first source SMT-LIB artifact checks only
-the final contradiction against the false claim that `5/6` is an upper bound.
-Exact replay also computes `a_2 = 2/3`, gap `1/3`, and tail excess `1/12` over
-`epsilon = 1/4`; the second artifact checks the false nonpositive-excess claim.
+The malformed source rows keep sequence replay outside the solver. Exact
+replay computes `a_6 = 6/7`, and the separate `qf-lra-bad-upper-bound` proof
+row checks only the final contradiction against the false claim that `5/6` is
+an upper bound. Exact replay also computes `a_2 = 2/3`, gap `1/3`, and tail
+excess `1/12` over `epsilon = 1/4`; the separate `qf-lra-bad-tail-gap` proof
+row checks the false nonpositive-excess claim.
 
 This pack does not prove monotone convergence, completeness of the real
 numbers, compactness, or any infinite tail theorem.
