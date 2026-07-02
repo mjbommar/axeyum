@@ -81,6 +81,17 @@ The output groups candidate replay rows by proof-cookbook route and includes
 the existing checked `unsat` rows in the same pack for contrast. Use this before
 adding a new certificate row: if the checked-row contrast already teaches the
 same proof shape, improve learner text instead of duplicating the route.
+The `promotion_state` column summarizes that contrast:
+
+- `no-route-contrast`: no checked `unsat` row currently matches the route in
+  the same pack.
+- `partial-route-contrast`: at least one checked route row exists, but fewer
+  checked rows than replay-only `unsat` rows exist in that pack/route group.
+- `covered-by-route-contrast`: checked route rows are at least as numerous as
+  the replay-only `unsat` rows in that pack/route group.
+
+This state is a triage hint. It does not prove that every replay row has a
+one-to-one certificate; it tells a proof contributor where to inspect first.
 
 Machine-readable output is available for tooling:
 
@@ -94,6 +105,41 @@ python3 scripts/query-foundational-resources.py upgrade-frontier \
 An empty route result is not automatically a gap. It can mean the current
 corpus has no replay-only `unsat` row under that certificate route, or that the
 remaining rows should stay finite replay.
+
+## Promotion-State Triage
+
+Start with rows that have no checked route contrast:
+
+```sh
+python3 scripts/query-foundational-resources.py upgrade-frontier \
+  --route Farkas \
+  --promotion-state no-route-contrast \
+  --format json
+```
+
+If this returns an empty list, the current public corpus has no obvious
+same-pack Farkas promotion gap under this coarse query. That is a useful
+maintenance signal, not a final proof audit.
+
+Partial contrast rows are usually the next place to inspect:
+
+```sh
+python3 scripts/query-foundational-resources.py upgrade-frontier \
+  --route Farkas \
+  --promotion-state partial-route-contrast \
+  --format json
+```
+
+Rows already covered by route contrast can still be useful for learner-page
+wording or route documentation, but they should not be the default source for
+another checked certificate:
+
+```sh
+python3 scripts/query-foundational-resources.py upgrade-frontier \
+  --route Alethe \
+  --promotion-state covered-by-route-contrast \
+  --require-any
+```
 
 ## Replay-Only Row Discovery
 

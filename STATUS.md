@@ -234,6 +234,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Proof-upgrade promotion-state triage landed.**
+  `scripts/query-foundational-resources.py upgrade-frontier` now reports and
+  filters `promotion_state`: `no-route-contrast`, `partial-route-contrast`, or
+  `covered-by-route-contrast`. The proof-upgrade query guide, route-family
+  selector, public data contract, detailed build ledger, and foundational
+  smoke gate now use this to inspect genuinely uncovered or partial
+  certificate-route families before adding another checked row, keeping
+  duplicate proof-shape promotions out of the default path.
+
 - **Foundational coverage-frontier query landed.**
   `scripts/query-foundational-resources.py coverage-frontier` now ranks public
   math-resource coverage groups by checked evidence, replay-only rows,

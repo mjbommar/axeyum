@@ -13,6 +13,10 @@ ledger and [Learner And Proof Upgrade Dashboard](generated/learner-proof-upgrade
 for generated counts.
 Use [Proof Upgrade Queries](PROOF-UPGRADE-QUERIES.md) for executable
 replay-only row, route-relevant pack, checked-row, and horizon lookups.
+The `upgrade-frontier --promotion-state ...` filter is the first stop before a
+new promotion: inspect `no-route-contrast` and `partial-route-contrast` before
+adding another checked row to a family already marked
+`covered-by-route-contrast`.
 Use [Proof Route Learner Snippets](../learn/math/proof-route-learner-snippets.md)
 when a focused learner page needs compact route wording.
 
@@ -112,6 +116,14 @@ python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Alethe
 python3 scripts/query-foundational-resources.py upgrade-frontier --route qf-bv
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Diophantine
+```
+
+Promotion-state triage:
+
+```sh
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --promotion-state no-route-contrast --format json
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --promotion-state partial-route-contrast --format json
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Alethe --promotion-state covered-by-route-contrast --require-any
 ```
 
 This frontier query is a selection aid, not an automatic promotion queue. A

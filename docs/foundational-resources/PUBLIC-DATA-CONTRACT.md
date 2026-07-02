@@ -120,6 +120,9 @@ python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas
 This command is advisory. It lists replay-only `unsat` rows in packs that
 already advertise a certificate route, plus checked-row contrast in the same
 pack. It does not assert that every replay row needs promotion.
+Use `--promotion-state no-route-contrast`, `partial-route-contrast`, or
+`covered-by-route-contrast` to triage whether a row family has no, partial, or
+already sufficient same-pack checked-route contrast.
 
 Coverage-frontier discovery ranks resource-builder pressure over the same
 dependency-free JSON boundary:
@@ -184,6 +187,8 @@ python3 scripts/query-foundational-resources.py coverage-frontier --by fragment 
 python3 scripts/query-foundational-resources.py coverage-frontier --by curriculum-node --field topology --min-horizon 1 --require-any
 python3 scripts/query-foundational-resources.py labels
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --require-any
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Alethe --promotion-state covered-by-route-contrast --require-any
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --promotion-state no-route-contrast --format json
 python3 scripts/query-foundational-resources.py horizon-frontier --field topology --require-any
 ```
 

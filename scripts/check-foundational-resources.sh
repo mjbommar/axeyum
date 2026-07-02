@@ -101,6 +101,8 @@ python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas 
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py upgrade-frontier --route qf-bv --require-any >/dev/null
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Alethe --promotion-state covered-by-route-contrast --require-any >/dev/null
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --promotion-state no-route-contrast --format json >/dev/null
 python3 scripts/query-foundational-resources.py packs --field probability_theory --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field graph_theory --expected-result unsat --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --kind example-family --format json --require-any >/dev/null

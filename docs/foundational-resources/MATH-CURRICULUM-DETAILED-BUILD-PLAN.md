@@ -1779,6 +1779,13 @@ Pick one row per commit unless the change is purely navigational.
      action hints, and sample packs; emits JSON for downstream tools; and keeps
      frontier pressure separate from theorem, benchmark, solver-performance,
      and parity claims.
+210. Landed: add `promotion_state` triage to
+     `query-foundational-resources.py upgrade-frontier`. The command now marks
+     route-relevant replay-only `unsat` groups as `no-route-contrast`,
+     `partial-route-contrast`, or `covered-by-route-contrast`, exposes a filter
+     for each state, and lets proof-resource builders inspect genuinely
+     uncovered or partial route families before adding another checked
+     certificate row.
 
 ## Validation Checklist
 

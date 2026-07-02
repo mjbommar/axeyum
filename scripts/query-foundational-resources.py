@@ -198,6 +198,14 @@ def route_order(route: str) -> int:
         return len(UPGRADE_ROUTE_ORDER)
 
 
+def promotion_state(replay_unsat: int, checked_unsat: int) -> str:
+    if checked_unsat == 0:
+        return "no-route-contrast"
+    if checked_unsat < replay_unsat:
+        return "partial-route-contrast"
+    return "covered-by-route-contrast"
+
+
 def shorten(value: str, width: int = 90) -> str:
     if len(value) <= width:
         return value
@@ -1175,6 +1183,9 @@ def command_upgrade_frontier(args: argparse.Namespace) -> int:
                 for check in checked_unsat_checks
                 if route_text_matches(route, check_route_text(check))
             ]
+            state = promotion_state(len(replay_unsat_checks), len(route_checked_checks))
+            if args.promotion_state and state != args.promotion_state:
+                continue
             rows.append(
                 {
                     "route": route,
@@ -1182,6 +1193,7 @@ def command_upgrade_frontier(args: argparse.Namespace) -> int:
                     "fields": metadata["field_ids"],
                     "replay_unsat": len(replay_unsat_checks),
                     "checked_unsat": len(route_checked_checks),
+                    "promotion_state": state,
                     "replay_checks": [check["id"] for check in replay_unsat_checks[:5]],
                     "checked_checks": [check["id"] for check in route_checked_checks[:5]],
                     "solver_reuse": solver_reuse.get("status", "unclassified"),
@@ -1203,6 +1215,7 @@ def command_upgrade_frontier(args: argparse.Namespace) -> int:
             "fields",
             "replay_unsat",
             "checked_unsat",
+            "promotion_state",
             "replay_checks",
             "checked_checks",
             "solver_reuse",
@@ -1518,6 +1531,15 @@ def build_parser() -> argparse.ArgumentParser:
     upgrade_frontier.add_argument(
         "--text",
         help="case-insensitive search over replay-only UNSAT row text",
+    )
+    upgrade_frontier.add_argument(
+        "--promotion-state",
+        choices=[
+            "no-route-contrast",
+            "partial-route-contrast",
+            "covered-by-route-contrast",
+        ],
+        help="filter by checked-route contrast state",
     )
     add_output_args(upgrade_frontier, default_limit=DEFAULT_LIMIT)
     upgrade_frontier.set_defaults(func=command_upgrade_frontier)
