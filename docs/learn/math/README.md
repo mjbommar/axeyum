@@ -311,6 +311,11 @@ Companion maps:
   projection, projected descent, checked QF_LRA/Farkas bad-projection and bad
   projected-decrease rejections, and the general projected-gradient convergence
   Lean horizon.
+- [Projected Gradient Convergence Theorem Boundary](projected-gradient-convergence-theorem-boundary.md):
+  maps those finite derivative, trial-step, interval-projection,
+  projected-descent, and malformed-row shadows to the missing projection
+  theorem, variational-inequality, convergence, rate, active-set, variant, and
+  numerical-stability routes.
 - [Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md):
   follows exact smooth-gradient replay, one trial step, L1 soft-threshold
   proximal replay, box-plus-L1 constrained replay, composite descent, checked

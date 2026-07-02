@@ -125,7 +125,10 @@ bad sufficient-decrease, and bad-curvature certificates; its theorem boundary is
 [Wolfe Line Search Theorem Boundary](wolfe-line-search-theorem-boundary.md).
 The finite projected-gradient slice adds exact
 interval projection after a trial step, projected objective decrease, and
-checked QF_LRA/Farkas bad-projection plus bad-decrease certificates. The finite proximal-gradient slice adds exact L1 soft-threshold
+checked QF_LRA/Farkas bad-projection plus bad-decrease certificates; its
+theorem boundary is
+[Projected Gradient Convergence Theorem Boundary](projected-gradient-convergence-theorem-boundary.md).
+The finite proximal-gradient slice adds exact L1 soft-threshold
 replay after a trial step, exact box-plus-L1 constrained replay with an active
 upper multiplier, composite-decrease replay, and checked QF_LRA/Farkas
 bad-proximal-point, bad composite-decrease, and bad box-proximal-point
@@ -562,6 +565,10 @@ claim `3/2` is feasible for `[0,1]` and that the same step decreases the
 objective by `4`; the final contradictions are checked through QF_LRA/Farkas
 evidence. For a focused trace, read
 [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md).
+For the theorem boundary that keeps those finite projected-gradient rows
+separate from projection theory, projected-gradient convergence, rates,
+active-set identification, variants, and numerical stability, read
+[Projected Gradient Convergence Theorem Boundary](projected-gradient-convergence-theorem-boundary.md).
 
 For a finite proximal-gradient example, encode one L1-regularized quadratic:
 
@@ -710,6 +717,7 @@ replay, read
 [End To End: Finite Line Search Checks](finite-line-search-end-to-end.md),
 [End To End: Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md),
 [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md),
+[Projected Gradient Convergence Theorem Boundary](projected-gradient-convergence-theorem-boundary.md),
 [End To End: Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md),
 [End To End: Finite Simplicial Homology](finite-simplicial-homology-end-to-end.md),
 [End To End: Finite Universal Coefficient Shadow](finite-universal-coefficient-shadow-end-to-end.md),

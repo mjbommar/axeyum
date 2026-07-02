@@ -383,6 +383,10 @@ point for `[0,1]` and that the same step decreases the objective by `4`; the
 final contradictions are checked through QF_LRA/Farkas evidence. For a focused
 trace, read
 [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md).
+For the theorem boundary that keeps those finite projected-gradient rows
+separate from projection theory, projected-gradient convergence, rates,
+active-set identification, variants, and numerical stability, read
+[Projected Gradient Convergence Theorem Boundary](projected-gradient-convergence-theorem-boundary.md).
 
 For a finite proximal-gradient check, encode one L1-regularized quadratic step:
 
@@ -626,6 +630,7 @@ active-set QP, gradient descent, line search, projected gradient, and proximal g
 and [End To End: Finite Line Search Checks](finite-line-search-end-to-end.md),
 and [End To End: Finite Wolfe Line Search Checks](finite-wolfe-line-search-end-to-end.md),
 and [End To End: Finite Projected Gradient Checks](finite-projected-gradient-end-to-end.md),
+and [Projected Gradient Convergence Theorem Boundary](projected-gradient-convergence-theorem-boundary.md),
 and [End To End: Finite Proximal Gradient Checks](finite-proximal-gradient-end-to-end.md). For exact
 finite coordinate, incidence, rigid-configuration, affine, and oriented geometry replay, read
 [End To End: Coordinate And Affine Geometry](coordinate-affine-geometry-end-to-end.md)
@@ -641,8 +646,8 @@ For finite cyclic quadrilateral replay, read
 ## Horizon
 
 Completeness, arbitrary limits, continuity, compactness, integration, general
-KKT sufficiency, constraint qualifications, proximal-gradient convergence, and
-Wolfe line-search convergence, and general real-analysis theorems
-remain Lean-horizon. Nonlinear real arithmetic closed-form
-generating-function extraction, asymptotics, and SOS/RCF certificates are
-future proof-route work, not assumed coverage.
+KKT sufficiency, constraint qualifications, Wolfe line-search convergence,
+projected-gradient convergence, proximal-gradient convergence, and general
+real-analysis theorems remain Lean-horizon. Nonlinear real arithmetic
+closed-form generating-function extraction, asymptotics, and SOS/RCF
+certificates are future proof-route work, not assumed coverage.

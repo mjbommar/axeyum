@@ -2588,7 +2588,13 @@ claims; and
 as the focused page that keeps finite exact line-minimizer,
 sufficient-decrease, and curvature replay plus checked Farkas bad-row evidence
 separate from Wolfe/strong-Wolfe existence, Zoutendijk-style convergence,
-rates, variants, and numerical-stability theorem claims.
+rates, variants, and numerical-stability theorem claims; and
+[`projected-gradient-convergence-theorem-boundary.md`](../learn/math/projected-gradient-convergence-theorem-boundary.md)
+as the focused page that keeps finite derivative, trial-step,
+interval-projection, projected-descent replay, and checked Farkas bad-row
+evidence separate from projection theory, projected-gradient convergence,
+rates, active-set identification, variants, and numerical-stability theorem
+claims.
 The functional-analysis/operator consumer layer now also has
 [`FUNCTIONAL-OPERATOR-QUERIES.md`](FUNCTIONAL-OPERATOR-QUERIES.md). The guide
 and resource smoke expose finite operator/Chebyshev rows, eigenpair and
@@ -2646,9 +2652,9 @@ projected-gradient replay, finite proximal-gradient replay, and
 matrix witnesses stay visible through the public JSON boundary without
 promoting duality, KKT sufficiency, SDP strong duality, Slater conditions,
 gradient-descent convergence/rates, line-search convergence,
-active-set method theory, Wolfe line-search theory, projected-gradient
-convergence, proximal-gradient convergence, or broader convergence-theorem
-claims.
+active-set method theory, Wolfe line-search theory, projection theory,
+projected-gradient convergence, proximal-gradient convergence, or broader
+convergence-theorem claims.
 The consumer query layer now also exposes functional-analysis/operator
 readiness: `CONSUMER-QUERIES.md` shows the Farkas field summary,
 operator/Chebyshev bridge lookup, concept-scoped
@@ -2748,6 +2754,15 @@ sufficient-decrease replay, curvature replay, and bad minimizer/bad
 sufficient-decrease/bad curvature QF_LRA/Farkas rows are linked to copyable
 queries and graduation criteria while keeping Wolfe/strong-Wolfe existence,
 Zoutendijk-style convergence, rates, stochastic variants, and numerical
+stability claims in Lean/theorem-horizon lanes.
+The learner/planning layer now also has
+[`projected-gradient-convergence-theorem-boundary.md`](../learn/math/projected-gradient-convergence-theorem-boundary.md),
+which expands the finite projected-gradient row into a concrete boundary
+ledger: exact derivative replay, unconstrained trial-step replay,
+interval-projection replay, projected-descent replay, and bad projected-point
+and bad projected-decrease QF_LRA/Farkas rows are linked to copyable queries
+and graduation criteria while keeping projection theory, projected-gradient
+convergence, rates, active-set identification, variants, and numerical
 stability claims in Lean/theorem-horizon lanes.
 The learner/planning layer now also has
 [`real-completeness-theorem-boundary.md`](../learn/math/real-completeness-theorem-boundary.md),

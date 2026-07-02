@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Projected-gradient theorem-boundary resource landed.**
+  `projected-gradient-convergence-theorem-boundary.md` now separates
+  `finite-projected-gradient-v0` exact derivative replay, unconstrained
+  trial-step replay, interval-projection replay, projected-descent replay, and
+  checked bad projected-point/bad projected-decrease QF_LRA/Farkas rows from
+  projection theory, variational-inequality characterizations, convergence,
+  rate theorems, active-set identification, projected/proximal/stochastic
+  variants, and numerical-stability claims. The theorem horizon,
+  optimization/convexity, learner-map, and smoke query docs now expose the
+  projected-gradient boundary directly.
+
 - **Wolfe line-search theorem-boundary resource landed.**
   `wolfe-line-search-theorem-boundary.md` now separates
   `finite-wolfe-line-search-v0` exact descent-direction replay, exact

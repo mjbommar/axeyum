@@ -1995,6 +1995,15 @@ Pick one row per commit unless the change is purely navigational.
      rate, variant, and numerical-stability theorem routes, and adds
      Wolfe-specific horizon queries to the public smoke gate without adding a
      duplicate pack or changing resource counts.
+237. Landed: add `projected-gradient-convergence-theorem-boundary.md` as the
+     focused theorem-boundary page for `finite-projected-gradient-v0`. It maps
+     exact derivative replay, unconstrained trial-step replay,
+     interval-projection replay, projected-descent replay, and checked
+     QF_LRA/Farkas bad projected-point and bad projected-decrease rows to the
+     missing projection theorem, variational-inequality, convergence, rate,
+     active-set, variant, and numerical-stability routes, and adds
+     projected-gradient-specific horizon queries to the public smoke gate
+     without adding a duplicate pack or changing resource counts.
 
 ## Validation Checklist
 

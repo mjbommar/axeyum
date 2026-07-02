@@ -470,6 +470,10 @@ python3 scripts/query-foundational-resources.py checks --pack finite-wolfe-line-
 python3 scripts/query-foundational-resources.py horizon-frontier --text "Wolfe line-search" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-wolfe-line-search-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-projected-gradient-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-projected-gradient-v0 --route Farkas --proof-status checked --text projection --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-projected-gradient-v0 --route Farkas --proof-status checked --text decrease --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text projected-gradient --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-projected-gradient-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked --text decrease --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-proximal-gradient-v0 --route Farkas --proof-status checked --text box --require-any >/dev/null

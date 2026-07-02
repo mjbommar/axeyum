@@ -352,6 +352,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Projected-gradient projection theory, convergence, active-set, and rate
+horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text projected-gradient \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-projected-gradient-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Hitting-time, recurrence/transience, and stochastic-process horizons:
 
 ```sh
