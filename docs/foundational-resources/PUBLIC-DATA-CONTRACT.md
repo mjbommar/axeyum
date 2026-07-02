@@ -145,6 +145,9 @@ python3 scripts/query-foundational-resources.py horizon-frontier --field topolog
 This command lists `lean-horizon` rows with finite checked/replay contrast from
 the same pack. It is for routing and display boundaries, not for proof,
 benchmark, or parity claims.
+Use `--shadow-state checked-finite-shadow`, `replay-only-finite-shadow`, or
+`no-finite-shadow` to triage whether the same pack has checked finite context,
+only replay context, or no finite shadow beside the horizon row.
 
 ## Compatibility Rules
 
@@ -190,6 +193,8 @@ python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas 
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Alethe --promotion-state covered-by-route-contrast --require-any
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --promotion-state no-route-contrast --format json
 python3 scripts/query-foundational-resources.py horizon-frontier --field topology --require-any
+python3 scripts/query-foundational-resources.py horizon-frontier --field topology --shadow-state checked-finite-shadow --require-any
+python3 scripts/query-foundational-resources.py horizon-frontier --shadow-state no-finite-shadow --format json
 ```
 
 For command examples and drilldowns, use

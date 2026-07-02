@@ -206,6 +206,14 @@ def promotion_state(replay_unsat: int, checked_unsat: int) -> str:
     return "covered-by-route-contrast"
 
 
+def horizon_shadow_state(finite_checked: int, finite_replay: int) -> str:
+    if finite_checked:
+        return "checked-finite-shadow"
+    if finite_replay:
+        return "replay-only-finite-shadow"
+    return "no-finite-shadow"
+
+
 def shorten(value: str, width: int = 90) -> str:
     if len(value) <= width:
         return value
@@ -1263,6 +1271,11 @@ def command_horizon_frontier(args: argparse.Namespace) -> int:
             for check in pack["checks"]
             if check.get("proof_status") == "replay-only"
         ]
+        state = horizon_shadow_state(
+            len(checked_finite_checks), len(replay_finite_checks)
+        )
+        if args.shadow_state and state != args.shadow_state:
+            continue
         rows.append(
             {
                 "pack": pack["id"],
@@ -1271,6 +1284,7 @@ def command_horizon_frontier(args: argparse.Namespace) -> int:
                 "horizon_rows": len(horizon_checks),
                 "finite_checked": len(checked_finite_checks),
                 "finite_replay": len(replay_finite_checks),
+                "shadow_state": state,
                 "horizon_checks": [check["id"] for check in horizon_checks[:5]],
                 "checked_examples": [check["id"] for check in checked_finite_checks[:5]],
                 "replay_examples": [check["id"] for check in replay_finite_checks[:5]],
@@ -1289,6 +1303,7 @@ def command_horizon_frontier(args: argparse.Namespace) -> int:
             "horizon_rows",
             "finite_checked",
             "finite_replay",
+            "shadow_state",
             "horizon_checks",
             "checked_examples",
             "replay_examples",
@@ -1554,6 +1569,15 @@ def build_parser() -> argparse.ArgumentParser:
     horizon_frontier.add_argument(
         "--text",
         help="case-insensitive search over theorem-horizon row text",
+    )
+    horizon_frontier.add_argument(
+        "--shadow-state",
+        choices=[
+            "checked-finite-shadow",
+            "replay-only-finite-shadow",
+            "no-finite-shadow",
+        ],
+        help="filter by finite-shadow evidence state",
     )
     add_output_args(horizon_frontier, default_limit=DEFAULT_LIMIT)
     horizon_frontier.set_defaults(func=command_horizon_frontier)

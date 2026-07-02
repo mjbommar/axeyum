@@ -234,6 +234,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Theorem-horizon shadow-state triage landed.**
+  `scripts/query-foundational-resources.py horizon-frontier` now reports and
+  filters `shadow_state`: `checked-finite-shadow`,
+  `replay-only-finite-shadow`, or `no-finite-shadow`. The theorem-horizon
+  query guide, public data contract, detailed build ledger, and foundational
+  smoke gate now use this to keep Lean/theorem boundaries paired with their
+  finite checked/replay context before a learner or downstream consumer
+  displays them.
+
 - **Proof-upgrade promotion-state triage landed.**
   `scripts/query-foundational-resources.py upgrade-frontier` now reports and
   filters `promotion_state`: `no-route-contrast`, `partial-route-contrast`, or

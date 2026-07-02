@@ -1786,6 +1786,13 @@ Pick one row per commit unless the change is purely navigational.
      for each state, and lets proof-resource builders inspect genuinely
      uncovered or partial route families before adding another checked
      certificate row.
+211. Landed: add `shadow_state` triage to
+     `query-foundational-resources.py horizon-frontier`. The command now marks
+     theorem-boundary packs as `checked-finite-shadow`,
+     `replay-only-finite-shadow`, or `no-finite-shadow`, exposes a filter for
+     each state, and lets learner/resource consumers verify that a Lean-horizon
+     row has finite bounded context before displaying it as a polished resource
+     boundary.
 
 ## Validation Checklist
 

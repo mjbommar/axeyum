@@ -60,8 +60,21 @@ python3 scripts/query-foundational-resources.py horizon-frontier \
 
 This answers: "Which finite checked examples are the bounded shadows, and which
 general theorem row marks the boundary?" Rows include the pack, fields,
-curriculum nodes, horizon row ids, finite checked/replay counts, sample finite
-row ids, and pack path.
+curriculum nodes, horizon row ids, finite checked/replay counts,
+`shadow_state`, sample finite row ids, and pack path.
+
+The `shadow_state` column summarizes the finite contrast in the same pack:
+
+- `checked-finite-shadow`: at least one checked finite row lives beside the
+  horizon row.
+- `replay-only-finite-shadow`: finite replay rows exist, but no checked finite
+  row is present in that pack.
+- `no-finite-shadow`: the horizon row currently has no finite checked or replay
+  contrast in the same pack.
+
+This state is a display and planning hint. It does not mean the general theorem
+is proved; it only says how much finite-resource context is available next to
+the boundary row.
 
 Curriculum-scoped and machine-readable versions use the same public JSON
 contract:
@@ -80,6 +93,36 @@ python3 scripts/query-foundational-resources.py horizon-frontier \
   --text convergence \
   --require-any
 ```
+
+## Finite-Shadow Triage
+
+Start with theorem boundaries that already have checked finite shadows:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --shadow-state checked-finite-shadow \
+  --require-any
+```
+
+Use this when a learner page or downstream UI needs to show the bounded
+evidence first and the theorem boundary second.
+
+Rows without a checked finite shadow should be inspected before they are shown
+as polished learner cards:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --shadow-state replay-only-finite-shadow \
+  --format json
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --shadow-state no-finite-shadow \
+  --format json
+```
+
+An empty result for these two queries is a maintenance signal: the current
+public corpus has no horizon row that lacks finite checked/replay contrast
+under this coarse same-pack query.
 
 ## Field-Scoped Horizon Queries
 

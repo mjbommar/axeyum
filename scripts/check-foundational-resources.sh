@@ -78,6 +78,8 @@ python3 scripts/query-foundational-resources.py checks --field topology --proof-
 python3 scripts/query-foundational-resources.py checks --field graph_theory --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --text convergence --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --field topology --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --field topology --shadow-state checked-finite-shadow --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --shadow-state no-finite-shadow --format json >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --curriculum-node calculus --format json --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text convergence --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --solver-reuse promoted --require-any >/dev/null
