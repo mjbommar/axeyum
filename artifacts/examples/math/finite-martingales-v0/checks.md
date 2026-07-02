@@ -28,17 +28,33 @@ Expected result: `unsat`.
 
 The validator replays the bounded stopping time, recomputes stopped values
 `1, 1, 0, -2`, and checks that the stopped expectation is `0`, not `1/2`.
-The source-linked QF_LRA artifact records the resulting exact-linear
-contradiction and is checked by the shared Farkas route regression.
+This row is replay-only; the separate `qf-lra-bad-stopped-expectation` row owns
+the proof-object refutation.
+
+## `qf-lra-bad-stopped-expectation`
+
+Expected result: `unsat`.
+
+The source-linked QF_LRA artifact records the exact-linear contradiction
+between `stopped_expectation = 0` and `stopped_expectation = 1/2`, and is
+checked by the shared Farkas route regression.
 
 ## `bad-martingale-rejected`
 
 Expected result: `unsat`.
 
 The validator rejects the malformed terminal table because the conditional
-expectation on the up block is `3/2`, not `1`. The source-linked QF_LRA
-artifact records the resulting exact-linear contradiction and is checked by
-the shared Farkas route regression.
+expectation on the up block is `3/2`, not `1`. This row is replay-only; the
+separate `qf-lra-bad-martingale` row owns the proof-object refutation.
+
+## `qf-lra-bad-martingale`
+
+Expected result: `unsat`.
+
+The source-linked QF_LRA artifact records the exact-linear contradiction
+between `up_block_conditional_expectation = 3/2` and
+`up_block_conditional_expectation = 1`, and is checked by the shared Farkas
+route regression.
 
 ## `general-martingale-lean-horizon`
 

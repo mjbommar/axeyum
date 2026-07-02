@@ -33,7 +33,8 @@ python3 scripts/query-foundational-resources.py checks --pack finite-random-vari
 python3 scripts/query-foundational-resources.py checks --pack finite-conditional-expectation-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-conditional-expectation-v0 --route Farkas --proof-status checked --text total --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-conditional-expectation-v0 --route Farkas --proof-status checked --text variance --require-any >/dev/null
-python3 scripts/query-foundational-resources.py checks --pack finite-martingales-v0 --route Farkas --proof-status checked --text stopped --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-martingales-v0 --route Farkas --proof-status checked --text qf-lra-bad-stopped-expectation --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-martingales-v0 --route Farkas --proof-status checked --text qf-lra-bad-martingale --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-markov-chain-v0 --route Farkas --proof-status checked --text stationary --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-concentration-v0 --route Farkas --proof-status checked --text union --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-hitting-times-v0 --route Farkas --proof-status checked --text survival --require-any >/dev/null
@@ -150,6 +151,7 @@ python3 scripts/query-foundational-resources.py checks --pack finite-product-mea
 python3 scripts/query-foundational-resources.py checks --pack finite-integration-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-integration-v0 --route Farkas --proof-status checked --text qf-lra-bad-expectation --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-martingales-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-martingales-v0 --proof-status replay-only --text rejected --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-hitting-times-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field statistics --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field statistics --text tail --require-any >/dev/null

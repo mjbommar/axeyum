@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite martingale Farkas rows split landed.**
+  `finite-martingales-v0` now keeps `bad-stopped-expectation-rejected` and
+  `bad-martingale-rejected` as exact finite replay: they recompute
+  `E[M_tau]=0` instead of `1/2` and the up-block conditional expectation
+  `3/2` instead of `1`. The checked proof-object paths are now the explicit
+  `qf-lra-bad-stopped-expectation` and `qf-lra-bad-martingale` rows linked to
+  the existing QF_LRA/Farkas SMT-LIB artifacts and regressions. Focused
+  validation passes; the public summary now reports 120 concept rows, 108
+  packs, 660 expected checks, 322 checked rows, 267 replay-only rows, and 71
+  Lean-horizon rows.
+
 - **Finite random-variable Farkas rows split landed.**
   `finite-random-variables-v0` now keeps `bad-pushforward-rejected` and
   `bad-expectation-through-pushforward-rejected` as exact finite replay: they

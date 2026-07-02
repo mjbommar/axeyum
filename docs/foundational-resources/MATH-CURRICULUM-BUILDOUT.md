@@ -923,9 +923,10 @@ variance-decomposition tables, and a general conditional-expectation/martingale
 Lean-horizon row.
 `artifacts/examples/math/finite-martingales-v0/` now validates exact finite
 filtrations, adaptedness, martingale conditional-expectation equalities,
-finite square-submartingale inequalities, bounded stopping-time replay, checked
-QF_LRA/Farkas rejection of false stopped-expectation and martingale tables, and
-a general martingale Lean-horizon row.
+finite square-submartingale inequalities, bounded stopping-time replay,
+replay-only rejection of false stopped-expectation and martingale tables,
+separate checked QF_LRA/Farkas rows for the isolated scalar conflicts, and a
+general martingale Lean-horizon row.
 `artifacts/examples/math/finite-stochastic-kernels-v0/` now validates exact
 finite source-to-target probability kernels, pushforward distributions, joint
 factorization/disintegration replay, kernel composition, checked rejection of a
@@ -1138,7 +1139,7 @@ Recommended order:
     rejections.
 28. `finite-martingales-v0`: finite filtrations, adaptedness, martingale
     equalities, square submartingale inequalities, bounded stopping replay, and
-    QF_LRA/Farkas bad stopped-expectation/martingale rejection.
+    separate QF_LRA/Farkas bad stopped-expectation/martingale proof rows.
 29. `finite-stochastic-kernels-v0`: finite source-to-target kernels,
     pushforward distributions, joint disintegration replay, kernel
     composition, and QF_LRA/Farkas bad kernel-row and bad composition-entry
@@ -1621,8 +1622,8 @@ conditional expectation, with checked QF_LRA/Farkas evidence for bad high-block,
 total-expectation, tower-property, and variance-decomposition rows.
 `finite-martingales-v0` now adds the exact finite filtration, martingale,
 submartingale, and bounded-stopping bridge toward stochastic-process theory,
-with checked QF_LRA/Farkas evidence for bad conditional-expectation and
-bad tower-property rows.
+with replay-only bad-row rejection plus checked QF_LRA/Farkas evidence for
+bad stopped-expectation and bad conditional-expectation scalar conflicts.
 `finite-stochastic-kernels-v0` now adds the finite conditional-distribution,
 pushforward, disintegration, and composition bridge toward Markov kernels and
 regular conditional probabilities, with a checked QF_LRA/Farkas bad-row

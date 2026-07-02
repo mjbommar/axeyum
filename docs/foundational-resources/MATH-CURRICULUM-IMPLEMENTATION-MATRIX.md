@@ -398,9 +398,11 @@ Build sequence:
     `artifacts/examples/math/finite-integration-v0/smt2/bad-expectation-farkas-conflict.smt2`,
     checked by the `math_resource_lra_routes` QF_LRA/Farkas regression; the
     original `bad-expectation-rejected` row remains exact finite replay.
-24. `finite-martingales-v0` now links `bad-stopped-expectation-rejected` to
+24. `finite-martingales-v0` now keeps `bad-stopped-expectation-rejected` and
+    `bad-martingale-rejected` as exact finite replay, and links
+    `qf-lra-bad-stopped-expectation` to
     `artifacts/examples/math/finite-martingales-v0/smt2/bad-stopped-expectation-farkas-conflict.smt2`
-    and `bad-martingale-rejected` to
+    and `qf-lra-bad-martingale` to
     `artifacts/examples/math/finite-martingales-v0/smt2/bad-martingale-farkas-conflict.smt2`,
     both checked by the `math_resource_lra_routes` QF_LRA/Farkas regression.
 25. Route-specific tamper/rejection regressions now land for the active

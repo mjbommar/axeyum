@@ -40,11 +40,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-martingales-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite martingale bad conditional-expectation and stopped-expectation QF_LRA/Farkas regression seeds",
-    "pressure": "Malformed finite martingale rows where exact replay computes the up-block conditional expectation 3/2 but the false martingale equality claims 1, and bounded stopping replay computes E[M_tau]=0 while the false stopped-expectation row claims 1/2.",
+    "target": "finite martingale separate bad conditional-expectation and stopped-expectation QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed finite martingale rows where exact replay computes the up-block conditional expectation 3/2 and stopped expectation E[M_tau]=0, while separate QF_LRA rows reject the fixed false equality claims 1 and 1/2.",
     "evidence": [
-      "bad-stopped-expectation-rejected",
-      "bad-martingale-rejected"
+      "qf-lra-bad-stopped-expectation",
+      "qf-lra-bad-martingale"
     ],
     "next_step": "Promote additional optional-stopping or submartingale rows only when they add distinct exact-linear solver pressure; keep convergence, Doob inequalities, stochastic integration, and continuous-time martingales in the Lean-horizon lane."
   },
@@ -67,13 +67,15 @@
     "square-submartingale-witness",
     "bounded-stopping-replay",
     "bad-stopped-expectation-rejected",
+    "qf-lra-bad-stopped-expectation",
     "bad-martingale-rejected",
+    "qf-lra-bad-martingale",
     "general-martingale-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite filtrations as time-indexed partitions of probability atoms.",
     "Replay finite adaptedness, martingale, submartingale, and bounded stopping-time witnesses by exact rational model evaluation.",
-    "Emit checked finite counterexample evidence for rejected martingale and bounded stopped-expectation claims; the bad rows now have checked QF_LRA/Farkas evidence.",
+    "Keep malformed finite martingale and stopped-expectation replay separate from checked QF_LRA/Farkas rows for isolated exact-linear contradictions.",
     "Keep general martingale convergence, optional stopping, Doob inequalities, and stochastic integration marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

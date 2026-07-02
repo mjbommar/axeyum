@@ -416,7 +416,7 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-martingales-v0 \
   --route Farkas \
   --proof-status checked \
-  --text stopped \
+  --text qf-lra-bad-stopped-expectation \
   --require-any
 ```
 

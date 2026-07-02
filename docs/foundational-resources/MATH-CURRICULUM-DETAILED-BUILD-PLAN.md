@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 655 expected checks.
+- 660 expected checks.
 - 322 checked proof/evidence rows.
-- 262 replay-only rows.
+- 267 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1119,13 +1119,15 @@ Pick one row per commit unless the change is purely navigational.
      contradictions without claiming recurrence/transience, optional stopping,
      mixing bounds, Markov-chain potential theory, or infinite-horizon
      convergence.
-128. Landed: extend `finite-martingales-v0` with a checked bad stopped-
-     expectation row. Exact bounded stopping replay recomputes stopped values
-     `1, 1, 0, -2` and `E[M_tau]=0`, while the malformed source SMT-LIB
-     artifact claims `1/2`; the shared QF_LRA/Farkas route now checks both
-     bounded stopped-expectation and conditional-expectation contradictions
-     without claiming general optional stopping, martingale convergence, Doob
-     inequalities, stochastic integration, or continuous-time martingales.
+128. Landed: split `finite-martingales-v0` so exact bounded-stopping and bad
+     martingale rows remain replay-only, while `qf-lra-bad-stopped-expectation`
+     and `qf-lra-bad-martingale` own the checked Farkas proof-object
+     contradictions. Exact bounded stopping replay recomputes stopped values
+     `1, 1, 0, -2` and `E[M_tau]=0`, and the bad martingale replay recomputes
+     the up-block conditional expectation as `3/2`; the shared QF_LRA/Farkas
+     route checks the isolated false claims `1/2` and `1` without claiming
+     general optional stopping, martingale convergence, Doob inequalities,
+     stochastic integration, or continuous-time martingales.
 129. Landed: extend `finite-measure-monotonicity-v0` with a checked bad
      union-subadditivity row. Exact inclusion-exclusion replay recomputes
      `mu(A union B)=1` and `mu(A)+mu(B)=4/3`, while the malformed source

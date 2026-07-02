@@ -62,10 +62,12 @@ but claims:
 E[M_tau] = 1/2
 ```
 
-Exact replay computes `0`, so the final equality conflict is checked through
-QF_LRA/Farkas evidence.
+Exact replay computes `0`. The separate `qf-lra-bad-stopped-expectation` row
+checks the final equality conflict through QF_LRA/Farkas evidence.
 
 ## Bad Martingale Claim
 
 The false claim changes `M2(uu)` from `2` to `3`. The checker rejects it
-because `E[M2 | F1]` on the up block becomes `3/2`, not `1`.
+because `E[M2 | F1]` on the up block becomes `3/2`, not `1`. The separate
+`qf-lra-bad-martingale` row checks that isolated equality conflict through
+QF_LRA/Farkas evidence.

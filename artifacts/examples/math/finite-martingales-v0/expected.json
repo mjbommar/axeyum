@@ -138,8 +138,8 @@
       "id": "bad-stopped-expectation-rejected",
       "claim": "The bounded stopping-time replay has stopped expectation E[M_tau] = 1/2.",
       "expected_result": "unsat",
-      "validation": "finite_bad_stopped_expectation_refutation",
-      "proof_status": "checked",
+      "validation": "finite_bad_stopped_expectation_replay",
+      "proof_status": "replay-only",
       "data": {
         "atoms": [
           {"id": "uu", "probability": "1/4"},
@@ -168,18 +168,34 @@
         "stopping_time": {"uu": 1, "ud": 1, "du": 2, "dd": 2},
         "stopped_values": {"uu": "1", "ud": "1", "du": "0", "dd": "-2"},
         "actual_stopped_expectation": "0",
-        "claimed_stopped_expectation": "1/2",
-        "smt2_artifact": "artifacts/examples/math/finite-martingales-v0/smt2/bad-stopped-expectation-farkas-conflict.smt2",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_martingales_bad_stopped_expectation_artifact_emits_checked_farkas"
+        "claimed_stopped_expectation": "1/2"
       },
-      "notes": "The validator recomputes the stopped values and E[M_tau]=0; the Axeyum regression refutes the final linear claim E[M_tau]=1/2 with rechecked Farkas evidence."
+      "notes": "The validator recomputes the stopped values and E[M_tau]=0, rejecting the false 1/2 claim. The separate qf-lra-bad-stopped-expectation row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-stopped-expectation",
+      "claim": "The fixed malformed stopped-expectation claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_bad_stopped_expectation_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "bounded-stopping-time-two-step-walk",
+        "source_replay_row": "bad-stopped-expectation-rejected",
+        "actual_stopped_expectation": "0",
+        "claimed_stopped_expectation": "1/2",
+        "farkas_stopped_expectation_equation": "stopped_expectation = actual_stopped_expectation",
+        "smt2_artifact": "artifacts/examples/math/finite-martingales-v0/smt2/bad-stopped-expectation-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_martingales_bad_stopped_expectation_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "The source SMT-LIB artifact isolates the final exact-linear contradiction after finite replay computes the stopped expectation as 0."
     },
     {
       "id": "bad-martingale-rejected",
       "claim": "The malformed terminal table still defines a martingale.",
       "expected_result": "unsat",
-      "validation": "finite_bad_martingale_refutation",
-      "proof_status": "checked",
+      "validation": "finite_bad_martingale_replay",
+      "proof_status": "replay-only",
       "data": {
         "atoms": [
           {"id": "uu", "probability": "1/4"},
@@ -195,11 +211,27 @@
         ],
         "current_values": {"uu": "1", "ud": "1", "du": "-1", "dd": "-1"},
         "next_values": {"uu": "3", "ud": "0", "du": "0", "dd": "-2"},
-        "actual_conditional_expectation": {"uu": "3/2", "ud": "3/2", "du": "-1", "dd": "-1"},
-        "smt2_artifact": "artifacts/examples/math/finite-martingales-v0/smt2/bad-martingale-farkas-conflict.smt2",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_martingales_bad_conditional_expectation_emits_checked_farkas"
+        "actual_conditional_expectation": {"uu": "3/2", "ud": "3/2", "du": "-1", "dd": "-1"}
       },
-      "notes": "The validator rejects the claim because the up block conditional expectation is 3/2, not 1; after replay computes the block value, the Axeyum regression refutes up_block_conditional_expectation = 3/2 and up_block_conditional_expectation = 1 with rechecked Farkas evidence."
+      "notes": "The validator rejects the claim because the up block conditional expectation is 3/2, not 1. The separate qf-lra-bad-martingale row owns the proof-object refutation."
+    },
+    {
+      "id": "qf-lra-bad-martingale",
+      "claim": "The fixed malformed martingale equality is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "qf_lra_bad_martingale_refutation",
+      "proof_status": "checked",
+      "data": {
+        "source_replay_row": "bad-martingale-rejected",
+        "failing_block": "up",
+        "actual_conditional_expectation": "3/2",
+        "claimed_martingale_value": "1",
+        "farkas_conditional_expectation_equation": "up_block_conditional_expectation = actual_conditional_expectation",
+        "smt2_artifact": "artifacts/examples/math/finite-martingales-v0/smt2/bad-martingale-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_martingales_bad_conditional_expectation_emits_checked_farkas",
+        "certificate": "The resource regression emits UnsatFarkas evidence for the isolated up-block equality conflict and independently checks the certificate."
+      },
+      "notes": "The checked row isolates the exact-linear contradiction after finite replay computes the malformed up-block conditional expectation as 3/2."
     },
     {
       "id": "general-martingale-lean-horizon",

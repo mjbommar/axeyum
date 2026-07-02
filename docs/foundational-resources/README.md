@@ -602,8 +602,10 @@ schemas, examples, and validation workflows.
 - [`artifacts/examples/math/finite-martingales-v0/`](../../artifacts/examples/math/finite-martingales-v0/)
   validates exact finite filtrations, adapted process values, martingale
   conditional-expectation equalities, square submartingale inequalities,
-  bounded stopping-time replay, checked rejection of false stopped-expectation
-  and martingale tables, and a general martingale Lean-horizon row.
+  bounded stopping-time replay, replay-only rejection of false
+  stopped-expectation and martingale tables, separate checked QF_LRA/Farkas
+  rows for the isolated scalar conflicts, and a general martingale Lean-horizon
+  row.
 - [`artifacts/examples/math/finite-stochastic-kernels-v0/`](../../artifacts/examples/math/finite-stochastic-kernels-v0/)
   validates exact finite stochastic kernels, pushforward distributions, joint
   table factorization/disintegration, finite kernel composition, checked

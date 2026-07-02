@@ -319,9 +319,10 @@ First targets:
   `qf-lra-bad-pushforward` and
   `qf-lra-bad-expectation-through-pushforward`)
 - [finite-martingales-v0](../../artifacts/examples/math/finite-martingales-v0/)
-  (resource-backed Farkas regressions landed for the bad stopped-expectation
-  and bad martingale rows after exact bounded-stopping and finite-filtration
-  replay compute the stopped expectation and up-block conditional expectation)
+  (exact bounded-stopping and finite-filtration replay remain in the bad rows;
+  resource-backed Farkas regressions now live in
+  `qf-lra-bad-stopped-expectation` and `qf-lra-bad-martingale` after replay
+  computes the stopped expectation and up-block conditional expectation)
 - [finite-markov-chain-v0](../../artifacts/examples/math/finite-markov-chain-v0/)
   (resource-backed Farkas regressions landed for the bad stochastic row and
   bad stationary-distribution row)

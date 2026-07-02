@@ -1350,7 +1350,7 @@ fn finite_integration_bad_expectation_emits_checked_farkas() {
 #[test]
 fn finite_martingales_bad_stopped_expectation_artifact_emits_checked_farkas() {
     assert_resource_farkas(
-        "finite-martingales-v0 bad-stopped-expectation SMT-LIB artifact",
+        "finite-martingales-v0 qf-lra-bad-stopped-expectation SMT-LIB artifact",
         FINITE_MARTINGALES_BAD_STOPPED_EXPECTATION,
     );
 }
@@ -1363,7 +1363,7 @@ fn finite_martingales_bad_conditional_expectation_emits_checked_farkas() {
     let false_martingale_equality = eq_ratio(&mut arena, up_block_conditional_expectation, 1, 1);
 
     assert_farkas_checked(
-        "finite-martingales-v0 bad-martingale-rejected",
+        "finite-martingales-v0 qf-lra-bad-martingale",
         &arena,
         &[replay_computed_expectation, false_martingale_equality],
     );

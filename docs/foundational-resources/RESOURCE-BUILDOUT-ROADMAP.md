@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 655 expected checks.
+- 660 expected checks.
 - 322 checked proof/evidence rows.
-- 262 replay-only rows.
+- 267 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1329,9 +1329,11 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/finite-integration-v0/smt2/bad-expectation-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_integration_bad_expectation_emits_checked_farkas`.
-22. Landed: promote `finite-martingales-v0` through source-linked
-    QF_LRA/Farkas regressions for `bad-stopped-expectation-rejected` and
-    `bad-martingale-rejected`. The artifacts
+22. Landed: split and promote `finite-martingales-v0` through source-linked
+    QF_LRA/Farkas regressions: `bad-stopped-expectation-rejected` and
+    `bad-martingale-rejected` stay exact finite replay, while
+    `qf-lra-bad-stopped-expectation` and `qf-lra-bad-martingale` own the
+    checked proof-object refutations. The artifacts
     `artifacts/examples/math/finite-martingales-v0/smt2/bad-stopped-expectation-farkas-conflict.smt2`
     and
     `artifacts/examples/math/finite-martingales-v0/smt2/bad-martingale-farkas-conflict.smt2`

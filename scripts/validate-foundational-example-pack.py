@@ -22018,8 +22018,10 @@ def validate_finite_martingales(expected: dict[str, Any]) -> None:
     bad_stopped = checks["bad-stopped-expectation-rejected"]
     if bad_stopped["expected_result"] != "unsat":
         fail("bad-stopped-expectation-rejected must expect unsat")
-    if bad_stopped["proof_status"] != "checked":
-        fail("bad-stopped-expectation-rejected must be checked")
+    if bad_stopped["proof_status"] != "replay-only":
+        fail("bad-stopped-expectation-rejected must be replay-only")
+    if bad_stopped["validation"] != "finite_bad_stopped_expectation_replay":
+        fail("bad-stopped-expectation-rejected must use finite_bad_stopped_expectation_replay validation")
     data = bad_stopped.get("data", {})
     atoms = require_probability_atoms("bad stopped expectation atoms", data.get("atoms"), require_events=False)
     require_normalized_atoms("bad-stopped-expectation-rejected", atoms)
@@ -22059,15 +22061,57 @@ def validate_finite_martingales(expected: dict[str, Any]) -> None:
         fail("bad-stopped-expectation-rejected actual stopped expectation is incorrect")
     if actual_stopped_expectation == claimed_stopped_expectation:
         fail("bad-stopped-expectation-rejected must document a false stopped expectation")
-    require_string("bad stopped expectation smt2_artifact", data.get("smt2_artifact"))
-    check_source("bad stopped expectation smt2_artifact", data["smt2_artifact"])
-    require_string("bad stopped expectation farkas_regression", data.get("farkas_regression"))
-    if "finite_martingales_bad_stopped_expectation_artifact_emits_checked_farkas" not in data["farkas_regression"]:
-        fail("bad-stopped-expectation-rejected must link the Farkas regression")
+    notes = bad_stopped.get("notes", "")
+    if "separate qf-lra-bad-stopped-expectation" not in notes:
+        fail("bad-stopped-expectation-rejected notes must name the separate qf-lra-bad-stopped-expectation row")
+
+    qf_bad_stopped = checks["qf-lra-bad-stopped-expectation"]
+    if qf_bad_stopped["expected_result"] != "unsat":
+        fail("qf-lra-bad-stopped-expectation must expect unsat")
+    if qf_bad_stopped["proof_status"] != "checked":
+        fail("qf-lra-bad-stopped-expectation must be checked")
+    if qf_bad_stopped["validation"] != "qf_lra_bad_stopped_expectation_refutation":
+        fail("qf-lra-bad-stopped-expectation must use qf_lra_bad_stopped_expectation_refutation validation")
+    qf_data = qf_bad_stopped.get("data", {})
+    if qf_data.get("source_witness") != "bounded-stopping-time-two-step-walk":
+        fail("qf-lra-bad-stopped-expectation must cite bounded-stopping-time-two-step-walk")
+    if qf_data.get("source_replay_row") != "bad-stopped-expectation-rejected":
+        fail("qf-lra-bad-stopped-expectation must cite bad-stopped-expectation-rejected")
+    qf_actual_stopped_expectation = require_fraction(
+        "qf-lra bad stopped actual_stopped_expectation",
+        qf_data.get("actual_stopped_expectation"),
+    )
+    qf_claimed_stopped_expectation = require_fraction(
+        "qf-lra bad stopped claimed_stopped_expectation",
+        qf_data.get("claimed_stopped_expectation"),
+    )
+    if qf_actual_stopped_expectation != actual_stopped_expectation:
+        fail("qf-lra-bad-stopped-expectation actual_stopped_expectation must match replay")
+    if qf_claimed_stopped_expectation != claimed_stopped_expectation:
+        fail("qf-lra-bad-stopped-expectation claimed_stopped_expectation must match replay")
+    equation = qf_data.get("farkas_stopped_expectation_equation")
+    require_string("qf-lra bad stopped farkas_stopped_expectation_equation", equation)
+    if equation != "stopped_expectation = actual_stopped_expectation":
+        fail("qf-lra-bad-stopped-expectation must document the Farkas stopped-expectation equation")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad stopped smt2_artifact", smt2_artifact)
+    check_source("qf-lra bad stopped smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad stopped farkas_regression", regression)
+    if "finite_martingales_bad_stopped_expectation_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-stopped-expectation must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad stopped certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-stopped-expectation certificate must document checked UnsatFarkas evidence")
 
     bad = checks["bad-martingale-rejected"]
     if bad["expected_result"] != "unsat":
         fail("bad-martingale-rejected must expect unsat")
+    if bad["proof_status"] != "replay-only":
+        fail("bad-martingale-rejected must be replay-only")
+    if bad["validation"] != "finite_bad_martingale_replay":
+        fail("bad-martingale-rejected must use finite_bad_martingale_replay validation")
     data = bad.get("data", {})
     atoms = require_probability_atoms("bad martingale atoms", data.get("atoms"), require_events=False)
     require_normalized_atoms("bad-martingale-rejected", atoms)
@@ -22095,11 +22139,49 @@ def validate_finite_martingales(expected: dict[str, Any]) -> None:
         fail("bad-martingale-rejected actual conditional expectation is incorrect")
     if actual == current_values:
         fail("bad-martingale-rejected must document a false martingale equality")
-    require_string("bad martingale smt2_artifact", data.get("smt2_artifact"))
-    check_source("bad martingale smt2_artifact", data["smt2_artifact"])
-    require_string("bad martingale farkas_regression", data.get("farkas_regression"))
-    if "finite_martingales_bad_conditional_expectation_emits_checked_farkas" not in data["farkas_regression"]:
-        fail("bad-martingale-rejected must link the Farkas regression")
+    notes = bad.get("notes", "")
+    if "separate qf-lra-bad-martingale" not in notes:
+        fail("bad-martingale-rejected notes must name the separate qf-lra-bad-martingale row")
+
+    qf_bad = checks["qf-lra-bad-martingale"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-martingale must expect unsat")
+    if qf_bad["proof_status"] != "checked":
+        fail("qf-lra-bad-martingale must be checked")
+    if qf_bad["validation"] != "qf_lra_bad_martingale_refutation":
+        fail("qf-lra-bad-martingale must use qf_lra_bad_martingale_refutation validation")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_replay_row") != "bad-martingale-rejected":
+        fail("qf-lra-bad-martingale must cite bad-martingale-rejected")
+    if qf_data.get("failing_block") != "up":
+        fail("qf-lra-bad-martingale must document the up failing block")
+    qf_actual = require_fraction(
+        "qf-lra bad martingale actual_conditional_expectation",
+        qf_data.get("actual_conditional_expectation"),
+    )
+    qf_claimed = require_fraction(
+        "qf-lra bad martingale claimed_martingale_value",
+        qf_data.get("claimed_martingale_value"),
+    )
+    if qf_actual != actual["uu"] or qf_actual != actual["ud"]:
+        fail("qf-lra-bad-martingale actual_conditional_expectation must match up-block replay")
+    if qf_claimed != current_values["uu"] or qf_claimed != current_values["ud"]:
+        fail("qf-lra-bad-martingale claimed_martingale_value must match up-block replay")
+    equation = qf_data.get("farkas_conditional_expectation_equation")
+    require_string("qf-lra bad martingale farkas_conditional_expectation_equation", equation)
+    if equation != "up_block_conditional_expectation = actual_conditional_expectation":
+        fail("qf-lra-bad-martingale must document the Farkas conditional-expectation equation")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad martingale smt2_artifact", smt2_artifact)
+    check_source("qf-lra bad martingale smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad martingale farkas_regression", regression)
+    if "finite_martingales_bad_conditional_expectation_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-martingale must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad martingale certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-martingale certificate must document checked UnsatFarkas evidence")
 
     horizon = checks["general-martingale-lean-horizon"]
     if horizon["expected_result"] != "not-run":
