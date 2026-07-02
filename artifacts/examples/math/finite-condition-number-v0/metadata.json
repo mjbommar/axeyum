@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "finite-condition-number-v0",
+  "title": "Finite Condition Number Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_functional_analysis_and_operator_theory",
+    "bridge_residual_bound",
+    "bridge_exact_vs_floating_arithmetic"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "functional_analysis_and_operator_theory"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite numerical replay",
+    "finite rational matrices",
+    "finite-dimensional operator replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-condition-number-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite matrix condition-number bad bound QF_LRA/Farkas regression seed",
+    "pressure": "Exact infinity-norm condition-number replay computes kappa_infinity(A) = 6 for a fixed diagonal matrix while the malformed row claims kappa_infinity(A) <= 5.",
+    "evidence": [
+      "qf-lra-bad-condition-number"
+    ],
+    "next_step": "Promote additional conditioning rows only when they add distinct norm, inverse, singularity, perturbation, or proof-route pressure; keep algorithmic stability and floating-point roundoff in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/condition-number-end-to-end.md",
+    "artifacts/examples/math/finite-condition-number-v0/smt2/bad-condition-number-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "matrix-inverse-replay",
+    "infinity-norm-replay",
+    "condition-number-replay",
+    "perturbation-bound-replay",
+    "bad-condition-number-rejected",
+    "qf-lra-bad-condition-number",
+    "general-conditioning-stability-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational matrix, inverse, matrix infinity norms, condition number, nominal solve, and perturbation response as deterministic exact-rational replay obligations.",
+    "Route false finite condition-number bounds through checked QF_LRA/Farkas evidence after replay computes the exact scalar condition number.",
+    "Expose the pack through matrix computation, numerical-analysis, and exact-vs-floating learner and consumer query surfaces.",
+    "Keep algorithmic stability, singular-value conditioning, pseudospectra, arbitrary-matrix perturbation theorems, and floating-point roundoff marked Lean-horizon or numerical-honesty until formal routes exist."
+  ]
+}

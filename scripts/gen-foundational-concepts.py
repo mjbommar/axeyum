@@ -422,6 +422,10 @@ CURRICULUM_MAP = {
                 "Exact Hessian linear solve, Newton direction, stationary next point, objective decrease, and checked bad-coordinate evidence.",
             ),
             (
+                "finite-condition-number-v0",
+                "Exact matrix inverse, infinity-norm condition number, perturbation-bound replay, and checked bad condition-number bound evidence.",
+            ),
+            (
                 "finite-recurrence-prefix-v0",
                 "Finite recurrence prefixes, companion-matrix state replay, and checked affine-step refutations.",
             ),
@@ -531,7 +535,7 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, multivariable-calculus and Newton-step shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
@@ -555,7 +559,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "LU/QR/Cholesky replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "LU/QR/Cholesky replay, interval bounds, inner-product projections, condition-number and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -575,7 +579,7 @@ FIELD_PACKS = {
             "Finite cyclic quadrilateral, diagonal-intersection, opposite-angle, and bad-intersection replay.",
         ),
     ],
-    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
+    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact condition-number shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
 }
 
 FIELD_DECIDABILITY = {
@@ -1463,6 +1467,10 @@ BRIDGE_CONCEPTS = [
                 "Residual and solution-box rows that are exact rational shadows of numerical linear algebra.",
             ),
             (
+                "finite-condition-number-v0",
+                "Infinity-norm condition-number and perturbation-bound rows checked as exact rational matrix arithmetic, not floating-point stability evidence.",
+            ),
+            (
                 "least-squares-regression-v0",
                 "Normal-equation, residual, and bad RSS-improvement rows checked as exact rational linear algebra, not floating-point regression.",
             ),
@@ -1485,6 +1493,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/finite-model-replay.md",
                     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
                     "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+                    "docs/learn/math/condition-number-end-to-end.md",
                     "docs/learn/math/exact-statistical-tests-end-to-end.md",
                     "docs/foundational-resources/MATH-FIELDS.md",
                 ],
@@ -1500,6 +1509,7 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+            "docs/learn/math/condition-number-end-to-end.md",
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
             "docs/learn/math/exact-statistical-tests-end-to-end.md",
             "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
@@ -5443,7 +5453,7 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "A residual-bound row checks exact rational residuals, norms, "
             "solution boxes, Jacobi-step error bounds, Hessian linear solves, "
-            "or normal-equation side "
+            "condition-number perturbation bounds, or normal-equation side "
             "conditions for a fixed matrix problem, and separates exact "
             "infeasibility from floating error analysis."
         ),
@@ -5464,6 +5474,7 @@ BRIDGE_CONCEPTS = [
             "exact rational residuals",
             "finite matrices",
             "exact Hessian solves",
+            "condition-number replay",
             "bounded recurrence replay",
         ],
         "example_packs": [
@@ -5487,6 +5498,10 @@ BRIDGE_CONCEPTS = [
                 "finite-newton-step-v0",
                 "Two-by-two Hessian solve, inverse replay, Newton direction, and checked bad-coordinate row over exact rationals.",
             ),
+            (
+                "finite-condition-number-v0",
+                "Two-by-two diagonal inverse replay, infinity-norm condition number, perturbation-bound shadow, and checked bad condition-number bound.",
+            ),
         ],
         "proof_routes": [
             {
@@ -5501,12 +5516,14 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/matrix-corpus-benchmark-boundary.md",
                     "docs/learn/math/numerical-linear-algebra-end-to-end.md",
                     "docs/learn/math/newton-step-end-to-end.md",
+                    "docs/learn/math/condition-number-end-to-end.md",
                     "docs/learn/math/linear-algebra-and-optimization.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
                     "Exact residual witnesses replay directly; false bound or "
                     "coefficient claims, including false Newton coordinates, "
+                    "and condition-number bounds, "
                     "graduate only when the final rational "
                     "linear conflict has rechecked Farkas evidence."
                 ),
@@ -5519,12 +5536,13 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
             "docs/learn/math/newton-step-end-to-end.md",
+            "docs/learn/math/condition-number-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Exact residual rows do not certify floating-point roundoff, conditioning, or asymptotic convergence rates.",
+            "Exact residual and condition-number rows do not certify floating-point roundoff, algorithmic stability, or asymptotic convergence rates.",
             "Nonlinear norm bounds and spectral-condition claims need separate NRA, interval, or Lean-backed routes.",
         ],
         "graduation": {

@@ -20,6 +20,7 @@ Example packs:
 - [finite-modules-v0](../../../artifacts/examples/math/finite-modules-v0/)
 - [finite-tensor-products-v0](../../../artifacts/examples/math/finite-tensor-products-v0/)
 - [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
+- [finite-condition-number-v0](../../../artifacts/examples/math/finite-condition-number-v0/)
 - [finite-recurrence-prefix-v0](../../../artifacts/examples/math/finite-recurrence-prefix-v0/)
 - [finite-root-finding-v0](../../../artifacts/examples/math/finite-root-finding-v0/)
 - [finite-newton-step-v0](../../../artifacts/examples/math/finite-newton-step-v0/)
@@ -107,7 +108,11 @@ left-additivity evidence over `F2`. Their shared theorem boundary is
 The
 numerical-linear-algebra slice adds exact residual bounds, rational interval
 boxes for solutions, and a one-step Jacobi contraction check, with a checked
-QF_LRA/Farkas bad residual, solution-box, and Jacobi-bound certificates. The finite-recurrence-prefix slice adds
+QF_LRA/Farkas bad residual, solution-box, and Jacobi-bound certificates. The
+finite condition-number slice adds exact diagonal inverse replay, row-sum
+infinity norms, a condition-number calculation, perturbation-bound replay, and
+checked QF_LRA/Farkas rejection of a bad condition-number upper bound without
+claiming floating-point stability. The finite-recurrence-prefix slice adds
 Fibonacci and affine recurrence replay plus a companion-matrix state trace,
 with replay-only bad finite-value and bad affine-step source rows plus
 separate checked `qf-lra-*` Farkas proof rows. The
@@ -347,6 +352,21 @@ v^T*v`, and `P*D*P^-1` exactly, and rejects a false Rayleigh quotient after
 replay computes `3`. For matrix invariants, it recomputes the
 characteristic polynomial, evaluates listed roots, checks `A^2 - trace(A)*A +
 det(A)*I = 0`, and validates finite eigenvalue intervals.
+
+For exact conditioning, encode one diagonal matrix and its inverse:
+
+```text
+A = [[2,0],[0,1/3]]
+A^-1 = [[1/2,0],[0,3]]
+```
+
+The `finite-condition-number-v0` validator checks `A*A^-1 = I`,
+`||A||_infinity = 2`, `||A^-1||_infinity = 3`, and
+`kappa_infinity(A) = 6`. It also replays one perturbation where
+`delta_b = [0,1/30]` yields `delta_x = [0,1/10]` and checks the exact
+relative bound `1/10 <= 6*(1/60)`. The checked bad row rejects
+`kappa_infinity(A) <= 5` after exact replay computes `6`. For a focused trace,
+read [End To End: Finite Condition Number](condition-number-end-to-end.md).
 
 For an operator example, the finite-operator pack checks:
 
@@ -706,6 +726,8 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-tensor-products-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/numerical-linear-algebra-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes numerical_linear_algebra_bad_solution_box_upper_bound_artifact_emits_checked_farkas
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-condition-number-v0
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_condition_number_bad_condition_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0
@@ -785,6 +807,7 @@ replay, read
 [End To End: Finite Covariance Matrix](covariance-matrix-end-to-end.md),
 [Random Matrix Moment Index](random-matrix-moment-index.md),
 [End To End: Numerical Linear Algebra](numerical-linear-algebra-end-to-end.md),
+[End To End: Finite Condition Number](condition-number-end-to-end.md),
 [End To End: Finite Recurrence Prefixes](finite-recurrence-prefix-end-to-end.md),
 [End To End: Finite Root Finding](finite-root-finding-end-to-end.md),
 [End To End: Finite Newton Step](newton-step-end-to-end.md),
@@ -842,7 +865,7 @@ eigenpairs, bad Rayleigh-quotient rows, bad characteristic-polynomial rows,
 bad operator-bound and bad Chebyshev-prefix rows, bad Walsh-Hadamard
 transform coefficients, bad QR/Cholesky product entries, bad covariance
 entries, bad KKT stationarity and complementarity rows,
-bad Newton-coordinate rows, bad proximal residual rows, negative-norm rows, and projection-orthogonality
+bad condition-number bounds, bad Newton-coordinate rows, bad proximal residual rows, negative-norm rows, and projection-orthogonality
 examples graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
 Finite vector-space, dual-space, module, ideal, and tensor-product equality

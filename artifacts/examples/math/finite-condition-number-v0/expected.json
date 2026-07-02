@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-condition-number-v0",
+  "witnesses": [
+    {
+      "id": "diagonal-condition-number-shadow",
+      "description": "Exact infinity-norm condition number and perturbation response for a fixed diagonal 2x2 rational matrix.",
+      "values": {
+        "matrix": [
+          ["2", "0"],
+          ["0", "1/3"]
+        ],
+        "inverse": [
+          ["1/2", "0"],
+          ["0", "3"]
+        ],
+        "identity": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "matrix_infinity_norm": "2",
+        "inverse_infinity_norm": "3",
+        "condition_number_infinity": "6",
+        "x": ["1", "1"],
+        "b": ["2", "1/3"],
+        "delta_b": ["0", "1/30"],
+        "delta_x": ["0", "1/10"],
+        "perturbed_b": ["2", "11/30"],
+        "perturbed_x": ["1", "11/10"],
+        "b_infinity_norm": "2",
+        "delta_b_infinity_norm": "1/30",
+        "relative_b_perturbation": "1/60",
+        "x_infinity_norm": "1",
+        "delta_x_infinity_norm": "1/10",
+        "relative_x_perturbation": "1/10",
+        "condition_bound": "1/10"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "matrix-inverse-replay",
+      "claim": "The listed inverse is exact for the fixed diagonal rational matrix.",
+      "expected_result": "sat",
+      "validation": "exact_rational_matrix_inverse_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-condition-number-shadow"],
+      "notes": "The validator recomputes A*A^-1 and A^-1*A exactly over rationals."
+    },
+    {
+      "id": "infinity-norm-replay",
+      "claim": "The listed matrix and inverse infinity norms are exact row-sum norms.",
+      "expected_result": "sat",
+      "validation": "exact_rational_matrix_infinity_norm_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-condition-number-shadow"],
+      "notes": "The validator recomputes each absolute row sum and takes the maximum."
+    },
+    {
+      "id": "condition-number-replay",
+      "claim": "The fixed matrix has infinity-norm condition number 6.",
+      "expected_result": "sat",
+      "validation": "exact_rational_condition_number_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-condition-number-shadow"],
+      "notes": "The validator recomputes kappa_infinity(A) = ||A||_infinity * ||A^-1||_infinity."
+    },
+    {
+      "id": "perturbation-bound-replay",
+      "claim": "The listed perturbation response saturates the exact condition-number bound.",
+      "expected_result": "sat",
+      "validation": "exact_rational_condition_perturbation_bound_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["diagonal-condition-number-shadow"],
+      "notes": "The validator recomputes b=A*x, delta_x=A^-1*delta_b, perturbed quantities, relative norms, and relative_x <= kappa*relative_b."
+    },
+    {
+      "id": "bad-condition-number-rejected",
+      "claim": "The fixed matrix has infinity-norm condition number at most 5.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_condition_number_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "diagonal-condition-number-shadow",
+        "computed_condition_number": "6",
+        "claimed_condition_upper_bound": "5"
+      },
+      "notes": "Exact replay computes kappa_infinity(A) = 6, so the claimed upper bound 5 is rejected; the separate qf-lra-bad-condition-number row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-condition-number",
+      "claim": "The fixed malformed condition-number upper-bound claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "diagonal-condition-number-shadow",
+        "source_replay_row": "bad-condition-number-rejected",
+        "computed_condition_number": "6",
+        "claimed_condition_upper_bound": "5",
+        "farkas_conflict": "kappa_infinity = 6 and kappa_infinity <= 5",
+        "smt2_artifact": "artifacts/examples/math/finite-condition-number-v0/smt2/bad-condition-number-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_condition_number_bad_condition_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the condition number as 6, while the malformed row claims an upper bound of 5; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-conditioning-stability-lean-horizon",
+      "claim": "General matrix conditioning, perturbation theory, backward stability, singular-value conditioning, pseudospectra, and floating-point roundoff require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For an arbitrary invertible matrix and a chosen norm, prove standard forward-error perturbation bounds, condition-number identities, and algorithm-specific backward-stability theorems under explicit assumptions.",
+        "future_checker": "Lean theorem statements for exact finite-dimensional normed linear algebra plus separate numerical-honesty or QF_FP artifacts for floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational diagonal matrix, not a theorem about arbitrary matrices or a stability claim for numerical algorithms."
+    }
+  ]
+}

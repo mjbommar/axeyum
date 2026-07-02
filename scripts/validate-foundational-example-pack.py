@@ -12514,6 +12514,209 @@ def validate_numerical_linear_algebra(expected: dict[str, Any]) -> None:
         fail("bad-jacobi-error-bound-rejected must link the Farkas regression")
 
 
+def validate_finite_condition_number(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    inverse_check = checks["matrix-inverse-replay"]
+    if inverse_check["expected_result"] != "sat":
+        fail("matrix-inverse-replay must expect sat")
+    if inverse_check.get("proof_status") != "replay-only":
+        fail("matrix-inverse-replay must be replay-only")
+    values = single_witness_values(inverse_check, witnesses)
+    matrix = require_fraction_matrix("condition matrix", values.get("matrix"))
+    inverse = require_fraction_matrix("condition inverse", values.get("inverse"))
+    identity = require_fraction_matrix("condition identity", values.get("identity"))
+    require_square_matrix("condition matrix", matrix)
+    require_square_matrix("condition inverse", inverse)
+    require_square_matrix("condition identity", identity)
+    if len(matrix) != len(inverse) or len(matrix) != len(identity):
+        fail("matrix-inverse-replay matrices must have matching square dimensions")
+    expected_identity = [
+        [Fraction(1) if row == column else Fraction(0) for column in range(len(matrix))]
+        for row in range(len(matrix))
+    ]
+    if identity != expected_identity:
+        fail("matrix-inverse-replay identity matrix is incorrect")
+    if mat_mul(matrix, inverse) != identity:
+        fail("matrix-inverse-replay A*A^-1 does not equal identity")
+    if mat_mul(inverse, matrix) != identity:
+        fail("matrix-inverse-replay A^-1*A does not equal identity")
+
+    norm_check = checks["infinity-norm-replay"]
+    if norm_check["expected_result"] != "sat":
+        fail("infinity-norm-replay must expect sat")
+    if norm_check.get("proof_status") != "replay-only":
+        fail("infinity-norm-replay must be replay-only")
+    values = single_witness_values(norm_check, witnesses)
+    matrix_norm = require_fraction(
+        "condition matrix_infinity_norm",
+        values.get("matrix_infinity_norm"),
+    )
+    inverse_norm = require_fraction(
+        "condition inverse_infinity_norm",
+        values.get("inverse_infinity_norm"),
+    )
+    if row_sum_norm(matrix) != matrix_norm:
+        fail("infinity-norm-replay matrix norm is incorrect")
+    if row_sum_norm(inverse) != inverse_norm:
+        fail("infinity-norm-replay inverse norm is incorrect")
+    if matrix_norm <= 0 or inverse_norm <= 0:
+        fail("infinity-norm-replay expects positive norms for an invertible matrix")
+
+    condition_check = checks["condition-number-replay"]
+    if condition_check["expected_result"] != "sat":
+        fail("condition-number-replay must expect sat")
+    if condition_check.get("proof_status") != "replay-only":
+        fail("condition-number-replay must be replay-only")
+    values = single_witness_values(condition_check, witnesses)
+    condition_number = require_fraction(
+        "condition condition_number_infinity",
+        values.get("condition_number_infinity"),
+    )
+    if matrix_norm * inverse_norm != condition_number:
+        fail("condition-number-replay condition number is not norm(A)*norm(A^-1)")
+
+    perturbation = checks["perturbation-bound-replay"]
+    if perturbation["expected_result"] != "sat":
+        fail("perturbation-bound-replay must expect sat")
+    if perturbation.get("proof_status") != "replay-only":
+        fail("perturbation-bound-replay must be replay-only")
+    values = single_witness_values(perturbation, witnesses)
+    vector = require_fraction_vector("condition x", values.get("x"))
+    rhs = require_fraction_vector("condition b", values.get("b"))
+    rhs_delta = require_fraction_vector("condition delta_b", values.get("delta_b"))
+    vector_delta = require_fraction_vector("condition delta_x", values.get("delta_x"))
+    perturbed_rhs = require_fraction_vector("condition perturbed_b", values.get("perturbed_b"))
+    perturbed_vector = require_fraction_vector("condition perturbed_x", values.get("perturbed_x"))
+    require_mat_vec_shape("condition A*x", matrix, vector)
+    require_mat_vec_shape("condition A^-1*delta_b", inverse, rhs_delta)
+    require_same_vector_length("condition b/delta_b", rhs, rhs_delta)
+    require_same_vector_length("condition x/delta_x", vector, vector_delta)
+    if mat_vec(matrix, vector) != rhs:
+        fail("perturbation-bound-replay b does not equal A*x")
+    if mat_vec(inverse, rhs_delta) != vector_delta:
+        fail("perturbation-bound-replay delta_x does not equal A^-1*delta_b")
+    if vector_add_fraction(rhs, rhs_delta) != perturbed_rhs:
+        fail("perturbation-bound-replay perturbed_b is not b + delta_b")
+    if vector_add_fraction(vector, vector_delta) != perturbed_vector:
+        fail("perturbation-bound-replay perturbed_x is not x + delta_x")
+    if mat_vec(matrix, perturbed_vector) != perturbed_rhs:
+        fail("perturbation-bound-replay perturbed solve is not consistent")
+
+    rhs_norm = require_fraction("condition b_infinity_norm", values.get("b_infinity_norm"))
+    rhs_delta_norm = require_fraction(
+        "condition delta_b_infinity_norm",
+        values.get("delta_b_infinity_norm"),
+    )
+    relative_rhs = require_fraction(
+        "condition relative_b_perturbation",
+        values.get("relative_b_perturbation"),
+    )
+    vector_norm = require_fraction("condition x_infinity_norm", values.get("x_infinity_norm"))
+    vector_delta_norm = require_fraction(
+        "condition delta_x_infinity_norm",
+        values.get("delta_x_infinity_norm"),
+    )
+    relative_vector = require_fraction(
+        "condition relative_x_perturbation",
+        values.get("relative_x_perturbation"),
+    )
+    condition_bound = require_fraction("condition condition_bound", values.get("condition_bound"))
+    if linf_norm(rhs) != rhs_norm:
+        fail("perturbation-bound-replay b norm is incorrect")
+    if linf_norm(rhs_delta) != rhs_delta_norm:
+        fail("perturbation-bound-replay delta_b norm is incorrect")
+    if linf_norm(vector) != vector_norm:
+        fail("perturbation-bound-replay x norm is incorrect")
+    if linf_norm(vector_delta) != vector_delta_norm:
+        fail("perturbation-bound-replay delta_x norm is incorrect")
+    if rhs_norm <= 0 or vector_norm <= 0:
+        fail("perturbation-bound-replay relative norms require nonzero b and x")
+    if rhs_delta_norm / rhs_norm != relative_rhs:
+        fail("perturbation-bound-replay relative_b_perturbation is incorrect")
+    if vector_delta_norm / vector_norm != relative_vector:
+        fail("perturbation-bound-replay relative_x_perturbation is incorrect")
+    if condition_number * relative_rhs != condition_bound:
+        fail("perturbation-bound-replay condition_bound is incorrect")
+    if relative_vector > condition_bound:
+        fail("perturbation-bound-replay violates the condition-number bound")
+
+    bad = checks["bad-condition-number-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-condition-number-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-condition-number-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_condition_number_replay":
+        fail("bad-condition-number-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "diagonal-condition-number-shadow":
+        fail("bad-condition-number-rejected must cite the condition-number witness")
+    computed_condition = require_fraction(
+        "bad condition computed_condition_number",
+        data.get("computed_condition_number"),
+    )
+    claimed_upper = require_fraction(
+        "bad condition claimed_condition_upper_bound",
+        data.get("claimed_condition_upper_bound"),
+    )
+    if computed_condition != condition_number:
+        fail("bad-condition-number-rejected computed condition number does not match replay")
+    if computed_condition <= claimed_upper:
+        fail("bad-condition-number-rejected claimed upper bound unexpectedly holds")
+    if "separate qf-lra-bad-condition-number" not in bad.get("notes", ""):
+        fail("bad-condition-number-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-condition-number"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-condition-number must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-condition-number must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-condition-number must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "diagonal-condition-number-shadow":
+        fail("qf-lra-bad-condition-number must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-condition-number-rejected":
+        fail("qf-lra-bad-condition-number must cite the replay row")
+    qf_computed = require_fraction(
+        "qf condition computed_condition_number",
+        qf_data.get("computed_condition_number"),
+    )
+    qf_claimed = require_fraction(
+        "qf condition claimed_condition_upper_bound",
+        qf_data.get("claimed_condition_upper_bound"),
+    )
+    if qf_computed != computed_condition or qf_claimed != claimed_upper:
+        fail("qf-lra-bad-condition-number data must match the replay row")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf condition smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-condition-number-v0/smt2/"
+        "bad-condition-number-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-condition-number smt2_artifact must name the checked source artifact")
+    check_source("qf condition smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf condition farkas_regression", regression)
+    if "finite_condition_number_bad_condition_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-condition-number must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf condition certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-condition-number certificate must document checked Farkas evidence")
+
+    horizon = checks["general-conditioning-stability-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-conditioning-stability-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-conditioning-stability-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("condition horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("condition horizon future_checker", horizon_data.get("future_checker"))
+
+
 def require_fraction_vector_list(context: str, value: Any) -> list[list[Fraction]]:
     if not isinstance(value, list) or not value:
         fail(f"{context} must be a non-empty list of vectors")
@@ -27849,6 +28052,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_measure_monotonicity(expected)
     if metadata["id"] == "finite-newton-step-v0":
         validate_finite_newton_step(expected)
+    if metadata["id"] == "finite-condition-number-v0":
+        validate_finite_condition_number(expected)
     if metadata["id"] == "metric-continuity-v0":
         validate_metric_continuity(expected)
     if metadata["id"] == "finite-predicate-v0":

@@ -240,6 +240,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite condition-number resource landed.**
+  `finite-condition-number-v0` now gives the linear-algebra,
+  numerical-analysis, and functional/operator lanes an exact rational
+  conditioning shadow: it checks a diagonal matrix inverse, infinity norms,
+  `kappa_infinity(A) = 6`, a perturbation-bound equality case, replay-only bad
+  condition-number rejection, and a source-linked QF_LRA/Farkas row for the
+  malformed upper-bound claim `kappa_infinity(A) <= 5`. The focused learner
+  page and query guides keep exact rational conditioning separate from
+  algorithmic stability, singular-value conditioning, pseudospectra, and
+  floating-point roundoff. The public summary now reports 121 concept rows,
+  117 packs, 747 expected checks, 343 checked rows, 324 replay-only rows, 80
+  Lean-horizon rows, and 117 promoted solver-reuse packs.
 - **Finite Newton step resource landed.**
   `finite-newton-step-v0` now gives the calculus, linear-algebra,
   optimization, and numerical-analysis lanes an exact two-variable Newton-step
@@ -249,9 +261,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   source-linked QF_LRA/Farkas row. The focused learner page keeps Newton
   convergence, globalization, trust-region methods, conditioning, and
   floating-point Newton algorithms in theorem or numerical-honesty lanes. The
-  public summary now reports 121 concept rows, 116 packs, 740 expected checks,
-  342 checked rows, 319 replay-only rows, 79 Lean-horizon rows, and 116
-  promoted solver-reuse packs.
+  public summary then reported 121 concept rows, 116 packs, 740 expected
+  checks, 342 checked rows, 319 replay-only rows, 79 Lean-horizon rows, and
+  116 promoted solver-reuse packs.
 - **Finite covariance matrix resource landed.**
   `finite-covariance-matrix-v0` now gives the statistics, probability, and
   linear-algebra lanes an exact finite-sample covariance replay: it checks the

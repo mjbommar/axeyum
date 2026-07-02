@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 75 bridge-concept rows.
 - 5 example-family rows.
-- 116 non-template math example packs.
-- 740 expected checks.
-- 342 checked proof/evidence rows.
-- 319 replay-only rows.
-- 79 Lean-horizon rows.
-- 116 promoted solver-reuse packs.
+- 117 non-template math example packs.
+- 747 expected checks.
+- 343 checked proof/evidence rows.
+- 324 replay-only rows.
+- 80 Lean-horizon rows.
+- 117 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 116 focused learner-linked packs, with no path-only, index-only, or missing
+- 117 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2376,6 +2376,13 @@ Pick one item per commit unless the change is purely navigational.
      malformed next-coordinate claim through a source-linked QF_LRA/Farkas
      regression without claiming Newton convergence, globalization,
      trust-region methods, conditioning, or floating-point Newton algorithms.
+164. Landed: add `finite-condition-number-v0` as an exact finite
+     condition-number resource. The pack computes one diagonal rational
+     matrix inverse, infinity-norm condition number, perturbation-bound shadow,
+     and replay-only bad condition-number bound, then promotes the malformed
+     `kappa_infinity(A) <= 5` claim through a source-linked QF_LRA/Farkas
+     regression without claiming algorithmic stability, singular-value
+     theory, pseudospectra, or floating-point roundoff.
 
 ## Validation Checklist
 

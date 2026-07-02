@@ -157,13 +157,13 @@ proof upgrades, solver feedback, and consumer boundaries is
 [`docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
 The commit-sized curriculum/resource work matrix is
 [`docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md`](docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
-The current execution ledger for stabilizing the 116 current math packs,
+The current execution ledger for stabilizing the 117 current math packs,
 resolving unclassified solver-reuse rows, completing learner paths, and
 deepening proof routes field by field is
 [`docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md).
 The current learner-spine audit over all non-template math packs is
 [`docs/foundational-resources/LEARNER-COVERAGE-AUDIT.md`](docs/foundational-resources/LEARNER-COVERAGE-AUDIT.md);
-it records all 116 current non-template packs as focused-lesson linked, with no
+it records all 117 current non-template packs as focused-lesson linked, with no
 path-only, index-only, or missing learner buckets.
 The detailed operating roadmap for building the math-curriculum resource system
 across ontology rows, example packs, learner pages, proof routes, solver reuse,
@@ -371,13 +371,13 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-02): the public JSON layer reports
-121 concept rows, 116 non-template packs, 740 expected checks (361 `sat`,
-300 `unsat`, 79 `not-run`), 342 checked rows, 319 replay-only rows, 79
-Lean-horizon rows, and 116 promoted solver-reuse packs. The rules/law JSON
+121 concept rows, 117 non-template packs, 747 expected checks (365 `sat`,
+302 `unsat`, 80 `not-run`), 343 checked rows, 324 replay-only rows, 80
+Lean-horizon rows, and 117 promoted solver-reuse packs. The rules/law JSON
 layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
-coverage audit records all 116 non-template packs as focused-lesson linked,
+coverage audit records all 117 non-template packs as focused-lesson linked,
 with no path-only, index-only, or missing learner buckets. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -772,7 +772,7 @@ curriculum-pressure dashboards now expose conservative R0-R6 gate/next-gate
 columns and overlapping fragment-pressure buckets, making R4-to-R5 solver-reuse
 candidates and Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
 Lean-horizon demand visible without hand-maintained scans.
-The generated solver-reuse disposition audit now reports 116 promoted math
+The generated solver-reuse disposition audit now reports 117 promoted math
 packs, 0 non-benchmark-horizon packs, and 0 unclassified rows, so future
 unclassified packs and deliberate non-benchmark rows surface in a
 freshness-checked queue.
@@ -1112,7 +1112,7 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **116 promoted solver-reuse
+the foundational resource dashboards now report **117 promoted solver-reuse
 packs**, **0 non-benchmark-horizon packs**, and **0 unclassified packs** after
 the latest finite Cholesky bad product-entry QF_LRA/Farkas promotion,
 the latest finite QR bad product-entry QF_LRA/Farkas promotion,
@@ -1151,6 +1151,7 @@ the latest finite-separation split into replay-only bad convex-combination and
 bad separator rows plus separate `qf-lra-*` QF_LRA/Farkas proof rows,
 the latest finite-root-finding split into replay-only bad Newton-step and
 bad bisection-width rows plus separate `qf-lra-*` QF_LRA/Farkas proof rows,
+the latest finite-condition-number bad upper-bound QF_LRA/Farkas promotion,
 the latest bounded-dynamics split into replay-only bad transition-step,
 bad threshold-step, and invariant-bound rows plus separate `qf-lra-*`
 QF_LRA/Farkas proof rows,

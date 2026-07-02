@@ -94,7 +94,7 @@ Every new or upgraded resource should answer these questions before it lands:
 | `discrete_math` | counting, relations | graph search, matching, cuts, generating functions, asymptotic horizons | SAT/CNF, finite replay, Lean horizon |
 | `graph_theory` | sets, relations, counting | maintain landed finite graph replay/obstruction bridge across coloring, reachability, search runtime, matching, cuts, and d-separation; add theorem/asymptotic rows only when reused | SAT/CNF, QF_BV for fixed color encodings, BV/LIA counters, model replay |
 | `number_theory` | divisibility, modular, fields | bounded Diophantine and residue-family packs | QF_LIA, QF_BV |
-| `linear_algebra` | fields, polynomials, relations | LU/QR/Cholesky exact replay plus checked bad product-entry proof rows, rank/nullity, residual, spectral, tensor and module rows | QF_LRA/Farkas, finite-field replay |
+| `linear_algebra` | fields, polynomials, relations | LU/QR/Cholesky exact replay plus checked bad product-entry proof rows, rank/nullity, residual, condition-number, spectral, tensor and module rows | QF_LRA/Farkas, finite-field replay |
 | `abstract_algebra` | groups, rings, fields | homomorphisms, ideals, quotients, modules, tensor products | QF_UF/Alethe, QF_BV |
 | `real_analysis` | rationals, reals, sequences, calculus | balls, bounded epsilon-delta, compactness/continuity horizons | QF_LRA/Farkas, QF_LRA/NRA, Lean horizon |
 | `complex_analysis` | complex, reals, polynomials | real-pair algebra now; analytic rows later | NRA/LRA, Lean horizon |
@@ -103,10 +103,10 @@ Every new or upgraded resource should answer these questions before it lands:
 | `probability_theory` | counting, rationals, measure | probability tables, kernels, Markov chains, hitting times, concentration | QF_LRA, QF_LIA counts, replay |
 | `statistics` | probability, linear algebra | exact tests, regression, finite sampling tables, numerical-honesty rows | QF_LRA, QF_LIA, replay |
 | `optimization_and_convexity` | rationals, reals, linear algebra | landed LP objective/Farkas, rational convexity/gradient bridge rows with checked bad midpoint and affine-threshold evidence, finite root-finding step and bisection-width replay, finite hyperplane-separation replay, finite KKT replay with checked stationarity/complementarity evidence, finite active-set QP face/slack replay with checked inactive-slack evidence, finite degenerate active-bound replay, finite SDP replay, exact QR/Cholesky factorization replay, finite gradient-descent replay with checked descent-bound evidence, finite Armijo line-search rejected-step, descent-direction, and accepted-candidate replay, finite Wolfe line-search replay, finite projected-gradient interval/decrease replay, finite proximal-gradient soft-threshold/composite-decrease replay, and finite box-plus-L1 proximal replay; add narrower duality, working-set pivots, higher-dimensional SDP, least-squares/covariance/Hessian factorization families, group-lasso/active-set proximal, strong-Wolfe/nonconvex line-search, or stochastic/convergence rows only when reused | QF_LRA/Farkas, NRA shadows |
-| `numerical_analysis` | linear algebra, calculus | maintain landed finite dynamics/Euler bridge alongside residual bounds, interval boxes, exact error recurrences, root-finding, LU/QR/Cholesky factorization replay, active-set QP, gradient-descent, Armijo/Wolfe line-search descent-direction and accepted-candidate arithmetic, projected-gradient, and proximal-gradient composite-decrease iterations | QF_LRA, replay, numerical-honesty metadata |
+| `numerical_analysis` | linear algebra, calculus | maintain landed finite dynamics/Euler bridge alongside residual bounds, interval boxes, exact condition-number/perturbation shadows, exact error recurrences, root-finding, LU/QR/Cholesky factorization replay, active-set QP, gradient-descent, Armijo/Wolfe line-search descent-direction and accepted-candidate arithmetic, projected-gradient, and proximal-gradient composite-decrease iterations | QF_LRA, replay, numerical-honesty metadata |
 | `differential_equations_and_dynamical_systems` | calculus, linear algebra | maintain landed finite dynamics/Euler bridge for bounded recurrences, Euler traces, invariant checks, threshold reachability, replay-only bad dynamics rows, separate checked QF_LRA proof rows, and finite error tables | QF_LRA, BV/LIA counters, Lean horizon |
 | `geometry` | reals, polynomials, linear algebra | landed coordinate/incidence/rigid/affine/oriented replay plus finite circle/inversion/cyclic replay bridge rows; add only distinct nontrivial circle-line correspondence, higher-degree polynomial-geometry, or theorem-reconstruction pressure beyond the current affine collinearity-determinant, area-scaling, circle-line, square angle-dot, and Ptolemy rows when reused | QF_LRA/NRA, replay |
-| `functional_analysis_and_operator_theory` | linear algebra, real analysis | finite operators, inner products, Chebyshev-system slices | QF_LRA, finite replay, Lean horizon |
+| `functional_analysis_and_operator_theory` | linear algebra, real analysis | finite operators, inner products, exact condition-number shadows, Chebyshev-system slices | QF_LRA, finite replay, Lean horizon |
 
 ## Route-Specific Build Plan
 
@@ -858,7 +858,15 @@ Build sequence:
     residual bridges keep exact finite replay separate from Newton
     convergence, globalization, trust-region, conditioning, and floating-point
     stability claims.
-87. Revisit crate/repo boundaries only after three real consumers or repeated
+87. Landed: add the finite condition-number resource.
+    `finite-condition-number-v0` now records one exact diagonal rational
+    matrix inverse, infinity-norm condition number, perturbation-bound shadow,
+    replay-only bad condition-number bound, and a checked QF_LRA/Farkas
+    artifact for the malformed claim `kappa_infinity(A) <= 5`. The reused
+    residual and exact-vs-floating bridges keep exact finite replay separate
+    from algorithmic stability, singular-value theory, pseudospectra, and
+    floating-point roundoff.
+88. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

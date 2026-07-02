@@ -1782,6 +1782,12 @@
           "notes": "Exact Hessian linear solve, Newton direction, stationary next point, objective decrease, and checked bad-coordinate evidence."
         },
         {
+          "id": "finite-condition-number-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-condition-number-v0",
+          "notes": "Exact matrix inverse, infinity-norm condition number, perturbation-bound replay, and checked bad condition-number bound evidence."
+        },
+        {
           "id": "finite-recurrence-prefix-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
@@ -2984,6 +2990,12 @@
           "notes": "Residual and solution-box rows that are exact rational shadows of numerical linear algebra."
         },
         {
+          "id": "finite-condition-number-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-condition-number-v0",
+          "notes": "Infinity-norm condition-number and perturbation-bound rows checked as exact rational matrix arithmetic, not floating-point stability evidence."
+        },
+        {
           "id": "least-squares-regression-v0",
           "status": "validated",
           "path": "artifacts/examples/math/least-squares-regression-v0",
@@ -3012,6 +3024,7 @@
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+            "docs/learn/math/condition-number-end-to-end.md",
             "docs/learn/math/exact-statistical-tests-end-to-end.md",
             "docs/foundational-resources/MATH-FIELDS.md"
           ],
@@ -3022,6 +3035,7 @@
         "docs/proof-cookbook/recipes/finite-model-replay.md",
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/learn/math/numerical-linear-algebra-end-to-end.md",
+        "docs/learn/math/condition-number-end-to-end.md",
         "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
         "docs/learn/math/exact-statistical-tests-end-to-end.md",
         "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
@@ -7245,7 +7259,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A residual-bound row checks exact rational residuals, norms, solution boxes, Jacobi-step error bounds, Hessian linear solves, or normal-equation side conditions for a fixed matrix problem, and separates exact infeasibility from floating error analysis.",
+      "summary": "A residual-bound row checks exact rational residuals, norms, solution boxes, Jacobi-step error bounds, Hessian linear solves, condition-number perturbation bounds, or normal-equation side conditions for a fixed matrix problem, and separates exact infeasibility from floating error analysis.",
       "prerequisites": [
         "bridge_lu_replay",
         "bridge_counterexample_proof",
@@ -7263,6 +7277,7 @@
         "exact rational residuals",
         "finite matrices",
         "exact Hessian solves",
+        "condition-number replay",
         "bounded recurrence replay"
       ],
       "example_packs": [
@@ -7295,6 +7310,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-newton-step-v0",
           "notes": "Two-by-two Hessian solve, inverse replay, Newton direction, and checked bad-coordinate row over exact rationals."
+        },
+        {
+          "id": "finite-condition-number-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-condition-number-v0",
+          "notes": "Two-by-two diagonal inverse replay, infinity-norm condition number, perturbation-bound shadow, and checked bad condition-number bound."
         }
       ],
       "proof_routes": [
@@ -7310,10 +7331,11 @@
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
             "docs/learn/math/newton-step-end-to-end.md",
+            "docs/learn/math/condition-number-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "Exact residual witnesses replay directly; false bound or coefficient claims, including false Newton coordinates, graduate only when the final rational linear conflict has rechecked Farkas evidence."
+          "notes": "Exact residual witnesses replay directly; false bound or coefficient claims, including false Newton coordinates, and condition-number bounds, graduate only when the final rational linear conflict has rechecked Farkas evidence."
         }
       ],
       "source_refs": [
@@ -7323,12 +7345,13 @@
         "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/numerical-linear-algebra-end-to-end.md",
         "docs/learn/math/newton-step-end-to-end.md",
+        "docs/learn/math/condition-number-end-to-end.md",
         "docs/learn/math/linear-algebra-and-optimization.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
       "open_gaps": [
-        "Exact residual rows do not certify floating-point roundoff, conditioning, or asymptotic convergence rates.",
+        "Exact residual and condition-number rows do not certify floating-point roundoff, algorithmic stability, or asymptotic convergence rates.",
         "Nonlinear norm bounds and spectral-condition claims need separate NRA, interval, or Lean-backed routes."
       ],
       "graduation": {
@@ -11396,13 +11419,19 @@
           "id": "finite-operator-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-operator-v0",
-          "notes": "Finite-dimensional norms, inner products, dual spaces, operator matrices, Chebyshev polynomial slices, and finite Chebyshev-system grids."
+          "notes": "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact condition-number shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."
         },
         {
           "id": "finite-chebyshev-systems-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-chebyshev-systems-v0",
           "notes": "Finite Chebyshev-System Checks"
+        },
+        {
+          "id": "finite-condition-number-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-condition-number-v0",
+          "notes": "Finite Condition Number Checks"
         },
         {
           "id": "finite-dual-spaces-v0",
@@ -11698,7 +11727,7 @@
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, LU/QR/Cholesky replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -11771,6 +11800,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-circle-geometry-v0",
           "notes": "Finite Circle Geometry Checks"
+        },
+        {
+          "id": "finite-condition-number-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-condition-number-v0",
+          "notes": "Finite Condition Number Checks"
         },
         {
           "id": "finite-covariance-matrix-v0",
@@ -12407,7 +12442,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "LU/QR/Cholesky replay, interval bounds, inner-product projections, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
+          "notes": "LU/QR/Cholesky replay, interval bounds, inner-product projections, condition-number and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -12444,6 +12479,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-cholesky-decomposition-v0",
           "notes": "Finite Cholesky Decomposition Checks"
+        },
+        {
+          "id": "finite-condition-number-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-condition-number-v0",
+          "notes": "Finite Condition Number Checks"
         },
         {
           "id": "finite-euler-method-v0",

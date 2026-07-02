@@ -41,7 +41,7 @@ public substring filter, so use canonical recipe names such as
 
 | Route | Current Pack Count | Start Query | Drilldown Query | Do Not Claim |
 |---|---:|---|---|---|
-| `finite-model-replay` | 116 | `routes --route finite-replay` | `packs --route finite-model-replay --solver-reuse promoted` | Certificate checking, theorem proof, performance, or solver parity. This route proves exact replay of finite source data. |
+| `finite-model-replay` | 117 | `routes --route finite-replay` | `packs --route finite-model-replay --solver-reuse promoted` | Certificate checking, theorem proof, performance, or solver parity. This route proves exact replay of finite source data. |
 | `boolean-cnf-lrat` | 16 | `routes --route boolean` | `checks --route boolean --proof-status checked` | General graph/set/proof theorems or trust in the encoder. The trusted claim is the checked finite CNF proof object. |
 | `qf-bv-bitblast` | 7 | `routes --route qf-bv` | `checks --route qf-bv --proof-status checked` | Unbounded arithmetic, arbitrary finite algebra, or width-independent claims. Width must be part of the source claim. |
 | `qf-lia-diophantine` | 15 | `routes --route Diophantine` | `checks --route Diophantine --proof-status checked` | General number theory, arbitrary integer theorem schemas, universal coefficient theorems, or asymptotic combinatorics. The row is a concrete integer obstruction. |

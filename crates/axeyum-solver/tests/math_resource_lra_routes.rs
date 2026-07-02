@@ -199,6 +199,9 @@ const MULTIVARIABLE_CALCULUS_BAD_GRADIENT: &str = include_str!(
 const FINITE_NEWTON_STEP_BAD_COORDINATE: &str = include_str!(
     "../../../artifacts/examples/math/finite-newton-step-v0/smt2/bad-newton-coordinate-farkas-conflict.smt2"
 );
+const FINITE_CONDITION_NUMBER_BAD_CONDITION: &str = include_str!(
+    "../../../artifacts/examples/math/finite-condition-number-v0/smt2/bad-condition-number-farkas-conflict.smt2"
+);
 const FINITE_MEASURE_BAD_COMPLEMENT: &str = include_str!(
     "../../../artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2"
 );
@@ -1094,6 +1097,14 @@ fn finite_newton_step_bad_coordinate_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-newton-step-v0 bad-coordinate SMT-LIB artifact",
         FINITE_NEWTON_STEP_BAD_COORDINATE,
+    );
+}
+
+#[test]
+fn finite_condition_number_bad_condition_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-condition-number-v0 bad-condition-number SMT-LIB artifact",
+        FINITE_CONDITION_NUMBER_BAD_CONDITION,
     );
 }
 
