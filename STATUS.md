@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Circle-geometry theorem-boundary resource landed.**
+  `circle-geometry-theorem-boundary.md` now separates
+  `finite-circle-geometry-v0` exact point-on-circle replay,
+  tangent-line/radius perpendicularity replay, chord-midpoint perpendicularity
+  replay, circle-line intersection replay, and checked bad-radius/bad
+  line-intersection QF_LRA/Farkas rows from tangent, chord,
+  power-of-a-point, cyclic, inversion, synthetic-geometry, projective-geometry,
+  and numerical-geometry theorem claims. The theorem horizon, geometry,
+  learner-map, and smoke query docs now expose the circle boundary directly.
+
 - **Proximal-gradient theorem-boundary resource landed.**
   `proximal-gradient-convergence-theorem-boundary.md` now separates
   `finite-proximal-gradient-v0` exact smooth-gradient replay, trial-step

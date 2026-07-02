@@ -2551,6 +2551,15 @@ resource smoke expose `bridge_coordinate_orientation_geometry` and
 pack/check queries, making coordinate/incidence/rigid/affine/orientation rows
 and circle/inversion/cyclic rows discoverable while keeping broad geometry
 theorems in the proof-horizon lane.
+The learner/planning layer now also has
+[`circle-geometry-theorem-boundary.md`](../learn/math/circle-geometry-theorem-boundary.md),
+which expands the finite circle-geometry row into a concrete boundary ledger:
+point-on-circle replay, tangent-line/radius perpendicularity replay,
+chord-midpoint perpendicularity replay, circle-line intersection replay, and
+bad radius/bad line-intersection QF_LRA/Farkas rows are linked to copyable
+queries and graduation criteria while keeping tangent, chord,
+power-of-a-point, cyclic, inversion, synthetic-geometry, projective-geometry,
+and numerical-geometry claims in Lean/theorem-horizon lanes.
 The graph/discrete consumer layer now also has
 [`GRAPH-DISCRETE-QUERIES.md`](GRAPH-DISCRETE-QUERIES.md). The guide and
 resource smoke expose `bridge_finite_graph_replay_obstruction` through

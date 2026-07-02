@@ -170,7 +170,8 @@ hyperplane-separation/duality, KKT sufficiency, active-set method theory, and
 SDP duality/Slater-condition theory, and gradient-descent convergence/rate
 theory, line-search termination/convergence theory, Wolfe-line-search
 existence/convergence theory, and projected-gradient projection/convergence
-theory, plus proximal-gradient proximal-map/convergence theory.
+theory, proximal-gradient proximal-map/convergence theory, and
+circle-geometry tangent/chord theorem boundaries.
 The solver-reuse query guide is
 [`docs/foundational-resources/SOLVER-REUSE-QUERIES.md`](docs/foundational-resources/SOLVER-REUSE-QUERIES.md);
 it records promoted-pack, proof-route, field, and checked-row queries for

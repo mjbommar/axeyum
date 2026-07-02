@@ -173,7 +173,9 @@ evidence.
 The finite circle-geometry slice checks point-on-circle equations,
 tangent-line/radius perpendicularity, chord-midpoint perpendicularity, and
 circle-line intersections as small exact vector calculations, then rejects bad
-radius and bad line-intersection rows through QF_LRA/Farkas evidence.
+radius and bad line-intersection rows through QF_LRA/Farkas evidence; its
+theorem boundary is
+[Circle Geometry Theorem Boundary](circle-geometry-theorem-boundary.md).
 The finite inversion-geometry slice checks unit-circle inversion as scalar
 vector replay, inverse-distance products, and collinearity determinants, then
 rejects bad inverse-coordinate and inverse-distance-product rows through
@@ -415,6 +417,10 @@ right-intersection x-coordinate `2`; exact replay computes squared radius `2`
 and right-intersection x-coordinate `1`, and both final conflicts are checked
 through QF_LRA/Farkas evidence. For a focused trace, read
 [End To End: Finite Circle Geometry](finite-circle-geometry-end-to-end.md).
+For the theorem boundary that keeps those finite circle rows separate from
+tangent, chord, power-of-a-point, cyclic, inversion, synthetic-geometry, and
+numerical-geometry theorems, read
+[Circle Geometry Theorem Boundary](circle-geometry-theorem-boundary.md).
 
 For a finite inversion-geometry example, encode the point and inverse image as
 exact rational vectors:
@@ -734,6 +740,7 @@ replay, read
 [End To End: Incidence Geometry](incidence-geometry-end-to-end.md),
 [End To End: Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md),
 [End To End: Finite Circle Geometry](finite-circle-geometry-end-to-end.md),
+[Circle Geometry Theorem Boundary](circle-geometry-theorem-boundary.md),
 [End To End: Finite Inversion Geometry](finite-inversion-geometry-end-to-end.md),
 [End To End: Finite Cyclic Geometry](finite-cyclic-geometry-end-to-end.md),
 [End To End: Rational Inner Product Spaces](inner-product-spaces-end-to-end.md),

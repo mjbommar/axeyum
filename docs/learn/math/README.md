@@ -423,6 +423,11 @@ Companion maps:
   chord-midpoint perpendicularity, circle-line intersection replay, checked
   QF_LRA/Farkas bad-radius and bad-line-intersection rejection, and the general
   circle-geometry Lean horizon.
+- [Circle Geometry Theorem Boundary](circle-geometry-theorem-boundary.md):
+  maps those finite point, tangent, chord, circle-line, bad-radius, and
+  bad-intersection coordinate shadows to the missing tangent, chord,
+  power-of-a-point, cyclic, inversion, synthetic-geometry, and
+  numerical-geometry theorem routes.
 - [Finite Inversion Geometry](finite-inversion-geometry-end-to-end.md):
   follows exact unit-circle inversion replay, inverse-distance product
   checking, collinearity replay, checked QF_LRA/Farkas bad inverse-coordinate

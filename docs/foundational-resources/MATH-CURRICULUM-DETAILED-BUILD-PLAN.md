@@ -2014,6 +2014,15 @@ Pick one row per commit unless the change is purely navigational.
      numerical-stability routes, and adds proximal-gradient-specific horizon
      queries to the public smoke gate without adding a duplicate pack or
      changing resource counts.
+239. Landed: add `circle-geometry-theorem-boundary.md` as the focused
+     theorem-boundary page for `finite-circle-geometry-v0`. It maps exact
+     point-on-circle replay, tangent-line/radius perpendicularity replay,
+     chord-midpoint perpendicularity replay, circle-line intersection replay,
+     and checked QF_LRA/Farkas bad radius and bad line-intersection rows to
+     the missing tangent, chord, power-of-a-point, cyclic, inversion,
+     synthetic-geometry, projective-geometry, and numerical-geometry theorem
+     routes, and adds circle-specific horizon queries to the public smoke gate
+     without adding a duplicate pack or changing resource counts.
 
 ## Validation Checklist
 

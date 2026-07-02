@@ -54,7 +54,7 @@ needs concrete checked rows to display.
 | Coordinate, incidence, rigid, affine, and orientation replay | `bridge_coordinate_orientation_geometry` | `Farkas` | `checks --concept bridge_coordinate_orientation_geometry --route Farkas --proof-status checked` |
 | Circle, inversion, and cyclic-configuration replay | `bridge_finite_circle_inversion_cyclic_replay` | `Farkas` | `checks --concept bridge_finite_circle_inversion_cyclic_replay --route Farkas --proof-status checked` |
 | All finite geometry checks | field `geometry` | `Farkas` | `checks --field geometry --route Farkas --proof-status checked` |
-| Circle-specific display rows | pack `finite-circle-geometry-v0` | `Farkas` | `checks --pack finite-circle-geometry-v0 --route Farkas --proof-status checked` |
+| Circle-specific display rows | pack `finite-circle-geometry-v0` | `Farkas` | `checks --pack finite-circle-geometry-v0 --route Farkas --proof-status checked`; `horizon-frontier --text "circle geometry"` |
 | Inversion-specific display rows | pack `finite-inversion-geometry-v0` | `Farkas` | `checks --pack finite-inversion-geometry-v0 --route Farkas --proof-status checked` |
 | Cyclic/Ptolemy display rows | pack `finite-cyclic-geometry-v0` | `Farkas` | `checks --pack finite-cyclic-geometry-v0 --route Farkas --proof-status checked` |
 
@@ -125,6 +125,29 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-circle-geometry-v0 \
   --route Farkas \
   --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text "circle geometry" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-circle-geometry-v0 \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-circle-geometry-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text radius \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-circle-geometry-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text intersection \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \

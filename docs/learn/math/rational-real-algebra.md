@@ -493,6 +493,10 @@ circle and that the right intersection has x-coordinate `2`; exact replay
 computes squared radius `2` and right-intersection x-coordinate `1`, while the
 source QF_LRA artifacts check those final equality conflicts with
 `UnsatFarkas` evidence.
+For the theorem boundary that keeps those finite circle rows separate from
+tangent, chord, power-of-a-point, cyclic, inversion, synthetic-geometry, and
+numerical-geometry theorems, read
+[Circle Geometry Theorem Boundary](circle-geometry-theorem-boundary.md).
 
 For a finite inversion-geometry check, encode one rational point outside the
 unit circle:
@@ -642,7 +646,8 @@ finite coordinate, incidence, rigid-configuration, affine, and oriented geometry
 [End To End: Incidence Geometry](incidence-geometry-end-to-end.md), and
 [End To End: Rigid Configuration Geometry](rigid-configuration-geometry-end-to-end.md).
 For finite circle point, tangent, and chord replay, read
-[End To End: Finite Circle Geometry](finite-circle-geometry-end-to-end.md).
+[End To End: Finite Circle Geometry](finite-circle-geometry-end-to-end.md) and
+[Circle Geometry Theorem Boundary](circle-geometry-theorem-boundary.md).
 For finite inversion replay, read
 [End To End: Finite Inversion Geometry](finite-inversion-geometry-end-to-end.md).
 For finite cyclic quadrilateral replay, read

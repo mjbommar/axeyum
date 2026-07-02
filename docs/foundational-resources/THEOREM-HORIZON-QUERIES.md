@@ -380,6 +380,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Circle-geometry tangent, chord, power-of-a-point, cyclic, and inversion
+horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text "circle geometry" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-circle-geometry-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Hitting-time, recurrence/transience, and stochastic-process horizons:
 
 ```sh
@@ -455,6 +469,7 @@ The main learner maps that explain these boundaries are:
 - [Wolfe Line Search Theorem Boundary](../learn/math/wolfe-line-search-theorem-boundary.md)
 - [Projected Gradient Convergence Theorem Boundary](../learn/math/projected-gradient-convergence-theorem-boundary.md)
 - [Proximal Gradient Convergence Theorem Boundary](../learn/math/proximal-gradient-convergence-theorem-boundary.md)
+- [Circle Geometry Theorem Boundary](../learn/math/circle-geometry-theorem-boundary.md)
 - [Random Variable Theorem Boundary](../learn/math/random-variable-theorem-boundary.md)
 - [Stochastic Kernel Theorem Boundary](../learn/math/stochastic-kernel-theorem-boundary.md)
 - [Hitting-Time Theorem Boundary](../learn/math/hitting-time-theorem-boundary.md)
