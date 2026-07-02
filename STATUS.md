@@ -15271,6 +15271,30 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-02** — **P1.4 reframe + the last honest `#[ignore]` flips green**
+  (`86998ea8`): a read-only scoping pass found the e-graph keystone is
+  **essentially already built** (hash-cons + backtrackable union-find,
+  congruence cascade, proof forest with explain-to-LCA, push/pop, th_vars —
+  all in `axeyum-egraph` with an independent `check_congruence` re-validator),
+  and the "uninterpreted-sort `ite` SAT" blocker was a **model-assembly
+  completeness gap**: skeleton-only Bool symbols (lifted `ite` conditions)
+  never entered the built model, so replay failed and the route declined.
+  Fixed by injecting DPLL-committed Bool values (TermId-sorted; replay-gated —
+  no wrong sat possible); NEW ite/uninterpreted-sort differential fuzz: 1500
+  instances, 0 unknowns, DISAGREE=0. Remaining P1.4/P1.5/P1.6 depth re-scoped
+  as slices 3-6 (model-assembly parity in UF+arith builders, UFLIA CEGAR
+  convergence, UF×NRA interface routing + a new combination fuzz, qinst
+  e-matching depth).
+- **2026-07-02** — **QF_AX lazy-ext verdicts were hash-order-dependent**
+  (`d73e00f1`): `euf_egraph::build_model` assigned uninterpreted-class codes
+  while iterating HashMaps (per-process random order), so the same instance
+  decided `Sat` ~88% of runs and declined otherwise — the CI flake behind
+  `arrays3`. TermId-sorted coding + BTreeMap tables; 200/200 identical
+  verdicts; in-suite 64-run determinism guard; abv fuzz DISAGREE=0. Also:
+  `lean_crosscheck` parallelized + sliced (`15365a00`, 4 h+ → 14 s default,
+  full 157 modules ~16 s via `--ignored`), and the UFLIA combination loop now
+  honors `config.timeout` (`3cd6c810`, bug330 >90 s at a 2 s budget → 8.5 s,
+  `deadline_honored.rs` regression, uflia fuzz 2500 DISAGREE=0).
 - **2026-07-02** — **Strings: 5 gate-downgraded unsats recovered**
   (`a264681a`): a step-1a pure-LIA projection in the gate (drop non-Int
   abstracted assertions on an unknown full solve — sound weakening), exact
