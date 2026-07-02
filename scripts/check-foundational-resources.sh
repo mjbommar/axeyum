@@ -58,6 +58,11 @@ python3 scripts/query-foundational-resources.py checks --field logic_and_proof -
 python3 scripts/query-foundational-resources.py checks --concept bridge_boolean_cnf_lrat_anatomy --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_refutation_query --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_countermodel_replay --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py packs --concept bridge_finite_countermodel_replay --solver-reuse promoted --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_countermodel_replay --pack finite-predicate-v0 --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_countermodel_replay --pack proof-methods-patterns-v0 --expected-result sat --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_countermodel_replay --pack relations-functions-v0 --route Alethe --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_countermodel_replay --pack finite-order-lattices-v0 --route boolean --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_proof_pattern --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_bounded_induction_obligation --route LIA --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py fields --field set_theory_and_foundations --route Alethe --require-any >/dev/null

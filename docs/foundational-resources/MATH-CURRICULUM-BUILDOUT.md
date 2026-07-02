@@ -86,6 +86,8 @@ proof route, use the
 For logic/proof, set-foundations, and discrete-math discovery by bridge concept
 and proof route, use the
 [Foundations And Discrete Resource Consumer Queries](FOUNDATIONS-DISCRETE-QUERIES.md).
+For pack-scoped finite countermodel discovery, use the
+[Finite Countermodel Replay Queries](COUNTERMODEL-REPLAY-QUERIES.md).
 This file remains the phase contract and landed-history log.
 
 The product is not a textbook and not a formal-library clone. It is a set of

@@ -233,6 +233,11 @@ The foundations/discrete consumer query guide is
 it records exact concept-plus-route queries for Boolean proof rows, finite
 proof patterns, bounded induction, finite quantifiers, cardinality, counting,
 Boolean algebra, partition, and relation/function resources.
+The finite countermodel replay consumer query guide is
+[`docs/foundational-resources/COUNTERMODEL-REPLAY-QUERIES.md`](docs/foundational-resources/COUNTERMODEL-REPLAY-QUERIES.md);
+it records pack-scoped concept queries for Boolean assignments, finite
+predicate tables, proof-pattern counterexamples, function-table conflicts, and
+finite order/lattice countermodels while keeping proof-route claims separate.
 The rules/law transfer crosswalk that maps finite predicates, arithmetic
 thresholds, graph reachability, precedence, category equivalence, and proof
 routes into concrete policy/rule checks is
@@ -272,7 +277,8 @@ and finite cup-product extensions. The
 finite countermodel lane now also makes explicit finite universes, Boolean
 assignments, predicate extensions, relation tables, function tables, and finite
 order/lattice counterexamples queryable as one checked bridge concept with a
-learner-facing replay guide, without changing pack or check totals. The
+learner-facing replay guide and a consumer query guide, without changing pack
+or check totals. The
 finite algebra-homomorphism lane now also promotes the
 concrete bad group-homomorphism row through QF_UF/Alethe after exact table
 replay isolates `phi(1+1)=1` versus `phi(1)+phi(1)=0`. The finite

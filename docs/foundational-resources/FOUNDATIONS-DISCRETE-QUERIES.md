@@ -108,6 +108,8 @@ python3 scripts/query-foundational-resources.py checks \
 
 The learner-facing bridge page is
 [Finite Countermodel Replay](../learn/math/finite-countermodel-replay.md).
+The consumer-facing pack query guide is
+[Finite Countermodel Replay Queries](COUNTERMODEL-REPLAY-QUERIES.md).
 
 Display finite proof-pattern rows:
 

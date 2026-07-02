@@ -1657,6 +1657,13 @@ Pick one row per commit unless the change is purely navigational.
      trust boundary. The public query surface now reports 121 concept rows, 75
      bridge concepts, 108 packs, and the concept-scoped countermodel query
      returns checked rows without changing pack/check totals.
+191. Landed: add `COUNTERMODEL-REPLAY-QUERIES.md` as the consumer-facing query
+     guide for `bridge_finite_countermodel_replay`. It records executable
+     pack-scoped queries for finite predicate tables, Boolean
+     no-countermodel searches, proof-pattern counterexamples,
+     function-table QF_UF/Alethe conflicts, and finite order/lattice Boolean
+     evidence, while explicitly separating bridge-concept discovery from proof
+     route claims.
 
 ## Validation Checklist
 

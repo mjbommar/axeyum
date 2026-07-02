@@ -243,9 +243,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   query guide and foundational-resource smoke script now include the
   concept-scoped checked-row query, and
   `docs/learn/math/finite-countermodel-replay.md` now gives the
-  learner-facing trust boundary for the shared pattern. The public summary now
-  reports 121 concept rows, 75 bridge concepts, 108 packs, 688 expected checks,
-  322 checked rows, 295 replay-only rows, and 71 Lean-horizon rows.
+  learner-facing trust boundary for the shared pattern.
+  `COUNTERMODEL-REPLAY-QUERIES.md` now adds pack-scoped consumer queries for
+  Boolean assignments, predicate tables, proof-pattern counterexamples,
+  function-table conflicts, and finite order/lattice countermodels while
+  keeping proof-route claims separate. The public summary now reports 121
+  concept rows, 75 bridge concepts, 108 packs, 688 expected checks, 322 checked
+  rows, 295 replay-only rows, and 71 Lean-horizon rows.
 
 - **Finite-separation Farkas rows split landed.**
   `finite-separation-v0` now keeps
