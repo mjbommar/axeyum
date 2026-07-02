@@ -3,6 +3,8 @@
 This lesson follows one finite monoid resource from function tables to replayed
 result and proof/evidence status. It uses the
 [finite-monoids-v0](../../../artifacts/examples/math/finite-monoids-v0/) pack.
+For the focused finite-versus-theorem boundary, read
+[Monoid And Permutation Theorem Boundary](monoid-permutation-theorem-boundary.md).
 
 Concept rows:
 

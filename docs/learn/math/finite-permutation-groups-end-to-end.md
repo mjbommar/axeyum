@@ -4,6 +4,8 @@ This lesson follows one finite permutation-group resource from point maps to
 replayed result and proof/evidence status. It uses the
 [finite-permutation-groups-v0](../../../artifacts/examples/math/finite-permutation-groups-v0/)
 pack.
+For the focused finite-versus-theorem boundary, read
+[Monoid And Permutation Theorem Boundary](monoid-permutation-theorem-boundary.md).
 
 Concept rows:
 

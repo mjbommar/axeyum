@@ -66,6 +66,7 @@ needs concrete checked rows to display.
 | Algebra equality certificates versus table replay | `bridge_algebra_equality_certificate_boundary` | `Alethe` | `checks --concept bridge_algebra_equality_certificate_boundary --route Alethe --proof-status checked` |
 | Group operations, homomorphisms, and permutation rows | `bridge_homomorphism_preservation` | `Alethe` | `checks --concept bridge_homomorphism_preservation --route Alethe --proof-status checked` |
 | Group actions and permutation actions | `bridge_group_action` | `Alethe` | `checks --concept bridge_group_action --route Alethe --proof-status checked` |
+| Monoid and permutation theorem boundary | packs `finite-monoids-v0`, `finite-permutation-groups-v0` | `Lean horizon` | `horizon-frontier --pack finite-monoids-v0`; `horizon-frontier --pack finite-permutation-groups-v0` |
 | Group-action theorem boundary | pack `finite-group-actions-v0` | `Lean horizon` | `horizon-frontier --pack finite-group-actions-v0`; `checks --pack finite-group-actions-v0 --proof-status lean-horizon` |
 | Kernels, images, and quotient maps | `bridge_kernel_image`; `bridge_quotient_map` | `Alethe` | `packs --concept bridge_kernel_image --route Alethe`; `packs --concept bridge_quotient_map --route Alethe` |
 | Ideals and quotient-ring representatives | `bridge_ideal_closure` | `Alethe` | `checks --concept bridge_ideal_closure --route Alethe --proof-status checked` |
@@ -141,6 +142,46 @@ python3 scripts/query-foundational-resources.py horizon-frontier \
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-group-actions-v0 \
   --proof-status lean-horizon \
+  --require-any
+```
+
+Display monoid and permutation theorem boundaries:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-monoids-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-permutation-groups-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-monoids-v0 \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-permutation-groups-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
+Display the scoped checked equality conflicts for those boundaries:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-monoids-v0 \
+  --route Alethe \
+  --proof-status checked \
+  --text associativity \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-permutation-groups-v0 \
+  --route Alethe \
+  --proof-status checked \
+  --text injectivity \
   --require-any
 ```
 

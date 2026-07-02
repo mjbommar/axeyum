@@ -114,6 +114,10 @@ For the theorem boundary that keeps finite group-action and Burnside replay
 separate from orbit-stabilizer, Burnside/Cauchy-Frobenius, quotient-action,
 and representation-theory claims, read
 [Group Action Theorem Boundary](group-action-theorem-boundary.md).
+For the theorem boundary that keeps finite transformation-monoid and `S3`
+permutation replay separate from semigroup, monoid, Cayley, Sylow, and
+representation-theory claims, read
+[Monoid And Permutation Theorem Boundary](monoid-permutation-theorem-boundary.md).
 
 ## Encode / Check Walkthrough
 

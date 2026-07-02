@@ -608,6 +608,11 @@ Companion maps:
   follows `S3` point maps through bijection checks, composition-table replay,
   cycle/sign replay, natural action orbit-stabilizer counting, and checked
   QF_UF/Alethe bad-nonbijection injectivity evidence.
+- [Monoid And Permutation Theorem Boundary](monoid-permutation-theorem-boundary.md):
+  maps finite transformation-monoid replay, `S3` permutation replay,
+  replay-only malformed table/bijection rejection, and checked QF_UF/Alethe
+  equality-conflict rows to the missing semigroup, monoid,
+  permutation-group, Cayley, Sylow, and representation-theory proof routes.
 - [Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md):
   follows action-law replay, orbit/stabilizer recomputation, Burnside fixed-point
   counting, exact bad identity/compatibility replay, and explicit checked

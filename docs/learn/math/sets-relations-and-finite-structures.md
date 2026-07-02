@@ -53,6 +53,10 @@ The finite-permutation-groups pack narrows finite endofunctions to bijections,
 checks `S3` under composition, recomputes cycle/sign data, and replays the
 natural action on the underlying set. Its bad nonbijection replay is separated
 from the checked `qf-uf-bad-nonbijection-injectivity` Alethe row.
+The focused
+[Monoid And Permutation Theorem Boundary](monoid-permutation-theorem-boundary.md)
+keeps those finite-function and finite-bijection rows separate from general
+semigroup, monoid, permutation-group, Sylow, and representation-theory claims.
 The finite-group-actions pack treats each group element as a
 total function on a finite set, then checks action laws, orbit/stabilizer
 replay, and Burnside fixed-point counting. The finite-order-lattices pack

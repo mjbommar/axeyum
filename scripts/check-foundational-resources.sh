@@ -358,7 +358,11 @@ python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-i
 python3 scripts/query-foundational-resources.py checks --pack finite-algebra-homomorphisms-v0 --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-algebra-homomorphisms-v0 --text quotient --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ideals-v0 --text quotient --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-monoids-v0 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-monoids-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-monoids-v0 --route Alethe --proof-status checked --text associativity --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-permutation-groups-v0 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-permutation-groups-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_homomorphism_preservation --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_group_action --route Alethe --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-group-actions-v0 --require-any >/dev/null

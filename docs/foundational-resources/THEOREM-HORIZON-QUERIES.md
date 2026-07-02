@@ -135,12 +135,30 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
-Algebra, group-action, orbit-stabilizer, and Burnside/Cauchy-Frobenius
-horizons:
+Algebra, monoid, permutation-group, group-action, orbit-stabilizer, and
+Burnside/Cauchy-Frobenius horizons:
 
 ```sh
 python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-monoids-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-permutation-groups-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
   --pack finite-group-actions-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-monoids-v0 \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-permutation-groups-v0 \
+  --proof-status lean-horizon \
   --require-any
 
 python3 scripts/query-foundational-resources.py checks \

@@ -779,7 +779,16 @@ Build sequence:
     transported-structure, Sylow-action, class-equation, and
     representation-theory theorem routes, with pack-specific checked-row and
     horizon-frontier queries.
-77. Revisit crate/repo boundaries only after three real consumers or repeated
+77. Landed: add the monoid/permutation theorem-boundary page.
+    `monoid-permutation-theorem-boundary.md` maps exact finite
+    transformation-monoid replay, units/idempotents, `S3` permutation replay,
+    cycle/sign replay, natural-action orbit/stabilizer replay, replay-only bad
+    associativity/nonbijection rejection, and checked QF_UF/Alethe
+    associativity/injectivity evidence to the missing semigroup, monoid,
+    quotient/free/presentation, Green's-relation, Cayley, conjugacy, Sylow,
+    alternating-group, and representation-theory theorem routes, with
+    pack-specific checked-row and horizon-frontier queries.
+78. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

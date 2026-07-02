@@ -2264,6 +2264,19 @@ Pick one row per commit unless the change is purely navigational.
      Sylow-action, class-equation, and representation-theory layers, and adds
      pack-specific checked-row and horizon-frontier queries to the public
      smoke gate without promoting finite action tables into theorem coverage.
+265. Landed: add `monoid-permutation-theorem-boundary.md` as the focused
+     finite/general monoid and permutation-group theorem-boundary page for
+     `finite-monoids-v0` and `finite-permutation-groups-v0`. It maps exact
+     transformation-monoid law replay, function-composition replay,
+     unit/idempotent recomputation, `S3` group-law replay, cycle/sign replay,
+     natural-action orbit/stabilizer replay, replay-only bad
+     associativity/nonbijection rejection, and scoped QF_UF/Alethe
+     associativity/injectivity evidence to the missing semigroup, monoid,
+     quotient/free/presentation, Green's-relation, Cayley, conjugacy, Sylow,
+     alternating-group, and representation-theory layers, and adds
+     pack-specific checked-row and horizon-frontier queries to the public
+     smoke gate without promoting finite function tables into theorem
+     coverage.
 
 ## Validation Checklist
 

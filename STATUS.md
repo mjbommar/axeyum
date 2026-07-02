@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Monoid/permutation theorem-boundary resource landed.**
+  `monoid-permutation-theorem-boundary.md` now separates
+  `finite-monoids-v0` exact transformation-monoid replay, unit/idempotent
+  recomputation, replay-only bad associativity rejection, and checked
+  QF_UF/Alethe associativity evidence plus `finite-permutation-groups-v0`
+  `S3` composition, cycle/sign, natural-action, replay-only bad
+  nonbijection, and checked QF_UF/Alethe injectivity evidence from general
+  semigroup, monoid, Cayley, conjugacy, Sylow, and representation-theory
+  claims. The theorem-horizon, algebra/discrete learner, algebra query,
+  consumer, and smoke-query docs now expose both packs through
+  pack-specific horizon-frontier and checked-row queries.
 - **Group-action theorem-boundary resource landed.**
   `group-action-theorem-boundary.md` now separates
   `finite-group-actions-v0` exact action-law replay, orbit/stabilizer

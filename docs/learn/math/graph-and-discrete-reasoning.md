@@ -53,7 +53,10 @@ affine-step source rows by exact replay, and exposes separate checked
 QF_LRA/Farkas proof rows. The
 finite-permutation-groups pack adds symmetry data: it checks `S3` as bijective
 function tables, recomputes cycle lengths and parity signs, and replays the
-natural action's orbit and stabilizer. The finite-group-actions pack adds
+natural action's orbit and stabilizer. Its focused theorem boundary is
+[Monoid And Permutation Theorem Boundary](monoid-permutation-theorem-boundary.md),
+which keeps finite permutation replay separate from Cayley, conjugacy, Sylow,
+and representation-theory claims. The finite-group-actions pack adds
 finite orbit counting: it checks action laws, recomputes orbits and
 stabilizers, and verifies Burnside's fixed-point average for one small action.
 The graph coloring pack replays a

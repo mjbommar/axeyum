@@ -1388,6 +1388,14 @@ python3 scripts/query-foundational-resources.py horizon-frontier \
   --pack finite-group-actions-v0 \
   --require-any
 
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-monoids-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-permutation-groups-v0 \
+  --require-any
+
 python3 scripts/query-foundational-resources.py checks \
   --concept bridge_module_action \
   --route Alethe \

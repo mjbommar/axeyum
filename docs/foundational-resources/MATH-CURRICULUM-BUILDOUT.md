@@ -1794,6 +1794,10 @@ Lean-horizon row.
 cycle-length and sign homomorphism replay, natural action orbit/stabilizer
 replay, exact bad-nonbijection replay, an explicit QF_UF/Alethe
 bad-nonbijection injectivity row, and a permutation-group Lean-horizon row.
+The focused `monoid-permutation-theorem-boundary.md` learner page now maps the
+finite transformation-monoid and finite `S3` permutation rows to the missing
+semigroup, monoid, quotient/free/presentation, Green's-relation, Cayley,
+conjugacy, Sylow, alternating-group, and representation-theory layers.
 `inner-product-spaces-rational-v0` now adds the exact rational
 inner-product-space bridge: Gram matrices, positive-definite minors,
 Cauchy-Schwarz replay, orthogonal projections, Gram-Schmidt residuals,
@@ -2988,6 +2992,18 @@ identity-action/action-compatibility rows are linked to copyable queries and
 graduation criteria while keeping arbitrary group-action theory,
 orbit-stabilizer, Burnside/Cauchy-Frobenius, quotient actions, transported
 structure, Sylow actions, class equations, and representation theory in
+Lean/theorem-horizon lanes.
+The learner/planning layer now also has
+[`monoid-permutation-theorem-boundary.md`](../learn/math/monoid-permutation-theorem-boundary.md),
+which expands the finite monoid and finite permutation-group rows into a
+concrete boundary ledger: exact transformation-monoid law replay,
+function-composition replay, unit/idempotent recomputation, `S3` group-law
+replay, composition replay, cycle/sign replay, natural-action
+orbit/stabilizer replay, replay-only bad associativity/nonbijection
+rejection, and checked QF_UF/Alethe associativity/injectivity rows are linked
+to copyable queries and graduation criteria while keeping general semigroup,
+monoid, quotient/free/presentation, Green's-relation, Cayley, conjugacy,
+Sylow, alternating-group, and representation-theory claims in
 Lean/theorem-horizon lanes.
 The learner/planning layer now also has
 [`fubini-tonelli-theorem-boundary.md`](../learn/math/fubini-tonelli-theorem-boundary.md),
