@@ -234,6 +234,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **D-separation causal trust-boundary resource landed.**
+  `d-separation-causal-trust-boundary.md` now separates
+  `graph-d-separation-v0` checked finite active-chain replay, conditioned
+  chain/fork blocking, unconditioned-collider blocking, descendant-opened
+  collider replay, and source-linked chain/collider Boolean CNF/DRAT/LRAT
+  blocker rows from causal identification, do-calculus, probabilistic
+  graphical-model semantics, adjustment-set correctness, and statistical
+  consistency. The graph/discrete query guide, learner map, probability map,
+  and smoke query docs now expose the d-separation trust boundary without
+  adding a false Lean-horizon theorem row.
+
 - **Topological-sort theorem-boundary resource landed.**
   `topological-sort-theorem-boundary.md` now separates
   `finite-dag-topological-order-v0` checked finite topological-order replay,

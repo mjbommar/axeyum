@@ -2069,6 +2069,15 @@ Pick one row per commit unless the change is purely navigational.
      routes, and adds topological-sort-specific horizon and checked-row
      queries to the public smoke gate without adding a duplicate pack or
      changing resource counts.
+245. Landed: add `d-separation-causal-trust-boundary.md` as the focused
+     causal trust-boundary page for `graph-d-separation-v0`. It maps checked
+     finite active-chain replay, conditioned chain/fork blocking,
+     unconditioned-collider blocking, descendant-opened collider replay, and
+     the source-linked chain/collider Boolean CNF/DRAT/LRAT blocker rows to
+     the missing graphical-Markov, adjustment-set, do-calculus,
+     causal-identification, and statistical-consistency layers, and adds
+     d-separation-specific checked-row queries to the public smoke gate without
+     adding a duplicate pack or inventing a causal theorem horizon row.
 
 ## Validation Checklist
 

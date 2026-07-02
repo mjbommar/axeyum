@@ -76,7 +76,8 @@ needs concrete checked rows to display.
 | All checked graph rows | field `graph_theory` | any route | `checks --field graph_theory --expected-result unsat --proof-status checked` |
 | Runtime-specific rows | pack `graph-search-runtime-v0` | `LIA` | `checks --pack graph-search-runtime-v0 --route LIA --proof-status checked` |
 | Coloring-specific rows | pack `graph-coloring-v0` | `boolean`; `qf-bv` | `checks --pack graph-coloring-v0 --route boolean --proof-status checked`; `checks --pack graph-coloring-v0 --route qf-bv --proof-status checked` |
-| D-separation blocker rows | pack `graph-d-separation-v0` | `boolean` | `checks --pack graph-d-separation-v0 --route boolean --proof-status checked` |
+| D-separation checked finite rows | pack `graph-d-separation-v0` | finite DAG replay | `checks --pack graph-d-separation-v0 --proof-status checked` |
+| D-separation CNF blocker rows | pack `graph-d-separation-v0` | `boolean` | `checks --pack graph-d-separation-v0 --route boolean --proof-status checked --expected-result unsat` |
 
 ## Copyable Examples
 
@@ -105,7 +106,6 @@ unconditioned-collider CNF route:
 ```sh
 python3 scripts/query-foundational-resources.py checks \
   --pack graph-d-separation-v0 \
-  --route boolean \
   --proof-status checked \
   --require-any
 
@@ -113,9 +113,37 @@ python3 scripts/query-foundational-resources.py checks \
   --pack graph-d-separation-v0 \
   --route boolean \
   --proof-status checked \
-  --text collider \
+  --expected-result unsat \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-d-separation-v0 \
+  --proof-status checked \
+  --expected-result sat \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-d-separation-v0 \
+  --proof-status checked \
+  --text fork \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-d-separation-v0 \
+  --proof-status checked \
+  --expected-result sat \
+  --text "conditioning on a descendant" \
   --require-any
 ```
+
+Use
+[D-Separation Causal Trust Boundary](../learn/math/d-separation-causal-trust-boundary.md)
+when a consumer needs display wording that keeps finite graph-theoretic
+d-separation checks separate from causal identification, do-calculus,
+probabilistic graphical-model semantics, adjustment-set correctness, and
+statistical consistency. The current pack intentionally has no
+`horizon-frontier --text d-separation` command because no causal theorem row is
+committed yet.
 
 Display the fixed-width graph-coloring row:
 

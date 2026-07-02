@@ -2104,6 +2104,10 @@ topological-sort horizon query to the finite checked rows.
 active-chain replay, conditioned chain/fork blocking, unconditioned-collider
 blocking, descendant-opened collider replay, and the causal-identification
 proof horizon.
+It also has a focused causal trust-boundary page that keeps those finite
+graph-theoretic checks and the chain/collider CNF blocker rows separate from
+causal identification, do-calculus, probabilistic graphical-model semantics,
+adjustment-set correctness, and statistical consistency.
 `counting-v0` now has a learner-facing end-to-end lesson for a fixed
 permutation count, one Pascal-identity instance, finite pigeonhole
 enumeration, and the Boolean CNF/LRAT proof-upgrade route.

@@ -357,7 +357,8 @@ For exact finite statistical-test p-values, read
 For finite counting identities and the first pigeonhole refutation, read
 [End To End: Counting And Pigeonhole](counting-pigeonhole-end-to-end.md).
 For finite DAG d-separation path replay, read
-[End To End: DAG D-Separation Checks](graph-d-separation-end-to-end.md).
+[End To End: DAG D-Separation Checks](graph-d-separation-end-to-end.md) and
+[D-Separation Causal Trust Boundary](d-separation-causal-trust-boundary.md).
 For finite sigma-algebras and exact measure tables, read
 [End To End: Finite Measure](finite-measure-end-to-end.md). For the
 topology-to-measure bridge, read

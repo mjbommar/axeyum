@@ -753,6 +753,10 @@ source-linked DIMACS artifacts; topology's
 `bad-open-cover-rejected` and `bad-connected-claim-rejected` now do too. The
 Boolean `math_resource_boolean_routes` regression checks emitted DRAT and LRAT
 proof objects, while
+the learner/resource map now exposes a focused d-separation causal trust
+boundary that keeps those finite DAG path-blocking rows separate from causal
+identification, do-calculus, probabilistic graphical-model semantics,
+adjustment-set correctness, and statistical consistency.
 `bad-dfs-cost-bound-rejected` now has a source-linked
 QF_LIA artifact checked by the `math_resource_lia_routes` arithmetic-DPLL
 regression and `diophantine-gcd-obstruction` now has a source-linked QF_LIA

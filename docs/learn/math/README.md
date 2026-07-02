@@ -99,6 +99,10 @@ Companion maps:
 - [Graph Traversal Runtime Index](graph-traversal-runtime-index.md): separates
   finite reachability, BFS/DFS traces, visited-node counters, checked LIA cost
   refutations, and asymptotic runtime horizons.
+- [D-Separation Causal Trust Boundary](d-separation-causal-trust-boundary.md):
+  separates finite DAG d-separation replay and checked CNF blocker rows from
+  causal identification, do-calculus, probabilistic graphical-model semantics,
+  adjustment-set correctness, and statistical consistency.
 
 ## End-To-End Lessons
 
@@ -199,6 +203,10 @@ Companion maps:
 - [DAG D-Separation Checks](graph-d-separation-end-to-end.md): follows finite
   active chains, conditioned chain/fork blocking, collider blocking, and
   descendant-opened collider replay.
+- [D-Separation Causal Trust Boundary](d-separation-causal-trust-boundary.md):
+  maps those finite graph-theoretic rows to the missing causal/probabilistic
+  theorem and modeling layers without promoting them to causal-identification
+  claims.
 - [Natural Arithmetic](natural-arithmetic-end-to-end.md): follows successor
   arithmetic, fixed addition and multiplication replay, bounded successor
   no-counterexample enumeration, a checked QF_LIA negative-domain refutation,

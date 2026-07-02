@@ -32,6 +32,7 @@ Example packs:
 Companion map:
 
 - [Graph Traversal Runtime Index](graph-traversal-runtime-index.md)
+- [D-Separation Causal Trust Boundary](d-separation-causal-trust-boundary.md)
 - [Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md)
 
 ## What Axeyum Checks
@@ -79,6 +80,10 @@ topological-order pack checks two valid linear extensions of one prerequisite
 DAG, rejects an order with a backward edge, and rejects a cyclic graph by
 replaying a directed cycle obstruction. Its focused theorem boundary is
 [Topological Sort Theorem Boundary](topological-sort-theorem-boundary.md).
+The d-separation pack's focused causal trust boundary is
+[D-Separation Causal Trust Boundary](d-separation-causal-trust-boundary.md);
+it keeps finite path-blocking replay and CNF-backed blocker rows separate from
+causal identification, do-calculus, and probabilistic semantics.
 
 This gives a direct model of "untrusted fast search, trusted small checking":
 the search can propose colors, but the checker only needs the graph and the
@@ -311,6 +316,7 @@ For a fuller trace from data row to replay result and evidence status, read
 [Shortest Path Theorem Boundary](shortest-path-theorem-boundary.md),
 [Topological Sort Theorem Boundary](topological-sort-theorem-boundary.md),
 [End To End: DAG D-Separation Checks](graph-d-separation-end-to-end.md),
+[D-Separation Causal Trust Boundary](d-separation-causal-trust-boundary.md),
 [End To End: Finite Permutation Groups](finite-permutation-groups-end-to-end.md), and
 [End To End: Finite Group Actions And Burnside Counting](finite-group-actions-end-to-end.md).
 For coefficient-level finite recurrence and convolution replay, read

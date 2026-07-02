@@ -393,7 +393,13 @@ python3 scripts/query-foundational-resources.py checks --field graph_theory --ro
 python3 scripts/query-foundational-resources.py checks --field graph_theory --route LIA --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_graph_replay_obstruction --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_graph_replay_obstruction --route boolean --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-d-separation-v0 --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-d-separation-v0 --proof-status checked --expected-result sat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-d-separation-v0 --proof-status checked --expected-result unsat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-d-separation-v0 --route boolean --proof-status checked --expected-result unsat --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-d-separation-v0 --proof-status checked --text fork --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack graph-d-separation-v0 --route boolean --proof-status checked --text collider --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack graph-d-separation-v0 --proof-status checked --expected-result sat --text "conditioning on a descendant" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_graph_replay_obstruction --route qf-bv --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_graph_replay_obstruction --route qf-bv --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_graph_replay_obstruction --route LIA --require-any >/dev/null

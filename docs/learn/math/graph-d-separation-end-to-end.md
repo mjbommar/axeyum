@@ -5,6 +5,9 @@ witness replay, blocked-path refutation, source-linked CNF evidence, and
 descendant-opened collider replay.
 It uses
 [graph-d-separation-v0](../../../artifacts/examples/math/graph-d-separation-v0/).
+For the broader boundary between these finite graph checks and causal
+identification or probabilistic semantics, read
+[D-Separation Causal Trust Boundary](d-separation-causal-trust-boundary.md).
 
 Concept rows:
 
