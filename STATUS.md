@@ -234,6 +234,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Proof-upgrade curriculum/R5 filters landed.**
+  `upgrade-frontier` now accepts `--curriculum-node` and `--solver-reuse`, so
+  proof contributors can start from the formal curriculum DAG or the R5
+  solver-reuse boundary before inspecting replay-only `unsat` rows and
+  same-pack checked-route contrast. The proof-upgrade guide, consumer query
+  docs, public data contract, detailed build ledger, and foundational smoke
+  gate now exercise the `linear-algebra`/Farkas and promoted/Farkas slices.
+
 - **Coverage-frontier action filter landed.**
   `coverage-frontier --action ...` now filters group-level field, fragment,
   curriculum-node, or decidability worklists by `seed-pack`,

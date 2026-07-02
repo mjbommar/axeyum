@@ -65,7 +65,8 @@ For Lean/theorem-boundary discovery, use the
 For solver/proof contributors mining promoted resource packs, use the
 [Solver Reuse Queries](SOLVER-REUSE-QUERIES.md).
 For proof contributors choosing certificate-upgrade candidates, use the
-[Proof Upgrade Queries](PROOF-UPGRADE-QUERIES.md).
+[Proof Upgrade Queries](PROOF-UPGRADE-QUERIES.md), including route,
+curriculum-node, solver-reuse, and promotion-state slices.
 For proof-status and result-status trust-boundary drilldowns, use the
 [Trust Boundary Queries](TRUST-BOUNDARY-QUERIES.md).
 For SMT-fragment demand discovery across the curriculum resources, use the

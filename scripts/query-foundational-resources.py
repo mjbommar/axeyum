@@ -1370,6 +1370,14 @@ def command_upgrade_frontier(args: argparse.Namespace) -> int:
             continue
         if args.field and args.field not in metadata.get("field_ids", []):
             continue
+        if args.curriculum_node and args.curriculum_node not in metadata.get(
+            "curriculum_nodes", []
+        ):
+            continue
+        solver_reuse = metadata.get("solver_reuse") or {}
+        if args.solver_reuse:
+            if solver_reuse.get("status", "unclassified") != args.solver_reuse:
+                continue
 
         routes = [
             route
@@ -1401,7 +1409,6 @@ def command_upgrade_frontier(args: argparse.Namespace) -> int:
             if check.get("proof_status") == "checked"
             and check.get("expected_result") == "unsat"
         ]
-        solver_reuse = metadata.get("solver_reuse") or {}
         for route in routes:
             route_checked_checks = [
                 check
@@ -1824,6 +1831,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     upgrade_frontier.add_argument("--field", help="exact field id, such as topology")
     upgrade_frontier.add_argument("--pack", help="exact example-pack id")
+    upgrade_frontier.add_argument("--curriculum-node", help="exact curriculum node id")
+    upgrade_frontier.add_argument(
+        "--solver-reuse",
+        choices=["candidate", "promoted", "non-benchmark-horizon", "unclassified"],
+        help="filter by pack-level solver-reuse status",
+    )
     upgrade_frontier.add_argument(
         "--text",
         help="case-insensitive search over replay-only UNSAT row text",

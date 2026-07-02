@@ -122,7 +122,9 @@ already advertise a certificate route, plus checked-row contrast in the same
 pack. It does not assert that every replay row needs promotion.
 Use `--promotion-state no-route-contrast`, `partial-route-contrast`, or
 `covered-by-route-contrast` to triage whether a row family has no, partial, or
-already sufficient same-pack checked-route contrast.
+already sufficient same-pack checked-route contrast. Use `--curriculum-node`
+or `--solver-reuse` when the review starts from the curriculum DAG or the R5
+solver-reuse boundary.
 
 Coverage-frontier discovery ranks resource-builder pressure over the same
 dependency-free JSON boundary:
@@ -211,6 +213,8 @@ python3 scripts/query-foundational-resources.py pack-frontier --field measure_th
 python3 scripts/query-foundational-resources.py pack-frontier --field real_analysis --action proof-review --format json --require-any
 python3 scripts/query-foundational-resources.py labels
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --require-any
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --curriculum-node linear-algebra --promotion-state covered-by-route-contrast --require-any
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --solver-reuse promoted --format json --require-any
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Alethe --promotion-state covered-by-route-contrast --require-any
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --promotion-state no-route-contrast --format json
 python3 scripts/query-foundational-resources.py horizon-frontier --field topology --require-any

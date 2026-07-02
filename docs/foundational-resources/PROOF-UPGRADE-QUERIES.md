@@ -141,6 +141,34 @@ python3 scripts/query-foundational-resources.py upgrade-frontier \
   --require-any
 ```
 
+## Curriculum And Solver-Reuse Slices
+
+Proof-upgrade work should be selectable from the curriculum DAG, not only from
+field names. Use `--curriculum-node` when a resource buildout starts from a
+formal node such as `linear-algebra`, `calculus`, or `sets`:
+
+```sh
+python3 scripts/query-foundational-resources.py upgrade-frontier \
+  --route Farkas \
+  --curriculum-node linear-algebra \
+  --promotion-state covered-by-route-contrast \
+  --require-any
+```
+
+Use `--solver-reuse promoted` when reviewing replay rows that already sit
+beside a solver-regression or proof-regression backlink:
+
+```sh
+python3 scripts/query-foundational-resources.py upgrade-frontier \
+  --route Farkas \
+  --solver-reuse promoted \
+  --format json \
+  --require-any
+```
+
+These filters do not change the trust story. They only narrow the same
+row-level review queue by curriculum source or R5 disposition.
+
 ## Replay-Only Row Discovery
 
 Find all replay-only UNSAT rows:

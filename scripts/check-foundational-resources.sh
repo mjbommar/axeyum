@@ -105,6 +105,8 @@ python3 scripts/query-foundational-resources.py packs --proof-status replay-only
 python3 scripts/query-foundational-resources.py packs --proof-status replay-only --route boolean --require-any >/dev/null
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --require-any >/dev/null
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --format json --require-any >/dev/null
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --curriculum-node linear-algebra --promotion-state covered-by-route-contrast --require-any >/dev/null
+python3 scripts/query-foundational-resources.py upgrade-frontier --route Farkas --solver-reuse promoted --format json --require-any >/dev/null
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Alethe --require-any >/dev/null
 python3 scripts/query-foundational-resources.py upgrade-frontier --route Diophantine --require-any >/dev/null
 python3 scripts/query-foundational-resources.py upgrade-frontier --route qf-bv --require-any >/dev/null

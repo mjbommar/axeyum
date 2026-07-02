@@ -1819,6 +1819,13 @@ Pick one row per commit unless the change is purely navigational.
      worklists directly before drilling into `pack-frontier`; the public data
      contract, consumer query guide, coverage-frontier guide, and foundational
      smoke gate exercise the proof-review path.
+215. Landed: add curriculum-node and solver-reuse filters to
+     `query-foundational-resources.py upgrade-frontier`. Proof contributors can
+     now narrow replay-only `unsat` review queues by formal curriculum node or
+     R5 disposition before deciding whether a covered-by-route row needs
+     learner wording, route documentation, or a genuinely new certificate; the
+     proof-upgrade guide, public data contract, consumer query guide, and
+     foundational smoke gate exercise both filters.
 
 ## Validation Checklist
 

@@ -343,6 +343,18 @@ python3 scripts/query-foundational-resources.py upgrade-frontier \
   --route Alethe \
   --format json \
   --require-any
+
+python3 scripts/query-foundational-resources.py upgrade-frontier \
+  --route Farkas \
+  --curriculum-node linear-algebra \
+  --promotion-state covered-by-route-contrast \
+  --require-any
+
+python3 scripts/query-foundational-resources.py upgrade-frontier \
+  --route Farkas \
+  --solver-reuse promoted \
+  --format json \
+  --require-any
 ```
 
 Use this as a selection aid, not as a claim that every returned row should be
