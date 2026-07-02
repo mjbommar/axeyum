@@ -141,6 +141,7 @@ python3 scripts/query-foundational-resources.py fields --field measure_theory --
 python3 scripts/query-foundational-resources.py concepts --field measure_theory --text finite --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --field measure_theory --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-measure-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-measure-v0 --route Farkas --proof-status checked --text complement --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-measure-monotonicity-v0 --route Farkas --proof-status checked --text union --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-measure-monotonicity-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-product-measure-v0 --route Farkas --proof-status checked --require-any >/dev/null

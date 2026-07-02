@@ -421,8 +421,8 @@ Companion maps:
   and checked bad-independence rejection.
 - [Finite Measure](finite-measure-end-to-end.md): follows finite
   sigma-algebra replay, exact finite additivity, event-complement replay,
-  checked QF_LRA/Farkas bad-complement rejection, and the countable-measure
-  Lean horizon.
+  exact bad-complement replay, checked QF_LRA/Farkas complement-additivity
+  evidence, and the countable-measure Lean horizon.
 - [Finite Measure Monotonicity](finite-measure-monotonicity-end-to-end.md):
   follows normalized finite measure-table replay, subset monotonicity, union
   subadditivity, checked QF_LRA/Farkas bad subset-measure and
@@ -431,7 +431,8 @@ Companion maps:
 - [Finite Topology And Measure](finite-topology-measure-end-to-end.md):
   follows finite topology replay, finite sigma-algebra replay, exact finite
   measure additivity, event complements, checked Bool/CNF bad-empty-open
-  rejection, and checked QF_LRA/Farkas bad-complement rejection.
+  rejection, exact bad-complement replay, and checked QF_LRA/Farkas
+  complement-additivity evidence.
 - [Finite Integration](finite-integration-end-to-end.md): follows finite
   simple-function integrals, indicator integrals, integral linearity, checked
   bad-expectation rejection, and the Lebesgue-integration Lean horizon.

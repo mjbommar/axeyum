@@ -893,7 +893,8 @@ checked rejection of a bad boundary sign, a checked QF_LIA bad boundary
 coefficient obstruction, and a general homology Lean-horizon row.
 `artifacts/examples/math/finite-measure-v0/` now validates finite
 sigma-algebra axioms, exact finite additivity, event/complement measure
-replay, and checked QF_LRA/Farkas rejection of a bad complement-measure row.
+replay, exact bad-complement replay, and checked QF_LRA/Farkas rejection of the
+isolated complement-additivity contradiction.
 `artifacts/examples/math/finite-measure-monotonicity-v0/` now validates
 normalized finite measure-table replay, subset monotonicity, union
 subadditivity, checked QF_LRA/Farkas rejection of bad subset-measure and
@@ -1837,8 +1838,9 @@ and general geometry Lean-horizon rows.
 `finite-topology-v0` and `finite-measure-v0` now have a learner-facing
 end-to-end lesson for finite topology axioms, closure/interior, finite
 metric-ball replay, checked Bool/CNF bad-empty-open rejection, finite
-sigma-algebra closure, exact finite additivity, event complements, checked
-QF_LRA/Farkas bad-complement rejection, and the topology/measure Lean horizon.
+sigma-algebra closure, exact finite additivity, event complements, exact
+bad-complement replay, checked QF_LRA/Farkas complement-additivity evidence,
+and the topology/measure Lean horizon.
 They now also have standalone finite-topology and finite-measure pages so
 learners can start from one pack before crossing the topology/measure boundary.
 `bounded-dynamics-v0` and `finite-euler-method-v0` now have a learner-facing
@@ -2076,8 +2078,9 @@ evidence path after exact replay computes `P(heads)=1/2`, `P(red)=1/2`, and
 `P(heads and red)=1/4`. It also routes a bad total-variation row through that
 path after exact replay computes the atomwise absolute differences, `l1`
 distance `1/3`, and `TV=1/6`.
-`finite-measure-v0` now routes its bad complement-measure row through the same
-checked Farkas evidence path after finite replay computes `mu(A) = 1/3` and
+`finite-measure-v0` now routes the explicit
+`qf-lra-bad-complement-measure` row through the same checked Farkas evidence
+path after finite replay computes `mu(A) = 1/3`, `mu(A^c) = 2/3`, and
 `mu(U) = 1`.
 `finite-measure-monotonicity-v0` routes its bad subset-measure and bad
 union-subadditivity rows through the same checked Farkas evidence path after

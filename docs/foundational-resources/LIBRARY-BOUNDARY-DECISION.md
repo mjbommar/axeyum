@@ -65,8 +65,8 @@ The Phase M8 threshold is met for size and repeated structure:
 
 The current pack-level evidence mix is still intentionally conservative:
 
-- `checked`: 238 expected-result rows
-- `replay-only`: 245 expected-result rows
+- `checked`: 322 expected-result rows
+- `replay-only`: 260 expected-result rows
 - `lean-horizon`: 71 expected-result rows
 - `not-run`: 71 expected-result rows
 - `solver_reuse`: 108 promoted packs, 0 non-benchmark-horizon packs, and 0

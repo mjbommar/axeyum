@@ -1,8 +1,8 @@
 # End To End: Finite Measure
 
 This lesson follows one finite measure resource from sigma-algebra replay to
-exact finite additivity, event complements, and checked rejection of a malformed
-complement-measure row. It uses the
+exact finite additivity, event complements, exact bad-complement replay, and
+checked rejection of an isolated complement-additivity contradiction. It uses the
 [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 pack.
 
@@ -23,7 +23,8 @@ Concept rows:
 | `finite-sigma-algebra-axioms` | `sat` | replay-only |
 | `finite-measure-additivity` | `sat` | replay-only |
 | `event-complement-measure` | `sat` | replay-only |
-| `bad-complement-measure-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-complement-measure-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-complement-measure` | `unsat` | checked QF_LRA/Farkas |
 
 All rows are finite and exact-rational. The pack checks a finite
 sigma-algebra, a normalized finite measure table, and one bad complement claim.
@@ -86,8 +87,8 @@ mu({a,b}) + mu({c,d}) = 1/3 + 2/3 = 1
 
 ## Check The Refutation
 
-The promoted bad row keeps the finite source object fixed but changes the
-claimed complement measure:
+The bad replay row keeps the finite source object fixed but changes the claimed
+complement measure:
 
 ```text
 mu(E) = 1/3
@@ -97,7 +98,7 @@ mu(E) + mu(E^c) = mu(U)
 ```
 
 Finite replay computes `mu(E) = 1/3` and `mu(U) = 1`. The committed SMT-LIB
-artifact
+artifact, linked by `qf-lra-bad-complement-measure`,
 [`bad-complement-measure-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2)
 checks the final exact-rational contradiction:
 

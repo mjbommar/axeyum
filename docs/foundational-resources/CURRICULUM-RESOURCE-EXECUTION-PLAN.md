@@ -491,7 +491,8 @@ Next buildout:
    bad-independence rejection, plus total variation replay and checked
    bad-total-variation rejection; the finite
    measure page follows finite sigma-algebra replay, exact finite additivity,
-   event complements, and checked QF_LRA/Farkas bad-complement rejection.
+   event complements, exact bad-complement replay, and checked QF_LRA/Farkas
+   complement-additivity evidence.
    `docs/learn/math/finite-measure-monotonicity-end-to-end.md` now follows
    normalized finite measure-table replay, subset monotonicity, union
    subadditivity, checked QF_LRA/Farkas bad subset-measure rejection, checked

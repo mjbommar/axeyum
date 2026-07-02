@@ -253,8 +253,8 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-120 concept rows, 108 non-template packs, 652 expected checks (336 `sat`,
-245 `unsat`, 71 `not-run`), 322 checked rows, 259 replay-only rows, and 71
+120 concept rows, 108 non-template packs, 653 expected checks (336 `sat`,
+246 `unsat`, 71 `not-run`), 322 checked rows, 260 replay-only rows, and 71
 Lean-horizon rows. The rules/law JSON layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
@@ -324,7 +324,7 @@ bad row claims `4`, and its bad tower-property row after nested-partition
 replay computes `7/2` rather than `4`, plus its bad variance-decomposition row
 after finite replay computes `Var(X)=35/4`, `E[Var(X|G)]=5/2`, and
 `Var(E[X|G])=25/4` while the bad row claims total variance `9`,
-finite-measure's bad complement row
+finite-measure's explicit `qf-lra-bad-complement-measure` row
 after finite replay computes the event
 and total measures, finite-measure-monotonicity's bad subset-measure and
 union-subadditivity rows after finite replay computes the subset/superset

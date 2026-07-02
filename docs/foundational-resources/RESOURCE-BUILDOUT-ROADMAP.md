@@ -50,9 +50,9 @@ The current committed data boundary reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math example packs.
-- 652 expected checks.
+- 653 expected checks.
 - 322 checked proof/evidence rows.
-- 259 replay-only rows.
+- 260 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1458,7 +1458,7 @@ Pick one item per commit unless the change is purely navigational.
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes reals_rcf_shadow_negative_discriminant_artifact_emits_checked_farkas`.
 42. Landed: promote `finite-measure-v0` through a source-linked QF_LRA/Farkas
-    regression for `bad-complement-measure-rejected`. The artifact
+    regression for `qf-lra-bad-complement-measure`. The artifact
     `artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2`
     is checked by
     `cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas`.
@@ -1472,8 +1472,8 @@ Pick one item per commit unless the change is purely navigational.
     closure/interior, metric-ball replay, and checked Bool/CNF
     missing-empty-set rejection; `docs/learn/math/finite-measure-end-to-end.md`
     follows `finite-measure-v0` through finite sigma-algebra replay, exact
-    finite additivity, event complements, and checked QF_LRA/Farkas
-    bad-complement rejection.
+    finite additivity, event complements, exact bad-complement replay, and
+    checked QF_LRA/Farkas complement-additivity evidence.
 45. Landed: add standalone linear optimization learner page.
     `docs/learn/math/linear-optimization-end-to-end.md` follows
     `linear-optimization-v0` through exact LP feasible-point replay,
@@ -2230,6 +2230,12 @@ Pick one item per commit unless the change is purely navigational.
      replay rows still own the finite table computations that expose the bad
      entries. This keeps solver-reuse evidence pointed at checked proof
      artifacts while preserving learner-visible replay.
+152. Landed: split `finite-measure-v0` bad complement-measure checking into an
+     exact replay row plus an explicit QF_LRA/Farkas proof row. The replay row
+     still computes the finite measure-table values and exposes the malformed
+     claimed complement measure; the new `qf-lra-bad-complement-measure` row
+     owns the source SMT-LIB artifact and gives consumers a direct
+     pack/route/text query for the checked complement-additivity conflict.
 
 ## Validation Checklist
 

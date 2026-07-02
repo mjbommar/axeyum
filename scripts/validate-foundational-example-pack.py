@@ -20153,28 +20153,70 @@ def validate_finite_measure(expected: dict[str, Any]) -> None:
         fail("event-complement witness total measure does not match universe")
 
     bad_complement = checks["bad-complement-measure-rejected"]
-    if bad_complement["expected_result"] != "unsat" or bad_complement.get("proof_status") != "checked":
-        fail("bad-complement-measure-rejected must be a checked unsat row")
+    if bad_complement["expected_result"] != "unsat" or bad_complement.get("proof_status") != "replay-only":
+        fail("bad-complement-measure-rejected must be a replay-only unsat row")
     data = bad_complement.get("data", {})
     if data.get("source_witness") != "event-complement":
         fail("bad-complement-measure-rejected must cite the event-complement source witness")
+    event_measure = require_fraction("bad complement event_measure", data.get("event_measure"))
+    computed_complement_measure = require_fraction(
+        "bad complement computed_complement_measure",
+        data.get("computed_complement_measure"),
+    )
     claimed_complement_measure = require_fraction(
         "bad complement claimed_complement_measure",
         data.get("claimed_complement_measure"),
     )
+    total_measure = require_fraction("bad complement total_measure", data.get("total_measure"))
+    if event_measure != measures[event]:
+        fail("bad-complement-measure-rejected event_measure must match replay")
+    if computed_complement_measure != measures[actual_complement]:
+        fail("bad-complement-measure-rejected computed_complement_measure must match replay")
+    if total_measure != measures[universe_set]:
+        fail("bad-complement-measure-rejected total_measure must match replay")
     if claimed_complement_measure == measures[actual_complement]:
         fail("bad-complement-measure-rejected must disagree with the replayed complement measure")
     if measures[event] + claimed_complement_measure == measures[universe_set]:
         fail("bad-complement-measure-rejected must contradict complement additivity")
+
+    bad_complement_farkas = checks["qf-lra-bad-complement-measure"]
+    if (
+        bad_complement_farkas["expected_result"] != "unsat"
+        or bad_complement_farkas.get("proof_status") != "checked"
+    ):
+        fail("qf-lra-bad-complement-measure must be a checked unsat row")
+    if bad_complement_farkas["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-complement-measure must use exact_rational_farkas_evidence validation")
+    data = bad_complement_farkas.get("data", {})
+    if data.get("source_witness") != "event-complement":
+        fail("qf-lra-bad-complement-measure must cite the event-complement source witness")
+    qf_event_measure = require_fraction("qf-lra bad complement event_measure", data.get("event_measure"))
+    qf_claimed_complement_measure = require_fraction(
+        "qf-lra bad complement claimed_complement_measure",
+        data.get("claimed_complement_measure"),
+    )
+    qf_total_measure = require_fraction("qf-lra bad complement total_measure", data.get("total_measure"))
+    if qf_event_measure != event_measure:
+        fail("qf-lra-bad-complement-measure event_measure must match bad-complement replay")
+    if qf_claimed_complement_measure != claimed_complement_measure:
+        fail("qf-lra-bad-complement-measure claimed_complement_measure must match bad-complement replay")
+    if qf_total_measure != total_measure:
+        fail("qf-lra-bad-complement-measure total_measure must match bad-complement replay")
+    if qf_event_measure + qf_claimed_complement_measure == qf_total_measure:
+        fail("qf-lra-bad-complement-measure must be linearly contradictory")
     smt2_artifact = data.get("smt2_artifact")
-    require_string("bad complement smt2_artifact", smt2_artifact)
+    require_string("qf-lra bad complement smt2_artifact", smt2_artifact)
     if smt2_artifact != "artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2":
-        fail("bad-complement-measure-rejected smt2_artifact must name the checked QF_LRA artifact")
-    check_source("bad complement smt2_artifact", smt2_artifact)
+        fail("qf-lra-bad-complement-measure smt2_artifact must name the checked QF_LRA artifact")
+    check_source("qf-lra bad complement smt2_artifact", smt2_artifact)
     farkas_regression = data.get("farkas_regression")
-    require_string("bad complement farkas_regression", farkas_regression)
+    require_string("qf-lra bad complement farkas_regression", farkas_regression)
     if "finite_measure_bad_complement_artifact_emits_checked_farkas" not in farkas_regression:
-        fail("bad-complement-measure-rejected must link the LRA route regression")
+        fail("qf-lra-bad-complement-measure must link the LRA route regression")
+    certificate = data.get("certificate")
+    require_string("qf-lra bad complement certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-complement-measure certificate must document checked Farkas evidence")
 
 
 def validate_finite_measure_monotonicity(expected: dict[str, Any]) -> None:

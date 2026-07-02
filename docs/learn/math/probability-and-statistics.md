@@ -36,7 +36,8 @@ Companion map:
 The statistics path is exact and finite. It checks probability mass tables,
 conditional probability, Bayes replay, finite sigma-algebra axioms, finite
 additivity, event complements, finite measure monotonicity, finite union
-subadditivity, a checked QF_LRA bad-complement certificate, a checked QF_LRA
+subadditivity, exact bad-complement replay with a separate checked QF_LRA
+bad-complement certificate, a checked QF_LRA
 bad subset-measure certificate, a checked QF_LRA bad union-subadditivity
 certificate, checked QF_LRA bad-normalization,
 bad-conditional-probability, bad-Bayes, bad-independence, and

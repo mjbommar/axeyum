@@ -92,14 +92,32 @@
       "claim": "The event {a,b} has complement measure 1/2 while event and complement measures still sum to the total measure.",
       "expected_result": "unsat",
       "validation": "finite_measure_bad_complement_refutation",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "event-complement",
+        "event_measure": "1/3",
+        "computed_complement_measure": "2/3",
+        "claimed_complement_measure": "1/2",
+        "total_measure": "1"
+      },
+      "notes": "The validator replays the finite measure table to compute mu({a,b}) = 1/3, mu({a,b}^c) = 2/3, and total measure 1. This row is exact finite replay; the separate QF_LRA row owns the proof-object refutation for the final complement-additivity contradiction."
+    },
+    {
+      "id": "qf-lra-bad-complement-measure",
+      "claim": "The fixed malformed complement-measure claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
       "proof_status": "checked",
       "data": {
         "source_witness": "event-complement",
+        "event_measure": "1/3",
         "claimed_complement_measure": "1/2",
+        "total_measure": "1",
         "smt2_artifact": "artifacts/examples/math/finite-measure-v0/smt2/bad-complement-measure-farkas-conflict.smt2",
-        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas"
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_measure_bad_complement_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
       },
-      "notes": "The validator replays the finite measure table to compute mu({a,b}) = 1/3 and total measure 1; the source artifact checks the final contradiction mu(A) + 1/2 = 1 through QF_LRA/Farkas evidence."
+      "notes": "Exact replay computes the event and total measures; the source QF_LRA artifact isolates the malformed complement-additivity equality and checks it with Farkas evidence."
     }
   ]
 }

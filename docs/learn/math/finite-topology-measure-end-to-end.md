@@ -30,7 +30,8 @@ Concept rows:
 | `finite-sigma-algebra-axioms` | `sat` | replay-only |
 | `finite-measure-additivity` | `sat` | replay-only |
 | `event-complement-measure` | `sat` | replay-only |
-| `bad-complement-measure-rejected` | `unsat` | checked QF_LRA/Farkas |
+| `bad-complement-measure-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-complement-measure` | `unsat` | checked QF_LRA/Farkas |
 
 Every row is finite replay over explicit sets and exact rational values. These
 packs do not claim compactness, connectedness, continuity, countable additivity,

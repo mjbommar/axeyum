@@ -35,7 +35,7 @@
     "target": "finite measure bad complement QF_LRA/Farkas regression seed",
     "pressure": "Malformed complement-measure row where exact replay computes mu(A)=1/3 and mu(U)=1, but the false complement claim requires mu(A^c)=1/2 while preserving finite complement additivity.",
     "evidence": [
-      "bad-complement-measure-rejected"
+      "qf-lra-bad-complement-measure"
     ],
     "next_step": "Promote additional finite-measure rows only when they add distinct exact-linear normalization, additivity, complement, or monotonicity pressure; keep countable additivity, Lebesgue measure, integration, and convergence theorems in the Lean-horizon lane."
   },
@@ -55,13 +55,14 @@
     "finite-sigma-algebra-axioms",
     "finite-measure-additivity",
     "event-complement-measure",
-    "bad-complement-measure-rejected"
+    "bad-complement-measure-rejected",
+    "qf-lra-bad-complement-measure"
   ],
   "graduation_criteria": [
     "Encode finite sigma-algebra membership and closure checks as deterministic Bool formulas.",
     "Encode finite measure equalities as exact QF_LRA formulas.",
     "Replay finite measure witnesses through Axeyum model evaluation.",
-    "Emit checked finite counterexample evidence for rejected complement-measure claims; the bad complement row now has checked QF_LRA/Farkas evidence.",
+    "Keep rejected complement-measure finite table replay separate from the checked QF_LRA/Farkas row for the isolated complement-additivity contradiction.",
     "Keep countable additivity, Lebesgue measure, integration, and convergence theorems marked Lean-horizon."
   ]
 }

@@ -217,8 +217,9 @@ First targets:
   conditional-probability, Bayes-posterior, independence, and total-variation
   rows)
 - [finite-measure-v0](../../artifacts/examples/math/finite-measure-v0/)
-  (resource-backed Farkas regression landed for the bad complement-measure row
-  after exact finite-measure replay computes the event and total measures)
+  (resource-backed Farkas regression landed for
+  `qf-lra-bad-complement-measure` after exact finite-measure replay computes
+  the event, complement, and total measures)
 - [finite-measure-monotonicity-v0](../../artifacts/examples/math/finite-measure-monotonicity-v0/)
   (resource-backed Farkas regressions landed for the bad subset-measure and
   bad union-subadditivity rows after exact finite-measure replay computes the

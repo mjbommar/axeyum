@@ -47,9 +47,9 @@ The committed resource query currently reports:
 - 74 bridge-concept rows.
 - 5 example-family rows.
 - 108 non-template math packs.
-- 652 expected checks.
+- 653 expected checks.
 - 322 checked proof/evidence rows.
-- 259 replay-only rows.
+- 260 replay-only rows.
 - 71 Lean-horizon rows.
 - 108 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
@@ -1543,6 +1543,16 @@ Pick one row per commit unless the change is purely navigational.
      regressions. The public query surface now reports 652 checks, 322 checked
      rows, 259 replay-only rows, and row-scoped Alethe lookup for identity and
      compatibility.
+180. Landed: split `finite-measure-v0` bad complement-measure proof-object
+     checking into the explicit `qf-lra-bad-complement-measure` row. Exact
+     finite replay still owns `bad-complement-measure-rejected` by computing
+     `mu(A)=1/3`, `mu(A^c)=2/3`, and `mu(U)=1` while the malformed row claims
+     `mu(A^c)=1/2`; the source SMT-LIB artifact separately rejects the fixed
+     complement-additivity contradiction through the existing
+     `finite_measure_bad_complement_artifact_emits_checked_farkas`
+     regression. The public query surface now reports 653 checks, 322 checked
+     rows, 260 replay-only rows, and row-scoped Farkas lookup for the pack
+     returns the complement row.
 
 ## Validation Checklist
 
