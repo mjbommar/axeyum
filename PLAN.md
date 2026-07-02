@@ -253,8 +253,8 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-01): the public JSON layer reports
-120 concept rows, 108 non-template packs, 656 expected checks (336 `sat`,
-249 `unsat`, 71 `not-run`), 322 checked rows, 263 replay-only rows, and 71
+120 concept rows, 108 non-template packs, 658 expected checks (336 `sat`,
+251 `unsat`, 71 `not-run`), 322 checked rows, 265 replay-only rows, and 71
 Lean-horizon rows. The rules/law JSON layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
@@ -320,7 +320,8 @@ product-measure's bad product-probability and bad marginal rows through
 source-linked exact linear contradictions after replay computes the product
 mass and row marginal, plus finite random-variables' bad pushforward row after
 replay computes the outcome mass and bad expectation-through-pushforward row
-after replay computes `E[X] = 20`, finite-integration's bad expectation row
+after replay computes `E[X] = 20`, with separate `qf-lra-*` proof rows for the
+final exact-linear contradictions, finite-integration's bad expectation row
 after replay computes the integral, finite-conditional-expectation's bad
 total-expectation row after replay computes `E[X] = E[E[X|G]] = 7/2` while the
 bad row claims `4`, and its bad tower-property row after nested-partition
@@ -894,8 +895,8 @@ conflicts, with metric continuity now promoted for the finite
 bad-delta output-bound conflict, finite stochastic kernels now promoted for
 the bad kernel-row normalization and bad composition-entry conflicts, and finite product measure now
 promoted for the bad product-probability and bad marginal conflicts, with
-finite random variables now promoted for the bad pushforward-distribution and
-bad expectation-through-pushforward conflicts and finite integration now
+finite random variables now promoted for separate bad pushforward-distribution
+and bad expectation-through-pushforward QF_LRA conflicts and finite integration now
 promoted for the bad expectation conflict, and finite
 martingales now promoted for the bad stopped-expectation and
 conditional-expectation conflicts, with

@@ -40,11 +40,11 @@
   "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-random-variables-v0",
   "solver_reuse": {
     "status": "promoted",
-    "target": "finite random-variable bad pushforward and expectation QF_LRA/Farkas regression seeds",
-    "pressure": "Malformed finite random-variable rows where exact replay sums source atom mass 1/4 for the long outcome but the false distribution claims 1/2, and where exact source and pushforward expectation replay computes 20 but the false row claims 25.",
+    "target": "finite random-variable separate bad pushforward and expectation QF_LRA/Farkas regression seeds",
+    "pressure": "Malformed finite random-variable rows where exact replay sums source atom mass 1/4 for the long outcome while the separate QF_LRA row rejects the fixed false distribution claim 1/2, and where exact source and pushforward expectation replay computes 20 while the separate QF_LRA row rejects the fixed false claim 25.",
     "evidence": [
-      "bad-pushforward-rejected",
-      "bad-expectation-through-pushforward-rejected"
+      "qf-lra-bad-pushforward",
+      "qf-lra-bad-expectation-through-pushforward"
     ],
     "next_step": "Promote additional independence or distribution-law rows only when they add distinct exact-linear solver pressure; keep measurable random variables, conditional expectation, martingales, and continuous distributions in the Lean-horizon lane."
   },
@@ -67,13 +67,15 @@
     "expectation-through-pushforward-witness",
     "independent-random-variables-witness",
     "bad-pushforward-rejected",
+    "qf-lra-bad-pushforward",
     "bad-expectation-through-pushforward-rejected",
+    "qf-lra-bad-expectation-through-pushforward",
     "general-random-variable-lean-horizon"
   ],
   "graduation_criteria": [
     "Encode finite random variables as total finite functions from probability atoms to outcome labels.",
     "Replay finite pushforward, expectation, and independence witnesses through exact rational model evaluation.",
-    "Emit checked finite counterexample evidence for rejected pushforward-distribution and expectation claims; the bad pushforward and bad expectation-through-pushforward rows now have checked QF_LRA/Farkas evidence.",
+    "Keep malformed finite pushforward and expectation replay separate from checked QF_LRA/Farkas rows for isolated exact-linear contradictions.",
     "Keep general measurable functions, conditional expectation, stochastic kernels, martingales, and continuous random variables marked Lean-horizon until no-sorry Lean artifacts exist."
   ]
 }

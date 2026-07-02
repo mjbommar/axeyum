@@ -635,9 +635,9 @@ product probability and a false marginal, and a Fubini/Tonelli Lean-horizon
 row.
 [`finite-random-variables-v0`](../../artifacts/examples/math/finite-random-variables-v0/)
 validates exact finite random-variable pushforwards, expectation through
-pushforward distributions, finite independence checks, checked rejection of
-false pushforward and expectation-through-pushforward claims, and a general
-random-variable Lean-horizon row.
+pushforward distributions, finite independence checks, replay rejection of
+false pushforward and expectation-through-pushforward claims, separate checked
+QF_LRA/Farkas rows, and a general random-variable Lean-horizon row.
 [`finite-conditional-expectation-v0`](../../artifacts/examples/math/finite-conditional-expectation-v0/)
 validates exact finite partition conditional expectations, law of total
 expectation, tower property replay, conditional-variance decomposition, checked

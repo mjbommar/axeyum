@@ -40,8 +40,10 @@ Concept rows:
 | `pushforward-distribution-witness` | `sat` | replay-only |
 | `expectation-through-pushforward-witness` | `sat` | replay-only |
 | `independent-random-variables-witness` | `sat` | replay-only |
-| `bad-pushforward-rejected` | `unsat` | checked |
-| `bad-expectation-through-pushforward-rejected` | `unsat` | checked |
+| `bad-pushforward-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-pushforward` | `unsat` | checked |
+| `bad-expectation-through-pushforward-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-expectation-through-pushforward` | `unsat` | checked |
 | `conditional-expectation-partition-witness` | `sat` | replay-only |
 | `law-total-expectation-witness` | `sat` | replay-only |
 | `bad-total-expectation-rejected` | `unsat` | checked |

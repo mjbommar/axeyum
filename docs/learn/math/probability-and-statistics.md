@@ -118,8 +118,8 @@ The `finite-random-variables-v0` validator recomputes the pushforward mass,
 expectation from source atoms, expectation from the pushforward distribution,
 and finite independence of two random variables over a four-atom table. It
 rejects the malformed expectation row `E[X] = 25` because both exact replay
-routes compute `E[X] = 20`, then checks the final linear conflict through
-`UnsatFarkas`.
+routes compute `E[X] = 20`; the separate `qf-lra-*` rows check the final linear
+pushforward and expectation conflicts through `UnsatFarkas`.
 Conditional expectation checks partition averages such as:
 
 ```text

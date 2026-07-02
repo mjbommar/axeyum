@@ -833,6 +833,14 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-random-variables-v0 \
   --route Farkas \
   --proof-status checked \
+  --text qf-lra-bad-pushforward \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-random-variables-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text qf-lra-bad-expectation-through-pushforward \
   --require-any
 ```
 

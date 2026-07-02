@@ -59,6 +59,13 @@ checks each joint probability equals the product of its marginals.
 The false claim says `P(X = long) = 1/2`. The checker rejects it because the
 exact pushforward mass for `long` is `1/4`.
 
+The checked proof-object row then isolates the final linear contradiction:
+
+```text
+long_probability = 1/4
+long_probability = 1/2
+```
+
 ## Bad Expectation Claim
 
 The false claim says `E[X] = 25`. The checker rejects it because exact source
@@ -66,4 +73,11 @@ and pushforward replay both compute:
 
 ```text
 E[X] = 20
+```
+
+The checked proof-object row then isolates the final linear contradiction:
+
+```text
+expectation_value = 20
+expectation_value = 25
 ```

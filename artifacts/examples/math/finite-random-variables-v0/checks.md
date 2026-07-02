@@ -27,9 +27,22 @@ every listed outcome pair.
 Expected result: `unsat`.
 
 The validator rejects the claimed pushforward distribution because the exact
-mass for `long` is `1/4`, not `1/2`. The source-linked QF_LRA artifact records
-the final exact-linear contradiction checked by the shared Farkas route
-regression.
+mass for `long` is `1/4`, not `1/2`.
+
+Proof route: finite-model replay. This row checks the finite pushforward
+computation; the separate `qf-lra-bad-pushforward` row owns the proof-object
+refutation.
+
+## `qf-lra-bad-pushforward`
+
+Expected result: `unsat`.
+
+The source artifact keeps the replay boundary explicit: it only asks QF_LRA to
+refute the fixed equalities `long_probability = 1/4` and
+`long_probability = 1/2`.
+
+Proof route: checked QF_LRA/Farkas evidence. The pushforward computation is
+finite replay; the trusted certificate checks the final linear contradiction.
 
 ## `bad-expectation-through-pushforward-rejected`
 
@@ -37,8 +50,22 @@ Expected result: `unsat`.
 
 The validator rejects the claimed expectation because exact replay computes
 `E[X] = 20` from both the source atom table and the pushforward distribution,
-not `25`. The source-linked QF_LRA artifact records the final exact-linear
-contradiction checked by the shared Farkas route regression.
+not `25`.
+
+Proof route: finite-model replay. This row checks the finite expectation
+computation; the separate `qf-lra-bad-expectation-through-pushforward` row owns
+the proof-object refutation.
+
+## `qf-lra-bad-expectation-through-pushforward`
+
+Expected result: `unsat`.
+
+The source artifact keeps the replay boundary explicit: it only asks QF_LRA to
+refute the fixed equalities `expectation_value = 20` and
+`expectation_value = 25`.
+
+Proof route: checked QF_LRA/Farkas evidence. The expectation computation is
+finite replay; the trusted certificate checks the final linear contradiction.
 
 ## `general-random-variable-lean-horizon`
 

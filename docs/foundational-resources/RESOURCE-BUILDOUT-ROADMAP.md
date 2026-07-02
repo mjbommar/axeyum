@@ -1316,8 +1316,9 @@ Pick one item per commit unless the change is purely navigational.
     `artifacts/examples/math/finite-product-measure-v0/smt2/bad-product-marginal-farkas-conflict.smt2`
     are checked by `math_resource_lra_routes`.
 20. Landed: promote `finite-random-variables-v0` through source-linked
-    QF_LRA/Farkas regressions for `bad-pushforward-rejected` and
-    `bad-expectation-through-pushforward-rejected`. The artifacts
+    QF_LRA/Farkas regressions for `qf-lra-bad-pushforward` and
+    `qf-lra-bad-expectation-through-pushforward`, while the original bad rows
+    remain exact finite replay. The artifacts
     `artifacts/examples/math/finite-random-variables-v0/smt2/bad-pushforward-farkas-conflict.smt2`
     and
     `artifacts/examples/math/finite-random-variables-v0/smt2/bad-expectation-through-pushforward-farkas-conflict.smt2`

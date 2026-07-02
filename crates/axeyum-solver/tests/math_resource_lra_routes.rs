@@ -1319,7 +1319,7 @@ fn finite_random_variables_bad_pushforward_emits_checked_farkas() {
     let false_claimed_mass = eq_ratio(&mut arena, long_probability, 1, 2);
 
     assert_farkas_checked(
-        "finite-random-variables-v0 bad-pushforward-rejected",
+        "finite-random-variables-v0 qf-lra-bad-pushforward",
         &arena,
         &[replay_computed_mass, false_claimed_mass],
     );
@@ -1328,7 +1328,7 @@ fn finite_random_variables_bad_pushforward_emits_checked_farkas() {
 #[test]
 fn finite_random_variables_bad_expectation_through_pushforward_artifact_emits_checked_farkas() {
     assert_resource_farkas(
-        "finite-random-variables-v0 bad-expectation-through-pushforward SMT-LIB artifact",
+        "finite-random-variables-v0 qf-lra-bad-expectation-through-pushforward SMT-LIB artifact",
         FINITE_RANDOM_VARIABLES_BAD_EXPECTATION_THROUGH_PUSHFORWARD,
     );
 }

@@ -20,12 +20,15 @@ Concept rows:
 | `pushforward-distribution-witness` | `sat` | replay-only |
 | `expectation-through-pushforward-witness` | `sat` | replay-only |
 | `independent-random-variables-witness` | `sat` | replay-only |
-| `bad-pushforward-rejected` | `unsat` | checked |
-| `bad-expectation-through-pushforward-rejected` | `unsat` | checked |
+| `bad-pushforward-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-pushforward` | `unsat` | checked |
+| `bad-expectation-through-pushforward-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-expectation-through-pushforward` | `unsat` | checked |
 | `general-random-variable-lean-horizon` | `not-run` | lean-horizon |
 
-Every checked row is exact finite rational arithmetic over normalized atom
-tables and total finite functions. The pack does not prove general
+Every finite replay row is exact rational arithmetic over normalized atom
+tables and total finite functions; every checked row isolates a final QF_LRA
+contradiction after replay. The pack does not prove general
 measurable-function theory, conditional expectation, stochastic kernels,
 martingales, or continuous random variables.
 
@@ -169,6 +172,17 @@ and rejects the claim because:
 The candidate distribution is untrusted; the small checker rebuilds it from the
 source atom table and the finite function.
 
+The checked proof-object row strips away the table and asks QF_LRA to refute
+only the final exact-linear conflict:
+
+```text
+long_probability = 1/4
+long_probability = 1/2
+```
+
+That is the source of
+[`bad-pushforward-farkas-conflict.smt2`](../../../artifacts/examples/math/finite-random-variables-v0/smt2/bad-pushforward-farkas-conflict.smt2).
+
 ## Reject A False Expectation Claim
 
 The second negative row claims:
@@ -211,6 +225,7 @@ expectation from source atoms and pushforward distributions
 joint and marginal distributions
 finite independence
 bad pushforward and bad expectation refutations
+QF_LRA/Farkas final contradictions
 ```
 
 The following remain proof-assistant targets:
@@ -248,11 +263,13 @@ This lesson shows Axeyum's current finite random-variable resource pattern:
 ```text
 untrusted fast search -> random-variable, distribution, expectation, independence, or counterexample row
 trusted small checking -> exact finite functions and rational atom sums
+checked proof object -> final QF_LRA/Farkas contradiction
 remaining horizon -> general measurable random-variable theory
 ```
 
 The graduation target is to encode finite random variables as total finite
 functions from probability atoms to outcome labels, replay finite pushforward,
 expectation, and independence witnesses through exact rational model
-evaluation, and emit checked counterexample evidence for rejected
-pushforward-distribution claims.
+evaluation, keep malformed replay separate from checked QF_LRA/Farkas rows, and
+emit checked counterexample evidence for rejected pushforward-distribution and
+expectation claims.

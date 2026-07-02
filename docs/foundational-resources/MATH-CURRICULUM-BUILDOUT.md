@@ -911,9 +911,9 @@ product probability and a false marginal, and a Fubini/Tonelli Lean-horizon
 row.
 `artifacts/examples/math/finite-random-variables-v0/` now validates exact
 finite random-variable pushforwards, expectation through pushforward
-distributions, finite independence checks, checked QF_LRA/Farkas rejection of
-a false pushforward distribution and a false expectation-through-pushforward
-claim, and a general random-variable/conditional expectation Lean-horizon row.
+distributions, finite independence checks, exact bad pushforward and
+expectation replay, separate checked QF_LRA/Farkas rejection rows, and a
+general random-variable/conditional expectation Lean-horizon row.
 `artifacts/examples/math/finite-conditional-expectation-v0/` now validates
 exact finite partition conditional expectations, the law of total expectation,
 the finite tower property over nested partitions, finite conditional-variance
@@ -1610,9 +1610,10 @@ statistics.
 measure, marginalization, Fubini bridge, and checked QF_LRA/Farkas bad-product
 probability row toward general measure/probability theory.
 `finite-random-variables-v0` now adds the exact finite random-variable
-pushforward, expectation, independence bridge, and checked QF_LRA/Farkas
-bad-pushforward and bad expectation-through-pushforward rows toward
-probability/statistics and measure-theory semantics.
+pushforward, expectation, independence bridge, exact bad-row replay, and
+separate checked `qf-lra-bad-pushforward` and
+`qf-lra-bad-expectation-through-pushforward` rows toward probability/statistics
+and measure-theory semantics.
 `finite-conditional-expectation-v0` now adds the
 finite partition conditional-expectation, total-expectation, tower-property,
 and conditional-variance-decomposition bridge toward martingales and general
@@ -1934,9 +1935,9 @@ finite Fubini replay, checked bad product-probability and bad marginal
 rejection, and the Fubini/Tonelli Lean horizon.
 `finite-random-variables-v0` now has a learner-facing end-to-end lesson for
 finite random-variable functions, pushforward distributions, expectation
-through pushforwards, finite independence, checked bad pushforward and bad
-expectation-through-pushforward rejection, and the general random-variable
-Lean horizon.
+through pushforwards, finite independence, replayed bad pushforward and
+bad expectation-through-pushforward rejection, separate checked QF_LRA rows,
+and the general random-variable Lean horizon.
 `finite-conditional-expectation-v0` now has a learner-facing end-to-end lesson
 for finite conditioning partitions, blockwise conditional expectations, total
 expectation replay, tower-property replay, conditional-variance decomposition,

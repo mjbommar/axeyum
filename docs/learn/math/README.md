@@ -443,9 +443,9 @@ Companion maps:
   rejection, and the Fubini/Tonelli Lean horizon.
 - [Finite Random Variables](finite-random-variables-end-to-end.md): follows
   finite random-variable functions, pushforward distributions, expectation
-  through pushforwards, finite independence, checked bad pushforward and bad
-  expectation-through-pushforward rejection, and the general random-variable
-  Lean horizon.
+  through pushforwards, finite independence, replayed bad pushforward and
+  bad expectation-through-pushforward rejection, separate checked QF_LRA rows,
+  and the general random-variable Lean horizon.
 - [Finite Conditional Expectation](finite-conditional-expectation-end-to-end.md):
   follows finite conditioning partitions, blockwise conditional expectations,
   total-expectation replay, tower-property replay, checked QF_LRA/Farkas bad

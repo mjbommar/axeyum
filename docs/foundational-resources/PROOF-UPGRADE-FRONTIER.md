@@ -314,10 +314,10 @@ First targets:
   and bad marginal rows after exact finite product replay computes the product
   mass and row marginal)
 - [finite-random-variables-v0](../../artifacts/examples/math/finite-random-variables-v0/)
-  (resource-backed Farkas regressions landed for the bad
-  pushforward-distribution and bad expectation-through-pushforward rows after
-  exact finite random-variable replay computes the outcome mass and
-  expectation)
+  (exact finite random-variable replay stays in the bad pushforward and
+  expectation rows; resource-backed Farkas regressions now live in
+  `qf-lra-bad-pushforward` and
+  `qf-lra-bad-expectation-through-pushforward`)
 - [finite-martingales-v0](../../artifacts/examples/math/finite-martingales-v0/)
   (resource-backed Farkas regressions landed for the bad stopped-expectation
   and bad martingale rows after exact bounded-stopping and finite-filtration

@@ -205,6 +205,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite random-variable Farkas rows split landed.**
+  `finite-random-variables-v0` now keeps `bad-pushforward-rejected` and
+  `bad-expectation-through-pushforward-rejected` as exact finite replay: they
+  recompute `P(X = long) = 1/4` instead of `1/2` and `E[X] = 20` instead of
+  `25`. The checked proof-object paths are now the explicit
+  `qf-lra-bad-pushforward` and
+  `qf-lra-bad-expectation-through-pushforward` rows linked to the existing
+  QF_LRA/Farkas SMT-LIB artifacts and regressions. Focused validation passes;
+  the public summary now reports 120 concept rows, 108 packs, 658 expected
+  checks, 322 checked rows, 265 replay-only rows, and 71 Lean-horizon rows.
+
 - **Finite integration expectation Farkas row split landed.**
   `finite-integration-v0` now keeps `bad-expectation-rejected` as exact
   finite replay: it recomputes the three-atom simple-function integral as
@@ -2255,8 +2266,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **Finite random-variable QF_LRA promotion landed.**
   [`finite-random-variables-v0`](artifacts/examples/math/finite-random-variables-v0/)
-  now links `bad-pushforward-rejected` to a source-level QF_LRA artifact for
-  the malformed pushforward-distribution row. The shared
+  now links the malformed pushforward-distribution row to a source-level
+  QF_LRA artifact. The shared
   `math_resource_lra_routes` regression emits and independently rechecks
   Farkas evidence for `long_probability = 1/4` versus
   `long_probability = 1/2`; generated dashboards move promoted solver-reuse
@@ -3734,8 +3745,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [`finite-random-variables-end-to-end.md`](docs/learn/math/finite-random-variables-end-to-end.md)
   as the learner-facing trace for the finite-random-variables pack:
   finite random-variable functions, pushforward distributions, expectation
-  through pushforwards, finite independence, checked bad pushforward
-  rejection, and the general random-variable Lean horizon. The lesson is
+  through pushforwards, finite independence, bad pushforward rejection, and the
+  general random-variable Lean horizon. The lesson is
   linked from the math learning index plus the probability/statistics path.
 
 - **Finite-product-measure end-to-end lesson landed.** Added
@@ -4624,8 +4635,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   as the exact finite random-variable bridge between finite probability,
   measure, functions, and statistics. The pack validates pushforward
   distributions, expectation through pushforward distributions, finite
-  independence checks, checked rejection of false pushforward and
-  expectation-through-pushforward claims, and a general
+  independence checks, replay rejection of false pushforward and
+  expectation-through-pushforward claims, separate checked QF_LRA/Farkas rows,
+  and a general
   random-variable/conditional-expectation Lean-horizon row. The
   foundational example-pack validator now checks finite atom-to-outcome maps,
   pushforward mass, exact source and pushforward expectations, joint

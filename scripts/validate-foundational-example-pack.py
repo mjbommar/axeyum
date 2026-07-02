@@ -22216,6 +22216,10 @@ def validate_finite_random_variables(expected: dict[str, Any]) -> None:
     bad = checks["bad-pushforward-rejected"]
     if bad["expected_result"] != "unsat":
         fail("bad-pushforward-rejected must expect unsat")
+    if bad["proof_status"] != "replay-only":
+        fail("bad-pushforward-rejected must be replay-only")
+    if bad["validation"] != "finite_bad_pushforward_replay":
+        fail("bad-pushforward-rejected must use finite_bad_pushforward_replay validation")
     data = bad.get("data", {})
     atoms = require_probability_atoms("bad pushforward atoms", data.get("atoms"), require_events=False)
     require_normalized_atoms("bad-pushforward-rejected", atoms)
@@ -22229,15 +22233,62 @@ def validate_finite_random_variables(expected: dict[str, Any]) -> None:
         fail("bad-pushforward-rejected actual_distribution is incorrect")
     if claimed == actual:
         fail("bad-pushforward-rejected must document a false pushforward distribution")
-    require_string("bad pushforward smt2_artifact", data.get("smt2_artifact"))
-    check_source("bad pushforward smt2_artifact", data["smt2_artifact"])
-    require_string("bad pushforward farkas_regression", data.get("farkas_regression"))
-    if "finite_random_variables_bad_pushforward_emits_checked_farkas" not in data["farkas_regression"]:
-        fail("bad-pushforward-rejected must link the Farkas regression")
+    notes = bad.get("notes", "")
+    if "separate qf-lra-bad-pushforward" not in notes:
+        fail("bad-pushforward-rejected notes must name the separate qf-lra-bad-pushforward row")
+
+    qf_bad_pushforward = checks["qf-lra-bad-pushforward"]
+    if qf_bad_pushforward["expected_result"] != "unsat":
+        fail("qf-lra-bad-pushforward must expect unsat")
+    if qf_bad_pushforward["proof_status"] != "checked":
+        fail("qf-lra-bad-pushforward must be checked")
+    if qf_bad_pushforward["validation"] != "qf_lra_bad_pushforward_refutation":
+        fail("qf-lra-bad-pushforward must use qf_lra_bad_pushforward_refutation validation")
+    qf_data = qf_bad_pushforward.get("data", {})
+    if qf_data.get("source_witness") != "weather-commute-random-variable":
+        fail("qf-lra-bad-pushforward must cite weather-commute-random-variable")
+    outcome = qf_data.get("outcome")
+    require_string("qf-lra bad pushforward outcome", outcome)
+    if outcome not in actual:
+        fail("qf-lra-bad-pushforward outcome must appear in the replay distributions")
+    qf_actual_probability = require_fraction(
+        "qf-lra bad pushforward actual_probability",
+        qf_data.get("actual_probability"),
+    )
+    qf_claimed_probability = require_fraction(
+        "qf-lra bad pushforward claimed_probability",
+        qf_data.get("claimed_probability"),
+    )
+    if qf_actual_probability != actual[outcome]:
+        fail("qf-lra-bad-pushforward actual_probability must match replay actual distribution")
+    if qf_claimed_probability != claimed[outcome]:
+        fail("qf-lra-bad-pushforward claimed_probability must match replay claimed distribution")
+    equation = qf_data.get("farkas_pushforward_equation")
+    require_string("qf-lra bad pushforward farkas_pushforward_equation", equation)
+    if equation != "long_probability = actual_probability":
+        fail("qf-lra-bad-pushforward must document the Farkas pushforward equation")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad pushforward smt2_artifact", smt2_artifact)
+    check_source("qf-lra bad pushforward smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad pushforward farkas_regression", regression)
+    if "finite_random_variables_bad_pushforward_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-pushforward must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad pushforward certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-pushforward certificate must document checked UnsatFarkas evidence")
 
     bad_expectation = checks["bad-expectation-through-pushforward-rejected"]
     if bad_expectation["expected_result"] != "unsat":
         fail("bad-expectation-through-pushforward-rejected must expect unsat")
+    if bad_expectation["proof_status"] != "replay-only":
+        fail("bad-expectation-through-pushforward-rejected must be replay-only")
+    if bad_expectation["validation"] != "finite_bad_expectation_through_pushforward_replay":
+        fail(
+            "bad-expectation-through-pushforward-rejected must use "
+            "finite_bad_expectation_through_pushforward_replay validation"
+        )
     data = bad_expectation.get("data", {})
     atoms = require_probability_atoms("bad expectation atoms", data.get("atoms"), require_events=False)
     require_normalized_atoms("bad-expectation-through-pushforward-rejected", atoms)
@@ -22281,14 +22332,59 @@ def validate_finite_random_variables(expected: dict[str, Any]) -> None:
         fail("bad-expectation-through-pushforward-rejected expectations do not match")
     if claimed_expectation == source_expectation:
         fail("bad-expectation-through-pushforward-rejected must document a false expectation")
-    require_string("bad expectation smt2_artifact", data.get("smt2_artifact"))
-    check_source("bad expectation smt2_artifact", data["smt2_artifact"])
-    require_string("bad expectation farkas_regression", data.get("farkas_regression"))
-    if (
-        "finite_random_variables_bad_expectation_through_pushforward_artifact_emits_checked_farkas"
-        not in data["farkas_regression"]
-    ):
-        fail("bad-expectation-through-pushforward-rejected must link the Farkas regression")
+    notes = bad_expectation.get("notes", "")
+    if "separate qf-lra-bad-expectation-through-pushforward" not in notes:
+        fail(
+            "bad-expectation-through-pushforward-rejected notes must name the separate "
+            "qf-lra-bad-expectation-through-pushforward row"
+        )
+
+    qf_bad_expectation = checks["qf-lra-bad-expectation-through-pushforward"]
+    if qf_bad_expectation["expected_result"] != "unsat":
+        fail("qf-lra-bad-expectation-through-pushforward must expect unsat")
+    if qf_bad_expectation["proof_status"] != "checked":
+        fail("qf-lra-bad-expectation-through-pushforward must be checked")
+    if qf_bad_expectation["validation"] != "qf_lra_bad_expectation_through_pushforward_refutation":
+        fail(
+            "qf-lra-bad-expectation-through-pushforward must use "
+            "qf_lra_bad_expectation_through_pushforward_refutation validation"
+        )
+    qf_data = qf_bad_expectation.get("data", {})
+    if qf_data.get("source_witness") != "weather-commute-random-variable":
+        fail("qf-lra-bad-expectation-through-pushforward must cite weather-commute-random-variable")
+    qf_source_expectation = require_fraction(
+        "qf-lra bad expectation source_expectation",
+        qf_data.get("source_expectation"),
+    )
+    qf_pushforward_expectation = require_fraction(
+        "qf-lra bad expectation pushforward_expectation",
+        qf_data.get("pushforward_expectation"),
+    )
+    qf_claimed_expectation = require_fraction(
+        "qf-lra bad expectation claimed_expectation",
+        qf_data.get("claimed_expectation"),
+    )
+    if qf_source_expectation != source_expectation:
+        fail("qf-lra-bad-expectation-through-pushforward source_expectation must match replay")
+    if qf_pushforward_expectation != pushforward_expectation:
+        fail("qf-lra-bad-expectation-through-pushforward pushforward_expectation must match replay")
+    if qf_claimed_expectation != claimed_expectation:
+        fail("qf-lra-bad-expectation-through-pushforward claimed_expectation must match replay")
+    equation = qf_data.get("farkas_expectation_equation")
+    require_string("qf-lra bad expectation farkas_expectation_equation", equation)
+    if equation != "expectation_value = source_expectation":
+        fail("qf-lra-bad-expectation-through-pushforward must document the Farkas expectation equation")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf-lra bad expectation smt2_artifact", smt2_artifact)
+    check_source("qf-lra bad expectation smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf-lra bad expectation farkas_regression", regression)
+    if "finite_random_variables_bad_expectation_through_pushforward_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-expectation-through-pushforward must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf-lra bad expectation certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-expectation-through-pushforward certificate must document checked UnsatFarkas evidence")
 
     horizon = checks["general-random-variable-lean-horizon"]
     if horizon["expected_result"] != "not-run":
