@@ -2079,6 +2079,10 @@ theory horizon.
 minimum-edge-cut and minimum-vertex-cut certificates, rejected one-cut claims,
 checked smaller-cut enumeration, and the general max-flow/min-cut theorem
 horizon.
+It also has a focused graph-cut trust-boundary page that keeps finite
+edge/vertex cut replay and the one-edge CNF non-cut row separate from
+Menger-style cut theorems, max-flow/min-cut, scalable algorithms, spectral
+cuts, graph-partitioning guarantees, and asymptotic claims.
 `finite-flow-cut-v0` now has a learner-facing end-to-end lesson for exact
 directed-flow feasibility, cut-capacity optimality replay, malformed
 capacity/flow-value rejections, and the general max-flow/min-cut theorem

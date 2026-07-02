@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Graph-cut certificate trust-boundary resource landed.**
+  `graph-cut-certificate-trust-boundary.md` now separates `graph-cut-v0`
+  checked finite minimum edge-cut replay, one-edge non-cut CNF/DRAT/LRAT
+  rejection, minimum internal vertex-cut replay, and one-vertex non-cut replay
+  from Menger-style cut theorems, max-flow/min-cut, scalable algorithms,
+  spectral cuts, graph-partitioning guarantees, and asymptotic claims. The
+  graph/discrete query guide, learner map, traversal index, and smoke query
+  docs now expose the graph-cut trust boundary without adding a false theorem
+  horizon row.
+
 - **D-separation causal trust-boundary resource landed.**
   `d-separation-causal-trust-boundary.md` now separates
   `graph-d-separation-v0` checked finite active-chain replay, conditioned

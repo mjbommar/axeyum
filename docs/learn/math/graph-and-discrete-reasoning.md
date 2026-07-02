@@ -32,6 +32,7 @@ Example packs:
 Companion map:
 
 - [Graph Traversal Runtime Index](graph-traversal-runtime-index.md)
+- [Graph Cut Certificate Trust Boundary](graph-cut-certificate-trust-boundary.md)
 - [D-Separation Causal Trust Boundary](d-separation-causal-trust-boundary.md)
 - [Recurrence And Asymptotic Theorem Boundary](recurrence-asymptotic-theorem-boundary.md)
 
@@ -65,7 +66,11 @@ d-separation pack checks chains, forks, colliders, and descendant-opened
 colliders by enumerating finite skeleton paths, with CNF/DRAT/LRAT artifacts for
 conditioned-chain and unconditioned-collider blockers. The graph cut pack checks
 minimum edge and vertex cut certificates by replaying separation and
-enumerating smaller candidate cuts. The finite flow/cut pack checks one
+enumerating smaller candidate cuts. Its focused trust boundary is
+[Graph Cut Certificate Trust Boundary](graph-cut-certificate-trust-boundary.md),
+which keeps the finite cut rows separate from Menger, max-flow/min-cut,
+algorithm, spectral-cut, and graph-partitioning claims. The finite flow/cut
+pack checks one
 directed capacitated network by replaying feasibility, recomputing a
 source-side cut capacity, rejecting a capacity violation, and rejecting a
 claimed flow value above that cut bound. Its focused theorem boundary is
@@ -311,6 +316,7 @@ For a fuller trace from data row to replay result and evidence status, read
 [End To End: Graph Search Runtime Counters](graph-search-runtime-end-to-end.md),
 [End To End: Graph Matching And Augmenting Paths](graph-matching-end-to-end.md),
 [End To End: Graph Cut Certificates](graph-cut-end-to-end.md),
+[Graph Cut Certificate Trust Boundary](graph-cut-certificate-trust-boundary.md),
 [End To End: Finite Flow And Cut Certificates](finite-flow-cut-end-to-end.md),
 [Max-Flow Min-Cut Theorem Boundary](max-flow-min-cut-theorem-boundary.md),
 [Shortest Path Theorem Boundary](shortest-path-theorem-boundary.md),

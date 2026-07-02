@@ -757,6 +757,10 @@ the learner/resource map now exposes a focused d-separation causal trust
 boundary that keeps those finite DAG path-blocking rows separate from causal
 identification, do-calculus, probabilistic graphical-model semantics,
 adjustment-set correctness, and statistical consistency.
+It also exposes a focused graph-cut trust boundary that keeps finite edge and
+vertex cut replay plus the one-edge CNF non-cut row separate from Menger-style
+cut theorems, max-flow/min-cut, scalable algorithms, spectral cuts,
+graph-partitioning guarantees, and asymptotic claims.
 `bad-dfs-cost-bound-rejected` now has a source-linked
 QF_LIA artifact checked by the `math_resource_lia_routes` arithmetic-DPLL
 regression and `diophantine-gcd-obstruction` now has a source-linked QF_LIA

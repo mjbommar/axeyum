@@ -99,6 +99,11 @@ when the question is path optimality rather than traversal order. That page
 shows how exact path replay and potential inequalities certify one finite
 shortest-path instance.
 
+Use [Graph Cut Certificate Trust Boundary](graph-cut-certificate-trust-boundary.md)
+when the question is whether a proposed edge or vertex removal separates a
+fixed graph. That page keeps finite cut replay separate from graph-cut theorem
+coverage and flow-duality claims.
+
 Use [Finite DAG Topological Order Certificates](finite-dag-topological-order-end-to-end.md)
 when the question is order feasibility on a directed acyclic graph. That page
 shows how edge positions and a cycle witness are replayed without trusting a

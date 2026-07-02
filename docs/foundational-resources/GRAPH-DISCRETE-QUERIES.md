@@ -76,6 +76,8 @@ needs concrete checked rows to display.
 | All checked graph rows | field `graph_theory` | any route | `checks --field graph_theory --expected-result unsat --proof-status checked` |
 | Runtime-specific rows | pack `graph-search-runtime-v0` | `LIA` | `checks --pack graph-search-runtime-v0 --route LIA --proof-status checked` |
 | Coloring-specific rows | pack `graph-coloring-v0` | `boolean`; `qf-bv` | `checks --pack graph-coloring-v0 --route boolean --proof-status checked`; `checks --pack graph-coloring-v0 --route qf-bv --proof-status checked` |
+| Graph-cut checked finite rows | pack `graph-cut-v0` | finite graph replay | `checks --pack graph-cut-v0 --proof-status checked` |
+| Graph-cut CNF non-cut row | pack `graph-cut-v0` | `boolean` | `checks --pack graph-cut-v0 --route boolean --proof-status checked` |
 | D-separation checked finite rows | pack `graph-d-separation-v0` | finite DAG replay | `checks --pack graph-d-separation-v0 --proof-status checked` |
 | D-separation CNF blocker rows | pack `graph-d-separation-v0` | `boolean` | `checks --pack graph-d-separation-v0 --route boolean --proof-status checked --expected-result unsat` |
 
@@ -99,6 +101,54 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --require-any
 ```
+
+Display checked graph-cut certificate and non-cut rows:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-cut-v0 \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-cut-v0 \
+  --expected-result sat \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-cut-v0 \
+  --expected-result unsat \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-cut-v0 \
+  --route boolean \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-cut-v0 \
+  --proof-status checked \
+  --text "minimum s-t edge cut" \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack graph-cut-v0 \
+  --proof-status checked \
+  --text "one internal vertex" \
+  --require-any
+```
+
+Use
+[Graph Cut Certificate Trust Boundary](../learn/math/graph-cut-certificate-trust-boundary.md)
+when a consumer needs display wording that keeps finite graph cut replay and
+the one-edge CNF non-cut row separate from Menger-style theorems,
+max-flow/min-cut, scalable algorithms, spectral cuts, graph-partitioning
+guarantees, and asymptotic claims. The current `graph-cut-v0` pack intentionally
+has no `horizon-frontier --text graph-cut` command because no theorem row is
+committed for this pack.
 
 Display checked finite DAG d-separation blocker rows, including the
 unconditioned-collider CNF route:

@@ -99,6 +99,10 @@ Companion maps:
 - [Graph Traversal Runtime Index](graph-traversal-runtime-index.md): separates
   finite reachability, BFS/DFS traces, visited-node counters, checked LIA cost
   refutations, and asymptotic runtime horizons.
+- [Graph Cut Certificate Trust Boundary](graph-cut-certificate-trust-boundary.md):
+  separates finite edge/vertex cut replay and one-edge CNF blocker evidence
+  from Menger-style cut theorems, max-flow/min-cut, scalable algorithms,
+  spectral cuts, partitioning guarantees, and asymptotic claims.
 - [D-Separation Causal Trust Boundary](d-separation-causal-trust-boundary.md):
   separates finite DAG d-separation replay and checked CNF blocker rows from
   causal identification, do-calculus, probabilistic graphical-model semantics,
@@ -174,6 +178,10 @@ Companion maps:
 - [Graph Cut Certificates](graph-cut-end-to-end.md): follows finite
   minimum-edge-cut and minimum-vertex-cut certificates, rejected one-cut claims,
   and checked smaller-cut enumeration.
+- [Graph Cut Certificate Trust Boundary](graph-cut-certificate-trust-boundary.md):
+  maps those finite edge/vertex cut rows to the missing cut-theory, algorithm,
+  flow-duality, and graph-partitioning layers without promoting them to theorem
+  claims.
 - [Finite Flow And Cut Certificates](finite-flow-cut-end-to-end.md): follows
   exact directed-flow feasibility, cut-capacity optimality replay, malformed
   capacity and flow-value rejections, and the max-flow/min-cut theorem horizon.

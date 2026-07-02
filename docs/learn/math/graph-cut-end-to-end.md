@@ -4,6 +4,9 @@ This lesson follows one finite graph resource from a raw edge list to edge-cut
 certificates, vertex-cut certificates, rejected non-cuts, and minimum-size
 replay. It uses
 [graph-cut-v0](../../../artifacts/examples/math/graph-cut-v0/).
+For the broader boundary between these finite cut checks and graph-cut theorem
+coverage, read
+[Graph Cut Certificate Trust Boundary](graph-cut-certificate-trust-boundary.md).
 
 Concept rows:
 

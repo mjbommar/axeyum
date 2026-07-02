@@ -2078,6 +2078,14 @@ Pick one row per commit unless the change is purely navigational.
      causal-identification, and statistical-consistency layers, and adds
      d-separation-specific checked-row queries to the public smoke gate without
      adding a duplicate pack or inventing a causal theorem horizon row.
+246. Landed: add `graph-cut-certificate-trust-boundary.md` as the focused
+     graph-cut trust-boundary page for `graph-cut-v0`. It maps checked finite
+     minimum edge-cut replay, one-edge non-cut CNF/DRAT/LRAT rejection,
+     minimum internal vertex-cut replay, and one-vertex non-cut replay to the
+     missing Menger, max-flow/min-cut, scalable algorithm, spectral-cut,
+     graph-partitioning, and asymptotic layers, and adds graph-cut-specific
+     checked-row queries to the public smoke gate without adding a duplicate
+     pack or inventing a theorem horizon row for this pack.
 
 ## Validation Checklist
 
