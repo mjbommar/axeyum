@@ -56,8 +56,8 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFFF | `qf-ufff-cvc5-regress-clean` | 8 | 8 | 100% | 0 | 0 | 0 | 0 | :status | 0.003 |
 | QF_UFLIA | `qf-uflia-curated-named` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 0.001 |
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts` | 6 | 6 | 100% | 0 | 0 | 6 | 0 | z3-binary | 0.002 |
-| QF_UFLIA | `qf-uflia-cvc5-regress-clean` | 8 | 6 | 75% | 2 | 0 | 6 | 0 | z3-binary | 5.001 |
-| QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 0 | 0% | 2 | 0 | 0 | 0 | :status | 20.000 |
+| QF_UFLIA | `qf-uflia-cvc5-regress-clean` | 8 | 8 | 100% | 0 | 0 | 8 | 0 | z3-binary | 0.572 |
+| QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
 **Totals:** 992 files, 665 decided, 612 oracle-compared, **0 disagreements.**
@@ -112,6 +112,16 @@ assertions — a sound weakening — so the mixed BV+Int abstraction refutes
 (inclusion/intersection emptiness across separate `in_re` atoms) and
 lexicographic (`str.<=`) refutations — **Phase B / A.3**, not length facts (see
 [ADR-0052](../docs/research/09-decisions/adr-0052-string-len-lia-link-and-bounded-unsat-gate.md)).
+
+### QF_UFLIA re-measured 2026-07-02 — both residual divisions now fully decided
+
+`qf-uflia-cvc5-regress-clean` 6→8/8 and `-overbound-uninterp-sorts` 0→2/2
+(DISAGREE=0, all 10 z3-compared). Per-instance timing attributes the movers to
+the **UFLIA combination deadline threading** (`3cd6c810` — the former
+timeout/budget declines now solve in ~2.3 s) on top of the accumulated
+arithmetic landings; the model-assembly parity fix (`bff67679`) is verdict-
+relevant only for skeleton-Bool SAT witnesses (none among the movers) but
+repaired a wrong-default `false` witness value in the same builders.
 
 ## Progress frontiers (lever depth)
 
