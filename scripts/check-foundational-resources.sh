@@ -693,6 +693,9 @@ python3 scripts/query-foundational-resources.py packs --field numerical_analysis
 python3 scripts/query-foundational-resources.py packs --field numerical_analysis --text "Arnoldi" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --field numerical_analysis --text "Lanczos" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-orthogonal-diagonalization-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-orthogonal-diagonalization-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-orthogonal-diagonalization-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-power-iteration-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-arnoldi-iteration-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-lanczos-iteration-v0 --route Farkas --proof-status checked --require-any >/dev/null
@@ -739,6 +742,7 @@ python3 scripts/query-foundational-resources.py checks --pack bounded-monotone-s
 python3 scripts/query-foundational-resources.py horizon-frontier --text hitting --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-hitting-times-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack spectral-linear-algebra-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-orthogonal-diagonalization-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-power-iteration-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpair --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-jordan-chain-v0 --route Farkas --proof-status checked --text qf-lra-bad-jordan-chain --require-any >/dev/null

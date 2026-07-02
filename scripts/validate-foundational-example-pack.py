@@ -13955,6 +13955,244 @@ def validate_finite_singular_value_shadow(expected: dict[str, Any]) -> None:
     require_string("singular horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_orthogonal_diagonalization(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    orthogonal = checks["orthogonal-matrix-witness"]
+    if orthogonal["expected_result"] != "sat":
+        fail("orthogonal-matrix-witness must expect sat")
+    if orthogonal.get("proof_status") != "replay-only":
+        fail("orthogonal-matrix-witness must be replay-only")
+    values = single_witness_values(orthogonal, witnesses)
+    matrix = require_fraction_matrix(
+        "orthogonal diagonalization matrix A",
+        values.get("matrix"),
+    )
+    q_matrix = require_fraction_matrix(
+        "orthogonal diagonalization Q matrix",
+        values.get("q_matrix"),
+    )
+    q_transpose = require_fraction_matrix(
+        "orthogonal diagonalization Q transpose",
+        values.get("q_transpose"),
+    )
+    diagonal = require_fraction_matrix(
+        "orthogonal diagonalization D matrix",
+        values.get("diagonal"),
+    )
+    identity = require_fraction_matrix(
+        "orthogonal diagonalization identity",
+        values.get("identity"),
+    )
+    product = require_fraction_matrix(
+        "orthogonal diagonalization product",
+        values.get("product"),
+    )
+    eigenvalues = require_fraction_vector(
+        "orthogonal diagonalization eigenvalues",
+        values.get("eigenvalues"),
+    )
+    eigenvectors = require_fraction_vector_list(
+        "orthogonal diagonalization eigenvectors",
+        values.get("eigenvectors"),
+    )
+    images = require_fraction_vector_list(
+        "orthogonal diagonalization images",
+        values.get("images"),
+    )
+    trace = require_fraction("orthogonal diagonalization trace", values.get("trace"))
+    eigenvalue_sum = require_fraction(
+        "orthogonal diagonalization eigenvalue_sum",
+        values.get("eigenvalue_sum"),
+    )
+    determinant = require_fraction(
+        "orthogonal diagonalization determinant",
+        values.get("determinant"),
+    )
+    eigenvalue_product = require_fraction(
+        "orthogonal diagonalization eigenvalue_product",
+        values.get("eigenvalue_product"),
+    )
+
+    require_square_matrix("orthogonal diagonalization matrix A", matrix)
+    require_square_matrix("orthogonal diagonalization Q matrix", q_matrix)
+    require_square_matrix("orthogonal diagonalization Q transpose", q_transpose)
+    require_square_matrix("orthogonal diagonalization D matrix", diagonal)
+    require_square_matrix("orthogonal diagonalization identity", identity)
+    if len(matrix) != 2:
+        fail("finite orthogonal diagonalization replay expects one 2x2 matrix")
+    if len(q_matrix) != len(matrix) or len(diagonal) != len(matrix) or len(identity) != len(matrix):
+        fail("orthogonal diagonalization matrices must have matching dimensions")
+    expected_identity = [
+        [Fraction(1) if row == column else Fraction(0) for column in range(len(matrix))]
+        for row in range(len(matrix))
+    ]
+    if identity != expected_identity:
+        fail("orthogonal-matrix-witness identity must be the exact identity matrix")
+    if q_transpose != matrix_transpose(q_matrix):
+        fail("orthogonal-matrix-witness q_transpose is incorrect")
+    if mat_mul(q_transpose, q_matrix) != identity:
+        fail("orthogonal-matrix-witness Q^T*Q does not equal identity")
+    if mat_mul(q_matrix, q_transpose) != identity:
+        fail("orthogonal-matrix-witness Q*Q^T does not equal identity")
+    if eigenvectors != matrix_transpose(q_matrix):
+        fail("orthogonal-matrix-witness eigenvectors must be the columns of Q")
+    validate_orthonormal_vectors("orthogonal diagonalization eigenvector", eigenvectors)
+
+    decomposition = checks["orthogonal-diagonalization-witness"]
+    if decomposition["expected_result"] != "sat":
+        fail("orthogonal-diagonalization-witness must expect sat")
+    if decomposition.get("proof_status") != "replay-only":
+        fail("orthogonal-diagonalization-witness must be replay-only")
+    if single_witness_values(decomposition, witnesses) != values:
+        fail("orthogonal-diagonalization-witness must cite the orthogonal diagonalization witness")
+    for row_index, row in enumerate(matrix):
+        for column_index, entry in enumerate(row):
+            if entry != matrix[column_index][row_index]:
+                fail("orthogonal-diagonalization-witness expects a symmetric matrix")
+    for row_index, row in enumerate(diagonal):
+        for column_index, entry in enumerate(row):
+            if row_index == column_index:
+                if row_index >= len(eigenvalues) or entry != eigenvalues[row_index]:
+                    fail("orthogonal-diagonalization-witness diagonal entries must match eigenvalues")
+            elif entry != 0:
+                fail("orthogonal-diagonalization-witness D must be diagonal")
+    if mat_mul(mat_mul(q_matrix, diagonal), q_transpose) != product:
+        fail("orthogonal-diagonalization-witness product does not equal Q*D*Q^T")
+    if product != matrix:
+        fail("orthogonal-diagonalization-witness product must equal A")
+
+    eigenpair = checks["spectral-eigenpair-witness"]
+    if eigenpair["expected_result"] != "sat":
+        fail("spectral-eigenpair-witness must expect sat")
+    if eigenpair.get("proof_status") != "replay-only":
+        fail("spectral-eigenpair-witness must be replay-only")
+    if single_witness_values(eigenpair, witnesses) != values:
+        fail("spectral-eigenpair-witness must cite the orthogonal diagonalization witness")
+    if len(eigenvalues) != len(eigenvectors) or len(images) != len(eigenvectors):
+        fail("spectral-eigenpair-witness eigenvalue/vector/image counts must match")
+    for index, vector in enumerate(eigenvectors):
+        require_mat_vec_shape("orthogonal diagonalization eigenpair", matrix, vector)
+        if mat_vec(matrix, vector) != images[index]:
+            fail(f"spectral-eigenpair-witness image {index} does not equal A*q_i")
+        if scalar_vec(eigenvalues[index], vector) != images[index]:
+            fail(f"spectral-eigenpair-witness image {index} does not equal lambda_i*q_i")
+
+    invariants = checks["spectral-invariant-witness"]
+    if invariants["expected_result"] != "sat":
+        fail("spectral-invariant-witness must expect sat")
+    if invariants.get("proof_status") != "replay-only":
+        fail("spectral-invariant-witness must be replay-only")
+    if single_witness_values(invariants, witnesses) != values:
+        fail("spectral-invariant-witness must cite the orthogonal diagonalization witness")
+    if sum((matrix[index][index] for index in range(len(matrix))), Fraction(0)) != trace:
+        fail("spectral-invariant-witness trace(A) is incorrect")
+    if sum(eigenvalues, Fraction(0)) != eigenvalue_sum:
+        fail("spectral-invariant-witness eigenvalue sum is incorrect")
+    if trace != eigenvalue_sum:
+        fail("spectral-invariant-witness trace must equal eigenvalue sum")
+    if matrix_determinant(matrix) != determinant:
+        fail("spectral-invariant-witness determinant(A) is incorrect")
+    computed_product = Fraction(1)
+    for eigenvalue in eigenvalues:
+        computed_product *= eigenvalue
+    if computed_product != eigenvalue_product:
+        fail("spectral-invariant-witness eigenvalue product is incorrect")
+    if determinant != eigenvalue_product:
+        fail("spectral-invariant-witness determinant must equal eigenvalue product")
+
+    bad = checks["bad-spectral-eigenvalue-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-spectral-eigenvalue-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-spectral-eigenvalue-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_spectral_eigenvalue_replay":
+        fail("bad-spectral-eigenvalue-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "rational-orthogonal-diagonalization":
+        fail("bad-spectral-eigenvalue-rejected must cite rational-orthogonal-diagonalization")
+    eigenvalue_index = require_nonnegative_int(
+        "bad spectral eigenvalue_index",
+        data.get("eigenvalue_index"),
+    )
+    if eigenvalue_index >= len(eigenvalues):
+        fail("bad-spectral-eigenvalue-rejected eigenvalue_index is out of range")
+    computed_eigenvalue = require_fraction(
+        "bad spectral computed_eigenvalue",
+        data.get("computed_eigenvalue"),
+    )
+    claimed_eigenvalue = require_fraction(
+        "bad spectral claimed_eigenvalue",
+        data.get("claimed_eigenvalue"),
+    )
+    if computed_eigenvalue != eigenvalues[eigenvalue_index]:
+        fail("bad-spectral-eigenvalue-rejected computed eigenvalue does not match replay")
+    if computed_eigenvalue == claimed_eigenvalue:
+        fail("bad-spectral-eigenvalue-rejected must document a false eigenvalue claim")
+    if "separate qf-lra-bad-spectral-eigenvalue" not in bad.get("notes", ""):
+        fail("bad-spectral-eigenvalue-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-spectral-eigenvalue"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-spectral-eigenvalue must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-spectral-eigenvalue must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-spectral-eigenvalue must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "rational-orthogonal-diagonalization":
+        fail("qf-lra-bad-spectral-eigenvalue must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-spectral-eigenvalue-rejected":
+        fail("qf-lra-bad-spectral-eigenvalue must cite the replay row")
+    if qf_data.get("eigenvalue_index") != eigenvalue_index:
+        fail("qf-lra-bad-spectral-eigenvalue eigenvalue_index must match the replay row")
+    qf_computed = require_fraction(
+        "qf spectral computed_eigenvalue",
+        qf_data.get("computed_eigenvalue"),
+    )
+    qf_claimed = require_fraction(
+        "qf spectral claimed_eigenvalue",
+        qf_data.get("claimed_eigenvalue"),
+    )
+    if qf_computed != computed_eigenvalue or qf_claimed != claimed_eigenvalue:
+        fail("qf-lra-bad-spectral-eigenvalue data must match the replay row")
+    if qf_data.get("farkas_conflict") != "spectral_lambda_1 = 4 and spectral_lambda_1 = 5":
+        fail("qf-lra-bad-spectral-eigenvalue must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf spectral smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-orthogonal-diagonalization-v0/smt2/"
+        "bad-spectral-eigenvalue-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-spectral-eigenvalue smt2_artifact must name the checked source artifact")
+    check_source("qf spectral smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf spectral farkas_regression", regression)
+    if "finite_orthogonal_diagonalization_bad_eigenvalue_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-spectral-eigenvalue must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf spectral certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-spectral-eigenvalue certificate must document checked Farkas evidence")
+
+    horizon = checks["general-orthogonal-diagonalization-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-orthogonal-diagonalization-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-orthogonal-diagonalization-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "orthogonal diagonalization horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string(
+        "orthogonal diagonalization horizon future_checker",
+        horizon_data.get("future_checker"),
+    )
+
+
 def validate_finite_jordan_chain(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -30952,6 +31190,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_schur_complement(expected)
     if metadata["id"] == "finite-singular-value-shadow-v0":
         validate_finite_singular_value_shadow(expected)
+    if metadata["id"] == "finite-orthogonal-diagonalization-v0":
+        validate_finite_orthogonal_diagonalization(expected)
     if metadata["id"] == "finite-jordan-chain-v0":
         validate_finite_jordan_chain(expected)
     if metadata["id"] == "metric-continuity-v0":

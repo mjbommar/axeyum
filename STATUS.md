@@ -240,6 +240,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite orthogonal diagonalization resource landed.**
+  `finite-orthogonal-diagonalization-v0` now gives the linear-algebra,
+  numerical-analysis, and functional-analysis/operator lanes an exact rational
+  spectral-theorem shadow: it checks a rational orthogonal matrix
+  `Q = [[3/5,4/5],[-4/5,3/5]]`, `D = diag(1,4)`,
+  `A = Q*D*Q^T = [[73/25,36/25],[36/25,52/25]]`,
+  `Q^T*Q = I`, both column eigenpairs, `trace(A) = 5`, and
+  `det(A) = 4`, then isolates the malformed eigenvalue claim
+  `lambda_1 = 5` versus exact `4` as a source-linked QF_LRA/Farkas row. The
+  focused learner page, matrix/numerical query guides, eigenpair and
+  exact-vs-floating bridges, validator, and `math_resource_lra_routes`
+  regression keep fixed finite spectral replay separate from the spectral
+  theorem, diagonalization criteria, multiplicity theory, perturbation bounds,
+  eigensolver convergence, and floating-point stability. The public summary
+  now reports 122 concept rows, 132 packs, 865 expected checks, 358 checked
+  rows, 412 replay-only rows, 95 Lean-horizon rows, and 132 promoted
+  solver-reuse packs.
 - **Finite LDLT decomposition resource landed.**
   `finite-ldlt-decomposition-v0` now gives the linear-algebra,
   numerical-analysis, and optimization lanes an exact rational

@@ -1002,7 +1002,18 @@ Build sequence:
     exact finite LDLT replay separate from LDLT existence, pivoting strategy
     correctness, indefinite variants, sparse algorithms, conditioning, and
     floating-point stability.
-102. Revisit crate/repo boundaries only after three real consumers or repeated
+102. Landed: add the finite orthogonal-diagonalization resource.
+    `finite-orthogonal-diagonalization-v0` now records one exact rational
+    spectral-theorem shadow: `Q = [[3/5,4/5],[-4/5,3/5]]`,
+    `D = diag(1,4)`, `A = Q*D*Q^T`,
+    `Q^T*Q = I`, column eigenpair replay, trace/eigenvalue-sum replay,
+    and determinant/eigenvalue-product replay. It includes a checked
+    QF_LRA/Farkas artifact for the malformed eigenvalue claim
+    `lambda_1 = 5`. The reused eigenpair and exact-vs-floating bridges keep
+    exact finite orthogonal diagonalization separate from the spectral theorem,
+    diagonalization criteria, multiplicity theory, eigensolver convergence,
+    perturbation bounds, and floating-point stability.
+103. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

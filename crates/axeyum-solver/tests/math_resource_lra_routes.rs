@@ -310,6 +310,9 @@ const SPECTRAL_BAD_RAYLEIGH_QUOTIENT: &str = include_str!(
 const SPECTRAL_BAD_EIGENPAIR: &str = include_str!(
     "../../../artifacts/examples/math/spectral-linear-algebra-v0/smt2/bad-eigenpair-farkas-conflict.smt2"
 );
+const FINITE_ORTHOGONAL_DIAGONALIZATION_BAD_EIGENVALUE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-orthogonal-diagonalization-v0/smt2/bad-spectral-eigenvalue-farkas-conflict.smt2"
+);
 const FINITE_POWER_ITERATION_BAD_COORDINATE: &str = include_str!(
     "../../../artifacts/examples/math/finite-power-iteration-v0/smt2/bad-power-iterate-coordinate-farkas-conflict.smt2"
 );
@@ -1921,6 +1924,14 @@ fn spectral_bad_eigenpair_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "spectral-linear-algebra-v0 bad-eigenpair SMT-LIB artifact",
         SPECTRAL_BAD_EIGENPAIR,
+    );
+}
+
+#[test]
+fn finite_orthogonal_diagonalization_bad_eigenvalue_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-orthogonal-diagonalization-v0 bad-eigenvalue SMT-LIB artifact",
+        FINITE_ORTHOGONAL_DIAGONALIZATION_BAD_EIGENVALUE,
     );
 }
 

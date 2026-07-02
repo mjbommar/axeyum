@@ -30,6 +30,7 @@ Example packs:
 - [numerical-linear-algebra-v0](../../../artifacts/examples/math/numerical-linear-algebra-v0/)
 - [finite-condition-number-v0](../../../artifacts/examples/math/finite-condition-number-v0/)
 - [finite-singular-value-shadow-v0](../../../artifacts/examples/math/finite-singular-value-shadow-v0/)
+- [finite-orthogonal-diagonalization-v0](../../../artifacts/examples/math/finite-orthogonal-diagonalization-v0/)
 - [finite-power-iteration-v0](../../../artifacts/examples/math/finite-power-iteration-v0/)
 - [finite-conjugate-gradient-v0](../../../artifacts/examples/math/finite-conjugate-gradient-v0/)
 - [finite-arnoldi-iteration-v0](../../../artifacts/examples/math/finite-arnoldi-iteration-v0/)
@@ -472,6 +473,23 @@ diagonal rational matrix `A = [[3,0],[0,1]]`. The validator recomputes
 replay computes `3`; the general SVD theorem and numerical SVD stability stay
 in the horizon lane. For a focused trace, read
 [End To End: Finite Singular-Value Shadow](singular-value-shadow-end-to-end.md).
+
+For exact orthogonal diagonalization, `finite-orthogonal-diagonalization-v0`
+uses a rational orthogonal matrix:
+
+```text
+Q = [[3/5,4/5],[-4/5,3/5]]
+D = diag(1,4)
+A = Q*D*Q^T
+```
+
+The validator recomputes `Q^T*Q = I`, `Q*D*Q^T = A`, both column
+eigenpairs, `trace(A) = 5`, and `det(A) = 4`. Its checked bad row rejects the
+claim that the second eigenvalue is `5` after exact replay reads `4`; the
+spectral theorem, diagonalization criteria, eigensolver convergence,
+perturbation theory, and floating-point stability stay in the horizon lane.
+For a focused trace, read
+[End To End: Finite Orthogonal Diagonalization](orthogonal-diagonalization-end-to-end.md).
 
 For a Jordan-chain shadow, `finite-jordan-chain-v0` uses one non-diagonal
 rational matrix:
@@ -997,6 +1015,7 @@ replay, read
 [Convexity Theorem Boundary](convexity-theorem-boundary.md),
 [End To End: Matrix Invariants](matrix-invariants-end-to-end.md),
 [End To End: Spectral Linear Algebra](spectral-linear-algebra-end-to-end.md),
+[End To End: Finite Orthogonal Diagonalization](orthogonal-diagonalization-end-to-end.md),
 [End To End: Finite Power Iteration](power-iteration-end-to-end.md),
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md),
 [End To End: Finite Covariance Matrix](covariance-matrix-end-to-end.md),

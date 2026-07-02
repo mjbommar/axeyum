@@ -88,7 +88,7 @@ needs concrete checked rows to display.
 | Root-finding and Newton-step rows | pack `finite-root-finding-v0`; concept `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --pack finite-root-finding-v0 --route Farkas --proof-status checked` |
 | Finite dynamics, recurrence, and Euler replay | `bridge_finite_dynamics_euler_replay` | `Farkas` | `checks --concept bridge_finite_dynamics_euler_replay --route Farkas --proof-status checked` |
 | Residuals, solution boxes, Jacobi steps, condition numbers, Schur complements, singular values, and exact matrix factorizations | `bridge_residual_bound`; `bridge_lu_replay`; `bridge_schur_complement`; pack `finite-singular-value-shadow-v0` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked`; `checks --concept bridge_schur_complement --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked`; `checks --pack finite-condition-number-v0 --route Farkas --proof-status checked`; `checks --pack finite-schur-complement-v0 --route Farkas --proof-status checked`; `checks --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked`; `checks --pack numerical-linear-algebra-v0 --route Farkas --proof-status checked --text solution`; `checks --pack finite-lu-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-pivoted-lu-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-ldlt-decomposition-v0 --route Farkas --proof-status checked`; `checks --pack finite-cholesky-decomposition-v0 --route Farkas --proof-status checked` |
-| Operator/Chebyshev, spectral, and singular-value numerical rows | `bridge_finite_operator_chebyshev`; `bridge_eigenpair` | `Farkas` | `checks --concept bridge_finite_operator_chebyshev --route Farkas --proof-status checked`; `checks --concept bridge_eigenpair --route Farkas --proof-status checked`; `checks --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked` |
+| Operator/Chebyshev, spectral, orthogonal-diagonalization, and singular-value numerical rows | `bridge_finite_operator_chebyshev`; `bridge_eigenpair` | `Farkas` | `checks --concept bridge_finite_operator_chebyshev --route Farkas --proof-status checked`; `checks --concept bridge_eigenpair --route Farkas --proof-status checked`; `checks --pack finite-orthogonal-diagonalization-v0 --route Farkas --proof-status checked`; `checks --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked` |
 | Complex numbers and plane transforms as real-pair algebra | `bridge_complex_real_pair_transform` | `Farkas` | `checks --concept bridge_complex_real_pair_transform --route Farkas --proof-status checked` |
 | Exact-vs-floating boundary rows | `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked` |
 
@@ -284,6 +284,12 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-schur-complement-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-orthogonal-diagonalization-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any

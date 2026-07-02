@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 131 non-template math example packs validate.
+  Status: 132 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 131 non-template packs have at least one `checked` expected-result row.
+  Status: 132 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3477,6 +3477,17 @@ source-linked QF_LRA/Farkas artifact rejects the malformed diagonal-entry
 claim `D[1,1] = 3` against the exact value `2`. LDLT existence, pivoting
 strategy correctness, indefinite variants, sparse algorithms, conditioning,
 and floating-point stability claims stay in theorem or numerical-honesty lanes.
+The linear-algebra/numerical-analysis/operator layer now adds
+`finite-orthogonal-diagonalization-v0` as the 132nd non-template math pack.
+Exact rational replay checks `Q = [[3/5,4/5],[-4/5,3/5]]`,
+`D = diag(1,4)`, `A = [[73/25,36/25],[36/25,52/25]]`,
+`Q^T*Q = I`, `Q*D*Q^T = A`, both column eigenpairs,
+`trace(A) = 1 + 4 = 5`, and `det(A) = 1*4 = 4`, while a source-linked
+QF_LRA/Farkas artifact rejects the malformed eigenvalue claim
+`lambda_1 = 5` against the exact value `4`. Spectral theorem,
+diagonalization criteria, multiplicity theory, perturbation bounds,
+eigensolver convergence, and floating-point stability claims stay in theorem
+or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

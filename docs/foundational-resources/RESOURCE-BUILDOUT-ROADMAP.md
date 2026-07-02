@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 131 non-template math example packs.
-- 858 expected checks.
-- 357 checked proof/evidence rows.
-- 407 replay-only rows.
-- 94 Lean-horizon rows.
-- 131 promoted solver-reuse packs.
+- 132 non-template math example packs.
+- 865 expected checks.
+- 358 checked proof/evidence rows.
+- 412 replay-only rows.
+- 95 Lean-horizon rows.
+- 132 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 131 focused learner-linked packs, with no path-only, index-only, or missing
+- 132 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2498,6 +2498,16 @@ Pick one item per commit unless the change is purely navigational.
      regression without claiming LDLT existence, pivoting strategy
      correctness, indefinite variants, sparse algorithms, conditioning, or
      floating-point stability.
+178. Landed: add `finite-orthogonal-diagonalization-v0` as an exact finite
+     orthogonal-diagonalization resource. The pack computes one rational
+     symmetric spectral shadow with
+     `Q = [[3/5,4/5],[-4/5,3/5]]`, `D = diag(1,4)`,
+     `A = Q*D*Q^T`, orthogonality, column eigenpairs, trace/eigenvalue-sum
+     replay, and determinant/eigenvalue-product replay, then promotes the
+     malformed eigenvalue claim `lambda_1 = 5` versus exact `4` through a
+     source-linked QF_LRA/Farkas regression without claiming spectral theorem,
+     diagonalization criteria, multiplicity theory, perturbation bounds,
+     eigensolver convergence, or floating-point stability.
 
 ## Validation Checklist
 

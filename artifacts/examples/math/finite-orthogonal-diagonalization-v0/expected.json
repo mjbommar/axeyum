@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-orthogonal-diagonalization-v0",
+  "witnesses": [
+    {
+      "id": "rational-orthogonal-diagonalization",
+      "description": "Exact rational orthogonal diagonalization for a fixed symmetric 2x2 matrix.",
+      "values": {
+        "matrix": [
+          ["73/25", "36/25"],
+          ["36/25", "52/25"]
+        ],
+        "q_matrix": [
+          ["3/5", "4/5"],
+          ["-4/5", "3/5"]
+        ],
+        "q_transpose": [
+          ["3/5", "-4/5"],
+          ["4/5", "3/5"]
+        ],
+        "diagonal": [
+          ["1", "0"],
+          ["0", "4"]
+        ],
+        "identity": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "product": [
+          ["73/25", "36/25"],
+          ["36/25", "52/25"]
+        ],
+        "eigenvalues": ["1", "4"],
+        "eigenvectors": [
+          ["3/5", "-4/5"],
+          ["4/5", "3/5"]
+        ],
+        "images": [
+          ["3/5", "-4/5"],
+          ["16/5", "12/5"]
+        ],
+        "trace": "5",
+        "eigenvalue_sum": "5",
+        "determinant": "4",
+        "eigenvalue_product": "4"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "orthogonal-matrix-witness",
+      "claim": "The fixed rational matrix Q is orthogonal.",
+      "expected_result": "sat",
+      "validation": "exact_rational_orthogonal_matrix_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-orthogonal-diagonalization"],
+      "notes": "The validator recomputes Q^T, Q^T*Q, Q*Q^T, and column norms/dot products exactly."
+    },
+    {
+      "id": "orthogonal-diagonalization-witness",
+      "claim": "The fixed rational matrices satisfy Q*D*Q^T = A.",
+      "expected_result": "sat",
+      "validation": "exact_rational_orthogonal_diagonalization_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-orthogonal-diagonalization"],
+      "notes": "The validator checks that A is symmetric, D is diagonal, and the matrix product reconstructs A exactly."
+    },
+    {
+      "id": "spectral-eigenpair-witness",
+      "claim": "The columns of Q are eigenvectors of A with eigenvalues 1 and 4.",
+      "expected_result": "sat",
+      "validation": "exact_rational_spectral_eigenpair_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-orthogonal-diagonalization"],
+      "notes": "The validator checks A*q_i = lambda_i*q_i for both columns exactly."
+    },
+    {
+      "id": "spectral-invariant-witness",
+      "claim": "The fixed matrix trace and determinant match the sum and product of the listed eigenvalues.",
+      "expected_result": "sat",
+      "validation": "exact_rational_spectral_invariant_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["rational-orthogonal-diagonalization"],
+      "notes": "The validator recomputes trace(A), det(A), sum(lambda_i), and product(lambda_i) exactly."
+    },
+    {
+      "id": "bad-spectral-eigenvalue-rejected",
+      "claim": "The second eigenvalue in the fixed diagonalization is 5.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_spectral_eigenvalue_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "rational-orthogonal-diagonalization",
+        "eigenvalue_index": 1,
+        "computed_eigenvalue": "4",
+        "claimed_eigenvalue": "5"
+      },
+      "notes": "Exact replay reads D[1,1] as 4, so the claimed eigenvalue 5 is rejected; the separate qf-lra-bad-spectral-eigenvalue row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-spectral-eigenvalue",
+      "claim": "The fixed malformed spectral eigenvalue claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "rational-orthogonal-diagonalization",
+        "source_replay_row": "bad-spectral-eigenvalue-rejected",
+        "eigenvalue_index": 1,
+        "computed_eigenvalue": "4",
+        "claimed_eigenvalue": "5",
+        "farkas_conflict": "spectral_lambda_1 = 4 and spectral_lambda_1 = 5",
+        "smt2_artifact": "artifacts/examples/math/finite-orthogonal-diagonalization-v0/smt2/bad-spectral-eigenvalue-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_orthogonal_diagonalization_bad_eigenvalue_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the listed second eigenvalue as 4, while the malformed row claims 5; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-orthogonal-diagonalization-theory-lean-horizon",
+      "claim": "General orthogonal diagonalization, spectral theorem, multiplicity theory, eigensolver convergence, perturbation bounds, and floating-point stability require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For arbitrary finite-dimensional real inner-product spaces and symmetric operators, prove existence of an orthonormal eigenbasis, orthogonal diagonalization, trace/determinant spectral identities, and multiplicity side conditions.",
+        "future_checker": "Lean theorem statements for the spectral theorem and separate numerical-honesty artifacts for floating-point eigensolvers, perturbation bounds, and convergence claims."
+      },
+      "notes": "The finite exact row is a checked resource for one rational orthogonal diagonalization, not a theorem about arbitrary symmetric matrices or a numerical eigensolver claim."
+    }
+  ]
+}
