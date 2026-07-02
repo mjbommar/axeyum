@@ -171,6 +171,11 @@ The `finite-conditional-expectation-v0` validator recomputes block averages,
 finite conditional-variance decomposition, then checks Farkas certificates for
 the bad high-block table, false total-expectation value, false tower value, and
 false variance-decomposition total.
+For the theorem boundary that keeps these finite partition averages,
+total-expectation, tower, variance-decomposition, and checked bad-row resources
+separate from Radon-Nikodym, general conditional-expectation,
+regular-conditional-probability, and stopping-time claims, read
+[Conditional Expectation Theorem Boundary](conditional-expectation-theorem-boundary.md).
 Finite kernels check conditional distributions as source-to-target tables:
 
 ```text

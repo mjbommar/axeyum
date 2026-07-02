@@ -145,6 +145,8 @@ python3 scripts/query-foundational-resources.py checks --pack finite-random-vari
 python3 scripts/query-foundational-resources.py checks --pack finite-conditional-expectation-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-conditional-expectation-v0 --route Farkas --proof-status checked --text total --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-conditional-expectation-v0 --route Farkas --proof-status checked --text variance --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --pack finite-conditional-expectation-v0 --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-conditional-expectation-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-martingales-v0 --route Farkas --proof-status checked --text qf-lra-bad-stopped-expectation --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-martingales-v0 --route Farkas --proof-status checked --text qf-lra-bad-martingale --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-markov-chain-v0 --route Farkas --proof-status checked --text qf-lra-bad-stochastic-row --require-any >/dev/null

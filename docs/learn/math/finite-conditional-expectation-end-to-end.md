@@ -4,6 +4,8 @@ This lesson follows one finite conditional-expectation resource from atom
 probabilities to block averages, total expectation, tower-property replay, and
 conditional variance decomposition. It uses
 [finite-conditional-expectation-v0](../../../artifacts/examples/math/finite-conditional-expectation-v0/).
+For the focused finite-versus-theorem boundary, read
+[Conditional Expectation Theorem Boundary](conditional-expectation-theorem-boundary.md).
 
 Concept rows:
 

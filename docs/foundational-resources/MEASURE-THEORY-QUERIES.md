@@ -61,6 +61,7 @@ needs concrete checked rows to display.
 | Lebesgue-integration theorem boundary | pack `finite-integration-v0` | `Lean horizon` | `horizon-frontier --pack finite-integration-v0`; `checks --pack finite-integration-v0 --proof-status lean-horizon` |
 | Pushforward and expectation-through-pushforward rows | `bridge_pushforward_distribution` | `Farkas` | `checks --concept bridge_pushforward_distribution --route Farkas --proof-status checked` |
 | Conditional expectation, total expectation, tower property, and stopped expectation rows | `bridge_conditional_expectation` | `Farkas` | `checks --concept bridge_conditional_expectation --route Farkas --proof-status checked` |
+| Conditional-expectation theorem boundary | pack `finite-conditional-expectation-v0` | `Lean horizon` | `horizon-frontier --pack finite-conditional-expectation-v0`; `checks --pack finite-conditional-expectation-v0 --proof-status lean-horizon` |
 | Stochastic kernels, Markov rows, and finite hitting-time equations | `bridge_stochastic_kernel` | `Farkas` | `checks --concept bridge_stochastic_kernel --route Farkas --proof-status checked` |
 | Tail and concentration rows | `bridge_tail_count_obstruction` | `Farkas` | `checks --concept bridge_tail_count_obstruction --route Farkas --proof-status checked` |
 | Finite measure display rows | packs `finite-measure-v0`, `finite-measure-monotonicity-v0` | `Farkas` | `checks --pack finite-measure-v0 --route Farkas --proof-status checked`; `checks --pack finite-measure-monotonicity-v0 --route Farkas --proof-status checked` |
@@ -167,6 +168,15 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-conditional-expectation-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-conditional-expectation-v0 \
+  --proof-status lean-horizon \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
   --text random-variable \
   --require-any
 ```
@@ -227,6 +237,13 @@ For the finite random-variable boundary, read
 before treating finite pushforward, expectation, independence, or checked
 bad-row resources as evidence for general measurable-random-variable,
 distribution-law, convergence, or continuous-distribution claims.
+
+For the finite conditional-expectation boundary, read
+[Conditional Expectation Theorem Boundary](../learn/math/conditional-expectation-theorem-boundary.md)
+before treating finite partition averages, total expectation, tower replay,
+variance-decomposition replay, or checked bad-row resources as evidence for
+Radon-Nikodym construction, general conditional expectation, regular
+conditional probabilities, stopping-time theorems, or martingale theory.
 
 For the finite integration boundary, read
 [Lebesgue Integration Theorem Boundary](../learn/math/lebesgue-integration-theorem-boundary.md)

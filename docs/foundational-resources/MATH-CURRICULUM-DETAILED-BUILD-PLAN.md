@@ -2277,6 +2277,17 @@ Pick one row per commit unless the change is purely navigational.
      pack-specific checked-row and horizon-frontier queries to the public
      smoke gate without promoting finite function tables into theorem
      coverage.
+266. Landed: add `conditional-expectation-theorem-boundary.md` as the focused
+     finite/general conditional-expectation theorem-boundary page for
+     `finite-conditional-expectation-v0`. It maps exact finite partition
+     conditional-expectation replay, total-expectation replay, nested-partition
+     tower replay, conditional-variance decomposition, and scoped
+     QF_LRA/Farkas bad high-block, total-expectation, tower, and variance
+     evidence to the missing Radon-Nikodym, general conditional-expectation,
+     regular-conditional-probability, martingale, stopping-time, and
+     disintegration layers, and adds pack-specific checked-row and
+     horizon-frontier queries to the public smoke gate without promoting
+     finite atom partitions into theorem coverage.
 
 ## Validation Checklist
 

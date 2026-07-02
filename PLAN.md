@@ -184,7 +184,7 @@ evidence; the public query script also exposes
 including finite/infinite cardinality, algebra homomorphism/quotient structure,
 vector-space/duality/module/tensor structure, group-action/orbit-stabilizer
 and Burnside theorem boundaries, monoid/permutation-group theorem boundaries,
-finite random-variable,
+finite random-variable and conditional-expectation theorem boundaries,
 recurrence/asymptotic, stochastic-kernel, and
 martingale/stopping theory, finite integration/Lebesgue theorem boundaries,
 finite product-measure/Fubini-Tonelli theorem boundaries,

@@ -320,6 +320,20 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 ```
 
+Conditional-expectation, Radon-Nikodym, and regular-conditional-probability
+horizons:
+
+```sh
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-conditional-expectation-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-conditional-expectation-v0 \
+  --proof-status lean-horizon \
+  --require-any
+```
+
 Stochastic-kernel, disintegration, and measurable-Markov-kernel horizons:
 
 ```sh
@@ -816,6 +830,7 @@ The main learner maps that explain these boundaries are:
 - [Inversion Geometry Theorem Boundary](../learn/math/inversion-geometry-theorem-boundary.md)
 - [Cyclic Geometry Theorem Boundary](../learn/math/cyclic-geometry-theorem-boundary.md)
 - [Random Variable Theorem Boundary](../learn/math/random-variable-theorem-boundary.md)
+- [Conditional Expectation Theorem Boundary](../learn/math/conditional-expectation-theorem-boundary.md)
 - [Stochastic Kernel Theorem Boundary](../learn/math/stochastic-kernel-theorem-boundary.md)
 - [Hitting-Time Theorem Boundary](../learn/math/hitting-time-theorem-boundary.md)
 - [Martingale Theorem Boundary](../learn/math/martingale-theorem-boundary.md)

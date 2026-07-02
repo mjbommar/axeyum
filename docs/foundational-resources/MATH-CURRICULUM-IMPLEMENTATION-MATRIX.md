@@ -788,7 +788,15 @@ Build sequence:
     quotient/free/presentation, Green's-relation, Cayley, conjugacy, Sylow,
     alternating-group, and representation-theory theorem routes, with
     pack-specific checked-row and horizon-frontier queries.
-78. Revisit crate/repo boundaries only after three real consumers or repeated
+78. Landed: add the conditional-expectation theorem-boundary page.
+    `conditional-expectation-theorem-boundary.md` maps finite partition
+    averages, total-expectation replay, nested-partition tower replay,
+    conditional variance decomposition, and checked QF_LRA/Farkas bad
+    high-block, total-expectation, tower, and variance rows to the missing
+    Radon-Nikodym, general conditional-expectation, regular conditional
+    probability, martingale, stopping-time, and disintegration theorem routes,
+    with pack-specific checked-row and horizon-frontier queries.
+79. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

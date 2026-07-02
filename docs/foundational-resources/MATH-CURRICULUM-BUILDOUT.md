@@ -1685,6 +1685,12 @@ finite partition conditional-expectation, total-expectation, tower-property,
 and conditional-variance-decomposition bridge toward martingales and general
 conditional expectation, with checked QF_LRA/Farkas evidence for bad high-block,
 total-expectation, tower-property, and variance-decomposition rows.
+The focused `conditional-expectation-theorem-boundary.md` learner page now
+maps those finite partition averages, total-expectation, tower,
+variance-decomposition, and checked bad-row resources to the missing
+Radon-Nikodym, general conditional-expectation,
+regular-conditional-probability, martingale, stopping-time, and
+disintegration layers.
 `finite-martingales-v0` now adds the exact finite filtration, martingale,
 submartingale, and bounded-stopping bridge toward stochastic-process theory,
 with replay-only bad-row rejection plus checked QF_LRA/Farkas evidence for
@@ -2097,6 +2103,11 @@ expectation replay, tower-property replay, conditional-variance decomposition,
 checked QF_LRA/Farkas bad table, bad total-expectation, bad tower-property, and
 bad variance-decomposition rejection, and the general conditional-expectation
 Lean horizon.
+It also has a focused conditional-expectation theorem-boundary page that keeps
+finite partition averages, total-expectation replay, tower replay,
+conditional-variance replay, and checked bad-row Farkas evidence separate from
+Radon-Nikodym construction, general conditional expectation, regular
+conditional probabilities, stopping-time theorems, and martingale claims.
 `finite-martingales-v0` now has a learner-facing end-to-end lesson for finite
 filtrations, adaptedness, martingale conditional-expectation equalities,
 square-submartingale inequalities, bounded stopping replay, checked bad
@@ -3057,6 +3068,17 @@ checked bad pushforward and bad expectation Farkas rows, the
 graduation criteria for future no-`sorry` measurable-function,
 distribution-law, convergence, conditional-expectation, and continuous
 random-variable routes.
+The learner/planning layer now also has
+[`conditional-expectation-theorem-boundary.md`](../learn/math/conditional-expectation-theorem-boundary.md),
+which narrows the measure/probability theorem boundary to
+`finite-conditional-expectation-v0`: finite conditioning partitions,
+blockwise conditional expectations, total-expectation replay, tower-property
+replay, conditional-variance decomposition, checked bad high-block,
+total-expectation, tower, and variance Farkas rows, the
+`general-conditional-expectation-lean-horizon` metadata row, copyable queries,
+and graduation criteria for future no-`sorry` Radon-Nikodym, general
+conditional-expectation, regular-conditional-probability, martingale, and
+stopping-time routes.
 The learner/planning layer now also has
 [`stochastic-kernel-theorem-boundary.md`](../learn/math/stochastic-kernel-theorem-boundary.md),
 which narrows the measure/probability and stochastic-process theorem boundary

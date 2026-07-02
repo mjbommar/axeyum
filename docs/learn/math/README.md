@@ -716,6 +716,12 @@ Companion maps:
   total-expectation replay, tower-property replay, checked QF_LRA/Farkas bad
   table, bad total-expectation, and bad tower-property rejection, and the
   general conditional-expectation Lean horizon.
+- [Conditional Expectation Theorem Boundary](conditional-expectation-theorem-boundary.md):
+  maps finite partition averages, total-expectation replay,
+  nested-partition tower replay, conditional variance decomposition, and
+  checked QF_LRA/Farkas bad-row evidence to the missing Radon-Nikodym,
+  conditional-expectation, regular-conditional-probability, martingale, and
+  stopping-time theorem routes.
 - [Finite Martingales](finite-martingales-end-to-end.md): follows finite
   filtrations, adaptedness, martingale conditional-expectation equalities,
   square-submartingale inequalities, bounded stopping replay, checked bad

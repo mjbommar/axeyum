@@ -640,6 +640,15 @@ python3 scripts/query-foundational-resources.py checks \
   --proof-status checked \
   --text total \
   --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-conditional-expectation-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-conditional-expectation-v0 \
+  --proof-status lean-horizon \
+  --require-any
 ```
 
 For the concrete finite martingale stopped-expectation proof row:

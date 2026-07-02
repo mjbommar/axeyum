@@ -73,6 +73,7 @@ needs concrete checked rows to display.
 | Product measure, simple integration, conditional expectation, and martingale rows | `bridge_finite_product_integration` | `Farkas` | `checks --concept bridge_finite_product_integration --route Farkas --proof-status checked` |
 | Pushforward distributions and expectation-through-pushforward rows | `bridge_pushforward_distribution` | `Farkas` | `checks --concept bridge_pushforward_distribution --route Farkas --proof-status checked` |
 | Conditional expectation, total expectation, tower property, and stopped expectation rows | `bridge_conditional_expectation` | `Farkas` | `checks --concept bridge_conditional_expectation --route Farkas --proof-status checked` |
+| Conditional-expectation theorem boundary | pack `finite-conditional-expectation-v0` | `Lean horizon` | `horizon-frontier --pack finite-conditional-expectation-v0`; `checks --pack finite-conditional-expectation-v0 --proof-status lean-horizon` |
 | Stochastic kernels, finite Markov chains, hitting times, and recurrence rows | `bridge_stochastic_kernel` | `Farkas` | `checks --concept bridge_stochastic_kernel --route Farkas --proof-status checked` |
 | Tail counts, exact tests, finite concentration, and variance rows | `bridge_tail_count_obstruction` | `Farkas` | `checks --concept bridge_tail_count_obstruction --route Farkas --proof-status checked` |
 | Random-matrix finite moments and expected-rank rows | `bridge_random_matrix_finite_moment` | `Farkas` | `checks --concept bridge_random_matrix_finite_moment --route Farkas --proof-status checked` |
@@ -241,6 +242,15 @@ python3 scripts/query-foundational-resources.py checks \
   --route Farkas \
   --proof-status checked \
   --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --pack finite-conditional-expectation-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-conditional-expectation-v0 \
+  --proof-status lean-horizon \
+  --require-any
 ```
 
 Display stochastic-kernel, tail-count, and random-matrix rows:
@@ -282,6 +292,13 @@ For the finite random-variable boundary, read
 before displaying measurable-function, distribution-law, convergence,
 continuous-random-variable, or density-calculus language next to finite
 pushforward, expectation, and independence rows.
+
+For the finite conditional-expectation boundary, read
+[Conditional Expectation Theorem Boundary](../learn/math/conditional-expectation-theorem-boundary.md)
+before displaying Radon-Nikodym construction, general conditional expectation,
+regular conditional probabilities, stopping-time theorems, or martingale
+theorem language next to finite partition averages, total-expectation, tower,
+variance-decomposition, or checked bad-row resources.
 
 For the finite stochastic-kernel boundary, read
 [Stochastic Kernel Theorem Boundary](../learn/math/stochastic-kernel-theorem-boundary.md)

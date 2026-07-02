@@ -234,6 +234,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Conditional-expectation theorem-boundary resource landed.**
+  `conditional-expectation-theorem-boundary.md` now separates
+  `finite-conditional-expectation-v0` finite partition averages,
+  total-expectation replay, nested-partition tower replay, conditional
+  variance decomposition, and checked QF_LRA/Farkas bad high-block,
+  total-expectation, tower, and variance rows from Radon-Nikodym,
+  general conditional expectation, regular conditional probability,
+  martingale, and stopping-time claims. The theorem-horizon, probability,
+  measure, consumer, learner, and smoke-query docs now expose the boundary
+  through pack-specific horizon-frontier and checked-row queries.
 - **Monoid/permutation theorem-boundary resource landed.**
   `monoid-permutation-theorem-boundary.md` now separates
   `finite-monoids-v0` exact transformation-monoid replay, unit/idempotent
