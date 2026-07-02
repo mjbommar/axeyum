@@ -406,6 +406,10 @@ CURRICULUM_MAP = {
                 "Exact rational QR replay, orthogonality checks, upper-triangular factor checks, and checked bad product-entry evidence.",
             ),
             (
+                "finite-givens-rotation-v0",
+                "Exact rational Givens rotation replay, coordinate zeroing, inverse reconstruction, determinant/norm preservation, and checked bad sine-coefficient evidence.",
+            ),
+            (
                 "finite-cholesky-decomposition-v0",
                 "Exact rational Cholesky replay, positive-diagonal and leading-minor checks, and checked bad product-entry evidence.",
             ),
@@ -505,6 +509,10 @@ CURRICULUM_MAP = {
                 "finite-walsh-hadamard-transform-v0",
                 "Exact rational Walsh-Hadamard transform replay, inverse reconstruction, Parseval energy scaling, and checked bad coefficient evidence.",
             ),
+            (
+                "finite-givens-rotation-v0",
+                "Exact rational Givens rotation replay, coordinate zeroing, inverse reconstruction, determinant/norm preservation, and checked bad sine-coefficient evidence.",
+            ),
         ],
     },
     "calculus": {
@@ -567,7 +575,7 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU/QR/Cholesky/Schur replay, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU/QR/Cholesky/Schur replay, Givens rotations, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, multivariable-calculus and Newton-step shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
@@ -593,7 +601,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU/QR/Cholesky/Schur replay, interval bounds, inner-product projections, condition-number, singular-value, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, residual, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU/QR/Cholesky/Schur replay, Givens rotations, interval bounds, inner-product projections, condition-number, singular-value, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, residual, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -613,7 +621,7 @@ FIELD_PACKS = {
             "Finite cyclic quadrilateral, diagonal-intersection, opposite-angle, and bad-intersection replay.",
         ),
     ],
-    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact condition-number, singular-value, power-iteration, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan/nilpotent shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
+    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact orthogonal transforms, Givens rotations, condition-number, singular-value, power-iteration, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan/nilpotent shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
 }
 
 FIELD_DECIDABILITY = {
@@ -1521,6 +1529,10 @@ BRIDGE_CONCEPTS = [
                 "Two-step Lanczos rows checked as exact rational symmetric-matrix and tridiagonal arithmetic, not floating-point Krylov stability evidence.",
             ),
             (
+                "finite-givens-rotation-v0",
+                "Givens zeroing rows checked as exact rational rotation arithmetic, not floating-point QR stability evidence.",
+            ),
+            (
                 "least-squares-regression-v0",
                 "Normal-equation, residual, and bad RSS-improvement rows checked as exact rational linear algebra, not floating-point regression.",
             ),
@@ -1548,6 +1560,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/conjugate-gradient-end-to-end.md",
                     "docs/learn/math/arnoldi-iteration-end-to-end.md",
                     "docs/learn/math/lanczos-iteration-end-to-end.md",
+                    "docs/learn/math/givens-rotation-end-to-end.md",
                     "docs/learn/math/exact-statistical-tests-end-to-end.md",
                     "docs/foundational-resources/MATH-FIELDS.md",
                 ],
@@ -1568,13 +1581,14 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/conjugate-gradient-end-to-end.md",
             "docs/learn/math/arnoldi-iteration-end-to-end.md",
             "docs/learn/math/lanczos-iteration-end-to-end.md",
+            "docs/learn/math/givens-rotation-end-to-end.md",
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
             "docs/learn/math/exact-statistical-tests-end-to-end.md",
             "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
-            "Exact rational replay does not prove floating-point roundoff, conditioning, singular-value perturbation, Krylov/preconditioner stability, Lanczos breakdown behavior, loss of orthogonality, or convergence guarantees.",
+            "Exact rational replay does not prove floating-point roundoff, conditioning, singular-value perturbation, Givens/QR stability, Krylov/preconditioner stability, Lanczos breakdown behavior, loss of orthogonality, or convergence guarantees.",
             "QF_FP and numerical experiment metadata need their own trust boundary before floating-point resources can graduate.",
             "Learner pages must label exact rational shadows when a topic is normally taught numerically.",
         ],
@@ -5319,8 +5333,8 @@ BRIDGE_CONCEPTS = [
         "field_ids": ["linear_algebra", "numerical_analysis"],
         "resource_status": "validated",
         "summary": (
-            "Claimed Gaussian-elimination transcripts, LU, QR, and Cholesky "
-            "factorizations, Schur block identities, and nullspace vectors "
+            "Claimed Gaussian-elimination transcripts, LU, QR, Givens, and "
+            "Cholesky factorizations, Schur block identities, and nullspace vectors "
             "are checked by exact matrix arithmetic over fixed rational "
             "matrices; malformed row-operation, product-entry, scalar, and "
             "nullspace-component rows now route through checked QF_LRA/Farkas "
@@ -5346,6 +5360,7 @@ BRIDGE_CONCEPTS = [
             "LRA (exact rationals)",
             "matrix multiplication replay",
             "orthogonal factorization replay",
+            "Givens rotation replay",
             "positive-definite factorization replay",
             "QF_LRA",
         ],
@@ -5361,6 +5376,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-qr-decomposition-v0",
                 "Exact rational QR factorization, orthogonality, triangularity, product replay, and checked bad product-entry evidence.",
+            ),
+            (
+                "finite-givens-rotation-v0",
+                "Exact rational Givens rotation, coordinate zeroing, inverse reconstruction, determinant/norm preservation, and checked bad sine-coefficient evidence.",
             ),
             (
                 "finite-cholesky-decomposition-v0",
@@ -5393,16 +5412,17 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/linear-system-end-to-end.md",
                     "docs/learn/math/gaussian-elimination-end-to-end.md",
                     "docs/learn/math/qr-decomposition-end-to-end.md",
+                    "docs/learn/math/givens-rotation-end-to-end.md",
                     "docs/learn/math/cholesky-decomposition-end-to-end.md",
                     "docs/learn/math/schur-complement-end-to-end.md",
                     "docs/learn/math/numerical-linear-algebra-end-to-end.md",
                 ],
                 "notes": (
                     "The pack validator recomputes row operations, pivots, "
-                    "back-substitution, L*U, Q*R, Q^T*Q, L*L^T, Schur "
+                    "back-substitution, L*U, Q*R, Q^T*Q, G^T*G, G*x, L*L^T, Schur "
                     "complements, determinant factors, leading principal "
                     "minors, A*x, and A*v exactly over rationals; separate "
-                    "qf-lra row-operation, product-entry, scalar, "
+                    "qf-lra row-operation, product-entry, coefficient, scalar, "
                     "nullspace-component, and infeasible linear-system rows "
                     "use the QF_LRA/Farkas route."
                 ),
@@ -5416,6 +5436,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/linear-system-end-to-end.md",
             "docs/learn/math/gaussian-elimination-end-to-end.md",
             "docs/learn/math/qr-decomposition-end-to-end.md",
+            "docs/learn/math/givens-rotation-end-to-end.md",
             "docs/learn/math/cholesky-decomposition-end-to-end.md",
             "docs/learn/math/schur-complement-end-to-end.md",
             "docs/learn/math/numerical-linear-algebra-end-to-end.md",
@@ -5423,19 +5444,20 @@ BRIDGE_CONCEPTS = [
             "artifacts/examples/math/linear-algebra-rational-v0/smt2/bad-nullspace-component-farkas-conflict.smt2",
             "artifacts/examples/math/finite-gaussian-elimination-v0/smt2/bad-eliminated-rhs-farkas-conflict.smt2",
             "artifacts/examples/math/finite-qr-decomposition-v0/smt2/bad-qr-product-entry-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-givens-rotation-v0/smt2/bad-givens-sine-farkas-conflict.smt2",
             "artifacts/examples/math/finite-cholesky-decomposition-v0/smt2/bad-cholesky-product-entry-farkas-conflict.smt2",
             "artifacts/examples/math/finite-schur-complement-v0/smt2/bad-schur-complement-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
         "open_gaps": [
-            "Gaussian elimination, LU, QR, Cholesky, and Schur replay check fixed transcripts, factorizations, or block identities; they do not prove existence, pivoting strategy correctness, QR/Cholesky algorithm correctness, conditioning, or numerical stability.",
+            "Gaussian elimination, LU, QR, Givens, Cholesky, and Schur replay check fixed transcripts, factorizations, rotations, or block identities; they do not prove existence, pivoting strategy correctness, QR/Givens/Cholesky algorithm correctness, conditioning, or numerical stability.",
             "Ill-conditioned and floating-point claims need separate numerical-honesty metadata before they become solver or learner claims.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state the exact matrix entries, elimination row operations, lower/upper or orthogonal/upper-triangular factors, and rational arithmetic domain.",
-                "The validator recomputes row operations, pivot products, back-substitution, L*U, Q^T*Q, Q*R, L*L^T, Schur complements, determinant factors, inverses, and positive leading principal minors, and separate qf-lra row-operation, product-entry, or scalar rows reject corrupted equalities through checked QF_LRA/Farkas evidence.",
+                "Rows state the exact matrix entries, elimination row operations, lower/upper or orthogonal/upper-triangular factors, Givens rotation coefficients, and rational arithmetic domain.",
+                "The validator recomputes row operations, pivot products, back-substitution, L*U, Q^T*Q, Q*R, G^T*G, G*x, L*L^T, Schur complements, determinant factors, inverses, and positive leading principal minors, and separate qf-lra row-operation, product-entry, coefficient, or scalar rows reject corrupted equalities through checked QF_LRA/Farkas evidence.",
                 "Singularity, factorization existence, algorithm correctness, pivoting, conditioning, and stability claims remain separate proof-horizon or numerical-analysis rows.",
             ],
         },
@@ -8010,8 +8032,8 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "Finite-dimensional inner-product rows replay exact rational Gram "
             "matrices, norm squares, fixed-vector Cauchy-Schwarz checks, "
-            "orthogonal projections, Gram-Schmidt steps, and exact "
-            "Walsh-Hadamard transform, Arnoldi/Lanczos orthogonalization, and SVD-shadow rows while keeping "
+            "orthogonal projections, Gram-Schmidt steps, exact "
+            "Walsh-Hadamard and Givens transforms, Arnoldi/Lanczos orthogonalization, and SVD-shadow rows while keeping "
             "Hilbert-space theorems as Lean horizons."
         ),
         "prerequisites": [
@@ -8032,6 +8054,7 @@ BRIDGE_CONCEPTS = [
             "Gram matrices",
             "orthogonal projection",
             "orthogonal transforms",
+            "Givens rotations",
             "Arnoldi orthogonalization",
             "Lanczos orthogonalization",
             "singular-vector replay",
@@ -8064,6 +8087,10 @@ BRIDGE_CONCEPTS = [
                 "Exact order-4 Walsh-Hadamard transform, inverse reconstruction, Parseval energy scaling, and bad transform-coefficient evidence.",
             ),
             (
+                "finite-givens-rotation-v0",
+                "Exact two-dimensional Givens rotation, coordinate zeroing, inverse reconstruction, determinant/norm preservation, and bad sine-coefficient evidence.",
+            ),
+            (
                 "finite-arnoldi-iteration-v0",
                 "Exact Arnoldi orthonormal basis, projection coefficients, Hessenberg relation, and bad subdiagonal-coefficient evidence.",
             ),
@@ -8090,6 +8117,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/matrix-corpus-benchmark-boundary.md",
                     "docs/learn/math/inner-product-spaces-end-to-end.md",
                     "docs/learn/math/covariance-matrix-end-to-end.md",
+                    "docs/learn/math/givens-rotation-end-to-end.md",
                     "docs/learn/math/arnoldi-iteration-end-to-end.md",
                     "docs/learn/math/lanczos-iteration-end-to-end.md",
                     "docs/learn/math/singular-value-shadow-end-to-end.md",
@@ -8099,7 +8127,7 @@ BRIDGE_CONCEPTS = [
                 "notes": (
                     "The finite pack recomputes each rational inner-product "
                     "quantity first; checked Farkas evidence is used only for "
-                    "the small bad positivity, transform-coefficient, or "
+                    "the small bad positivity, transform/coefficient, or "
                     "Arnoldi or Lanczos coefficient, or singular-value-bound conflict."
                 ),
             }
@@ -8114,6 +8142,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/inner-product-spaces-end-to-end.md",
             "docs/learn/math/covariance-matrix-end-to-end.md",
+            "docs/learn/math/givens-rotation-end-to-end.md",
             "docs/learn/math/arnoldi-iteration-end-to-end.md",
             "docs/learn/math/lanczos-iteration-end-to-end.md",
             "docs/learn/math/singular-value-shadow-end-to-end.md",
@@ -8122,15 +8151,15 @@ BRIDGE_CONCEPTS = [
         ],
         "open_gaps": [
             "Finite rational projection replay does not prove the Hilbert projection theorem, Riesz representation, Hahn-Banach, or completeness results.",
-            "Rows involving floating-point orthogonality, Arnoldi/Lanczos loss of orthogonality, conditioning, singular-value perturbation, or numerical stability require separate numerical-honesty metadata.",
+            "Rows involving floating-point orthogonality, Givens rotations, Arnoldi/Lanczos loss of orthogonality, conditioning, singular-value perturbation, or numerical stability require separate numerical-honesty metadata.",
             "General inner-product, duality, SVD, and Hilbert-space theorem statements remain Lean-horizon until no-sorry Lean artifacts exist.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
             "Rows state the finite vector space, basis, Gram matrix, transform matrix, and exact rational vectors.",
-            "The validator recomputes norm squares, projections, Gram-Schmidt steps, Arnoldi/Lanczos projections, orthogonal transforms, SVD-shadow products, and residuals from source data.",
-            "Malformed finite positivity, projection, transform-coefficient, Arnoldi/Lanczos-coefficient, or singular-value-bound rows link to checked QF_LRA/Farkas regressions after replay.",
+            "The validator recomputes norm squares, projections, Gram-Schmidt steps, Givens rotations, Arnoldi/Lanczos projections, orthogonal transforms, SVD-shadow products, and residuals from source data.",
+            "Malformed finite positivity, projection, transform/coefficient, Arnoldi/Lanczos-coefficient, or singular-value-bound rows link to checked QF_LRA/Farkas regressions after replay.",
             ],
         },
     },

@@ -25,6 +25,9 @@ const FINITE_GAUSSIAN_ELIMINATION_BAD_RHS: &str = include_str!(
 const FINITE_QR_DECOMPOSITION_BAD_PRODUCT_ENTRY: &str = include_str!(
     "../../../artifacts/examples/math/finite-qr-decomposition-v0/smt2/bad-qr-product-entry-farkas-conflict.smt2"
 );
+const FINITE_GIVENS_ROTATION_BAD_SINE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-givens-rotation-v0/smt2/bad-givens-sine-farkas-conflict.smt2"
+);
 const FINITE_CHOLESKY_DECOMPOSITION_BAD_PRODUCT_ENTRY: &str = include_str!(
     "../../../artifacts/examples/math/finite-cholesky-decomposition-v0/smt2/bad-cholesky-product-entry-farkas-conflict.smt2"
 );
@@ -651,6 +654,14 @@ fn finite_qr_decomposition_bad_product_entry_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-qr-decomposition-v0 bad-qr-product-entry SMT-LIB artifact",
         FINITE_QR_DECOMPOSITION_BAD_PRODUCT_ENTRY,
+    );
+}
+
+#[test]
+fn finite_givens_rotation_bad_sine_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-givens-rotation-v0 bad-givens-sine SMT-LIB artifact",
+        FINITE_GIVENS_ROTATION_BAD_SINE,
     );
 }
 

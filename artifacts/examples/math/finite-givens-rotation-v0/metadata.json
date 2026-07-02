@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": "finite-givens-rotation-v0",
+  "title": "Finite Givens Rotation Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_functional_analysis_and_operator_theory",
+    "field_optimization_and_convexity",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "curriculum_reals",
+    "bridge_lu_replay",
+    "bridge_inner_product_projection",
+    "bridge_exact_vs_floating_arithmetic"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "functional_analysis_and_operator_theory",
+    "optimization_and_convexity"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite matrices",
+    "finite orthogonal transforms",
+    "exact rational Givens rotation",
+    "exact rational matrix replay",
+    "QF_LRA",
+    "Farkas",
+    "Lean horizon"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-givens-rotation-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Givens bad sine coefficient QF_LRA/Farkas regression seed",
+    "pressure": "Exact Givens replay computes the sine coefficient as 4/5 while a malformed row claims 3/5, isolating a compact equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-givens-sine"
+    ],
+    "next_step": "Promote additional orthogonal-factorization rows only when they add distinct zeroing, product, least-squares, residual, or numerical-honesty pressure; keep QR/Givens algorithm correctness, pivoting, conditioning, and floating-point stability in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/givens-rotation-end-to-end.md",
+    "artifacts/examples/math/finite-givens-rotation-v0/smt2/bad-givens-sine-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "givens-orthogonality-witness",
+    "givens-zeroing-witness",
+    "givens-inverse-reconstruction-witness",
+    "givens-determinant-witness",
+    "bad-givens-sine-rejected",
+    "qf-lra-bad-givens-sine",
+    "general-givens-qr-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational cosine/sine coefficients, Givens rotation matrix, source vector, zeroed vector, inverse reconstruction, determinant, and orthogonality identity as deterministic exact-rational replay obligations.",
+    "Route the false sine coefficient through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes s = 4/5.",
+    "Expose the pack through matrix computation, QR/factorization, orthogonal-transform, and exact-vs-floating learner and consumer query surfaces.",
+    "Keep general Givens/QR algorithm correctness, pivoting, conditioning, and floating-point stability marked Lean or numerical-honesty horizon."
+  ]
+}

@@ -692,8 +692,11 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpai
 python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --pack finite-lanczos-iteration-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-walsh-hadamard-transform-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-givens-rotation-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --pack finite-givens-rotation-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --route Farkas --proof-status checked --text transform --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-qr-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_lu_replay --pack finite-givens-rotation-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-cholesky-decomposition-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_lu_replay --route Farkas --proof-status checked --text product-entry --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_tensor_bilinearity --route Alethe --require-any >/dev/null

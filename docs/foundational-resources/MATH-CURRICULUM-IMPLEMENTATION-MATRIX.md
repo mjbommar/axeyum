@@ -938,7 +938,17 @@ Build sequence:
     exact-vs-floating bridges keep exact finite Lanczos replay separate from
     convergence, Ritz-value theory, breakdown/restart behavior,
     finite-precision loss of orthogonality, and floating-point stability.
-96. Revisit crate/repo boundaries only after three real consumers or repeated
+96. Landed: add the finite Givens-rotation resource.
+    `finite-givens-rotation-v0` now records one exact rational orthogonal
+    zeroing transform: `c = 3/5`, `s = 4/5`,
+    `G = [[3/5,4/5],[-4/5,3/5]]`, `G^T*G = I`, `G*[3,4] = [5,0]`,
+    inverse reconstruction, determinant `1`, and norm preservation. It
+    includes a checked QF_LRA/Farkas artifact for the malformed sine
+    coefficient claim `s = 3/5`. The reused matrix, inner-product,
+    finite-operator/Chebyshev, and exact-vs-floating bridges keep exact finite
+    Givens replay separate from QR algorithms, pivoting, conditioning, and
+    floating-point stability.
+97. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 125 non-template math example packs validate.
+  Status: 126 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 125 non-template packs have at least one `checked` expected-result row.
+  Status: 126 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3414,6 +3414,16 @@ coefficient claim `beta1 = 2` against the exact value `1`. General Lanczos
 tridiagonalization, Ritz convergence, breakdown/restart policies,
 finite-precision loss of orthogonality, and floating-point stability claims
 stay in theorem or numerical-honesty lanes.
+The linear-algebra/numerical-analysis/operator layer now adds
+`finite-givens-rotation-v0` as the 126th non-template math pack. Exact rational
+replay checks `c = 3/5`, `s = 4/5`, the Givens rotation
+`G = [[3/5,4/5],[-4/5,3/5]]`, orthogonality `G^T*G = I`, zeroing
+`G*[3,4] = [5,0]`, inverse reconstruction with `G^T`, determinant `1`, and
+norm preservation, while a source-linked QF_LRA/Farkas artifact rejects the
+malformed sine coefficient claim `s = 3/5` against the exact value `4/5`.
+General Givens/QR algorithms, pivoting, conditioning, finite-precision
+orthogonality, and floating-point stability claims stay in theorem or
+numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.

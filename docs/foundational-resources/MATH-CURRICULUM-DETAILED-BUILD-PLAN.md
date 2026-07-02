@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 125 non-template math packs.
-- 811 expected checks.
-- 351 checked proof/evidence rows.
-- 372 replay-only rows.
-- 88 Lean-horizon rows.
-- 125 promoted solver-reuse packs.
+- 126 non-template math packs.
+- 818 expected checks.
+- 352 checked proof/evidence rows.
+- 377 replay-only rows.
+- 89 Lean-horizon rows.
+- 126 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 125 focused learner-linked packs, with no path-only, index-only, or missing
+- 126 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 125 current non-template packs satisfy the focused-lesson side of this
+all 126 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2447,6 +2447,14 @@ Pick one row per commit unless the change is purely navigational.
      symmetric Krylov/tridiagonal replay separate from Lanczos convergence,
      Ritz-value theory, breakdown/restart behavior, finite-precision
      orthogonality, and floating-point stability.
+284. Landed: add `finite-givens-rotation-v0` as an exact finite
+     Givens-rotation resource. The pack replays `c = 3/5`, `s = 4/5`,
+     `G = [[3/5,4/5],[-4/5,3/5]]`, `G^T*G = I`, `G*[3,4] = [5,0]`,
+     inverse reconstruction, determinant `1`, and norm preservation, then
+     adds `qf-lra-bad-givens-sine` as the source-linked Farkas row for the
+     false sine coefficient claim `s = 3/5` versus exact `4/5`. The learner
+     and query pages keep exact finite Givens replay separate from general QR
+     algorithms, pivoting, conditioning, and floating-point stability.
 
 ## Validation Checklist
 

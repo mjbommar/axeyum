@@ -17804,6 +17804,173 @@ def validate_finite_walsh_hadamard_transform(expected: dict[str, Any]) -> None:
     require_string("Walsh horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_givens_rotation(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    orthogonality = checks["givens-orthogonality-witness"]
+    if orthogonality["expected_result"] != "sat":
+        fail("givens-orthogonality-witness must expect sat")
+    if orthogonality.get("proof_status") != "replay-only":
+        fail("givens-orthogonality-witness must be replay-only")
+    values = single_witness_values(orthogonality, witnesses)
+    cosine = require_fraction("Givens cosine", values.get("cosine"))
+    sine = require_fraction("Givens sine", values.get("sine"))
+    rotation = require_fraction_matrix("Givens rotation", values.get("rotation"))
+    rotation_transpose = require_fraction_matrix(
+        "Givens rotation_transpose",
+        values.get("rotation_transpose"),
+    )
+    identity = require_fraction_matrix("Givens identity", values.get("identity"))
+    source_vector = require_fraction_vector(
+        "Givens source_vector",
+        values.get("source_vector"),
+    )
+    zeroed_vector = require_fraction_vector(
+        "Givens zeroed_vector",
+        values.get("zeroed_vector"),
+    )
+    inverse_reconstruction = require_fraction_vector(
+        "Givens inverse_reconstruction",
+        values.get("inverse_reconstruction"),
+    )
+    source_norm_squared = require_fraction(
+        "Givens source_norm_squared",
+        values.get("source_norm_squared"),
+    )
+    zeroed_norm_squared = require_fraction(
+        "Givens zeroed_norm_squared",
+        values.get("zeroed_norm_squared"),
+    )
+    determinant = require_fraction("Givens determinant", values.get("determinant"))
+
+    require_square_matrix("Givens rotation", rotation)
+    if len(rotation) != 2:
+        fail("finite Givens replay expects one 2x2 rotation")
+    require_mat_vec_shape("Givens source", rotation, source_vector)
+    require_mat_vec_shape("Givens zeroed", rotation, zeroed_vector)
+    expected_identity = [
+        [Fraction(1) if row == column else Fraction(0) for column in range(len(rotation))]
+        for row in range(len(rotation))
+    ]
+    if identity != expected_identity:
+        fail("givens-orthogonality-witness identity must be the exact identity matrix")
+    if rotation_transpose != matrix_transpose(rotation):
+        fail("givens-orthogonality-witness rotation_transpose is incorrect")
+    if rotation != [[cosine, sine], [-sine, cosine]]:
+        fail("givens-orthogonality-witness rotation entries must match cosine/sine")
+    if cosine * cosine + sine * sine != 1:
+        fail("givens-orthogonality-witness requires c^2 + s^2 = 1")
+    if mat_mul(rotation_transpose, rotation) != identity:
+        fail("givens-orthogonality-witness G^T*G does not equal identity")
+
+    zeroing = checks["givens-zeroing-witness"]
+    if zeroing["expected_result"] != "sat":
+        fail("givens-zeroing-witness must expect sat")
+    if zeroing.get("proof_status") != "replay-only":
+        fail("givens-zeroing-witness must be replay-only")
+    if single_witness_values(zeroing, witnesses) != values:
+        fail("givens-zeroing-witness must cite the Givens witness")
+    if mat_vec(rotation, source_vector) != zeroed_vector:
+        fail("givens-zeroing-witness zeroed_vector does not equal G*x")
+    if len(zeroed_vector) != 2 or zeroed_vector[1] != 0:
+        fail("givens-zeroing-witness expects the second coordinate to be zero")
+
+    inverse = checks["givens-inverse-reconstruction-witness"]
+    if inverse["expected_result"] != "sat":
+        fail("givens-inverse-reconstruction-witness must expect sat")
+    if inverse.get("proof_status") != "replay-only":
+        fail("givens-inverse-reconstruction-witness must be replay-only")
+    if single_witness_values(inverse, witnesses) != values:
+        fail("givens-inverse-reconstruction-witness must cite the Givens witness")
+    if mat_vec(rotation_transpose, zeroed_vector) != inverse_reconstruction:
+        fail("givens-inverse-reconstruction-witness reconstruction is not G^T*y")
+    if inverse_reconstruction != source_vector:
+        fail("givens-inverse-reconstruction-witness must reconstruct the source vector")
+
+    det_check = checks["givens-determinant-witness"]
+    if det_check["expected_result"] != "sat":
+        fail("givens-determinant-witness must expect sat")
+    if det_check.get("proof_status") != "replay-only":
+        fail("givens-determinant-witness must be replay-only")
+    if single_witness_values(det_check, witnesses) != values:
+        fail("givens-determinant-witness must cite the Givens witness")
+    if matrix_determinant(rotation) != determinant:
+        fail("givens-determinant-witness determinant is incorrect")
+    if determinant != 1:
+        fail("givens-determinant-witness expects determinant 1")
+    if dot_product(source_vector, source_vector) != source_norm_squared:
+        fail("givens-determinant-witness source norm square is incorrect")
+    if dot_product(zeroed_vector, zeroed_vector) != zeroed_norm_squared:
+        fail("givens-determinant-witness zeroed norm square is incorrect")
+    if source_norm_squared != zeroed_norm_squared:
+        fail("givens-determinant-witness expects norm preservation")
+
+    bad = checks["bad-givens-sine-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-givens-sine-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-givens-sine-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_givens_sine_replay":
+        fail("bad-givens-sine-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-by-two-givens-zeroing":
+        fail("bad-givens-sine-rejected must cite two-by-two-givens-zeroing")
+    actual_sine = require_fraction("bad Givens actual_sine", data.get("actual_sine"))
+    claimed_sine = require_fraction("bad Givens claimed_sine", data.get("claimed_sine"))
+    if actual_sine != sine:
+        fail("bad-givens-sine-rejected actual_sine does not match replay")
+    if actual_sine == claimed_sine:
+        fail("bad-givens-sine-rejected must document a false sine claim")
+    if "separate qf-lra-bad-givens-sine" not in bad.get("notes", ""):
+        fail("bad-givens-sine-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-givens-sine"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-givens-sine must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-givens-sine must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-givens-sine must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-by-two-givens-zeroing":
+        fail("qf-lra-bad-givens-sine must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-givens-sine-rejected":
+        fail("qf-lra-bad-givens-sine must cite the replay row")
+    qf_actual = require_fraction("qf Givens actual_sine", qf_data.get("actual_sine"))
+    qf_claimed = require_fraction("qf Givens claimed_sine", qf_data.get("claimed_sine"))
+    if qf_actual != actual_sine or qf_claimed != claimed_sine:
+        fail("qf-lra-bad-givens-sine data must match the replay row")
+    if qf_data.get("farkas_conflict") != "givens_sine = 4/5 and givens_sine = 3/5":
+        fail("qf-lra-bad-givens-sine must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Givens smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-givens-rotation-v0/smt2/"
+        "bad-givens-sine-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-givens-sine smt2_artifact must name the checked source artifact")
+    check_source("qf Givens smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Givens farkas_regression", regression)
+    if "finite_givens_rotation_bad_sine_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-givens-sine must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Givens certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-givens-sine certificate must document checked Farkas evidence")
+
+    horizon = checks["general-givens-qr-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-givens-qr-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-givens-qr-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("Givens horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("Givens horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_finite_qr_decomposition(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -29741,6 +29908,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_wolfe_line_search(expected)
     if metadata["id"] == "finite-walsh-hadamard-transform-v0":
         validate_finite_walsh_hadamard_transform(expected)
+    if metadata["id"] == "finite-givens-rotation-v0":
+        validate_finite_givens_rotation(expected)
     if metadata["id"] == "finite-qr-decomposition-v0":
         validate_finite_qr_decomposition(expected)
     if metadata["id"] == "finite-projected-gradient-v0":

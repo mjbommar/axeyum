@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-givens-rotation-v0",
+  "witnesses": [
+    {
+      "id": "two-by-two-givens-zeroing",
+      "description": "Exact rational two-by-two Givens rotation that maps [3,4] to [5,0].",
+      "values": {
+        "cosine": "3/5",
+        "sine": "4/5",
+        "rotation": [
+          ["3/5", "4/5"],
+          ["-4/5", "3/5"]
+        ],
+        "rotation_transpose": [
+          ["3/5", "-4/5"],
+          ["4/5", "3/5"]
+        ],
+        "identity": [
+          ["1", "0"],
+          ["0", "1"]
+        ],
+        "source_vector": ["3", "4"],
+        "zeroed_vector": ["5", "0"],
+        "inverse_reconstruction": ["3", "4"],
+        "source_norm_squared": "25",
+        "zeroed_norm_squared": "25",
+        "determinant": "1"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "givens-orthogonality-witness",
+      "claim": "The fixed Givens rotation satisfies G^T*G = I.",
+      "expected_result": "sat",
+      "validation": "exact_rational_givens_orthogonality_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-givens-zeroing"],
+      "notes": "The validator recomputes the transpose and matrix product exactly over rationals."
+    },
+    {
+      "id": "givens-zeroing-witness",
+      "claim": "The fixed Givens rotation maps [3,4] to [5,0].",
+      "expected_result": "sat",
+      "validation": "exact_rational_givens_zeroing_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-givens-zeroing"],
+      "notes": "The validator recomputes G*x and checks that the second coordinate is zero."
+    },
+    {
+      "id": "givens-inverse-reconstruction-witness",
+      "claim": "Applying G^T to [5,0] reconstructs [3,4].",
+      "expected_result": "sat",
+      "validation": "exact_rational_givens_inverse_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-givens-zeroing"],
+      "notes": "The validator recomputes G^T*y exactly and compares it with the original vector."
+    },
+    {
+      "id": "givens-determinant-witness",
+      "claim": "The fixed Givens rotation has determinant 1 and preserves squared norm.",
+      "expected_result": "sat",
+      "validation": "exact_rational_givens_determinant_norm_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["two-by-two-givens-zeroing"],
+      "notes": "The validator recomputes det(G), ||x||^2, and ||Gx||^2 exactly."
+    },
+    {
+      "id": "bad-givens-sine-rejected",
+      "claim": "The Givens sine coefficient is 3/5.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_givens_sine_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "two-by-two-givens-zeroing",
+        "actual_sine": "4/5",
+        "claimed_sine": "3/5"
+      },
+      "notes": "The validator recomputes the Givens coefficients and rejects the malformed sine claim; the separate qf-lra-bad-givens-sine row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-givens-sine",
+      "claim": "The fixed malformed Givens sine claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "two-by-two-givens-zeroing",
+        "source_replay_row": "bad-givens-sine-rejected",
+        "actual_sine": "4/5",
+        "claimed_sine": "3/5",
+        "farkas_conflict": "givens_sine = 4/5 and givens_sine = 3/5",
+        "smt2_artifact": "artifacts/examples/math/finite-givens-rotation-v0/smt2/bad-givens-sine-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_givens_rotation_bad_sine_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the sine coefficient as 4/5, while the malformed row claims 3/5; the source QF_LRA artifact isolates that final equality conflict for Farkas checking."
+    },
+    {
+      "id": "general-givens-qr-theory-lean-horizon",
+      "claim": "General Givens-rotation QR algorithms, pivoting policies, least-squares theorem use, conditioning, and floating-point stability require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For all finite matrices, prove that a sequence of exact Givens rotations can zero selected subdiagonal entries and compose into an orthogonal factor for QR; separately state pivoting, rank-deficient, least-squares, and floating-point variants with explicit hypotheses.",
+        "future_checker": "Lean theorem statements for exact Givens/QR construction plus separate numerical-honesty or QF_FP artifacts for floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one 2D rational rotation, not a theorem about arbitrary QR algorithms, pivoting, least-squares solves, or finite-precision stability."
+    }
+  ]
+}

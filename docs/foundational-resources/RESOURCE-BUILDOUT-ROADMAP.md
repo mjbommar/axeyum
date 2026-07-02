@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 125 non-template math example packs.
-- 811 expected checks.
-- 351 checked proof/evidence rows.
-- 372 replay-only rows.
-- 88 Lean-horizon rows.
-- 125 promoted solver-reuse packs.
+- 126 non-template math example packs.
+- 818 expected checks.
+- 352 checked proof/evidence rows.
+- 377 replay-only rows.
+- 89 Lean-horizon rows.
+- 126 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 125 focused learner-linked packs, with no path-only, index-only, or missing
+- 126 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2439,6 +2439,14 @@ Pick one item per commit unless the change is purely navigational.
      through a source-linked QF_LRA/Farkas regression without claiming general
      Lanczos convergence, Ritz-value theory, breakdown/restart behavior,
      finite-precision orthogonality, or floating-point stability.
+172. Landed: add `finite-givens-rotation-v0` as an exact finite
+     Givens-rotation resource. The pack computes one rational orthogonal
+     transform with `c = 3/5`, `s = 4/5`, verifies `G^T*G = I`,
+     `G*[3,4] = [5,0]`, inverse reconstruction, determinant `1`, and norm
+     preservation, then promotes the malformed sine coefficient claim
+     `s = 3/5` versus exact `4/5` through a source-linked QF_LRA/Farkas
+     regression without claiming general QR algorithms, pivoting,
+     conditioning, or floating-point stability.
 
 ## Validation Checklist
 

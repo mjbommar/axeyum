@@ -15,6 +15,7 @@ Which checked finite operator, inner-product, spectral, or Chebyshev rows match 
 The current surface is finite and exact: matrix/operator norm bounds,
 Chebyshev recurrence values, Chebyshev interpolation/residual rows,
 inner-product positive-definiteness and projection orthogonality, exact
+Givens rotations,
 condition-number, singular-value, and Jordan/nilpotent shadows, spectral eigenpair/Rayleigh
 checks, Arnoldi/Hessenberg and Lanczos/tridiagonal rows, characteristic-polynomial and trace rows, and
 a small equality-heavy dual/tensor lane. Banach/Hilbert-space theorems, compact operators, minimax,
@@ -57,7 +58,7 @@ spectral rows. Use `Alethe` for finite dual/tensor equality rows.
 |---|---|---|---|
 | Finite operator, Chebyshev, trace, characteristic-polynomial, Arnoldi/Hessenberg, Lanczos/tridiagonal, Jordan-chain, and spectral replay | `bridge_finite_operator_chebyshev` or `bridge_eigenpair` | `Farkas` | `checks --concept bridge_finite_operator_chebyshev --route Farkas --proof-status checked`; `checks --pack finite-arnoldi-iteration-v0 --route Farkas --proof-status checked`; `checks --pack finite-lanczos-iteration-v0 --route Farkas --proof-status checked` |
 | Eigenpair, Rayleigh, Arnoldi/Hessenberg, Lanczos/tridiagonal, generalized-eigenvector, operator, inner-product, and invariant rows | `bridge_eigenpair` | `Farkas` | `checks --concept bridge_eigenpair --route Farkas --proof-status checked`; `checks --pack finite-arnoldi-iteration-v0 --route Farkas --proof-status checked`; `checks --pack finite-lanczos-iteration-v0 --route Farkas --proof-status checked` |
-| Inner-product and projection rows | `bridge_inner_product_projection` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked` |
+| Inner-product, projection, and Givens orthogonal-transform rows | `bridge_inner_product_projection` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked`; `checks --pack finite-givens-rotation-v0 --route Farkas --proof-status checked` |
 | Exact condition-number and perturbation-bound rows | pack `finite-condition-number-v0` | `Farkas` | `checks --pack finite-condition-number-v0 --route Farkas --proof-status checked` |
 | Singular-value, SVD-shadow, and spectral-norm rows | pack `finite-singular-value-shadow-v0` | `Farkas` | `checks --pack finite-singular-value-shadow-v0 --route Farkas --proof-status checked` |
 | Jordan-chain and nilpotent-part rows | pack `finite-jordan-chain-v0` | `Farkas` | `checks --pack finite-jordan-chain-v0 --route Farkas --proof-status checked` |
@@ -135,6 +136,12 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-lanczos-iteration-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-givens-rotation-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any
