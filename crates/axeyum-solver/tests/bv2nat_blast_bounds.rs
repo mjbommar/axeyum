@@ -207,3 +207,32 @@ fn lex_order_gap_beyond_bound_is_never_unsat() {
         out.result
     );
 }
+
+/// Perf regression (found 2026-07-02 after a 9-hour scoreboard hang): a
+/// regex-complement atom encodes to a heavily-shared reach-set DAG, and the
+/// blast's Boolean-skeleton scan walked it once per root→node path —
+/// exponential. With the memoized walk this decides in milliseconds; the
+/// combination (`re.comp` + a `str.len` atom) is exactly what triggers the
+/// blast on top of the complement encoding.
+#[test]
+fn re_comp_with_len_atom_decides_promptly() {
+    use std::time::{Duration, Instant};
+    let start = Instant::now();
+    let out = run("\
+(declare-const s String)
+(assert (str.in_re s (re.comp (str.to_re \"a\"))))
+(assert (= (str.len s) 1))
+(assert (not (= s \"a\")))
+(check-sat)
+");
+    assert!(
+        matches!(out.result, CheckResult::Sat(_)),
+        "a 1-char non-\"a\" string matches comp(a); got {:?}",
+        out.result
+    );
+    assert!(
+        start.elapsed() < Duration::from_secs(30),
+        "the blast scan must be DAG-linear, took {:?}",
+        start.elapsed()
+    );
+}

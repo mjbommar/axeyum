@@ -111,10 +111,17 @@ pub fn blast_bv2nat_linear(
     assertions: &[TermId],
 ) -> Result<Option<Vec<TermId>>, SolverError> {
     // Pass 1: classify the Boolean skeleton, collect the integer atoms, and
-    // verify no Int-sorted term escapes a recognized atom.
+    // verify no Int-sorted term escapes a recognized atom. `visited` /
+    // `int_free` make both walks once-per-DAG-node: the skeleton is a shared
+    // DAG (e.g. the regex-complement reach formula reuses every `reach[pos][q]`
+    // node across positions), so a per-path recursion goes exponential — a
+    // QF_S `re.comp` + `str.len` instance spun for hours here before the
+    // memoization.
     let mut atoms: Vec<TermId> = Vec::new();
+    let mut visited: std::collections::HashSet<TermId> = std::collections::HashSet::new();
+    let mut int_free: std::collections::HashSet<TermId> = std::collections::HashSet::new();
     for &a in assertions {
-        if !collect_int_atoms(arena, a, &mut atoms) {
+        if !collect_int_atoms(arena, a, &mut atoms, &mut visited, &mut int_free) {
             return Ok(None);
         }
     }
@@ -208,24 +215,41 @@ pub fn blast_bv2nat_linear(
 /// Walks a Boolean-sorted term: recurses through the propositional skeleton,
 /// records recognized integer atoms, and rejects (returns `false`) any shape
 /// that could hide an integer-sorted subterm outside a recognized atom.
-fn collect_int_atoms(arena: &TermArena, term: TermId, atoms: &mut Vec<TermId>) -> bool {
-    match arena.node(term) {
+/// `visited` short-circuits shared skeleton nodes (a node is walked once per
+/// DAG node, not once per root→node path); `int_free` carries the verified
+/// Int-free subtrees across atom scans.
+fn collect_int_atoms(
+    arena: &TermArena,
+    term: TermId,
+    atoms: &mut Vec<TermId>,
+    visited: &mut std::collections::HashSet<TermId>,
+    int_free: &mut std::collections::HashSet<TermId>,
+) -> bool {
+    if visited.contains(&term) {
+        // Already classified `true` on a previous path (a `false` aborts the
+        // whole pass, so only accepted nodes are ever recorded).
+        return true;
+    }
+    let ok = match arena.node(term) {
         TermNode::BoolConst(_) => true,
         TermNode::Symbol(_) => arena.sort_of(term) == Sort::Bool,
         TermNode::App { op, args } => match op {
             Op::BoolNot | Op::BoolAnd | Op::BoolOr | Op::BoolXor | Op::BoolImplies => {
                 let args = args.clone();
-                args.iter().all(|&a| collect_int_atoms(arena, a, atoms))
+                args.iter()
+                    .all(|&a| collect_int_atoms(arena, a, atoms, visited, int_free))
             }
             // A Bool-sorted `ite`/`=` recurses only when its branches are
             // Boolean; Int-sorted branches fall to the atom cases below.
             Op::Ite if arena.sort_of(args[1]) == Sort::Bool => {
                 let args = args.clone();
-                args.iter().all(|&a| collect_int_atoms(arena, a, atoms))
+                args.iter()
+                    .all(|&a| collect_int_atoms(arena, a, atoms, visited, int_free))
             }
             Op::Eq if arena.sort_of(args[0]) == Sort::Bool => {
                 let args = args.clone();
-                args.iter().all(|&a| collect_int_atoms(arena, a, atoms))
+                args.iter()
+                    .all(|&a| collect_int_atoms(arena, a, atoms, visited, int_free))
             }
             Op::Eq if arena.sort_of(args[0]) == Sort::Int => {
                 atoms.push(term);
@@ -239,18 +263,32 @@ fn collect_int_atoms(arena: &TermArena, term: TermId, atoms: &mut Vec<TermId>) -
             Op::Forall(_) | Op::Exists(_) => false,
             // Any other Boolean atom (BV comparison, …) is left untouched but
             // must not contain an integer-sorted subterm the rewrite would miss.
-            _ => subtree_is_int_free(arena, term),
+            _ => subtree_is_int_free(arena, term, int_free),
         },
         _ => false,
+    };
+    if ok {
+        visited.insert(term);
     }
+    ok
 }
 
-/// `true` iff no subterm (including `term` itself) is `Int`-sorted.
-fn subtree_is_int_free(arena: &TermArena, term: TermId) -> bool {
+/// `true` iff no subterm (including `term` itself) is `Int`-sorted. `verified`
+/// carries subtrees already proven Int-free (merged only on a `true` result —
+/// a failing walk's visited set may contain the Int node's ancestors and must
+/// be discarded).
+fn subtree_is_int_free(
+    arena: &TermArena,
+    term: TermId,
+    verified: &mut std::collections::HashSet<TermId>,
+) -> bool {
+    if verified.contains(&term) {
+        return true;
+    }
     let mut stack = vec![term];
     let mut seen = std::collections::BTreeSet::new();
     while let Some(t) = stack.pop() {
-        if !seen.insert(t) {
+        if verified.contains(&t) || !seen.insert(t) {
             continue;
         }
         if arena.sort_of(t) == Sort::Int {
@@ -260,6 +298,7 @@ fn subtree_is_int_free(arena: &TermArena, term: TermId) -> bool {
             stack.extend(args.iter().copied());
         }
     }
+    verified.extend(seen);
     true
 }
 
@@ -275,7 +314,7 @@ fn linear_form(arena: &TermArena, term: TermId) -> Option<LinForm> {
                 let b = args[0];
                 // The BV argument must itself be free of integer subterms
                 // (an `int2bv` inside would escape the rewrite).
-                if !subtree_is_int_free(arena, b) {
+                if !subtree_is_int_free(arena, b, &mut std::collections::HashSet::new()) {
                     return None;
                 }
                 let mut coeffs = BTreeMap::new();
@@ -391,7 +430,11 @@ mod tests {
             .expect("in fragment");
         assert_eq!(out.len(), 1);
         // The rewritten atom is pure BV (no Int-sorted subterm anywhere).
-        assert!(subtree_is_int_free(&arena, out[0]));
+        assert!(subtree_is_int_free(
+            &arena,
+            out[0],
+            &mut std::collections::HashSet::new()
+        ));
     }
 
     #[test]
@@ -467,7 +510,11 @@ mod tests {
         let out = blast_bv2nat_linear(&mut arena, &[atom])
             .expect("blast")
             .expect("in fragment");
-        assert!(subtree_is_int_free(&arena, out[0]));
+        assert!(subtree_is_int_free(
+            &arena,
+            out[0],
+            &mut std::collections::HashSet::new()
+        ));
         // Semantic check across the full 4-bit × 4-bit space: the blasted atom
         // evaluates exactly like the integer original.
         let TermNode::Symbol(sb) = *arena.node(b) else {
