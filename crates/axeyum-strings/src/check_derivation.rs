@@ -93,6 +93,28 @@ use axeyum_ir::{Assignment, Op, TermArena, TermId, TermNode, Value, eval};
 use crate::infer::{Conflict, Fact, Rule};
 use crate::normal_form::{concat_components, normalize};
 
+/// Expansion-size budget for [`check_congruence_equality`]: the maximum flattened
+/// component count of a substituted goal side before the checker **declines**
+/// (returns `false`, a safe `unknown`).
+///
+/// Chained acyclic congruence rules — `x₁ ≈ x₂ ++ x₂`, `x₂ ≈ x₃ ++ x₃`, … to depth
+/// `k` — expand into an interned **DAG** (cheap, linear in distinct subterms) whose
+/// *flattened* component vector is `2^k`. [`normalize`] / [`concat_components`]
+/// materialize that flat vector (and would recurse `2^k` deep), so an un-budgeted
+/// congruence check on such a chain blows up in time, memory, and stack — and it
+/// runs **per assert** inside the online CDCL(T) string driver. This cap bounds the
+/// flattened size *before* the `O(size)` normalization, so a doubling chain is
+/// declined in `O(distinct-subterms)` work instead of exploding. It is generous —
+/// far above any component count a real string problem produces — so no legitimate
+/// congruence certificate is lost; a decline only ever forfeits an `unsat` to
+/// `unknown`, never certifies a false one.
+const MAX_EXPANSION_COMPONENTS: u64 = 4096;
+
+/// The saturation ceiling for [`flattened_component_upper_bound`]: one past the
+/// budget, so a count that reaches it is known to exceed [`MAX_EXPANSION_COMPONENTS`]
+/// without computing the (possibly astronomical) true value.
+const SIZE_SATURATE: u64 = MAX_EXPANSION_COMPONENTS + 1;
+
 /// Re-verifies a T-B.3 [`Conflict`] from the cited premises alone.
 ///
 /// Returns `true` only when, using **only** the equalities named by
@@ -239,6 +261,20 @@ pub fn check_congruence_equality(
     let mut on_stack: BTreeSet<TermId> = BTreeSet::new();
     let a1 = expand(arena, &rules, a, &mut resolved, &mut on_stack);
     let b1 = expand(arena, &rules, b, &mut resolved, &mut on_stack);
+
+    // Expansion-size budget (per-assert `DoS` guard): the substituted sides are cheap
+    // interned DAGs, but a doubling chain makes their *flattened* component count
+    // `2^depth`. Bound it here, over the DAG (linear in distinct subterms), BEFORE
+    // the `O(size)` `normalize` / `concat_components` materialize (and deep-recurse
+    // over) the flat vector. Over-budget ⇒ decline (`false`, a safe `unknown`); a
+    // decline never certifies, so soundness is preserved.
+    let mut size_memo: BTreeMap<TermId, u64> = BTreeMap::new();
+    if flattened_component_upper_bound(arena, a1, &mut size_memo) > MAX_EXPANSION_COMPONENTS
+        || flattened_component_upper_bound(arena, b1, &mut size_memo) > MAX_EXPANSION_COMPONENTS
+    {
+        return false;
+    }
+
     let na = normalized_components(arena, a1);
     let nb = normalized_components(arena, b1);
 
@@ -342,6 +378,50 @@ fn expand(
         resolved.insert(term, out);
     }
     out
+}
+
+/// A memoized upper bound on the number of components `term` flattens to — the
+/// `2^depth` size a doubling chain would materialize — computed over the interned
+/// **DAG** in `O(distinct subterms)` and **saturating** at [`SIZE_SATURATE`] so an
+/// astronomically-large true count never overflows or costs more than a shared-node
+/// traversal.
+///
+/// It descends through **every** `str.++` node (even fully-constant ones, which
+/// [`concat_components`] would fold to a single component): [`normalize`] still
+/// walks and rebuilds the whole spine before that folding, so the un-folded spine
+/// width is the right bound on the normalization's cost. `seq.empty` contributes 0
+/// (dropped); any other node is one component. The recursion depth is the DAG depth
+/// (the chain length), never the exponential unfolded depth, so it is stack-safe.
+fn flattened_component_upper_bound(
+    arena: &TermArena,
+    term: TermId,
+    memo: &mut BTreeMap<TermId, u64>,
+) -> u64 {
+    if let Some(&cached) = memo.get(&term) {
+        return cached;
+    }
+    let count = match arena.node(term) {
+        TermNode::App {
+            op: Op::SeqConcat,
+            args,
+        } => {
+            let l = flattened_component_upper_bound(arena, args[0], memo);
+            // Short-circuit once saturated: the sum can only stay saturated.
+            if l >= SIZE_SATURATE {
+                SIZE_SATURATE
+            } else {
+                let r = flattened_component_upper_bound(arena, args[1], memo);
+                l.saturating_add(r).min(SIZE_SATURATE)
+            }
+        }
+        TermNode::App {
+            op: Op::SeqEmpty(_),
+            ..
+        } => 0,
+        _ => 1,
+    };
+    memo.insert(term, count);
+    count
 }
 
 /// Strips the longest provably-equal common **prefix** then common **suffix** from

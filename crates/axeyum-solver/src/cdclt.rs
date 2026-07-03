@@ -41,6 +41,18 @@
 //! - Deadline: `deadline` is checked at the head of the search loop and of the
 //!   propagation fixpoint, so the search degrades to `Unknown` under a deterministic
 //!   resource bound (the deadline-hole class is designed out).
+//! - Step budget (defense in depth): the main [`CdclT::solve`] loop also counts its
+//!   iterations against a [`CdclT::step_budget`] and degrades to [`Outcome::Unknown`]
+//!   on exhaustion. The driver is provably terminating for a well-behaved theory —
+//!   the trigger-literal invariant (every theory conflict carries a current-level
+//!   literal) makes every conflict force a strict backjump, so learning cannot
+//!   repeat a trail state — but the theories driven here are **incomplete and
+//!   non-monotone** (`StringTheory` re-runs its refuter per assert and may report a
+//!   conflict at assert *k* it missed at *k-1*). The step budget is the belt to the
+//!   deadline's braces: when no deadline is configured (e.g. `wasm32`, or a
+//!   `SolverConfig` with no timeout) it still guarantees the loop cannot spin
+//!   forever on a pathological theory. Exhaustion is *sound* — `Unknown` is always a
+//!   permitted verdict — never a wrong sat/unsat.
 
 use std::time::Instant;
 
@@ -96,6 +108,16 @@ struct Conflict {
     is_theory: bool,
 }
 
+/// Defense-in-depth ceiling on [`CdclT::solve`] main-loop iterations when no
+/// deadline is configured. The driver is terminating for a well-behaved theory;
+/// this bound only bites on a pathological non-monotone theory that would
+/// otherwise spin. It is deliberately large — orders of magnitude beyond what any
+/// skeleton this driver receives today needs — so a legitimate search is never
+/// capped, yet a true livelock still ends (in bounded, if large, time) as a sound
+/// `Unknown`. Callers with a real problem should also set `config.timeout`, which
+/// is the primary bound.
+const DEFAULT_STEP_BUDGET: usize = 16_000_000;
+
 /// The outcome of one conflict-learning step.
 enum Learn {
     /// The asserting clause was learned and the UIP enqueued; keep searching.
@@ -127,6 +149,15 @@ pub(crate) struct CdclT {
     decision_level: usize,
     /// When set, the search returns [`Outcome::Unknown`] once the deadline passes.
     deadline: Option<Instant>,
+    /// Defense-in-depth ceiling on main-loop iterations (see
+    /// [`DEFAULT_STEP_BUDGET`]); the search degrades to [`Outcome::Unknown`] when
+    /// [`Self::steps`] reaches it.
+    step_budget: usize,
+    /// Main-loop iterations taken so far (telemetry + the step-budget counter).
+    steps: usize,
+    /// Set once the step budget was exhausted, so a caller/test can distinguish a
+    /// budget-driven `Unknown` from a deadline- or fixpoint-driven one.
+    step_budget_hit: bool,
 }
 
 impl CdclT {
@@ -150,7 +181,26 @@ impl CdclT {
             reason_theory: vec![false; var_count],
             decision_level: 0,
             deadline,
+            step_budget: DEFAULT_STEP_BUDGET,
+            steps: 0,
+            step_budget_hit: false,
         }
+    }
+
+    /// Overrides the defense-in-depth step budget (see [`DEFAULT_STEP_BUDGET`]).
+    /// Used by the non-monotone-theory property tests to detect a livelock with a
+    /// tight, deterministic ceiling; production uses the generous default.
+    #[cfg(test)]
+    pub(crate) fn with_step_budget(mut self, budget: usize) -> Self {
+        self.step_budget = budget;
+        self
+    }
+
+    /// Whether the last [`Self::solve`] ended by exhausting the step budget (rather
+    /// than the deadline or a real verdict).
+    #[cfg(test)]
+    pub(crate) fn step_budget_hit(&self) -> bool {
+        self.step_budget_hit
     }
 
     /// The current value of `var` (for the caller's model-assembly injection path).
@@ -500,6 +550,14 @@ impl CdclT {
     /// deadline.
     pub(crate) fn solve<T: TheorySolver>(&mut self, theory: &mut T) -> Outcome {
         loop {
+            // Defense in depth against a non-monotone-theory livelock: bound the
+            // main-loop iterations even with no deadline. Sound — `Unknown` is a
+            // permitted verdict — never a wrong sat/unsat.
+            if self.steps >= self.step_budget {
+                self.step_budget_hit = true;
+                return Outcome::Unknown;
+            }
+            self.steps += 1;
             if self.timed_out() {
                 return Outcome::Unknown;
             }
@@ -531,5 +589,407 @@ impl CdclT {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod termination_tests {
+    //! Termination + soundness of the generic [`CdclT`] driver under an
+    //! **adversarial, non-monotone** theory (DEBT 1 of the default-on verification
+    //! debt paydown).
+    //!
+    //! [`MockTheory`] is a deliberately hostile [`TheorySolver`]: its *truth* is a
+    //! fixed set of forbidden cubes (a partial assignment the theory has no model
+    //! for — so `¬cube` is a valid theory lemma), but its *reporting* is
+    //! non-monotone — on a **partial** assignment it may report a contained cube,
+    //! skip one it could report (miss), flip-flop, or report a superset core,
+    //! mirroring how the real [`crate::string_theory::StringTheory`] re-runs an
+    //! incomplete refuter per assert. It is **complete on total assignments** (when
+    //! every atom is assigned it always reports a contained cube), and it always
+    //! folds the current-decision-level trigger literal into the core — exactly the
+    //! `c9d332c1` trigger-literal invariant the driver's 1-UIP analysis relies on.
+    //!
+    //! The property: over thousands of random instances the driver must (a)
+    //! **terminate** without tripping the step budget (no livelock), and (b) return
+    //! a verdict that matches an independent brute-force over the Boolean skeleton ∧
+    //! the forbidden-cube semantics — a wrong `Sat`/`Unsat` is a hard failure.
+
+    use super::{CdclT, Lit, Outcome};
+    use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
+
+    /// A deterministic linear-congruential PRNG (MMIX constants) — the house
+    /// convention; no clock, no entropy, fully reproducible per seed.
+    struct Lcg(u64);
+
+    impl Lcg {
+        fn new(seed: u64) -> Self {
+            Lcg(seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407)
+                .wrapping_add(0x9E37_79B9_7F4A_7C15))
+        }
+        fn next_u64(&mut self) -> u64 {
+            self.0 = self
+                .0
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            self.0
+        }
+        fn below(&mut self, n: usize) -> usize {
+            usize::try_from(self.next_u64() % (n as u64)).expect("modulus fits usize")
+        }
+        fn coin(&mut self) -> bool {
+            self.next_u64() & 1 == 1
+        }
+    }
+
+    /// How the mock decides, on a **partial** assignment, whether to report a
+    /// contained forbidden cube. All variants stay sound (every reported core is a
+    /// genuine ¬cube lemma); they differ only in *when* they fire, so the driver
+    /// meets a hostile, non-monotone conflict schedule.
+    #[derive(Clone, Copy)]
+    enum Mode {
+        /// Report on every partial assert where a cube is contained (eager).
+        Always,
+        /// Never report on a partial assignment — only at a total one (maximally
+        /// late; the driver reaches full models before the theory ever speaks).
+        OnlyTotal,
+        /// Report only on every `k`-th qualifying assert (periodic miss).
+        Periodic(u64),
+        /// Alternate report / skip on successive qualifying asserts (flip-flop).
+        FlipFlop,
+    }
+
+    /// The adversarial non-monotone theory. `forbidden` fixes its semantics; the
+    /// reporting schedule (`mode`) is hostile but never unsound.
+    struct MockTheory {
+        n: usize,
+        forbidden: Vec<Vec<(usize, bool)>>,
+        mode: Mode,
+        /// Whether the core should be padded to a superset of a genuine cube (still
+        /// sound). Independent of `mode`.
+        report_superset: bool,
+        /// Per atom: currently-asserted value (`None` if unassigned).
+        assigned: Vec<Option<bool>>,
+        /// Number of atoms currently assigned (for the total-assignment test).
+        assigned_count: usize,
+        /// Atoms assigned since the start, in order — the backtrack log.
+        assigned_log: Vec<usize>,
+        /// Backtrack trail: per `push`, the `assigned_log` length.
+        trail: Vec<usize>,
+        /// Count of qualifying (cube-contained) partial asserts, driving the
+        /// periodic / flip-flop schedules.
+        qualifying: u64,
+    }
+
+    impl MockTheory {
+        fn new(n: usize, forbidden: Vec<Vec<(usize, bool)>>, mode: Mode, superset: bool) -> Self {
+            Self {
+                n,
+                forbidden,
+                mode,
+                report_superset: superset,
+                assigned: vec![None; n],
+                assigned_count: 0,
+                assigned_log: Vec::new(),
+                trail: Vec::new(),
+                qualifying: 0,
+            }
+        }
+
+        /// Whether every literal of `cube` is currently asserted with the matching
+        /// value (the cube is contained in the current assignment).
+        fn contains_cube(&self, cube: &[(usize, bool)]) -> bool {
+            cube.iter().all(|&(a, v)| self.assigned[a] == Some(v))
+        }
+
+        /// The first contained forbidden cube, if any.
+        fn contained_cube(&self) -> Option<&Vec<(usize, bool)>> {
+            self.forbidden.iter().find(|c| self.contains_cube(c))
+        }
+
+        /// Builds a genuine theory-conflict core from `cube`: its literals, plus (in
+        /// superset mode) every currently-asserted literal, plus the current-level
+        /// `trigger` literal (the `c9d332c1` invariant). Every literal is genuinely
+        /// asserted, so `¬core` is entailed by `¬cube` — a sound lemma.
+        fn core_from(&self, cube: &[(usize, bool)], trigger: (usize, bool)) -> Vec<TheoryLit> {
+            let mut core: Vec<TheoryLit> = Vec::new();
+            let push_lit = |core: &mut Vec<TheoryLit>, atom: usize, value: bool| {
+                if !core.iter().any(|l| l.atom == atom) {
+                    core.push(TheoryLit { atom, value });
+                }
+            };
+            for &(a, v) in cube {
+                push_lit(&mut core, a, v);
+            }
+            if self.report_superset {
+                for &a in &self.assigned_log {
+                    if let Some(v) = self.assigned[a] {
+                        push_lit(&mut core, a, v);
+                    }
+                }
+            }
+            // Always carry the just-asserted current-level literal, so the driver's
+            // 1-UIP analysis always finds a current-level literal to resolve on.
+            push_lit(&mut core, trigger.0, trigger.1);
+            core
+        }
+    }
+
+    impl TheorySolver for MockTheory {
+        fn assert(&mut self, atom: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
+            if self.assigned[atom].is_none() {
+                self.assigned[atom] = Some(value);
+                self.assigned_count += 1;
+                self.assigned_log.push(atom);
+            }
+            let trigger = (atom, value);
+            // A total assignment: the mock is COMPLETE here — always report a
+            // contained cube, so the driver never accepts a theory-inconsistent model.
+            let total = self.assigned_count == self.n;
+            let Some(cube) = self.contained_cube().cloned() else {
+                return Ok(());
+            };
+            if total {
+                return Err(self.core_from(&cube, trigger));
+            }
+            // Partial: hostile, non-monotone schedule — but every fired core is sound.
+            self.qualifying += 1;
+            let fire = match self.mode {
+                Mode::Always => true,
+                Mode::OnlyTotal => false,
+                Mode::Periodic(k) => self.qualifying.is_multiple_of(k),
+                Mode::FlipFlop => self.qualifying.is_multiple_of(2),
+            };
+            if fire {
+                Err(self.core_from(&cube, trigger))
+            } else {
+                Ok(())
+            }
+        }
+
+        fn push(&mut self) {
+            self.trail.push(self.assigned_log.len());
+        }
+
+        fn pop(&mut self) {
+            if let Some(mark) = self.trail.pop() {
+                while self.assigned_log.len() > mark {
+                    if let Some(atom) = self.assigned_log.pop() {
+                        self.assigned[atom] = None;
+                        self.assigned_count -= 1;
+                    }
+                }
+            }
+        }
+
+        fn propagate(&self) -> Vec<TheoryProp> {
+            // Like the real StringTheory: no theory propagation this model.
+            Vec::new()
+        }
+    }
+
+    /// A generated instance: `n` atoms (all driver variables are theory atoms),
+    /// CNF `clauses` over them, and the theory's forbidden cubes.
+    struct Instance {
+        n: usize,
+        clauses: Vec<Vec<Lit>>,
+        forbidden: Vec<Vec<(usize, bool)>>,
+    }
+
+    fn gen_instance(rng: &mut Lcg) -> Instance {
+        let n = 1 + rng.below(6); // 1..=6 atoms
+        let m = rng.below(2 * n + 1); // 0..=2n clauses
+        let mut clauses = Vec::with_capacity(m);
+        for _ in 0..m {
+            let width = 1 + rng.below(3); // 1..=3 literals
+            let mut clause = Vec::with_capacity(width);
+            for _ in 0..width {
+                let var = rng.below(n);
+                let positive = rng.coin();
+                if !clause.iter().any(|l: &Lit| l.var == var) {
+                    clause.push(Lit { var, positive });
+                }
+            }
+            clauses.push(clause);
+        }
+        let f = rng.below(n + 1); // 0..=n forbidden cubes
+        let mut forbidden = Vec::with_capacity(f);
+        for _ in 0..f {
+            let width = 1 + rng.below(3); // 1..=3 literals
+            let mut cube: Vec<(usize, bool)> = Vec::with_capacity(width);
+            for _ in 0..width {
+                let atom = rng.below(n);
+                let value = rng.coin();
+                // A cube with contradictory literals on one atom can never be
+                // contained; drop the duplicate to keep cubes meaningful.
+                if !cube.iter().any(|&(a, _)| a == atom) {
+                    cube.push((atom, value));
+                }
+            }
+            if !cube.is_empty() {
+                forbidden.push(cube);
+            }
+        }
+        Instance {
+            n,
+            clauses,
+            forbidden,
+        }
+    }
+
+    /// Whether `assignment` (bit `i` = value of atom `i`) satisfies every clause.
+    fn sat_clauses(clauses: &[Vec<Lit>], assignment: u32) -> bool {
+        clauses.iter().all(|clause| {
+            clause
+                .iter()
+                .any(|l| ((assignment >> l.var) & 1 == 1) == l.positive)
+        })
+    }
+
+    /// Whether `assignment` contains no forbidden cube (theory-consistent).
+    fn theory_consistent(forbidden: &[Vec<(usize, bool)>], assignment: u32) -> bool {
+        !forbidden
+            .iter()
+            .any(|cube| cube.iter().all(|&(a, v)| ((assignment >> a) & 1 == 1) == v))
+    }
+
+    /// Independent brute force over all `2^n` total assignments: `true` iff some
+    /// assignment satisfies every clause and avoids every forbidden cube.
+    fn brute_force_sat(inst: &Instance) -> bool {
+        (0u32..(1u32 << inst.n))
+            .any(|a| sat_clauses(&inst.clauses, a) && theory_consistent(&inst.forbidden, a))
+    }
+
+    /// Drives one instance through [`CdclT`] under `mode`/`superset`, with a tight
+    /// step budget so a livelock trips it deterministically rather than hanging.
+    fn run_once(inst: &Instance, mode: Mode, superset: bool) -> (Outcome, CdclT) {
+        // A step ceiling far above any legitimate run on <=6 atoms (whose full CDCL
+        // search is at most a few thousand steps) but finite — a true livelock trips
+        // it and the test asserts it was NOT tripped.
+        const TEST_STEP_BUDGET: usize = 200_000;
+        let mut solver = CdclT::new(inst.n, inst.n, inst.clauses.clone(), None)
+            .with_step_budget(TEST_STEP_BUDGET);
+        let mut theory = MockTheory::new(inst.n, inst.forbidden.clone(), mode, superset);
+        let outcome = solver.solve(&mut theory);
+        (outcome, solver)
+    }
+
+    #[test]
+    fn non_monotone_theory_terminates_and_is_sound() {
+        // Every mode × superset-flag combination, over a large random sweep.
+        let modes = [
+            Mode::Always,
+            Mode::OnlyTotal,
+            Mode::Periodic(2),
+            Mode::Periodic(3),
+            Mode::FlipFlop,
+        ];
+        let mut runs = 0u64;
+        let mut sat = 0u64;
+        let mut unsat = 0u64;
+        // 2000 base instances × 10 (mode × superset) schedules = 20_000 driver runs.
+        for seed in 0..2000u64 {
+            let mut rng = Lcg::new(seed);
+            let inst = gen_instance(&mut rng);
+            let truth = brute_force_sat(&inst);
+            for &mode in &modes {
+                for &superset in &[false, true] {
+                    let (outcome, solver) = run_once(&inst, mode, superset);
+                    runs += 1;
+
+                    // (1) Termination: the driver must decide by its own logic, never
+                    // by exhausting the step budget — a trip is a livelock.
+                    assert!(
+                        !solver.step_budget_hit(),
+                        "LIVELOCK seed={seed} n={} mode-idx step-budget exhausted \
+                         (took {} steps) — the non-monotone driver did not terminate",
+                        inst.n,
+                        solver.steps,
+                    );
+                    // With no deadline and the budget untripped, `Unknown` is impossible.
+                    assert_ne!(
+                        outcome,
+                        Outcome::Unknown,
+                        "seed={seed}: Unknown without a deadline or budget trip",
+                    );
+
+                    match outcome {
+                        Outcome::Unsat => {
+                            // (2a) Soundness of UNSAT: brute force must agree no model
+                            // exists.
+                            assert!(
+                                !truth,
+                                "WRONG UNSAT seed={seed} n={}: driver said Unsat but a \
+                                 skeleton+theory model exists",
+                                inst.n,
+                            );
+                            unsat += 1;
+                        }
+                        Outcome::Sat => {
+                            // (2b) Soundness of SAT: read the driver's assignment and
+                            // confirm it satisfies the skeleton AND avoids every
+                            // forbidden cube (a genuine model), independent of the mock.
+                            let mut assignment = 0u32;
+                            for v in 0..inst.n {
+                                let val = solver
+                                    .value(v)
+                                    .expect("a Sat verdict assigns every variable");
+                                if val {
+                                    assignment |= 1 << v;
+                                }
+                            }
+                            assert!(
+                                sat_clauses(&inst.clauses, assignment),
+                                "WRONG SAT seed={seed}: model violates the skeleton",
+                            );
+                            assert!(
+                                theory_consistent(&inst.forbidden, assignment),
+                                "WRONG SAT seed={seed}: model contains a forbidden cube \
+                                 (theory-inconsistent)",
+                            );
+                            // And it agrees with the brute-force existence verdict.
+                            assert!(truth, "seed={seed}: driver Sat but brute force UNSAT");
+                            sat += 1;
+                        }
+                        Outcome::Unknown => unreachable!("ruled out above"),
+                    }
+                }
+            }
+        }
+        eprintln!(
+            "cdclt non-monotone termination: runs={runs} sat={sat} unsat={unsat} \
+             (all terminated within the step budget; no wrong verdicts)"
+        );
+        assert!(
+            sat > 0 && unsat > 0,
+            "degenerate sweep: sat={sat} unsat={unsat} — expected a mix",
+        );
+    }
+
+    /// A pointed regression for the exact hazard DEBT 1 names: a mock that reports
+    /// the **same** conflict on repeated queries (here, on every qualifying assert)
+    /// must not cause the driver to re-learn/spin — it terminates with the correct
+    /// verdict. The forbidden cube `{a=true}` forces `a=false`; the clause `(a)`
+    /// then makes the instance UNSAT, reached without livelock.
+    #[test]
+    fn repeated_same_conflict_does_not_livelock() {
+        let inst = Instance {
+            n: 2,
+            clauses: vec![
+                vec![Lit {
+                    var: 0,
+                    positive: true,
+                }], // a must be true
+            ],
+            forbidden: vec![vec![(0, true)]], // but a=true is forbidden
+        };
+        let (outcome, solver) = run_once(&inst, Mode::Always, false);
+        assert!(
+            !solver.step_budget_hit(),
+            "livelocked on a repeated conflict"
+        );
+        assert_eq!(outcome, Outcome::Unsat, "a ∧ ¬a-forbidden is UNSAT");
+        assert!(!brute_force_sat(&inst), "brute force agrees: UNSAT");
     }
 }

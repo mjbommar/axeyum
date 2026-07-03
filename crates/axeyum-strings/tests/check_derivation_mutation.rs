@@ -859,3 +859,68 @@ fn congruence_declines_compound_equals_compound_premise() {
         "a compound=compound premise must not certify yy++dd = zz++dd"
     );
 }
+
+/// Builds a depth-`k` **doubling chain** of premises `xᵢ ≈ x_{i+1} ++ x_{i+1}`
+/// (`i = 0..k`), returning the arena, the premises, and the head/tail symbol terms.
+/// Substituting `x₀` through these rules expands to a `2^k`-component sequence.
+fn doubling_chain(k: usize) -> (TermArena, Vec<(TermId, TermId)>, TermId, TermId) {
+    let mut arena = TermArena::new();
+    let vars: Vec<TermId> = (0..=k)
+        .map(|i| seq_var(&mut arena, &format!("x{i}")))
+        .collect();
+    let mut eqs = Vec::with_capacity(k);
+    for i in 0..k {
+        let rhs = cat(&mut arena, vars[i + 1], vars[i + 1]);
+        eqs.push((vars[i], rhs));
+    }
+    (arena, eqs, vars[0], vars[k])
+}
+
+/// DEBT 2 regression — **expansion-size budget** (per-assert `DoS` guard). A chained
+/// acyclic congruence (`x₀ ≈ x₁++x₁`, `x₁ ≈ x₂++x₂`, …) makes the substituted goal
+/// side flatten to `2^k` components. Before the budget, `check_congruence_equality`
+/// materialized (and deep-recursed over) that flat vector — exponential time/memory
+/// and, past `k ≈ 14`, a **stack overflow** — and it runs per-assert inside the
+/// online CDCL(T) string driver. With the budget, a depth-32 chain is *declined* in
+/// bounded, near-instant work. This test **completing at all** (no hang, no
+/// overflow) is the anti-`DoS` proof; the `false` pins the sound decline.
+#[test]
+fn congruence_doubling_chain_is_budgeted_not_exploded() {
+    let (mut arena, eqs, x0, _xk) = doubling_chain(32);
+    let cited: BTreeSet<usize> = (0..eqs.len()).collect();
+    // Goal x₀ ≈ x₀ is trivially true, but its substitution flattens to 2^32
+    // components — over budget, so the checker declines rather than blowing up.
+    assert!(
+        !check_congruence_equality(&mut arena, &eqs, &cited, x0, x0),
+        "a depth-32 doubling chain must be declined by the expansion budget, \
+         not certified via an exponential expansion"
+    );
+}
+
+/// The complement to the budget test: a doubling chain whose flattened size stays
+/// **under** the budget must still certify a genuine equality — the guard declines
+/// only true blowups, never legitimate bounded congruence work (no over-declining).
+#[test]
+fn congruence_small_doubling_chain_still_certifies() {
+    // Depth 8 ⇒ 2^8 = 256 components, comfortably under the 4096 budget.
+    let (mut arena, eqs, x0, _xk) = doubling_chain(8);
+    let cited: BTreeSet<usize> = (0..eqs.len()).collect();
+    assert!(
+        check_congruence_equality(&mut arena, &eqs, &cited, x0, x0),
+        "a bounded (depth-8) doubling chain proves x0 ≈ x0 and must certify"
+    );
+}
+
+/// Soundness under the budget: a doubling chain on the left vs an **unrelated**
+/// fresh variable on the right must NOT certify, whether or not the budget trips —
+/// a decline is fine, a certify would be a forged `unsat`.
+#[test]
+fn congruence_doubling_chain_vs_unrelated_never_certifies() {
+    let (mut arena, eqs, x0, _xk) = doubling_chain(8);
+    let unrelated = seq_var(&mut arena, "u_unrelated");
+    let cited: BTreeSet<usize> = (0..eqs.len()).collect();
+    assert!(
+        !check_congruence_equality(&mut arena, &eqs, &cited, x0, unrelated),
+        "the doubling chain does not entail x0 ≈ u_unrelated — must never certify"
+    );
+}

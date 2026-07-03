@@ -1050,6 +1050,137 @@ mod tests {
         );
     }
 
+    /// Builds the census `∀A B C D. (A=B ∧ C=D) ∨ (A=C ∧ B=D)` closed universal —
+    /// a **false** sentence (A=0,B=1,C=0,D=0 falsifies it) that the closed-universal
+    /// lever refutes when it is *positively* asserted. Returns the arena and the
+    /// forall term, so the polarity tests can embed it in a Boolean context where
+    /// refuting it would be **unsound**.
+    #[allow(clippy::many_single_char_names)]
+    fn false_closed_universal() -> (TermArena, TermId) {
+        let mut arena = TermArena::new();
+        // A narrow width so the front door's finite-domain expansion
+        // (`check_with_quantifiers`, complete for `BitVec`) decides the nested-
+        // polarity shapes end-to-end rather than falling through to the e-matching
+        // fallback (which cannot bit-blast a residual quantifier).
+        let sort = Sort::BitVec(4);
+        let mk = |arena: &mut TermArena, n: &str| {
+            let s = arena.declare(n, sort).unwrap();
+            (s, arena.var(s))
+        };
+        let (a, av) = mk(&mut arena, "A");
+        let (b, bv) = mk(&mut arena, "B");
+        let (c, cv) = mk(&mut arena, "C");
+        let (d, dv) = mk(&mut arena, "D");
+        let ab = arena.eq(av, bv).unwrap();
+        let cd = arena.eq(cv, dv).unwrap();
+        let ac = arena.eq(av, cv).unwrap();
+        let bd = arena.eq(bv, dv).unwrap();
+        let left = arena.and(ab, cd).unwrap();
+        let right = arena.and(ac, bd).unwrap();
+        let body = arena.or(left, right).unwrap();
+        // Innermost-first, so the peeled prefix is [A, B, C, D].
+        let mut forall = arena.forall(d, body).unwrap();
+        forall = arena.forall(c, forall).unwrap();
+        forall = arena.forall(b, forall).unwrap();
+        forall = arena.forall(a, forall).unwrap();
+        (arena, forall)
+    }
+
+    /// DEBT 3 polarity guard — the closed-universal falsification lever must fire
+    /// ONLY on a **top-level positively-asserted** universal. Here the lever's owner
+    /// [`prove_quantified_unsat_via_egraph`] is handed a false `∀` buried under a
+    /// top-level `or` (an `Op::Or` node, never in the `foralls` bucket): it must
+    /// never forge an `unsat`, whatever the ground solver makes of the disjunction.
+    /// (`(or (false ∀) …)` is TRUE, so an `unsat` would be unsound.)
+    fn lever_never_forges_unsat(assertion: TermId, arena: &mut TermArena) {
+        // The lever's owner: proves the lever itself never fires on the wrong
+        // polarity. A ground solver that declines the embedded quantifier surfaces as
+        // `Err(Unsupported)` — which is NOT an `unsat`, so the property holds.
+        let via_lever =
+            prove_quantified_unsat_via_egraph(arena, &[assertion], &SolverConfig::default());
+        assert!(
+            !matches!(via_lever, Ok(CheckResult::Unsat)),
+            "closed-universal lever forged an unsat on a non-top-level universal: {via_lever:?}",
+        );
+    }
+
+    #[test]
+    fn forall_under_or_with_true_branch_is_not_refuted() {
+        let (mut arena, forall) = false_closed_universal();
+        let tru = arena.bool_const(true);
+        let disj = arena.or(forall, tru).unwrap();
+        // The lever must not forge an unsat.
+        lever_never_forges_unsat(disj, &mut arena);
+        // End-to-end: the real front door decides it correctly — `(or ∀ true)` is
+        // TRUE, so `sat` (via finite BV expansion), never `unsat`.
+        let end_to_end = crate::solve(&mut arena, &[disj], &SolverConfig::default()).unwrap();
+        assert!(
+            matches!(end_to_end, CheckResult::Sat(_)),
+            "(or (false ∀) true) is TRUE — solve must return sat, got {end_to_end:?}",
+        );
+    }
+
+    #[test]
+    fn forall_under_or_with_sat_ground_branch_is_not_refuted() {
+        let (mut arena, forall) = false_closed_universal();
+        let p = arena.bool_var("p_free").unwrap(); // a free Boolean: can be true
+        let disj = arena.or(forall, p).unwrap();
+        lever_never_forges_unsat(disj, &mut arena);
+        let end_to_end = crate::solve(&mut arena, &[disj], &SolverConfig::default()).unwrap();
+        assert!(
+            matches!(end_to_end, CheckResult::Sat(_)),
+            "(or (false ∀) p) is satisfiable (p=true) — got {end_to_end:?}",
+        );
+    }
+
+    /// DEBT 3 polarity guard: `¬(∀x⃗. body)` with a **false** body-universal is
+    /// `∃x⃗. ¬body`, which is TRUE — so the assertion is satisfiable and must NOT be
+    /// `unsat`. Refuting the *inner* positive `∀` (the wrong polarity) would forge an
+    /// unsat here; the `not` node is not an `Op::Forall`, so the lever never fires.
+    #[test]
+    fn negated_false_universal_is_not_refuted() {
+        let (mut arena, forall) = false_closed_universal();
+        let neg = arena.not(forall).unwrap();
+        lever_never_forges_unsat(neg, &mut arena);
+        let end_to_end = crate::solve(&mut arena, &[neg], &SolverConfig::default()).unwrap();
+        assert!(
+            matches!(end_to_end, CheckResult::Sat(_)),
+            "¬(false ∀) = ∃¬body is TRUE — solve must return sat, got {end_to_end:?}",
+        );
+    }
+
+    /// DEBT 3 polarity guard: a false closed `∀` in the **then** branch of an `ite`
+    /// whose condition can select the (true) **else** branch must NOT be `unsat`.
+    #[test]
+    fn forall_inside_ite_then_branch_is_not_refuted() {
+        let (mut arena, forall) = false_closed_universal();
+        let cond = arena.bool_var("c_free").unwrap();
+        let tru = arena.bool_const(true);
+        // (ite c (false ∀) true): choosing c=false yields the true else branch.
+        let ite = arena.ite(cond, forall, tru).unwrap();
+        lever_never_forges_unsat(ite, &mut arena);
+        let end_to_end = crate::solve(&mut arena, &[ite], &SolverConfig::default()).unwrap();
+        assert!(
+            matches!(end_to_end, CheckResult::Sat(_)),
+            "(ite c (false ∀) true) is satisfiable (c=false) — got {end_to_end:?}",
+        );
+    }
+
+    /// Control: the same false closed universal asserted **positively** at top level
+    /// IS refuted (by the lever), confirming the polarity tests above are non-vacuous
+    /// — the universal really is false, so only its *positive* top-level assertion is
+    /// unsat.
+    #[test]
+    fn positive_false_universal_control_is_refuted() {
+        let (mut arena, forall) = false_closed_universal();
+        let end_to_end = crate::solve(&mut arena, &[forall], &SolverConfig::default()).unwrap();
+        assert_eq!(
+            end_to_end,
+            CheckResult::Unsat,
+            "the positively-asserted false closed universal must be unsat (control)",
+        );
+    }
+
     #[test]
     fn open_universal_is_not_treated_as_closed() {
         // ∀x. (f x) = c has a free function symbol `f` — it is NOT a closed
