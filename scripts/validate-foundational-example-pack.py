@@ -32385,6 +32385,56 @@ def validate_crank_nicolson_trace(context: str, values: dict[str, Any]) -> dict[
     }
 
 
+def validate_adams_bashforth_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    ode = require_euler_ode(f"{context}.ode", values.get("ode"))
+    method = values.get("method")
+    require_string(f"{context}.method", method)
+    if method != "explicit_two_step_adams_bashforth":
+        fail(f"{context}.method must be explicit_two_step_adams_bashforth")
+    step = require_fraction(f"{context}.step", values.get("step"))
+    times = require_fraction_vector(f"{context}.times", values.get("times"))
+    states = require_fraction_vector(f"{context}.states", values.get("states"))
+    derivatives = require_fraction_vector(f"{context}.derivatives", values.get("derivatives"))
+    ab2_slopes = require_fraction_vector(
+        f"{context}.adams_bashforth_slopes",
+        values.get("adams_bashforth_slopes"),
+    )
+    if step <= 0:
+        fail(f"{context}.step must be positive")
+    if len(times) != len(states):
+        fail(f"{context}.times and states must have the same length")
+    if len(states) < 3:
+        fail(f"{context} must contain a starter value and at least one AB2 update")
+    if len(derivatives) != len(states) - 1:
+        fail(f"{context}.derivatives must cover all history points used by AB2")
+    if len(ab2_slopes) != len(states) - 2:
+        fail(f"{context}.adams_bashforth_slopes must have one entry per AB2 update")
+    for index in range(len(states) - 1):
+        if times[index + 1] != times[index] + step:
+            fail(f"{context}.times transition {index}->{index + 1} does not match step")
+    for index, derivative in enumerate(derivatives):
+        expected_derivative = euler_derivative(ode, times[index], states[index])
+        if derivative != expected_derivative:
+            fail(f"{context}.derivatives[{index}] is incorrect")
+    for state_index in range(1, len(states) - 1):
+        slope_index = state_index - 1
+        expected_slope = Fraction(3, 2) * derivatives[state_index] - Fraction(1, 2) * derivatives[state_index - 1]
+        if ab2_slopes[slope_index] != expected_slope:
+            fail(f"{context}.adams_bashforth_slopes[{slope_index}] is incorrect")
+        expected_next = states[state_index] + step * ab2_slopes[slope_index]
+        if states[state_index + 1] != expected_next:
+            fail(f"{context}.states transition {state_index}->{state_index + 1} is not an Adams-Bashforth step")
+    return {
+        "ode": ode,
+        "method": method,
+        "step": step,
+        "times": times,
+        "states": states,
+        "derivatives": derivatives,
+        "adams_bashforth_slopes": ab2_slopes,
+    }
+
+
 def validate_finite_euler_method(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -33334,6 +33384,172 @@ def validate_finite_crank_nicolson_method(expected: dict[str, Any]) -> None:
     require_string("Crank-Nicolson horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_adams_bashforth_method(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    history = checks["adams-bashforth-history-witness"]
+    if history["expected_result"] != "sat":
+        fail("adams-bashforth-history-witness must expect sat")
+    if history.get("proof_status") != "replay-only":
+        fail("adams-bashforth-history-witness must be replay-only")
+    values = single_witness_values(history, witnesses)
+    replay = validate_adams_bashforth_trace("Adams-Bashforth trace", values)
+    if replay["ode"] != "y_prime_equals_2t":
+        fail("finite Adams-Bashforth replay must use y' = 2t")
+    if replay["step"] != Fraction(1, 2):
+        fail("finite Adams-Bashforth replay must use h = 1/2")
+    starter_source = values.get("starter_source")
+    require_string("Adams-Bashforth starter_source", starter_source)
+    if starter_source != "exact_solution_value":
+        fail("finite Adams-Bashforth starter_source must be exact_solution_value")
+
+    errors = checks["adams-bashforth-zero-error-witness"]
+    if errors["expected_result"] != "sat":
+        fail("adams-bashforth-zero-error-witness must expect sat")
+    if errors.get("proof_status") != "replay-only":
+        fail("adams-bashforth-zero-error-witness must be replay-only")
+    if single_witness_values(errors, witnesses) != values:
+        fail("adams-bashforth-zero-error-witness must cite the Adams-Bashforth witness")
+    exact_solution = require_fraction_vector("Adams-Bashforth exact_solution", values.get("exact_solution"))
+    absolute_errors = require_fraction_vector("Adams-Bashforth absolute_errors", values.get("absolute_errors"))
+    max_error = require_fraction("Adams-Bashforth max_error", values.get("max_error"))
+    if len(exact_solution) != len(replay["states"]) or len(absolute_errors) != len(replay["states"]):
+        fail("Adams-Bashforth exact_solution and absolute_errors must match state length")
+    for index, time in enumerate(replay["times"]):
+        if exact_solution[index] != time * time:
+            fail(f"Adams-Bashforth exact_solution[{index}] is incorrect")
+        if replay["states"][index] != exact_solution[index]:
+            fail(f"adams-bashforth-zero-error-witness state {index} does not match t^2")
+        if absolute_errors[index] != abs(exact_solution[index] - replay["states"][index]):
+            fail(f"Adams-Bashforth absolute_errors[{index}] is incorrect")
+    if max(absolute_errors) != max_error:
+        fail("Adams-Bashforth max_error is incorrect")
+    if max_error != 0:
+        fail("adams-bashforth-zero-error-witness expects max_error = 0")
+
+    bad = checks["bad-adams-bashforth-step-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-adams-bashforth-step-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-adams-bashforth-step-rejected must be replay-only")
+    if bad.get("validation") != "exact_rational_bad_adams_bashforth_step_replay":
+        fail("bad-adams-bashforth-step-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "quadratic-forcing-adams-bashforth-trace":
+        fail("bad-adams-bashforth-step-rejected must cite the Adams-Bashforth witness")
+    step_index = require_int("bad Adams-Bashforth step_index", data.get("step_index"))
+    if step_index < 1 or step_index >= len(replay["states"]) - 1:
+        fail("bad-adams-bashforth-step-rejected step_index out of range")
+    previous_time = require_fraction("bad Adams-Bashforth previous_time", data.get("previous_time"))
+    previous_state = require_fraction("bad Adams-Bashforth previous_state", data.get("previous_state"))
+    previous_derivative = require_fraction(
+        "bad Adams-Bashforth previous_derivative",
+        data.get("previous_derivative"),
+    )
+    time = require_fraction("bad Adams-Bashforth time", data.get("time"))
+    state = require_fraction("bad Adams-Bashforth state", data.get("state"))
+    derivative = require_fraction("bad Adams-Bashforth derivative", data.get("derivative"))
+    step = require_fraction("bad Adams-Bashforth step", data.get("step"))
+    ab2_slope = require_fraction("bad Adams-Bashforth adams_bashforth_slope", data.get("adams_bashforth_slope"))
+    computed_next_state = require_fraction(
+        "bad Adams-Bashforth computed_next_state",
+        data.get("computed_next_state"),
+    )
+    claimed_next_state = require_fraction(
+        "bad Adams-Bashforth claimed_next_state",
+        data.get("claimed_next_state"),
+    )
+    next_state_gap = require_fraction(
+        "bad Adams-Bashforth next_state_gap",
+        data.get("next_state_gap"),
+    )
+    if replay["times"][step_index - 1] != previous_time:
+        fail("bad-adams-bashforth-step-rejected previous_time does not match source witness")
+    if replay["states"][step_index - 1] != previous_state:
+        fail("bad-adams-bashforth-step-rejected previous_state does not match source witness")
+    if replay["derivatives"][step_index - 1] != previous_derivative:
+        fail("bad-adams-bashforth-step-rejected previous_derivative does not match source witness")
+    if replay["times"][step_index] != time:
+        fail("bad-adams-bashforth-step-rejected time does not match source witness")
+    if replay["states"][step_index] != state:
+        fail("bad-adams-bashforth-step-rejected state does not match source witness")
+    if replay["derivatives"][step_index] != derivative:
+        fail("bad-adams-bashforth-step-rejected derivative does not match source witness")
+    if replay["step"] != step:
+        fail("bad-adams-bashforth-step-rejected step does not match source witness")
+    if replay["adams_bashforth_slopes"][step_index - 1] != ab2_slope:
+        fail("bad-adams-bashforth-step-rejected slope does not match source witness")
+    if replay["states"][step_index + 1] != computed_next_state:
+        fail("bad-adams-bashforth-step-rejected computed_next_state does not match source witness")
+    if state + step * ab2_slope != computed_next_state:
+        fail("bad-adams-bashforth-step-rejected next-state arithmetic is incorrect")
+    if computed_next_state == claimed_next_state:
+        fail("bad-adams-bashforth-step-rejected malformed next state must disagree with replay")
+    if computed_next_state - claimed_next_state != next_state_gap:
+        fail("bad-adams-bashforth-step-rejected next_state_gap is incorrect")
+    if next_state_gap <= 0:
+        fail("bad-adams-bashforth-step-rejected next_state_gap must be positive")
+    if "separate qf-lra-bad-adams-bashforth-step" not in bad.get("notes", ""):
+        fail("bad-adams-bashforth-step-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-adams-bashforth-step"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-adams-bashforth-step must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-adams-bashforth-step must be checked")
+    if qf_bad.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-adams-bashforth-step must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "quadratic-forcing-adams-bashforth-trace":
+        fail("qf-lra-bad-adams-bashforth-step must cite the Adams-Bashforth witness")
+    if qf_data.get("source_replay_row") != "bad-adams-bashforth-step-rejected":
+        fail("qf-lra-bad-adams-bashforth-step must cite the replay row")
+    qf_computed = require_fraction(
+        "qf Adams-Bashforth computed_next_state",
+        qf_data.get("computed_next_state"),
+    )
+    qf_claimed = require_fraction(
+        "qf Adams-Bashforth claimed_next_state",
+        qf_data.get("claimed_next_state"),
+    )
+    if qf_computed != computed_next_state or qf_claimed != claimed_next_state:
+        fail("qf-lra-bad-adams-bashforth-step data must match the replay row")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf Adams-Bashforth farkas_conflict", conflict)
+    expected_conflict = (
+        "adams_bashforth_next_state = 1 and adams_bashforth_next_state = 3/4"
+    )
+    if conflict != expected_conflict:
+        fail("qf-lra-bad-adams-bashforth-step must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Adams-Bashforth smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-adams-bashforth-method-v0/smt2/"
+        "bad-adams-bashforth-step-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-adams-bashforth-step smt2_artifact must name the checked source artifact")
+    check_source("qf Adams-Bashforth smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Adams-Bashforth farkas_regression", regression)
+    if "finite_adams_bashforth_bad_step_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-adams-bashforth-step must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Adams-Bashforth certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-adams-bashforth-step certificate must document checked Farkas evidence")
+
+    horizon = checks["general-adams-bashforth-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-adams-bashforth-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-adams-bashforth-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("Adams-Bashforth horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("Adams-Bashforth horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -33697,6 +33913,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_backward_euler_method(expected)
     if metadata["id"] == "finite-crank-nicolson-method-v0":
         validate_finite_crank_nicolson_method(expected)
+    if metadata["id"] == "finite-adams-bashforth-method-v0":
+        validate_finite_adams_bashforth_method(expected)
     if metadata["id"] == "finite-gaussian-elimination-v0":
         validate_finite_gaussian_elimination(expected)
     if metadata["id"] == "finite-lu-decomposition-v0":

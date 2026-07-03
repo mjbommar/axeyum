@@ -54,12 +54,12 @@ As of 2026-07-03, the committed resource query reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 144 non-template math packs.
-- 945 expected checks.
-- 370 checked proof/evidence rows.
-- 468 replay-only rows.
-- 107 Lean-horizon rows.
-- 144 promoted solver-reuse packs.
+- 145 non-template math packs.
+- 950 expected checks.
+- 371 checked proof/evidence rows.
+- 471 replay-only rows.
+- 108 Lean-horizon rows.
+- 145 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -340,8 +340,8 @@ Next useful increments:
 | `probability_theory` | finite PMFs, kernels, Markov chains, martingales, hitting times, concentration | exact discrete distributions, independence/conditioning variants, limit-theorem horizons | QF_LRA/Farkas, QF_LIA, finite replay | probability rows can be audited as exact rational tables |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | exact finite inference examples and numerical-honesty metadata | QF_LIA, QF_LRA/Farkas, replay | inference claims distinguish exact finite tests from statistical modeling |
 | `optimization_and_convexity` | LP, convexity, least squares, root finding, KKT, active-set QP, SDP, gradient/line-search/projected/proximal rows | duality, working-set pivots, strong-Wolfe, group-lasso/active-set proximal variants, stochastic/convergence horizons | QF_LRA/Farkas, QF_NRA, Lean horizon | finite KKT/duality/algorithm rows do not claim general sufficiency/convergence |
-| `numerical_analysis` | residuals, explicit and implicit Euler/Crank-Nicolson steps, root-finding, finite optimization iterations, operator, singular-value, and Jordan-chain bounds | landed finite dynamics/Euler bridge plus exact condition-number, singular-value, and Jordan-chain shadows; add only distinct implicit-solve, pivoting/stability, or reproducible numerical metadata pressure | QF_LRA/Farkas, replay, Lean horizon | exact replay is separate from floating-point experiment claims |
-| `differential_equations_and_dynamical_systems` | bounded recurrences, explicit Euler traces, implicit Backward Euler and Crank-Nicolson traces, finite invariants, stochastic kernels/hitting times | landed finite dynamics/Euler bridge plus stochastic-kernel bridge; add transition/invariant/implicit-solve variants only when they add distinct finite pressure | QF_LRA/Farkas, finite replay, Lean horizon | continuous existence/uniqueness, stability, stiffness, and PDE claims stay horizon |
+| `numerical_analysis` | residuals, explicit and implicit Euler/Crank-Nicolson steps, Adams-Bashforth multistep rows, root-finding, finite optimization iterations, operator, singular-value, and Jordan-chain bounds | landed finite dynamics/Euler bridge plus exact condition-number, singular-value, and Jordan-chain shadows; add only distinct implicit-solve, multistep-history, pivoting/stability, or reproducible numerical metadata pressure | QF_LRA/Farkas, replay, Lean horizon | exact replay is separate from floating-point experiment claims |
+| `differential_equations_and_dynamical_systems` | bounded recurrences, explicit Euler traces, implicit Backward Euler and Crank-Nicolson traces, Adams-Bashforth multistep traces, finite invariants, stochastic kernels/hitting times | landed finite dynamics/Euler bridge plus stochastic-kernel bridge; add transition/invariant/implicit-solve variants only when they add distinct finite pressure | QF_LRA/Farkas, finite replay, Lean horizon | continuous existence/uniqueness, stability, stiffness, and PDE claims stay horizon |
 | `geometry` | coordinate, incidence, rigid, affine, oriented area, circle, inversion, cyclic quadrilaterals | landed finite circle/inversion/cyclic replay bridge; add only distinct nontrivial circle-line correspondence, higher-degree polynomial geometry, or theorem-reconstruction pressure beyond the current area-scaling, circle-line, square angle-dot, and Ptolemy rows | QF_LRA/Farkas, finite replay, QF_NRA horizon | synthetic/global geometry claims stay Lean horizon |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, projections, singular-value and Jordan/nilpotent shadows, Chebyshev slices, finite duals | norm variants, finite approximation/alternation, operator-spectrum/SVD/Jordan rows only when they add distinct proof pressure | QF_LRA/Farkas, finite replay, Lean horizon | Banach/Hilbert, SVD theorem, Jordan normal form, and infinite-dimensional claims are not finite checks |
 

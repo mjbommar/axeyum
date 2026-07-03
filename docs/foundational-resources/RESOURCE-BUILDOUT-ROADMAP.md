@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 144 non-template math example packs.
-- 945 expected checks.
-- 370 checked proof/evidence rows.
-- 468 replay-only rows.
-- 107 Lean-horizon rows.
-- 144 promoted solver-reuse packs.
+- 145 non-template math example packs.
+- 950 expected checks.
+- 371 checked proof/evidence rows.
+- 471 replay-only rows.
+- 108 Lean-horizon rows.
+- 145 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 144 focused learner-linked packs, with no path-only, index-only, or missing
+- 145 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2611,6 +2611,15 @@ Pick one item per commit unless the change is purely navigational.
      order, convergence, A-stability, stiffness behavior, nonlinear
      endpoint-solve correctness, adaptive-step correctness, floating-point
      stability, or PDE theory.
+191. Landed: add `finite-adams-bashforth-method-v0` as an exact finite
+     explicit multistep time-stepping resource. The pack computes `y' = 2t`
+     from `y(0)=0` with `h=1/2` and exact starter `y_1=1/4`, records derivative
+     history, Adams-Bashforth slopes `[3/2, 5/2]`, exact states
+     `[0, 1/4, 1, 9/4]`, and zero error, then promotes the malformed
+     first-multistep claim `3/4` through a source-linked QF_LRA/Farkas
+     regression against exact `1` without claiming general Adams-Bashforth
+     order, convergence, stability regions, variable-step correctness,
+     floating-point stability, or PDE theory.
 
 ## Validation Checklist
 

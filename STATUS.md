@@ -240,6 +240,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Adams-Bashforth method resource landed.**
+  `finite-adams-bashforth-method-v0` now gives the differential-equations,
+  numerical-analysis, and real-analysis lanes a compact exact explicit
+  two-step multistep example: it checks `y' = 2t`, `y(0)=0`, step size
+  `h=1/2`, times `[0, 1/2, 1, 3/2]`, exact starter `y_1=1/4`, states
+  `[0, 1/4, 1, 9/4]`, derivatives `[0, 1, 2]`, Adams-Bashforth slopes
+  `[3/2, 5/2]`, and zero error against `y=t^2`. It then rejects the malformed
+  first multistep claim `3/4` versus exact `1` through a source-linked
+  QF_LRA/Farkas row. The focused learner page, dynamics and analysis/numerical
+  query guides, finite dynamics/time-stepping bridge, validator, resource
+  smoke queries, and `math_resource_lra_routes` regression keep this fixed
+  exact multistep replay separate from general Adams-Bashforth order,
+  convergence, stability regions, variable-step correctness, floating-point
+  time-stepping, and PDE theory. The public summary now reports 122 concept
+  rows, 145 packs, 950 expected checks, 371 checked rows, 471 replay-only rows,
+  108 Lean-horizon rows, and 145 promoted solver-reuse packs.
 - **Finite Crank-Nicolson method resource landed.**
   `finite-crank-nicolson-method-v0` now gives the differential-equations,
   numerical-analysis, and real-analysis lanes a compact exact implicit
@@ -255,10 +271,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_lra_routes` regression keep this fixed exact implicit
   trapezoid replay separate from general Crank-Nicolson order, convergence,
   A-stability, stiffness behavior, nonlinear solve correctness,
-  adaptive-step control, floating-point time-stepping, and PDE theory. The
-  public summary now reports 122 concept rows, 144 packs, 945 expected checks,
-  370 checked rows, 468 replay-only rows, 107 Lean-horizon rows, and
-  144 promoted solver-reuse packs.
+  adaptive-step control, floating-point time-stepping, and PDE theory. After
+  that increment, the public summary reported 122 concept rows, 144 packs, 945
+  expected checks, 370 checked rows, 468 replay-only rows, 107 Lean-horizon
+  rows, and 144 promoted solver-reuse packs.
 - **Finite Backward Euler method resource landed.**
   `finite-backward-euler-method-v0` now gives the differential-equations,
   numerical-analysis, and real-analysis lanes a compact exact implicit

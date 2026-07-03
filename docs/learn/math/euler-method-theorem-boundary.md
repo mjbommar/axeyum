@@ -15,6 +15,7 @@ Related finite time-stepping packs:
 - [finite-heun-method-v0](../../../artifacts/examples/math/finite-heun-method-v0/)
 - [finite-backward-euler-method-v0](../../../artifacts/examples/math/finite-backward-euler-method-v0/)
 - [finite-crank-nicolson-method-v0](../../../artifacts/examples/math/finite-crank-nicolson-method-v0/)
+- [finite-adams-bashforth-method-v0](../../../artifacts/examples/math/finite-adams-bashforth-method-v0/)
 
 Concept rows:
 
@@ -85,8 +86,8 @@ The current resources do not prove:
 - convergence of explicit Euler as `h -> 0`;
 - local or global truncation-error theorems;
 - stability regions, stiffness behavior, or invariant-preservation theorems;
-- adaptive-step, implicit-method, Runge-Kutta, Crank-Nicolson, or
-  multistep-method theory;
+- adaptive-step, implicit-method, Runge-Kutta, Crank-Nicolson,
+  Adams-Bashforth, or multistep-method theory;
 - PDE theory or continuous-time dynamical-systems theory;
 - floating-point roundoff, conditioning, or solver-library behavior.
 

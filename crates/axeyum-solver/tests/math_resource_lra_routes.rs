@@ -391,6 +391,9 @@ const FINITE_BACKWARD_EULER_BAD_STEP: &str = include_str!(
 const FINITE_CRANK_NICOLSON_BAD_STEP: &str = include_str!(
     "../../../artifacts/examples/math/finite-crank-nicolson-method-v0/smt2/bad-crank-nicolson-step-farkas-conflict.smt2"
 );
+const FINITE_ADAMS_BASHFORTH_BAD_STEP: &str = include_str!(
+    "../../../artifacts/examples/math/finite-adams-bashforth-method-v0/smt2/bad-adams-bashforth-step-farkas-conflict.smt2"
+);
 const NUMERICAL_LINEAR_ALGEBRA_BAD_JACOBI_ERROR_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/numerical-linear-algebra-v0/smt2/bad-jacobi-error-bound-farkas-conflict.smt2"
 );
@@ -1856,6 +1859,14 @@ fn finite_crank_nicolson_bad_step_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-crank-nicolson-method-v0 bad-crank-nicolson-step SMT-LIB artifact",
         FINITE_CRANK_NICOLSON_BAD_STEP,
+    );
+}
+
+#[test]
+fn finite_adams_bashforth_bad_step_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-adams-bashforth-method-v0 bad-adams-bashforth-step SMT-LIB artifact",
+        FINITE_ADAMS_BASHFORTH_BAD_STEP,
     );
 }
 
