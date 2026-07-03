@@ -153,3 +153,141 @@ fn non_word_fragment_is_not_routed() {
         CheckResult::Sat(_) | CheckResult::Unknown(_)
     ));
 }
+
+// --- positive-polarity extended-function reductions (T-B.4c) -----------------
+//
+// `(str.prefixof p x)`, `(str.suffixof s x)`, and `(str.contains x c)` in a
+// positive (top-level-conjunction) position reduce to fresh-variable word
+// equations that are equisatisfiable with the atom:
+//
+//     prefixof(p, x) ⟺ ∃k.     x = p ++ k
+//     suffixof(s, x) ⟺ ∃k.     x = k ++ s
+//     contains(x, c) ⟺ ∃k1,k2. x = k1 ++ c ++ k2
+//
+// Each is *sat-implying*, so a replay-checked `Sat` of the reduced problem is a
+// genuine `Sat` of the original.
+//
+// NOTE on witness length: the bounded front-end hard-errors on a *single* string
+// literal longer than `max_len 8`, on a `str.++` whose result exceeds the parse
+// cap 16, and it constant-folds `str.++` of two literals into one literal (which
+// then trips the >8 check). So — exactly as the existing `beyond_bound` sat tests
+// do — the past-the-bound operands below are built as `"8-char-lit" ++ var` with
+// the `var` pinned to a second 8-char literal, giving a 16-char term (2× max_len
+// 8) that never folds and stays within the cap. A 16-char witness is past
+// `max_len 8`, so the bounded gate cannot decide it and downgrades to `unknown`;
+// the unbounded word search then decides it `sat`.
+
+/// A positive `str.contains` whose needle is forced to 16 chars — so any witness
+/// runs past `max_len 8` — decides `sat` via the word route.
+#[test]
+fn word_route_positive_contains_beyond_bound() {
+    // c = "abcdefgh" ++ w, w = "ijklmnop"  ⇒  c = "abcdefghijklmnop" (16). x must
+    // be ≥ 16 to contain c, past max_len 8 ⇒ bounded `unknown`. The reduction
+    // x = k1 ++ c ++ k2 is satisfied by x = c (k1 = k2 = "").
+    let text = "(set-logic QF_S)(declare-const x String)(declare-const c String)(declare-const w String)\
+                (assert (= c (str.++ \"abcdefgh\" w)))(assert (= w \"ijklmnop\"))\
+                (assert (str.contains x c))(check-sat)";
+    assert!(
+        matches!(verdict(text), CheckResult::Sat(_)),
+        "positive str.contains with a 16-char needle should decide sat via the word route"
+    );
+}
+
+/// A positive `str.prefixof` whose prefix is forced to 16 chars decides `sat`
+/// via the word route.
+#[test]
+fn word_route_positive_prefixof_beyond_bound() {
+    // p = "abcdefgh" ++ w, w = "ijklmnop"  ⇒  p = 16 chars. prefixof(p, x) forces
+    // |x| ≥ 16 (bounded `unknown`); the reduction x = p ++ k is satisfied by x = p.
+    let text = "(set-logic QF_S)(declare-const x String)(declare-const p String)(declare-const w String)\
+                (assert (= p (str.++ \"abcdefgh\" w)))(assert (= w \"ijklmnop\"))\
+                (assert (str.prefixof p x))(check-sat)";
+    assert!(
+        matches!(verdict(text), CheckResult::Sat(_)),
+        "positive str.prefixof with a 16-char prefix should decide sat via the word route"
+    );
+}
+
+/// A positive `str.suffixof` whose suffix is forced to 16 chars decides `sat`
+/// via the word route.
+#[test]
+fn word_route_positive_suffixof_beyond_bound() {
+    // s = "abcdefgh" ++ w, w = "ijklmnop"  ⇒  s = 16 chars. suffixof(s, x) forces
+    // |x| ≥ 16 (bounded `unknown`); the reduction x = k ++ s is satisfied by x = s.
+    let text = "(set-logic QF_S)(declare-const x String)(declare-const s String)(declare-const w String)\
+                (assert (= s (str.++ \"abcdefgh\" w)))(assert (= w \"ijklmnop\"))\
+                (assert (str.suffixof s x))(check-sat)";
+    assert!(
+        matches!(verdict(text), CheckResult::Sat(_)),
+        "positive str.suffixof with a 16-char suffix should decide sat via the word route"
+    );
+}
+
+/// A mixed script — word equations plus a positive `str.contains` — decides
+/// `sat` via the word route. The concatenation forces x to 16 chars (past the
+/// bound) and the contains needle is consistent with it.
+#[test]
+fn word_route_mixed_equations_and_contains() {
+    // x = y ++ "abcdefgh", y = "12345678"  ⇒  x = "12345678abcdefgh" (16 chars,
+    // 2× max_len 8), and x contains the literal "abcdefgh" — satisfiable, but
+    // past the bounded encoder.
+    let text = "(set-logic QF_S)\
+                (declare-const x String)(declare-const y String)\
+                (assert (= x (str.++ y \"abcdefgh\")))(assert (= y \"12345678\"))\
+                (assert (str.contains x \"abcdefgh\"))(check-sat)";
+    assert!(
+        matches!(verdict(text), CheckResult::Sat(_)),
+        "mixed equations + positive str.contains should decide sat via the word route"
+    );
+}
+
+/// **Polarity guard.** A *negative* `str.contains` (`(not (str.contains …))`) is
+/// not a sat-implying reduction, so the dual build must decline wholesale — the
+/// side channel stays `None` and the word route can never emit `sat` for it.
+///
+/// This instance is adversarially UNSAT: `x` is forced to a 16-char constant that
+/// *does* contain the needle, so `(not (str.contains x needle))` is false and the
+/// script is unsatisfiable. Because `x` runs past the bounded encoder's
+/// `max_len 8`, the bounded gate downgrades to `unknown` — so a *broken* polarity
+/// guard (reducing the contains positively, ignoring the `not`) would let the
+/// word route find `x = k1 ++ needle ++ k2` and fabricate a WRONG `sat`. A correct
+/// guard declines the whole side channel, leaving the verdict `unsat`/`unknown` —
+/// never `sat`.
+#[test]
+fn word_route_negative_contains_declines() {
+    let text = "(set-logic QF_S)(declare-const x String)(declare-const w String)\
+                (assert (= x (str.++ \"abcdefgh\" w)))(assert (= w \"ijklmnop\"))\
+                (assert (not (str.contains x \"abcdefgh\")))(check-sat)";
+    match verdict(text) {
+        CheckResult::Sat(model) => panic!(
+            "WRONG SAT: negative str.contains must not be decided `sat` by the \
+             word route (the reduction is only sound in positive position).\n\
+             model: {model:?}"
+        ),
+        CheckResult::Unsat | CheckResult::Unknown(_) => {}
+    }
+}
+
+/// **Polarity guard.** A `str.contains` under `or` is a disjunctive (non
+/// positive-conjunction) position; the dual build recognizes no `or`, so the
+/// whole side channel collapses to `None` and the word route is inert.
+///
+/// Adversarially UNSAT: `x` is a 16-char constant containing neither disjunct's
+/// needle/prefix, so the `or` is false and the script is unsatisfiable. `x` is
+/// past the bound, so the bounded gate downgrades to `unknown`; a broken guard
+/// that reduced either disjunct positively would fabricate a WRONG `sat`. A
+/// correct build declines (the top-level `or` is unrepresentable), so the verdict
+/// is `unsat`/`unknown` — never `sat`.
+#[test]
+fn word_route_contains_under_or_declines() {
+    let text = "(set-logic QF_S)(declare-const x String)(declare-const w String)\
+                (assert (= x (str.++ \"abcdefgh\" w)))(assert (= w \"ijklmnop\"))\
+                (assert (or (str.contains x \"zzz\") (str.prefixof \"qqq\" x)))(check-sat)";
+    match verdict(text) {
+        CheckResult::Sat(model) => panic!(
+            "WRONG SAT: a str.contains/prefixof under `or` must not be decided \
+             `sat` by the word route.\nmodel: {model:?}"
+        ),
+        CheckResult::Unsat | CheckResult::Unknown(_) => {}
+    }
+}

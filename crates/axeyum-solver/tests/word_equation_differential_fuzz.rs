@@ -7,11 +7,16 @@
 //! fact unsatisfiable (a wrong `unsat` is impossible — the arrangement search has
 //! no `unsat` variant, and every `sat` replays through the ground evaluator
 //! inside `axeyum-strings` before it is returned). This harness stresses exactly
-//! that: it generates hundreds of random pure word-equation scripts — the
-//! fragment the parser's dual build recognizes (`str.++` / string literals /
-//! string variables, `=` / `distinct` / a single `not (= …)`) — biased toward
-//! shapes the bounded encoder cannot decide (long-forcing concatenations and
-//! loops), and adjudicates the front door against Z3's full string theory.
+//! that: it generates hundreds of random word-equation scripts — the fragment the
+//! parser's dual build recognizes (`str.++` / string literals / string variables,
+//! `=` / `distinct` / a single `not (= …)`, plus the positive-polarity
+//! extended-function reductions `str.prefixof` / `str.suffixof` / `str.contains`,
+//! and their *negated* forms which the polarity guard must decline) — biased
+//! toward shapes the bounded encoder cannot decide (long-forcing concatenations
+//! and loops), and adjudicates the front door against Z3's full string theory.
+//! The extended-function atoms exercise the new reductions and the polarity guard
+//! end-to-end: a wrong positive reduction (a fabricated `sat`) or a leaking
+//! negative guard both surface as a differential disagreement against Z3.
 //!
 //! Method mirrors `string_differential_fuzz.rs` / `bv_differential_fuzz.rs`: a
 //! fixed-seed LCG (no clock, no OS entropy) drives every choice, so the whole
@@ -153,6 +158,13 @@ impl Instance {
     ///
     /// - 2..=4 declared `String` variables `s0..`;
     /// - 1..=4 equalities and 0..=2 disequalities over `str.++`/literals/vars;
+    /// - 0..=2 **extended-function atoms** (`str.prefixof`/`str.suffixof`/
+    ///   `str.contains`), mostly in a positive (top-level) position — which the
+    ///   dual build reduces to fresh-variable word equations — and occasionally
+    ///   negated (`(not (str.contains …))`), which the polarity guard must decline
+    ///   wholesale. Both are exercised end-to-end: Z3 handles them natively, so a
+    ///   wrong reduction (positive) or a broken guard (negative) surfaces as a
+    ///   `Sat`/`Unsat` disagreement here;
     /// - an occasional loop `si = lit ++ si` (an unsat shape the bounded gate
     ///   downgrades, exercising the word route's decline).
     fn generate(rng: &mut Lcg) -> Instance {
@@ -164,6 +176,7 @@ impl Instance {
             rng.below(2) + 1 // 1..=2
         };
         let num_diseqs = rng.below(3); // 0..=2
+        let num_ext = rng.below(3); // 0..=2 extended-function atoms
         let depth = if hard { 2 } else { 1 };
 
         let mut text = String::new();
@@ -192,6 +205,33 @@ impl Instance {
                 let _ = writeln!(text, "(assert (not (= {l} {r})))");
             } else {
                 let _ = writeln!(text, "(assert (distinct {l} {r}))");
+            }
+        }
+
+        // Extended-function atoms (prefixof/suffixof/contains). Mostly positive
+        // (the dual build reduces them to fresh-variable word equations); ~1 in 4
+        // negated (which the polarity guard must decline). Z3 decides all of them
+        // natively, so a wrong positive reduction or a leaking negative guard
+        // shows up as a differential disagreement.
+        for _ in 0..num_ext {
+            let op = match rng.below(3) {
+                0 => "str.prefixof",
+                1 => "str.suffixof",
+                _ => "str.contains",
+            };
+            // For prefixof/suffixof the first operand is the sub-word, the second
+            // the whole; for contains the first is the whole, the second the
+            // sub-word. Either way both are ordinary string expressions.
+            let a = gen_str_expr(rng, num_vars, depth);
+            let b = gen_str_expr(rng, num_vars, depth);
+            let atom = format!("({op} {a} {b})");
+            if rng.below(4) == 0 {
+                // Negative occurrence: the dual build must decline (all-or-nothing
+                // collapses the whole side channel to `None`), so the word route
+                // never fabricates a `sat` for these.
+                let _ = writeln!(text, "(assert (not {atom}))");
+            } else {
+                let _ = writeln!(text, "(assert {atom})");
             }
         }
 

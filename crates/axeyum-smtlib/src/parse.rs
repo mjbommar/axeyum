@@ -270,14 +270,39 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
 //     over string expressions;
 //   * atoms (under top-level `assert` and nested `and`): `(= s t …)` (chained
 //     equality), `(distinct s t …)` (pairwise disequality), and `(not (= s t))`
-//     (a single disequality), all over string expressions.
+//     (a single disequality), all over string expressions;
+//   * **positive-polarity extended-function atoms** (T-B.4c) — each an atom in a
+//     top-level conjunction position, reduced to fresh-variable word equations
+//     that are *equisatisfiable* with the atom in the real string theory:
 //
-// Anything else — `str.len`, `substr`, regex, `contains`, `ite` over strings, a
-// negation deeper than a single disequality, an atom over a non-string sort, or
-// any incremental command (`push`/`pop`/`check-sat-assuming`/`reset-assertions`)
-// or `define-fun` — collapses the whole side channel to `None`. All-or-nothing:
-// a partial translation could let a model of the represented subset violate a
-// dropped atom, so an unrepresentable atom forbids the whole problem.
+//         (str.prefixof p x)   →   x = p ++ k          (fresh k)
+//         (str.suffixof s x)   →   x = k ++ s          (fresh k)
+//         (str.contains x c)   →   x = k1 ++ c ++ k2   (fresh k1, k2)
+//
+//     Each reduction is *sat-implying*: any witness for the reduced equality
+//     makes the original atom true (`(str.prefixof p x)` holds iff `∃k. x=p++k`,
+//     etc.), so a replay-checked `Sat` of the reduced problem is a genuine `Sat`
+//     of the original script. The fresh `k`/`k1`/`k2` are never added to
+//     `seq_symbols`, so they never surface in a returned model.
+//
+// Anything else — `str.len`, `substr`, regex, `str.at`/anything length-dependent,
+// `ite` over strings, a negation deeper than a single disequality, an atom over a
+// non-string sort, or any incremental command
+// (`push`/`pop`/`check-sat-assuming`/`reset-assertions`) or `define-fun` —
+// collapses the whole side channel to `None`. All-or-nothing: a partial
+// translation could let a model of the represented subset violate a dropped atom,
+// so an unrepresentable atom forbids the whole problem.
+//
+// **Polarity is tracked conservatively.** The extended-function reductions above
+// are sound *only in a positive (top-level-conjunction) position*: under a `not`
+// (or any `or`/`ite`/`=>`/iff — none of which the dual build recognizes at all)
+// the reduction would be *sat-admitting* rather than sat-implying and could
+// fabricate a wrong `sat`. So `word_atom` reaches the extended-function cases only
+// on the positive-conjunction recursion (`assert` bodies and the arms of a
+// top-level `and`); the `not` branch accepts a single word *disequality* and
+// nothing else, and a `(not (str.contains …))` / `(not (str.prefixof …))` — or an
+// extended-function atom nested under any unrecognized connective — falls through
+// to a wholesale `None`. When in doubt, decline.
 
 /// Builds the [`WordProblem`] side channel from the command s-expressions, or
 /// `None` when the script is outside the pure word-equation fragment (see the
@@ -312,12 +337,16 @@ fn build_word_problem(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordProb
     }
 
     // Translate every assertion; a single unrepresentable atom aborts the whole.
+    // `next_k` names the fresh `Seq` variables introduced by the positive-polarity
+    // extended-function reductions (prefixof/suffixof/contains); it threads across
+    // all assertions so every fresh symbol is globally unique.
     let mut wp = WordProblem::default();
+    let mut next_k: u32 = 0;
     for e in exprs {
         let Some(items) = e.list() else { continue };
         if items.first().and_then(SExpr::atom) == Some("assert") {
             let [_, body] = items else { return None };
-            if !word_atom(arena, body, &vars, &mut wp) {
+            if !word_atom(arena, body, &vars, &mut wp, &mut next_k) {
                 return None;
             }
         }
@@ -347,13 +376,34 @@ fn declared_string_var(e: &SExpr) -> Option<&str> {
     }
 }
 
+/// Declares a fresh `Seq`-sorted variable term for an extended-function reduction
+/// (the `k`/`k1`/`k2` above), bumping `next_k`. The name prefix `!weqk!` is
+/// **disjoint** from the `!weq!<user-name>` string-variable symbols (a user var
+/// derived name always has `!` as its fifth byte, this one has `k`), so a fresh
+/// variable can never alias a user string variable or a previously-minted `k`.
+/// Deliberately **not** recorded in `wp.seq_symbols`, so it never surfaces in a
+/// returned model.
+fn fresh_seq_k(arena: &mut TermArena, next_k: &mut u32) -> Option<TermId> {
+    let n = *next_k;
+    *next_k += 1;
+    let sym = arena.declare(&format!("!weqk!{n}"), Sort::string()).ok()?;
+    Some(arena.var(sym))
+}
+
 /// Translates a Boolean atom into `wp`, returning `false` (abort) on anything
 /// outside the pure word-equation fragment. Recurses through top-level `and`.
+///
+/// **Every call is a positive (top-level-conjunction) position**: the caller only
+/// invokes this on `assert` bodies and, via the `and` recursion, on the arms of a
+/// top-level `and`. The `not` branch consumes its operand as a *disequality* and
+/// never recurses positively, so the sat-implying extended-function reductions
+/// (prefixof/suffixof/contains) are only ever reached in a sound positive context.
 fn word_atom(
     arena: &mut TermArena,
     e: &SExpr,
     vars: &BTreeMap<String, (SymbolId, TermId)>,
     wp: &mut WordProblem,
+    next_k: &mut u32,
 ) -> bool {
     // `true` is a trivial conjunct.
     if e.atom() == Some("true") {
@@ -366,7 +416,9 @@ fn word_atom(
         return false;
     };
     match head {
-        "and" => items[1..].iter().all(|c| word_atom(arena, c, vars, wp)),
+        "and" => items[1..]
+            .iter()
+            .all(|c| word_atom(arena, c, vars, wp, next_k)),
         // `(= a b …)` — chained equality over ≥2 string expressions.
         "=" if items.len() >= 3 => {
             let Some(terms) = word_terms(arena, &items[1..], vars) else {
@@ -405,7 +457,78 @@ fn word_atom(
                 false
             }
         }
-        _ => false,
+        // Positive-polarity extended-function reductions (T-B.4c): prefixof /
+        // suffixof / contains. Each is equisatisfiable with the atom *in this
+        // positive position* (see `word_extended_fn`). Negative/disjunctive
+        // contexts never reach here — see the `word_atom` / module polarity notes.
+        _ => word_extended_fn(arena, head, items, vars, wp, next_k),
+    }
+}
+
+/// Reduces a positive-polarity extended-function atom (`str.prefixof` /
+/// `str.suffixof` / `str.contains`) to a fresh-variable word equation, pushed
+/// into `wp`. Returns `false` (abort the whole side channel) for any other head
+/// or an unrepresentable operand.
+///
+/// Each reduction is *sat-implying* in this positive position — a witness for the
+/// fresh-variable equality makes the original atom true — so the route stays
+/// sound (never sat-admitting):
+///
+///   * `(str.prefixof p x)` ⟺ `∃k.     x = p ++ k`
+///   * `(str.suffixof s x)` ⟺ `∃k.     x = k ++ s`
+///   * `(str.contains x c)` ⟺ `∃k1,k2. x = k1 ++ c ++ k2`
+///
+/// The fresh `k`/`k1`/`k2` are never recorded in `wp.seq_symbols`, so they never
+/// surface in a returned model.
+fn word_extended_fn(
+    arena: &mut TermArena,
+    head: &str,
+    items: &[SExpr],
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+    wp: &mut WordProblem,
+    next_k: &mut u32,
+) -> bool {
+    if items.len() != 3 {
+        return false;
+    }
+    let (Some(a), Some(b)) = (
+        word_str_expr(arena, &items[1], vars),
+        word_str_expr(arena, &items[2], vars),
+    ) else {
+        return false;
+    };
+    // Build the equisatisfiable right-hand side; `?`-style bail on any arena error
+    // or unrecognized head collapses the whole side channel (all-or-nothing).
+    let equality = match head {
+        // (str.prefixof p x): a = p, b = x  ⇒  x = p ++ k.
+        "str.prefixof" => fresh_seq_k(arena, next_k)
+            .and_then(|k| arena.seq_concat(a, k).ok())
+            .map(|rhs| (b, rhs)),
+        // (str.suffixof s x): a = s, b = x  ⇒  x = k ++ s.
+        "str.suffixof" => fresh_seq_k(arena, next_k)
+            .and_then(|k| arena.seq_concat(k, a).ok())
+            .map(|rhs| (b, rhs)),
+        // (str.contains x c): a = x, b = c  ⇒  x = k1 ++ c ++ k2.
+        "str.contains" => {
+            let k1 = fresh_seq_k(arena, next_k);
+            let k2 = fresh_seq_k(arena, next_k);
+            match (k1, k2) {
+                (Some(k1), Some(k2)) => arena
+                    .seq_concat(b, k2)
+                    .and_then(|tail| arena.seq_concat(k1, tail))
+                    .ok()
+                    .map(|rhs| (a, rhs)),
+                _ => None,
+            }
+        }
+        _ => return false,
+    };
+    match equality {
+        Some(eq) => {
+            wp.equalities.push(eq);
+            true
+        }
+        None => false,
     }
 }
 
