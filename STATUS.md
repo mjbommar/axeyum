@@ -16175,6 +16175,37 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-03 (evening) — the keystone is banked (ADR-0055), its
+  verification debt paid, and the code↔LIA bridge moves strings again:
+  QF_S 61, totals 680.**
+  - (`5707563b`) **Default-on verification debt paid** (the 5th review's §3):
+    CdclT termination under adversarially non-monotone theories proven by a
+    20,000-run MockTheory property + a 16M-step budget belt (no livelock
+    found — the trigger-literal invariant forces strict backjump progress);
+    the congruence checker's substitution expansion was a REAL defect
+    (doubling chains stack-overflow at k≥14, reachable per-assert) — now
+    size-budgeted (`MAX_EXPANSION_COMPONENTS=4096`, declines in ~100µs);
+    closed-universal polarity pinned safe (a ∀ under or/not/ite never
+    reaches the lever) + 400 nested-polarity differential cases DISAGREE=0.
+  - (`dd732e2b`) **ADR-0055 accepted**: the QF_S online CDCL(T) route is
+    default-on (ratifying the landed second-chance ordering that moved the
+    scoreboard); QF_UF online stays an opt-in parity twin with recorded
+    default-on criteria; new theories arrive online-first.
+  - (`122c3c27`) **The code↔LIA bridge** (5th review's #2 lever): `str.to_code`
+    twins a fresh Int with the universally-true domain fact (`len=1 ∧
+    0≤c≤0x2FFFF` ∨ `len≠1 ∧ c=-1`) + single-char code↔equality links; the
+    ADR-0052 abstraction now also upgrades `unknown` verdicts (a sound
+    relaxation refuting is unsat regardless of what produced the unknown —
+    the three str-code census files were actually blocked on the 32-bit
+    bit-blast, not the gate). Faithfulness: the Unicode cap 0x2FFFF, not the
+    byte model's 255 — fixing a latent wrong-unsat risk (regression-guarded).
+    **QF_S 58→61, QF_SLIA 12→13, totals 676→680 decided, 627
+    oracle-compared, DISAGREE=0**; lex-order (`str.<=` over variables) and
+    seq.update honestly declined. String day total: **QF_S 52→61 (+9)**.
+  - Also: the pre-push compile gate is live (`hooks/pre-push`,
+    `core.hooksPath`), the cap audit found only two CI-scaled sites (both
+    healthy), ADR-0051/0053 flipped to accepted, and the tracker count-rot
+    was replaced with scoreboard references (5th review applied, `1cb7155f`).
 - **2026-07-03 (afternoon) — the P1.5 keystone opens, UF×NRA lands, Phase C
   engine core lands, and the 4th review is applied.**
   - (`a3460101`) **P1.5 slice (a): the generic online CDCL(T) driver** —
