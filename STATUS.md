@@ -16184,8 +16184,32 @@ plan is built and committed on the current branch:
     first, opt-in entry (`check_qf_uf_online_cdclt`), default dispatch
     unchanged. Parity: 2500-instance online-vs-offline house fuzz, 2500
     agree, 0 DISAGREE; the z3-gated QF_UF fuzz (3000) unchanged; no
-    TheorySolver trait changes. Next: slice (b) — the StringTheory adapter
-    (the integration payoff the census demands).
+    TheorySolver trait changes.
+  - (`c9d332c1`, `c924fcb0`) **P1.5 slice (b) + front-door wiring: the word
+    core runs inside a real CDCL(T) loop.** StringTheory adapter (per-assert
+    certified refutation checks; conflict explanations map the checker's
+    premise indices to trail literals; sat only via arrangement-search model
+    + full replay) — and the fuzz found a REAL CdclT bug (1-UIP path_count
+    underflow on non-current-level theory cores; fixed by always including
+    the trigger literal — a sound superset). Census str002-class disjunctive
+    shapes DECIDE; 1500-case z3 fuzz 549 decided (157 sat/392 unsat)
+    DISAGREE=0. Front door + bench wired via the new `word_skeleton` parser
+    side channel (Boolean structure over word atoms, all-or-nothing);
+    four fuzzes/crosschecks green incl. the cvc5 second oracle. **Honest
+    re-measure: three string divisions UNCHANGED** — the 6 reachable census
+    unsats need suffix-cancellation/quadratic/length refutation shapes the
+    certified refuter deliberately does not close yet (the named next
+    lever); the other ~116 declines are regex/length-bridge territory.
+  - (`4d039c5a`, `09e40e41`, `5ad952b8`) **Word-unsat hardening COMPLETE
+    (all four 4th-review demands):** cvc5 1.3.4 static as a SECOND
+    differential oracle (word fuzz 401/401 agree incl. all 305 unsats;
+    corpus 90/90; skip-when-absent); the normalize denotation fuzz (24k
+    adversarial pairs at the checker's one shared primitive); mutation
+    testing (175 mutants — zero dangerous survivors in the accept paths, 21
+    killing tests); and Alethe certificates for word-conflict derivations
+    (verify-before-record, 7 tamper modes rejected, 600-refutation
+    property; the `axeyum_word_clash` custom-rule Carcara hole disclosed
+    exactly as `lia_generic`'s).
   - (`881c76f6`) **UF×NRA combination made explicit (P1.6 slice)** — the
     eager-Ackermann→NRA composition existed *accidentally*, four declining
     routes deep; now an intentional, telemetry-recorded route with replay-
