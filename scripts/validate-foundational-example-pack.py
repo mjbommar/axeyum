@@ -11256,6 +11256,185 @@ def validate_finite_secant_method(expected: dict[str, Any]) -> None:
     require_string("secant horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_aitken_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    method = values.get("method")
+    if method != "aitken_delta_squared":
+        fail(f"{context}.method must be aitken_delta_squared")
+    sequence = require_fraction_vector(f"{context}.sequence", values.get("sequence"))
+    if len(sequence) != 3:
+        fail(f"{context}.sequence must contain exactly three terms")
+    target_limit = require_fraction(f"{context}.target_limit", values.get("target_limit"))
+    delta0 = require_fraction(f"{context}.delta0", values.get("delta0"))
+    delta1 = require_fraction(f"{context}.delta1", values.get("delta1"))
+    delta_squared = require_fraction(
+        f"{context}.delta_squared",
+        values.get("delta_squared"),
+    )
+    correction = require_fraction(f"{context}.correction", values.get("correction"))
+    accelerated = require_fraction(f"{context}.accelerated", values.get("accelerated"))
+    residual_before = require_fraction(
+        f"{context}.residual_before",
+        values.get("residual_before"),
+    )
+    residual_after = require_fraction(
+        f"{context}.residual_after",
+        values.get("residual_after"),
+    )
+    s0, s1, s2 = sequence
+    if delta0 != s1 - s0:
+        fail(f"{context}.delta0 is incorrect")
+    if delta1 != s2 - s1:
+        fail(f"{context}.delta1 is incorrect")
+    if delta_squared != delta1 - delta0:
+        fail(f"{context}.delta_squared is incorrect")
+    if delta_squared == 0:
+        fail(f"{context}.delta_squared must be nonzero")
+    if correction != delta0 * delta0 / delta_squared:
+        fail(f"{context}.correction is incorrect")
+    if accelerated != s0 - correction:
+        fail(f"{context}.accelerated is incorrect")
+    if residual_before != abs(s2 - target_limit):
+        fail(f"{context}.residual_before must be |s2 - target_limit|")
+    if residual_after != abs(accelerated - target_limit):
+        fail(f"{context}.residual_after must be |accelerated - target_limit|")
+    return {
+        "sequence": sequence,
+        "target_limit": target_limit,
+        "accelerated": accelerated,
+        "residual_before": residual_before,
+        "residual_after": residual_after,
+    }
+
+
+def validate_finite_aitken_acceleration(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    geometric = checks["aitken-geometric-exact-witness"]
+    if geometric["expected_result"] != "sat":
+        fail("aitken-geometric-exact-witness must expect sat")
+    if geometric.get("proof_status") != "replay-only":
+        fail("aitken-geometric-exact-witness must be replay-only")
+    if geometric.get("validation") != "exact_rational_aitken_acceleration_replay":
+        fail("aitken-geometric-exact-witness validation is incorrect")
+    geometric_values = single_witness_values(geometric, witnesses)
+    geometric_replay = validate_aitken_trace("geometric Aitken row", geometric_values)
+    if geometric_replay["sequence"] != [Fraction(2), Fraction(3, 2), Fraction(5, 4)]:
+        fail("aitken-geometric-exact-witness must use the geometric row [2, 3/2, 5/4]")
+    if geometric_replay["accelerated"] != Fraction(1):
+        fail("aitken-geometric-exact-witness must compute accelerated = 1")
+    if geometric_replay["residual_after"] != Fraction(0):
+        fail("aitken-geometric-exact-witness must compute zero residual")
+
+    harmonic = checks["aitken-harmonic-improvement-witness"]
+    if harmonic["expected_result"] != "sat":
+        fail("aitken-harmonic-improvement-witness must expect sat")
+    if harmonic.get("proof_status") != "replay-only":
+        fail("aitken-harmonic-improvement-witness must be replay-only")
+    if harmonic.get("validation") != "exact_rational_aitken_acceleration_replay":
+        fail("aitken-harmonic-improvement-witness validation is incorrect")
+    harmonic_values = single_witness_values(harmonic, witnesses)
+    harmonic_replay = validate_aitken_trace("harmonic Aitken row", harmonic_values)
+    if harmonic_replay["sequence"] != [Fraction(2), Fraction(3, 2), Fraction(4, 3)]:
+        fail("aitken-harmonic-improvement-witness must use the harmonic row [2, 3/2, 4/3]")
+    if harmonic_replay["accelerated"] != Fraction(5, 4):
+        fail("aitken-harmonic-improvement-witness must compute accelerated = 5/4")
+
+    residual = checks["aitken-residual-improvement-witness"]
+    if residual["expected_result"] != "sat":
+        fail("aitken-residual-improvement-witness must expect sat")
+    if residual.get("proof_status") != "replay-only":
+        fail("aitken-residual-improvement-witness must be replay-only")
+    if residual.get("validation") != "exact_rational_aitken_residual_replay":
+        fail("aitken-residual-improvement-witness validation is incorrect")
+    residual_values = single_witness_values(residual, witnesses)
+    residual_replay = validate_aitken_trace("Aitken residual row", residual_values)
+    if residual_replay["sequence"] != harmonic_replay["sequence"]:
+        fail("aitken-residual-improvement-witness must cite the harmonic row")
+    if residual_replay["residual_after"] >= residual_replay["residual_before"]:
+        fail("aitken-residual-improvement-witness must strictly decrease the residual")
+
+    bad = checks["bad-aitken-value-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-aitken-value-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-aitken-value-rejected must be replay-only")
+    if bad.get("validation") != "exact_rational_bad_aitken_value_replay":
+        fail("bad-aitken-value-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "geometric-error-aitken-row":
+        fail("bad-aitken-value-rejected must cite the geometric witness")
+    computed = require_fraction("bad Aitken computed_accelerated", data.get("computed_accelerated"))
+    claimed = require_fraction("bad Aitken claimed_accelerated", data.get("claimed_accelerated"))
+    gap = require_fraction("bad Aitken aitken_value_gap", data.get("aitken_value_gap"))
+    if computed != geometric_replay["accelerated"]:
+        fail("bad-aitken-value-rejected computed_accelerated must match geometric replay")
+    if computed == claimed:
+        fail("bad-aitken-value-rejected malformed claim must disagree with replay")
+    if claimed - computed != gap:
+        fail("bad-aitken-value-rejected aitken_value_gap is incorrect")
+    if gap <= 0:
+        fail("bad-aitken-value-rejected aitken_value_gap must be positive")
+    for forbidden in ("smt2_artifact", "farkas_regression", "certificate"):
+        if forbidden in data:
+            fail("bad-aitken-value-rejected must leave checked evidence to qf-lra-bad-aitken-value")
+    if "separate qf-lra-bad-aitken-value" not in bad.get("notes", ""):
+        fail("bad-aitken-value-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-aitken-value"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-aitken-value must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-aitken-value must be checked")
+    if qf_bad.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-aitken-value must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "geometric-error-aitken-row":
+        fail("qf-lra-bad-aitken-value must cite the geometric witness")
+    if qf_data.get("source_replay_row") != "bad-aitken-value-rejected":
+        fail("qf-lra-bad-aitken-value must cite the replay row")
+    qf_computed = require_fraction(
+        "qf Aitken computed_accelerated",
+        qf_data.get("computed_accelerated"),
+    )
+    qf_claimed = require_fraction(
+        "qf Aitken claimed_accelerated",
+        qf_data.get("claimed_accelerated"),
+    )
+    if qf_computed != computed or qf_claimed != claimed:
+        fail("qf-lra-bad-aitken-value data must match the replay row")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf Aitken farkas_conflict", conflict)
+    if conflict != "aitken_value = 1 and aitken_value = 3/2":
+        fail("qf-lra-bad-aitken-value must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Aitken smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-aitken-acceleration-v0/smt2/"
+        "bad-aitken-value-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-aitken-value smt2_artifact must name the checked source artifact")
+    check_source("qf Aitken smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Aitken farkas_regression", regression)
+    if "finite_aitken_acceleration_bad_value_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-aitken-value must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Aitken certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-aitken-value certificate must document checked Farkas evidence")
+
+    horizon = checks["general-aitken-acceleration-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-aitken-acceleration-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-aitken-acceleration-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("Aitken horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("Aitken horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_calculus_algebraic_shadow(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -36205,6 +36384,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_root_finding(expected)
     if metadata["id"] == "finite-secant-method-v0":
         validate_finite_secant_method(expected)
+    if metadata["id"] == "finite-aitken-acceleration-v0":
+        validate_finite_aitken_acceleration(expected)
     if metadata["id"] == "finite-separation-v0":
         validate_finite_separation(expected)
     if metadata["id"] == "function-composition-v0":

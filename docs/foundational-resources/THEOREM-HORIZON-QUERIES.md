@@ -406,6 +406,15 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-recurrence-prefix-v0 \
   --proof-status lean-horizon \
   --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text Aitken \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-aitken-acceleration-v0 \
+  --proof-status lean-horizon \
+  --require-any
 ```
 
 Root-finding convergence, error-bound, and numerical-stability horizons:

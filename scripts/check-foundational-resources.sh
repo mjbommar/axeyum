@@ -637,6 +637,13 @@ python3 scripts/query-foundational-resources.py checks --pack finite-root-findin
 python3 scripts/query-foundational-resources.py checks --pack finite-root-finding-v0 --proof-status replay-only --text rejected --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text root-finding --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-root-finding-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-aitken-acceleration-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-aitken-acceleration-v0 --route Farkas --proof-status checked --text qf-lra-bad-aitken-value --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_sequence_tail_shadow --pack finite-aitken-acceleration-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-aitken-acceleration-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-aitken-acceleration-v0 --proof-status replay-only --text rejected --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text Aitken --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-aitken-acceleration-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-secant-method-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-secant-method-v0 --route Farkas --proof-status checked --text qf-lra-bad-secant-step --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-secant-method-v0 --route Farkas --proof-status checked --require-any >/dev/null

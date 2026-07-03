@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 155 non-template math example packs.
-- 1008 expected checks.
-- 381 checked proof/evidence rows.
-- 509 replay-only rows.
-- 118 Lean-horizon rows.
-- 155 promoted solver-reuse packs.
+- 156 non-template math example packs.
+- 1014 expected checks.
+- 382 checked proof/evidence rows.
+- 513 replay-only rows.
+- 119 Lean-horizon rows.
+- 156 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 155 focused learner-linked packs, with no path-only, index-only, or missing
+- 156 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2726,6 +2726,15 @@ Pick one item per commit unless the change is purely navigational.
      regression against exact `1/3` without claiming general
      Romberg/Richardson convergence, asymptotic error expansions, adaptive
      quadrature behavior, floating-point quadrature correctness, or numerical
+     stability.
+201. Landed: add `finite-aitken-acceleration-v0` as an exact finite Aitken
+     delta-squared sequence-acceleration resource. The pack computes exact
+     accelerated values for `[2, 3/2, 5/4]` and `[2, 3/2, 4/3]`, records the
+     fixed residual improvement `1/4 < 1/3`, then promotes the malformed
+     accelerated-value claim `3/2` through a source-linked QF_LRA/Farkas
+     regression against exact `1` without claiming general convergence
+     acceleration, fixed-point acceleration theory, denominator-safety
+     theorems, floating-point implementation correctness, or numerical
      stability.
 
 ## Validation Checklist

@@ -54,12 +54,12 @@ As of 2026-07-03, the committed resource query reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 155 non-template math packs.
-- 1008 expected checks.
-- 381 checked proof/evidence rows.
-- 509 replay-only rows.
-- 118 Lean-horizon rows.
-- 155 promoted solver-reuse packs.
+- 156 non-template math packs.
+- 1014 expected checks.
+- 382 checked proof/evidence rows.
+- 513 replay-only rows.
+- 119 Lean-horizon rows.
+- 156 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 
@@ -112,7 +112,7 @@ route-specific corrupted-evidence command and current tamper gaps.
 
 ### Wave A: Preserve The Contract
 
-Goal: make the current 155 packs a stable, queryable data product.
+Goal: make the current 156 packs a stable, queryable data product.
 
 Work:
 

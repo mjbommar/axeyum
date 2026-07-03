@@ -155,6 +155,10 @@ CURRICULUM_MAP = {
                 "finite-interval-arithmetic-shadow-v0",
                 "Exact closed rational interval sum/product replay, second-order product-width shadow, and checked bad product-upper-bound evidence.",
             ),
+            (
+                "finite-aitken-acceleration-v0",
+                "Exact rational sequence-acceleration replay with checked bad accelerated-value evidence.",
+            ),
         ],
     },
     "reals": {
@@ -170,6 +174,10 @@ CURRICULUM_MAP = {
             (
                 "finite-secant-method-v0",
                 "Finite secant-method replay with a separate checked bad-step proof row and convergence-theorem horizon.",
+            ),
+            (
+                "finite-aitken-acceleration-v0",
+                "Finite Aitken delta-squared sequence acceleration replay with a checked bad-value proof row and convergence-theory horizon.",
             ),
             (
                 "finite-newton-step-v0",
@@ -420,6 +428,10 @@ CURRICULUM_MAP = {
             (
                 "finite-recurrence-prefix-v0",
                 "Finite recurrence-prefix, affine recurrence, companion-matrix, bad value, and bad affine-step checks.",
+            ),
+            (
+                "finite-aitken-acceleration-v0",
+                "Finite Aitken delta-squared acceleration rows, residual-improvement replay, and checked bad accelerated-value proof row.",
             ),
         ],
     },
@@ -735,7 +747,7 @@ FIELD_PACKS = {
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
-    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, finite secant/root-finding replay, fixed-decimal rounding shadows, Riemann-sum, Simpson-rule, and Romberg quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."),
+    "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, sequence acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, finite secant/root-finding replay, fixed-decimal rounding shadows, Riemann-sum, Simpson-rule, and Romberg quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
@@ -759,7 +771,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding/secant replay, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, sequence acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding/secant replay, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 finite time-stepping, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -1751,6 +1763,10 @@ BRIDGE_CONCEPTS = [
                 "Two finite secant-method rows replay exact rational updates while convergence order, denominator safety, and floating-point stability remain horizon claims.",
             ),
             (
+                "finite-aitken-acceleration-v0",
+                "Finite Aitken delta-squared rows replay exact rational sequence acceleration while convergence-order and floating-point stability remain horizon claims.",
+            ),
+            (
                 "finite-taylor-polynomials-v0",
                 "Finite Taylor polynomial rows replay exact rational derivative, factorial, and value arithmetic while floating-point Taylor evaluation remains horizon work.",
             ),
@@ -1799,6 +1815,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/gram-schmidt-end-to-end.md",
                     "docs/learn/math/givens-rotation-end-to-end.md",
                     "docs/learn/math/householder-reflection-end-to-end.md",
+                    "docs/learn/math/aitken-acceleration-end-to-end.md",
                     "docs/learn/math/secant-method-end-to-end.md",
                     "docs/learn/math/taylor-polynomials-end-to-end.md",
                     "docs/learn/math/hermite-interpolation-end-to-end.md",
@@ -3522,6 +3539,10 @@ BRIDGE_CONCEPTS = [
                 "Fixed-step explicit Euler transitions and finite error-table rows.",
             ),
             (
+                "finite-aitken-acceleration-v0",
+                "Fixed sequence triples, exact Aitken delta-squared replay, residual-improvement checks, and a convergence-acceleration horizon.",
+            ),
+            (
                 "finite-runge-kutta-midpoint-v0",
                 "Fixed-step explicit midpoint Runge-Kutta stages, exact quadratic trace replay, zero-error table, and checked bad first-step row.",
             ),
@@ -3746,6 +3767,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-secant-method-v0",
                 "Finite secant-method replay plus a separate checked bad-step proof row for root-finding convergence shadows.",
+            ),
+            (
+                "finite-aitken-acceleration-v0",
+                "Finite sequence-acceleration replay plus a separate checked bad-value proof row for convergence-acceleration shadows.",
             ),
             (
                 "real-analysis-rational-v0",
@@ -4120,6 +4145,10 @@ BRIDGE_CONCEPTS = [
                 "Finite recurrence prefixes, companion-matrix replay, and bad finite-value rows.",
             ),
             (
+                "finite-aitken-acceleration-v0",
+                "Finite Aitken delta-squared sequence acceleration, residual-improvement replay, and bad accelerated-value row.",
+            ),
+            (
                 "generating-functions-v0",
                 "Finite coefficient and recurrence/generating-function prefix rows.",
             ),
@@ -4134,6 +4163,7 @@ BRIDGE_CONCEPTS = [
                     "docs/proof-cookbook/recipes/finite-model-replay.md",
                     "docs/proof-cookbook/recipes/qf-lra-farkas.md",
                     "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/aitken-acceleration-end-to-end.md",
                     "docs/learn/math/sequence-limit-shadow-end-to-end.md",
                     "docs/learn/math/bounded-monotone-sequence-end-to-end.md",
                     "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
@@ -4150,6 +4180,7 @@ BRIDGE_CONCEPTS = [
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/aitken-acceleration-end-to-end.md",
             "docs/learn/math/sequence-limit-shadow-end-to-end.md",
             "docs/learn/math/bounded-monotone-sequence-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",

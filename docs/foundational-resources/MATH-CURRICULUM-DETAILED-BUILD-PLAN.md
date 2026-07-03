@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 155 non-template math packs.
-- 1008 expected checks.
-- 381 checked proof/evidence rows.
-- 509 replay-only rows.
-- 118 Lean-horizon rows.
-- 155 promoted solver-reuse packs.
+- 156 non-template math packs.
+- 1014 expected checks.
+- 382 checked proof/evidence rows.
+- 513 replay-only rows.
+- 119 Lean-horizon rows.
+- 156 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 155 focused learner-linked packs, with no path-only, index-only, or missing
+- 156 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 155 current non-template packs satisfy the focused-lesson side of this
+all 156 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2749,6 +2749,16 @@ Pick one row per commit unless the change is purely navigational.
      shadow separate from convergence order, nonzero-denominator hypotheses,
      bracketing/globalization, floating-point implementation correctness, and
      numerical stability theory.
+314. Landed: add `finite-aitken-acceleration-v0` as an exact finite Aitken
+     delta-squared sequence-acceleration resource. The pack replays
+     `[2, 3/2, 5/4] -> 1`, `[2, 3/2, 4/3] -> 5/4`, and the fixed residual
+     improvement `1/4 < 1/3`, then adds `qf-lra-bad-aitken-value` as the
+     source-linked Farkas row for the false accelerated-value claim `3/2`
+     versus exact `1`. The learner and query pages keep this finite exact
+     Aitken shadow separate from general convergence acceleration,
+     nonzero-denominator hypotheses, fixed-point acceleration theory,
+     floating-point implementation correctness, and numerical stability
+     theory.
 
 ## Validation Checklist
 

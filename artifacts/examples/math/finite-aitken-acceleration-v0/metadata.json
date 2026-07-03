@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "finite-aitken-acceleration-v0",
+  "title": "Finite Aitken Acceleration Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_numerical_analysis",
+    "field_real_analysis",
+    "curriculum_sequences_and_limits",
+    "curriculum_reals",
+    "curriculum_rationals",
+    "bridge_sequence_tail_shadow",
+    "bridge_bounded_family_asymptotic_boundary",
+    "bridge_exact_vs_floating_arithmetic"
+  ],
+  "field_ids": [
+    "numerical_analysis",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "sequences-and-limits",
+    "reals",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite sequence replay",
+    "finite algorithm replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-aitken-acceleration-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Aitken bad accelerated value QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational Aitken replay for the geometric-error row [2, 3/2, 5/4] computes aitken_value = 1, while a malformed row claims aitken_value = 3/2, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-aitken-value"
+    ],
+    "next_step": "Promote additional sequence-acceleration rows only when they add distinct denominator-safety, convergence-rate, fixed-point, extrapolation, floating-point, or theorem-reconstruction pressure; keep general Aitken acceleration theory and stability claims in future Lean or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/02-structures/sequences-and-limits.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/aitken-acceleration-end-to-end.md",
+    "artifacts/examples/math/finite-aitken-acceleration-v0/smt2/bad-aitken-value-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "aitken-geometric-exact-witness",
+    "aitken-harmonic-improvement-witness",
+    "aitken-residual-improvement-witness",
+    "bad-aitken-value-rejected",
+    "qf-lra-bad-aitken-value",
+    "general-aitken-acceleration-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed source terms, first differences, second difference, correction, accelerated value, and residuals as deterministic rational replay obligations.",
+    "Route the false accelerated value through checked QF_LRA/Farkas evidence after replay computes the exact value.",
+    "Expose the pack through sequence-tail, exact-vs-floating, bounded theorem-shadow, real-analysis, numerical-analysis, and learner query surfaces.",
+    "Keep general Aitken convergence acceleration, convergence-order improvement, nonzero-denominator preconditions, floating-point implementation correctness, and numerical-stability claims marked as future Lean or numerical-honesty work until formal routes exist."
+  ]
+}

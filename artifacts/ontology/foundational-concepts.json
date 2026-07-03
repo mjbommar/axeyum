@@ -717,6 +717,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-interval-arithmetic-shadow-v0",
           "notes": "Exact closed rational interval sum/product replay, second-order product-width shadow, and checked bad product-upper-bound evidence."
+        },
+        {
+          "id": "finite-aitken-acceleration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-aitken-acceleration-v0",
+          "notes": "Exact rational sequence-acceleration replay with checked bad accelerated-value evidence."
         }
       ],
       "proof_routes": [
@@ -796,6 +802,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-secant-method-v0",
           "notes": "Finite secant-method replay with a separate checked bad-step proof row and convergence-theorem horizon."
+        },
+        {
+          "id": "finite-aitken-acceleration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-aitken-acceleration-v0",
+          "notes": "Finite Aitken delta-squared sequence acceleration replay with a checked bad-value proof row and convergence-theory horizon."
         },
         {
           "id": "finite-newton-step-v0",
@@ -1610,6 +1622,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-recurrence-prefix-v0",
           "notes": "Finite recurrence-prefix, affine recurrence, companion-matrix, bad value, and bad affine-step checks."
+        },
+        {
+          "id": "finite-aitken-acceleration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-aitken-acceleration-v0",
+          "notes": "Finite Aitken delta-squared acceleration rows, residual-improvement replay, and checked bad accelerated-value proof row."
         }
       ],
       "proof_routes": [
@@ -3410,6 +3428,12 @@
           "notes": "Two finite secant-method rows replay exact rational updates while convergence order, denominator safety, and floating-point stability remain horizon claims."
         },
         {
+          "id": "finite-aitken-acceleration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-aitken-acceleration-v0",
+          "notes": "Finite Aitken delta-squared rows replay exact rational sequence acceleration while convergence-order and floating-point stability remain horizon claims."
+        },
+        {
           "id": "finite-taylor-polynomials-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-taylor-polynomials-v0",
@@ -3468,6 +3492,7 @@
             "docs/learn/math/gram-schmidt-end-to-end.md",
             "docs/learn/math/givens-rotation-end-to-end.md",
             "docs/learn/math/householder-reflection-end-to-end.md",
+            "docs/learn/math/aitken-acceleration-end-to-end.md",
             "docs/learn/math/secant-method-end-to-end.md",
             "docs/learn/math/taylor-polynomials-end-to-end.md",
             "docs/learn/math/hermite-interpolation-end-to-end.md",
@@ -5341,6 +5366,12 @@
           "notes": "Fixed-step explicit Euler transitions and finite error-table rows."
         },
         {
+          "id": "finite-aitken-acceleration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-aitken-acceleration-v0",
+          "notes": "Fixed sequence triples, exact Aitken delta-squared replay, residual-improvement checks, and a convergence-acceleration horizon."
+        },
+        {
           "id": "finite-runge-kutta-midpoint-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-runge-kutta-midpoint-v0",
@@ -5599,6 +5630,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-secant-method-v0",
           "notes": "Finite secant-method replay plus a separate checked bad-step proof row for root-finding convergence shadows."
+        },
+        {
+          "id": "finite-aitken-acceleration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-aitken-acceleration-v0",
+          "notes": "Finite sequence-acceleration replay plus a separate checked bad-value proof row for convergence-acceleration shadows."
         },
         {
           "id": "real-analysis-rational-v0",
@@ -6021,6 +6058,12 @@
           "notes": "Finite recurrence prefixes, companion-matrix replay, and bad finite-value rows."
         },
         {
+          "id": "finite-aitken-acceleration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-aitken-acceleration-v0",
+          "notes": "Finite Aitken delta-squared sequence acceleration, residual-improvement replay, and bad accelerated-value row."
+        },
+        {
           "id": "generating-functions-v0",
           "status": "validated",
           "path": "artifacts/examples/math/generating-functions-v0",
@@ -6037,6 +6080,7 @@
             "docs/proof-cookbook/recipes/finite-model-replay.md",
             "docs/proof-cookbook/recipes/qf-lra-farkas.md",
             "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/aitken-acceleration-end-to-end.md",
             "docs/learn/math/sequence-limit-shadow-end-to-end.md",
             "docs/learn/math/bounded-monotone-sequence-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
@@ -6049,6 +6093,7 @@
         "docs/proof-cookbook/recipes/finite-model-replay.md",
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/proof-cookbook/recipes/lean-horizon-template.md",
+        "docs/learn/math/aitken-acceleration-end-to-end.md",
         "docs/learn/math/sequence-limit-shadow-end-to-end.md",
         "docs/learn/math/bounded-monotone-sequence-end-to-end.md",
         "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
@@ -13904,7 +13949,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding/secant replay, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
+          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, sequence acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding/secant replay, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -13935,6 +13980,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-adams-bashforth-method-v0",
           "notes": "Finite Adams-Bashforth Method Checks"
+        },
+        {
+          "id": "finite-aitken-acceleration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-aitken-acceleration-v0",
+          "notes": "Finite Aitken Acceleration Checks"
         },
         {
           "id": "finite-arnoldi-iteration-v0",
@@ -14764,7 +14815,7 @@
           "id": "real-analysis-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/real-analysis-rational-v0",
-          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, finite secant/root-finding replay, fixed-decimal rounding shadows, Riemann-sum, Simpson-rule, and Romberg quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."
+          "notes": "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, sequence acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, finite secant/root-finding replay, fixed-decimal rounding shadows, Riemann-sum, Simpson-rule, and Romberg quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."
         },
         {
           "id": "affine-geometry-v0",
@@ -14825,6 +14876,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-adams-bashforth-method-v0",
           "notes": "Finite Adams-Bashforth Method Checks"
+        },
+        {
+          "id": "finite-aitken-acceleration-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-aitken-acceleration-v0",
+          "notes": "Finite Aitken Acceleration Checks"
         },
         {
           "id": "finite-backward-euler-method-v0",

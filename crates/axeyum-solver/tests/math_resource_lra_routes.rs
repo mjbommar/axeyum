@@ -163,6 +163,9 @@ const FINITE_ROOT_FINDING_BAD_BISECTION_WIDTH: &str = include_str!(
 const FINITE_SECANT_METHOD_BAD_STEP: &str = include_str!(
     "../../../artifacts/examples/math/finite-secant-method-v0/smt2/bad-secant-step-farkas-conflict.smt2"
 );
+const FINITE_AITKEN_ACCELERATION_BAD_VALUE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-aitken-acceleration-v0/smt2/bad-aitken-value-farkas-conflict.smt2"
+);
 const FINITE_FLOW_CUT_BAD_FLOW_VALUE_CUT_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/finite-flow-cut-v0/smt2/bad-flow-value-cut-bound-farkas-conflict.smt2"
 );
@@ -1123,6 +1126,14 @@ fn finite_secant_method_bad_step_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-secant-method-v0 bad-secant-step SMT-LIB artifact",
         FINITE_SECANT_METHOD_BAD_STEP,
+    );
+}
+
+#[test]
+fn finite_aitken_acceleration_bad_value_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-aitken-acceleration-v0 bad-aitken-value SMT-LIB artifact",
+        FINITE_AITKEN_ACCELERATION_BAD_VALUE,
     );
 }
 

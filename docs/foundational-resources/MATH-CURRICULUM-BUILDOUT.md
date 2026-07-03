@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 155 non-template math example packs validate.
+  Status: 156 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 155 non-template packs have at least one `checked` expected-result row.
+  Status: 156 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3689,6 +3689,16 @@ artifact rejects the malformed first next-value claim `3/2` against exact
 bracketing/globalization behavior, root-existence hypotheses, floating-point
 implementation correctness, and numerical stability stay in future
 Lean/theorem or numerical-honesty lanes.
+The real-analysis/numerical-analysis layer now adds
+`finite-aitken-acceleration-v0` as the 156th non-template math pack. Exact
+rational replay checks Aitken's delta-squared transform on fixed sequence
+triples: `[2, 3/2, 5/4]` accelerates to exact `1`, `[2, 3/2, 4/3]`
+accelerates to exact `5/4`, and the fixed residual improves from `1/3` to
+`1/4`. A source-linked QF_LRA/Farkas artifact rejects the malformed
+accelerated-value claim `3/2` against exact `1`. General convergence
+acceleration, nonzero-denominator preconditions, fixed-point acceleration
+theory, floating-point implementation correctness, and numerical stability
+stay in future Lean/theorem or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.
