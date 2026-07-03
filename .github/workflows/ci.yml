@@ -26,6 +26,11 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  # z3-sys's build script downloads a prebuilt Z3 release via the GitHub API;
+  # unauthenticated requests from shared runners get rate-limited (HTTP 403,
+  # and a 3× retry cannot outwait it). The build script sends this token as a
+  # Bearer header, lifting the request onto the authenticated quota.
+  READ_ONLY_GITHUB_TOKEN: ${{ github.token }}
 
 jobs:
   fmt:
