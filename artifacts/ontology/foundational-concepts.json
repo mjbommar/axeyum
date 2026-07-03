@@ -735,6 +735,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-ridge-regression-v0",
           "notes": "Exact rational ridge-regression replay with checked bad regularized-coefficient evidence."
+        },
+        {
+          "id": "finite-linear-discriminant-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-linear-discriminant-v0",
+          "notes": "Exact rational Fisher-discriminant replay with checked bad direction evidence."
         }
       ],
       "proof_routes": [
@@ -832,6 +838,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-ridge-regression-v0",
           "notes": "Finite regularized least-squares replay with a checked bad coefficient proof row and statistical/numerical-theory horizon."
+        },
+        {
+          "id": "finite-linear-discriminant-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-linear-discriminant-v0",
+          "notes": "Finite Fisher-discriminant replay with a checked bad direction proof row and classification/statistical-theory horizon."
         },
         {
           "id": "finite-newton-step-v0",
@@ -1900,6 +1912,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-covariance-matrix-v0",
           "notes": "Exact finite-sample mean, centered Gram, covariance matrix, positive-semidefinite shadow, and checked bad covariance-entry evidence."
+        },
+        {
+          "id": "finite-linear-discriminant-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-linear-discriminant-v0",
+          "notes": "Exact class means, within-class scatter, Fisher direction, finite threshold, and checked bad-direction evidence."
         },
         {
           "id": "finite-gaussian-elimination-v0",
@@ -3244,6 +3262,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-ridge-regression-v0",
           "notes": "Malformed ridge coefficient row checked through exact rational Farkas evidence after regularized normal-equation replay."
+        },
+        {
+          "id": "finite-linear-discriminant-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-linear-discriminant-v0",
+          "notes": "Malformed Fisher-discriminant direction row checked through exact rational Farkas evidence after within-scatter replay."
         }
       ],
       "proof_routes": [
@@ -3265,6 +3289,7 @@
       "source_refs": [
         "docs/proof-cookbook/recipes/qf-lra-farkas.md",
         "docs/learn/math/farkas-certificate-anatomy-end-to-end.md",
+        "docs/learn/math/linear-discriminant-end-to-end.md",
         "docs/learn/math/linear-algebra-and-optimization.md",
         "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -3464,6 +3489,12 @@
           "notes": "Regularized normal-equation, residual, penalty, and bad coefficient rows checked as exact rational linear algebra, not floating-point ridge regression."
         },
         {
+          "id": "finite-linear-discriminant-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-linear-discriminant-v0",
+          "notes": "Class-mean, within-scatter, Fisher-direction, threshold, and bad-direction rows checked as exact rational replay, not floating-point LDA or statistical generalization evidence."
+        },
+        {
           "id": "finite-root-finding-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-root-finding-v0",
@@ -3531,6 +3562,7 @@
             "docs/learn/math/rounding-shadow-end-to-end.md",
             "docs/learn/math/interval-arithmetic-shadow-end-to-end.md",
             "docs/learn/math/ridge-regression-end-to-end.md",
+            "docs/learn/math/linear-discriminant-end-to-end.md",
             "docs/learn/math/lu-decomposition-end-to-end.md",
             "docs/learn/math/pivoted-lu-decomposition-end-to-end.md",
             "docs/learn/math/ldlt-decomposition-end-to-end.md",
@@ -3585,6 +3617,7 @@
         "docs/learn/math/hermite-interpolation-end-to-end.md",
         "docs/learn/math/spline-interpolation-end-to-end.md",
         "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
+        "docs/learn/math/linear-discriminant-end-to-end.md",
         "docs/learn/math/exact-statistical-tests-end-to-end.md",
         "artifacts/examples/math/finite-rounding-shadow-v0/smt2/bad-rounded-delta-farkas-conflict.smt2",
         "artifacts/examples/math/finite-interval-arithmetic-shadow-v0/smt2/bad-product-upper-farkas-conflict.smt2",
@@ -3794,6 +3827,12 @@
           "notes": "Regularized normal-equation, coefficient-shrinkage, objective-comparison, and bad coefficient rows over exact rationals."
         },
         {
+          "id": "finite-linear-discriminant-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-linear-discriminant-v0",
+          "notes": "Fixed Fisher direction and finite threshold rows that expose a quadratic-ratio optimization shadow while keeping LDA optimality as theorem horizon."
+        },
+        {
           "id": "finite-separation-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-separation-v0",
@@ -3882,6 +3921,7 @@
             "docs/learn/math/conjugate-gradient-end-to-end.md",
             "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
             "docs/learn/math/ridge-regression-end-to-end.md",
+            "docs/learn/math/linear-discriminant-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
@@ -3899,6 +3939,7 @@
         "docs/learn/math/conjugate-gradient-end-to-end.md",
         "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
         "docs/learn/math/ridge-regression-end-to-end.md",
+        "docs/learn/math/linear-discriminant-end-to-end.md",
         "docs/learn/math/linear-algebra-and-optimization.md",
         "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -3914,6 +3955,117 @@
           "Rows state the finite rational sample points, polynomial/function values, derivative data, or normal equations.",
           "The validator recomputes midpoint inequalities, second differences, gradients, Hessian minors, conjugate-gradient steps, and residual equations exactly.",
           "General convex analysis, KKT, duality, and convergence claims are linked as Lean-horizon rows instead of counted as finite solver evidence."
+        ]
+      }
+    },
+    {
+      "id": "bridge_finite_linear_discriminant_shadow",
+      "kind": "bridge-concept",
+      "title": "Finite Linear Discriminant Shadow",
+      "domain": "mathematics",
+      "field_ids": [
+        "statistics",
+        "linear_algebra",
+        "optimization_and_convexity",
+        "numerical_analysis"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "Finite linear-discriminant rows replay exact class means, within-class scatter, Fisher directions, projected scores, threshold margins, and source-linked bad-direction Farkas evidence while keeping classifier theory and numerical implementations separate.",
+      "prerequisites": [
+        "curriculum_rationals",
+        "curriculum_linear_algebra",
+        "bridge_inner_product_projection",
+        "bridge_exact_vs_floating_arithmetic",
+        "bridge_qf_lra_farkas_anatomy"
+      ],
+      "unlocks": [
+        "field_statistics",
+        "field_optimization_and_convexity",
+        "field_numerical_analysis",
+        "bridge_lean_horizon"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "finite matrix replay",
+        "finite classification replay",
+        "within-class scatter replay",
+        "exact rational arithmetic",
+        "QF_LRA",
+        "Farkas certificate",
+        "finite replay",
+        "Lean horizon"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-linear-discriminant-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-linear-discriminant-v0",
+          "notes": "Exact two-class Fisher discriminant, finite threshold, bad-direction replay, and checked QF_LRA/Farkas row."
+        },
+        {
+          "id": "finite-covariance-matrix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-covariance-matrix-v0",
+          "notes": "Centered Gram and covariance rows that share finite-sample statistics vocabulary."
+        },
+        {
+          "id": "inner-product-spaces-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/inner-product-spaces-rational-v0",
+          "notes": "Projection and inner-product rows that supply finite direction and score vocabulary."
+        },
+        {
+          "id": "finite-ridge-regression-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-ridge-regression-v0",
+          "notes": "Regularized normal-equation rows that share regression/classification linear-algebra vocabulary."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "finite discriminant replay plus QF_LRA/Farkas",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+          "lean_status": "partial",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/linear-discriminant-end-to-end.md",
+            "artifacts/examples/math/finite-linear-discriminant-v0/smt2/bad-fisher-direction-farkas-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+          ],
+          "notes": "The finite checker recomputes the class means, centered rows, within-class scatter, direction equation, projected scores, threshold, margins, and Fisher ratio exactly. Only the final malformed direction row is promoted to checked Farkas evidence."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+        "docs/proof-cookbook/recipes/lean-horizon-template.md",
+        "docs/learn/math/linear-discriminant-end-to-end.md",
+        "artifacts/examples/math/finite-linear-discriminant-v0/smt2/bad-fisher-direction-farkas-conflict.smt2",
+        "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+      ],
+      "open_gaps": [
+        "Finite threshold replay does not prove Fisher LDA optimality, Bayes risk, Gaussian modeling assumptions, multiclass LDA, or statistical generalization.",
+        "Floating-point covariance, scatter, and classifier implementations need numerical-honesty or QF_FP resources before they can be presented as checked numerical claims.",
+        "Regularized, high-dimensional, singular-scatter, and probabilistic classifier theory remain Lean/theorem-horizon work."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the finite class samples, exact rational means, scatter matrices, direction, scores, threshold, margins, and ratio.",
+          "The validator recomputes all finite discriminant quantities from committed source data.",
+          "Malformed finite direction claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
+          "Learner and query docs keep finite training-set separation separate from general classifier, statistical, and floating-point claims."
         ]
       }
     },
@@ -11032,6 +11184,12 @@
           "notes": "Regularized normal-equation rows that compare projection-style residuals with coefficient-penalty arithmetic."
         },
         {
+          "id": "finite-linear-discriminant-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-linear-discriminant-v0",
+          "notes": "Fisher-direction and finite threshold rows that reuse exact inner products, projected scores, and within-scatter matrix vocabulary."
+        },
+        {
           "id": "finite-covariance-matrix-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-covariance-matrix-v0",
@@ -11106,6 +11264,7 @@
             "docs/learn/math/matrix-corpus-benchmark-boundary.md",
             "docs/learn/math/inner-product-spaces-end-to-end.md",
             "docs/learn/math/covariance-matrix-end-to-end.md",
+            "docs/learn/math/linear-discriminant-end-to-end.md",
             "docs/learn/math/gram-schmidt-end-to-end.md",
             "docs/learn/math/givens-rotation-end-to-end.md",
             "docs/learn/math/householder-reflection-end-to-end.md",
@@ -11129,6 +11288,7 @@
         "docs/learn/math/matrix-corpus-benchmark-boundary.md",
         "docs/learn/math/inner-product-spaces-end-to-end.md",
         "docs/learn/math/covariance-matrix-end-to-end.md",
+        "docs/learn/math/linear-discriminant-end-to-end.md",
         "docs/learn/math/gram-schmidt-end-to-end.md",
         "docs/learn/math/givens-rotation-end-to-end.md",
         "docs/learn/math/householder-reflection-end-to-end.md",
@@ -13210,7 +13370,7 @@
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, regularized normal-equation replay, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram and linear-discriminant replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, regularized normal-equation replay, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -13397,6 +13557,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-ldlt-decomposition-v0",
           "notes": "Finite LDLT Decomposition Checks"
+        },
+        {
+          "id": "finite-linear-discriminant-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-linear-discriminant-v0",
+          "notes": "Finite Linear Discriminant Checks"
         },
         {
           "id": "finite-lu-decomposition-v0",
@@ -14051,7 +14217,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, regularized normal-equation, rounding, and perturbation-bound shadows, sequence and fixed-point acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding/secant replay, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
+          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, regularized normal-equation, linear-discriminant/classification, rounding, and perturbation-bound shadows, sequence and fixed-point acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding/secant replay, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -14238,6 +14404,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-line-search-v0",
           "notes": "Finite Line Search Checks"
+        },
+        {
+          "id": "finite-linear-discriminant-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-linear-discriminant-v0",
+          "notes": "Finite Linear Discriminant Checks"
         },
         {
           "id": "finite-lu-decomposition-v0",
@@ -14588,6 +14760,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-proximal-gradient-v0",
           "notes": "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."
+        },
+        {
+          "id": "finite-linear-discriminant-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-linear-discriminant-v0",
+          "notes": "Finite Fisher-discriminant direction and threshold replay with checked bad-direction rejection."
         },
         {
           "id": "finite-cholesky-decomposition-v0",
@@ -15694,7 +15872,7 @@
           "id": "descriptive-statistics-v0",
           "status": "validated",
           "path": "artifacts/examples/math/descriptive-statistics-v0",
-          "notes": "Mean/variance/covariance identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, and Simpson witnesses."
+          "notes": "Mean/variance/covariance identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, and Simpson witnesses."
         },
         {
           "id": "exact-statistical-tests-v0",
@@ -15731,6 +15909,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-integration-v0",
           "notes": "Finite Integration And Expectation Checks"
+        },
+        {
+          "id": "finite-linear-discriminant-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-linear-discriminant-v0",
+          "notes": "Finite Linear Discriminant Checks"
         },
         {
           "id": "finite-markov-chain-v0",

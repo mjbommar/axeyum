@@ -60,17 +60,17 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 76 bridge-concept rows.
+- 77 bridge-concept rows.
 - 5 example-family rows.
-- 158 non-template math packs.
-- 1026 expected checks.
-- 384 checked proof/evidence rows.
-- 521 replay-only rows.
-- 121 Lean-horizon rows.
-- 158 promoted solver-reuse packs.
+- 159 non-template math packs.
+- 1033 expected checks.
+- 385 checked proof/evidence rows.
+- 526 replay-only rows.
+- 122 Lean-horizon rows.
+- 159 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 156 focused learner-linked packs, with no path-only, index-only, or missing
+- 159 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 158 current non-template packs satisfy the focused-lesson side of this
+all 159 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2783,6 +2783,17 @@ Pick one row per commit unless the change is purely navigational.
      cross-validation, model selection, statistical guarantees, rank-deficient
      generality, floating-point linear algebra, and numerical stability
      theory.
+317. Landed: add `finite-linear-discriminant-v0` as an exact finite
+     classification resource. The pack replays two fixed rational classes,
+     class means, centered rows, within-class scatter, the Fisher direction
+     `[0, 3/2]`, projected training scores, midpoint threshold `9/4`, finite
+     margins, and the finite Fisher ratio, then adds
+     `qf-lra-bad-fisher-direction` as the source-linked Farkas row for the
+     false direction claim `wy = 1` versus exact `3/2`. The learner and query
+     pages keep this finite exact discriminant shadow separate from Fisher LDA
+     optimality, Gaussian class-model assumptions, Bayes risk, multiclass or
+     regularized LDA, statistical generalization, floating-point classifiers,
+     and numerical stability theory.
 
 ## Validation Checklist
 

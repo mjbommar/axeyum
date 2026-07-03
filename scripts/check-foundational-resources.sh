@@ -178,6 +178,14 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_residual
 python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --pack finite-ridge-regression-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-ridge-regression-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text ridge --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-linear-discriminant-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-linear-discriminant-v0 --route Farkas --proof-status checked --text qf-lra-bad-fisher-direction --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-linear-discriminant-v0 --proof-status replay-only --text threshold --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-linear-discriminant-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_linear_discriminant_shadow --pack finite-linear-discriminant-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --pack finite-linear-discriminant-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-linear-discriminant-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text discriminant --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field linear_algebra --text Gaussian --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-gaussian-elimination-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field linear_algebra --text LU --require-any >/dev/null

@@ -33393,6 +33393,233 @@ def matrix_divide_scalar(matrix: list[list[Fraction]], scalar: Fraction) -> list
     return [[entry / scalar for entry in row] for row in matrix]
 
 
+def validate_finite_linear_discriminant(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    mean_check = checks["class-mean-witness"]
+    if mean_check["expected_result"] != "sat":
+        fail("class-mean-witness must expect sat")
+    if mean_check.get("proof_status") != "replay-only":
+        fail("class-mean-witness must be replay-only")
+    values = single_witness_values(mean_check, witnesses)
+    class_a = require_fraction_matrix("linear discriminant class_a", values.get("class_a"))
+    class_b = require_fraction_matrix("linear discriminant class_b", values.get("class_b"))
+    mean_a = require_fraction_vector("linear discriminant mean_a", values.get("mean_a"))
+    mean_b = require_fraction_vector("linear discriminant mean_b", values.get("mean_b"))
+    centered_a = require_fraction_matrix("linear discriminant centered_a", values.get("centered_a"))
+    centered_b = require_fraction_matrix("linear discriminant centered_b", values.get("centered_b"))
+    scatter_a = require_fraction_matrix("linear discriminant scatter_a", values.get("scatter_a"))
+    scatter_b = require_fraction_matrix("linear discriminant scatter_b", values.get("scatter_b"))
+    within_scatter = require_fraction_matrix(
+        "linear discriminant within_scatter",
+        values.get("within_scatter"),
+    )
+    mean_difference = require_fraction_vector(
+        "linear discriminant mean_difference",
+        values.get("mean_difference"),
+    )
+    fisher_direction = require_fraction_vector(
+        "linear discriminant fisher_direction",
+        values.get("fisher_direction"),
+    )
+    scatter_direction_product = require_fraction_vector(
+        "linear discriminant scatter_direction_product",
+        values.get("scatter_direction_product"),
+    )
+    projected_means = require_fraction_vector(
+        "linear discriminant projected_means",
+        values.get("projected_means"),
+    )
+    midpoint_threshold = require_fraction(
+        "linear discriminant midpoint_threshold",
+        values.get("midpoint_threshold"),
+    )
+    class_a_scores = require_fraction_vector(
+        "linear discriminant class_a_scores",
+        values.get("class_a_scores"),
+    )
+    class_b_scores = require_fraction_vector(
+        "linear discriminant class_b_scores",
+        values.get("class_b_scores"),
+    )
+    class_a_margins = require_fraction_vector(
+        "linear discriminant class_a_margins",
+        values.get("class_a_margins"),
+    )
+    class_b_margins = require_fraction_vector(
+        "linear discriminant class_b_margins",
+        values.get("class_b_margins"),
+    )
+    minimum_margin = require_fraction(
+        "linear discriminant minimum_margin",
+        values.get("minimum_margin"),
+    )
+    fisher_numerator = require_fraction(
+        "linear discriminant fisher_numerator",
+        values.get("fisher_numerator"),
+    )
+    fisher_denominator = require_fraction(
+        "linear discriminant fisher_denominator",
+        values.get("fisher_denominator"),
+    )
+    fisher_ratio = require_fraction(
+        "linear discriminant fisher_ratio",
+        values.get("fisher_ratio"),
+    )
+
+    if not class_a or not class_b:
+        fail("linear discriminant classes must be nonempty")
+    if len(class_a[0]) != len(class_b[0]):
+        fail("linear discriminant class widths must match")
+    if matrix_column_means(class_a) != mean_a:
+        fail("class-mean-witness mean_a is incorrect")
+    if matrix_column_means(class_b) != mean_b:
+        fail("class-mean-witness mean_b is incorrect")
+    if len(mean_a) != len(fisher_direction):
+        fail("linear discriminant direction width must match class means")
+
+    scatter_check = checks["within-scatter-witness"]
+    if scatter_check["expected_result"] != "sat":
+        fail("within-scatter-witness must expect sat")
+    if scatter_check.get("proof_status") != "replay-only":
+        fail("within-scatter-witness must be replay-only")
+    if scatter_check.get("witnesses") != ["two-class-fisher-discriminant"]:
+        fail("within-scatter-witness must cite the Fisher discriminant witness")
+    if matrix_subtract_row_vector(class_a, mean_a) != centered_a:
+        fail("within-scatter-witness centered_a is incorrect")
+    if matrix_subtract_row_vector(class_b, mean_b) != centered_b:
+        fail("within-scatter-witness centered_b is incorrect")
+    if mat_mul(matrix_transpose(centered_a), centered_a) != scatter_a:
+        fail("within-scatter-witness scatter_a is incorrect")
+    if mat_mul(matrix_transpose(centered_b), centered_b) != scatter_b:
+        fail("within-scatter-witness scatter_b is incorrect")
+    if matrix_add(scatter_a, scatter_b) != within_scatter:
+        fail("within-scatter-witness within_scatter is incorrect")
+    require_square_matrix("linear discriminant within_scatter", within_scatter)
+
+    direction = checks["fisher-direction-witness"]
+    if direction["expected_result"] != "sat":
+        fail("fisher-direction-witness must expect sat")
+    if direction.get("proof_status") != "replay-only":
+        fail("fisher-direction-witness must be replay-only")
+    if vector_sub(mean_b, mean_a) != mean_difference:
+        fail("fisher-direction-witness mean_difference is incorrect")
+    if mat_vec(within_scatter, fisher_direction) != scatter_direction_product:
+        fail("fisher-direction-witness scatter_direction_product is incorrect")
+    if scatter_direction_product != mean_difference:
+        fail("fisher-direction-witness direction must satisfy S_w*w = mean difference")
+    computed_projected_means = [
+        dot_product(fisher_direction, mean_a),
+        dot_product(fisher_direction, mean_b),
+    ]
+    if computed_projected_means != projected_means:
+        fail("fisher-direction-witness projected_means are incorrect")
+    direction_dot_difference = dot_product(fisher_direction, mean_difference)
+    if direction_dot_difference * direction_dot_difference != fisher_numerator:
+        fail("fisher-direction-witness numerator is incorrect")
+    if dot_product(fisher_direction, scatter_direction_product) != fisher_denominator:
+        fail("fisher-direction-witness denominator is incorrect")
+    if fisher_denominator <= 0:
+        fail("fisher-direction-witness denominator must be positive")
+    if fisher_numerator / fisher_denominator != fisher_ratio:
+        fail("fisher-direction-witness ratio is incorrect")
+
+    threshold = checks["finite-threshold-classification-witness"]
+    if threshold["expected_result"] != "sat":
+        fail("finite-threshold-classification-witness must expect sat")
+    if threshold.get("proof_status") != "replay-only":
+        fail("finite-threshold-classification-witness must be replay-only")
+    if (projected_means[0] + projected_means[1]) / 2 != midpoint_threshold:
+        fail("finite-threshold-classification-witness midpoint threshold is incorrect")
+    if [dot_product(fisher_direction, row) for row in class_a] != class_a_scores:
+        fail("finite-threshold-classification-witness class_a_scores are incorrect")
+    if [dot_product(fisher_direction, row) for row in class_b] != class_b_scores:
+        fail("finite-threshold-classification-witness class_b_scores are incorrect")
+    if [midpoint_threshold - score for score in class_a_scores] != class_a_margins:
+        fail("finite-threshold-classification-witness class_a_margins are incorrect")
+    if [score - midpoint_threshold for score in class_b_scores] != class_b_margins:
+        fail("finite-threshold-classification-witness class_b_margins are incorrect")
+    if min(class_a_margins + class_b_margins) != minimum_margin:
+        fail("finite-threshold-classification-witness minimum_margin is incorrect")
+    if minimum_margin <= 0:
+        fail("finite-threshold-classification-witness must show strict finite separation")
+
+    bad = checks["bad-fisher-direction-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-fisher-direction-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-fisher-direction-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_fisher_direction_replay":
+        fail("bad-fisher-direction-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-class-fisher-discriminant":
+        fail("bad-fisher-direction-rejected must cite two-class-fisher-discriminant")
+    computed_direction = require_fraction_vector(
+        "bad Fisher computed_direction",
+        data.get("computed_direction"),
+    )
+    claimed_wy = require_fraction("bad Fisher claimed_wy", data.get("claimed_wy"))
+    if computed_direction != fisher_direction:
+        fail("bad-fisher-direction-rejected computed direction does not match replay")
+    if claimed_wy == fisher_direction[1]:
+        fail("bad-fisher-direction-rejected must document a false wy claim")
+    if "separate qf-lra-bad-fisher-direction" not in bad.get("notes", ""):
+        fail("bad-fisher-direction-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-fisher-direction"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-fisher-direction must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-fisher-direction must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-fisher-direction must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-class-fisher-discriminant":
+        fail("qf-lra-bad-fisher-direction must cite two-class-fisher-discriminant")
+    if qf_data.get("source_replay_row") != "bad-fisher-direction-rejected":
+        fail("qf-lra-bad-fisher-direction must cite the replay row")
+    qf_direction = require_fraction_vector(
+        "qf Fisher computed_direction",
+        qf_data.get("computed_direction"),
+    )
+    qf_claimed_wy = require_fraction("qf Fisher claimed_wy", qf_data.get("claimed_wy"))
+    if qf_direction != computed_direction or qf_claimed_wy != claimed_wy:
+        fail("qf-lra-bad-fisher-direction data must match the replay row")
+    equations = require_string_list(
+        "qf Fisher within_scatter_equations",
+        qf_data.get("within_scatter_equations"),
+    )
+    if equations != ["2*wx = 0", "2*wy = 3"]:
+        fail("qf-lra-bad-fisher-direction must document both scatter equations")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Fisher smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-linear-discriminant-v0/smt2/"
+        "bad-fisher-direction-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-fisher-direction smt2_artifact must name the checked source artifact")
+    check_source("qf Fisher smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Fisher farkas_regression", regression)
+    if "finite_linear_discriminant_bad_direction_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-fisher-direction must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Fisher certificate", certificate)
+    if "UnsatFarkas" not in certificate:
+        fail("qf-lra-bad-fisher-direction certificate must document Farkas evidence")
+
+    horizon = checks["general-linear-discriminant-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-linear-discriminant-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-linear-discriminant-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("linear discriminant horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("linear discriminant horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_finite_covariance_matrix(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -36740,6 +36967,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_least_squares_regression(expected)
     if metadata["id"] == "finite-ridge-regression-v0":
         validate_finite_ridge_regression(expected)
+    if metadata["id"] == "finite-linear-discriminant-v0":
+        validate_finite_linear_discriminant(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "cardinality-principles-v0":

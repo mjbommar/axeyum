@@ -62,17 +62,17 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 76 bridge-concept rows.
+- 77 bridge-concept rows.
 - 5 example-family rows.
-- 158 non-template math example packs.
-- 1026 expected checks.
-- 384 checked proof/evidence rows.
-- 521 replay-only rows.
-- 121 Lean-horizon rows.
-- 158 promoted solver-reuse packs.
+- 159 non-template math example packs.
+- 1033 expected checks.
+- 385 checked proof/evidence rows.
+- 526 replay-only rows.
+- 122 Lean-horizon rows.
+- 159 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 156 focused learner-linked packs, with no path-only, index-only, or missing
+- 159 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -607,6 +607,7 @@ Current packs:
 - `random-matrix-finite-v0`
 - `least-squares-regression-v0`
 - `finite-ridge-regression-v0`
+- `finite-linear-discriminant-v0`
 - `multivariable-calculus-rational-v0`
 
 Build next:
@@ -906,6 +907,7 @@ Current packs:
 - `descriptive-statistics-v0`
 - `least-squares-regression-v0`
 - `finite-ridge-regression-v0`
+- `finite-linear-discriminant-v0`
 - `exact-statistical-tests-v0`
 - `finite-concentration-v0`
 - `finite-probability-v0`
@@ -937,6 +939,7 @@ Current packs:
 - `convexity-rational-v0`
 - `least-squares-regression-v0`
 - `finite-ridge-regression-v0`
+- `finite-linear-discriminant-v0`
 - `multivariable-calculus-rational-v0`
 - `numerical-linear-algebra-v0`
 - `finite-root-finding-v0`
@@ -1011,6 +1014,7 @@ Current packs:
 - `finite-cubic-hermite-interpolation-v0`
 - `finite-cubic-spline-interpolation-v0`
 - `finite-ridge-regression-v0`
+- `finite-linear-discriminant-v0`
 
 Build next:
 
@@ -2761,6 +2765,16 @@ Pick one item per commit unless the change is purely navigational.
      ridge optimality, regularization paths, cross-validation, model
      selection, statistical guarantees, floating-point linear algebra, or
      numerical stability.
+204. Landed: add `finite-linear-discriminant-v0` as an exact finite
+     discriminant/classification resource. The pack computes class means,
+     centered rows, within-class scatter, the Fisher direction `[0, 3/2]`,
+     projected training scores, midpoint threshold `9/4`, finite margins, and
+     the finite Fisher ratio for one two-class rational sample, then promotes
+     the malformed direction claim `wy = 1` through a source-linked
+     QF_LRA/Farkas regression against exact `3/2` without claiming Fisher LDA
+     optimality, Gaussian classifier assumptions, Bayes risk, multiclass or
+     regularized LDA, statistical generalization, floating-point classifiers,
+     or numerical stability.
 
 ## Validation Checklist
 

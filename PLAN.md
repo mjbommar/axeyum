@@ -157,13 +157,13 @@ proof upgrades, solver feedback, and consumer boundaries is
 [`docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md`](docs/foundational-resources/CURRICULUM-RESOURCE-EXECUTION-PLAN.md).
 The commit-sized curriculum/resource work matrix is
 [`docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md`](docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md).
-The current execution ledger for stabilizing the 158 current math packs,
+The current execution ledger for stabilizing the 159 current math packs,
 resolving unclassified solver-reuse rows, completing learner paths, and
 deepening proof routes field by field is
 [`docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md`](docs/foundational-resources/MATH-CURRICULUM-DETAILED-BUILD-PLAN.md).
 The current learner-spine audit over all non-template math packs is
 [`docs/foundational-resources/LEARNER-COVERAGE-AUDIT.md`](docs/foundational-resources/LEARNER-COVERAGE-AUDIT.md);
-it records all 158 current non-template packs as focused-lesson linked, with no
+it records all 159 current non-template packs as focused-lesson linked, with no
 path-only, index-only, or missing learner buckets.
 The detailed operating roadmap for building the math-curriculum resource system
 across ontology rows, example packs, learner pages, proof routes, solver reuse,
@@ -375,13 +375,13 @@ The learner-facing rules/law trust-boundary page is
 it walks from human-authored source rules through formal models, replayed
 witnesses, checked obligations, and explicit legal/theorem horizons.
 Current resource-buildout status (2026-07-03): the public JSON layer reports
-122 concept rows, 158 non-template packs, 1026 expected checks (521 `sat`,
-384 `unsat`, 121 `not-run`), 384 checked rows, 521 replay-only rows, 121
-Lean-horizon rows, and 158 promoted solver-reuse packs. The rules/law JSON
+123 concept rows, 159 non-template packs, 1033 expected checks (525 `sat`,
+386 `unsat`, 122 `not-run`), 385 checked rows, 526 replay-only rows, 122
+Lean-horizon rows, and 159 promoted solver-reuse packs. The rules/law JSON
 layer now reports 7 packs, 1,037
 bounded sample rows, 1,942 generated query rows, 27 checked obligations, and
 9 replayed witness rows. The learner
-coverage audit records all 158 non-template packs as focused-lesson linked,
+coverage audit records all 159 non-template packs as focused-lesson linked,
 with no path-only, index-only, or missing learner buckets. The first QF_UF/Alethe
 proof upgrade wave now includes equivalence classes, relations/functions, finite
 groups, function composition, finite algebra homomorphisms, finite monoids, and
@@ -1118,8 +1118,9 @@ for the overlapping-set false-additivity count conflict. The five active resourc
 now each have a route-specific tamper/rejection regression: Boolean CNF/LRAT,
 QF_BV DRAT, QF_LRA/Farkas, QF_LIA/Diophantine, and QF_UF/Alethe all mutate an
 emitted resource certificate and require the independent checker to reject it;
-the foundational resource dashboards now report **158 promoted solver-reuse
+the foundational resource dashboards now report **159 promoted solver-reuse
 packs**, **0 non-benchmark-horizon packs**, and **0 unclassified packs** after
+the latest finite linear-discriminant bad-direction QF_LRA/Farkas promotion,
 the latest finite Steffensen accelerated-value QF_LRA/Farkas promotion,
 the latest finite Aitken accelerated-value QF_LRA/Farkas promotion,
 the latest finite secant-method bad step QF_LRA/Farkas promotion,

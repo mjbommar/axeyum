@@ -22,6 +22,7 @@ Example packs:
 - [descriptive-statistics-v0](../../../artifacts/examples/math/descriptive-statistics-v0/)
 - [finite-covariance-matrix-v0](../../../artifacts/examples/math/finite-covariance-matrix-v0/)
 - [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/)
+- [finite-linear-discriminant-v0](../../../artifacts/examples/math/finite-linear-discriminant-v0/)
 - [exact-statistical-tests-v0](../../../artifacts/examples/math/exact-statistical-tests-v0/)
 - [finite-measure-v0](../../../artifacts/examples/math/finite-measure-v0/)
 - [finite-measure-monotonicity-v0](../../../artifacts/examples/math/finite-measure-monotonicity-v0/)
@@ -71,7 +72,9 @@ Gram matrices, positive-semidefinite shadows, and a checked QF_LRA
 bad-covariance-entry certificate,
 contingency table margins, a checked QF_LIA bad contingency-total certificate,
 least-squares normal equations, checked QF_LRA bad-RSS and bad-coefficients
-certificates, and a Simpson's paradox count-table witness.
+certificates, finite linear-discriminant class means, within-class scatter,
+Fisher direction, projected training scores, threshold margins, and checked
+QF_LRA bad-direction evidence, and a Simpson's paradox count-table witness.
 The d-separation pack adds a finite DAG bridge:
 it checks whether conditioning blocks or opens paths in small
 causal-graph-shaped examples. The random-matrix pack checks
@@ -86,6 +89,8 @@ For a focused finite Markov-chain trace, read
 [End To End: Finite Markov Chains](finite-markov-chain-end-to-end.md).
 For a focused finite Bayes-update trace, read
 [End To End: Finite Bayes Update](finite-bayes-update-end-to-end.md).
+For a focused finite classification trace, read
+[End To End: Finite Linear Discriminant](linear-discriminant-end-to-end.md).
 
 The exact-test pack checks finite binomial tails, hypergeometric point
 probabilities, one-sided and probability-ordered two-sided Fisher p-values as

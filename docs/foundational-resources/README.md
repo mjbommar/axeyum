@@ -520,6 +520,10 @@ schemas, examples, and validation workflows.
   validates exact least-squares normal equations, residual orthogonality,
   mean-baseline RSS comparison, checked rejection of bad RSS-improvement and
   bad coefficient claims, and a regression-statistics Lean-horizon row.
+- [`artifacts/examples/math/finite-linear-discriminant-v0/`](../../artifacts/examples/math/finite-linear-discriminant-v0/)
+  validates exact class means, within-class scatter, Fisher direction,
+  projected training scores, finite threshold margins, and a checked
+  QF_LRA/Farkas rejection of a false discriminant direction claim.
 - [`artifacts/examples/math/linear-optimization-v0/`](../../artifacts/examples/math/linear-optimization-v0/)
   validates exact LP feasibility witnesses, objective-threshold replay, and a
   tiny checked Farkas infeasibility certificate.
@@ -762,6 +766,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-linear-discriminant-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0

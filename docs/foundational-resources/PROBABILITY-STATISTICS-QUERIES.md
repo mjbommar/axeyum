@@ -20,9 +20,10 @@ expectation, finite martingale/stopping rows, finite distribution-distance
 rows, stochastic kernels, finite Markov chains, finite hitting times,
 concentration/tail-count rows, exact tests, finite covariance matrices, and
 finite Schur conditional-variance shadows, ordinary and ridge regression, and
-finite random-matrix moments. Continuous distributions, sampling guarantees,
-asymptotic inference, MCMC/VI, stochastic-process limits, random-matrix limit
-laws, regularization-path theory, and floating-point statistical-library
+finite linear-discriminant/classification replay, and finite random-matrix
+moments. Continuous distributions, sampling guarantees, asymptotic inference,
+MCMC/VI, stochastic-process limits, random-matrix limit laws,
+regularization-path theory, classifier generalization, and floating-point statistical-library
 behavior remain in proof-horizon or numerical-honesty lanes.
 
 ## Query Shape
@@ -78,6 +79,7 @@ needs concrete checked rows to display.
 | Stochastic kernels, finite Markov chains, hitting times, and recurrence rows | `bridge_stochastic_kernel` | `Farkas` | `checks --concept bridge_stochastic_kernel --route Farkas --proof-status checked` |
 | Tail counts, exact tests, finite concentration, and variance rows | `bridge_tail_count_obstruction` | `Farkas` | `checks --concept bridge_tail_count_obstruction --route Farkas --proof-status checked` |
 | Ordinary and ridge regression residual/objective rows | packs `least-squares-regression-v0`, `finite-ridge-regression-v0`; concepts `bridge_residual_bound`, `bridge_inner_product_projection`, `bridge_exact_vs_floating_arithmetic` | `Farkas` | `checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked`; `checks --pack finite-ridge-regression-v0 --proof-status replay-only`; `horizon-frontier --text ridge` |
+| Finite linear-discriminant and classification rows | `bridge_finite_linear_discriminant_shadow`; pack `finite-linear-discriminant-v0` | `Farkas` | `checks --concept bridge_finite_linear_discriminant_shadow --route Farkas --proof-status checked`; `checks --pack finite-linear-discriminant-v0 --proof-status replay-only`; `horizon-frontier --text discriminant` |
 | Random-matrix finite moments, covariance matrices, Schur conditional-variance shadows, and expected-rank rows | `bridge_random_matrix_finite_moment`; `bridge_schur_complement` | `Farkas` | `checks --concept bridge_random_matrix_finite_moment --route Farkas --proof-status checked`; `checks --concept bridge_schur_complement --route Farkas --proof-status checked`; `checks --pack finite-covariance-matrix-v0 --route Farkas --proof-status checked`; `checks --pack finite-schur-complement-v0 --route Farkas --proof-status checked` |
 
 ## Copyable Examples
@@ -229,6 +231,27 @@ python3 scripts/query-foundational-resources.py horizon-frontier \
   --require-any
 ```
 
+Display finite linear-discriminant rows, then the checked bad-direction row and
+the theorem boundary:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-linear-discriminant-v0 \
+  --proof-status replay-only \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-linear-discriminant-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --text qf-lra-bad-fisher-direction \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text discriminant \
+  --require-any
+```
+
 Display finite probability-mass and finite-measure table rows:
 
 ```sh
@@ -368,6 +391,8 @@ They do not prove:
   calibration;
 - general ridge-regression optimality, bias/variance guarantees,
   regularization paths, model selection, or cross-validation;
+- Fisher LDA optimality, Gaussian classifier assumptions, Bayes risk,
+  multiclass LDA, classifier generalization, or floating-point classifiers;
 - random-matrix asymptotics, universality, or concentration theorems;
 - floating-point statistical-library behavior;
 - benchmark performance, PAR-2, or Z3/cvc5 parity.

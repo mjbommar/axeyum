@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "id": "finite-linear-discriminant-v0",
+  "title": "Finite Linear Discriminant Checks",
+  "domain": "statistics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_statistics",
+    "field_linear_algebra",
+    "field_optimization_and_convexity",
+    "field_numerical_analysis",
+    "curriculum_rationals",
+    "curriculum_linear_algebra",
+    "curriculum_reals",
+    "bridge_finite_linear_discriminant_shadow",
+    "bridge_inner_product_projection",
+    "bridge_exact_vs_floating_arithmetic",
+    "bridge_qf_lra_farkas_anatomy"
+  ],
+  "field_ids": [
+    "statistics",
+    "linear_algebra",
+    "optimization_and_convexity",
+    "numerical_analysis"
+  ],
+  "curriculum_nodes": [
+    "rationals",
+    "linear-algebra",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite matrix replay",
+    "exact rational classification",
+    "finite Fisher discriminant replay",
+    "within-class scatter replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-linear-discriminant-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite linear-discriminant bad direction QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational Fisher-discriminant replay computes direction wy = 3/2 from S_w w = mu_B - mu_A, while a malformed row claims wy = 1, isolating a compact two-equation Farkas conflict.",
+    "evidence": [
+      "qf-lra-bad-fisher-direction"
+    ],
+    "next_step": "Promote additional discriminant/classification rows only when they add distinct scatter, threshold, multiclass, regularized, probabilistic, or numerical-honesty pressure; keep statistical generalization and floating-point classifier claims in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/linear-discriminant-end-to-end.md",
+    "artifacts/examples/math/finite-linear-discriminant-v0/smt2/bad-fisher-direction-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "class-mean-witness",
+    "within-scatter-witness",
+    "fisher-direction-witness",
+    "finite-threshold-classification-witness",
+    "bad-fisher-direction-rejected",
+    "qf-lra-bad-fisher-direction",
+    "general-linear-discriminant-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed rational class samples, means, centered rows, within-class scatter matrices, Fisher direction, projected scores, threshold, margins, and ratio as deterministic exact-rational replay obligations.",
+    "Route the false discriminant-direction claim through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting direction.",
+    "Expose the pack through statistics, matrix computation, optimization, exact-vs-floating, discriminant/classification, and learner-query surfaces.",
+    "Keep Gaussian generative assumptions, Bayes optimality, multiclass or regularized LDA theory, statistical generalization, and floating-point covariance/classifier behavior marked Lean or numerical-honesty horizon."
+  ]
+}
