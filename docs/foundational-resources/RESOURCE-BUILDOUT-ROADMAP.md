@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 139 non-template math example packs.
-- 915 expected checks.
-- 365 checked proof/evidence rows.
-- 448 replay-only rows.
-- 102 Lean-horizon rows.
-- 139 promoted solver-reuse packs.
+- 140 non-template math example packs.
+- 923 expected checks.
+- 366 checked proof/evidence rows.
+- 454 replay-only rows.
+- 103 Lean-horizon rows.
+- 140 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 139 focused learner-linked packs, with no path-only, index-only, or missing
+- 140 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2569,6 +2569,14 @@ Pick one item per commit unless the change is purely navigational.
      QF_LRA/Farkas regression without claiming holomorphicity, the general
      Cauchy-Riemann theorem, contour integration, residues, or analytic
      continuation.
+186. Landed: add `finite-gmres-residual-shadow-v0` as an exact finite
+     one-step GMRES residual-minimization resource. The pack computes one
+     rational Krylov direction, minimizer coefficient `alpha=2/5`, residual
+     orthogonality, and residual-norm decrease, then promotes the malformed
+     `alpha=1/2` claim through a source-linked QF_LRA/Farkas regression
+     without claiming general GMRES convergence, restart policy correctness,
+     preconditioner correctness, breakdown behavior, nonnormal theory, or
+     floating-point Krylov stability.
 
 ## Validation Checklist
 

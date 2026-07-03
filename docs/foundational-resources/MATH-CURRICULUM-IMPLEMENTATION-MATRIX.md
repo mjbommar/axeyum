@@ -1085,7 +1085,18 @@ Build sequence:
     keep this fixed polynomial shadow separate from general holomorphicity,
     Cauchy-Riemann theorem schemas, residues, contour integration, and analytic
     continuation.
-110. Revisit crate/repo boundaries only after three real consumers or repeated
+110. Landed: add the finite GMRES residual-shadow resource.
+    `finite-gmres-residual-shadow-v0` now records one exact rational one-step
+    GMRES transcript: `A=[[2,1],[1,2]]`, `b=[1,0]`, `x0=[0,0]`,
+    `r0=[1,0]`, Krylov direction `A*r0=[2,1]`, residual-minimizing
+    coefficient `alpha=2/5`, residual `[1/5,-2/5]`, residual orthogonality,
+    and residual-norm decrease. It includes a checked QF_LRA/Farkas artifact
+    for the malformed claim `alpha=1/2`. The residual-bound,
+    finite-operator/Krylov, and inner-product/projection bridges keep this
+    fixed exact row separate from general GMRES convergence, restart,
+    preconditioner, breakdown, nonnormal, and floating-point stability
+    theorems.
+111. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

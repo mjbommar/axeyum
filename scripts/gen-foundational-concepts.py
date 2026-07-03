@@ -520,6 +520,10 @@ CURRICULUM_MAP = {
                 "Exact two-step Arnoldi replay, orthonormal Krylov basis, Hessenberg relation, and checked bad subdiagonal-coefficient evidence.",
             ),
             (
+                "finite-gmres-residual-shadow-v0",
+                "Exact one-step GMRES residual-minimization replay, residual orthogonality, residual-norm decrease, and checked bad alpha evidence.",
+            ),
+            (
                 "finite-lanczos-iteration-v0",
                 "Exact two-step Lanczos replay for a symmetric matrix, orthonormal Krylov basis, tridiagonal relation, and checked bad off-diagonal-coefficient evidence.",
             ),
@@ -649,7 +653,7 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, fixed-decimal rounding shadows, multivariable-calculus and Newton-step shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
@@ -675,7 +679,7 @@ FIELD_PACKS = {
         ("finite-projected-gradient-v0", "Finite projected-gradient interval replay with checked bad-projection rejection."),
         ("finite-proximal-gradient-v0", "Finite proximal-gradient L1 soft-threshold/composite-decrease replay with checked bad proximal-gradient rows."),
     ],
-    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
+    "numerical_analysis": ("numerical-linear-algebra-v0", "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, rounding, and perturbation-bound shadows, fixed-step error recurrences, Jacobian/Hessian replay, finite root-finding, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."),
     "differential_equations_and_dynamical_systems": ("bounded-dynamics-v0", "Recurrence systems, discretized dynamics, threshold reachability, invariant checks, Markov transitions, and finite hitting times."),
     "geometry": [
         (
@@ -695,7 +699,7 @@ FIELD_PACKS = {
             "Finite cyclic quadrilateral, diagonal-intersection, opposite-angle, and bad-intersection replay.",
         ),
     ],
-    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact orthogonal transforms, Gram-Schmidt transcripts, Givens rotations, Householder reflections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, Arnoldi/Hessenberg, Lanczos/tridiagonalization, and Jordan/nilpotent shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
+    "functional_analysis_and_operator_theory": ("finite-operator-v0", "Finite-dimensional norms, inner products, dual spaces, operator matrices, exact orthogonal transforms, Gram-Schmidt transcripts, Givens rotations, Householder reflections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, and Jordan/nilpotent shadows, Chebyshev polynomial slices, and finite Chebyshev-system grids."),
 }
 
 FIELD_DECIDABILITY = {
@@ -5881,6 +5885,7 @@ BRIDGE_CONCEPTS = [
             "condition-number perturbation bounds, power-iteration residual "
             "shadows, conjugate-gradient residual orthogonality, A-conjugacy, "
             "Arnoldi orthogonalization/Hessenberg residuals, "
+            "GMRES one-step residual minimization, "
             "Lanczos tridiagonal residuals, or "
             "normal-equation side conditions for a fixed matrix "
             "problem, and separates exact "
@@ -5906,6 +5911,7 @@ BRIDGE_CONCEPTS = [
             "condition-number replay",
             "conjugate-gradient replay",
             "Arnoldi/Hessenberg replay",
+            "GMRES residual minimization replay",
             "Lanczos/tridiagonal replay",
             "bounded recurrence replay",
         ],
@@ -5947,6 +5953,10 @@ BRIDGE_CONCEPTS = [
                 "Two-step Arnoldi replay, orthonormal Krylov basis, Hessenberg relation, and checked bad subdiagonal-coefficient row.",
             ),
             (
+                "finite-gmres-residual-shadow-v0",
+                "One-step GMRES residual-minimization replay, residual orthogonality, residual-norm decrease, and checked bad alpha row.",
+            ),
+            (
                 "finite-lanczos-iteration-v0",
                 "Two-step Lanczos replay for a symmetric matrix, orthonormal Krylov basis, tridiagonal relation, and checked bad off-diagonal-coefficient row.",
             ),
@@ -5972,6 +5982,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/power-iteration-end-to-end.md",
                     "docs/learn/math/conjugate-gradient-end-to-end.md",
                     "docs/learn/math/arnoldi-iteration-end-to-end.md",
+                    "docs/learn/math/gmres-residual-shadow-end-to-end.md",
                     "docs/learn/math/lanczos-iteration-end-to-end.md",
                     "docs/learn/math/schur-complement-end-to-end.md",
                     "docs/learn/math/linear-algebra-and-optimization.md",
@@ -5984,6 +5995,7 @@ BRIDGE_CONCEPTS = [
                     "false power-iterate coordinates, "
                     "or false conjugate-gradient step sizes, "
                     "or false Arnoldi Hessenberg coefficients, "
+                    "or false GMRES minimizer coefficients, "
                     "or false Lanczos tridiagonal coefficients, "
                     "graduate only when the final rational "
                     "linear conflict has rechecked Farkas evidence."
@@ -6001,25 +6013,27 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/power-iteration-end-to-end.md",
             "docs/learn/math/conjugate-gradient-end-to-end.md",
             "docs/learn/math/arnoldi-iteration-end-to-end.md",
+            "docs/learn/math/gmres-residual-shadow-end-to-end.md",
             "docs/learn/math/lanczos-iteration-end-to-end.md",
             "docs/learn/math/schur-complement-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "artifacts/examples/math/finite-power-iteration-v0/smt2/bad-power-iterate-coordinate-farkas-conflict.smt2",
             "artifacts/examples/math/finite-conjugate-gradient-v0/smt2/bad-cg-alpha0-farkas-conflict.smt2",
             "artifacts/examples/math/finite-arnoldi-iteration-v0/smt2/bad-arnoldi-h21-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-gmres-residual-shadow-v0/smt2/bad-gmres-alpha-farkas-conflict.smt2",
             "artifacts/examples/math/finite-lanczos-iteration-v0/smt2/bad-lanczos-beta1-farkas-conflict.smt2",
             "artifacts/examples/math/finite-schur-complement-v0/smt2/bad-schur-complement-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Exact residual, condition-number, conjugate-gradient, Arnoldi, and Lanczos transcript rows do not certify floating-point roundoff, algorithmic stability, loss of orthogonality, preconditioner correctness, finite-termination theorems, breakdown behavior, or asymptotic convergence rates.",
+            "Exact residual, condition-number, conjugate-gradient, Arnoldi, GMRES, and Lanczos transcript rows do not certify floating-point roundoff, algorithmic stability, loss of orthogonality, restart policies, preconditioner correctness, finite-termination theorems, breakdown behavior, nonnormal convergence, or asymptotic convergence rates.",
             "Nonlinear norm bounds and spectral-condition claims need separate NRA, interval, or Lean-backed routes.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state the matrix, candidate vector, norm or box, search direction, step size, Arnoldi or Lanczos basis, Hessenberg or tridiagonal coefficient, and exact rational residual computation.",
+                "Rows state the matrix, candidate vector, norm or box, search direction, step size, Arnoldi, GMRES, or Lanczos basis/coefficient data, Hessenberg or tridiagonal coefficient, residual-minimizer coefficient, and exact rational residual computation.",
                 "Bad residual or coefficient rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed.",
                 "Learner pages label numerical-analysis claims as exact rational shadows unless floating-point evidence exists.",
             ],
@@ -8303,7 +8317,9 @@ BRIDGE_CONCEPTS = [
             "Finite-dimensional inner-product rows replay exact rational Gram "
             "matrices, norm squares, fixed-vector Cauchy-Schwarz checks, "
             "orthogonal projections, Gram-Schmidt steps, exact "
-            "Walsh-Hadamard, Givens, and Householder transforms, Arnoldi/Lanczos orthogonalization, and SVD-shadow rows while keeping "
+            "Walsh-Hadamard, Givens, and Householder transforms, "
+            "Arnoldi/Lanczos orthogonalization, one-step GMRES residual "
+            "projection/minimization, and SVD-shadow rows while keeping "
             "Hilbert-space theorems as Lean horizons."
         ),
         "prerequisites": [
@@ -8327,6 +8343,7 @@ BRIDGE_CONCEPTS = [
             "Givens rotations",
             "Householder reflections",
             "Arnoldi orthogonalization",
+            "GMRES residual projection",
             "Lanczos orthogonalization",
             "singular-vector replay",
             "QF_LRA",
@@ -8374,6 +8391,10 @@ BRIDGE_CONCEPTS = [
                 "Exact Arnoldi orthonormal basis, projection coefficients, Hessenberg relation, and bad subdiagonal-coefficient evidence.",
             ),
             (
+                "finite-gmres-residual-shadow-v0",
+                "Exact one-step GMRES residual-minimization coefficient, residual orthogonality to the Krylov direction, and bad alpha evidence.",
+            ),
+            (
                 "finite-lanczos-iteration-v0",
                 "Exact Lanczos orthonormal basis, alpha/beta coefficients, tridiagonal relation, and bad off-diagonal-coefficient evidence.",
             ),
@@ -8400,6 +8421,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/givens-rotation-end-to-end.md",
                     "docs/learn/math/householder-reflection-end-to-end.md",
                     "docs/learn/math/arnoldi-iteration-end-to-end.md",
+                    "docs/learn/math/gmres-residual-shadow-end-to-end.md",
                     "docs/learn/math/lanczos-iteration-end-to-end.md",
                     "docs/learn/math/singular-value-shadow-end-to-end.md",
                     "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
@@ -8409,7 +8431,7 @@ BRIDGE_CONCEPTS = [
                     "The finite pack recomputes each rational inner-product "
                     "quantity first; checked Farkas evidence is used only for "
                     "the small bad positivity, transform/coefficient, or "
-                    "Arnoldi or Lanczos coefficient, or singular-value-bound conflict."
+                    "Arnoldi, GMRES, or Lanczos coefficient, or singular-value-bound conflict."
                 ),
             }
         ],
@@ -8427,6 +8449,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/givens-rotation-end-to-end.md",
             "docs/learn/math/householder-reflection-end-to-end.md",
             "docs/learn/math/arnoldi-iteration-end-to-end.md",
+            "docs/learn/math/gmres-residual-shadow-end-to-end.md",
             "docs/learn/math/lanczos-iteration-end-to-end.md",
             "docs/learn/math/singular-value-shadow-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
@@ -8434,15 +8457,15 @@ BRIDGE_CONCEPTS = [
         ],
         "open_gaps": [
             "Finite rational projection replay does not prove the Hilbert projection theorem, Riesz representation, Hahn-Banach, or completeness results.",
-            "Rows involving floating-point orthogonality, Gram-Schmidt, Givens rotations, Householder reflections, Arnoldi/Lanczos loss of orthogonality, conditioning, singular-value perturbation, or numerical stability require separate numerical-honesty metadata.",
+            "Rows involving floating-point orthogonality, Gram-Schmidt, Givens rotations, Householder reflections, Arnoldi/Lanczos loss of orthogonality, GMRES restart/preconditioning/breakdown behavior, conditioning, singular-value perturbation, or numerical stability require separate numerical-honesty metadata.",
             "General inner-product, duality, SVD, and Hilbert-space theorem statements remain Lean-horizon until no-sorry Lean artifacts exist.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
             "Rows state the finite vector space, basis, Gram matrix, transform matrix, and exact rational vectors.",
-            "The validator recomputes norm squares, projections, Gram-Schmidt steps, Givens rotations, Householder reflections, Arnoldi/Lanczos projections, orthogonal transforms, SVD-shadow products, and residuals from source data.",
-            "Malformed finite positivity, projection, transform/coefficient, Arnoldi/Lanczos-coefficient, or singular-value-bound rows link to checked QF_LRA/Farkas regressions after replay.",
+            "The validator recomputes norm squares, projections, Gram-Schmidt steps, Givens rotations, Householder reflections, Arnoldi/Lanczos projections, GMRES residual-minimizer coefficients, orthogonal transforms, SVD-shadow products, and residuals from source data.",
+            "Malformed finite positivity, projection, transform/coefficient, Arnoldi/GMRES/Lanczos-coefficient, or singular-value-bound rows link to checked QF_LRA/Farkas regressions after replay.",
             ],
         },
     },
@@ -8459,7 +8482,8 @@ BRIDGE_CONCEPTS = [
         "summary": (
             "Finite operator rows replay exact rational norm and matrix-action "
             "bounds, finite Arnoldi rows replay orthogonal Krylov bases and "
-            "Hessenberg relations, finite Lanczos rows replay symmetric "
+            "Hessenberg relations, finite GMRES rows replay exact residual "
+            "minimization over a one-dimensional Krylov subspace, finite Lanczos rows replay symmetric "
             "tridiagonal reductions, finite Jordan rows replay nilpotent parts and "
             "generalized-eigenvector chains, while finite Chebyshev rows replay polynomial bases, "
             "interpolation matrices, duplicate-node failures, and alternating "
@@ -8481,6 +8505,7 @@ BRIDGE_CONCEPTS = [
         "axeyum_fragments": [
             "finite-dimensional operators",
             "Arnoldi/Hessenberg replay",
+            "GMRES residual minimization replay",
             "Lanczos/tridiagonal replay",
             "nilpotent operator replay",
             "generalized eigenvectors",
@@ -8497,6 +8522,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-arnoldi-iteration-v0",
                 "Finite Arnoldi orthogonal Krylov basis, Hessenberg relation, and bad subdiagonal-coefficient rows.",
+            ),
+            (
+                "finite-gmres-residual-shadow-v0",
+                "Finite one-step GMRES residual-minimization, residual orthogonality, residual decrease, and bad alpha rows.",
             ),
             (
                 "finite-lanczos-iteration-v0",
@@ -8538,6 +8567,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/chebyshev-operator-index.md",
                     "docs/learn/math/finite-operator-end-to-end.md",
                     "docs/learn/math/arnoldi-iteration-end-to-end.md",
+                    "docs/learn/math/gmres-residual-shadow-end-to-end.md",
                     "docs/learn/math/lanczos-iteration-end-to-end.md",
                     "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
                     "docs/learn/math/singular-value-shadow-end-to-end.md",
@@ -8547,7 +8577,7 @@ BRIDGE_CONCEPTS = [
                 ],
                 "notes": (
                     "Finite operator and Chebyshev packs replay the exact "
-                    "matrix, norm, Arnoldi/Hessenberg, Lanczos/tridiagonal, recurrence, or interpolation calculation; "
+                    "matrix, norm, Arnoldi/Hessenberg, GMRES residual-minimizer, Lanczos/tridiagonal, recurrence, or interpolation calculation; "
                     "the Jordan-chain pack replays the exact nilpotent "
                     "matrix action and similarity reconstruction "
                     "before handing the resulting small rational conflict to "
@@ -8566,6 +8596,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/chebyshev-operator-index.md",
             "docs/learn/math/finite-operator-end-to-end.md",
             "docs/learn/math/arnoldi-iteration-end-to-end.md",
+            "docs/learn/math/gmres-residual-shadow-end-to-end.md",
             "docs/learn/math/lanczos-iteration-end-to-end.md",
             "docs/learn/math/finite-chebyshev-systems-end-to-end.md",
             "docs/learn/math/singular-value-shadow-end-to-end.md",
@@ -8574,16 +8605,16 @@ BRIDGE_CONCEPTS = [
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Finite operator, Arnoldi, Lanczos, and Jordan-chain replay does not prove Banach-space, Hilbert-space, compact-operator, spectral theorem, Arnoldi/Ritz convergence, Lanczos/Ritz convergence, GMRES behavior, or Jordan normal form claims.",
+            "Finite operator, Arnoldi, GMRES, Lanczos, and Jordan-chain replay does not prove Banach-space, Hilbert-space, compact-operator, spectral theorem, Arnoldi/Ritz convergence, restarted/preconditioned GMRES behavior, GMRES breakdown/nonnormal convergence, Lanczos/Ritz convergence, or Jordan normal form claims.",
             "Finite Chebyshev grid replay does not prove Haar, minimax, alternation, or infinite-dimensional approximation theorems.",
             "General functional-analysis theorem statements remain Lean-horizon until no-sorry Lean artifacts exist.",
         ],
         "graduation": {
             "status": "validated",
             "criteria": [
-                "Rows state the finite vector space, operator matrix, Arnoldi or Lanczos coefficients, nilpotent part, norm, polynomial basis, or sample grid being replayed.",
-                "The validator recomputes matrix actions, Arnoldi/Lanczos orthogonalization, Hessenberg/tridiagonal relations, generalized-chain equations, nilpotent powers, norms, recurrence values, interpolation rows, and alternating residual witnesses.",
-                "Malformed finite operator, Arnoldi/Lanczos coefficient, recurrence, or interpolation rows link to checked QF_LRA/Farkas regressions after replay.",
+                "Rows state the finite vector space, operator matrix, Arnoldi, GMRES, or Lanczos coefficients, nilpotent part, norm, polynomial basis, or sample grid being replayed.",
+                "The validator recomputes matrix actions, Arnoldi/Lanczos orthogonalization, GMRES residual minimization, Hessenberg/tridiagonal relations, generalized-chain equations, nilpotent powers, norms, recurrence values, interpolation rows, and alternating residual witnesses.",
+                "Malformed finite operator, Arnoldi/GMRES/Lanczos coefficient, recurrence, or interpolation rows link to checked QF_LRA/Farkas regressions after replay.",
             ],
         },
     },

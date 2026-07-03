@@ -19315,6 +19315,208 @@ def validate_finite_conjugate_gradient(expected: dict[str, Any]) -> None:
     require_string("CG horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_gmres_residual_shadow(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    initial = checks["initial-residual-witness"]
+    if initial["expected_result"] != "sat":
+        fail("initial-residual-witness must expect sat")
+    if initial.get("proof_status") != "replay-only":
+        fail("initial-residual-witness must be replay-only")
+    values = single_witness_values(initial, witnesses)
+    matrix = require_fraction_matrix("GMRES matrix", values.get("matrix"))
+    rhs = require_fraction_vector("GMRES rhs", values.get("rhs"))
+    initial_point = require_fraction_vector("GMRES initial_point", values.get("initial_point"))
+    initial_residual = require_fraction_vector(
+        "GMRES initial_residual",
+        values.get("initial_residual"),
+    )
+    initial_norm_squared = require_fraction(
+        "GMRES initial_residual_norm_squared",
+        values.get("initial_residual_norm_squared"),
+    )
+    krylov_basis = require_fraction_vector(
+        "GMRES krylov_basis_vector",
+        values.get("krylov_basis_vector"),
+    )
+    krylov_direction = require_fraction_vector(
+        "GMRES krylov_direction",
+        values.get("krylov_direction"),
+    )
+    direction_norm_squared = require_fraction(
+        "GMRES direction_norm_squared",
+        values.get("direction_norm_squared"),
+    )
+    rhs_direction_dot = require_fraction(
+        "GMRES rhs_direction_dot",
+        values.get("rhs_direction_dot"),
+    )
+    alpha = require_fraction("GMRES alpha", values.get("alpha"))
+    approximate_solution = require_fraction_vector(
+        "GMRES approximate_solution",
+        values.get("approximate_solution"),
+    )
+    a_times_approximate_solution = require_fraction_vector(
+        "GMRES a_times_approximate_solution",
+        values.get("a_times_approximate_solution"),
+    )
+    residual = require_fraction_vector("GMRES residual", values.get("residual"))
+    residual_norm_squared = require_fraction(
+        "GMRES residual_norm_squared",
+        values.get("residual_norm_squared"),
+    )
+    residual_direction_dot = require_fraction(
+        "GMRES residual_direction_dot",
+        values.get("residual_direction_dot"),
+    )
+    residual_decrease = require_fraction(
+        "GMRES residual_decrease",
+        values.get("residual_decrease"),
+    )
+
+    require_square_matrix("GMRES matrix", matrix)
+    if len(matrix) != 2:
+        fail("finite GMRES replay expects one 2x2 system")
+    require_mat_vec_shape("GMRES initial point", matrix, initial_point)
+    if len(rhs) != len(matrix):
+        fail("GMRES rhs height must match matrix height")
+    if vector_sub(rhs, mat_vec(matrix, initial_point)) != initial_residual:
+        fail("initial-residual-witness initial residual is not b - A*x0")
+    if dot_product(initial_residual, initial_residual) != initial_norm_squared:
+        fail("initial-residual-witness initial residual norm is incorrect")
+
+    direction_check = checks["krylov-direction-witness"]
+    if direction_check["expected_result"] != "sat":
+        fail("krylov-direction-witness must expect sat")
+    if direction_check.get("proof_status") != "replay-only":
+        fail("krylov-direction-witness must be replay-only")
+    if single_witness_values(direction_check, witnesses) != values:
+        fail("krylov-direction-witness must cite the GMRES witness")
+    if krylov_basis != initial_residual:
+        fail("krylov-direction-witness basis vector must equal r0 for this one-step pack")
+    if mat_vec(matrix, krylov_basis) != krylov_direction:
+        fail("krylov-direction-witness krylov_direction is not A*r0")
+    if dot_product(krylov_direction, krylov_direction) != direction_norm_squared:
+        fail("krylov-direction-witness direction_norm_squared is incorrect")
+    if dot_product(initial_residual, krylov_direction) != rhs_direction_dot:
+        fail("krylov-direction-witness rhs_direction_dot is incorrect")
+
+    minimizer = checks["one-step-gmres-minimizer-witness"]
+    if minimizer["expected_result"] != "sat":
+        fail("one-step-gmres-minimizer-witness must expect sat")
+    if minimizer.get("proof_status") != "replay-only":
+        fail("one-step-gmres-minimizer-witness must be replay-only")
+    if single_witness_values(minimizer, witnesses) != values:
+        fail("one-step-gmres-minimizer-witness must cite the GMRES witness")
+    if direction_norm_squared == 0:
+        fail("one-step-gmres-minimizer-witness direction norm must be nonzero")
+    if rhs_direction_dot / direction_norm_squared != alpha:
+        fail("one-step-gmres-minimizer-witness alpha is incorrect")
+    if vector_add_fraction(initial_point, scalar_vec(alpha, krylov_basis)) != approximate_solution:
+        fail("one-step-gmres-minimizer-witness approximate solution is incorrect")
+    if mat_vec(matrix, approximate_solution) != a_times_approximate_solution:
+        fail("one-step-gmres-minimizer-witness A*x1 is incorrect")
+    if vector_sub(rhs, a_times_approximate_solution) != residual:
+        fail("one-step-gmres-minimizer-witness residual is not b - A*x1")
+    if dot_product(residual, residual) != residual_norm_squared:
+        fail("one-step-gmres-minimizer-witness residual norm is incorrect")
+
+    orthogonality = checks["residual-orthogonality-witness"]
+    if orthogonality["expected_result"] != "sat":
+        fail("residual-orthogonality-witness must expect sat")
+    if orthogonality.get("proof_status") != "replay-only":
+        fail("residual-orthogonality-witness must be replay-only")
+    if single_witness_values(orthogonality, witnesses) != values:
+        fail("residual-orthogonality-witness must cite the GMRES witness")
+    if dot_product(residual, krylov_direction) != residual_direction_dot:
+        fail("residual-orthogonality-witness residual_direction_dot is incorrect")
+    if residual_direction_dot != 0:
+        fail("residual-orthogonality-witness requires residual orthogonal to A*r0")
+
+    improvement = checks["residual-improvement-witness"]
+    if improvement["expected_result"] != "sat":
+        fail("residual-improvement-witness must expect sat")
+    if improvement.get("proof_status") != "replay-only":
+        fail("residual-improvement-witness must be replay-only")
+    if single_witness_values(improvement, witnesses) != values:
+        fail("residual-improvement-witness must cite the GMRES witness")
+    if initial_norm_squared - residual_norm_squared != residual_decrease:
+        fail("residual-improvement-witness residual decrease is incorrect")
+    if residual_decrease <= 0:
+        fail("residual-improvement-witness must record a positive residual decrease")
+
+    bad = checks["bad-gmres-alpha-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-gmres-alpha-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-gmres-alpha-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_gmres_alpha_replay":
+        fail("bad-gmres-alpha-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "one-step-gmres-transcript":
+        fail("bad-gmres-alpha-rejected must cite the GMRES witness")
+    computed_alpha = require_fraction(
+        "bad GMRES computed_alpha",
+        data.get("computed_alpha"),
+    )
+    claimed_alpha = require_fraction(
+        "bad GMRES claimed_alpha",
+        data.get("claimed_alpha"),
+    )
+    if computed_alpha != alpha:
+        fail("bad-gmres-alpha-rejected computed alpha does not match replay")
+    if computed_alpha == claimed_alpha:
+        fail("bad-gmres-alpha-rejected malformed alpha unexpectedly matches")
+    if "separate qf-lra-bad-gmres-alpha" not in bad.get("notes", ""):
+        fail("bad-gmres-alpha-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-gmres-alpha"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-gmres-alpha must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-gmres-alpha must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-gmres-alpha must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "one-step-gmres-transcript":
+        fail("qf-lra-bad-gmres-alpha must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-gmres-alpha-rejected":
+        fail("qf-lra-bad-gmres-alpha must cite the replay row")
+    qf_computed = require_fraction("qf GMRES computed_alpha", qf_data.get("computed_alpha"))
+    qf_claimed = require_fraction("qf GMRES claimed_alpha", qf_data.get("claimed_alpha"))
+    if qf_computed != computed_alpha or qf_claimed != claimed_alpha:
+        fail("qf-lra-bad-gmres-alpha data must match the replay row")
+    if qf_data.get("farkas_conflict") != "gmres_alpha = 2/5 and gmres_alpha = 1/2":
+        fail("qf-lra-bad-gmres-alpha must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf GMRES smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-gmres-residual-shadow-v0/smt2/"
+        "bad-gmres-alpha-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-gmres-alpha smt2_artifact must name the checked source artifact")
+    check_source("qf GMRES smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf GMRES farkas_regression", regression)
+    if "finite_gmres_residual_shadow_bad_alpha_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-gmres-alpha must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf GMRES certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-gmres-alpha certificate must document checked Farkas evidence")
+
+    horizon = checks["general-gmres-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-gmres-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-gmres-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("GMRES horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("GMRES horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_finite_arnoldi_iteration(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -32546,6 +32748,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_arnoldi_iteration(expected)
     if metadata["id"] == "finite-lanczos-iteration-v0":
         validate_finite_lanczos_iteration(expected)
+    if metadata["id"] == "finite-gmres-residual-shadow-v0":
+        validate_finite_gmres_residual_shadow(expected)
     if metadata["id"] == "finite-connectedness-v0":
         validate_finite_connectedness(expected)
     if metadata["id"] == "finite-continuous-maps-v0":

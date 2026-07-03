@@ -240,6 +240,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite GMRES residual-shadow resource landed.**
+  `finite-gmres-residual-shadow-v0` now gives the linear-algebra,
+  numerical-analysis, functional-operator, and optimization lanes a compact
+  exact one-step Krylov residual-minimization example: it checks
+  `A=[[2,1],[1,2]]`, `b=[1,0]`, `x0=[0,0]`, the initial residual
+  `r0=[1,0]`, Krylov direction `A*r0=[2,1]`, exact GMRES coefficient
+  `alpha=2/5`, approximate solution `[2/5,0]`, residual `[1/5,-2/5]`,
+  residual orthogonality to `A*r0`, and residual-norm decrease from `1` to
+  `1/5`. It then rejects the malformed claim `alpha=1/2` through a
+  source-linked QF_LRA/Farkas row. The focused learner page, matrix,
+  numerical-analysis, and functional-operator query guides, residual-bound,
+  finite-operator/Krylov, and inner-product/projection bridges, validator,
+  resource smoke queries, and `math_resource_lra_routes` regression keep this
+  finite exact replay separate from general GMRES convergence, restart,
+  preconditioner, breakdown, nonnormal, and floating-point stability schemas.
+  The public summary now reports 122 concept rows, 140 packs, 923 expected
+  checks, 366 checked rows, 454 replay-only rows, 103 Lean-horizon rows, and
+  140 promoted solver-reuse packs.
 - **Finite Cauchy-Riemann shadow resource landed.**
   `finite-cauchy-riemann-shadow-v0` now gives the complex-analysis and
   real-analysis lanes a compact exact polynomial partial-derivative example:
@@ -252,7 +270,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   guide, complex real-pair and derivative-shadow bridges, validator, resource
   smoke queries, and `math_resource_lra_routes` regression keep this finite
   replay separate from general holomorphicity and Cauchy-Riemann theorem
-  schemas. The public summary now reports 122 concept rows, 139 packs, 915
+  schemas. After that increment the public summary reported 122 concept rows, 139 packs, 915
   expected checks, 365 checked rows, 448 replay-only rows, 102 Lean-horizon
   rows, and 139 promoted solver-reuse packs.
 - **Finite interval-arithmetic shadow resource landed.**

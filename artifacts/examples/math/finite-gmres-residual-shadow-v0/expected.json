@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-gmres-residual-shadow-v0",
+  "witnesses": [
+    {
+      "id": "one-step-gmres-transcript",
+      "description": "Exact rational one-step GMRES transcript for a fixed 2x2 system with x0=0.",
+      "values": {
+        "matrix": [
+          ["2", "1"],
+          ["1", "2"]
+        ],
+        "rhs": ["1", "0"],
+        "initial_point": ["0", "0"],
+        "initial_residual": ["1", "0"],
+        "initial_residual_norm_squared": "1",
+        "krylov_basis_vector": ["1", "0"],
+        "krylov_direction": ["2", "1"],
+        "direction_norm_squared": "5",
+        "rhs_direction_dot": "2",
+        "alpha": "2/5",
+        "approximate_solution": ["2/5", "0"],
+        "a_times_approximate_solution": ["4/5", "2/5"],
+        "residual": ["1/5", "-2/5"],
+        "residual_norm_squared": "1/5",
+        "residual_direction_dot": "0",
+        "residual_decrease": "4/5"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "initial-residual-witness",
+      "claim": "For x0 = [0,0], the initial GMRES residual is b = [1,0] with norm squared 1.",
+      "expected_result": "sat",
+      "validation": "exact_rational_gmres_initial_residual_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["one-step-gmres-transcript"],
+      "notes": "The validator recomputes r0 = b - A*x0 and r0^T*r0 exactly."
+    },
+    {
+      "id": "krylov-direction-witness",
+      "claim": "The one-dimensional Krylov direction A*r0 is [2,1] with norm squared 5.",
+      "expected_result": "sat",
+      "validation": "exact_rational_gmres_krylov_direction_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["one-step-gmres-transcript"],
+      "notes": "The validator recomputes A*r0, the direction norm, and b^T*(A*r0)."
+    },
+    {
+      "id": "one-step-gmres-minimizer-witness",
+      "claim": "The exact one-step GMRES minimizer is alpha = 2/5 and x1 = [2/5,0].",
+      "expected_result": "sat",
+      "validation": "exact_rational_one_step_gmres_minimizer_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["one-step-gmres-transcript"],
+      "notes": "The validator recomputes alpha = (b^T A r0)/((A r0)^T(A r0)), x1, A*x1, and the residual exactly."
+    },
+    {
+      "id": "residual-orthogonality-witness",
+      "claim": "The one-step residual is orthogonal to the Krylov direction A*r0.",
+      "expected_result": "sat",
+      "validation": "exact_rational_gmres_residual_orthogonality_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["one-step-gmres-transcript"],
+      "notes": "The validator recomputes residual^T*(A*r0) = 0 exactly."
+    },
+    {
+      "id": "residual-improvement-witness",
+      "claim": "The residual norm squared improves from 1 to 1/5, a decrease of 4/5.",
+      "expected_result": "sat",
+      "validation": "exact_rational_gmres_residual_improvement_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["one-step-gmres-transcript"],
+      "notes": "The validator recomputes the initial and final residual norms and their exact difference."
+    },
+    {
+      "id": "bad-gmres-alpha-rejected",
+      "claim": "The one-step GMRES minimizer coefficient is alpha = 1/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_gmres_alpha_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "one-step-gmres-transcript",
+        "computed_alpha": "2/5",
+        "claimed_alpha": "1/2"
+      },
+      "notes": "Exact replay computes alpha as 2/5, so the claimed value 1/2 is rejected; the separate qf-lra-bad-gmres-alpha row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-gmres-alpha",
+      "claim": "The fixed malformed one-step GMRES alpha claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "one-step-gmres-transcript",
+        "source_replay_row": "bad-gmres-alpha-rejected",
+        "computed_alpha": "2/5",
+        "claimed_alpha": "1/2",
+        "farkas_conflict": "gmres_alpha = 2/5 and gmres_alpha = 1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-gmres-residual-shadow-v0/smt2/bad-gmres-alpha-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_gmres_residual_shadow_bad_alpha_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes alpha = 2/5, while the malformed row claims 1/2; the source QF_LRA artifact isolates that Krylov coefficient contradiction for Farkas checking."
+    },
+    {
+      "id": "general-gmres-theory-lean-horizon",
+      "claim": "General GMRES least-squares theory, Arnoldi relations, restart policies, preconditioning, breakdown behavior, nonnormal convergence, and floating-point Krylov stability require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For finite-dimensional operators and exact arithmetic, prove the k-step GMRES residual-minimization characterization over Krylov subspaces via Arnoldi/least-squares data; separately state restarted, preconditioned, breakdown, nonnormal, and floating-point variants with explicit hypotheses.",
+        "future_checker": "Lean theorem statements for exact GMRES theory plus separate numerical-honesty or QF_FP artifacts for floating-point implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one 2x2 one-step rational GMRES transcript, not a theorem about arbitrary systems, restarts, preconditioners, or floating-point Krylov stability."
+    }
+  ]
+}

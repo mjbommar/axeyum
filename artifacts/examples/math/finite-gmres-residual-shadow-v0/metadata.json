@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "finite-gmres-residual-shadow-v0",
+  "title": "Finite GMRES Residual Shadow Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "curriculum_linear_algebra",
+    "curriculum_reals",
+    "field_linear_algebra",
+    "field_numerical_analysis",
+    "field_functional_analysis_and_operator_theory",
+    "field_optimization_and_convexity",
+    "bridge_residual_bound",
+    "bridge_finite_operator_chebyshev",
+    "bridge_inner_product_projection"
+  ],
+  "field_ids": [
+    "linear_algebra",
+    "numerical_analysis",
+    "functional_analysis_and_operator_theory",
+    "optimization_and_convexity"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "reals"
+  ],
+  "axeyum_fragments": [
+    "finite matrices",
+    "exact rational GMRES replay",
+    "Krylov residual minimization",
+    "inner-product projection",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gmres-residual-shadow-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite GMRES bad one-step alpha QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational one-step GMRES replay computes alpha = 2/5 for a fixed 2x2 system, while a malformed row claims alpha = 1/2, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-gmres-alpha"
+    ],
+    "next_step": "Promote additional Krylov rows only when they add distinct Arnoldi/GMRES least-squares, restart, preconditioner, breakdown, nonnormality, or numerical-honesty pressure; keep general GMRES convergence and floating-point stability in future theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/gmres-residual-shadow-end-to-end.md",
+    "artifacts/examples/math/finite-gmres-residual-shadow-v0/smt2/bad-gmres-alpha-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "initial-residual-witness",
+    "krylov-direction-witness",
+    "one-step-gmres-minimizer-witness",
+    "residual-orthogonality-witness",
+    "residual-improvement-witness",
+    "bad-gmres-alpha-rejected",
+    "qf-lra-bad-gmres-alpha",
+    "general-gmres-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed matrix, right-hand side, initial residual, one-dimensional Krylov direction, exact minimizer coefficient, residual, orthogonality equation, and residual-norm decrease as deterministic rational replay obligations.",
+    "Route the false one-step GMRES coefficient claim through checked QF_LRA/Farkas evidence after replay computes the exact coefficient.",
+    "Expose the pack through residual-bound, finite-operator/Krylov, inner-product projection, matrix/numerical, and functional/operator learner and consumer query surfaces.",
+    "Keep general GMRES convergence, Arnoldi/least-squares theorem schemas, restarted GMRES, preconditioning, breakdown behavior, nonnormal spectral theory, and floating-point Krylov stability marked as future Lean or numerical-honesty work until formal routes exist."
+  ]
+}

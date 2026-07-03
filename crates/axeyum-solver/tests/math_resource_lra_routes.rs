@@ -340,6 +340,9 @@ const FINITE_POWER_ITERATION_BAD_COORDINATE: &str = include_str!(
 const FINITE_CONJUGATE_GRADIENT_BAD_ALPHA0: &str = include_str!(
     "../../../artifacts/examples/math/finite-conjugate-gradient-v0/smt2/bad-cg-alpha0-farkas-conflict.smt2"
 );
+const FINITE_GMRES_RESIDUAL_SHADOW_BAD_ALPHA: &str = include_str!(
+    "../../../artifacts/examples/math/finite-gmres-residual-shadow-v0/smt2/bad-gmres-alpha-farkas-conflict.smt2"
+);
 const FINITE_ARNOLDI_ITERATION_BAD_H21: &str = include_str!(
     "../../../artifacts/examples/math/finite-arnoldi-iteration-v0/smt2/bad-arnoldi-h21-farkas-conflict.smt2"
 );
@@ -2025,6 +2028,14 @@ fn finite_conjugate_gradient_bad_alpha0_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-conjugate-gradient-v0 bad-cg-alpha0 SMT-LIB artifact",
         FINITE_CONJUGATE_GRADIENT_BAD_ALPHA0,
+    );
+}
+
+#[test]
+fn finite_gmres_residual_shadow_bad_alpha_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-gmres-residual-shadow-v0 bad-gmres-alpha SMT-LIB artifact",
+        FINITE_GMRES_RESIDUAL_SHADOW_BAD_ALPHA,
     );
 }
 

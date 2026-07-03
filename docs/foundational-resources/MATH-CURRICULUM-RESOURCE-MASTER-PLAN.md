@@ -54,12 +54,12 @@ As of 2026-07-03, the committed resource query reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 139 non-template math packs.
-- 915 expected checks.
-- 365 checked proof/evidence rows.
-- 448 replay-only rows.
-- 102 Lean-horizon rows.
-- 139 promoted solver-reuse packs.
+- 140 non-template math packs.
+- 923 expected checks.
+- 366 checked proof/evidence rows.
+- 454 replay-only rows.
+- 103 Lean-horizon rows.
+- 140 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 

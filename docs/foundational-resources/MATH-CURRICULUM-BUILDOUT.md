@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 139 non-template math example packs validate.
+  Status: 140 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 139 non-template packs have at least one `checked` expected-result row.
+  Status: 140 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3528,6 +3528,17 @@ malformed derivative-coordinate claim `real(f'(1+2i)) = 3`. General
 holomorphicity, Cauchy-Riemann theorem schemas, contour integration, residues,
 analytic continuation, and conformal-map theorems stay in future Lean/theorem
 lanes.
+The linear-algebra/numerical-analysis/functional-operator layer now adds
+`finite-gmres-residual-shadow-v0` as the 140th non-template math pack. Exact
+rational replay checks the fixed one-step GMRES transcript for
+`A=[[2,1],[1,2]]`, `b=[1,0]`, `x0=[0,0]`, Krylov direction `A*r0=[2,1]`,
+minimizer coefficient `alpha=2/5`, residual `[1/5,-2/5]`, residual
+orthogonality, and residual-norm decrease, while a source-linked
+QF_LRA/Farkas artifact rejects the malformed one-step coefficient claim
+`alpha=1/2`. General GMRES least-squares theory, restart policy correctness,
+preconditioner correctness, breakdown behavior, nonnormal convergence, and
+floating-point Krylov stability stay in future Lean/theorem or
+numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.
