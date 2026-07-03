@@ -62,12 +62,12 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 156 non-template math packs.
-- 1014 expected checks.
-- 382 checked proof/evidence rows.
-- 513 replay-only rows.
-- 119 Lean-horizon rows.
-- 156 promoted solver-reuse packs.
+- 157 non-template math packs.
+- 1020 expected checks.
+- 383 checked proof/evidence rows.
+- 517 replay-only rows.
+- 120 Lean-horizon rows.
+- 157 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 - 156 focused learner-linked packs, with no path-only, index-only, or missing
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 156 current non-template packs satisfy the focused-lesson side of this
+all 157 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2759,6 +2759,17 @@ Pick one row per commit unless the change is purely navigational.
      nonzero-denominator hypotheses, fixed-point acceleration theory,
      floating-point implementation correctness, and numerical stability
      theory.
+315. Landed: add `finite-steffensen-method-v0` as an exact finite Steffensen
+     fixed-point acceleration resource. The pack replays
+     `g(x) = (x + 1)/2` from `x0 = 0` to exact accelerated value `1`,
+     replays `g(x) = 1 + (x - 1)/3` from `x0 = 4` to exact accelerated value
+     `1`, and checks the fixed residual improvement `0 < 1/8`, then adds
+     `qf-lra-bad-steffensen-value` as the source-linked Farkas row for the
+     false accelerated-value claim `3/2` versus exact `1`. The learner and
+     query pages keep this finite exact Steffensen shadow separate from
+     fixed-point existence, general convergence acceleration,
+     nonzero-denominator hypotheses, nonlinear-map theory, floating-point
+     implementation correctness, and numerical stability theory.
 
 ## Validation Checklist
 

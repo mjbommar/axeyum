@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-steffensen-method-v0",
+  "witnesses": [
+    {
+      "id": "affine-half-steffensen-row",
+      "description": "Exact Steffensen replay for g(x) = (x + 1)/2 from x0 = 0.",
+      "values": {
+        "method": "steffensen_fixed_point",
+        "map": {
+          "kind": "affine",
+          "slope": "1/2",
+          "intercept": "1/2"
+        },
+        "fixed_point": "1",
+        "x0": "0",
+        "x1": "1/2",
+        "x2": "3/4",
+        "delta0": "1/2",
+        "delta1": "1/4",
+        "delta_squared": "-1/4",
+        "correction": "-1",
+        "accelerated": "1",
+        "residual_before": "1/8",
+        "residual_after": "0"
+      }
+    },
+    {
+      "id": "affine-third-steffensen-row",
+      "description": "Exact Steffensen replay for g(x) = 1 + (x - 1)/3 from x0 = 4.",
+      "values": {
+        "method": "steffensen_fixed_point",
+        "map": {
+          "kind": "affine",
+          "slope": "1/3",
+          "intercept": "2/3"
+        },
+        "fixed_point": "1",
+        "x0": "4",
+        "x1": "2",
+        "x2": "4/3",
+        "delta0": "-2",
+        "delta1": "-2/3",
+        "delta_squared": "4/3",
+        "correction": "3",
+        "accelerated": "1",
+        "residual_before": "2/9",
+        "residual_after": "0"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "steffensen-half-step-exact-witness",
+      "claim": "The listed half-step fixed-point row accelerates exactly to 1.",
+      "expected_result": "sat",
+      "validation": "exact_rational_steffensen_fixed_point_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["affine-half-steffensen-row"],
+      "notes": "The validator recomputes the affine map iterates, first differences, second difference, correction, accelerated value, and residuals over exact rationals."
+    },
+    {
+      "id": "steffensen-third-step-exact-witness",
+      "claim": "The listed third-step fixed-point row accelerates exactly to 1.",
+      "expected_result": "sat",
+      "validation": "exact_rational_steffensen_fixed_point_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["affine-third-steffensen-row"],
+      "notes": "This row checks a finite Steffensen transform without claiming general fixed-point acceleration."
+    },
+    {
+      "id": "steffensen-residual-improvement-witness",
+      "claim": "For the listed half-step row, |g(1) - 1| < |g(3/4) - 3/4|.",
+      "expected_result": "sat",
+      "validation": "exact_rational_steffensen_residual_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["affine-half-steffensen-row"],
+      "notes": "The validator recomputes both fixed-point residuals over exact rationals and checks only this fixed strict decrease."
+    },
+    {
+      "id": "bad-steffensen-value-rejected",
+      "claim": "The half-step fixed-point row accelerates to 3/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_steffensen_value_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "affine-half-steffensen-row",
+        "computed_accelerated": "1",
+        "claimed_accelerated": "3/2",
+        "steffensen_value_gap": "1/2"
+      },
+      "notes": "Exact replay computes the accelerated value as 1, so the claimed value 3/2 is rejected; the separate qf-lra-bad-steffensen-value row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-steffensen-value",
+      "claim": "The fixed malformed Steffensen-value claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "affine-half-steffensen-row",
+        "source_replay_row": "bad-steffensen-value-rejected",
+        "computed_accelerated": "1",
+        "claimed_accelerated": "3/2",
+        "farkas_conflict": "steffensen_value = 1 and steffensen_value = 3/2",
+        "smt2_artifact": "artifacts/examples/math/finite-steffensen-method-v0/smt2/bad-steffensen-value-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_steffensen_method_bad_value_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the Steffensen accelerated value as 1, while the malformed row claims 3/2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-steffensen-method-theory-lean-horizon",
+      "claim": "General Steffensen convergence, convergence-order improvement, fixed-point existence, denominator-zero preconditions, and floating-point stability require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_metadata",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For Steffensen fixed-point acceleration, prove hypotheses for fixed-point existence, accelerated convergence, denominator safety, nonlinear map behavior, and stability separately from fixed rational replay rows.",
+        "future_checker": "Lean theorem statements for fixed-point acceleration plus separate numerical-honesty or QF_FP artifacts for floating-point implementations."
+      },
+      "notes": "The finite exact rows are checked resources for two affine rational fixed-point triples, not theorem evidence for arbitrary maps, convergence rates, denominator safety, or floating-point implementations."
+    }
+  ]
+}

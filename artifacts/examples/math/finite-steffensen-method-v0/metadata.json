@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "finite-steffensen-method-v0",
+  "title": "Finite Steffensen Method Checks",
+  "domain": "mathematics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_numerical_analysis",
+    "field_real_analysis",
+    "curriculum_sequences_and_limits",
+    "curriculum_reals",
+    "curriculum_rationals",
+    "bridge_sequence_tail_shadow",
+    "bridge_bounded_family_asymptotic_boundary",
+    "bridge_exact_vs_floating_arithmetic"
+  ],
+  "field_ids": [
+    "numerical_analysis",
+    "real_analysis"
+  ],
+  "curriculum_nodes": [
+    "sequences-and-limits",
+    "reals",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite fixed-point replay",
+    "finite algorithm replay",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-steffensen-method-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Steffensen bad accelerated value QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational Steffensen replay for the affine half-step row g(x)=(x+1)/2 from x0=0 computes steffensen_value = 1, while a malformed row claims steffensen_value = 3/2, isolating a compact scalar equality conflict for the Farkas route.",
+    "evidence": [
+      "qf-lra-bad-steffensen-value"
+    ],
+    "next_step": "Promote additional Steffensen or fixed-point acceleration rows only when they add distinct denominator-safety, contraction, convergence-rate, nonlinear fixed-point, floating-point, or theorem-reconstruction pressure; keep general Steffensen method theory and stability claims in future Lean or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/02-structures/sequences-and-limits.md",
+    "docs/curriculum/01-number-systems/reals.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/steffensen-method-end-to-end.md",
+    "artifacts/examples/math/finite-steffensen-method-v0/smt2/bad-steffensen-value-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "steffensen-half-step-exact-witness",
+    "steffensen-third-step-exact-witness",
+    "steffensen-residual-improvement-witness",
+    "bad-steffensen-value-rejected",
+    "qf-lra-bad-steffensen-value",
+    "general-steffensen-method-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed affine map, source iterate, two ordinary fixed-point iterates, first differences, second difference, correction, accelerated value, and residuals as deterministic rational replay obligations.",
+    "Route the false accelerated value through checked QF_LRA/Farkas evidence after replay computes the exact value.",
+    "Expose the pack through sequence-tail, exact-vs-floating, bounded theorem-shadow, real-analysis, numerical-analysis, and learner query surfaces.",
+    "Keep general Steffensen convergence, convergence-order improvement, fixed-point existence, nonzero-denominator preconditions, floating-point implementation correctness, and numerical-stability claims marked as future Lean or numerical-honesty work until formal routes exist."
+  ]
+}

@@ -64,12 +64,12 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 156 non-template math example packs.
-- 1014 expected checks.
-- 382 checked proof/evidence rows.
-- 513 replay-only rows.
-- 119 Lean-horizon rows.
-- 156 promoted solver-reuse packs.
+- 157 non-template math example packs.
+- 1020 expected checks.
+- 383 checked proof/evidence rows.
+- 517 replay-only rows.
+- 120 Lean-horizon rows.
+- 157 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
 - 156 focused learner-linked packs, with no path-only, index-only, or missing
@@ -2736,6 +2736,14 @@ Pick one item per commit unless the change is purely navigational.
      acceleration, fixed-point acceleration theory, denominator-safety
      theorems, floating-point implementation correctness, or numerical
      stability.
+202. Landed: add `finite-steffensen-method-v0` as an exact finite Steffensen
+     fixed-point acceleration resource. The pack computes exact accelerated
+     values for two affine fixed-point maps, records the half-step residual
+     improvement `0 < 1/8`, then promotes the malformed accelerated-value
+     claim `3/2` through a source-linked QF_LRA/Farkas regression against
+     exact `1` without claiming fixed-point existence, general Steffensen
+     convergence, nonlinear-map theory, denominator-safety theorems,
+     floating-point implementation correctness, or numerical stability.
 
 ## Validation Checklist
 

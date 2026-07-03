@@ -166,6 +166,9 @@ const FINITE_SECANT_METHOD_BAD_STEP: &str = include_str!(
 const FINITE_AITKEN_ACCELERATION_BAD_VALUE: &str = include_str!(
     "../../../artifacts/examples/math/finite-aitken-acceleration-v0/smt2/bad-aitken-value-farkas-conflict.smt2"
 );
+const FINITE_STEFFENSEN_METHOD_BAD_VALUE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-steffensen-method-v0/smt2/bad-steffensen-value-farkas-conflict.smt2"
+);
 const FINITE_FLOW_CUT_BAD_FLOW_VALUE_CUT_BOUND: &str = include_str!(
     "../../../artifacts/examples/math/finite-flow-cut-v0/smt2/bad-flow-value-cut-bound-farkas-conflict.smt2"
 );
@@ -1134,6 +1137,14 @@ fn finite_aitken_acceleration_bad_value_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-aitken-acceleration-v0 bad-aitken-value SMT-LIB artifact",
         FINITE_AITKEN_ACCELERATION_BAD_VALUE,
+    );
+}
+
+#[test]
+fn finite_steffensen_method_bad_value_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-steffensen-method-v0 bad-steffensen-value SMT-LIB artifact",
+        FINITE_STEFFENSEN_METHOD_BAD_VALUE,
     );
 }
 

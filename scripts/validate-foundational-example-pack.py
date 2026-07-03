@@ -11435,6 +11435,218 @@ def validate_finite_aitken_acceleration(expected: dict[str, Any]) -> None:
     require_string("Aitken horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_steffensen_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    method = values.get("method")
+    if method != "steffensen_fixed_point":
+        fail(f"{context}.method must be steffensen_fixed_point")
+    mapping = values.get("map")
+    if not isinstance(mapping, dict):
+        fail(f"{context}.map must be an object")
+    if mapping.get("kind") != "affine":
+        fail(f"{context}.map.kind must be affine")
+    slope = require_fraction(f"{context}.map.slope", mapping.get("slope"))
+    intercept = require_fraction(f"{context}.map.intercept", mapping.get("intercept"))
+    fixed_point = require_fraction(f"{context}.fixed_point", values.get("fixed_point"))
+    x0 = require_fraction(f"{context}.x0", values.get("x0"))
+    x1 = require_fraction(f"{context}.x1", values.get("x1"))
+    x2 = require_fraction(f"{context}.x2", values.get("x2"))
+    delta0 = require_fraction(f"{context}.delta0", values.get("delta0"))
+    delta1 = require_fraction(f"{context}.delta1", values.get("delta1"))
+    delta_squared = require_fraction(
+        f"{context}.delta_squared",
+        values.get("delta_squared"),
+    )
+    correction = require_fraction(f"{context}.correction", values.get("correction"))
+    accelerated = require_fraction(f"{context}.accelerated", values.get("accelerated"))
+    residual_before = require_fraction(
+        f"{context}.residual_before",
+        values.get("residual_before"),
+    )
+    residual_after = require_fraction(
+        f"{context}.residual_after",
+        values.get("residual_after"),
+    )
+
+    def affine(x: Fraction) -> Fraction:
+        return slope * x + intercept
+
+    if affine(fixed_point) != fixed_point:
+        fail(f"{context}.fixed_point is not fixed by the affine map")
+    if x1 != affine(x0):
+        fail(f"{context}.x1 must equal g(x0)")
+    if x2 != affine(x1):
+        fail(f"{context}.x2 must equal g(x1)")
+    if delta0 != x1 - x0:
+        fail(f"{context}.delta0 is incorrect")
+    if delta1 != x2 - x1:
+        fail(f"{context}.delta1 is incorrect")
+    if delta_squared != delta1 - delta0:
+        fail(f"{context}.delta_squared is incorrect")
+    if delta_squared == 0:
+        fail(f"{context}.delta_squared must be nonzero")
+    if correction != delta0 * delta0 / delta_squared:
+        fail(f"{context}.correction is incorrect")
+    if accelerated != x0 - correction:
+        fail(f"{context}.accelerated is incorrect")
+    if residual_before != abs(affine(x2) - x2):
+        fail(f"{context}.residual_before must be |g(x2) - x2|")
+    if residual_after != abs(affine(accelerated) - accelerated):
+        fail(f"{context}.residual_after must be |g(accelerated) - accelerated|")
+    return {
+        "slope": slope,
+        "intercept": intercept,
+        "fixed_point": fixed_point,
+        "x0": x0,
+        "x1": x1,
+        "x2": x2,
+        "accelerated": accelerated,
+        "residual_before": residual_before,
+        "residual_after": residual_after,
+    }
+
+
+def validate_finite_steffensen_method(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    half = checks["steffensen-half-step-exact-witness"]
+    if half["expected_result"] != "sat":
+        fail("steffensen-half-step-exact-witness must expect sat")
+    if half.get("proof_status") != "replay-only":
+        fail("steffensen-half-step-exact-witness must be replay-only")
+    if half.get("validation") != "exact_rational_steffensen_fixed_point_replay":
+        fail("steffensen-half-step-exact-witness validation is incorrect")
+    half_values = single_witness_values(half, witnesses)
+    half_replay = validate_steffensen_trace("half-step Steffensen row", half_values)
+    if half_replay["slope"] != Fraction(1, 2) or half_replay["intercept"] != Fraction(1, 2):
+        fail("steffensen-half-step-exact-witness must use g(x)=(x+1)/2")
+    if half_replay["x0"] != Fraction(0):
+        fail("steffensen-half-step-exact-witness must start at x0=0")
+    if half_replay["accelerated"] != Fraction(1):
+        fail("steffensen-half-step-exact-witness must compute accelerated = 1")
+    if half_replay["residual_after"] != Fraction(0):
+        fail("steffensen-half-step-exact-witness must compute zero residual")
+
+    third = checks["steffensen-third-step-exact-witness"]
+    if third["expected_result"] != "sat":
+        fail("steffensen-third-step-exact-witness must expect sat")
+    if third.get("proof_status") != "replay-only":
+        fail("steffensen-third-step-exact-witness must be replay-only")
+    if third.get("validation") != "exact_rational_steffensen_fixed_point_replay":
+        fail("steffensen-third-step-exact-witness validation is incorrect")
+    third_values = single_witness_values(third, witnesses)
+    third_replay = validate_steffensen_trace("third-step Steffensen row", third_values)
+    if third_replay["slope"] != Fraction(1, 3) or third_replay["intercept"] != Fraction(2, 3):
+        fail("steffensen-third-step-exact-witness must use g(x)=x/3+2/3")
+    if third_replay["x0"] != Fraction(4):
+        fail("steffensen-third-step-exact-witness must start at x0=4")
+    if third_replay["accelerated"] != Fraction(1):
+        fail("steffensen-third-step-exact-witness must compute accelerated = 1")
+
+    residual = checks["steffensen-residual-improvement-witness"]
+    if residual["expected_result"] != "sat":
+        fail("steffensen-residual-improvement-witness must expect sat")
+    if residual.get("proof_status") != "replay-only":
+        fail("steffensen-residual-improvement-witness must be replay-only")
+    if residual.get("validation") != "exact_rational_steffensen_residual_replay":
+        fail("steffensen-residual-improvement-witness validation is incorrect")
+    residual_values = single_witness_values(residual, witnesses)
+    residual_replay = validate_steffensen_trace("Steffensen residual row", residual_values)
+    if residual_replay["x0"] != half_replay["x0"]:
+        fail("steffensen-residual-improvement-witness must cite the half-step row")
+    if residual_replay["residual_after"] >= residual_replay["residual_before"]:
+        fail("steffensen-residual-improvement-witness must strictly decrease the residual")
+
+    bad = checks["bad-steffensen-value-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-steffensen-value-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-steffensen-value-rejected must be replay-only")
+    if bad.get("validation") != "exact_rational_bad_steffensen_value_replay":
+        fail("bad-steffensen-value-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "affine-half-steffensen-row":
+        fail("bad-steffensen-value-rejected must cite the half-step witness")
+    computed = require_fraction(
+        "bad Steffensen computed_accelerated",
+        data.get("computed_accelerated"),
+    )
+    claimed = require_fraction(
+        "bad Steffensen claimed_accelerated",
+        data.get("claimed_accelerated"),
+    )
+    gap = require_fraction("bad Steffensen steffensen_value_gap", data.get("steffensen_value_gap"))
+    if computed != half_replay["accelerated"]:
+        fail("bad-steffensen-value-rejected computed_accelerated must match half-step replay")
+    if computed == claimed:
+        fail("bad-steffensen-value-rejected malformed claim must disagree with replay")
+    if claimed - computed != gap:
+        fail("bad-steffensen-value-rejected steffensen_value_gap is incorrect")
+    if gap <= 0:
+        fail("bad-steffensen-value-rejected steffensen_value_gap must be positive")
+    for forbidden in ("smt2_artifact", "farkas_regression", "certificate"):
+        if forbidden in data:
+            fail("bad-steffensen-value-rejected must leave checked evidence to qf-lra-bad-steffensen-value")
+    if "separate qf-lra-bad-steffensen-value" not in bad.get("notes", ""):
+        fail("bad-steffensen-value-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-steffensen-value"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-steffensen-value must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-steffensen-value must be checked")
+    if qf_bad.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-steffensen-value must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "affine-half-steffensen-row":
+        fail("qf-lra-bad-steffensen-value must cite the half-step witness")
+    if qf_data.get("source_replay_row") != "bad-steffensen-value-rejected":
+        fail("qf-lra-bad-steffensen-value must cite the replay row")
+    qf_computed = require_fraction(
+        "qf Steffensen computed_accelerated",
+        qf_data.get("computed_accelerated"),
+    )
+    qf_claimed = require_fraction(
+        "qf Steffensen claimed_accelerated",
+        qf_data.get("claimed_accelerated"),
+    )
+    if qf_computed != computed or qf_claimed != claimed:
+        fail("qf-lra-bad-steffensen-value data must match the replay row")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf Steffensen farkas_conflict", conflict)
+    if conflict != "steffensen_value = 1 and steffensen_value = 3/2":
+        fail("qf-lra-bad-steffensen-value must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf Steffensen smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-steffensen-method-v0/smt2/"
+        "bad-steffensen-value-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-steffensen-value smt2_artifact must name the checked source artifact")
+    check_source("qf Steffensen smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf Steffensen farkas_regression", regression)
+    if "finite_steffensen_method_bad_value_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-steffensen-value must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf Steffensen certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-steffensen-value certificate must document checked Farkas evidence")
+
+    horizon = checks["general-steffensen-method-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-steffensen-method-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-steffensen-method-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "Steffensen horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string("Steffensen horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_calculus_algebraic_shadow(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -36386,6 +36598,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_secant_method(expected)
     if metadata["id"] == "finite-aitken-acceleration-v0":
         validate_finite_aitken_acceleration(expected)
+    if metadata["id"] == "finite-steffensen-method-v0":
+        validate_finite_steffensen_method(expected)
     if metadata["id"] == "finite-separation-v0":
         validate_finite_separation(expected)
     if metadata["id"] == "function-composition-v0":

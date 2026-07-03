@@ -276,6 +276,10 @@ schemas, examples, and validation workflows.
   validates exact Aitken delta-squared sequence-acceleration replay,
   fixed residual-improvement checking, checked rejection of a false
   accelerated-value claim, and a convergence-acceleration Lean-horizon row.
+- [`artifacts/examples/math/finite-steffensen-method-v0/`](../../artifacts/examples/math/finite-steffensen-method-v0/)
+  validates exact Steffensen fixed-point acceleration replay, fixed residual
+  checking, checked rejection of a false accelerated-value claim, and a
+  fixed-point/convergence Lean-horizon row.
 - [`artifacts/examples/math/finite-root-finding-v0/`](../../artifacts/examples/math/finite-root-finding-v0/)
   validates exact bisection and Newton-step replay, fixed residual-decrease
   checking, checked rejection of false Newton-iterate and bisection-width
@@ -711,6 +715,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/se
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-monotone-sequence-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-aitken-acceleration-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-steffensen-method-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-root-finding-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-secant-method-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-separation-v0
