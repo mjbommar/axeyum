@@ -335,13 +335,24 @@ pub fn reflect_ll(ll: &str) -> Reflected {
     }
 }
 
-/// Reflect a single-input function into an *existing* arena, using `x` as its
-/// parameter — so two functions can be lowered over the *same* symbol and proved
-/// equivalent.
-pub fn reflect_unary_into(arena: &mut TermArena, x: TermId, ll: &str) -> TermId {
+/// Reflect a function into an *existing* arena, binding `params[i]` to the i-th
+/// declared parameter — so several functions can be lowered over the *same*
+/// symbols and proved equivalent.
+pub fn reflect_into(arena: &mut TermArena, params: &[TermId], ll: &str) -> TermId {
     let decls = param_decls(ll);
-    assert_eq!(decls.len(), 1, "reflect_unary_into expects one parameter");
+    assert_eq!(
+        decls.len(),
+        params.len(),
+        "parameter count mismatch between the define line and the given terms"
+    );
     let mut env: HashMap<String, (TermId, u32)> = HashMap::new();
-    env.insert(decls[0].0.clone(), (x, decls[0].1));
+    for ((name, width), &term) in decls.iter().zip(params) {
+        env.insert(name.clone(), (term, *width));
+    }
     lower_fn(arena, &mut env, ll).0
+}
+
+/// Single-input convenience over [`reflect_into`] (`x` is the sole parameter).
+pub fn reflect_unary_into(arena: &mut TermArena, x: TermId, ll: &str) -> TermId {
+    reflect_into(arena, &[x], ll)
 }

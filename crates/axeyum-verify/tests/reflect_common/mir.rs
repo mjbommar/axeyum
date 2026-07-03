@@ -58,20 +58,25 @@ fn ty_info(ty: &str) -> (u32, bool) {
     (width, signed)
 }
 
-/// `(width, signed)` of the input `_1`, from the `fn name(_1: TY) -> TY` line.
-fn input_ty(mir: &str) -> (u32, bool) {
+/// `(width, signed)` of each parameter `_1.._N`, in order, from the
+/// `fn name(_1: TY, _2: TY, …) -> TY` line.
+fn param_tys(mir: &str) -> Vec<(u32, bool)> {
     let sig = mir
         .lines()
         .map(str::trim)
         .find(|l| l.starts_with("fn "))
         .expect("fn signature");
-    let after = sig.split_once("_1: ").expect("an `_1: TY` parameter").1;
-    let ty = after
-        .split([',', ')'])
-        .next()
-        .expect("parameter type")
-        .trim();
-    ty_info(ty)
+    let inside = sig
+        .split_once('(')
+        .and_then(|(_, r)| r.split_once(')'))
+        .expect("parameter list")
+        .0;
+    inside
+        .split(',')
+        .map(str::trim)
+        .filter(|p| !p.is_empty())
+        .map(|p| ty_info(p.split_once(": ").expect("`_N: TY`").1))
+        .collect()
 }
 
 /// Resolve a MIR operand (`copy _L` / `move _L` / `const K_TY` / `const true`).
@@ -214,12 +219,25 @@ fn exec_block(
     panic!("block {bb} fell through without a terminator");
 }
 
-/// Reflect a single-input MIR function into an *existing* arena, using `x` (the
-/// input local `_1`) as its parameter, returning the term for `_0` at `return`.
-pub fn reflect_mir_unary(arena: &mut TermArena, x: TermId, mir: &str) -> TermId {
-    let (in_w, in_signed) = input_ty(mir);
+/// Reflect a MIR function into an *existing* arena, binding `params[i]` to local
+/// `_{i+1}` — so several functions can be lowered over the *same* symbols and
+/// proved equivalent. Returns the term for `_0` at `return`.
+pub fn reflect_mir_into(arena: &mut TermArena, params: &[TermId], mir: &str) -> TermId {
+    let tys = param_tys(mir);
+    assert_eq!(
+        tys.len(),
+        params.len(),
+        "parameter count mismatch between the MIR signature and the given terms"
+    );
     let map = blocks(mir);
     let mut env: HashMap<u32, Operand> = HashMap::new();
-    env.insert(1, (x, in_w, in_signed));
+    for (i, (&term, &(w, signed))) in params.iter().zip(tys.iter()).enumerate() {
+        env.insert(u32::try_from(i).unwrap() + 1, (term, w, signed));
+    }
     exec_block(arena, &map, env, "bb0", 0).0
+}
+
+/// Single-input convenience over [`reflect_mir_into`] (`x` is `_1`).
+pub fn reflect_mir_unary(arena: &mut TermArena, x: TermId, mir: &str) -> TermId {
+    reflect_mir_into(arena, &[x], mir)
 }

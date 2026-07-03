@@ -16,8 +16,8 @@ use axeyum_ir::{Assignment, Sort, TermArena, Value, eval};
 use axeyum_solver::{ProofOutcome, SolverConfig, prove};
 
 mod reflect_common;
-use reflect_common::llvm::reflect_unary_into;
-use reflect_common::mir::reflect_mir_unary;
+use reflect_common::llvm::{reflect_into, reflect_unary_into};
+use reflect_common::mir::{reflect_mir_into, reflect_mir_unary};
 
 // ---- `masked(x) = (x & 0xff) | 0x100` : straight-line BitAnd/BitOr ~ and/or -----
 
@@ -381,6 +381,108 @@ fn differential_fuzz_mir_vs_llvm_reflections() {
             };
             assert_eq!(m, l, "{name}: mir/llvm reflections disagree at x={v}");
         }
+    }
+}
+
+// ---- `umin(a, b) = if a < b { a } else { b }` : TWO parameters -------------------
+// MIR keeps the Lt-diamond; `-O` LLVM recognizes the idiom and emits the
+// `@llvm.umin` intrinsic. Proving them equal exercises multi-parameter
+// reflection on both sides AND validates the min-idiom recognition.
+
+const UMIN_MIR: &str = r"
+fn umin(_1: u32, _2: u32) -> u32 {
+    debug a => _1;
+    debug b => _2;
+    let mut _0: u32;
+    let mut _3: bool;
+
+    bb0: {
+        StorageLive(_3);
+        _3 = Lt(copy _1, copy _2);
+        switchInt(move _3) -> [0: bb2, otherwise: bb1];
+    }
+
+    bb1: {
+        _0 = copy _1;
+        goto -> bb3;
+    }
+
+    bb2: {
+        _0 = copy _2;
+        goto -> bb3;
+    }
+
+    bb3: {
+        StorageDead(_3);
+        return;
+    }
+}
+";
+
+const UMIN_LL: &str = r"
+define noundef i32 @umin(i32 noundef %a, i32 noundef %b) unnamed_addr {
+start:
+  %r = tail call i32 @llvm.umin.i32(i32 %a, i32 %b)
+  ret i32 %r
+}
+";
+
+/// `umin`, two parameters: MIR `Lt`-diamond over (_1, _2) == LLVM's recognized
+/// `@llvm.umin` intrinsic, for all (u32, u32) — multi-parameter reflection on
+/// both platforms over the same two symbols, and the min-idiom validated.
+#[test]
+fn umin_two_param_mir_equals_llvm() {
+    let mut arena = TermArena::new();
+    let a_sym = arena.declare("a", Sort::BitVec(32)).unwrap();
+    let b_sym = arena.declare("b", Sort::BitVec(32)).unwrap();
+    let a = arena.var(a_sym);
+    let b = arena.var(b_sym);
+
+    let from_mir = reflect_mir_into(&mut arena, &[a, b], UMIN_MIR);
+    let from_llvm = reflect_into(&mut arena, &[a, b], UMIN_LL);
+
+    let eq = arena.eq(from_mir, from_llvm).unwrap();
+    let outcome =
+        prove(&mut arena, &[], eq, &SolverConfig::default()).expect("solver should not hard-error");
+    assert!(
+        matches!(outcome, ProofOutcome::Proved(_)),
+        "umin MIR and LLVM reflections must be provably equal for all (u32,u32), got {outcome:?}"
+    );
+
+    // Concrete cross-check at corner pairs (independent of the proof).
+    for &(va, vb) in &[
+        (0u128, 0u128),
+        (0, 1),
+        (1, 0),
+        (7, 7),
+        (u128::from(u32::MAX), 0),
+        (0xdead_beef, 0xbeef_dead),
+    ] {
+        let mut asg = Assignment::new();
+        asg.set(
+            a_sym,
+            Value::Bv {
+                width: 32,
+                value: va,
+            },
+        );
+        asg.set(
+            b_sym,
+            Value::Bv {
+                width: 32,
+                value: vb,
+            },
+        );
+        let m = match eval(&arena, from_mir, &asg).unwrap() {
+            Value::Bv { value, .. } => value,
+            other => panic!("mir eval not BV: {other:?}"),
+        };
+        let l = match eval(&arena, from_llvm, &asg).unwrap() {
+            Value::Bv { value, .. } => value,
+            other => panic!("llvm eval not BV: {other:?}"),
+        };
+        assert_eq!(m, l, "umin mir/llvm disagree at a={va}, b={vb}");
+        assert_eq!(m, va.min(vb), "umin wrong value at a={va}, b={vb}");
     }
 }
 
