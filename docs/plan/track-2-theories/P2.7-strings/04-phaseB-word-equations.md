@@ -83,3 +83,26 @@ Track explanation dependencies for minimal conflicts (cvc5's `d_expDep`).
   `F-Loop`; budget-guarded `unknown` outside.
 - Every `sat` replays; `unsat` derivations re-checkable.
 - `str_differential_fuzz` vs Z3 DISAGREE=0 on a large random word-equation set.
+
+## Measured coverage boundary (census 2026-07-03, post T-B.7 slice 2)
+
+The word route is live both directions (T-B.1…T-B.4d, T-B.7 slices 1–2;
+ADR-0053) and moved QF_S 52→57. A file-by-file census of the **35 remaining
+gate-downgraded unknowns** across the three committed string divisions found
+the word-equation fragment's ceiling on this corpus is reached:
+
+| Blocking class | Count | Where it belongs |
+|---|---|---|
+| regex (`re.*`, `str.in_re`, `re.comp`) | 15 | **Phase C** (derivatives) — the largest single demand signal |
+| `str.<=`/`str.<` over variables (lex-order transitivity proofs) | 4 | lex-order theory atoms — bounded/theory route, not word equations |
+| `str.to_code` under integer arithmetic (range bounds, sums, distinct) | 4 | the len/code↔LIA link (Phase A bus, extended to code points) |
+| `seq.update` over `(Seq (_ BitVec 16))` with `seq.len` side conditions | 1 | sequence theory + length coupling |
+| `str.replace`/`substr`/`to_int`/`seq.nth`/`extract`/`rev` etc. | 11 | Phase D lazy extended-function reductions (the non-word-encodable remainder) |
+
+No occurrence of the cheaply-encodable shapes (`(= (str.to_code x) K)`,
+literal-only `str.<=`, `str.at`, `str.from_code`) exists among the unknowns —
+verified by grep before writing any code, and the honest deliverable was this
+census, not encodings. **Conclusion: further QF_S/QF_SLIA decide-rate comes
+from Phase C regex derivatives first (15/35), then Phase D reductions (11/35),
+then lex-order + code-point↔LIA theory atoms (8/35) — not from widening the
+pure word-equation side channel.**
