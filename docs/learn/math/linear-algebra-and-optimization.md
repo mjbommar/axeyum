@@ -56,6 +56,7 @@ Example packs:
 - [matrix-invariants-v0](../../../artifacts/examples/math/matrix-invariants-v0/)
 - [random-matrix-finite-v0](../../../artifacts/examples/math/random-matrix-finite-v0/)
 - [finite-covariance-matrix-v0](../../../artifacts/examples/math/finite-covariance-matrix-v0/)
+- [finite-k-means-clustering-v0](../../../artifacts/examples/math/finite-k-means-clustering-v0/)
 - [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/)
 - [finite-simplicial-homology-v0](../../../artifacts/examples/math/finite-simplicial-homology-v0/)
 - [finite-universal-coefficient-shadow-v0](../../../artifacts/examples/math/finite-universal-coefficient-shadow-v0/)
@@ -261,6 +262,11 @@ matrix-valued probability tables, trace/determinant moments, expected Gram
 matrices, rank distributions, sample means, centered Gram matrices,
 covariance matrices, positive-semidefinite shadows, and checked QF_LRA/Farkas
 bad trace-square, bad expected-rank, and bad covariance-entry certificates.
+The finite k-means slice treats clustering as an exact finite objective row:
+fixed labels, exact centroids, residual vectors, WCSS, total/between scatter,
+replayed bad-centroid rejection, and a checked QF_LRA/Farkas centroid conflict
+without claiming Lloyd convergence, global optimality, statistical consistency,
+or floating-point implementation behavior.
 The spectral slice checks exact finite
 eigenpair replay, orthogonal eigenbasis arithmetic, Rayleigh quotients, and
 `P*D*P^-1` reconstruction for a fixed rational matrix, plus a QF_LRA/Farkas

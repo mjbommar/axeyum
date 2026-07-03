@@ -20,10 +20,11 @@ objective/slack/gap replay, gradient-descent steps, Armijo/Wolfe line-search
 rows, projected-gradient interval/decrease replay, proximal-gradient
 soft-threshold and composite-decrease plus box-plus-L1 replay, Schur-complement
 positive-definite shadows, least-squares
-and ridge-regression rows, residual bounds, and projection witnesses. General duality, KKT
-sufficiency, SDP strong duality, method
-convergence, stability, and floating-point performance claims remain in the
-proof-horizon or numerical-honesty lanes.
+and ridge-regression rows, finite PCA rows, finite k-means centroid/objective
+rows, residual bounds, and projection witnesses. General duality, KKT
+sufficiency, SDP strong duality, clustering global optimality, Lloyd
+convergence, method convergence, stability, and floating-point performance
+claims remain in the proof-horizon or numerical-honesty lanes.
 
 ## Query Shape
 
@@ -62,10 +63,11 @@ needs concrete checked rows to display.
 | Convexity, separation, KKT, QP, SDP, conjugate-gradient, and finite first-order method shadows | `bridge_rational_convexity_shadow` | `Farkas` | `checks --concept bridge_rational_convexity_shadow --route Farkas --proof-status checked` |
 | Affine-threshold convexity display row | pack `convexity-rational-v0`, text `threshold` | `Farkas` | `checks --pack convexity-rational-v0 --route Farkas --proof-status checked --text threshold` |
 | Convex-analysis theorem boundary | pack `convexity-rational-v0` or text `convex-analysis` | `Lean horizon` | `horizon-frontier --pack convexity-rational-v0`; `horizon-frontier --text convex-analysis` |
-| Inner-product projection, least-squares, ridge, finite PCA, and finite discriminant rows | `bridge_inner_product_projection`; packs `finite-ridge-regression-v0`, `finite-principal-components-v0`, `finite-linear-discriminant-v0` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked`; `checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked`; `checks --pack finite-principal-components-v0 --route Farkas --proof-status checked`; `checks --pack finite-linear-discriminant-v0 --route Farkas --proof-status checked` |
-| Residual bounds and regression/numerical optimization rows | `bridge_residual_bound`; pack `finite-ridge-regression-v0` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked`; `checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked` |
-| Exact arithmetic, regularized regression, finite PCA, finite discriminants, and numerical-honesty rows | `bridge_exact_vs_floating_arithmetic`; packs `finite-ridge-regression-v0`, `finite-principal-components-v0`, `finite-linear-discriminant-v0` | `Farkas` | `checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked`; `checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked`; `checks --pack finite-principal-components-v0 --route Farkas --proof-status checked`; `checks --pack finite-linear-discriminant-v0 --route Farkas --proof-status checked`; `horizon-frontier --text pca`; `horizon-frontier --text discriminant` |
+| Inner-product projection, least-squares, ridge, finite PCA, finite k-means, and finite discriminant rows | `bridge_inner_product_projection`; packs `finite-ridge-regression-v0`, `finite-principal-components-v0`, `finite-k-means-clustering-v0`, `finite-linear-discriminant-v0` | `Farkas` | `checks --concept bridge_inner_product_projection --route Farkas --proof-status checked`; `checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked`; `checks --pack finite-principal-components-v0 --route Farkas --proof-status checked`; `checks --pack finite-k-means-clustering-v0 --route Farkas --proof-status checked`; `checks --pack finite-linear-discriminant-v0 --route Farkas --proof-status checked` |
+| Residual bounds and regression/clustering/numerical optimization rows | `bridge_residual_bound`; packs `finite-ridge-regression-v0`, `finite-k-means-clustering-v0` | `Farkas` | `checks --concept bridge_residual_bound --route Farkas --proof-status checked`; `checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked`; `checks --pack finite-k-means-clustering-v0 --route Farkas --proof-status checked` |
+| Exact arithmetic, regularized regression, finite PCA, finite k-means, finite discriminants, and numerical-honesty rows | `bridge_exact_vs_floating_arithmetic`; packs `finite-ridge-regression-v0`, `finite-principal-components-v0`, `finite-k-means-clustering-v0`, `finite-linear-discriminant-v0` | `Farkas` | `checks --concept bridge_exact_vs_floating_arithmetic --route Farkas --proof-status checked`; `checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked`; `checks --pack finite-principal-components-v0 --route Farkas --proof-status checked`; `checks --pack finite-k-means-clustering-v0 --route Farkas --proof-status checked`; `checks --pack finite-linear-discriminant-v0 --route Farkas --proof-status checked`; `horizon-frontier --text pca`; `horizon-frontier --text clustering`; `horizon-frontier --text discriminant` |
 | Finite PCA covariance/eigenpair/projection optimization shadow | `bridge_finite_pca_shadow`; pack `finite-principal-components-v0` | `Farkas` | `checks --concept bridge_finite_pca_shadow --route Farkas --proof-status checked`; `checks --pack finite-principal-components-v0 --route Farkas --proof-status checked`; `horizon-frontier --text pca` |
+| Finite k-means centroid/objective optimization shadow | `bridge_finite_k_means_shadow`; pack `finite-k-means-clustering-v0` | `Farkas` | `checks --concept bridge_finite_k_means_shadow --route Farkas --proof-status checked`; `checks --pack finite-k-means-clustering-v0 --route Farkas --proof-status checked`; `horizon-frontier --text clustering` |
 | Finite linear-discriminant/classification optimization shadow | `bridge_finite_linear_discriminant_shadow`; pack `finite-linear-discriminant-v0` | `Farkas` | `checks --concept bridge_finite_linear_discriminant_shadow --route Farkas --proof-status checked`; `checks --pack finite-linear-discriminant-v0 --route Farkas --proof-status checked`; `horizon-frontier --text discriminant` |
 | KKT stationarity and complementarity display rows | pack `finite-kkt-v0` | `Farkas` | `checks --pack finite-kkt-v0 --route Farkas --proof-status checked` |
 | Active-set QP display row | pack `finite-active-set-qp-v0` | `Farkas` | `checks --pack finite-active-set-qp-v0 --route Farkas --proof-status checked` |
@@ -184,6 +186,13 @@ python3 scripts/query-foundational-resources.py checks \
 python3 scripts/query-foundational-resources.py checks \
   --concept bridge_finite_pca_shadow \
   --pack finite-principal-components-v0 \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_k_means_shadow \
+  --pack finite-k-means-clustering-v0 \
   --route Farkas \
   --proof-status checked \
   --require-any

@@ -33982,6 +33982,250 @@ def validate_finite_principal_components(expected: dict[str, Any]) -> None:
     require_string("PCA horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_k_means_clustering(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    assignment = checks["cluster-assignment-witness"]
+    if assignment["expected_result"] != "sat":
+        fail("cluster-assignment-witness must expect sat")
+    if assignment.get("proof_status") != "replay-only":
+        fail("cluster-assignment-witness must be replay-only")
+    values = single_witness_values(assignment, witnesses)
+    points = require_fraction_matrix("k-means points", values.get("points"))
+    assignments_raw = values.get("cluster_assignments")
+    if not isinstance(assignments_raw, list):
+        fail("k-means cluster_assignments must be a list")
+    assignments: list[str] = []
+    for index, item in enumerate(assignments_raw):
+        if not isinstance(item, str) or not item:
+            fail(f"k-means cluster_assignments[{index}] must be a non-empty string")
+        assignments.append(item)
+    cluster_ids = require_string_list("k-means cluster_ids", values.get("cluster_ids"))
+    cluster_members_raw = values.get("cluster_members")
+    if not isinstance(cluster_members_raw, list):
+        fail("k-means cluster_members must be a list")
+    cluster_members: list[list[int]] = []
+    for cluster_index, members in enumerate(cluster_members_raw):
+        if not isinstance(members, list) or not members:
+            fail(f"k-means cluster_members[{cluster_index}] must be a non-empty list")
+        parsed_members: list[int] = []
+        for member in members:
+            if not isinstance(member, str) or not member.isdigit():
+                fail(f"k-means cluster_members[{cluster_index}] entries must be decimal strings")
+            parsed_members.append(int(member))
+        cluster_members.append(parsed_members)
+    cluster_sizes = require_fraction_vector("k-means cluster_sizes", values.get("cluster_sizes"))
+    centroids = require_fraction_matrix("k-means centroids", values.get("centroids"))
+    residuals = require_fraction_matrix("k-means residuals", values.get("residuals"))
+    squared_distances = require_fraction_vector(
+        "k-means squared_distances",
+        values.get("squared_distances"),
+    )
+    cluster_sum_squares = require_fraction_vector(
+        "k-means cluster_sum_squares",
+        values.get("cluster_sum_squares"),
+    )
+    within_cluster_sum_squares = require_fraction(
+        "k-means within_cluster_sum_squares",
+        values.get("within_cluster_sum_squares"),
+    )
+    global_centroid = require_fraction_vector(
+        "k-means global_centroid",
+        values.get("global_centroid"),
+    )
+    global_residuals = require_fraction_matrix(
+        "k-means global_residuals",
+        values.get("global_residuals"),
+    )
+    total_squared_distances = require_fraction_vector(
+        "k-means total_squared_distances",
+        values.get("total_squared_distances"),
+    )
+    total_sum_squares = require_fraction("k-means total_sum_squares", values.get("total_sum_squares"))
+    between_centroid_residuals = require_fraction_matrix(
+        "k-means between_centroid_residuals",
+        values.get("between_centroid_residuals"),
+    )
+    between_cluster_squares = require_fraction_vector(
+        "k-means between_cluster_squares",
+        values.get("between_cluster_squares"),
+    )
+    between_cluster_sum_squares = require_fraction(
+        "k-means between_cluster_sum_squares",
+        values.get("between_cluster_sum_squares"),
+    )
+
+    if not points:
+        fail("finite-k-means-clustering-v0 points must be nonempty")
+    if len(points[0]) != 2:
+        fail("finite-k-means-clustering-v0 intentionally uses 2D points")
+    if len(assignments) != len(points):
+        fail("cluster-assignment-witness must label every point")
+    if len(cluster_members) != len(cluster_ids):
+        fail("cluster-assignment-witness must list members for every cluster")
+    if len(cluster_sizes) != len(cluster_ids):
+        fail("cluster-assignment-witness cluster_sizes width must match cluster_ids")
+    if len(centroids) != len(cluster_ids):
+        fail("centroid-witness centroid count must match cluster_ids")
+    if any(len(centroid) != len(points[0]) for centroid in centroids):
+        fail("centroid-witness centroid width must match point width")
+    if sorted(index for members in cluster_members for index in members) != list(range(len(points))):
+        fail("cluster-assignment-witness cluster_members must partition the point indices")
+    id_to_index = {cluster_id: index for index, cluster_id in enumerate(cluster_ids)}
+    for point_index, cluster_id in enumerate(assignments):
+        if cluster_id not in id_to_index:
+            fail(f"cluster-assignment-witness unknown cluster id {cluster_id!r}")
+        if point_index not in cluster_members[id_to_index[cluster_id]]:
+            fail("cluster-assignment-witness assignments and members disagree")
+    for cluster_index, members in enumerate(cluster_members):
+        if cluster_sizes[cluster_index] != Fraction(len(members)):
+            fail("cluster-assignment-witness cluster_sizes must match member counts")
+
+    centroid_check = checks["centroid-witness"]
+    if centroid_check["expected_result"] != "sat":
+        fail("centroid-witness must expect sat")
+    if centroid_check.get("proof_status") != "replay-only":
+        fail("centroid-witness must be replay-only")
+    computed_centroids = [matrix_column_means([points[index] for index in members]) for members in cluster_members]
+    if computed_centroids != centroids:
+        fail("centroid-witness centroids do not match assigned-point means")
+
+    energy = checks["within-cluster-energy-witness"]
+    if energy["expected_result"] != "sat":
+        fail("within-cluster-energy-witness must expect sat")
+    if energy.get("proof_status") != "replay-only":
+        fail("within-cluster-energy-witness must be replay-only")
+    computed_residuals: list[list[Fraction]] = []
+    for point, cluster_id in zip(points, assignments):
+        computed_residuals.append(vector_sub(point, centroids[id_to_index[cluster_id]]))
+    if computed_residuals != residuals:
+        fail("within-cluster-energy-witness residuals are incorrect")
+    computed_squared = [dot_product(row, row) for row in residuals]
+    if computed_squared != squared_distances:
+        fail("within-cluster-energy-witness squared distances are incorrect")
+    computed_cluster_sums = [
+        sum((computed_squared[index] for index in members), Fraction(0))
+        for members in cluster_members
+    ]
+    if computed_cluster_sums != cluster_sum_squares:
+        fail("within-cluster-energy-witness cluster sums are incorrect")
+    if sum(cluster_sum_squares, Fraction(0)) != within_cluster_sum_squares:
+        fail("within-cluster-energy-witness WCSS is incorrect")
+
+    decomposition = checks["variance-decomposition-witness"]
+    if decomposition["expected_result"] != "sat":
+        fail("variance-decomposition-witness must expect sat")
+    if decomposition.get("proof_status") != "replay-only":
+        fail("variance-decomposition-witness must be replay-only")
+    if matrix_column_means(points) != global_centroid:
+        fail("variance-decomposition-witness global centroid is incorrect")
+    if matrix_subtract_row_vector(points, global_centroid) != global_residuals:
+        fail("variance-decomposition-witness global residuals are incorrect")
+    computed_total_squared = [dot_product(row, row) for row in global_residuals]
+    if computed_total_squared != total_squared_distances:
+        fail("variance-decomposition-witness total squared distances are incorrect")
+    if sum(total_squared_distances, Fraction(0)) != total_sum_squares:
+        fail("variance-decomposition-witness total sum of squares is incorrect")
+    computed_between_residuals = [vector_sub(centroid, global_centroid) for centroid in centroids]
+    if computed_between_residuals != between_centroid_residuals:
+        fail("variance-decomposition-witness between residuals are incorrect")
+    computed_between_squares = [dot_product(row, row) for row in between_centroid_residuals]
+    if computed_between_squares != between_cluster_squares:
+        fail("variance-decomposition-witness between cluster squares are incorrect")
+    computed_between_sum = sum(
+        (size * square for size, square in zip(cluster_sizes, between_cluster_squares)),
+        Fraction(0),
+    )
+    if computed_between_sum != between_cluster_sum_squares:
+        fail("variance-decomposition-witness between cluster sum is incorrect")
+    if within_cluster_sum_squares + between_cluster_sum_squares != total_sum_squares:
+        fail("variance-decomposition-witness total = within + between is incorrect")
+
+    bad = checks["bad-centroid-x-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-centroid-x-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-centroid-x-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_k_means_centroid_replay":
+        fail("bad-centroid-x-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "four-point-two-cluster-sample":
+        fail("bad-centroid-x-rejected must cite four-point-two-cluster-sample")
+    if data.get("cluster_id") != "0" or data.get("coordinate") != "x":
+        fail("bad-centroid-x-rejected must document the first cluster x-coordinate")
+    coordinate_sum = require_fraction("bad k-means coordinate_sum", data.get("coordinate_sum"))
+    cluster_size = require_fraction("bad k-means cluster_size", data.get("cluster_size"))
+    computed_centroid = require_fraction("bad k-means computed_centroid", data.get("computed_centroid"))
+    claimed_centroid = require_fraction("bad k-means claimed_centroid", data.get("claimed_centroid"))
+    cluster_zero_index = id_to_index["0"]
+    if sum((points[index][0] for index in cluster_members[cluster_zero_index]), Fraction(0)) != coordinate_sum:
+        fail("bad-centroid-x-rejected coordinate_sum must match cluster 0 x-values")
+    if cluster_size != cluster_sizes[cluster_zero_index]:
+        fail("bad-centroid-x-rejected cluster_size must match replay")
+    if computed_centroid != centroids[cluster_zero_index][0]:
+        fail("bad-centroid-x-rejected computed centroid must match replay")
+    if coordinate_sum / cluster_size != computed_centroid:
+        fail("bad-centroid-x-rejected computed centroid must equal sum / size")
+    if claimed_centroid == computed_centroid:
+        fail("bad-centroid-x-rejected must document a false centroid claim")
+    if "separate qf-lra-bad-centroid-x" not in bad.get("notes", ""):
+        fail("bad-centroid-x-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-centroid-x"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-centroid-x must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-centroid-x must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-centroid-x must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "four-point-two-cluster-sample":
+        fail("qf-lra-bad-centroid-x must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-centroid-x-rejected":
+        fail("qf-lra-bad-centroid-x must cite the replay row")
+    qf_sum = require_fraction("qf k-means coordinate_sum", qf_data.get("coordinate_sum"))
+    qf_size = require_fraction("qf k-means cluster_size", qf_data.get("cluster_size"))
+    qf_computed = require_fraction("qf k-means computed_centroid", qf_data.get("computed_centroid"))
+    qf_claimed = require_fraction("qf k-means claimed_centroid", qf_data.get("claimed_centroid"))
+    if (qf_sum, qf_size, qf_computed, qf_claimed) != (
+        coordinate_sum,
+        cluster_size,
+        computed_centroid,
+        claimed_centroid,
+    ):
+        fail("qf-lra-bad-centroid-x data must match the replay row")
+    equations = require_string_list("qf k-means centroid_equations", qf_data.get("centroid_equations"))
+    if equations != ["2*c0x = -2", "c0x = -1/2"]:
+        fail("qf-lra-bad-centroid-x must document the linear conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf k-means smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-k-means-clustering-v0/smt2/"
+        "bad-centroid-x-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-centroid-x smt2_artifact must name the checked source artifact")
+    check_source("qf k-means smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf k-means farkas_regression", regression)
+    if "finite_k_means_clustering_bad_centroid_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-centroid-x must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf k-means certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-centroid-x certificate must document checked Farkas evidence")
+
+    horizon = checks["general-k-means-clustering-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-k-means-clustering-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-k-means-clustering-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("k-means horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("k-means horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -37190,6 +37434,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_linear_discriminant(expected)
     if metadata["id"] == "finite-principal-components-v0":
         validate_finite_principal_components(expected)
+    if metadata["id"] == "finite-k-means-clustering-v0":
+        validate_finite_k_means_clustering(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "cardinality-principles-v0":

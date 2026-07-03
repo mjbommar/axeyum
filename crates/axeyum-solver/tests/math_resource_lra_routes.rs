@@ -64,6 +64,9 @@ const FINITE_COVARIANCE_MATRIX_BAD_ENTRY: &str = include_str!(
 const FINITE_PRINCIPAL_COMPONENTS_BAD_EIGENVALUE: &str = include_str!(
     "../../../artifacts/examples/math/finite-principal-components-v0/smt2/bad-principal-eigenvalue-farkas-conflict.smt2"
 );
+const FINITE_K_MEANS_CLUSTERING_BAD_CENTROID: &str = include_str!(
+    "../../../artifacts/examples/math/finite-k-means-clustering-v0/smt2/bad-centroid-x-farkas-conflict.smt2"
+);
 const LEAST_SQUARES_BAD_RSS_IMPROVEMENT: &str = include_str!(
     "../../../artifacts/examples/math/least-squares-regression-v0/smt2/bad-rss-improvement-farkas-conflict.smt2"
 );
@@ -914,6 +917,14 @@ fn finite_principal_components_bad_eigenvalue_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-principal-components-v0 bad-principal-eigenvalue SMT-LIB artifact",
         FINITE_PRINCIPAL_COMPONENTS_BAD_EIGENVALUE,
+    );
+}
+
+#[test]
+fn finite_k_means_clustering_bad_centroid_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-k-means-clustering-v0 bad-centroid-x SMT-LIB artifact",
+        FINITE_K_MEANS_CLUSTERING_BAD_CENTROID,
     );
 }
 

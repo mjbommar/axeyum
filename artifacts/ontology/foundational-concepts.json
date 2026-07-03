@@ -743,6 +743,12 @@
           "notes": "Exact rational PCA covariance/eigenpair replay with checked bad principal-eigenvalue evidence."
         },
         {
+          "id": "finite-k-means-clustering-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-k-means-clustering-v0",
+          "notes": "Exact rational k-means centroid/objective replay with checked bad centroid-coordinate evidence."
+        },
+        {
           "id": "finite-linear-discriminant-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-linear-discriminant-v0",
@@ -850,6 +856,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-principal-components-v0",
           "notes": "Finite PCA covariance/eigenpair and projection replay with a checked bad eigenvalue proof row and PCA/SVD/statistical-theory horizon."
+        },
+        {
+          "id": "finite-k-means-clustering-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-k-means-clustering-v0",
+          "notes": "Finite k-means centroid/objective replay with a checked bad centroid-coordinate proof row and clustering/statistical-theory horizon."
         },
         {
           "id": "finite-linear-discriminant-v0",
@@ -1930,6 +1942,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-principal-components-v0",
           "notes": "Exact finite-sample covariance, principal eigenpair, projection/reconstruction replay, and checked bad eigenvalue evidence."
+        },
+        {
+          "id": "finite-k-means-clustering-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-k-means-clustering-v0",
+          "notes": "Exact finite cluster assignment, centroid, WCSS, between-cluster decomposition, and checked bad centroid-coordinate evidence."
         },
         {
           "id": "finite-linear-discriminant-v0",
@@ -3282,6 +3300,12 @@
           "notes": "Malformed principal-eigenvalue row checked through exact rational Farkas evidence after finite covariance/eigenpair replay."
         },
         {
+          "id": "finite-k-means-clustering-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-k-means-clustering-v0",
+          "notes": "Malformed centroid-coordinate row checked through exact rational Farkas evidence after finite cluster/objective replay."
+        },
+        {
           "id": "finite-ridge-regression-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-ridge-regression-v0",
@@ -3315,6 +3339,7 @@
         "docs/learn/math/farkas-certificate-anatomy-end-to-end.md",
         "docs/learn/math/linear-discriminant-end-to-end.md",
         "docs/learn/math/principal-components-end-to-end.md",
+        "docs/learn/math/k-means-clustering-end-to-end.md",
         "docs/learn/math/linear-algebra-and-optimization.md",
         "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -3520,6 +3545,12 @@
           "notes": "Principal-component covariance, eigenpair, projection, reconstruction, and bad-eigenvalue rows checked as exact rational replay, not floating-point PCA or statistical generalization evidence."
         },
         {
+          "id": "finite-k-means-clustering-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-k-means-clustering-v0",
+          "notes": "Cluster assignment, centroid, residual, WCSS, and bad-centroid rows checked as exact rational replay, not floating-point k-means or statistical clustering evidence."
+        },
+        {
           "id": "finite-linear-discriminant-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-linear-discriminant-v0",
@@ -3618,6 +3649,7 @@
             "docs/learn/math/romberg-extrapolation-end-to-end.md",
             "docs/learn/math/exact-statistical-tests-end-to-end.md",
             "docs/learn/math/principal-components-end-to-end.md",
+            "docs/learn/math/k-means-clustering-end-to-end.md",
             "docs/foundational-resources/MATH-FIELDS.md"
           ],
           "notes": "The checked object is the exact rational row or exact linear certificate. This route deliberately does not certify IEEE rounding, conditioning, stability, or statistical approximation behavior."
@@ -3650,6 +3682,7 @@
         "docs/learn/math/spline-interpolation-end-to-end.md",
         "docs/learn/math/descriptive-statistics-regression-end-to-end.md",
         "docs/learn/math/principal-components-end-to-end.md",
+        "docs/learn/math/k-means-clustering-end-to-end.md",
         "docs/learn/math/linear-discriminant-end-to-end.md",
         "docs/learn/math/exact-statistical-tests-end-to-end.md",
         "artifacts/examples/math/finite-rounding-shadow-v0/smt2/bad-rounded-delta-farkas-conflict.smt2",
@@ -4213,6 +4246,117 @@
           "The validator recomputes all finite PCA quantities from committed source data.",
           "Malformed finite eigenvalue claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
           "Learner and query docs keep finite exact PCA replay separate from general PCA, SVD, statistical, randomized, and floating-point claims."
+        ]
+      }
+    },
+    {
+      "id": "bridge_finite_k_means_shadow",
+      "kind": "bridge-concept",
+      "title": "Finite K-Means Clustering Shadow",
+      "domain": "mathematics",
+      "field_ids": [
+        "statistics",
+        "linear_algebra",
+        "optimization_and_convexity",
+        "numerical_analysis"
+      ],
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_area": null,
+      "curriculum_status": "extension",
+      "curriculum_family": "",
+      "resource_status": "validated",
+      "summary": "Finite k-means rows replay exact point tables, assigned clusters, centroids, residuals, within-cluster sum-of-squares, between-cluster decomposition, and source-linked bad-centroid Farkas evidence while keeping clustering optimality, convergence, statistical, and floating-point theory separate.",
+      "prerequisites": [
+        "curriculum_rationals",
+        "curriculum_linear_algebra",
+        "bridge_inner_product_projection",
+        "bridge_exact_vs_floating_arithmetic",
+        "bridge_qf_lra_farkas_anatomy"
+      ],
+      "unlocks": [
+        "field_statistics",
+        "field_optimization_and_convexity",
+        "field_numerical_analysis",
+        "bridge_lean_horizon"
+      ],
+      "decidability": "bounded",
+      "axeyum_fragments": [
+        "finite sample tables",
+        "finite clustering replay",
+        "finite matrix replay",
+        "finite objective replay",
+        "exact rational arithmetic",
+        "QF_LRA",
+        "Farkas certificate",
+        "Lean horizon"
+      ],
+      "example_packs": [
+        {
+          "id": "finite-k-means-clustering-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-k-means-clustering-v0",
+          "notes": "Exact four-point k-means shadow with cluster assignments, centroids, WCSS, between-cluster decomposition, and checked bad-centroid evidence."
+        },
+        {
+          "id": "finite-principal-components-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-principal-components-v0",
+          "notes": "PCA projection and residual-energy rows that share finite-sample objective vocabulary."
+        },
+        {
+          "id": "finite-covariance-matrix-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-covariance-matrix-v0",
+          "notes": "Centered sample and scatter rows that supply finite-sample statistics vocabulary."
+        },
+        {
+          "id": "inner-product-spaces-rational-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/inner-product-spaces-rational-v0",
+          "notes": "Projection, norm, and inner-product rows that supply finite residual vocabulary."
+        }
+      ],
+      "proof_routes": [
+        {
+          "name": "finite k-means replay plus QF_LRA/Farkas",
+          "status": "checked",
+          "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+          "lean_status": "partial",
+          "sources": [
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/k-means-clustering-end-to-end.md",
+            "artifacts/examples/math/finite-k-means-clustering-v0/smt2/bad-centroid-x-farkas-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+          ],
+          "notes": "The finite checker recomputes cluster membership, centroids, residuals, squared distances, WCSS, global centroid, total squared deviation, and between-cluster decomposition exactly. Only the final malformed centroid row is promoted to checked Farkas evidence."
+        }
+      ],
+      "source_refs": [
+        "docs/foundational-resources/MATH-FIELDS.md",
+        "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+        "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+        "docs/proof-cookbook/recipes/finite-model-replay.md",
+        "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+        "docs/proof-cookbook/recipes/lean-horizon-template.md",
+        "docs/learn/math/k-means-clustering-end-to-end.md",
+        "artifacts/examples/math/finite-k-means-clustering-v0/smt2/bad-centroid-x-farkas-conflict.smt2",
+        "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+      ],
+      "open_gaps": [
+        "Finite assigned-cluster replay does not prove Lloyd convergence, global k-means optimality, k-means++ guarantees, NP-hardness reductions, clustering consistency, model selection, or statistical generalization.",
+        "Floating-point k-means implementations need numerical-honesty or QF_FP resources before they can be presented as checked numerical claims.",
+        "High-dimensional, weighted, kernel, mini-batch, streaming, and probabilistic clustering theory remain Lean/theorem-horizon work."
+      ],
+      "graduation": {
+        "status": "validated",
+        "criteria": [
+          "Rows state the finite point table, cluster labels, exact rational centroids, residuals, squared distances, WCSS, global centroid, total scatter, and between-cluster scatter.",
+          "The validator recomputes all finite k-means quantities from committed source data.",
+          "Malformed finite centroid claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
+          "Learner and query docs keep finite exact assignment/objective replay separate from Lloyd convergence, global optimality, statistical, randomized, and floating-point claims."
         ]
       }
     },
@@ -8565,7 +8709,7 @@
       "curriculum_status": "extension",
       "curriculum_family": "",
       "resource_status": "validated",
-      "summary": "A residual-bound row checks exact rational residuals, norms, solution boxes, Jacobi-step error bounds, Hessian linear solves, condition-number perturbation bounds, power-iteration residual shadows, conjugate-gradient residual orthogonality, A-conjugacy, Arnoldi orthogonalization/Hessenberg residuals, GMRES one-step residual minimization, Lanczos tridiagonal residuals, or normal-equation side conditions for a fixed matrix problem, and separates exact infeasibility from floating error analysis.",
+      "summary": "A residual-bound row checks exact rational residuals, norms, solution boxes, Jacobi-step error bounds, Hessian linear solves, condition-number perturbation bounds, power-iteration residual shadows, conjugate-gradient residual orthogonality, A-conjugacy, Arnoldi orthogonalization/Hessenberg residuals, GMRES one-step residual minimization, k-means assigned-cluster residual sums, Lanczos tridiagonal residuals, or normal-equation side conditions for a fixed matrix problem, and separates exact infeasibility from floating error analysis.",
       "prerequisites": [
         "bridge_lu_replay",
         "bridge_counterexample_proof",
@@ -8587,6 +8731,7 @@
         "conjugate-gradient replay",
         "Arnoldi/Hessenberg replay",
         "GMRES residual minimization replay",
+        "finite clustering objective replay",
         "Lanczos/tridiagonal replay",
         "bounded recurrence replay"
       ],
@@ -8608,6 +8753,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-ridge-regression-v0",
           "notes": "Regularized normal-equation, residual/penalty objective, shrinkage, and bad coefficient rows."
+        },
+        {
+          "id": "finite-k-means-clustering-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-k-means-clustering-v0",
+          "notes": "Assigned-cluster residuals, WCSS, between-cluster decomposition, and bad centroid-coordinate rows."
         },
         {
           "id": "inner-product-spaces-rational-v0",
@@ -8688,13 +8839,14 @@
             "docs/learn/math/conjugate-gradient-end-to-end.md",
             "docs/learn/math/arnoldi-iteration-end-to-end.md",
             "docs/learn/math/gmres-residual-shadow-end-to-end.md",
+            "docs/learn/math/k-means-clustering-end-to-end.md",
             "docs/learn/math/lanczos-iteration-end-to-end.md",
             "docs/learn/math/schur-complement-end-to-end.md",
             "docs/learn/math/ridge-regression-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
           ],
-          "notes": "Exact residual witnesses replay directly; false bound or coefficient claims, including false Newton coordinates, and condition-number bounds, false power-iterate coordinates, or false conjugate-gradient step sizes, or false Arnoldi Hessenberg coefficients, or false GMRES minimizer coefficients, or false Lanczos tridiagonal coefficients, graduate only when the final rational linear conflict has rechecked Farkas evidence."
+          "notes": "Exact residual witnesses replay directly; false bound or coefficient claims, including false Newton coordinates, and condition-number bounds, false power-iterate coordinates, or false conjugate-gradient step sizes, or false Arnoldi Hessenberg coefficients, or false GMRES minimizer coefficients, or false k-means centroid coordinates, or false Lanczos tridiagonal coefficients, graduate only when the final rational linear conflict has rechecked Farkas evidence."
         }
       ],
       "source_refs": [
@@ -8709,6 +8861,7 @@
         "docs/learn/math/conjugate-gradient-end-to-end.md",
         "docs/learn/math/arnoldi-iteration-end-to-end.md",
         "docs/learn/math/gmres-residual-shadow-end-to-end.md",
+        "docs/learn/math/k-means-clustering-end-to-end.md",
         "docs/learn/math/lanczos-iteration-end-to-end.md",
         "docs/learn/math/schur-complement-end-to-end.md",
         "docs/learn/math/linear-algebra-and-optimization.md",
@@ -8716,19 +8869,20 @@
         "artifacts/examples/math/finite-conjugate-gradient-v0/smt2/bad-cg-alpha0-farkas-conflict.smt2",
         "artifacts/examples/math/finite-arnoldi-iteration-v0/smt2/bad-arnoldi-h21-farkas-conflict.smt2",
         "artifacts/examples/math/finite-gmres-residual-shadow-v0/smt2/bad-gmres-alpha-farkas-conflict.smt2",
+        "artifacts/examples/math/finite-k-means-clustering-v0/smt2/bad-centroid-x-farkas-conflict.smt2",
         "artifacts/examples/math/finite-lanczos-iteration-v0/smt2/bad-lanczos-beta1-farkas-conflict.smt2",
         "artifacts/examples/math/finite-schur-complement-v0/smt2/bad-schur-complement-farkas-conflict.smt2",
         "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
       ],
       "open_gaps": [
-        "Exact residual, condition-number, conjugate-gradient, Arnoldi, GMRES, and Lanczos transcript rows do not certify floating-point roundoff, algorithmic stability, loss of orthogonality, restart policies, preconditioner correctness, finite-termination theorems, breakdown behavior, nonnormal convergence, or asymptotic convergence rates.",
+        "Exact residual, condition-number, conjugate-gradient, Arnoldi, GMRES, k-means, and Lanczos transcript rows do not certify floating-point roundoff, algorithmic stability, loss of orthogonality, restart policies, preconditioner correctness, finite-termination theorems, breakdown behavior, nonnormal convergence, clustering convergence, global optimality, or asymptotic convergence rates.",
         "Nonlinear norm bounds and spectral-condition claims need separate NRA, interval, or Lean-backed routes."
       ],
       "graduation": {
         "status": "validated",
         "criteria": [
-          "Rows state the matrix, candidate vector, norm or box, search direction, step size, Arnoldi, GMRES, or Lanczos basis/coefficient data, Hessenberg or tridiagonal coefficient, residual-minimizer coefficient, and exact rational residual computation.",
+          "Rows state the matrix, candidate vector, norm or box, search direction, step size, Arnoldi, GMRES, k-means cluster, or Lanczos basis/coefficient data, Hessenberg or tridiagonal coefficient, residual-minimizer coefficient, centroid, and exact rational residual computation.",
           "Bad residual or coefficient rows carry source-linked QF_LRA/Farkas evidence before solver reuse is claimed.",
           "Learner pages label numerical-analysis claims as exact rational shadows unless floating-point evidence exists."
         ]
@@ -11365,6 +11519,12 @@
           "notes": "Principal-score projection, rank-one reconstruction, residual energy, and covariance eigenpair rows over exact finite samples."
         },
         {
+          "id": "finite-k-means-clustering-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-k-means-clustering-v0",
+          "notes": "Assigned-cluster residual vectors, squared distances, WCSS, and between-cluster decomposition rows over exact finite samples."
+        },
+        {
           "id": "finite-dual-spaces-v0",
           "status": "validated",
           "path": "artifacts/examples/math/finite-dual-spaces-v0",
@@ -11435,6 +11595,7 @@
             "docs/learn/math/covariance-matrix-end-to-end.md",
             "docs/learn/math/linear-discriminant-end-to-end.md",
             "docs/learn/math/principal-components-end-to-end.md",
+            "docs/learn/math/k-means-clustering-end-to-end.md",
             "docs/learn/math/gram-schmidt-end-to-end.md",
             "docs/learn/math/givens-rotation-end-to-end.md",
             "docs/learn/math/householder-reflection-end-to-end.md",
@@ -11460,6 +11621,7 @@
         "docs/learn/math/covariance-matrix-end-to-end.md",
         "docs/learn/math/linear-discriminant-end-to-end.md",
         "docs/learn/math/principal-components-end-to-end.md",
+        "docs/learn/math/k-means-clustering-end-to-end.md",
         "docs/learn/math/gram-schmidt-end-to-end.md",
         "docs/learn/math/givens-rotation-end-to-end.md",
         "docs/learn/math/householder-reflection-end-to-end.md",
@@ -13541,7 +13703,7 @@
           "id": "linear-algebra-rational-v0",
           "status": "validated",
           "path": "artifacts/examples/math/linear-algebra-rational-v0",
-          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram, PCA, and linear-discriminant replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, regularized normal-equation replay, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."
+          "notes": "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram, PCA, k-means centroid/objective, and linear-discriminant replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, regularized normal-equation replay, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."
         },
         {
           "id": "affine-geometry-v0",
@@ -13710,6 +13872,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-jordan-chain-v0",
           "notes": "Finite Jordan-Chain Checks"
+        },
+        {
+          "id": "finite-k-means-clustering-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-k-means-clustering-v0",
+          "notes": "Exact Finite K-Means Clustering Checks"
         },
         {
           "id": "finite-kkt-v0",
@@ -14394,7 +14562,7 @@
           "id": "numerical-linear-algebra-v0",
           "status": "validated",
           "path": "artifacts/examples/math/numerical-linear-algebra-v0",
-          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, regularized normal-equation, PCA, linear-discriminant/classification, rounding, and perturbation-bound shadows, sequence and fixed-point acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding/secant replay, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
+          "notes": "Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, interval bounds, inner-product projections, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, residual, regularized normal-equation, PCA, k-means centroid/objective, linear-discriminant/classification, rounding, and perturbation-bound shadows, sequence and fixed-point acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, fixed-step error recurrences, Simpson-rule quadrature, Romberg extrapolation, Euler, Runge-Kutta midpoint, Heun, backward Euler, Crank-Nicolson implicit, Adams-Bashforth explicit multistep, and BDF2 implicit multistep time-stepping shadows, Jacobian/Hessian replay, finite root-finding/secant replay, Newton/Hessian-solve, active-set QP, gradient-step, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient rational shadows."
         },
         {
           "id": "bounded-dynamics-v0",
@@ -14563,6 +14731,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-interval-arithmetic-shadow-v0",
           "notes": "Finite Interval Arithmetic Shadow Checks"
+        },
+        {
+          "id": "finite-k-means-clustering-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-k-means-clustering-v0",
+          "notes": "Exact Finite K-Means Clustering Checks"
         },
         {
           "id": "finite-lanczos-iteration-v0",
@@ -14949,6 +15123,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-principal-components-v0",
           "notes": "Finite PCA covariance eigenpair and projection replay with checked bad principal-eigenvalue rejection."
+        },
+        {
+          "id": "finite-k-means-clustering-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-k-means-clustering-v0",
+          "notes": "Finite k-means centroid/objective replay with checked bad centroid-coordinate rejection."
         },
         {
           "id": "finite-linear-discriminant-v0",
@@ -16061,7 +16241,7 @@
           "id": "descriptive-statistics-v0",
           "status": "validated",
           "path": "artifacts/examples/math/descriptive-statistics-v0",
-          "notes": "Mean/variance/covariance/PCA identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, and Simpson witnesses."
+          "notes": "Mean/variance/covariance/PCA and finite clustering identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, and Simpson witnesses."
         },
         {
           "id": "exact-statistical-tests-v0",
@@ -16098,6 +16278,12 @@
           "status": "validated",
           "path": "artifacts/examples/math/finite-integration-v0",
           "notes": "Finite Integration And Expectation Checks"
+        },
+        {
+          "id": "finite-k-means-clustering-v0",
+          "status": "validated",
+          "path": "artifacts/examples/math/finite-k-means-clustering-v0",
+          "notes": "Exact Finite K-Means Clustering Checks"
         },
         {
           "id": "finite-linear-discriminant-v0",

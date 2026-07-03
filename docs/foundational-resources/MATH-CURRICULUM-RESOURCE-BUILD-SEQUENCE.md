@@ -30,16 +30,16 @@ is checked, what is trusted, and what remains a theorem/proof horizon.
 
 The committed public query boundary currently reports:
 
-- 124 concept rows: 23 curriculum nodes, 18 field rows, 78 bridge concepts, and
+- 125 concept rows: 23 curriculum nodes, 18 field rows, 79 bridge concepts, and
   5 example-family rows.
-- 160 non-template math example packs.
-- 1040 expected checks: 529 `sat`, 388 `unsat`, and 123 `not-run`.
-- 386 checked proof/evidence rows, 531 replay-only rows, and 123 Lean-horizon
+- 161 non-template math example packs.
+- 1047 expected checks: 533 `sat`, 390 `unsat`, and 124 `not-run`.
+- 387 checked proof/evidence rows, 536 replay-only rows, and 124 Lean-horizon
   rows.
-- 160 promoted solver-reuse packs.
+- 161 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 160 focused learner-linked packs, with no path-only, index-only, or missing
+- 161 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The seed phase is complete. The build problem is now depth, navigation, proof
@@ -374,7 +374,7 @@ Pick one item per commit unless the change is purely navigational.
 
 1. Refresh stale planning counts and link this sequence from the resource
    indexes.
-2. Audit learner coverage for the current 160 packs and record any remaining
+2. Audit learner coverage for the current 161 packs and record any remaining
    combined-page-only rows.
 3. Landed: add the finite quotient-topology pack and bridge as the next
    distinct topology/set-theory gap, with quotient-map fibers, quotient-open

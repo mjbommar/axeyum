@@ -448,6 +448,11 @@ schemas, examples, and validation workflows.
   validates exact finite-sample centering, covariance, principal eigenpair,
   projected scores, one-component residual energy, explained-variance ratio,
   and checked rejection of a false principal-eigenvalue claim.
+- [`artifacts/examples/math/finite-k-means-clustering-v0/`](../../artifacts/examples/math/finite-k-means-clustering-v0/)
+  validates exact finite cluster labels, centroids, residuals, WCSS, total and
+  between-cluster scatter decomposition, replayed rejection of a false
+  centroid-coordinate claim, and a separate checked QF_LRA/Farkas scalar
+  refutation.
 - [`artifacts/examples/math/finite-markov-chain-v0/`](../../artifacts/examples/math/finite-markov-chain-v0/)
   validates exact stochastic matrices, finite-horizon distribution evolution,
   stationary distributions, replayed rejection of a malformed transition row
@@ -754,6 +759,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/ma
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-principal-components-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-k-means-clustering-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0

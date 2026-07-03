@@ -240,6 +240,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite k-means clustering resource landed.**
+  `finite-k-means-clustering-v0` now gives the statistics, linear-algebra,
+  optimization/convexity, numerical-analysis, rational, and real-analysis
+  lanes a compact exact clustering example: it replays a four-point rational
+  sample, fixed two-cluster assignment, exact centroids, residuals, squared
+  distances, WCSS, global centroid, total scatter, and between-cluster scatter;
+  rejects the malformed centroid-coordinate claim `-1/2` versus exact `-1`;
+  and routes that scalar conflict through a source-linked QF_LRA/Farkas row.
+  The focused learner page, statistics/matrix/optimization/numerical query
+  guides, finite k-means, residual-bound, inner-product/projection,
+  exact-vs-floating, and QF_LRA/Farkas bridge rows, validator, resource smoke
+  queries, generated dashboards, and `math_resource_lra_routes` regression
+  keep this fixed finite replay separate from Lloyd convergence, global
+  optimality, clustering consistency, randomized initialization, floating-point
+  k-means implementations, and statistical generalization. The public summary
+  now reports 125 concept rows, 161 packs, 1047 expected checks, 387 checked
+  rows, 536 replay-only rows, 124 Lean-horizon rows, and 161 promoted
+  solver-reuse packs.
 - **Finite principal-components resource landed.**
   `finite-principal-components-v0` now gives the statistics, linear-algebra,
   optimization/convexity, numerical-analysis, rational, and real-analysis
@@ -256,9 +274,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   keep this fixed finite replay separate from PCA/SVD optimality, best-rank
   approximation, estimator consistency, randomized algorithms, perturbation
   theory, floating-point PCA implementations, and statistical generalization.
-  The public summary now reports 125 concept rows, 161 packs, 1040 expected
-  checks, 387 checked rows, 536 replay-only rows, 124 Lean-horizon rows, and
-  161 promoted solver-reuse packs.
+  The public summary at landing reported 124 concept rows, 160 packs, 1040
+  expected checks, 386 checked rows, 531 replay-only rows, 123 Lean-horizon
+  rows, and 160 promoted solver-reuse packs.
 - **Finite linear discriminant resource landed.**
   `finite-linear-discriminant-v0` now gives the statistics, linear-algebra,
   optimization/convexity, numerical-analysis, rational, and real-analysis

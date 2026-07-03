@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-k-means-clustering-v0",
+  "witnesses": [
+    {
+      "id": "four-point-two-cluster-sample",
+      "description": "A four-observation two-dimensional rational dataset with two fixed clusters, exact centroids, and exact objective replay.",
+      "values": {
+        "points": [
+          ["-2", "0"],
+          ["0", "0"],
+          ["4", "1"],
+          ["6", "1"]
+        ],
+        "cluster_assignments": ["0", "0", "1", "1"],
+        "cluster_ids": ["0", "1"],
+        "cluster_members": [
+          ["0", "1"],
+          ["2", "3"]
+        ],
+        "cluster_sizes": ["2", "2"],
+        "centroids": [
+          ["-1", "0"],
+          ["5", "1"]
+        ],
+        "residuals": [
+          ["-1", "0"],
+          ["1", "0"],
+          ["-1", "0"],
+          ["1", "0"]
+        ],
+        "squared_distances": ["1", "1", "1", "1"],
+        "cluster_sum_squares": ["2", "2"],
+        "within_cluster_sum_squares": "4",
+        "global_centroid": ["2", "1/2"],
+        "global_residuals": [
+          ["-4", "-1/2"],
+          ["-2", "-1/2"],
+          ["2", "1/2"],
+          ["4", "1/2"]
+        ],
+        "total_squared_distances": ["65/4", "17/4", "17/4", "65/4"],
+        "total_sum_squares": "41",
+        "between_centroid_residuals": [
+          ["-3", "-1/2"],
+          ["3", "1/2"]
+        ],
+        "between_cluster_squares": ["37/4", "37/4"],
+        "between_cluster_sum_squares": "37"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "cluster-assignment-witness",
+      "claim": "The listed point table and cluster labels define two nonempty finite clusters.",
+      "expected_result": "sat",
+      "validation": "exact_rational_k_means_assignment_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["four-point-two-cluster-sample"],
+      "notes": "The validator checks the fixed labels, cluster members, and cluster sizes."
+    },
+    {
+      "id": "centroid-witness",
+      "claim": "The listed centroids are the exact coordinate-wise means of the assigned points.",
+      "expected_result": "sat",
+      "validation": "exact_rational_k_means_centroid_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["four-point-two-cluster-sample"],
+      "notes": "The validator recomputes each centroid from its committed cluster members over exact rationals."
+    },
+    {
+      "id": "within-cluster-energy-witness",
+      "claim": "The listed residuals, squared distances, cluster sums, and WCSS are exact for the fixed assignment.",
+      "expected_result": "sat",
+      "validation": "exact_rational_k_means_wcss_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["four-point-two-cluster-sample"],
+      "notes": "The validator recomputes each point residual against its assigned centroid and sums the squared distances exactly."
+    },
+    {
+      "id": "variance-decomposition-witness",
+      "claim": "The listed global centroid, total squared deviation, between-cluster sum, and total = within + between decomposition are exact.",
+      "expected_result": "sat",
+      "validation": "exact_rational_k_means_variance_decomposition_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["four-point-two-cluster-sample"],
+      "notes": "The validator recomputes the global centroid, total scatter, between-cluster scatter, and finite decomposition exactly."
+    },
+    {
+      "id": "bad-centroid-x-rejected",
+      "claim": "The first cluster centroid has x-coordinate -1/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_k_means_centroid_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "four-point-two-cluster-sample",
+        "cluster_id": "0",
+        "coordinate": "x",
+        "coordinate_sum": "-2",
+        "cluster_size": "2",
+        "computed_centroid": "-1",
+        "claimed_centroid": "-1/2"
+      },
+      "notes": "Exact replay computes the first centroid x-coordinate as -1, so the claimed value -1/2 is rejected; the separate qf-lra-bad-centroid-x row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-centroid-x",
+      "claim": "The fixed malformed centroid-coordinate claim is linearly inconsistent with the cluster average equation.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "four-point-two-cluster-sample",
+        "source_replay_row": "bad-centroid-x-rejected",
+        "cluster_id": "0",
+        "coordinate": "x",
+        "coordinate_sum": "-2",
+        "cluster_size": "2",
+        "computed_centroid": "-1",
+        "claimed_centroid": "-1/2",
+        "centroid_equations": [
+          "2*c0x = -2",
+          "c0x = -1/2"
+        ],
+        "farkas_conflict": "cluster average equation plus c0x = -1/2",
+        "smt2_artifact": "artifacts/examples/math/finite-k-means-clustering-v0/smt2/bad-centroid-x-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_k_means_clustering_bad_centroid_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes 2*c0x = -2 from the two assigned x-coordinates, so c0x must be -1 while the malformed row claims -1/2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-k-means-clustering-theory-lean-horizon",
+      "claim": "Lloyd convergence, k-means global optimality, NP-hardness, model selection, clustering consistency, randomized initialization, and floating-point implementations require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For finite-dimensional datasets under stated assumptions, prove assignment optimality, Lloyd monotonicity, local convergence, global-optimum conditions, or statistical guarantees only with explicit theorem hypotheses.",
+        "future_checker": "Lean theorem statements for clustering objectives and Lloyd iterations plus separate numerical-honesty or QF_FP artifacts for floating-point k-means implementations."
+      },
+      "notes": "The finite exact row checks one committed assignment and its objective arithmetic, not a theorem about arbitrary clustering, Lloyd convergence, global optimality, statistical generalization, randomized initialization, or floating-point k-means."
+    }
+  ]
+}

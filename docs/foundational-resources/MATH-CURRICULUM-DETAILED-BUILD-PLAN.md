@@ -60,17 +60,17 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 78 bridge-concept rows.
+- 79 bridge-concept rows.
 - 5 example-family rows.
-- 160 non-template math packs.
-- 1040 expected checks.
-- 386 checked proof/evidence rows.
-- 531 replay-only rows.
-- 123 Lean-horizon rows.
-- 160 promoted solver-reuse packs.
+- 161 non-template math packs.
+- 1047 expected checks.
+- 387 checked proof/evidence rows.
+- 536 replay-only rows.
+- 124 Lean-horizon rows.
+- 161 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 160 focused learner-linked packs, with no path-only, index-only, or missing
+- 161 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 160 current non-template packs satisfy the focused-lesson side of this
+all 161 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth

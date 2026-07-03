@@ -35,16 +35,16 @@ than treating the dashboard as an independent source of truth.
 The consumer smoke currently reports:
 
 ```text
-concept_rows=124
+concept_rows=125
 curriculum_rows=23
 field_rows=18
-non_template_packs=160
-packs_with_checked_evidence=160
+non_template_packs=161
+packs_with_checked_evidence=161
 schema_versions=atlas:1,metadata:1,expected:1
-expected_result_counts=not-run:123,sat:529,unsat:388
-proof_status_counts=checked:386,lean-horizon:123,replay-only:531
-row_label_counts=checked_refutation:296,checked_witness:90,finite_rejection_replay:92,finite_witness_replay:439,theorem_horizon:123
-pack_label_counts=checked_evidence_pack:160,mixed_trust_story:149,theorem_boundary_included:123
+expected_result_counts=not-run:124,sat:533,unsat:390
+proof_status_counts=checked:387,lean-horizon:124,replay-only:536
+row_label_counts=checked_refutation:297,checked_witness:90,finite_rejection_replay:93,finite_witness_replay:443,theorem_horizon:124
+pack_label_counts=checked_evidence_pack:161,mixed_trust_story:150,theorem_boundary_included:124
 ```
 
 Regenerate this snapshot with:

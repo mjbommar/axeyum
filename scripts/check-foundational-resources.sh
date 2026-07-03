@@ -180,6 +180,16 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_eigenpai
 python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --pack finite-principal-components-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-principal-components-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text pca --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field statistics --text k-means --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-k-means-clustering-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-k-means-clustering-v0 --route Farkas --proof-status checked --text qf-lra-bad-centroid-x --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-k-means-clustering-v0 --proof-status replay-only --text WCSS --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-k-means-clustering-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_k_means_shadow --pack finite-k-means-clustering-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_residual_bound --pack finite-k-means-clustering-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_inner_product_projection --pack finite-k-means-clustering-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-k-means-clustering-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text clustering --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked --text qf-lra-bad-ridge-beta0 --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --proof-status replay-only --text rejected --require-any >/dev/null
