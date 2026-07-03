@@ -52,12 +52,41 @@
 //! arrangement rules that would reconcile those cases are not part of this
 //! slice, so it declines rather than guess. Congruence over `str.++` is the
 //! e-graph's responsibility, not this union-find's.
+//!
+//! ## What is here (slice T-B.3): cycle detection + normal-form inference
+//!
+//! [`infer()`] runs a deterministic, budget-guarded fixpoint over the T-B.2
+//! substrate that turns some of its declines into progress. It emits
+//! [`Inference`]s — each a derived [`Fact`] (a theory consequence of its cited
+//! premises) or a [`Conflict`] (a jointly-unsatisfiable premise set) — via four
+//! rules:
+//!
+//! * **cycle ε-inference** ([`infer::Rule::CycleEpsilon`]): on a class-containment
+//!   cycle (`x ≈ y ++ x`, or a mutual `x ≈ y ++ a`, `a ≈ z ++ x`) every
+//!   off-cycle component is forced to ε (CAV-2014), which breaks the loop T-B.2
+//!   [`Declined::Cycle`] refused to unfold;
+//! * **`INFER_UNIFY`** ([`infer::Rule::InferUnify`]): two components of
+//!   **structurally** provable equal length at an aligned position must be equal
+//!   (LIA length entailment is out of scope — it arrives with the Phase-A
+//!   `LenAbs` link);
+//! * **`INFER_ENDPOINT_EQ` / `INFER_ENDPOINT_EMP`**
+//!   ([`infer::Rule::InferEndpointEq`] / [`infer::Rule::InferEndpointEmp`]): tail
+//!   handling when one member's vector is a component-wise-equal prefix of
+//!   another's.
+//!
+//! `F-Split` / `Len-Split` arrangement branching (T-B.4) and `F-Loop` / regex
+//! (T-B.5) are **not** part of this slice: where they would be required the pass
+//! declines (stops the alignment) rather than guess. Every published premise set
+//! cites **original** premise indices only, even for facts derived from earlier
+//! derived facts.
 
 #![forbid(unsafe_code)]
 #![allow(clippy::missing_errors_doc)] // documented per-item where a `Result` is returned
 
 pub mod classes;
+pub mod infer;
 pub mod normal_form;
 
 pub use classes::{Classes, Declined, FlatForm, NormalForm, NormalForms, Unreconciled};
+pub use infer::{Conflict, ConflictReason, Fact, Inference, Inferences, Rule, infer};
 pub use normal_form::{concat_components, normalize};
