@@ -29,8 +29,8 @@ use std::collections::BTreeSet;
 
 use axeyum_ir::{TermArena, TermId};
 use axeyum_strings::{
-    Conflict, ConflictReason, Fact, Rule, check_conflict, check_cycle_constant_conflict,
-    check_equality, check_fact, concat_components, infer, normalize,
+    Conflict, ConflictReason, Fact, Rule, check_conflict, check_congruence_equality,
+    check_cycle_constant_conflict, check_equality, check_fact, concat_components, infer, normalize,
 };
 use common::{bv_var, cat, ch, empty, seq_var, unit};
 
@@ -694,5 +694,168 @@ fn cycle_epsilon_fact_recognizes_value_empty_side() {
     assert!(
         check_fact(&mut arena, &eqs, &fact),
         "a value-empty (non-structural) ε side must be recognized"
+    );
+}
+
+// ===== check_congruence_equality (slice 3) accept-path mutants ================
+//
+// The accept path is: bounds-check the cited premises → orient them into
+// symbol↦term rewrite rules → substitute to a fixpoint → normalize → cancel
+// provably-equal common prefix/suffix → certify iff BOTH residuals are empty. A
+// mutation is dangerous iff it certifies a sequence equality the premises do not
+// entail (which would forge an `unsat`). Each test drives one accept branch.
+
+/// A multi-char constant sequence (each byte a `seq.unit` of a char const).
+fn kstr(arena: &mut TermArena, bytes: &[u8]) -> TermId {
+    let parts: Vec<TermId> = bytes
+        .iter()
+        .map(|&c| {
+            let e = ch(arena, u128::from(c));
+            unit(arena, e)
+        })
+        .collect();
+    parts
+        .iter()
+        .copied()
+        .reduce(|acc, p| cat(arena, acc, p))
+        .expect("non-empty")
+}
+
+/// Positive: the census `str002` shape certifies (`xx ≈ yy++"aa"` ⊢
+/// `xx++"bb" ≈ yy++"aa"++"bb"`). Kills whole-function `-> false`, and the
+/// substitute/normalize/cancel-then-both-empty accept chain.
+#[test]
+fn congruence_accepts_str002_shape() {
+    let mut arena = TermArena::new();
+    let xx = seq_var(&mut arena, "xx");
+    let yy = seq_var(&mut arena, "yy");
+    let aa = kstr(&mut arena, b"aa");
+    let bb = kstr(&mut arena, b"bb");
+    let yy_aa = cat(&mut arena, yy, aa);
+    let eqs = [(xx, yy_aa)];
+    let lhs = cat(&mut arena, xx, bb);
+    let rhs = cat(&mut arena, yy_aa, bb);
+    assert!(
+        check_congruence_equality(&mut arena, &eqs, &BTreeSet::from([0]), lhs, rhs),
+        "str002 congruence must certify"
+    );
+}
+
+/// Positive: the premise is oriented `term ≈ symbol` (`yy++"aa" ≈ xx`) — kills the
+/// mutant that drops the `(false, true)` orientation arm.
+#[test]
+fn congruence_accepts_term_symbol_orientation() {
+    let mut arena = TermArena::new();
+    let xx = seq_var(&mut arena, "xx");
+    let yy = seq_var(&mut arena, "yy");
+    let aa = kstr(&mut arena, b"aa");
+    let bb = kstr(&mut arena, b"bb");
+    let yy_aa = cat(&mut arena, yy, aa);
+    let eqs = [(yy_aa, xx)]; // reversed orientation
+    let lhs = cat(&mut arena, xx, bb);
+    let rhs = cat(&mut arena, yy_aa, bb);
+    assert!(
+        check_congruence_equality(&mut arena, &eqs, &BTreeSet::from([0]), lhs, rhs),
+        "term≈symbol premise must still orient and certify"
+    );
+}
+
+/// Positive: a two-step substitution chain (`xx ≈ yy++"a"`, `yy ≈ zz`) needs ≥2
+/// fixpoint rounds — kills a round-cap-to-0/1 mutant and the `next == cur` early
+/// break becoming `break` unconditionally.
+#[test]
+fn congruence_accepts_two_round_chain() {
+    let mut arena = TermArena::new();
+    let xx = seq_var(&mut arena, "xx");
+    let yy = seq_var(&mut arena, "yy");
+    let zz = seq_var(&mut arena, "zz");
+    let a = kstr(&mut arena, b"a");
+    let b = kstr(&mut arena, b"b");
+    let yy_a = cat(&mut arena, yy, a);
+    let eqs = [(xx, yy_a), (yy, zz)];
+    let lhs = cat(&mut arena, xx, b); // xx ++ "b"  → zz ++ "a" ++ "b"
+    let za = cat(&mut arena, zz, a);
+    let rhs = cat(&mut arena, za, b); // zz ++ "a" ++ "b"
+    assert!(
+        check_congruence_equality(&mut arena, &eqs, &BTreeSet::from([0, 1]), lhs, rhs),
+        "a two-round substitution chain must certify"
+    );
+}
+
+/// Negative: an out-of-range cited premise must decline — kills the mutant that
+/// deletes the bounds guard (an out-of-range index would panic or misindex).
+#[test]
+fn congruence_rejects_out_of_range_premise() {
+    let mut arena = TermArena::new();
+    let xx = seq_var(&mut arena, "xx");
+    let yy = seq_var(&mut arena, "yy");
+    let eqs = [(xx, yy)];
+    assert!(
+        !check_congruence_equality(&mut arena, &eqs, &BTreeSet::from([5]), xx, yy),
+        "an out-of-range premise index must decline"
+    );
+}
+
+/// Negative — THE key soundness killer: an unrelated disequality (a noise premise
+/// only) leaves a non-empty residual `[yy]` vs `[zz]` after cancelling the common
+/// `"cc"` suffix. The two sides `yy++"cc"` and `zz++"cc"` are NOT equal, so it must
+/// decline. Kills (a) `prov_eq -> true` (over-cancelling the distinct residuals),
+/// and (b) the final `&&` → `||` (which would accept on one empty residual).
+#[test]
+fn congruence_rejects_unrelated_sides() {
+    let mut arena = TermArena::new();
+    let yy = seq_var(&mut arena, "yy");
+    let zz = seq_var(&mut arena, "zz");
+    let p = seq_var(&mut arena, "p");
+    let q = seq_var(&mut arena, "q");
+    let cc = kstr(&mut arena, b"cc");
+    let eqs = [(p, q)]; // noise, unrelated to yy/zz
+    let lhs = cat(&mut arena, yy, cc);
+    let rhs = cat(&mut arena, zz, cc);
+    assert!(
+        !check_congruence_equality(&mut arena, &eqs, &BTreeSet::from([0]), lhs, rhs),
+        "yy++cc = zz++cc is NOT entailed by an unrelated premise — must decline"
+    );
+}
+
+/// Negative: a one-sided residual (`"cc"` vs `zz++"cc"`, i.e. `[]` vs `[zz]` after
+/// suffix cancellation) must decline — `"cc" = zz++"cc"` forces `zz = ε`, which the
+/// premises do not entail. Pins the `&&` in the both-empty accept (an `||` mutant
+/// would wrongly certify on the empty left residual).
+#[test]
+fn congruence_rejects_one_sided_residual() {
+    let mut arena = TermArena::new();
+    let zz = seq_var(&mut arena, "zz");
+    let p = seq_var(&mut arena, "p");
+    let q = seq_var(&mut arena, "q");
+    let cc = kstr(&mut arena, b"cc");
+    let eqs = [(p, q)];
+    let lhs = cc; // "cc"
+    let rhs = cat(&mut arena, zz, cc); // zz ++ "cc"
+    assert!(
+        !check_congruence_equality(&mut arena, &eqs, &BTreeSet::from([0]), lhs, rhs),
+        "\"cc\" = zz++\"cc\" is not entailed — must decline"
+    );
+}
+
+/// Negative: a `term ≈ term` premise (`yy++"aa" ≈ zz++"aa"`) is NOT oriented into a
+/// rewrite rule, so `yy++"dd"` vs `zz++"dd"` leaves residual `[yy]` vs `[zz]` and
+/// declines. Documents the deliberate decline (we do not cancel inside premises) and
+/// kills a mutant that would treat compound=compound as a usable rule.
+#[test]
+fn congruence_declines_compound_equals_compound_premise() {
+    let mut arena = TermArena::new();
+    let yy = seq_var(&mut arena, "yy");
+    let zz = seq_var(&mut arena, "zz");
+    let aa = kstr(&mut arena, b"aa");
+    let dd = kstr(&mut arena, b"dd");
+    let ya = cat(&mut arena, yy, aa);
+    let za = cat(&mut arena, zz, aa);
+    let eqs = [(ya, za)]; // compound ≈ compound
+    let lhs = cat(&mut arena, yy, dd);
+    let rhs = cat(&mut arena, zz, dd);
+    assert!(
+        !check_congruence_equality(&mut arena, &eqs, &BTreeSet::from([0]), lhs, rhs),
+        "a compound=compound premise must not certify yy++dd = zz++dd"
     );
 }

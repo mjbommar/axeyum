@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 622 oracle-compared instances (992 files total, 675 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 623 oracle-compared instances (992 files total, 676 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -45,7 +45,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_NIA | `qf-nia-curated-iand` | 3 | 1 | 33% | 2 | 0 | 0 | 0 | :status | 13.333 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
 | QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 21 | 55% | 16 | 1 | 21 | 0 | z3-binary | 8.660 |
-| QF_S | `qf-s-cvc5-regress-clean` | 134 | 57 | 43% | 20 | 57 | 54 | 0 | z3-library+binary | 5.208 |
+| QF_S | `qf-s-cvc5-regress-clean` | 134 | 58 | 43% | 20 | 56 | 55 | 0 | z3-library+binary | 5.141 |
 | QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | 6 | 1 | 15 | 0 | z3-library+binary | 3.752 |
 | QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 12 | 24% | 9 | 29 | 11 | 0 | z3-library+binary | 8.584 |
 | QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts` | 6 | 4 | 67% | 2 | 0 | 4 | 0 | z3-binary | 7.489 |
@@ -60,9 +60,30 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 675 decided, 622 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 676 decided, 623 oracle-compared, **0 disagreements.**
 
 <!-- NOTES:BEGIN (hand-written attribution notes — preserved by the generator) -->
+### QF_S row re-measured 2026-07-03 (T-B.7 slice 3 — certified concat-congruence refutation)
+
+The census `str002`-class disjunctive shape now decides. The word refuter gained
+a **concat-congruence / affix-cancellation disequality** conflict, re-checked
+independently in `check_derivation.rs::check_congruence_equality`: a disequality
+`a ≠ b` is refuted when the cited equalities force `a ≈ b` by equal-for-equal
+congruence substitution (its own oriented rule set + a memoized, cycle-safe
+expansion) + T-B.1 normalization + free-monoid common-affix cancellation. This
+moves **`r1_QF_S_str002` unsupported → unsat: QF_S 57 → 58 decided (43% → 43%),
+PAR-2 5.208 → 5.141, DISAGREE=0** (z3-binary oracle agrees `unsat`, oracle
+compared 54 → 55). Attribution is a same-command HEAD re-run: exactly one
+instance changed. **QF_SLIA (12 decided) and QF_SEQ (26 decided) are unchanged** —
+the `quad-*-unsat` Kepler-22 quadratic word equations are single-equation
+Nielsen/length refutations, NOT word-level cancellation, and the refuter honestly
+declines them (verified per-file). A bench wiring fix was required so the
+disjunctive word-first-fallback shape (`word_skeleton`, `word_problem` empty) is
+routed through the online string route instead of the under-parse `unsupported`
+guard — mirroring the existing `run_one` dispatch condition. Soundness: `unsat`
+only through the independent re-check (mutation-tested, zero dangerous accept-path
+survivors); word/qf_s_online/cvc5 differential fuzzes DISAGREE=0.
+
 ### BV quantified row re-measured 2026-07-03 (P2.6 slice 6 — closed-universal falsification)
 
 A census of the 17 undecided `bv-cvc5-regress-clean-quantified` instances
@@ -199,8 +220,8 @@ Each frontier tracks how deep a single capability lever reaches: a family is sca
 
 | Lever family | Frontier | Baseline | Δ | Max knob | Budget (s) | Tracks |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| bv_reduction | 32 | 28 | +4 | 36 | 4 | QF_BV word-level reduction depth (unsat at knob N) |
-| lia_cuts | 26 | 20 | +6 | 36 | 4 | QF_LIA branch-and-cut depth (sat at knob N) |
+| bv_reduction | 33 | 28 | +5 | 38 | 4 | QF_BV word-level reduction depth (unsat at knob N) |
+| lia_cuts | 26 | 20 | +6 | 37 | 4 | QF_LIA branch-and-cut depth (sat at knob N) |
 | nia_unsat | 40 | 40 | 0 | 40 | 4 | QF_NIA unsat-proving depth (knob N) |
 | nra_degree | 2 | 2 | 0 | 6 | 4 | QF_NRA polynomial-degree decision depth (knob N) |
 | string_bound | 8 | 8 | 0 | 12 | 4 | QF_S string-length bound (sat at knob N) |

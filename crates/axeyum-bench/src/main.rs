@@ -1283,10 +1283,16 @@ mod run {
     ///    solving "no constraints" is a vacuous `sat`.
     fn under_parsed_reason(script: &Script, text: &str) -> Option<String> {
         // T-B.4d word-first fallback: the flat view is empty because the bounded
-        // encoder declined at parse, but the word-problem side channel carries
-        // the constraints FAITHFULLY — `run_one` decides it via the word route
-        // (never the vacuous flat view), so it is not under-parsed.
-        if script.word_only_fallback.is_some() && script.word_problem.is_some() {
+        // encoder declined at parse, but a word-problem side channel carries the
+        // constraints FAITHFULLY — either the flat top-level-conjunction
+        // `word_problem`, or (the disjunctive `str002` census shape, P1.5b) the
+        // Boolean-structured `word_skeleton`. `run_one` decides such a script via the
+        // word / online CDCL(T) string routes (never the vacuous flat view) under the
+        // SAME condition, so it is not under-parsed. Mirrors the dispatch guard in
+        // `run_one`.
+        if script.word_only_fallback.is_some()
+            && (script.word_problem.is_some() || !script.word_skeleton.is_empty())
+        {
             return None;
         }
         if script.commands.iter().any(|cmd| {

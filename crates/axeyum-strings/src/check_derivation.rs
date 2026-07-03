@@ -73,6 +73,15 @@
 //! (`x ≈ y ++ "a"`, `y ≈ x ++ "b"`) have no single self-loop endpoint witness and
 //! are conservatively **declined**.
 //!
+//! # Slice 3 — concat-congruence / affix-cancellation disequality
+//!
+//! [`check_congruence_equality`] re-verifies the **sequence equality** a disequality
+//! `a ≠ b` must contradict: it re-derives `a ≈ b` from the cited premises alone by
+//! equal-for-equal congruence substitution (its own oriented rule set + its own
+//! substitution walker), T-B.1 [`normalize`], and free-monoid common-affix
+//! cancellation. It shares no reasoning code with [`infer`](crate::infer()) — only
+//! the shared *representation* primitives ([`normalize`] / [`concat_components`]).
+//!
 //! A shape that is not one of the above — or whose cited premises do not
 //! independently re-derive it — is simply **not certified** (`false`), a safe
 //! decline to `unknown`.
@@ -174,6 +183,185 @@ pub fn check_equality(
         uf.union(x, y);
     }
     uf.find(a) == uf.find(b)
+}
+
+/// Re-verifies that the cited premises entail the **sequence equality** `a ≈ b`
+/// by equal-for-equal **congruence substitution + T-B.1 normalization + common
+/// affix cancellation**, sharing no reasoning code with [`infer`](crate::infer()).
+///
+/// This is the independent re-derivation behind the concat-congruence /
+/// affix-cancellation disequality conflict (T-B.7 slice 3): a disequality `a ≠ b`
+/// is refuted precisely when the cited premises force `a ≈ b`. It generalizes
+/// [`check_equality`] from "the two sides are *directly* in one premise class" to
+/// "the two sides become provably equal after substituting the premise equalities
+/// and normalizing". Its soundness rests on three self-evident facts, each holding
+/// under **every** satisfying assignment:
+///
+/// 1. **substitution** — rewriting a subterm `s` to `t` under a cited premise
+///    `s ≈ t` replaces a subterm with a *denotationally equal* one, so the whole
+///    term's denotation is unchanged, for **any** rule orientation and **any**
+///    application order (no confluence obligation — only termination, which the
+///    bounded round count guarantees);
+/// 2. **normalization** — [`normalize`] is denotation-preserving (T-B.1);
+/// 3. **cancellation** — the free monoid is cancellative: `p·u·s = p·v·s ⟺ u = v`
+///    for a common prefix `p` / suffix `s`, so provably-equal boundary components
+///    strip from both sides of the goal without changing its truth.
+///
+/// After (1)+(2) both sides are normalized component vectors; (3) removes matching
+/// boundary components; the residual is accepted iff it is empty on both sides, or
+/// exactly one component on each side that the cited-premise union-find places in
+/// one class (equal sequences). Any residual it cannot discharge — an out-of-range
+/// premise, an unreduced middle, a mismatch — yields `false`, a safe decline to
+/// `unknown`. It never asserts `a ≈ b` is false, only that this checker declines to
+/// certify it.
+#[must_use]
+pub fn check_congruence_equality(
+    arena: &mut TermArena,
+    equalities: &[(TermId, TermId)],
+    cited: &BTreeSet<usize>,
+    a: TermId,
+    b: TermId,
+) -> bool {
+    if cited.iter().any(|&p| p >= equalities.len()) {
+        return false;
+    }
+    // Oriented equal-for-equal rewrite rules and a union-find, both over ONLY the
+    // cited premises — the checker's own machinery, no `infer` reasoning code.
+    let rules = congruence_rules(arena, equalities, cited);
+    let uf = mini_uf(equalities, cited);
+
+    // (1) substitute, (2) normalize into component vectors. Substitution is a
+    // single memoized, cycle-safe expansion: an acyclic `symbol ↦ term` chain is
+    // fully resolved, and a self-referential symbol (`x ≈ …x…`) is left unexpanded
+    // rather than expanded forever — finite, terminating, and still sound (leaving a
+    // symbol un-substituted only proves *less*).
+    let mut resolved: BTreeMap<TermId, TermId> = BTreeMap::new();
+    let mut on_stack: BTreeSet<TermId> = BTreeSet::new();
+    let a1 = expand(arena, &rules, a, &mut resolved, &mut on_stack);
+    let b1 = expand(arena, &rules, b, &mut resolved, &mut on_stack);
+    let na = normalized_components(arena, a1);
+    let nb = normalized_components(arena, b1);
+
+    // (3) cancel provably-equal common prefix then common suffix. Certified iff
+    // NOTHING is left on either side — the two component vectors were equal up to a
+    // provably-equal prefix/suffix, i.e. the whole sequences are equal. Any residual
+    // is a shape this checker does not certify (a safe decline).
+    let (ra, rb) = cancel_common_affixes(&uf, &na, &nb);
+    ra.is_empty() && rb.is_empty()
+}
+
+// ----- congruence substitution (slice 3 — own copies, no `infer` code) ---------
+
+/// Whether `t` is a bare declared-symbol leaf.
+fn is_symbol(arena: &TermArena, t: TermId) -> bool {
+    matches!(arena.node(t), TermNode::Symbol(_))
+}
+
+/// Orients each cited premise into a **symbol ↦ term** rewrite rule (the only
+/// orientation that guarantees termination): a `symbol ≈ term` premise rewrites the
+/// symbol to the term; a `symbol ≈ symbol` premise rewrites the larger-id symbol to
+/// the smaller (deterministic, strictly decreasing). A `term ≈ term` premise is not
+/// oriented as a rewrite (its equality still lives in the union-find). First rule
+/// for a given symbol wins (deterministic over the sorted `cited`).
+fn congruence_rules(
+    arena: &TermArena,
+    equalities: &[(TermId, TermId)],
+    cited: &BTreeSet<usize>,
+) -> BTreeMap<TermId, TermId> {
+    let mut rules: BTreeMap<TermId, TermId> = BTreeMap::new();
+    for &p in cited {
+        let (s, t) = equalities[p];
+        match (is_symbol(arena, s), is_symbol(arena, t)) {
+            (true, false) => {
+                rules.entry(s).or_insert(t);
+            }
+            (false, true) => {
+                rules.entry(t).or_insert(s);
+            }
+            (true, true) if s != t => {
+                let (from, to) = if s > t { (s, t) } else { (t, s) };
+                rules.entry(from).or_insert(to);
+            }
+            _ => {}
+        }
+    }
+    rules
+}
+
+/// Fully expands `term` under the `symbol ↦ term` rules by a single memoized,
+/// bottom-up pass: each bare symbol with a rule is replaced by its (recursively
+/// expanded) image; every other node rebuilds with expanded children. Chained
+/// definitions (`x ≈ y++"a"`, `y ≈ z`) resolve in one traversal.
+///
+/// **Termination / cycle safety** — `on_stack` is the occurs-check: a symbol that
+/// is already being expanded (a self-referential rule `x ≈ …x…`, or a mutual cycle)
+/// is left *unexpanded* at the recursive occurrence instead of unfolding forever.
+/// The result is a finite interned DAG; `resolved` memoizes each fully-expanded
+/// node so the traversal is linear in distinct subterms (a `cat(x,x)`-style rule
+/// cannot blow up). Leaving a symbol un-substituted is sound — it only proves less.
+fn expand(
+    arena: &mut TermArena,
+    rules: &BTreeMap<TermId, TermId>,
+    term: TermId,
+    resolved: &mut BTreeMap<TermId, TermId>,
+    on_stack: &mut BTreeSet<TermId>,
+) -> TermId {
+    if let Some(&cached) = resolved.get(&term) {
+        return cached;
+    }
+    let out = match arena.node(term) {
+        TermNode::Symbol(_) => match rules.get(&term).copied() {
+            // A self-/mutually-referential symbol currently being expanded: break the
+            // cycle by keeping it as-is.
+            Some(_) if on_stack.contains(&term) => term,
+            Some(rhs) => {
+                on_stack.insert(term);
+                let e = expand(arena, rules, rhs, resolved, on_stack);
+                on_stack.remove(&term);
+                e
+            }
+            None => term,
+        },
+        TermNode::App { args, .. } => {
+            let args: Vec<TermId> = args.to_vec();
+            let new: Vec<TermId> = args
+                .iter()
+                .map(|&a| expand(arena, rules, a, resolved, on_stack))
+                .collect();
+            if new == args {
+                term
+            } else {
+                arena.rebuild_with_args(term, &new)
+            }
+        }
+        _ => term,
+    };
+    // Memoize only settled nodes — never a symbol whose cycle expansion is still in
+    // progress on the stack (its value here is the cycle-break fallback, not final).
+    if !on_stack.contains(&term) {
+        resolved.insert(term, out);
+    }
+    out
+}
+
+/// Strips the longest provably-equal common **prefix** then common **suffix** from
+/// two component vectors, returning the residual middles. Two components are
+/// provably equal when identical or placed in one class by the cited premises;
+/// equal components are equal-length, so removing them keeps the remaining offsets
+/// aligned and preserves the equality's truth (free-monoid cancellativity).
+fn cancel_common_affixes(uf: &MiniUf, a: &[TermId], b: &[TermId]) -> (Vec<TermId>, Vec<TermId>) {
+    let prov_eq = |x: TermId, y: TermId| x == y || uf.find(x) == uf.find(y);
+    let mut i = 0;
+    while i < a.len() && i < b.len() && prov_eq(a[i], b[i]) {
+        i += 1;
+    }
+    let mut ja = a.len();
+    let mut jb = b.len();
+    while ja > i && jb > i && prov_eq(a[ja - 1], b[jb - 1]) {
+        ja -= 1;
+        jb -= 1;
+    }
+    (a[i..ja].to_vec(), b[i..jb].to_vec())
 }
 
 // ----- fact re-checking (slice 2) --------------------------------------------

@@ -28,7 +28,13 @@
 //!   `y ≈ "a"` — two distinct constants in one augmented class;
 //! - **direct / augmented disequality** — a disequality contradicted by a direct
 //!   equality chain ([`check_equality`]) or one that closes only through certified
-//!   facts.
+//!   facts;
+//! - **concat-congruence / affix-cancellation disequality** (slice 3) — a
+//!   disequality `a ≠ b` whose two sides the equalities force EQUAL by equal-for-equal
+//!   substitution + normalization + free-monoid common-affix cancellation, re-derived
+//!   independently by [`check_congruence_equality`]. This is the `str002` census
+//!   shape: from `xx ≈ yy ++ "aa"` derive `xx ++ "bb" ≈ yy ++ "aa" ++ "bb"`,
+//!   contradicting the asserted disequality.
 //!
 //! # No search-based `unsat`
 //!
@@ -54,7 +60,8 @@ use axeyum_ir::{Assignment, TermArena, TermId, Value, eval};
 
 use crate::arrange::SearchBudget;
 use crate::check_derivation::{
-    check_conflict, check_cycle_constant_conflict, check_equality, check_fact,
+    check_conflict, check_congruence_equality, check_cycle_constant_conflict, check_equality,
+    check_fact,
 };
 use crate::classes::Classes;
 use crate::infer::{Conflict, Fact, Rule, infer};
@@ -161,7 +168,68 @@ pub fn refute_word_equations(
         }
     }
 
+    // (f) Concat-congruence / affix-cancellation disequality (T-B.7 slice 3): a
+    // disequality whose two sides the cited equalities force EQUAL by equal-for-equal
+    // substitution + normalization + free-monoid common-affix cancellation. This is
+    // the generalization of (e) from "the two sides are already one class" to "the
+    // two sides become provably equal after substituting the premises" — the
+    // `str002` census shape (`xx ≈ yy ++ "aa"` ⊢ `xx ++ "bb" ≈ yy ++ "aa" ++ "bb"`).
+    // Independent: `check_congruence_equality` re-derives from the cited set alone.
+    if let Some(premises) = congruence_disequality(arena, equalities, disequalities) {
+        return RefuteOutcome::Unsat { premises };
+    }
+
     RefuteOutcome::Unknown
+}
+
+/// Refutes a disequality whose two sides the equalities force equal by congruence
+/// substitution + normalization + affix cancellation, returning a **tight** cited
+/// premise core (delta-debugged down from the full set) on success.
+///
+/// The full equality set is proposed as the candidate core; the independent
+/// [`check_congruence_equality`] re-derives `a ≈ b` from it, and — on success — a
+/// single minimization pass drops each premise that is not needed (re-checked at
+/// every step, so the returned core is verified sufficient). A wrong or
+/// insufficient premise set can never survive: the checker re-derives from exactly
+/// the cited premises.
+fn congruence_disequality(
+    arena: &mut TermArena,
+    equalities: &[(TermId, TermId)],
+    disequalities: &[(TermId, TermId)],
+) -> Option<BTreeSet<usize>> {
+    if equalities.is_empty() || disequalities.is_empty() {
+        return None;
+    }
+    let all: BTreeSet<usize> = (0..equalities.len()).collect();
+    for &(a, b) in disequalities {
+        if check_congruence_equality(arena, equalities, &all, a, b) {
+            return Some(minimize_congruence_core(arena, equalities, &all, a, b));
+        }
+    }
+    None
+}
+
+/// Delta-debugs `start` to a minimal sufficient core for `a ≈ b`: drop each premise
+/// whose removal still leaves the congruence re-check passing. Deterministic (sorted
+/// iteration), and every retained state is re-verified by
+/// [`check_congruence_equality`], so the returned core is a genuinely sufficient
+/// premise set — never an under-approximation that would forge an `unsat`.
+fn minimize_congruence_core(
+    arena: &mut TermArena,
+    equalities: &[(TermId, TermId)],
+    start: &BTreeSet<usize>,
+    a: TermId,
+    b: TermId,
+) -> BTreeSet<usize> {
+    let mut core = start.clone();
+    for &p in start {
+        let mut trial = core.clone();
+        trial.remove(&p);
+        if check_congruence_equality(arena, equalities, &trial, a, b) {
+            core = trial;
+        }
+    }
+    core
 }
 
 /// The augmented equality list `equalities ++ [certified fact equalities]`. The

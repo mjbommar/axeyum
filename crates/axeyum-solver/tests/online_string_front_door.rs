@@ -91,6 +91,25 @@ fn front_door_disjunction_with_negated_equality_unsat() {
     assert_eq!(verdict(s), CheckResult::Unsat);
 }
 
+#[test]
+fn front_door_str002_congruence_unsat() {
+    // The exact `r1_QF_S_str002` census shape (T-B.7 slice 3, concat-congruence):
+    //   (or (= xx (yy++"aa")) (= zz (yy++"aa")))
+    //   ∧ (not (= (xx++"bb") (yy++"aa"++"bb"))) ∧ (not (= (zz++"bb") (yy++"aa"++"bb")))
+    // Each disjunct forces `_ ++ "bb" ≈ yy ++ "aa" ++ "bb"` by congruence, clashing
+    // with the matching disequality — every branch is unsat. Both `str.++` results
+    // exceed the ADR-0029 bound, so this reaches the online route as a word skeleton.
+    let s = r#"(set-logic QF_S)
+(declare-fun xx () String)
+(declare-fun yy () String)
+(declare-fun zz () String)
+(assert (or (= xx (str.++ yy "aa")) (= zz (str.++ yy "aa"))))
+(assert (and (not (= (str.++ xx "bb") (str.++ yy "aa" "bb")))
+             (not (= (str.++ zz "bb") (str.++ yy "aa" "bb")))))
+(check-sat)"#;
+    assert_eq!(verdict(s), CheckResult::Unsat);
+}
+
 // ---------- census-shape SAT through the text front door ----------
 
 #[test]

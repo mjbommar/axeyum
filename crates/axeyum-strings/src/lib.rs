@@ -105,7 +105,8 @@ pub mod regex;
 
 pub use arrange::{SearchBudget, SearchOutcome, UnknownReason, solve_word_equations};
 pub use check_derivation::{
-    check_conflict, check_cycle_constant_conflict, check_equality, check_fact,
+    check_conflict, check_congruence_equality, check_cycle_constant_conflict, check_equality,
+    check_fact,
 };
 pub use classes::{Classes, Declined, FlatForm, NormalForm, NormalForms, Unreconciled};
 pub use infer::{Conflict, ConflictReason, Fact, Inference, Inferences, Rule, infer};
