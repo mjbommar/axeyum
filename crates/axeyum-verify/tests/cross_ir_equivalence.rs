@@ -193,6 +193,31 @@ start:
 }
 ";
 
+/// The **unoptimized** LLVM form of `lut`: a real `switch` instruction with a
+/// `phi` join — the direct structural cousin of MIR's `switchInt`.
+const LUT_SWITCH_LL: &str = r"
+define i8 @lut(i8 %x) unnamed_addr {
+start:
+  switch i8 %x, label %otherwise [
+    i8 0, label %ret5
+    i8 1, label %ret7
+  ]
+
+otherwise:                                        ; preds = %start
+  br label %join
+
+ret5:                                             ; preds = %start
+  br label %join
+
+ret7:                                             ; preds = %start
+  br label %join
+
+join:                                             ; preds = %ret7, %ret5, %otherwise
+  %r = phi i8 [ 0, %otherwise ], [ 5, %ret5 ], [ 7, %ret7 ]
+  ret i8 %r
+}
+";
+
 /// Prove `mir(f) == llvm(f)` for all inputs, and separately exhaustively/fuzz the
 /// two reflected terms agree — belt and suspenders across proof and execution.
 fn assert_equivalent(width: u32, mir: &str, ll: &str, samples: &[u128]) {
@@ -327,6 +352,36 @@ fn scale_mir_equals_llvm() {
 #[test]
 fn lut_mir_equals_llvm() {
     assert_equivalent(8, LUT_MIR, LUT_LL, &(0u128..=255).collect::<Vec<_>>());
+}
+
+/// `lut`, both dispatchers: MIR `switchInt` == LLVM's `switch` instruction (the
+/// direct structural cousin, O0 shape with a 3-way `phi` join), for all u8.
+#[test]
+fn lut_mir_switchint_equals_llvm_switch() {
+    assert_equivalent(
+        8,
+        LUT_MIR,
+        LUT_SWITCH_LL,
+        &(0u128..=255).collect::<Vec<_>>(),
+    );
+}
+
+/// LLVM O0 vs O2 for `lut`: the `switch`+`phi` form == the if-converted chained
+/// `select` form, for all u8 — switch elimination validated within LLVM.
+#[test]
+fn lut_llvm_switch_equals_llvm_selects() {
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::BitVec(8)).unwrap();
+    let x = arena.var(x_sym);
+    let o0 = reflect_unary_into(&mut arena, x, LUT_SWITCH_LL);
+    let o2 = reflect_unary_into(&mut arena, x, LUT_LL);
+    let eq = arena.eq(o0, o2).unwrap();
+    let outcome =
+        prove(&mut arena, &[], eq, &SolverConfig::default()).expect("solver should not hard-error");
+    assert!(
+        matches!(outcome, ProofOutcome::Proved(_)),
+        "switch+phi and select forms of lut must be provably equal, got {outcome:?}"
+    );
 }
 
 /// Deterministic differential fuzz over EVERY paired fixture: reflect both sides,

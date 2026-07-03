@@ -246,7 +246,55 @@ fn exec_cfg_block(
         .iter()
         .find(|(l, _)| l == label)
         .unwrap_or_else(|| panic!("undefined block %{label}"));
-    for line in lines {
+    let mut i = 0;
+    while i < lines.len() {
+        let line = &lines[i];
+        i += 1;
+        // switch iW %x, label %default [ \n iW K, label %case \n ... ]
+        if let Some(rest) = line.strip_prefix("switch ") {
+            let mut toks = rest.split_whitespace();
+            let w = width_of(toks.next().expect("switch type"));
+            let scrut_tok = toks.next().expect("switch scrutinee").trim_end_matches(',');
+            let scrut = resolve(arena, &env, scrut_tok, w);
+            let default = rest
+                .split("label %")
+                .nth(1)
+                .expect("switch default")
+                .split_whitespace()
+                .next()
+                .expect("default label");
+            let mut arms: Vec<(u128, &str)> = Vec::new();
+            while i < lines.len() && lines[i] != "]" {
+                let arm = &lines[i];
+                i += 1;
+                // `i8 1, label %case1` (values printed signed)
+                let val_tok = arm
+                    .split_whitespace()
+                    .nth(1)
+                    .expect("switch arm value")
+                    .trim_end_matches(',');
+                let v: i128 = val_tok.parse().expect("switch arm integer");
+                let value = if v < 0 {
+                    (v + (1i128 << w)).cast_unsigned()
+                } else {
+                    v.cast_unsigned()
+                };
+                let target = arm
+                    .split("label %")
+                    .nth(1)
+                    .expect("switch arm target")
+                    .trim();
+                arms.push((value, target));
+            }
+            let mut acc = exec_cfg_block(arena, blocks, env.clone(), default, label, depth + 1);
+            for (val, target) in arms.iter().rev() {
+                let then = exec_cfg_block(arena, blocks, env.clone(), target, label, depth + 1);
+                let v = arena.bv_const(w, *val).unwrap();
+                let cond = arena.eq(scrut, v).unwrap();
+                acc = (arena.ite(cond, then.0, acc.0).unwrap(), then.1);
+            }
+            return acc;
+        }
         if let Some(rest) = line.strip_prefix("ret ") {
             let toks: Vec<&str> = rest.split_whitespace().collect();
             let w = width_of(toks[0]);
