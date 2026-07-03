@@ -2,7 +2,7 @@
 //! (Track 1, P1.5 slice b).
 //!
 //! `StringTheory` plugs the ADR-0053 unbounded word core ([`axeyum_strings`])
-//! into the reusable `CdclT`(crate::cdclt::CdclT) driver as a
+//! into the reusable `CdclT` (`crate::cdclt::CdclT`) driver as a
 //! [`TheorySolver`]. Where the existing word-equation *side channel*
 //! ([`crate::smtlib::word_route_verdict`]) is all-or-nothing over a **top-level
 //! conjunction** of equalities/disequalities, the CDCL(T) route handles arbitrary
