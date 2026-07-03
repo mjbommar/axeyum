@@ -1,15 +1,20 @@
 //! The shared MIR reflector: **symbolic execution over an acyclic MIR CFG** into
-//! an `axeyum-ir` term over a caller-provided input symbol `x`. Sharing the
-//! signature `(arena, x, mir) -> TermId` with the LLVM `reflect_unary_into` is
-//! what lets one function be reflected from *both* its MIR and its LLVM and
-//! proved equivalent (translation-validation of rustc lowering).
+//! an `axeyum-ir` term over caller-provided input symbols. Sharing the signature
+//! shape with the LLVM `reflect_into` is what lets one function be reflected from
+//! *both* its MIR and its LLVM and proved equivalent (translation-validation of
+//! rustc lowering).
 //!
 //! Handled per block: `_N = BinaryOp(a, b)` statements (arithmetic/bitwise/shifts
 //! **and** comparisons, sign-aware: `Shr` on a signed local is `ashr`, `Gt` is
-//! `sgt`/`ugt` by operand sign), `Use` copies, `StorageLive`/`StorageDead` noise;
-//! terminators `return`, `goto`, and `switchInt` (integer dispatch *or* bool
-//! branch), joined by recursion into `ite` terms. Loops are out of scope here —
-//! cyclic CFGs are the `TransitionSystem` path (a depth cap panics on cycles).
+//! `sgt`/`ugt` by operand sign), the `*WithOverflow` checked-arithmetic tuple
+//! forms with `(_N.0: TY)` / `(_N.1: bool)` field projections, `as`-casts,
+//! `UnaryOp`, `Use` copies, and `StorageLive`/`StorageDead` noise; terminators
+//! `return`, `goto`, `switchInt` (integer dispatch *or* bool branch), and
+//! **`assert`** (debug-profile overflow/bounds checks — the panic edge becomes a
+//! Bool *panic-condition term*, so "this function cannot panic" is a provable
+//! goal and a `Disproved` countermodel is a concrete panicking input). Loops are
+//! out of scope here — cyclic CFGs are the `TransitionSystem` path (a depth cap
+//! panics on cycles).
 //!
 //! All ops route through the shared vocabulary (`super::{binop, compare}`), so
 //! `BitAnd` (MIR) and `and` (LLVM) hit the same `bv_and`, and MIR's `Gt` lands on
@@ -22,6 +27,16 @@ use super::{binop, compare};
 
 /// `(term, width, signed)` — width 1 = Bool.
 type Operand = (TermId, u32, bool);
+
+/// A local's value: a scalar, or the `(value, overflowed)` pair produced by the
+/// `*WithOverflow` checked-arithmetic rvalues.
+#[derive(Clone, Copy)]
+enum Slot {
+    Scalar(Operand),
+    Pair(Operand, Operand),
+}
+
+type Env = HashMap<u32, Slot>;
 
 /// Group the MIR text into `bbN -> [lines]`.
 fn blocks(mir: &str) -> HashMap<String, Vec<String>> {
@@ -79,14 +94,42 @@ fn param_tys(mir: &str) -> Vec<(u32, bool)> {
         .collect()
 }
 
-/// Resolve a MIR operand (`copy _L` / `move _L` / `const K_TY` / `const true`).
-fn operand(arena: &mut TermArena, env: &HashMap<u32, Operand>, tok: &str) -> Operand {
+/// The scalar in a slot (a `Pair` is not a scalar — project it first).
+fn scalar(slot: Slot, what: &str) -> Operand {
+    match slot {
+        Slot::Scalar(op) => op,
+        Slot::Pair(..) => panic!("{what}: expected a scalar local, found a tuple"),
+    }
+}
+
+/// Resolve a MIR operand: `copy _L` / `move _L` / `const K_TY` / `const true`,
+/// or a checked-arithmetic field projection `copy (_L.0: TY)` / `(_L.1: bool)`.
+fn operand(arena: &mut TermArena, env: &Env, tok: &str) -> Operand {
     let parts: Vec<&str> = tok.split_whitespace().collect();
     match parts.as_slice() {
+        // `move (_2.0: u32)` / `copy (_2.1: bool)`
+        ["copy" | "move", loc, _ty] if loc.starts_with("(_") => {
+            let (n_s, field_s) = loc
+                .trim_start_matches("(_")
+                .split_once('.')
+                .expect("tuple projection `(_N.K: TY)`");
+            let n: u32 = n_s.parse().expect("local index");
+            let field: u32 = field_s.trim_end_matches(':').parse().expect("field index");
+            match (env.get(&n), field) {
+                (Some(Slot::Pair(v, _)), 0) => *v,
+                (Some(Slot::Pair(_, o)), 1) => *o,
+                (Some(Slot::Pair(..)), f) => panic!("tuple local _{n} has no field {f}"),
+                (Some(Slot::Scalar(_)), _) => panic!("local _{n} is a scalar, not a tuple"),
+                (None, _) => panic!("undefined local _{n}"),
+            }
+        }
         ["copy" | "move", loc] => {
             let n: u32 = loc.trim_start_matches('_').parse().expect("local index");
-            *env.get(&n)
-                .unwrap_or_else(|| panic!("undefined local _{n}"))
+            scalar(
+                *env.get(&n)
+                    .unwrap_or_else(|| panic!("undefined local _{n}")),
+                tok,
+            )
         }
         ["const", "true"] => (arena.bool_const(true), 1, false),
         ["const", "false"] => (arena.bool_const(false), 1, false),
@@ -124,8 +167,28 @@ fn compare_pred(op: &str, signed: bool) -> Option<&'static str> {
     })
 }
 
+/// The `(value, overflowed)` pair for a `*WithOverflow` rvalue, sign-selected.
+fn with_overflow(
+    arena: &mut TermArena,
+    op: &str,
+    a: TermId,
+    b: TermId,
+    signed: bool,
+) -> Option<(TermId, TermId)> {
+    let (val_op, ovf) = match (op, signed) {
+        ("AddWithOverflow", false) => ("add", arena.bv_uaddo(a, b).unwrap()),
+        ("AddWithOverflow", true) => ("add", arena.bv_saddo(a, b).unwrap()),
+        ("SubWithOverflow", false) => ("sub", arena.bv_usubo(a, b).unwrap()),
+        ("SubWithOverflow", true) => ("sub", arena.bv_ssubo(a, b).unwrap()),
+        ("MulWithOverflow", false) => ("mul", arena.bv_umulo(a, b).unwrap()),
+        ("MulWithOverflow", true) => ("mul", arena.bv_smulo(a, b).unwrap()),
+        _ => return None,
+    };
+    Some((binop(arena, val_op, a, b), ovf))
+}
+
 /// Execute one `_N = RHS` statement into the environment.
-fn exec_stmt(arena: &mut TermArena, env: &mut HashMap<u32, Operand>, stmt: &str) {
+fn exec_stmt(arena: &mut TermArena, env: &mut Env, stmt: &str) {
     let (dst, rhs) = stmt.split_once(" = ").expect("statement `_N = ..`");
     let dst_n: u32 = dst.trim_start_matches('_').parse().expect("dst local");
     // `copy _1 as u32 (IntToInt)` — widen by the SOURCE sign, narrow by extract.
@@ -139,18 +202,23 @@ fn exec_stmt(arena: &mut TermArena, env: &mut HashMap<u32, Operand>, stmt: &str)
             std::cmp::Ordering::Less => arena.extract(dst_w - 1, 0, a).unwrap(),
             std::cmp::Ordering::Equal => a,
         };
-        env.insert(dst_n, (term, dst_w, dst_signed));
+        env.insert(dst_n, Slot::Scalar((term, dst_w, dst_signed)));
         return;
     }
     let result = match rhs.split_once('(') {
-        // `BitAnd(copy _1, const 255_u32)` / `Gt(..)` / unary `Not(..)` / `Neg(..)`
+        // `BitAnd(copy _1, const 255_u32)` / `Gt(..)` / `AddWithOverflow(..)` /
+        // unary `Not(..)` / `Neg(..)`
         Some((op, args)) if op.chars().all(char::is_alphanumeric) && !op.is_empty() => {
             let inner = args.strip_suffix(')').unwrap_or(args);
             if let Some((lhs, rhs_op)) = inner.split_once(", ") {
                 let (a, w, signed) = operand(arena, env, lhs.trim());
                 let (mut b, b_w, _) = operand(arena, env, rhs_op.trim());
+                if let Some((val, ovf)) = with_overflow(arena, op, a, b, signed) {
+                    env.insert(dst_n, Slot::Pair((val, w, signed), (ovf, 1, false)));
+                    return;
+                }
                 if let Some(pred) = compare_pred(op, signed) {
-                    (compare(arena, pred, a, b), 1, false)
+                    Slot::Scalar((compare(arena, pred, a, b), 1, false))
                 } else {
                     // Rust shift amounts are independently typed (`x << 1` is an
                     // `i32` literal) — adjust to the shiftee's width for the BV op.
@@ -162,9 +230,9 @@ fn exec_stmt(arena: &mut TermArena, env: &mut HashMap<u32, Operand>, stmt: &str)
                         };
                     }
                     if op == "Shr" && signed {
-                        (binop(arena, "ashr", a, b), w, signed)
+                        Slot::Scalar((binop(arena, "ashr", a, b), w, signed))
                     } else {
-                        (binop(arena, op, a, b), w, signed)
+                        Slot::Scalar((binop(arena, op, a, b), w, signed))
                     }
                 }
             } else {
@@ -177,25 +245,28 @@ fn exec_stmt(arena: &mut TermArena, env: &mut HashMap<u32, Operand>, stmt: &str)
                     ("Neg", _) => arena.bv_neg(a).unwrap(),
                     _ => panic!("unsupported unary MIR op `{op}`"),
                 };
-                (t, w, signed)
+                Slot::Scalar((t, w, signed))
             }
         }
-        // A bare `Use`: `copy _1` / `move _2` / `const K_TY`.
-        _ => operand(arena, env, rhs.trim()),
+        // A bare `Use`: `copy _1` / `move (_2.0: u32)` / `const K_TY`.
+        _ => Slot::Scalar(operand(arena, env, rhs.trim())),
     };
     env.insert(dst_n, result);
 }
 
-/// Symbolically execute from `bb` to `return`, yielding the value of `_0`.
-/// Branches recurse per successor (each on a clone of the environment) and join
-/// as `ite`; the depth cap turns a cyclic CFG into a loud panic, not a hang.
+/// Symbolically execute from `bb` to `return`, yielding `(value of _0, panic)` —
+/// `panic` is a Bool term that is true exactly on inputs whose path fails an
+/// `assert` (a debug-profile overflow/bounds check). Branches recurse per
+/// successor (each on a clone of the environment) and join both the value and
+/// the panic condition as `ite`; the depth cap turns a cyclic CFG into a loud
+/// panic, not a hang.
 fn exec_block(
     arena: &mut TermArena,
     map: &HashMap<String, Vec<String>>,
-    mut env: HashMap<u32, Operand>,
+    mut env: Env,
     bb: &str,
     depth: usize,
-) -> Operand {
+) -> (Operand, TermId) {
     assert!(
         depth < 64,
         "cyclic or too-deep MIR CFG (loops are the TransitionSystem path)"
@@ -209,10 +280,42 @@ fn exec_block(
             continue;
         }
         if stmt == "return" {
-            return *env.get(&0).expect("MIR must assign _0 before return");
+            let ret = scalar(
+                *env.get(&0).expect("MIR must assign _0 before return"),
+                "_0",
+            );
+            return (ret, arena.bool_const(false));
         }
         if let Some(target) = stmt.strip_prefix("goto -> ") {
             return exec_block(arena, map, env, target.trim(), depth + 1);
+        }
+        // assert(!move (_2.1: bool), "…") -> [success: bb1, unwind continue];
+        // Panics exactly when the asserted condition is false.
+        if let Some(rest) = stmt.strip_prefix("assert(") {
+            let cond_part = rest.split(", \"").next().expect("assert condition").trim();
+            let (negated, tok) = match cond_part.strip_prefix('!') {
+                Some(inner) => (true, inner),
+                None => (false, cond_part),
+            };
+            let (cond, w, _) = operand(arena, &env, tok.trim());
+            assert_eq!(w, 1, "assert condition must be bool");
+            // assert(c) panics iff ¬c; assert(!c) panics iff c.
+            let panic_here = if negated {
+                cond
+            } else {
+                arena.not(cond).unwrap()
+            };
+            let success = rest
+                .split("success: ")
+                .nth(1)
+                .expect("assert success target")
+                .split([',', ']'])
+                .next()
+                .expect("success block")
+                .trim();
+            let (value, rest_panic) = exec_block(arena, map, env, success, depth + 1);
+            let panic = arena.or(panic_here, rest_panic).unwrap();
+            return (value, panic);
         }
         if let Some(rest) = stmt.strip_prefix("switchInt(") {
             let (scrut_tok, arms_part) = rest.split_once(')').expect("switchInt scrutinee");
@@ -232,9 +335,10 @@ fn exec_block(
                     arms.push((key.parse().expect("arm value"), target));
                 }
             }
-            let mut acc = exec_block(arena, map, env.clone(), otherwise, depth + 1);
+            let (mut acc, mut acc_panic) =
+                exec_block(arena, map, env.clone(), otherwise, depth + 1);
             for (val, target) in arms.iter().rev() {
-                let then = exec_block(arena, map, env.clone(), target, depth + 1);
+                let (then, then_panic) = exec_block(arena, map, env.clone(), target, depth + 1);
                 // Bool scrutinee: arm `0` is the false edge, so its guard is ¬scrut.
                 let cond = if w == 1 {
                     if *val == 0 {
@@ -248,8 +352,9 @@ fn exec_block(
                 };
                 let t = arena.ite(cond, then.0, acc.0).unwrap();
                 acc = (t, then.1, then.2);
+                acc_panic = arena.ite(cond, then_panic, acc_panic).unwrap();
             }
-            return acc;
+            return ((acc.0, acc.1, acc.2), acc_panic);
         }
         exec_stmt(arena, &mut env, stmt);
     }
@@ -257,9 +362,15 @@ fn exec_block(
 }
 
 /// Reflect a MIR function into an *existing* arena, binding `params[i]` to local
-/// `_{i+1}` — so several functions can be lowered over the *same* symbols and
-/// proved equivalent. Returns the term for `_0` at `return`.
-pub fn reflect_mir_into(arena: &mut TermArena, params: &[TermId], mir: &str) -> TermId {
+/// `_{i+1}`, returning `(value of _0, panic condition)`. The panic condition is
+/// a Bool term true exactly on inputs that fail a debug-profile `assert`
+/// (overflow/bounds check) — proving it `== false` is a **panic-freedom proof**;
+/// a countermodel is a concrete panicking input.
+pub fn reflect_mir_into_checked(
+    arena: &mut TermArena,
+    params: &[TermId],
+    mir: &str,
+) -> (TermId, TermId) {
     let tys = param_tys(mir);
     assert_eq!(
         tys.len(),
@@ -267,11 +378,21 @@ pub fn reflect_mir_into(arena: &mut TermArena, params: &[TermId], mir: &str) -> 
         "parameter count mismatch between the MIR signature and the given terms"
     );
     let map = blocks(mir);
-    let mut env: HashMap<u32, Operand> = HashMap::new();
+    let mut env: Env = HashMap::new();
     for (i, (&term, &(w, signed))) in params.iter().zip(tys.iter()).enumerate() {
-        env.insert(u32::try_from(i).unwrap() + 1, (term, w, signed));
+        env.insert(
+            u32::try_from(i).unwrap() + 1,
+            Slot::Scalar((term, w, signed)),
+        );
     }
-    exec_block(arena, &map, env, "bb0", 0).0
+    let (value, panic) = exec_block(arena, &map, env, "bb0", 0);
+    (value.0, panic)
+}
+
+/// Reflect a MIR function, returning only the `_0` value term (for fixtures
+/// without checked arithmetic the panic condition is constant false anyway).
+pub fn reflect_mir_into(arena: &mut TermArena, params: &[TermId], mir: &str) -> TermId {
+    reflect_mir_into_checked(arena, params, mir).0
 }
 
 /// Single-input convenience over [`reflect_mir_into`] (`x` is `_1`).
