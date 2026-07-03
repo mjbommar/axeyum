@@ -114,6 +114,37 @@ fn word_route_budget(config: &SolverConfig) -> SearchBudget {
     }
 }
 
+/// Decides a **word-first-fallback** [`Script`] (T-B.4d) by the word route alone.
+///
+/// The bounded ADR-0029 encoder declined this script *at parse* (a literal over
+/// the length cap, a `str.++` over the width cap, …), so
+/// [`Script::word_only_fallback`] is set and the flat assertion view is **empty**.
+/// The empty view must never be handed to [`crate::solve`] — that would answer a
+/// vacuous `sat` unrelated to the word problem. Instead the sat-only, replay-
+/// checked [`apply_word_route`] is the sole decider, seeded from a synthetic
+/// `unknown`. On a word-route decline the **original** bounded parse error is
+/// reproduced as [`SolverError::Parse`], so a script that was `unsupported` before
+/// this fallback existed never silently becomes a bare `unknown`/`sat`.
+fn decide_word_only(
+    script: &mut Script,
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    let base = CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: "word-first fallback: bounded string encoder declined at parse; deciding via \
+                 the word-equation route (T-B.4d)"
+            .to_owned(),
+    });
+    match apply_word_route(script, config, base) {
+        result @ CheckResult::Sat(_) => Ok(result),
+        // Decline (word route returned `unknown`, or has no `unsat` capability):
+        // reproduce the original bounded parse error verbatim.
+        _ => Err(SolverError::Parse(
+            script.word_only_fallback.clone().unwrap_or_default(),
+        )),
+    }
+}
+
 /// The result of deciding an SMT-LIB script, with the script's own declarations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
@@ -559,6 +590,17 @@ fn smtlib_single_query(script: &Script) -> Result<SmtLibSingleQuery, SolverError
 ///   an internal backend failure).
 pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome, SolverError> {
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    // Word-first parse fallback (T-B.4d): the bounded encoder declined this script
+    // at parse, so decide it by the word route alone — never solve its (empty) flat
+    // assertion view.
+    if script.word_only_fallback.is_some() {
+        let result = decide_word_only(&mut script, config)?;
+        return Ok(SmtLibOutcome {
+            result,
+            logic: script.logic,
+            expected_status: script.status,
+        });
+    }
     let query = smtlib_single_query(&script)?;
     let gate = StringGate::from_script(&script);
     let result = solve(&mut script.arena, &query.assertions, config)?;
@@ -1167,6 +1209,12 @@ pub fn solve_smtlib_incremental(
     config: &SolverConfig,
 ) -> Result<Vec<CheckResult>, SolverError> {
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    // Word-first parse fallback (T-B.4d): a word-only script is non-incremental by
+    // construction (`build_word_problem` declines push/pop/check-sat-assuming), so
+    // it has exactly one implicit `check-sat`. Decide it by the word route alone.
+    if script.word_only_fallback.is_some() {
+        return Ok(vec![decide_word_only(&mut script, config)?]);
+    }
     let gate = StringGate::from_script(&script);
     let mut stack: Vec<axeyum_ir::TermId> = Vec::new();
     let mut scopes: Vec<usize> = Vec::new(); // assertion-stack depth at each open push

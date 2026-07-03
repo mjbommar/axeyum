@@ -106,35 +106,65 @@ fn gen_long_literal(rng: &mut Lcg) -> String {
     s
 }
 
+/// An **over-long** literal (9..=14 bytes) — strictly longer than the bounded
+/// `max_len` (8). Any declaration or `str.++` mentioning one makes the *bounded*
+/// ADR-0029 parse decline at the length cap, so the script can only reach axeyum
+/// through the **word-first parse fallback** (T-B.4d). Z3 decides it natively, so
+/// biasing scripts toward these exercises the fallback's word route end-to-end
+/// under the same wrong-sat soundness gate.
+fn gen_over_long_literal(rng: &mut Lcg) -> String {
+    let len = 9 + rng.below(6); // 9..=14
+    let mut s = String::with_capacity(len);
+    for _ in 0..len {
+        s.push(char::from(ALPHABET[rng.below(ALPHABET.len() as u64)]));
+    }
+    s
+}
+
 /// A string-sorted expression: a variable, a literal, or a shallow `str.++`.
 /// `depth`-bounded and `str.++` kept binary so the summed bounded-encoder width
 /// stays representable (a chain that overflows the cap simply makes axeyum SKIP,
 /// which is adjudication-neutral, but keeping it shallow yields more joint
 /// decisions).
-fn gen_str_expr(rng: &mut Lcg, num_vars: usize, depth: u32) -> String {
+fn gen_str_expr(rng: &mut Lcg, num_vars: usize, depth: u32, over_long: bool) -> String {
     if depth == 0 {
-        return leaf(rng, num_vars);
+        return leaf(rng, num_vars, over_long);
     }
     match rng.below(6) {
-        0 | 1 => leaf(rng, num_vars),
+        0 | 1 => leaf(rng, num_vars, over_long),
         // str.++ of two shallower expressions; at depth ≥ 2 (the "hard" path)
         // occasionally seed a maximal literal to force a past-the-bound witness.
+        // In `over_long` (fallback) mode use a *wider* (ternary) concat and seed an
+        // over-8-byte literal, so the summed bounded width blows the cap and only
+        // the word-first parse fallback can decide the script.
         _ => {
-            let l = if depth >= 2 && rng.below(4) == 0 {
+            let l = if over_long && rng.below(2) == 0 {
+                format!("\"{}\"", gen_over_long_literal(rng))
+            } else if depth >= 2 && rng.below(4) == 0 {
                 format!("\"{}\"", gen_long_literal(rng))
             } else {
-                gen_str_expr(rng, num_vars, depth - 1)
+                gen_str_expr(rng, num_vars, depth - 1, over_long)
             };
-            let r = gen_str_expr(rng, num_vars, depth - 1);
-            format!("(str.++ {l} {r})")
+            let r = gen_str_expr(rng, num_vars, depth - 1, over_long);
+            if over_long && rng.below(2) == 0 {
+                // Ternary concat: three operands push the bounded result width over
+                // the 16-byte cap even without an over-long literal.
+                let m = gen_str_expr(rng, num_vars, depth - 1, over_long);
+                format!("(str.++ {l} {m} {r})")
+            } else {
+                format!("(str.++ {l} {r})")
+            }
         }
     }
 }
 
-/// A leaf string expression: a declared variable or a short literal.
-fn leaf(rng: &mut Lcg, num_vars: usize) -> String {
+/// A leaf string expression: a declared variable or a (short, or in fallback mode
+/// occasionally over-long) literal.
+fn leaf(rng: &mut Lcg, num_vars: usize, over_long: bool) -> String {
     if num_vars > 0 && rng.below(2) == 0 {
         format!("s{}", rng.below(num_vars as u64))
+    } else if over_long && rng.below(3) == 0 {
+        format!("\"{}\"", gen_over_long_literal(rng))
     } else {
         format!("\"{}\"", gen_short_literal(rng))
     }
@@ -168,7 +198,15 @@ impl Instance {
     /// - an occasional loop `si = lit ++ si` (an unsat shape the bounded gate
     ///   downgrades, exercising the word route's decline).
     fn generate(rng: &mut Lcg) -> Instance {
-        let hard = rng.below(2) == 0;
+        // Three difficulty modes: `easy` stays within the bounded `max_len` (the
+        // bounded path decides it); `hard` seeds maximal 8-byte literals and loops
+        // the bounded gate downgrades (routing to the word search); `over_long`
+        // seeds >8-byte literals and >16-byte concats the bounded *parse* rejects
+        // wholesale, so the script reaches axeyum only through the word-first parse
+        // fallback (T-B.4d). The soundness gate covers all three.
+        let mode = rng.below(3); // 0 = easy, 1 = hard, 2 = over_long (fallback)
+        let hard = mode >= 1;
+        let over_long = mode == 2;
         let num_vars = rng.below(3) + 2; // 2..=4
         let num_eqs = if hard {
             rng.below(3) + 2 // 2..=4
@@ -192,14 +230,14 @@ impl Instance {
                 let lit = gen_short_literal(rng);
                 let _ = writeln!(text, "(assert (= s{i} (str.++ \"{lit}\" s{i})))");
             } else {
-                let l = gen_str_expr(rng, num_vars, depth);
-                let r = gen_str_expr(rng, num_vars, depth);
+                let l = gen_str_expr(rng, num_vars, depth, over_long);
+                let r = gen_str_expr(rng, num_vars, depth, over_long);
                 let _ = writeln!(text, "(assert (= {l} {r}))");
             }
         }
         for _ in 0..num_diseqs {
-            let l = gen_str_expr(rng, num_vars, 1);
-            let r = gen_str_expr(rng, num_vars, 1);
+            let l = gen_str_expr(rng, num_vars, 1, over_long);
+            let r = gen_str_expr(rng, num_vars, 1, over_long);
             // Alternate the two disequality spellings the dual build recognizes.
             if rng.below(2) == 0 {
                 let _ = writeln!(text, "(assert (not (= {l} {r})))");
@@ -222,8 +260,8 @@ impl Instance {
             // For prefixof/suffixof the first operand is the sub-word, the second
             // the whole; for contains the first is the whole, the second the
             // sub-word. Either way both are ordinary string expressions.
-            let a = gen_str_expr(rng, num_vars, depth);
-            let b = gen_str_expr(rng, num_vars, depth);
+            let a = gen_str_expr(rng, num_vars, depth, over_long);
+            let b = gen_str_expr(rng, num_vars, depth, over_long);
             let atom = format!("({op} {a} {b})");
             if rng.below(4) == 0 {
                 // Negative occurrence: the dual build must decline (all-or-nothing

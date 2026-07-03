@@ -1546,21 +1546,38 @@ fn variable_concat_at_and_contains_decide() {
 }
 
 #[test]
-fn variable_concat_over_bound_declines_gracefully() {
+fn variable_concat_over_bound_routes_to_word_first_fallback() {
     // Two declared strings are max_len 8 each, so a++b is max_len 16 (fits the cap).
-    // A *third* concat would be max_len 24 > the 16-byte cap, so it must decline as
-    // Unsupported (Unknown to the consumer) — never a wrong verdict.
-    let err = parse_script(
+    // A *third* concat would be max_len 24 > the 16-byte cap, so the *bounded*
+    // ADR-0029 encoder declines it. But this is a pure word equation, so the
+    // word-first parse fallback (T-B.4d) catches the bounded decline and returns a
+    // word-only `Script`: the bounded caps are an encoding artifact, not a theory
+    // limit. `word_only_fallback` carries the original bounded error (for honest
+    // reproduction on a word-route decline) and `word_problem` is populated; no
+    // packed-BV flat assertions are built.
+    let script = parse_script(
         "(declare-fun a () String)\n\
          (declare-fun b () String)\n\
          (declare-fun c () String)\n\
          (assert (= (str.++ (str.++ a b) c) \"z\"))\n(check-sat)\n",
     )
-    .expect_err("max_len 24 exceeds the 16-byte cap");
-    let SmtError::Unsupported(msg) = err else {
-        panic!("expected Unsupported for the over-cap concat, got {err:?}");
-    };
-    assert!(msg.contains("exceeds the cap"), "actionable msg: {msg}");
+    .expect("pure word equation reaches the word-first fallback, not a hard error");
+    let fallback = script
+        .word_only_fallback
+        .as_deref()
+        .expect("the bounded parse declined, so this is a word-first fallback script");
+    assert!(
+        fallback.contains("exceeds the cap"),
+        "the fallback preserves the original bounded error for honest decline: {fallback}"
+    );
+    let wp = script
+        .word_problem
+        .expect("the word-equation side channel is populated");
+    assert_eq!(wp.equalities.len(), 1, "one equation a++b++c = \"z\"");
+    assert!(
+        script.assertions.is_empty(),
+        "no packed-BV flat assertions are built on the fallback path"
+    );
 }
 
 #[test]

@@ -131,6 +131,18 @@ pub struct Script {
     /// same [`Script::arena`]; `String` = `Seq(BitVec(18))` with literals as the
     /// right-associated `seq.unit` code-point chain (matching `axeyum-strings`).
     pub word_problem: Option<WordProblem>,
+    /// Set (to the original bounded-parse error's `Display`) when the script was
+    /// parsed through the **word-first fallback** (T-B.4d): the bounded ADR-0029
+    /// string encoder declined this script wholesale (a literal over
+    /// [`STRING_MAX_LEN`], a `str.++` result over [`STRING_BOUND_CAP`], or another
+    /// bounded-encoder capacity/unsupported limit), but the script *is* a pure
+    /// word-equation problem, so only the unbounded [`Script::word_problem`] side
+    /// channel is populated — [`Script::assertions`]/[`Script::commands`] are empty
+    /// and no packed-BV terms exist. The solver front door decides such a script by
+    /// the word route alone; on a word-route decline it reproduces this original
+    /// error, so a previously-`unsupported` script never silently becomes a bare
+    /// `unknown`/`sat`.
+    pub word_only_fallback: Option<String>,
 }
 
 /// A first-class `Sort::Seq` word-equation problem accumulated as a side channel
@@ -161,6 +173,40 @@ pub struct WordProblem {
 /// constructs outside the `QF_BV` benchmark slice, and sort errors surfaced
 /// as [`SmtError::Ir`].
 pub fn parse_script(input: &str) -> Result<Script, SmtError> {
+    match parse_script_bounded(input) {
+        Ok(script) => Ok(script),
+        // Word-first parse fallback (T-B.4d). The bounded ADR-0029 string encoder
+        // declined the script *wholesale* — a string literal over [`STRING_MAX_LEN`],
+        // a `str.++` result over [`STRING_BOUND_CAP`], a sequence element over the
+        // packed-sort ceiling, or another bounded-encoder capacity/unsupported limit
+        // (all surfaced as [`SmtError::Unsupported`], or an [`SmtError::Ir`] width
+        // error from packing). These caps are an artifact of the *bounded* encoding,
+        // not of the string theory: a pure word-equation problem is decidable
+        // unbounded regardless of literal length or concat width. So retry with a
+        // word-level-only parse that builds **only** the unbounded
+        // [`Script::word_problem`] side channel (no packed-BV terms, no flat
+        // assertions). On success the front door decides it by the word route; on
+        // failure (not a pure word-equation fragment) the original bounded error is
+        // returned unchanged, so bench/consumer classification stays honest.
+        //
+        // A [`SmtError::Syntax`] is malformed input — never a capacity decline — so
+        // it is propagated as-is (no fallback).
+        Err(error @ (SmtError::Unsupported(_) | SmtError::Ir(_))) => match parse_word_only(input) {
+            Some(mut script) => {
+                script.word_only_fallback = Some(error.to_string());
+                Ok(script)
+            }
+            None => Err(error),
+        },
+        Err(error) => Err(error),
+    }
+}
+
+/// The bounded ADR-0029 parse: the full slice parser (string literals ≤
+/// [`STRING_MAX_LEN`], concats ≤ [`STRING_BOUND_CAP`], packed-BV string model).
+/// A capacity/unsupported decline here is what triggers the word-first fallback in
+/// [`parse_script`].
+fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
     let mut exprs = read_all(input)?;
     // Finite-set theory: model every `(Set E)` as a `BitVec(W)` over the finite
     // element domain and rewrite the sound subset of set operations to bit-vector
@@ -256,6 +302,58 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
         script.word_problem = build_word_problem(&mut script.arena, &exprs);
     }
     Ok(script)
+}
+
+/// The word-first fallback parse (T-B.4d): build **only** the unbounded
+/// [`WordProblem`] side channel, with no bounded caps (any literal length, any
+/// concat width — the `Seq(BitVec(18))` IR is unbounded). Returns `Some(script)`
+/// only when the script is the pure word-equation fragment that
+/// [`build_word_problem`] recognizes; otherwise `None`, so [`parse_script`] can
+/// surface the original bounded error unchanged.
+///
+/// The returned [`Script`] carries an **empty** flat/incremental assertion view
+/// (no packed-BV terms are ever built) and the populated [`Script::word_problem`];
+/// `logic`/`status` are recovered by a light scan so the front door still reports
+/// the benchmark's own `:status`. [`Script::word_only_fallback`] is set by the
+/// caller.
+fn parse_word_only(input: &str) -> Option<Script> {
+    // Re-tokenize and re-run the same s-expression desugars the bounded parse
+    // applies before term construction. A set/const-array desugar failure means
+    // the script is not a pure word-equation problem, so decline (bounded error
+    // stands). `desugar_const_arrays` is infallible.
+    let mut exprs = read_all(input).ok()?;
+    desugar_sets(&mut exprs).ok()?;
+    desugar_const_arrays(&mut exprs);
+
+    let mut script = Script::default();
+    let wp = build_word_problem(&mut script.arena, &exprs)?;
+    script.word_problem = Some(wp);
+    // The word channel *is* the bounded-string surface for this script; flag it so
+    // downstream string-aware code paths recognize it (the front door special-cases
+    // `word_only_fallback` before any bounded gate, so this is informational).
+    script.uses_bounded_strings = true;
+
+    // Recover `set-logic` / `(set-info :status …)` so `SmtLibOutcome` still carries
+    // the script's declared logic and ground-truth status.
+    for e in &exprs {
+        let Some(items) = e.list() else { continue };
+        match items.first().and_then(SExpr::atom) {
+            Some("set-logic") => {
+                if let Some(logic) = items.get(1).and_then(SExpr::atom) {
+                    script.logic = Some(logic.to_owned());
+                }
+            }
+            Some("set-info") => {
+                if items.get(1).and_then(SExpr::atom) == Some(":status")
+                    && let Some(status) = items.get(2).and_then(SExpr::atom)
+                {
+                    script.status = Some(status.to_owned());
+                }
+            }
+            _ => {}
+        }
+    }
+    Some(script)
 }
 
 // --- word-equation dual build (ADR-0053, T-B.4b) -----------------------------
