@@ -393,6 +393,15 @@ impl StringGate {
     ///    contract-repair follow-up).
     /// 3. Otherwise the refutation leaned on the integer channel in a way the
     ///    unbounded abstraction cannot confirm — report an honest `unknown`.
+    ///
+    /// It also **upgrades** an `unknown` verdict to `unsat` when the same
+    /// unbounded length/code abstraction (steps 1/1a only) is itself `unsat`:
+    /// because the abstraction is a sound relaxation, its `unsat` proves the
+    /// original `unsat` regardless of why the bounded path was undecided (e.g. a
+    /// code-point range/arithmetic conflict the bounded integer bit-blast could
+    /// not close — `str-code-unsat*`). The bite detector, coarse guard, and the
+    /// step-2 `None ⇒ unsat` shortcut stay `unsat`-input-only (they *downgrade*
+    /// or *assume* a bounded `unsat`, which an `unknown` input has not produced).
     fn confirm(
         &self,
         arena: &mut TermArena,
@@ -400,9 +409,24 @@ impl StringGate {
         config: &SolverConfig,
         result: CheckResult,
     ) -> Result<CheckResult, SolverError> {
-        if !self.active || !matches!(result, CheckResult::Unsat) {
+        if !self.active {
             return Ok(result);
         }
+        // Neither an `unsat` (to confirm/downgrade) nor an `unknown` (a candidate
+        // for a sound-relaxation refutation upgrade) — pass through.
+        if !matches!(result, CheckResult::Unsat | CheckResult::Unknown(_)) {
+            return Ok(result);
+        }
+        // An `unsat` input runs the full confirm/downgrade machinery (steps
+        // 1/1a/1.5/coarse/2). An `unknown` input runs *only* the sound-relaxation
+        // refutation (steps 1/1a): the unbounded length/code abstraction being
+        // itself `unsat` proves the original `unsat` no matter why the bounded
+        // path was undecided (e.g. a code-arithmetic conflict the bounded integer
+        // bit-blast could not close). The bite detector, coarse guard, and the
+        // step-2 `None ⇒ unsat` shortcut are all `unsat`-input-only: they either
+        // *downgrade* a bounded `unsat` or assume one, so they must not run on an
+        // `unknown` (returning `unsat` from step 2's `None` would be unsound).
+        let is_unsat_input = matches!(result, CheckResult::Unsat);
         // Quantifier guard: the abstraction map replaces *atoms*, and an atom
         // inside a quantifier body may depend on the bound variable — a single
         // fresh Boolean cannot represent it for every instantiation, so the
@@ -476,7 +500,7 @@ impl StringGate {
             // facts force some length past the encoding bound. The bounded
             // `unsat` is then an artifact of the encoding (a real model may use
             // longer strings), so downgrade. A downgrade is always sound.
-            if !self.bounds.is_empty() {
+            if is_unsat_input && !self.bounds.is_empty() {
                 let mut with_bounds = abstracted;
                 with_bounds.extend(self.bounds.iter().copied());
                 if matches!(solve(arena, &with_bounds, config)?, CheckResult::Unsat) {
@@ -487,6 +511,12 @@ impl StringGate {
                     }));
                 }
             }
+        }
+        // An `unknown` input reaches here only when the sound abstraction did not
+        // refute it — leave the honest `unknown` verdict as-is (the `unsat`-only
+        // coarse guard and step 2 below must not run on it).
+        if !is_unsat_input {
+            return Ok(result);
         }
         // A coarsely-abstracted atom (`str.<`, `str.in_re`) means the length
         // abstraction can miss a bound bite (a real model may exist only past
@@ -542,6 +572,36 @@ pub fn confirm_bounded_string_verdict(
     // Word-equation second-chance route (ADR-0053, T-B.4b), same as the
     // `solve_smtlib` front door: adds `sat` only where the verdict is `unknown`.
     Ok(apply_word_route(script, config, confirmed))
+}
+
+/// Attempts the bounded-string **`unknown` ⇒ `unsat` upgrade** (P2.7 A.2
+/// code/len↔LIA): runs the unbounded length/code abstraction (a sound
+/// relaxation) on a script whose bounded solve was left `unknown`, returning
+/// [`CheckResult::Unsat`] when the abstraction itself refutes (proving the
+/// original `unsat` bound-independent — e.g. a `str.to_code` range/arithmetic
+/// conflict the bounded integer bit-blast could not close). Otherwise returns
+/// [`CheckResult::Unknown`] unchanged. For harnesses (e.g. `axeyum-bench`) that
+/// hold only the stringified verdict and cannot build a [`CheckResult::Unknown`]
+/// themselves ([`UnknownReason`] is `#[non_exhaustive]`).
+///
+/// This is the upgrade-only companion to [`confirm_bounded_string_verdict`]
+/// (which confirms/downgrades an `unsat`); it never manufactures a `sat` and
+/// only ever returns `unsat` through the sound abstraction.
+///
+/// # Errors
+///
+/// Any [`SolverError`] from the abstraction solves.
+pub fn upgrade_bounded_string_unknown(
+    script: &mut Script,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    let gate = StringGate::from_script(script);
+    let unknown = CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: String::new(),
+    });
+    gate.confirm(&mut script.arena, assertions, config, unknown)
 }
 
 /// Whether `t` has any `Int`-sorted subterm — used by the step-1a LIA

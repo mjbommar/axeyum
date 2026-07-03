@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 623 oracle-compared instances (992 files total, 676 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 627 oracle-compared instances (992 files total, 680 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -45,9 +45,9 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_NIA | `qf-nia-curated-iand` | 3 | 1 | 33% | 2 | 0 | 0 | 0 | :status | 13.333 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
 | QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 21 | 55% | 16 | 1 | 21 | 0 | z3-binary | 8.660 |
-| QF_S | `qf-s-cvc5-regress-clean` | 134 | 58 | 43% | 20 | 56 | 55 | 0 | z3-library+binary | 5.141 |
+| QF_S | `qf-s-cvc5-regress-clean` | 134 | 61 | 46% | 17 | 56 | 58 | 0 | z3-library+binary | 4.372 |
 | QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | 6 | 1 | 15 | 0 | z3-library+binary | 3.752 |
-| QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 12 | 24% | 9 | 29 | 11 | 0 | z3-library+binary | 8.584 |
+| QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 13 | 26% | 8 | 29 | 12 | 0 | z3-library+binary | 7.632 |
 | QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts` | 6 | 4 | 67% | 2 | 0 | 4 | 0 | z3-binary | 7.489 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded` | 82 | 44 | 54% | 13 | 24 | 37 | 0 | z3-library+binary | 4.845 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts` | 82 | 44 | 54% | 13 | 24 | 37 | 0 | z3-library+binary | 4.845 |
@@ -60,9 +60,35 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 676 decided, 623 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 680 decided, 627 oracle-compared, **0 disagreements.**
 
 <!-- NOTES:BEGIN (hand-written attribution notes — preserved by the generator) -->
+### QF_S + QF_SLIA rows re-measured 2026-07-03 (P2.7 A.2 — the len/code↔LIA bridge)
+
+The `str.to_code` bridge in the unbounded length abstraction was upgraded from a
+*wholly-free* integer to a **code-domain + length-coupled** twin: `str.to_code s`
+maps to a fresh `Int c` with the universally-true fact
+`(len(s)=1 ∧ 0≤c≤0x2FFFF) ∨ (len(s)≠1 ∧ c=-1)`, plus a single-character
+**code↔equality link** `(len(p)=1 ∧ len(q)=1 ∧ c_p=c_q) ⇒ (p=q)`. Both are sound
+relaxations of the *real* (Unicode) theory — the code cap is the SMT-LIB maximum
+`0x2FFFF`, not the byte model's 255, so the abstraction can never refute a formula
+satisfiable only above the byte range. The string gate now also runs the
+abstraction on an `unknown` bounded verdict (not just to confirm/downgrade an
+`unsat`): the abstraction being itself `unsat` proves the original `unsat`
+bound-independent regardless of why the bounded integer bit-blast was undecided.
+This decides the `str-code-unsat{,-2,-3}` code-range / code-arithmetic / distinct
+conflicts the bounded 32-bit int blast left `unknown`. Net (same-command HEAD
+re-run): **QF_S 58 → 61 decided (unsat 11 → 14; oracle-compared 55 → 58; PAR-2
+5.141 → 4.372), QF_SLIA 12 → 13 decided (unsat 2 → 3; oracle-compared 11 → 12;
+PAR-2 8.584 → 7.632), QF_SEQ 26 unchanged** — the `str.<=`-over-variables
+lex-order and `seq.update` files honestly stay `unknown` (out of the code-bridge
+scope). DISAGREE=0, model-replay-failures=0 across all three; the z3-binary oracle
+agrees `unsat` on every upgraded file. Soundness: `unsat` only through the sound
+length/code abstraction (documented per-fact relaxation argument); a 1500-case
+never-refutes-a-model property test, a 400-case adversarial brute-force
+cross-check, and the `str.to_code`-dense QF_S differential fuzz vs Z3 (474 jointly
+decided) are all DISAGREE=0.
+
 ### QF_S row re-measured 2026-07-03 (T-B.7 slice 3 — certified concat-congruence refutation)
 
 The census `str002`-class disjunctive shape now decides. The word refuter gained
@@ -220,7 +246,7 @@ Each frontier tracks how deep a single capability lever reaches: a family is sca
 
 | Lever family | Frontier | Baseline | Δ | Max knob | Budget (s) | Tracks |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| bv_reduction | 33 | 28 | +5 | 38 | 4 | QF_BV word-level reduction depth (unsat at knob N) |
+| bv_reduction | 32 | 28 | +4 | 36 | 4 | QF_BV word-level reduction depth (unsat at knob N) |
 | lia_cuts | 26 | 20 | +6 | 37 | 4 | QF_LIA branch-and-cut depth (sat at knob N) |
 | nia_unsat | 40 | 40 | 0 | 40 | 4 | QF_NIA unsat-proving depth (knob N) |
 | nra_degree | 2 | 2 | 0 | 6 | 4 | QF_NRA polynomial-degree decision depth (knob N) |

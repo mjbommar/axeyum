@@ -825,22 +825,44 @@ mod run {
         config: &SolverConfig,
         record: &mut SolveRecord,
     ) {
-        if record.outcome != "unsat" || !script.uses_bounded_strings {
+        if !script.uses_bounded_strings {
             return;
         }
-        let confirmed = axeyum_solver::confirm_bounded_string_verdict(
-            script,
-            solved_assertions,
-            config,
-            CheckResult::Unsat,
-        );
-        if !matches!(confirmed, Ok(CheckResult::Unsat)) {
-            record.outcome = "unknown";
-            record.detail = Some(
-                "bounded-string unsat not confirmed bound-independent (P2.7 A.2 \
-                 gate); reported unknown"
-                    .to_owned(),
-            );
+        match record.outcome {
+            // Confirm a bounded `unsat` bound-independent, or downgrade it.
+            "unsat" => {
+                let confirmed = axeyum_solver::confirm_bounded_string_verdict(
+                    script,
+                    solved_assertions,
+                    config,
+                    CheckResult::Unsat,
+                );
+                if !matches!(confirmed, Ok(CheckResult::Unsat)) {
+                    record.outcome = "unknown";
+                    record.detail = Some(
+                        "bounded-string unsat not confirmed bound-independent (P2.7 A.2 \
+                         gate); reported unknown"
+                            .to_owned(),
+                    );
+                }
+            }
+            // Attempt the sound length/code-abstraction upgrade (P2.7 A.2
+            // code/len↔LIA): promote to `unsat` only when the abstraction refutes
+            // (e.g. a `str.to_code` range/arithmetic conflict the bounded integer
+            // bit-blast could not close — `str-code-unsat*`).
+            "unknown" => {
+                if let Ok(CheckResult::Unsat) =
+                    axeyum_solver::upgrade_bounded_string_unknown(script, solved_assertions, config)
+                {
+                    record.outcome = "unsat";
+                    record.detail = Some(
+                        "bounded-string unknown upgraded to unsat by the unbounded \
+                         length/code abstraction (P2.7 A.2 code/len↔LIA)"
+                            .to_owned(),
+                    );
+                }
+            }
+            _ => {}
         }
     }
 

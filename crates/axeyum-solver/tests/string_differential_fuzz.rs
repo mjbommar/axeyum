@@ -229,7 +229,18 @@ fn gen_atom(rng: &mut Lcg, num_vars: usize) -> String {
     // overflow the length cap and SKIP). Coverage of every op is preserved; the
     // depth just bounds how *nested* a single atom gets.
     let depth = 1;
-    match rng.below(10) {
+    match rng.below(11) {
+        // Code-point ↔ LIA bridge shape (P2.7 A.2 code/len↔LIA): a sum of two
+        // `str.to_code`s equated to a constant, the family behind the
+        // `str-code-unsat*` regressions the code abstraction now decides. Kept
+        // dense so the differential gate covers the new Unknown⇒Unsat upgrade
+        // against Z3 (a wrong upgrade would surface as axeyum-Unsat ∧ Z3-sat).
+        10 => format!(
+            "(= (+ (str.to_code {}) (str.to_code {})) {})",
+            gen_str_expr(rng, num_vars, 0),
+            gen_str_expr(rng, num_vars, 0),
+            rng.in_range(0, 300)
+        ),
         0 => format!(
             "(= {} {})",
             gen_str_expr(rng, num_vars, depth),

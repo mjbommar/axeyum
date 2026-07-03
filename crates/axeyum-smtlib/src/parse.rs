@@ -3007,7 +3007,9 @@ fn parse_term<'a>(
                 if !packed_const(arena, s) && !matches!(arena.node(atom), TermNode::BoolConst(_)) {
                     lenabs.coarse.set(true);
                     match fact {
-                        Some(f) => lenabs.note_atom_fact(arena, atom, f)?,
+                        Some(f) => {
+                            lenabs.note_atom_fact(arena, atom, f)?;
+                        }
                         None => lenabs.note_atom_free(arena, atom)?,
                     }
                 }
@@ -3922,6 +3924,10 @@ struct LenAbs {
     /// Original term (string atom or `Int` bridge) → replacement, in
     /// first-recorded order (deterministic export).
     repl: std::cell::RefCell<Vec<(TermId, TermId)>>,
+    /// String-valued term → its `str.to_code` code-point twin `Int`
+    /// ([`LenAbs::note_code_bridge`]); consulted by the single-char code↔
+    /// equality link ([`LenAbs::note_code_eq_link`]).
+    code_of: std::cell::RefCell<HashMap<TermId, TermId>>,
     /// Globally-true side facts (`len(v) ≥ 0`, …).
     facts: std::cell::RefCell<Vec<TermId>>,
     /// **Encoding-bound** facts (`len(v) ≤ max_len`) — true of the *bounded
@@ -4054,23 +4060,27 @@ impl LenAbs {
         self.note_repl(atom, predicate);
     }
 
-    /// Hooks a string atom: `atom → fresh_bool ∧ fact`.
+    /// Hooks a string atom: `atom → fresh_bool ∧ fact`. Returns the fresh
+    /// Boolean `b` (`None` for a constant-folded atom kept verbatim), so a
+    /// caller can add further facts that reference the abstraction-side truth
+    /// value of the atom (e.g. the [`LenAbs::note_code_eq_link`] single-char
+    /// code↔equality bridge).
     fn note_atom_fact(
         &self,
         arena: &mut TermArena,
         atom: TermId,
         fact: TermId,
-    ) -> Result<(), SmtError> {
+    ) -> Result<Option<TermId>, SmtError> {
         // A constant-folded atom is exact — keep it verbatim (replacing the
         // interned `true`/`false` would rewrite every other use of the
         // constant too).
         if matches!(arena.node(atom), TermNode::BoolConst(_)) {
-            return Ok(());
+            return Ok(None);
         }
         let b = self.fresh_var(arena, Sort::Bool, false)?;
         let repl = arena.and(b, fact)?;
         self.note_repl(atom, repl);
-        Ok(())
+        Ok(Some(b))
     }
 
     /// Hooks a content bridge (`str.to_int`, `str.indexof`, `seq.nth`, …): the
@@ -4079,6 +4089,119 @@ impl LenAbs {
         self.mark_used();
         let v = self.fresh_var(arena, Sort::Int, false)?;
         self.note_repl(t, v);
+        Ok(())
+    }
+
+    /// Hooks the **code-point bridge** `str.to_code s` (result term `r`): a
+    /// fresh `Int` `c` standing for the code point, tied to the abstraction-side
+    /// length `len(s)` by the *universally-true* (byte-model) fact
+    ///
+    /// ```text
+    /// (len(s) = 1 ∧ 0 ≤ c ≤ 0x2FFFF) ∨ (len(s) ≠ 1 ∧ c = -1)
+    /// ```
+    ///
+    /// This is `str.to_code`'s SMT-LIB definition (`ite(|s| = 1, codepoint(s[0]),
+    /// -1)`) *minus* the specific code point, which stays free — so it is a sound
+    /// **relaxation**: assign `c := value(str.to_code s)` and `len(s) := |s|` and
+    /// the disjunction holds in every real model. The upper cap is the SMT-LIB
+    /// maximum code point `0x2FFFF`, **not** the byte model's `255`: over-
+    /// approximating the alphabet keeps the abstraction a relaxation of the *real*
+    /// (Unicode) theory, so it can never refute a formula satisfiable only by a
+    /// code point above the byte range (which would DISAGREE with Z3/cvc5).
+    /// Unlike [`note_bridge_free`] (a wholly-free
+    /// integer), this pins the code point's domain and its coupling to the
+    /// length, which lets the unbounded abstraction refute the code-range /
+    /// code-arithmetic conflicts (`str-code-unsat*`) without the bounded
+    /// integer bit-blast. Records `s → c` in [`LenAbs::code_of`] so string
+    /// (dis)equalities over `s` can add the single-char code↔equality link.
+    fn note_code_bridge(
+        &self,
+        arena: &mut TermArena,
+        s: TermId,
+        r: TermId,
+    ) -> Result<(), SmtError> {
+        self.mark_used();
+        // Idempotent per operand: `str.to_code s` may appear many times (all
+        // hooked to the same code twin `c`). Minting a fresh twin per occurrence
+        // would leave the arithmetic uses (mapped through `r → c₀`) and the
+        // equality-link uses (`code_of[s] = cₙ`) referencing *different*
+        // variables, breaking the coupling. Reuse the first twin.
+        if let Some(&c) = self.code_of.borrow().get(&s) {
+            self.note_repl(r, c);
+            return Ok(());
+        }
+        let ls = self.len_expr_string(arena, s)?;
+        // `c` may be `-1`, so it is *not* declared non-negative.
+        let c = self.fresh_var(arena, Sort::Int, false)?;
+        let one = arena.int_const(1);
+        let zero = arena.int_const(0);
+        // SMT-LIB maximum code point (`0x2FFFF`), not the byte model's 255 — see
+        // the doc comment: over-approximating the alphabet keeps the abstraction
+        // a sound relaxation of the real Unicode theory.
+        let cap = arena.int_const(0x2_FFFF);
+        let neg_one = arena.int_const(-1);
+        let is_one = arena.eq(ls, one)?;
+        let ge0 = arena.int_le(zero, c)?;
+        let le255 = arena.int_le(c, cap)?;
+        let in_range = arena.and(ge0, le255)?;
+        let single = arena.and(is_one, in_range)?;
+        let not_one = arena.not(is_one)?;
+        let is_neg = arena.eq(c, neg_one)?;
+        let other = arena.and(not_one, is_neg)?;
+        let fact = arena.or(single, other)?;
+        self.facts.borrow_mut().push(fact);
+        self.note_repl(r, c);
+        self.code_of.borrow_mut().insert(s, c);
+        Ok(())
+    }
+
+    /// The abstraction-side **code-point expression** of a string operand `t`,
+    /// if one exists: the recorded code twin `c` of a `str.to_code`-hooked
+    /// variable, or the literal code point of a single-character string
+    /// constant. `None` for any other operand.
+    fn code_expr(&self, arena: &mut TermArena, t: TermId) -> Option<TermId> {
+        if let Some(&c) = self.code_of.borrow().get(&t) {
+            return Some(c);
+        }
+        single_char_code(arena, t).map(|code| arena.int_const(i128::from(code)))
+    }
+
+    /// Adds the single-character **code↔equality link** for a string equality
+    /// atom `p = q` whose abstraction-side truth value is `b`: when both
+    /// operands carry a code-point expression (`c_p`, `c_q`) the *universally-
+    /// true* (byte-model) fact
+    ///
+    /// ```text
+    /// (len(p) = 1 ∧ len(q) = 1 ∧ c_p = c_q) → b
+    /// ```
+    ///
+    /// is recorded. Sound as a relaxation: in a real model a single-character
+    /// string is exactly its code point, so equal single-character code points
+    /// force the strings equal (`b = value(p = q) = true`). This lets the
+    /// abstraction see that distinct single-character strings need distinct
+    /// codes (`str-code-unsat`, `str-code-unsat-3`) — the piece a wholly-free
+    /// bridge and a fresh-Boolean equality would drop. No-op unless both
+    /// operands have a code expression.
+    fn note_code_eq_link(
+        &self,
+        arena: &mut TermArena,
+        b: TermId,
+        p: TermId,
+        lp: TermId,
+        q: TermId,
+        lq: TermId,
+    ) -> Result<(), SmtError> {
+        let (Some(cp), Some(cq)) = (self.code_expr(arena, p), self.code_expr(arena, q)) else {
+            return Ok(());
+        };
+        let one = arena.int_const(1);
+        let p_single = arena.eq(lp, one)?;
+        let q_single = arena.eq(lq, one)?;
+        let codes_eq = arena.eq(cp, cq)?;
+        let ante = arena.and(p_single, q_single)?;
+        let ante = arena.and(ante, codes_eq)?;
+        let link = arena.implies(ante, b)?;
+        self.facts.borrow_mut().push(link);
         Ok(())
     }
 
@@ -4123,6 +4246,23 @@ fn packed_string_len(arena: &TermArena, t: TermId) -> Option<u32> {
     let m = string_max_len_of(*width)?;
     let len = u32::try_from(value & ((1u128 << len_width(m)) - 1)).ok()?;
     (len <= m).then_some(len)
+}
+
+/// The code point (single content byte, `0..=255`) of a **single-character**
+/// packed string constant; `None` unless `t` is a length-1 constant string.
+/// This is exactly `str.to_code t` for a literal in the byte model, used to
+/// give a single-char string literal a code expression for the code↔equality
+/// link ([`LenAbs::note_code_eq_link`]).
+fn single_char_code(arena: &TermArena, t: TermId) -> Option<u8> {
+    if packed_string_len(arena, t) != Some(1) {
+        return None;
+    }
+    let TermNode::BvConst { width, value } = arena.node(t) else {
+        return None;
+    };
+    let m = string_max_len_of(*width)?;
+    let byte = (value >> len_width(m)) & 0xFF;
+    u8::try_from(byte).ok()
 }
 
 /// Packs a string literal's bytes into the canonical bit-vector representation
@@ -5320,7 +5460,10 @@ fn string_eq_len_hook(
         Ok(())
     } else {
         let fact = arena.eq(lp, lq)?;
-        lenabs.note_atom_fact(arena, atom, fact)
+        if let Some(b) = lenabs.note_atom_fact(arena, atom, fact)? {
+            lenabs.note_code_eq_link(arena, b, p, lp, q, lq)?;
+        }
+        Ok(())
     }
 }
 
@@ -8396,7 +8539,10 @@ fn apply_op(
         "str.to_code" => {
             need(1)?;
             let r = string_to_code(arena, args[0])?;
-            lenabs.note_bridge_free(arena, r)?;
+            // P2.7 A.2 (code↔LIA): a code-domain + length-coupled abstraction
+            // (not a wholly-free bridge), so the unbounded abstraction refutes
+            // the code-range / code-arithmetic conflicts.
+            lenabs.note_code_bridge(arena, args[0], r)?;
             r
         }
         // `str.from_code i` — the length-1 string of code point `i` (conservative
