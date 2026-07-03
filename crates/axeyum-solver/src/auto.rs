@@ -2586,6 +2586,18 @@ fn collect_int_vars(arena: &TermArena, term: TermId, out: &mut BTreeSet<SymbolId
     }
 }
 
+/// Case-count cap for the *pre-blast* enumeration probe. Exhaustive
+/// evaluation costs ~µs per case while the exact blast decides these boxes in
+/// tens of ms, so past ~10^4 cases enumeration loses to the blast — measured:
+/// the `nia_unsat` frontier family fell 40 → 23 (per-instance 20-30× slower)
+/// when the 10^6-case probe ran ahead of the blast. Small boxes stay on the
+/// evaluation route: it is trusted-by-construction and beats blast setup cost.
+const INT_BOX_ENUM_FAST_CASES: u128 = 10_000;
+
+/// Cap for the *post-decline* enumeration fallback: once the blast itself has
+/// declined (covering width or CNF too large — e.g. a few cases at huge
+/// magnitudes), exhaustive evaluation is the only remaining decider for the
+/// proven box, so it may spend the full budget.
 const MAX_INT_BOX_ENUM_CASES: u128 = 1_000_000;
 
 /// Proves a finite integer box for every free `Int` variable of `assertions`,
@@ -2624,7 +2636,9 @@ fn decide_bounded_int_blast(
         IntBoxProof::Decline => return Ok(None),
     };
 
-    if let Some(result) = decide_int_box_by_evaluation(arena, assertions, &proven) {
+    if let Some(result) =
+        decide_int_box_by_evaluation(arena, assertions, &proven, INT_BOX_ENUM_FAST_CASES)
+    {
         return Ok(Some(result));
     }
 
@@ -2634,7 +2648,19 @@ fn decide_bounded_int_blast(
     let clamped = clamp_to_box(arena, assertions, &proven)?;
 
     // 8. Solve the clamped, exactly-encoded box at the covering width.
-    solve_exact_bounded_box(arena, &clamped, proven.width, config)
+    let blasted = solve_exact_bounded_box(arena, &clamped, proven.width, config)?;
+    if blasted.is_some() {
+        return Ok(blasted);
+    }
+
+    // 9. The blast declined (covering width or CNF too large) — full-budget
+    //    exhaustive evaluation is the last decider for the proven box.
+    Ok(decide_int_box_by_evaluation(
+        arena,
+        assertions,
+        &proven,
+        MAX_INT_BOX_ENUM_CASES,
+    ))
 }
 
 fn decide_bounded_int_box_by_evaluation(
@@ -2642,7 +2668,12 @@ fn decide_bounded_int_box_by_evaluation(
     assertions: &[TermId],
 ) -> Option<CheckResult> {
     match prove_int_box(arena, assertions) {
-        IntBoxProof::Box(proven) => decide_int_box_by_evaluation(arena, assertions, &proven),
+        // The early-dispatch probe uses the FAST cap: larger boxes fall
+        // through to the exact blast route, which decides them 20-30× faster
+        // (the full-budget enumeration only runs after the blast declines).
+        IntBoxProof::Box(proven) => {
+            decide_int_box_by_evaluation(arena, assertions, &proven, INT_BOX_ENUM_FAST_CASES)
+        }
         IntBoxProof::TriviallyUnsat => Some(CheckResult::Unsat),
         IntBoxProof::Decline => None,
     }
@@ -2652,8 +2683,9 @@ fn decide_int_box_by_evaluation(
     arena: &TermArena,
     assertions: &[TermId],
     proven: &BoundedBox,
+    max_cases: u128,
 ) -> Option<CheckResult> {
-    if int_box_case_count(proven)? > MAX_INT_BOX_ENUM_CASES {
+    if int_box_case_count(proven)? > max_cases {
         return None;
     }
     let vars = proven
