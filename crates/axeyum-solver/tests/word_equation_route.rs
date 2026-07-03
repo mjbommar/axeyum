@@ -10,9 +10,17 @@
 //!
 //! - **The bridge never emits a wrong verdict on an UNSAT instance.** A family of
 //!   adversarially unsatisfiable word-equation scripts is decided; every one must
-//!   come back `unsat` (soundly, from the bounded path) or `unknown` (the word
-//!   route declined) — **never `sat`**. The instances that reach the word route
-//!   (the bounded gate downgraded them to `unknown`) must stay `unknown`.
+//!   come back `unsat` or `unknown` — **never `sat`**.
+//! - **The bridge adds a re-checked `unsat` (ADR-0053, T-B.7).** The word route
+//!   now decides `unsat`, but *only* through an independently re-checked
+//!   derivation. Scripts whose refutation is a checkable **constant clash** past
+//!   the bounded encoder's `max_len` — which the bounded gate downgrades to
+//!   `unknown` — are now decided `unsat` by the word route's refuter. Shapes that
+//!   are not an aligned constant clash (loops, parity/length arguments) are never
+//!   certified by the word route; at the full front door they are still decided
+//!   `unsat` by the bounded ADR-0052 length abstraction (never reaching the word
+//!   route), and the word route's own decline on those shapes is pinned directly
+//!   in `axeyum-strings` (the `check_derivation` / `refute_property` suites).
 //! - **The bridge adds `sat` for genuinely-satisfiable instances the bounded path
 //!   cannot decide.** Scripts whose only witness exceeds the bounded encoder's
 //!   `max_len` (a variable forced past 8 bytes by literal concatenation) return
@@ -26,74 +34,93 @@ fn verdict(text: &str) -> CheckResult {
         .result
 }
 
-/// The bridge must never turn an unsatisfiable script into `sat` — a wrong sat is
-/// the one soundness failure the word route could introduce. Every listed script
-/// is genuinely UNSAT; the verdict must be `unsat` or `unknown`, never `sat`.
-#[test]
-fn bridge_never_emits_sat_on_unsat() {
-    // Each script is genuinely unsatisfiable in the real (unbounded) string
-    // theory. Some are decided `unsat` directly by the bounded path; the ones
-    // that force a witness past the encoding bound get downgraded to `unknown`,
-    // and it is *those* that exercise the word route — which must decline, not
-    // fabricate a model.
-    let unsat_scripts = [
-        // x = "a" ++ x  — a length loop (|x| = 1 + |x|), unsatisfiable.
-        "(set-logic QF_S)(declare-const x String)\
-         (assert (= x (str.++ \"a\" x)))(check-sat)",
-        // x = x ++ "a"  — the append loop.
-        "(set-logic QF_S)(declare-const x String)\
-         (assert (= x (str.++ x \"a\")))(check-sat)",
-        // Mutual loop x = y++\"a\", y = x++\"b\".
-        "(set-logic QF_S)(declare-const x String)(declare-const y String)\
-         (assert (= x (str.++ y \"a\")))(assert (= y (str.++ x \"b\")))(check-sat)",
-        // Distinct constants equated.
-        "(set-logic QF_S)(assert (= \"a\" \"b\"))(check-sat)",
-        // Suffix clash: x++\"a\" = x++\"b\".
-        "(set-logic QF_S)(declare-const x String)\
-         (assert (= (str.++ x \"a\") (str.++ x \"b\")))(check-sat)",
-        // Prefix clash: x = \"ab\"++y and x = \"cd\"++y.
-        "(set-logic QF_S)(declare-const x String)(declare-const y String)\
-         (assert (= x (str.++ \"ab\" y)))(assert (= x (str.++ \"cd\" y)))(check-sat)",
-        // x=x++x with x nonempty (a parity/length contradiction).
-        "(set-logic QF_S)(declare-const x String)\
-         (assert (= x (str.++ x x)))(assert (not (= x \"\")))(check-sat)",
-        // Content clash that only shows up past the bound: x = \"abcdefgh\"++z and
-        // x = \"abcdefgi\"++z with z nonempty forces |x| >= 9 (> max_len 8), so the
-        // bounded gate downgrades to `unknown` and the WORD ROUTE handles it —
-        // the prefixes differ at position 7, so it must decline, never sat.
-        "(set-logic QF_S)(declare-const x String)(declare-const z String)\
-         (assert (= x (str.++ \"abcdefgh\" z)))(assert (= x (str.++ \"abcdefgi\" z)))\
-         (assert (not (= z \"\")))(check-sat)",
-        // Same idea with a variable prefix pinned long, plus a spurious diseq var.
-        "(set-logic QF_S)(declare-const x String)(declare-const y String)(declare-const z String)\
-         (assert (= x (str.++ y \"a\")))(assert (= x (str.++ y \"b\")))\
-         (assert (= y \"abcdefgh\"))(assert (not (= z \"\")))(assert (= x (str.++ y z)))(check-sat)",
-    ];
+/// Every genuinely-unsatisfiable word-equation script, regardless of which route
+/// decides it. Split by *how* they are (soundly) decided at the front door.
+const UNSAT_SCRIPTS: &[&str] = &[
+    // x = "a" ++ x  — a length loop (|x| = 1 + |x|), unsatisfiable.
+    "(set-logic QF_S)(declare-const x String)\
+     (assert (= x (str.++ \"a\" x)))(check-sat)",
+    // x = x ++ "a"  — the append loop.
+    "(set-logic QF_S)(declare-const x String)\
+     (assert (= x (str.++ x \"a\")))(check-sat)",
+    // Mutual loop x = y++\"a\", y = x++\"b\".
+    "(set-logic QF_S)(declare-const x String)(declare-const y String)\
+     (assert (= x (str.++ y \"a\")))(assert (= y (str.++ x \"b\")))(check-sat)",
+    // Distinct constants equated.
+    "(set-logic QF_S)(assert (= \"a\" \"b\"))(check-sat)",
+    // Suffix clash: x++\"a\" = x++\"b\".
+    "(set-logic QF_S)(declare-const x String)\
+     (assert (= (str.++ x \"a\") (str.++ x \"b\")))(check-sat)",
+    // Prefix clash: x = \"ab\"++y and x = \"cd\"++y.
+    "(set-logic QF_S)(declare-const x String)(declare-const y String)\
+     (assert (= x (str.++ \"ab\" y)))(assert (= x (str.++ \"cd\" y)))(check-sat)",
+    // x=x++x with x nonempty (a parity/length contradiction).
+    "(set-logic QF_S)(declare-const x String)\
+     (assert (= x (str.++ x x)))(assert (not (= x \"\")))(check-sat)",
+];
 
-    let mut reached_word_route = 0;
-    for text in unsat_scripts {
-        match verdict(text) {
-            CheckResult::Sat(model) => panic!(
-                "WRONG SAT: the bridge decided an UNSAT script satisfiable — a \
-                 soundness bug.\nscript:\n{text}\nmodel: {model:?}"
-            ),
-            CheckResult::Unsat => {}
-            CheckResult::Unknown(reason) => {
-                // The word route decline shows up in the reason detail.
-                if reason.detail.contains("word-equation route declined") {
-                    reached_word_route += 1;
-                }
-            }
+/// The soundness pin: no unsatisfiable script may ever be decided `sat`, on any
+/// route. A wrong `sat` is the one failure the word route could introduce.
+#[test]
+fn no_unsat_script_is_ever_sat() {
+    for &text in UNSAT_SCRIPTS.iter().chain(PAST_BOUND_CONST_CLASH_UNSAT) {
+        if let CheckResult::Sat(model) = verdict(text) {
+            panic!(
+                "WRONG SAT: decided an UNSAT script satisfiable — a soundness bug.\n\
+                 script:\n{text}\nmodel: {model:?}"
+            );
         }
     }
+}
 
-    // Sanity: at least one adversarial instance actually flowed through the word
-    // route (otherwise this would only be testing the bounded path).
-    assert!(
-        reached_word_route >= 2,
-        "expected the word route to engage on the past-the-bound unsat instances \
-         (got {reached_word_route})"
-    );
+/// Past-the-bound **constant clashes** whose refutation is an aligned constant
+/// clash the T-B.7 checker can re-derive. The bounded encoder cannot decide them
+/// (the witness is forced past `max_len 8`), so before T-B.7 they were downgraded
+/// to `unknown`; now the word route's independently re-checked refutation decides
+/// them `unsat`.
+const PAST_BOUND_CONST_CLASH_UNSAT: &[&str] = &[
+    // x = "abcdefgh"++z and x = "abcdefgi"++z with z nonempty: |x| >= 9 (> max_len
+    // 8) downgrades the bounded gate; the two 8-char constant blocks differ at
+    // position 7, an aligned constant clash the checker certifies.
+    "(set-logic QF_S)(declare-const x String)(declare-const z String)\
+     (assert (= x (str.++ \"abcdefgh\" z)))(assert (= x (str.++ \"abcdefgi\" z)))\
+     (assert (not (= z \"\")))(check-sat)",
+    // A variable prefix pinned long, plus a spurious diseq var: x=y++"a", x=y++"b"
+    // ⇒ y++"a" ≈ y++"b", a suffix constant clash after the shared y.
+    "(set-logic QF_S)(declare-const x String)(declare-const y String)(declare-const z String)\
+     (assert (= x (str.++ y \"a\")))(assert (= x (str.++ y \"b\")))\
+     (assert (= y \"abcdefgh\"))(assert (not (= z \"\")))(assert (= x (str.++ y z)))(check-sat)",
+];
+
+/// The T-B.7 capability, end to end: a past-the-bound constant clash the bounded
+/// path downgrades is now decided `unsat` by the word route's re-checked
+/// refutation. (With the refuter disabled these return `unknown`; see the module
+/// history — this is the one behavior T-B.7 adds at the front door.)
+#[test]
+fn past_bound_constant_clash_refutes_to_unsat() {
+    for &text in PAST_BOUND_CONST_CLASH_UNSAT {
+        assert!(
+            matches!(verdict(text), CheckResult::Unsat),
+            "the past-the-bound constant clash must now decide unsat via the \
+             re-checked word-equation refutation:\n{text}\ngot: {:?}",
+            verdict(text)
+        );
+    }
+}
+
+/// The bounded ADR-0052 length abstraction soundly decides the loop / parity
+/// shapes `unsat` *before* the word route runs (a length argument the word route
+/// deliberately does not certify — that decline is pinned in `axeyum-strings`).
+/// Here we only require the front-door verdict is a sound one: `unsat` or
+/// `unknown`, never `sat`.
+#[test]
+fn loop_and_parity_shapes_are_sound() {
+    for &text in UNSAT_SCRIPTS {
+        assert!(
+            matches!(verdict(text), CheckResult::Unsat | CheckResult::Unknown(_)),
+            "an unsat loop/parity/clash shape must be unsat or unknown, never sat:\n{text}"
+        );
+    }
 }
 
 /// The word route decides genuinely-satisfiable instances the bounded encoder

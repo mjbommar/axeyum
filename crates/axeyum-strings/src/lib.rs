@@ -79,16 +79,32 @@
 //! declines (stops the alignment) rather than guess. Every published premise set
 //! cites **original** premise indices only, even for facts derived from earlier
 //! derived facts.
+//!
+//! ## What is here (slice T-B.7): word-level `unsat` behind a re-checked derivation
+//!
+//! [`refute_word_equations`] is the first route to word-level `unsat`, and it only
+//! ever fires behind an **independent re-check**. It runs the T-B.3 fixpoint (the
+//! untrusted search) and, on a reported [`Conflict`], returns `unsat` only when
+//! [`check_conflict`] re-derives that conflict from its cited premises alone —
+//! sharing no reasoning code with [`infer`], trusting the record only as a hint,
+//! and declining anything it cannot re-derive from first principles (loops,
+//! parity/length arguments, inference-dependent conflicts). This mirrors how the
+//! pure-Rust SAT path waited for DRAT: a wrong `unsat` is impossible because every
+//! `unsat` carries a re-checkable derivation.
 
 #![forbid(unsafe_code)]
 #![allow(clippy::missing_errors_doc)] // documented per-item where a `Result` is returned
 
 pub mod arrange;
+pub mod check_derivation;
 pub mod classes;
 pub mod infer;
 pub mod normal_form;
+pub mod refute;
 
 pub use arrange::{SearchBudget, SearchOutcome, UnknownReason, solve_word_equations};
+pub use check_derivation::{check_conflict, check_equality};
 pub use classes::{Classes, Declined, FlatForm, NormalForm, NormalForms, Unreconciled};
 pub use infer::{Conflict, ConflictReason, Fact, Inference, Inferences, Rule, infer};
 pub use normal_form::{concat_components, normalize};
+pub use refute::{RefuteOutcome, refute_word_equations};

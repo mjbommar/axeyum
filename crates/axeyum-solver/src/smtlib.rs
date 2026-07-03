@@ -18,7 +18,9 @@ use axeyum_ir::{
     FuncValue, Op, Sort, TermArena, TermId, TermNode, Value, render, well_founded_default,
 };
 use axeyum_smtlib::{Script, ScriptCommand, parse_script};
-use axeyum_strings::{SearchBudget, SearchOutcome, solve_word_equations};
+use axeyum_strings::{
+    RefuteOutcome, SearchBudget, SearchOutcome, refute_word_equations, solve_word_equations,
+};
 
 use crate::auto::{solve, unsat_core};
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
@@ -39,13 +41,26 @@ const WORD_ROUTE_MAX_NODES: u64 = 200_000;
 /// Runs **strictly after** the ADR-0029 bounded pre-check and the ADR-0052
 /// [`StringGate`], and only when the current verdict is `unknown` (the bounded
 /// path declined or the gate downgraded) *and* the parser accumulated a
-/// [`WordProblem`](axeyum_smtlib::WordProblem) side channel. It may only ever
-/// **add** `sat`: on a replay-checked [`SearchOutcome::Sat`] it returns `sat`,
-/// and on [`SearchOutcome::Unknown`] it preserves the prior `unknown` (recording
-/// the decline in the reason detail — the "unknown-ends-in-declined" telemetry
-/// invariant). The word search has no `unsat` capability by construction, so this
-/// can never introduce an `unsat`, and its `sat` is soundness-anchored by the
-/// mandatory ground-evaluator replay inside `axeyum-strings`.
+/// [`WordProblem`](axeyum_smtlib::WordProblem) side channel.
+///
+/// The route can now move the verdict in **both** directions, each behind a
+/// distinct soundness anchor:
+///
+/// - it may add `unsat` — but **only** through an independently re-checked
+///   derivation (ADR-0053, T-B.7). [`refute_word_equations`] runs first (it is
+///   cheap): it certifies a T-B.3 constant-clash conflict or a directly-chained
+///   disequality contradiction with the standalone
+///   [`check_conflict`](axeyum_strings::check_conflict) re-checker, which shares no
+///   reasoning code with the search. Loops, parity/length arguments, and
+///   inference-dependent conflicts are *not* certified and stay `unknown` — a
+///   wrong `unsat` is impossible because every `unsat` carries a re-checkable
+///   derivation;
+/// - it may add `sat` — on a replay-checked [`SearchOutcome::Sat`], soundness-
+///   anchored by the mandatory ground-evaluator replay inside `axeyum-strings`.
+///
+/// On [`SearchOutcome::Unknown`] it preserves the prior `unknown` (recording the
+/// decline in the reason detail — the "unknown-ends-in-declined" telemetry
+/// invariant).
 fn apply_word_route(
     script: &mut Script,
     config: &SolverConfig,
@@ -68,6 +83,15 @@ fn apply_word_route(
     };
 
     let budget = word_route_budget(config);
+
+    // Refutation first (cheap, non-recursive): a checked derivation is the ONLY
+    // way this route reaches `unsat` (ADR-0053, T-B.7).
+    if let RefuteOutcome::Unsat { .. } =
+        refute_word_equations(&mut script.arena, &eqs, &diseqs, &budget)
+    {
+        return CheckResult::Unsat;
+    }
+
     match solve_word_equations(&mut script.arena, &eqs, &diseqs, &budget) {
         // A model that has already replayed against every equality/disequality
         // through the ground evaluator inside `axeyum-strings` (the trust anchor).
@@ -125,6 +149,10 @@ fn word_route_budget(config: &SolverConfig) -> SearchBudget {
 /// `unknown`. On a word-route decline the **original** bounded parse error is
 /// reproduced as [`SolverError::Parse`], so a script that was `unsupported` before
 /// this fallback existed never silently becomes a bare `unknown`/`sat`.
+///
+/// The word route may now also decide `unsat` — but only through the independently
+/// re-checked derivation of ADR-0053 T-B.7 — so a re-checked `unsat` is likewise a
+/// real verdict here, not a decline.
 fn decide_word_only(
     script: &mut Script,
     config: &SolverConfig,
@@ -136,9 +164,11 @@ fn decide_word_only(
             .to_owned(),
     });
     match apply_word_route(script, config, base) {
-        result @ CheckResult::Sat(_) => Ok(result),
-        // Decline (word route returned `unknown`, or has no `unsat` capability):
-        // reproduce the original bounded parse error verbatim.
+        // A replay-checked `sat` or a re-checked-derivation `unsat` (T-B.7) is a
+        // real verdict.
+        result @ (CheckResult::Sat(_) | CheckResult::Unsat) => Ok(result),
+        // Decline (word route returned `unknown`): reproduce the original bounded
+        // parse error verbatim.
         _ => Err(SolverError::Parse(
             script.word_only_fallback.clone().unwrap_or_default(),
         )),

@@ -127,8 +127,11 @@ impl SearchBudget {
     }
 
     /// Whether the deadline has passed. Always `false` under `wasm32` (no
-    /// deadline field there — node budget governs termination).
-    fn past_deadline(&self) -> bool {
+    /// deadline field there — node budget governs termination). Public so the
+    /// T-B.7 [`refute_word_equations`](crate::refute_word_equations) arm honors
+    /// the same deadline discipline every solve does.
+    #[must_use]
+    pub fn past_deadline(&self) -> bool {
         #[cfg(not(target_arch = "wasm32"))]
         {
             self.deadline.is_some_and(|d| Instant::now() >= d)

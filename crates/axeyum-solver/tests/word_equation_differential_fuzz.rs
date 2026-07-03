@@ -2,12 +2,19 @@
 //! (ADR-0053, T-B.4b) against the Z3 oracle.
 //!
 //! The word route runs behind the ADR-0029 bounded pre-check + ADR-0052 gate and
-//! may only ever *add* `sat` where they returned `unknown`. Its one soundness
-//! risk is therefore a **wrong `sat`**: a model of an equation system that is in
-//! fact unsatisfiable (a wrong `unsat` is impossible — the arrangement search has
-//! no `unsat` variant, and every `sat` replays through the ground evaluator
-//! inside `axeyum-strings` before it is returned). This harness stresses exactly
-//! that: it generates hundreds of random word-equation scripts — the fragment the
+//! moves the verdict in **both** directions: it adds `sat` (replay-checked) and,
+//! since ADR-0053 T-B.7, `unsat` (only through an independently re-checked
+//! derivation). Both directions are soundness-gated here against Z3:
+//!
+//! - a wrong `sat` — a model of a system that is in fact unsatisfiable — every
+//!   `sat` replays through the ground evaluator inside `axeyum-strings` before it
+//!   is returned, and any surviving wrong `sat` faces Z3 `unsat` here;
+//! - a wrong `unsat` (the worst case) — every word-route `unsat` carries a
+//!   re-checked derivation ([`check_conflict`]), and any wrong one faces Z3 `sat`
+//!   here.
+//!
+//! This harness stresses exactly that: it generates hundreds of random
+//! word-equation scripts — the fragment the
 //! parser's dual build recognizes (`str.++` / string literals / string variables,
 //! `=` / `distinct` / a single `not (= …)`, plus the positive-polarity
 //! extended-function reductions `str.prefixof` / `str.suffixof` / `str.contains`,
@@ -350,6 +357,7 @@ fn word_equation_differential_fuzz_disagree_zero() {
     let mut jointly_decided = 0u64;
     let mut agreements = 0u64;
     let mut axeyum_sat = 0u64;
+    let mut axeyum_unsat = 0u64;
     let mut axeyum_skip = 0u64;
     let mut z3_skip = 0u64;
 
@@ -367,6 +375,9 @@ fn word_equation_differential_fuzz_disagree_zero() {
         let ax = axeyum_decide(&inst.text);
         if ax == Verdict::Sat {
             axeyum_sat += 1;
+        }
+        if ax == Verdict::Unsat {
+            axeyum_unsat += 1;
         }
         if ax == Verdict::Skip {
             axeyum_skip += 1;
@@ -405,6 +416,7 @@ fn word_equation_differential_fuzz_disagree_zero() {
     println!("jointly decided:      {jointly_decided}");
     println!("agreements:           {agreements}");
     println!("axeyum Sat:           {axeyum_sat}");
+    println!("axeyum Unsat:         {axeyum_unsat} (bounded + T-B.7 re-checked word refutations)");
     println!("axeyum skipped:       {axeyum_skip} (Unknown/decline)");
     println!("Z3 skipped:           {z3_skip} (unknown/timeout)");
     println!("DISAGREEMENTS:        0");
@@ -413,5 +425,13 @@ fn word_equation_differential_fuzz_disagree_zero() {
         jointly_decided > 50,
         "too few jointly-decided scripts ({jointly_decided}); the differential \
          gate is not meaningfully exercised"
+    );
+    // Both verdict directions must be exercised against the oracle: `sat`
+    // (replay-checked) and `unsat` (T-B.7 re-checked derivation). A run with zero
+    // of either would leave that direction unadjudicated.
+    assert!(
+        axeyum_sat > 0 && axeyum_unsat > 0,
+        "expected both sat and unsat verdicts to be adjudicated (sat={axeyum_sat}, \
+         unsat={axeyum_unsat})"
     );
 }
