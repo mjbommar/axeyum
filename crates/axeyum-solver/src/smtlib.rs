@@ -19,7 +19,8 @@ use axeyum_ir::{
 };
 use axeyum_smtlib::{Script, ScriptCommand, parse_script};
 use axeyum_strings::{
-    RefuteOutcome, SearchBudget, SearchOutcome, refute_word_equations, solve_word_equations,
+    MembershipOutcome, RefuteOutcome, SearchBudget, SearchOutcome, refute_word_equations,
+    solve_word_equations,
 };
 
 use crate::auto::{solve, unsat_core};
@@ -167,7 +168,10 @@ fn decide_word_only(
     // Online CDCL(T) string route (P1.5b): the disjunction-aware second chance for a
     // word-first-fallback script too — a Boolean-structured word problem whose
     // *bounded* parse declined at a length/width cap is still decidable here.
-    match apply_online_string_route(script, config, after_word) {
+    let after_online = apply_online_string_route(script, config, after_word);
+    // Regex-membership route (P2.7 T-C.5): a pure `str.in_re` problem whose bounded
+    // parse declined at a length/loop cap is decidable by symbolic derivatives.
+    match apply_membership_route(script, config, after_online) {
         // A replay-checked `sat` or a certified-derivation `unsat` is a real verdict.
         result @ (CheckResult::Sat(_) | CheckResult::Unsat) => Ok(result),
         // Decline (both routes returned `unknown`): reproduce the original bounded
@@ -299,6 +303,141 @@ pub fn online_string_verdict(script: &mut Script, config: &SolverConfig) -> Opti
         detail: String::new(),
     });
     match apply_online_string_route(script, config, seed) {
+        result @ (CheckResult::Sat(_) | CheckResult::Unsat) => Some(result),
+        CheckResult::Unknown(_) => None,
+    }
+}
+
+/// The state cap the regex-membership route (P2.7 T-C.5, ADR-0054) spends per
+/// query on the derivative closure / witness search — the number of distinct
+/// canonical residuals it will materialize before declining to `unknown`. Paired
+/// with the config-derived deadline so an intractable regex is a fast `unknown`.
+const MEMBERSHIP_MAX_STATES: u64 = 60_000;
+
+/// The regex-membership [`SearchBudget`]: an absolute deadline from
+/// `config.timeout` (native targets) plus the [`MEMBERSHIP_MAX_STATES`] cap.
+fn membership_budget(config: &SolverConfig) -> SearchBudget {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        if let Some(t) = config.timeout
+            && let Some(deadline) = std::time::Instant::now().checked_add(t)
+        {
+            return SearchBudget::with_deadline(MEMBERSHIP_MAX_STATES, deadline);
+        }
+        SearchBudget::new(MEMBERSHIP_MAX_STATES)
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = config;
+        SearchBudget::new(MEMBERSHIP_MAX_STATES)
+    }
+}
+
+/// Builds a `Seq(BitVec(18))` model value from a witness's Unicode code points.
+fn seq_value(codepoints: &[u32]) -> Value {
+    Value::Seq(
+        codepoints
+            .iter()
+            .map(|&cp| {
+                Value::from_scalar_code(Sort::BitVec(Sort::STRING_ELEM_WIDTH), u128::from(cp))
+            })
+            .collect(),
+    )
+}
+
+/// The **regex-membership second-chance route** (P2.7 T-C.5, ADR-0054).
+///
+/// Runs *strictly after* the bounded route, the flat word route, and the online
+/// CDCL(T) route decline, and only when the current verdict is `unknown` and the
+/// parser accumulated a [`MembershipProblem`](axeyum_smtlib::MembershipProblem)
+/// side channel. The symbolic-derivative sub-solver decides each single-variable
+/// constraint set:
+///
+/// - it may add `sat` — a per-variable witness the reference matcher has replayed
+///   against every membership atom and length bound (the sole gate on `sat`, so no
+///   wrong `sat` is possible); the returned model binds each variable's `!weq!`
+///   `Seq` symbol to its witness. The variables carry **no** cross constraints in
+///   the recognized fragment, so their independent witnesses jointly satisfy the
+///   whole problem;
+/// - it may add `unsat` — but **only** behind a re-checked derivative-emptiness
+///   certificate (a finite, nullable-free, closure-verified residual set), or a
+///   ground literal-operand atom the matcher refutes.
+///
+/// A variable the sub-solver leaves `unknown` (over budget / outside the decided
+/// fragment) preserves the prior `unknown` — the route never guesses.
+fn apply_membership_route(
+    script: &mut Script,
+    config: &SolverConfig,
+    result: CheckResult,
+) -> CheckResult {
+    let CheckResult::Unknown(reason) = result else {
+        return result;
+    };
+    let Some(problem) = script.membership_problem.clone() else {
+        return CheckResult::Unknown(reason);
+    };
+    let budget = membership_budget(config);
+    let mut model = Model::new();
+    let mut undecided = false;
+    for var in &problem.vars {
+        // A pinned/ground atom: validate the fixed witness through the reference
+        // matcher — a violated atom is an immediate `unsat`.
+        if let Some(pin) = &var.pinned {
+            if !var.membership.accepts(pin) {
+                return CheckResult::Unsat;
+            }
+            if let Some(sym) = var.sym {
+                model.set(sym, seq_value(pin));
+            }
+            continue;
+        }
+        match var.membership.solve(&budget) {
+            MembershipOutcome::Unsat => return CheckResult::Unsat,
+            MembershipOutcome::Sat(witness) => {
+                if let Some(sym) = var.sym {
+                    model.set(sym, seq_value(&witness));
+                }
+            }
+            MembershipOutcome::Unknown => undecided = true,
+        }
+    }
+    if undecided {
+        let detail = if reason.detail.is_empty() {
+            "regex-membership route declined (over budget or outside the decided fragment)"
+                .to_owned()
+        } else {
+            format!(
+                "{}; regex-membership route declined (over budget)",
+                reason.detail
+            )
+        };
+        return CheckResult::Unknown(UnknownReason {
+            kind: reason.kind,
+            detail,
+        });
+    }
+    CheckResult::Sat(model)
+}
+
+/// Harness-parity surface (P2.7 T-C.5): consults the **regex-membership route** on
+/// an already-`unknown` [`Script`], returning `Some(Sat/Unsat)` only when the route
+/// decides, and `None` otherwise. The membership mirror of [`word_route_verdict`] /
+/// [`online_string_verdict`].
+///
+/// Soundness anchors are those of `apply_membership_route`: `sat` only through a
+/// matcher-replayed witness, `unsat` only through a re-checked emptiness certificate
+/// or a matcher-refuted ground atom. A `sat` model binds `Seq`-level witnesses,
+/// already checked at that level — callers must not replay it against a packed
+/// bit-vector view. Returns `None` when the script carries no
+/// [`MembershipProblem`](axeyum_smtlib::MembershipProblem) or the route declines.
+#[must_use]
+pub fn membership_verdict(script: &mut Script, config: &SolverConfig) -> Option<CheckResult> {
+    script.membership_problem.as_ref()?;
+    let seed = CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: String::new(),
+    });
+    match apply_membership_route(script, config, seed) {
         result @ (CheckResult::Sat(_) | CheckResult::Unsat) => Some(result),
         CheckResult::Unknown(_) => None,
     }
@@ -832,6 +971,11 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
     // problems the conjunction side channel cannot represent. Only ever adds `sat`
     // (replay-checked) or a certified `unsat` to an `unknown`.
     let result = apply_online_string_route(&mut script, config, result);
+    // Regex-membership route (P2.7 T-C.5): the `str.in_re` second chance, run
+    // strictly after the word routes decline — decides unbounded membership by
+    // symbolic derivatives (witness + matcher replay for `sat`, a re-checked
+    // emptiness certificate for `unsat`). Only ever adds a verdict to an `unknown`.
+    let result = apply_membership_route(&mut script, config, result);
     Ok(SmtLibOutcome {
         result,
         logic: script.logic,

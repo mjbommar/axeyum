@@ -14,6 +14,7 @@ publish = false
 [dependencies]
 axeyum-fp.workspace = true
 axeyum-ir.workspace = true
+axeyum-strings.workspace = true
 
 [lints]
 workspace = true

@@ -951,6 +951,49 @@ mod run {
         }
     }
 
+    /// Regex-membership second chance (P2.7 T-C.5) — harness parity with the
+    /// `solve_smtlib` front door's `apply_membership_route`, run **strictly after**
+    /// [`apply_online_string_upgrade`] leaves the record `unknown`. It decides the
+    /// `str.in_re` membership problems the parser captured in
+    /// [`Script::membership_problem`] over the symbolic-derivative sub-solver — a
+    /// matcher-replayed `sat` witness or a re-checked-emptiness `unsat`.
+    ///
+    /// A `sat` model is a `Seq`-level witness already replayed through the reference
+    /// matcher against every membership atom; it is NOT replayed against the packed
+    /// bit-vector view, so `model_replay_failure` stays `false`. Runs **before** the
+    /// oracle comparison so the upgraded verdict is what the z3-binary cross-check
+    /// sees.
+    fn apply_membership_upgrade(
+        script: &mut Script,
+        config: &SolverConfig,
+        record: &mut SolveRecord,
+    ) {
+        if record.outcome != "unknown" || script.membership_problem.is_none() {
+            return;
+        }
+        match axeyum_solver::membership_verdict(script, config) {
+            Some(CheckResult::Sat(_)) => {
+                record.outcome = "sat";
+                record.detail = Some(
+                    "regex-membership route (T-C.5): decided sat; witness replayed \
+                     in-crate through the reference matcher"
+                        .to_owned(),
+                );
+                record.model_replay_failure = false;
+            }
+            Some(CheckResult::Unsat) => {
+                record.outcome = "unsat";
+                record.detail = Some(
+                    "regex-membership route (T-C.5): decided unsat via a re-checked \
+                     derivative-emptiness certificate"
+                        .to_owned(),
+                );
+                record.model_replay_failure = false;
+            }
+            _ => {}
+        }
+    }
+
     /// Decides a **word-first-fallback** script (T-B.4d) — harness parity with
     /// the `solve_smtlib` front door. The flat assertion view is empty (the
     /// bounded ADR-0029 encoder declined at parse), so the sat-only,
@@ -1115,6 +1158,7 @@ mod run {
             // rewrite-induced verdict change.
             apply_word_route_upgrade(&mut script, &config, &mut original.solve);
             apply_online_string_upgrade(&mut script, &config, &mut original.solve);
+            apply_membership_upgrade(&mut script, &config, &mut original.solve);
             Some(original)
         } else {
             None
@@ -1148,6 +1192,9 @@ mod run {
         // Online CDCL(T) string second chance (P1.5b): decides the disjunctive word
         // problems the flat route above cannot, before the oracle comparison.
         apply_online_string_upgrade(&mut script, &config, &mut primary_solve.solve);
+        // Regex-membership second chance (P2.7 T-C.5): decides the `str.in_re`
+        // membership problems by symbolic derivatives, before the oracle comparison.
+        apply_membership_upgrade(&mut script, &config, &mut primary_solve.solve);
         if let Some(original) = &original_solve {
             compare_rewrite_decision(&original.solve, &primary_solve.solve, summary);
         }
@@ -2263,8 +2310,16 @@ mod run {
         total.query_slice_dropped_terms += next.query_slice_dropped_terms;
         total.query_original_dag_nodes += next.query_original_dag_nodes;
         total.query_slice_dag_nodes += next.query_slice_dag_nodes;
-        total.query_original_tree_nodes += next.query_original_tree_nodes;
-        total.query_slice_tree_nodes += next.query_slice_tree_nodes;
+        // Tree-node counts are the DAG-to-tree expansion metric — a single
+        // heavily-shared script (e.g. a deeply-nested regex membership) can
+        // exponentially exceed `u64`. These are diagnostics, not soundness, so
+        // saturate rather than panic the whole run.
+        total.query_original_tree_nodes = total
+            .query_original_tree_nodes
+            .saturating_add(next.query_original_tree_nodes);
+        total.query_slice_tree_nodes = total
+            .query_slice_tree_nodes
+            .saturating_add(next.query_slice_tree_nodes);
         total.oracle_compared += next.oracle_compared;
         total.oracle_agree += next.oracle_agree;
         total.oracle_disagree += next.oracle_disagree;

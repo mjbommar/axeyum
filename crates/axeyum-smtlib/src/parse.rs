@@ -162,6 +162,17 @@ pub struct Script {
     /// no incremental scoping (declined wholesale, same soundness argument as
     /// [`Script::word_problem`]).
     pub word_skeleton: Vec<TermId>,
+    /// The parser-side **regex-membership side channel** (P2.7 T-C.5, ADR-0054):
+    /// a translation of the script's `str.in_re` fragment into single-variable
+    /// [`MembershipProblem`](crate::MembershipProblem) constraints over the
+    /// code-point symbolic-derivative regex engine, populated all-or-nothing over
+    /// the recognized membership fragment (positive/negative `str.in_re` over
+    /// variables or literals, length bounds, and literal pins — nothing else). The
+    /// solver consults it as a second-chance route strictly after the bounded and
+    /// word routes decline: it may add a replay-checked `sat` (a witness matched by
+    /// the reference matcher) or a re-checked-emptiness `unsat`, so a `None` (or an
+    /// undecided problem) simply leaves the prior verdict untouched.
+    pub membership_problem: Option<crate::MembershipProblem>,
 }
 
 /// A first-class `Sort::Seq` word-equation problem accumulated as a side channel
@@ -324,6 +335,11 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
         // conjunction side channel above cannot represent. Same all-or-nothing
         // discipline and same shared `!weq!` symbols.
         script.word_skeleton = build_word_skeleton(&mut script.arena, &exprs).unwrap_or_default();
+        // Parser-side regex-membership side channel (P2.7 T-C.5): the `str.in_re`
+        // fragment translated to code-point membership problems for the
+        // symbolic-derivative sub-solver (ADR-0054). Same all-or-nothing discipline
+        // and shared `!weq!` symbols.
+        script.membership_problem = crate::MembershipProblem::build(&mut script.arena, &exprs);
     }
     Ok(script)
 }
@@ -358,9 +374,16 @@ fn parse_word_only(input: &str) -> Option<Script> {
     // build declared (`TermArena::declare` is idempotent).
     script.word_problem = build_word_problem(&mut script.arena, &exprs);
     script.word_skeleton = build_word_skeleton(&mut script.arena, &exprs).unwrap_or_default();
-    if script.word_problem.is_none() && script.word_skeleton.is_empty() {
-        // Neither route recognizes the script — not a word-equation problem; decline
-        // so the original bounded error stands.
+    // Regex-membership side channel (P2.7 T-C.5): a script whose *bounded* parse
+    // declined at a length/loop cap may still be a pure `str.in_re` membership
+    // problem the unbounded symbolic-derivative sub-solver decides.
+    script.membership_problem = crate::MembershipProblem::build(&mut script.arena, &exprs);
+    if script.word_problem.is_none()
+        && script.word_skeleton.is_empty()
+        && script.membership_problem.is_none()
+    {
+        // No route recognizes the script — not a word-equation/membership problem;
+        // decline so the original bounded error stands.
         return None;
     }
     // The word channel *is* the bounded-string surface for this script; flag it so

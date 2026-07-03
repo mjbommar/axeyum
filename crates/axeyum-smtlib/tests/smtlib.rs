@@ -4085,24 +4085,25 @@ fn regex_declined_constructs_are_clean_unsupported() {
         ),
         Err(SmtError::Unsupported(_))
     ));
-    // A re.comp nested *inside* another construct has no single-fragment form and
-    // is declined (only top-level comp/diff determinize).
-    assert!(matches!(
-        parse_script(
-            "(declare-fun s () String)\n\
-             (assert (str.in_re s (re.++ (re.comp (str.to_re \"a\")) (str.to_re \"b\"))))\n\
-             (check-sat)\n"
-        ),
-        Err(SmtError::Unsupported(_))
-    ));
-    // (_ re.loop 0 2) (indexed head) is declined.
-    assert!(matches!(
-        parse_script(
-            "(declare-fun s () String)\n\
-             (assert (str.in_re s ((_ re.loop 0 2) (str.to_re \"a\"))))\n(check-sat)\n"
-        ),
-        Err(SmtError::Unsupported(_))
-    ));
+    // A re.comp nested *inside* another construct has no single-fragment form for
+    // the *bounded* NFA route (only top-level comp/diff determinize), but the
+    // unbounded symbolic-derivative membership route (T-C.5, ADR-0054) handles
+    // Boolean nodes natively — so this now parses OK with a membership side channel.
+    let nested_comp = parse_script(
+        "(declare-fun s () String)\n\
+         (assert (str.in_re s (re.++ (re.comp (str.to_re \"a\")) (str.to_re \"b\"))))\n\
+         (check-sat)\n",
+    )
+    .expect("nested comp decided by the membership route");
+    assert!(nested_comp.membership_problem.is_some());
+    // (_ re.loop 0 2) (indexed head): the bounded route declined it, but the
+    // membership route translates native loops — parses OK with a side channel.
+    let re_loop = parse_script(
+        "(declare-fun s () String)\n\
+         (assert (str.in_re s ((_ re.loop 0 2) (str.to_re \"a\"))))\n(check-sat)\n",
+    )
+    .expect("re.loop decided by the membership route");
+    assert!(re_loop.membership_problem.is_some());
     // str.to_re of a non-literal (symbolic) string is declined.
     assert!(matches!(
         parse_script(
@@ -4364,19 +4365,30 @@ fn regex_unicode_escape_range_is_sound() {
 
 #[test]
 fn regex_out_of_byte_codepoint_declines() {
-    // A code point > 255 is outside the byte model; the regex must DECLINE
-    // (Unsupported), never silently treat it as the empty language.
+    // A code point > 255 is outside the *bounded byte model*, so the bounded route
+    // declines it — but the unbounded symbolic-derivative membership route (T-C.5,
+    // ADR-0054) works over the full `BitVec(18)` Unicode alphabet, so a code point
+    // ≤ ALPHABET_MAX (0x2FFFF) is now translated faithfully and decided, never
+    // treated as the empty language.
+    let emoji = parse_script(
+        "(declare-fun s () String)\n\
+         (assert (str.in_re s (str.to_re \"\\u{1f600}\")))\n(check-sat)\n",
+    )
+    .expect("astral-plane literal decided by the membership route");
+    assert!(emoji.membership_problem.is_some());
+    let range = parse_script(
+        "(declare-fun s () String)\n\
+         (assert (str.in_re s (re.range \"\\u{100}\" \"\\u{200}\")))\n(check-sat)\n",
+    )
+    .expect("BMP range decided by the membership route");
+    assert!(range.membership_problem.is_some());
+    // A code point *above* the alphabet ceiling (> 0x2FFFF) has no faithful
+    // translation, so even the membership route declines the whole channel — the
+    // script stays a clean `Unsupported` rather than a silent misencoding.
     assert!(matches!(
         parse_script(
             "(declare-fun s () String)\n\
-             (assert (str.in_re s (str.to_re \"\\u{1f600}\")))\n(check-sat)\n"
-        ),
-        Err(SmtError::Unsupported(_))
-    ));
-    assert!(matches!(
-        parse_script(
-            "(declare-fun s () String)\n\
-             (assert (str.in_re s (re.range \"\\u{100}\" \"\\u{200}\")))\n(check-sat)\n"
+             (assert (str.in_re s (str.to_re \"\\u{30000}\")))\n(check-sat)\n"
         ),
         Err(SmtError::Unsupported(_))
     ));

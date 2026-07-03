@@ -14,10 +14,12 @@
 
 mod parse;
 mod regex;
+mod regex_membership;
 mod sexpr;
 mod write;
 
 pub use parse::{Script, ScriptCommand, parse_script};
+pub use regex_membership::{MemberVar, MembershipProblem};
 pub use sexpr::{SExpr, read_all};
 pub use write::write_script;
 
