@@ -195,6 +195,10 @@ CURRICULUM_MAP = {
                 "finite-precision-recall-v0",
                 "Exact rational precision-recall ranking replay with checked bad average-precision evidence.",
             ),
+            (
+                "finite-calibration-brier-v0",
+                "Exact rational probabilistic-classifier calibration/Brier replay with checked bad Brier-score evidence.",
+            ),
         ],
     },
     "reals": {
@@ -529,6 +533,10 @@ CURRICULUM_MAP = {
                 "finite-precision-recall-v0",
                 "Finite score-ranking count replay feeding exact rational precision-recall checks.",
             ),
+            (
+                "finite-calibration-brier-v0",
+                "Finite probability-forecast count replay feeding exact rational calibration and Brier-score checks.",
+            ),
         ],
     },
     "number-theory": {
@@ -843,8 +851,8 @@ FIELD_PACKS = {
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
-    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, Naive Bayes classifier posterior replay, confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, product measures, and exact discrete distributions."),
-    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance/PCA and finite clustering identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, finite Naive Bayes classifier replay, finite confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, and Simpson witnesses."),
+    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, Naive Bayes classifier posterior replay, confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, product measures, and exact discrete distributions."),
+    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance/PCA and finite clustering identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, finite Naive Bayes classifier replay, finite confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, and Simpson witnesses."),
     "optimization_and_convexity": [
         ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
         ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and checked bad midpoint-convexity plus affine-threshold rejection."),
@@ -1646,6 +1654,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_classifier_metrics_shadow",
             "bridge_finite_roc_auc_shadow",
             "bridge_finite_precision_recall_shadow",
+            "bridge_finite_calibration_brier_shadow",
             "bridge_eigenpair",
         ],
         "decidability": "decidable",
@@ -1684,6 +1693,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-precision-recall-v0",
                 "Malformed classifier average-precision row checked through exact rational Farkas evidence after finite precision-recall replay.",
+            ),
+            (
+                "finite-calibration-brier-v0",
+                "Malformed classifier Brier-score row checked through exact rational Farkas evidence after finite calibration/Brier replay.",
             ),
             (
                 "numerical-linear-algebra-v0",
@@ -1928,6 +1941,10 @@ BRIDGE_CONCEPTS = [
                 "Score order, threshold precision/recall, precision-recall curve, average precision, and bad-AP rows checked as exact rational replay, not floating-point metric or statistical generalization evidence.",
             ),
             (
+                "finite-calibration-brier-v0",
+                "Probability forecasts, fixed calibration bins, expected calibration error, Brier score, and bad-Brier rows checked as exact rational replay, not floating-point calibration or statistical generalization evidence.",
+            ),
+            (
                 "finite-root-finding-v0",
                 "One-step bisection/Newton rows replayed exactly while convergence and floating-point stability remain horizon claims.",
             ),
@@ -2003,6 +2020,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/exact-statistical-tests-end-to-end.md",
                     "docs/learn/math/roc-auc-end-to-end.md",
                     "docs/learn/math/precision-recall-end-to-end.md",
+                    "docs/learn/math/calibration-brier-end-to-end.md",
                     "docs/learn/math/principal-components-end-to-end.md",
                     "docs/learn/math/k-means-clustering-end-to-end.md",
                     "docs/foundational-resources/MATH-FIELDS.md",
@@ -2047,8 +2065,10 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/exact-statistical-tests-end-to-end.md",
             "docs/learn/math/roc-auc-end-to-end.md",
             "docs/learn/math/precision-recall-end-to-end.md",
+            "docs/learn/math/calibration-brier-end-to-end.md",
             "artifacts/examples/math/finite-rounding-shadow-v0/smt2/bad-rounded-delta-farkas-conflict.smt2",
             "artifacts/examples/math/finite-interval-arithmetic-shadow-v0/smt2/bad-product-upper-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-calibration-brier-v0/smt2/bad-brier-score-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
@@ -2797,10 +2817,12 @@ BRIDGE_CONCEPTS = [
             "tables, TP/FP/TN/FN counts, accuracy, precision/recall, "
             "specificity, balanced accuracy, F1, Jaccard, and source-linked "
             "bad-precision Farkas evidence. Sibling finite ROC/AUC and "
-            "precision-recall rows cover one tie-free exact score table while "
-            "keeping calibration, generalization, threshold theory, confidence "
-            "intervals, general tie conventions, interpolation policies, and "
-            "floating-point metric behavior separate."
+            "precision-recall rows cover one tie-free exact score table, and "
+            "finite calibration/Brier rows cover one exact probability-forecast "
+            "table while keeping general calibration theory, generalization, "
+            "threshold theory, confidence intervals, general tie conventions, "
+            "interpolation policies, scoring-rule theorems, and floating-point "
+            "metric behavior separate."
         ),
         "prerequisites": [
             "curriculum_counting",
@@ -2814,6 +2836,7 @@ BRIDGE_CONCEPTS = [
             "field_probability_theory",
             "bridge_finite_roc_auc_shadow",
             "bridge_finite_precision_recall_shadow",
+            "bridge_finite_calibration_brier_shadow",
             "bridge_lean_horizon",
         ],
         "decidability": "bounded",
@@ -2824,6 +2847,8 @@ BRIDGE_CONCEPTS = [
             "QF_LRA",
             "Farkas certificate",
             "finite replay",
+            "finite calibration replay",
+            "finite Brier score replay",
             "Lean horizon",
             "numerical-honesty metadata",
         ],
@@ -2839,6 +2864,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-precision-recall-v0",
                 "Exact six-row score-ranking table with threshold precision/recall, PR curve, average precision, bad-AP replay, and checked QF_LRA/Farkas row.",
+            ),
+            (
+                "finite-calibration-brier-v0",
+                "Exact six-row probability-forecast table with calibration bins, ECE, Brier score, bad-Brier replay, and checked QF_LRA/Farkas row.",
             ),
             (
                 "finite-naive-bayes-classifier-v0",
@@ -2862,9 +2891,11 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/classifier-metrics-end-to-end.md",
                     "docs/learn/math/roc-auc-end-to-end.md",
                     "docs/learn/math/precision-recall-end-to-end.md",
+                    "docs/learn/math/calibration-brier-end-to-end.md",
                     "artifacts/examples/math/finite-confusion-matrix-v0/smt2/bad-precision-farkas-conflict.smt2",
                     "artifacts/examples/math/finite-roc-auc-v0/smt2/bad-auc-farkas-conflict.smt2",
                     "artifacts/examples/math/finite-precision-recall-v0/smt2/bad-average-precision-farkas-conflict.smt2",
+                    "artifacts/examples/math/finite-calibration-brier-v0/smt2/bad-brier-score-farkas-conflict.smt2",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
                 "notes": (
@@ -2885,13 +2916,15 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/classifier-metrics-end-to-end.md",
             "docs/learn/math/roc-auc-end-to-end.md",
             "docs/learn/math/precision-recall-end-to-end.md",
+            "docs/learn/math/calibration-brier-end-to-end.md",
             "artifacts/examples/math/finite-confusion-matrix-v0/smt2/bad-precision-farkas-conflict.smt2",
             "artifacts/examples/math/finite-roc-auc-v0/smt2/bad-auc-farkas-conflict.smt2",
             "artifacts/examples/math/finite-precision-recall-v0/smt2/bad-average-precision-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-calibration-brier-v0/smt2/bad-brier-score-farkas-conflict.smt2",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
         ],
         "open_gaps": [
-            "Finite confusion-matrix, tie-free ROC/AUC, and tie-free precision-recall replay do not prove risk bounds, calibration, threshold optimality, confidence intervals, sampling guarantees, general tie conventions, interpolation policies, continuous score-distribution behavior, or classifier generalization.",
+            "Finite confusion-matrix, tie-free ROC/AUC, tie-free precision-recall, and fixed-bin calibration/Brier replay do not prove risk bounds, model calibration, threshold optimality, confidence intervals, sampling guarantees, general tie conventions, interpolation policies, scoring-rule theorems, continuous score-distribution behavior, or classifier generalization.",
             "Floating-point classifier metrics need numerical-honesty or QF_FP resources before they can be presented as checked numerical claims.",
             "Multiclass averaging conventions, ranking metrics beyond the committed finite rows, imbalanced-data policy choices, and statistical-inference theory remain Lean/theorem-horizon work.",
         ],
@@ -2901,7 +2934,7 @@ BRIDGE_CONCEPTS = [
                 "Rows state the finite actual/predicted table, confusion counts, class totals, exact rational metrics, and decision-relevant denominators.",
                 "The validator recomputes all finite classifier metrics from committed source data.",
                 "Malformed finite metric claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
-                "Learner and query docs keep finite exact metric, tie-free ROC/AUC, and tie-free precision-recall replay separate from calibration, threshold-policy, confidence-interval, statistical, multiclass, tie-convention, interpolation-policy, and floating-point claims.",
+                "Learner and query docs keep finite exact metric, tie-free ROC/AUC, tie-free precision-recall, and fixed-bin calibration/Brier replay separate from model-calibration, threshold-policy, confidence-interval, statistical, multiclass, tie-convention, interpolation-policy, scoring-rule, and floating-point claims.",
             ],
         },
     },
@@ -3121,6 +3154,111 @@ BRIDGE_CONCEPTS = [
                 "The validator recomputes all finite precision-recall quantities from committed source data.",
                 "Malformed finite average-precision claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
                 "Learner and query docs keep finite exact precision-recall replay separate from threshold-policy, calibration, interval, statistical, tie-convention, interpolation-policy, and floating-point claims.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_calibration_brier_shadow",
+        "title": "Finite Calibration And Brier Score Shadow",
+        "field_ids": [
+            "statistics",
+            "probability_theory",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite calibration/Brier rows replay a fixed probabilistic "
+            "classifier table, exact probability forecasts, two calibration "
+            "bins, expected calibration error, Brier score, and source-linked "
+            "bad-Brier-score Farkas evidence while keeping model calibration, "
+            "binning policy, proper-scoring-rule theorems, confidence "
+            "intervals, statistical generalization, continuous score "
+            "distributions, and floating-point behavior separate."
+        ),
+        "prerequisites": [
+            "curriculum_counting",
+            "curriculum_rationals",
+            "bridge_probability_mass_table",
+            "bridge_finite_classifier_metrics_shadow",
+            "bridge_exact_vs_floating_arithmetic",
+            "bridge_qf_lra_farkas_anatomy",
+        ],
+        "unlocks": [
+            "field_statistics",
+            "field_probability_theory",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite probabilistic classifier replay",
+            "finite calibration replay",
+            "finite Brier score replay",
+            "exact rational arithmetic",
+            "QF_LRA",
+            "Farkas certificate",
+            "finite replay",
+            "Lean horizon",
+            "numerical-honesty metadata",
+        ],
+        "example_packs": [
+            (
+                "finite-calibration-brier-v0",
+                "Exact six-row probability-forecast table with fixed calibration bins, ECE, Brier score, bad-Brier replay, and checked QF_LRA/Farkas row.",
+            ),
+            (
+                "finite-confusion-matrix-v0",
+                "Exact actual/predicted classifier metric replay that supplies the label-count contrast.",
+            ),
+            (
+                "finite-naive-bayes-classifier-v0",
+                "Finite classifier posterior replay that supplies a probabilistic-classifier contrast.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite calibration/Brier replay plus QF_LRA/Farkas",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/calibration-brier-end-to-end.md",
+                    "artifacts/examples/math/finite-calibration-brier-v0/smt2/bad-brier-score-farkas-conflict.smt2",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker recomputes the committed probability "
+                    "forecasts, fixed calibration-bin summaries, ECE, and "
+                    "Brier score. Only the final malformed Brier-score row is "
+                    "promoted to checked Farkas evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/calibration-brier-end-to-end.md",
+            "docs/learn/math/classifier-metrics-end-to-end.md",
+            "artifacts/examples/math/finite-calibration-brier-v0/smt2/bad-brier-score-farkas-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite fixed-bin calibration/Brier replay does not prove model calibration, risk bounds, confidence intervals, sampling guarantees, continuous score-distribution theory, or classifier generalization.",
+            "Binning-policy optimality, proper-scoring-rule theorems, multiclass scoring rules, and empirical calibration intervals remain separate theorem or policy resources.",
+            "Floating-point classifier scores and probability implementations need numerical-honesty or QF_FP resources before they can be presented as checked numerical claims.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite probability forecasts, class totals, fixed bin rules, bin summaries, ECE, and exact rational Brier score.",
+                "The validator recomputes all finite calibration and Brier-score quantities from committed source data.",
+                "Malformed finite Brier-score claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
+                "Learner and query docs keep finite exact calibration/Brier replay separate from binning-policy, model-calibration, interval, statistical, scoring-rule, multiclass, and floating-point claims.",
             ],
         },
     },
@@ -7915,6 +8053,10 @@ BRIDGE_CONCEPTS = [
                 "Finite score-ranking table, precision-recall curve, average precision, and checked bad-average-precision evidence.",
             ),
             (
+                "finite-calibration-brier-v0",
+                "Finite probability-forecast table, calibration bins, ECE, Brier score, and checked bad-Brier-score evidence.",
+            ),
+            (
                 "finite-measure-v0",
                 "Finite sigma-algebra, measure additivity, and complement replay.",
             ),
@@ -7944,6 +8086,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/finite-topology-measure-end-to-end.md",
                     "docs/learn/math/roc-auc-end-to-end.md",
                     "docs/learn/math/precision-recall-end-to-end.md",
+                    "docs/learn/math/calibration-brier-end-to-end.md",
                     "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
                     "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
                 ],
@@ -7963,6 +8106,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/probability-and-statistics.md",
             "docs/learn/math/roc-auc-end-to-end.md",
             "docs/learn/math/precision-recall-end-to-end.md",
+            "docs/learn/math/calibration-brier-end-to-end.md",
             "docs/learn/math/analysis-calculus-theorem-horizon-map.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
             "crates/axeyum-solver/tests/math_resource_lra_routes.rs",

@@ -60,17 +60,17 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 83 bridge-concept rows.
+- 84 bridge-concept rows.
 - 5 example-family rows.
-- 165 non-template math packs.
-- 1075 expected checks.
-- 391 checked proof/evidence rows.
-- 556 replay-only rows.
-- 128 Lean-horizon rows.
-- 165 promoted solver-reuse packs.
+- 166 non-template math packs.
+- 1082 expected checks.
+- 392 checked proof/evidence rows.
+- 561 replay-only rows.
+- 129 Lean-horizon rows.
+- 166 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 165 focused learner-linked packs, with no path-only, index-only, or missing
+- 166 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -112,7 +112,7 @@ good R2/R3 lesson while still not being a theorem.
 
 ## Build Waves
 
-### Wave 1: Stabilize The Current 165 Packs
+### Wave 1: Stabilize The Current 166 Packs
 
 Goal: every current non-template pack has a deliberate R5 disposition:
 `promoted`, `non-benchmark-horizon`, or a clear reason to remain unclassified.
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 165 current non-template packs satisfy the focused-lesson side of this
+all 166 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2858,6 +2858,17 @@ Pick one row per commit unless the change is purely navigational.
      from threshold policy, calibration, confidence intervals, general
      tie/interpolation conventions, continuous score-distribution theory,
      statistical generalization, and floating-point classifier-metric behavior.
+324. Landed: add `finite-calibration-brier-v0` as an exact finite
+     probabilistic-classifier resource. The pack replays a fixed six-row
+     probability-forecast table, class totals, fixed `p < 1/2` and
+     `p >= 1/2` calibration-bin summaries, expected calibration error `1/10`,
+     and Brier score `71/300`, then adds `qf-lra-bad-brier-score` as the
+     source-linked Farkas row for the false Brier-score claim `1/5` versus
+     exact `71/300`. The learner and query pages keep this fixed finite
+     calibration/Brier shadow separate from binning-policy optimality, model
+     calibration, proper-scoring-rule theorems, confidence intervals,
+     continuous score-distribution theory, statistical generalization, and
+     floating-point classifier behavior.
 
 ## Validation Checklist
 

@@ -240,6 +240,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite calibration/Brier probabilistic-classifier resource landed.**
+  `finite-calibration-brier-v0` now gives the statistics and probability lanes
+  a compact exact probabilistic-classifier example: it replays six rational
+  forecast probabilities, class totals, the fixed `p < 1/2` / `p >= 1/2`
+  calibration-bin summaries, expected calibration error `1/10`, and Brier
+  score `71/300`; rejects the malformed Brier-score claim `1/5`; and routes
+  that scalar conflict through a source-linked QF_LRA/Farkas row. The focused
+  learner page, probability/statistics query guide, probability-mass-table,
+  finite classifier-metrics, finite calibration/Brier, exact-vs-floating, and
+  QF_LRA/Farkas bridge rows, validator, resource smoke queries, generated
+  dashboards, and `math_resource_lra_routes` regression keep this fixed finite
+  replay separate from binning-policy optimality, model calibration,
+  proper-scoring-rule theorems, confidence intervals, continuous
+  score-distribution theory, statistical generalization, and floating-point
+  classifier behavior. The public summary now reports 130 concept rows, 166
+  packs, 1082 expected checks, 392 checked rows, 561 replay-only rows, 129
+  Lean-horizon rows, and 166 promoted solver-reuse packs.
+
 - **Finite precision-recall classifier-ranking resource landed.**
   `finite-precision-recall-v0` now gives the statistics and probability lanes a
   compact exact ranking-metric example: it replays six rational classifier
@@ -254,9 +272,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   keep this fixed tie-free finite replay separate from threshold policy,
   calibration, confidence intervals, interpolation/tie conventions,
   continuous score-distribution theory, statistical generalization, and
-  floating-point classifier-metric behavior. The public summary now reports
-  129 concept rows, 165 packs, 1075 expected checks, 391 checked rows, 556
-  replay-only rows, 128 Lean-horizon rows, and 165 promoted solver-reuse packs.
+  floating-point classifier-metric behavior. At that landing, the public
+  summary reported 129 concept rows, 165 packs, 1075 expected checks, 391
+  checked rows, 556 replay-only rows, 128 Lean-horizon rows, and 165 promoted
+  solver-reuse packs.
 
 - **Finite ROC/AUC classifier-ranking resource landed.**
   `finite-roc-auc-v0` now gives the statistics and probability lanes a compact

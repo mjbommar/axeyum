@@ -352,6 +352,10 @@ For finite precision-recall classification, it recomputes exact score order,
 threshold precision/recall/F1, the precision-recall curve, and average
 precision, then emits checked `UnsatFarkas` evidence for a malformed average
 precision claim.
+For finite calibration/Brier scoring, it recomputes exact probability
+forecasts, fixed calibration-bin summaries, expected calibration error, and
+Brier score, then emits checked `UnsatFarkas` evidence for a malformed Brier
+score claim.
 For DAG examples, the validator enumerates simple skeleton paths and applies
 the collider/non-collider conditioning rules. For random matrices, it
 recomputes weighted trace, determinant, Gram, and rank claims from exact
@@ -384,6 +388,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-confusion-matrix-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-roc-auc-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-precision-recall-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-calibration-brier-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
@@ -419,6 +424,8 @@ For exact finite ROC/AUC score-ranking replay, read
 [End To End: Finite ROC AUC](roc-auc-end-to-end.md).
 For exact finite precision-recall and average-precision replay, read
 [End To End: Finite Precision Recall](precision-recall-end-to-end.md).
+For exact finite calibration bins and Brier-score replay, read
+[End To End: Finite Calibration And Brier Score](calibration-brier-end-to-end.md).
 For finite matrix-valued probability tables, read
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md).
 For the cross-pack finite random-matrix query map, read
@@ -445,8 +452,8 @@ the validator recomputes exact atom-table sums and finite path conditions.
 Malformed probability normalization, Bayes-posterior rows, measure-complement
 rows, conditional expectation tables, stochastic rows, expected hitting-time
 equations, tail bounds, regression coefficients, covariance entries, classifier
-posteriors, classifier metric rows, ROC/AUC rows, precision-recall rows, and
-random-matrix moment/rank rows graduate through
+posteriors, classifier metric rows, ROC/AUC rows, precision-recall rows,
+calibration/Brier rows, and random-matrix moment/rank rows graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
 Discrete count contradictions such as contingency totals and exact tail counts
 use
@@ -468,9 +475,10 @@ general Markov kernels, recurrence/transience classifications,
 infinite-horizon hitting probabilities, general martingale convergence,
 optional stopping, Doob inequalities, MCMC, HMC, variational inference,
 asymptotic statistical tests, covariance-estimator consistency, PCA theorem
-claims, calibration, ROC/AUC and precision-recall threshold policy,
-confidence intervals, tie/interpolation conventions beyond committed finite
-rows, continuous score distributions, causal identification, do-calculus, and
-floating-point diagnostics are not proof claims. They need either
+claims, model calibration, calibration-bin policy, proper-scoring-rule
+theorems, ROC/AUC and precision-recall threshold policy, confidence intervals,
+tie/interpolation conventions beyond committed finite rows, continuous score
+distributions, causal identification, do-calculus, and floating-point
+diagnostics are not proof claims. They need either
 Lean-backed probability/measure formalization or explicit reproducibility
 metadata with seeds and tolerances.

@@ -75,13 +75,13 @@ As of this plan, the math resource lane has:
   operator/Jordan/Chebyshev replay, Schur-complement replay, natural cubic
   spline replay, and Lean horizons, plus five route-specific
   example families.
-- 165 non-template math example packs, plus the validating template pack.
+- 166 non-template math example packs, plus the validating template pack.
 - generated coverage, curriculum-status audit, field, proof-gap,
   learner/proof-upgrade, and curriculum-pressure dashboards under
   [generated/](generated/).
 - learner paths under [docs/learn/math](../learn/math/README.md).
 - [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md), which records that all
-  165 current non-template math packs are focused-lesson linked with no
+  166 current non-template math packs are focused-lesson linked with no
   path-only, index-only, or missing learner buckets.
 - a stable in-repo data boundary through JSON schemas, validators, generated
   dashboards, and `scripts/consume-foundational-resources.py`.
@@ -506,8 +506,8 @@ Next buildout:
 | `complex_analysis` | real-pair algebra lessons now; analytic theorem rows as Lean horizon |
 | `topology` | standalone finite topology, finite specialization-order, and finite cohomology lessons landed; maintain granular finite topology-operator/homeomorphism, specialization-order, boundary-operator, homology, and cohomology rows |
 | `measure_theory` | standalone finite measure and monotonicity lessons landed; keep Lebesgue/convergence theorem rows Lean-horizon |
-| `probability_theory` | standalone finite probability mass-table, finite Naive Bayes, ROC/AUC, and precision-recall lessons landed; maintain stochastic-process path through kernels/Markov chains |
-| `statistics` | exact finite tests, regression, concentration, finite classifier shadows, ROC/AUC, precision-recall, and explicit numerical-honesty status |
+| `probability_theory` | standalone finite probability mass-table, finite Naive Bayes, ROC/AUC, precision-recall, and calibration/Brier lessons landed; maintain stochastic-process path through kernels/Markov chains |
+| `statistics` | exact finite tests, regression, concentration, finite classifier shadows, ROC/AUC, precision-recall, calibration/Brier, and explicit numerical-honesty status |
 | `optimization_and_convexity` | standalone LP/Farkas, finite KKT, finite active-set QP, finite SDP, and finite gradient-descent lessons landed; maintain convexity/gradient/Hessian bridge rows |
 | `numerical_analysis` | residual/error-bound examples with exact rational shadows and numerical limits |
 | `differential_equations_and_dynamical_systems` | bounded recurrence/Euler lessons plus invariant-counterexample rows |
@@ -617,7 +617,7 @@ Next buildout:
    R4-to-R5 solver-reuse candidates visible in the coverage, field, proof-gap,
    and learner/proof-upgrade dashboards. The curriculum-status audit now shows
    where source `planned` rows have validated resources and need a source DAG
-   decision. The curriculum-pressure view now groups the 165 non-template packs
+   decision. The curriculum-pressure view now groups the 166 non-template packs
    into overlapping Bool/CNF, QF_BV, QF_LIA, QF_LRA, QF_UF, finite-replay, and
    Lean-horizon buckets for fragment-level planning.
    Candidate status: the first `solver_reuse` batch is now fully promoted:

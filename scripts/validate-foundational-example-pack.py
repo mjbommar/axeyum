@@ -35595,6 +35595,369 @@ def validate_finite_precision_recall(expected: dict[str, Any]) -> None:
         fail("general-precision-recall-theory-lean-horizon must be searchable by 'precision recall'")
 
 
+def validate_finite_calibration_brier(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    def require_key_fraction_map(context: str, value: Any, keys: list[str]) -> dict[str, Fraction]:
+        if not isinstance(value, dict):
+            fail(f"{context} must be an object")
+        key_set = set(keys)
+        if set(value) != key_set:
+            missing = sorted(key_set - set(value))
+            extra = sorted(set(value) - key_set)
+            fail(f"{context} must cover exactly {keys}; missing={missing} extra={extra}")
+        return {
+            key: require_fraction(f"{context}.{key}", value[key])
+            for key in keys
+        }
+
+    def require_count_map(context: str, value: Any, keys: list[str]) -> dict[str, Fraction]:
+        counts = require_key_fraction_map(context, value, keys)
+        for key, count in counts.items():
+            if count.denominator != 1 or count < 0:
+                fail(f"{context}.{key} must be a nonnegative integer count")
+        return counts
+
+    def require_sat_replay(check_id: str, validation: str) -> None:
+        check = checks[check_id]
+        if check["expected_result"] != "sat":
+            fail(f"{check_id} must expect sat")
+        if check.get("proof_status") != "replay-only":
+            fail(f"{check_id} must be replay-only")
+        if check["validation"] != validation:
+            fail(f"{check_id} validation is incorrect")
+        values_again = single_witness_values(check, witnesses)
+        if values_again != values:
+            fail(f"{check_id} must cite the shared calibration/Brier witness")
+
+    table_check = checks["probability-forecast-table-witness"]
+    if table_check["expected_result"] != "sat":
+        fail("probability-forecast-table-witness must expect sat")
+    if table_check.get("proof_status") != "replay-only":
+        fail("probability-forecast-table-witness must be replay-only")
+    if table_check["validation"] != "exact_rational_probability_forecast_table_replay":
+        fail("probability-forecast-table-witness validation is incorrect")
+    values = single_witness_values(table_check, witnesses)
+
+    classes = require_string_list("calibration/Brier classes", values.get("classes"))
+    positive_class = values.get("positive_class")
+    negative_class = values.get("negative_class")
+    require_string("calibration/Brier positive_class", positive_class)
+    require_string("calibration/Brier negative_class", negative_class)
+    if positive_class == negative_class:
+        fail("calibration/Brier positive_class and negative_class must differ")
+    if set(classes) != {positive_class, negative_class}:
+        fail("calibration/Brier classes must contain exactly positive_class and negative_class")
+
+    positive_actual_value = require_fraction(
+        "calibration/Brier positive_actual_value",
+        values.get("positive_actual_value"),
+    )
+    negative_actual_value = require_fraction(
+        "calibration/Brier negative_actual_value",
+        values.get("negative_actual_value"),
+    )
+    if positive_actual_value != 1 or negative_actual_value != 0:
+        fail("calibration/Brier actual values must encode positive=1 and negative=0")
+
+    raw_examples = values.get("examples")
+    if not isinstance(raw_examples, list) or not raw_examples:
+        fail("calibration/Brier examples must be a non-empty list")
+    seen_rows: set[str] = set()
+    examples: list[dict[str, Any]] = []
+    for index, row in enumerate(raw_examples):
+        if not isinstance(row, dict):
+            fail(f"calibration/Brier examples[{index}] must be an object")
+        row_id = row.get("id")
+        actual_class = row.get("actual_class")
+        probability = require_fraction(
+            f"calibration/Brier examples[{index}].positive_probability",
+            row.get("positive_probability"),
+        )
+        require_string(f"calibration/Brier examples[{index}].id", row_id)
+        require_string(f"calibration/Brier examples[{index}].actual_class", actual_class)
+        if row_id in seen_rows:
+            fail(f"calibration/Brier examples repeats id {row_id!r}")
+        if actual_class not in classes:
+            fail(f"calibration/Brier examples[{index}].actual_class is unknown")
+        if probability < 0 or probability > 1:
+            fail(f"calibration/Brier examples[{index}].positive_probability must be in [0,1]")
+        seen_rows.add(row_id)
+        actual_value = positive_actual_value if actual_class == positive_class else negative_actual_value
+        examples.append(
+            {
+                "id": row_id,
+                "actual_class": actual_class,
+                "actual_value": actual_value,
+                "positive_probability": probability,
+            }
+        )
+
+    class_count_keys = ["positive_count", "negative_count", "total"]
+    class_counts = require_count_map(
+        "calibration/Brier class_counts",
+        values.get("class_counts"),
+        class_count_keys,
+    )
+    computed_class_counts = {
+        "positive_count": Fraction(sum(1 for row in examples if row["actual_class"] == positive_class)),
+        "negative_count": Fraction(sum(1 for row in examples if row["actual_class"] == negative_class)),
+        "total": Fraction(len(examples)),
+    }
+    if class_counts != computed_class_counts:
+        fail("probability-forecast-table-witness class_counts are incorrect")
+    if class_counts["positive_count"] <= 0 or class_counts["negative_count"] <= 0:
+        fail("calibration/Brier requires at least one positive and one negative row")
+    total = class_counts["total"]
+
+    require_sat_replay("calibration-bin-witness", "exact_rational_calibration_bin_replay")
+    require_sat_replay(
+        "expected-calibration-error-witness",
+        "exact_rational_expected_calibration_error_replay",
+    )
+    require_sat_replay("brier-score-witness", "exact_rational_brier_score_replay")
+
+    examples_by_id = {row["id"]: row for row in examples}
+    raw_bins = values.get("calibration_bins")
+    if not isinstance(raw_bins, list) or not raw_bins:
+        fail("calibration/Brier calibration_bins must be a non-empty list")
+    expected_bin_ids = ["low", "high"]
+    if [item.get("id") for item in raw_bins if isinstance(item, dict)] != expected_bin_ids:
+        fail("calibration/Brier calibration_bins must be ordered as low, high")
+
+    weighted_gaps: list[Fraction] = []
+    for index, bin_row in enumerate(raw_bins):
+        if not isinstance(bin_row, dict):
+            fail(f"calibration/Brier calibration_bins[{index}] must be an object")
+        bin_id = bin_row.get("id")
+        require_string(f"calibration/Brier calibration_bins[{index}].id", bin_id)
+        rule = bin_row.get("rule")
+        require_string(f"calibration/Brier calibration_bins[{index}].rule", rule)
+        if bin_id == "low":
+            expected_ids = [
+                row["id"] for row in examples if row["positive_probability"] < Fraction(1, 2)
+            ]
+            if rule != "positive_probability < 1/2":
+                fail("low calibration bin must document positive_probability < 1/2")
+        elif bin_id == "high":
+            expected_ids = [
+                row["id"] for row in examples if row["positive_probability"] >= Fraction(1, 2)
+            ]
+            if rule != "positive_probability >= 1/2":
+                fail("high calibration bin must document positive_probability >= 1/2")
+        else:
+            fail(f"unknown calibration bin id {bin_id!r}")
+
+        example_ids = require_string_list(
+            f"calibration/Brier calibration_bins[{index}].example_ids",
+            bin_row.get("example_ids"),
+        )
+        if example_ids != expected_ids:
+            fail(f"{bin_id} calibration bin example_ids are incorrect")
+        bin_examples = [examples_by_id[row_id] for row_id in example_ids]
+        bin_count = require_fraction(
+            f"calibration/Brier calibration_bins[{index}].count",
+            bin_row.get("count"),
+        )
+        if bin_count != len(bin_examples):
+            fail(f"{bin_id} calibration bin count is incorrect")
+        average_prediction = require_fraction(
+            f"calibration/Brier calibration_bins[{index}].average_prediction",
+            bin_row.get("average_prediction"),
+        )
+        observed_rate = require_fraction(
+            f"calibration/Brier calibration_bins[{index}].observed_positive_rate",
+            bin_row.get("observed_positive_rate"),
+        )
+        absolute_gap = require_fraction(
+            f"calibration/Brier calibration_bins[{index}].absolute_gap",
+            bin_row.get("absolute_gap"),
+        )
+        weighted_gap = require_fraction(
+            f"calibration/Brier calibration_bins[{index}].weighted_absolute_gap",
+            bin_row.get("weighted_absolute_gap"),
+        )
+        computed_average = (
+            sum((row["positive_probability"] for row in bin_examples), Fraction(0)) / bin_count
+        )
+        computed_observed = (
+            sum((row["actual_value"] for row in bin_examples), Fraction(0)) / bin_count
+        )
+        computed_gap = abs(computed_average - computed_observed)
+        computed_weighted = (bin_count / total) * computed_gap
+        if (
+            average_prediction,
+            observed_rate,
+            absolute_gap,
+            weighted_gap,
+        ) != (
+            computed_average,
+            computed_observed,
+            computed_gap,
+            computed_weighted,
+        ):
+            fail(f"{bin_id} calibration bin summary is incorrect")
+        weighted_gaps.append(weighted_gap)
+
+    expected_calibration_error = require_fraction(
+        "calibration/Brier expected_calibration_error",
+        values.get("expected_calibration_error"),
+    )
+    if expected_calibration_error != sum(weighted_gaps, Fraction(0)):
+        fail("expected-calibration-error-witness value is incorrect")
+
+    brier = values.get("brier_score")
+    if not isinstance(brier, dict):
+        fail("calibration/Brier brier_score must be an object")
+    raw_terms = brier.get("per_example_terms")
+    if not isinstance(raw_terms, list) or len(raw_terms) != len(examples):
+        fail("calibration/Brier per_example_terms must cover every example")
+    computed_squared_errors: list[Fraction] = []
+    for index, term in enumerate(raw_terms):
+        if not isinstance(term, dict):
+            fail(f"calibration/Brier per_example_terms[{index}] must be an object")
+        row = examples[index]
+        if term.get("id") != row["id"]:
+            fail(f"calibration/Brier per_example_terms[{index}] id must preserve row order")
+        actual_value = require_fraction(
+            f"calibration/Brier per_example_terms[{index}].actual_value",
+            term.get("actual_value"),
+        )
+        residual = require_fraction(
+            f"calibration/Brier per_example_terms[{index}].residual",
+            term.get("residual"),
+        )
+        squared_error = require_fraction(
+            f"calibration/Brier per_example_terms[{index}].squared_error",
+            term.get("squared_error"),
+        )
+        computed_residual = row["positive_probability"] - row["actual_value"]
+        computed_squared = computed_residual * computed_residual
+        if (actual_value, residual, squared_error) != (
+            row["actual_value"],
+            computed_residual,
+            computed_squared,
+        ):
+            fail(f"calibration/Brier per_example_terms[{index}] is incorrect")
+        computed_squared_errors.append(squared_error)
+
+    sum_squared_error = require_fraction(
+        "calibration/Brier brier_score.sum_squared_error",
+        brier.get("sum_squared_error"),
+    )
+    if sum_squared_error != sum(computed_squared_errors, Fraction(0)):
+        fail("brier-score-witness sum_squared_error is incorrect")
+    mean_brier_score = require_fraction(
+        "calibration/Brier brier_score.mean_brier_score",
+        brier.get("mean_brier_score"),
+    )
+    if mean_brier_score != sum_squared_error / total:
+        fail("brier-score-witness mean_brier_score is incorrect")
+
+    bad = checks["bad-brier-score-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-brier-score-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-brier-score-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_brier_score_replay":
+        fail("bad-brier-score-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "six-probability-binary-classifier-sample":
+        fail("bad-brier-score-rejected must cite six-probability-binary-classifier-sample")
+    if data.get("metric") != "brier_score":
+        fail("bad-brier-score-rejected must document the brier_score metric")
+    bad_sum = require_fraction("bad calibration/Brier sum_squared_error", data.get("sum_squared_error"))
+    bad_computed = require_fraction(
+        "bad calibration/Brier computed_brier_score",
+        data.get("computed_brier_score"),
+    )
+    bad_claimed = require_fraction(
+        "bad calibration/Brier claimed_brier_score",
+        data.get("claimed_brier_score"),
+    )
+    if (bad_sum, bad_computed) != (sum_squared_error, mean_brier_score):
+        fail("bad-brier-score-rejected data must match replay")
+    if bad_claimed == bad_computed:
+        fail("bad-brier-score-rejected must document a false Brier-score claim")
+    if "separate qf-lra-bad-brier-score" not in bad.get("notes", ""):
+        fail("bad-brier-score-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-brier-score"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-brier-score must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-brier-score must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-brier-score must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "six-probability-binary-classifier-sample":
+        fail("qf-lra-bad-brier-score must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-brier-score-rejected":
+        fail("qf-lra-bad-brier-score must cite the replay row")
+    if qf_data.get("metric") != "brier_score":
+        fail("qf-lra-bad-brier-score must document the brier_score metric")
+    qf_sum = require_fraction(
+        "qf calibration/Brier sum_squared_error",
+        qf_data.get("sum_squared_error"),
+    )
+    qf_computed = require_fraction(
+        "qf calibration/Brier computed_brier_score",
+        qf_data.get("computed_brier_score"),
+    )
+    qf_claimed = require_fraction(
+        "qf calibration/Brier claimed_brier_score",
+        qf_data.get("claimed_brier_score"),
+    )
+    if (qf_sum, qf_computed, qf_claimed) != (bad_sum, bad_computed, bad_claimed):
+        fail("qf-lra-bad-brier-score data must match the replay row")
+    equations = require_string_list(
+        "qf calibration/Brier brier_score_equations",
+        qf_data.get("brier_score_equations"),
+    )
+    if equations != ["300*brier = 71", "5*brier = 1"]:
+        fail("qf-lra-bad-brier-score must document the linear conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf calibration/Brier smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-calibration-brier-v0/smt2/"
+        "bad-brier-score-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-brier-score smt2_artifact must name the checked source artifact")
+    check_source("qf calibration/Brier smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf calibration/Brier farkas_regression", regression)
+    if "finite_calibration_brier_bad_brier_score_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-brier-score must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf calibration/Brier certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-brier-score certificate must document checked Farkas evidence")
+
+    horizon = checks["general-calibration-brier-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-calibration-brier-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-calibration-brier-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "calibration/Brier horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string("calibration/Brier horizon future_checker", horizon_data.get("future_checker"))
+    horizon_text = " ".join(
+        [
+            horizon.get("claim", ""),
+            horizon_data.get("target_theorem_shape", ""),
+            horizon_data.get("future_checker", ""),
+            horizon.get("notes", ""),
+        ]
+    ).lower()
+    if "calibration" not in horizon_text or "brier" not in horizon_text:
+        fail("general-calibration-brier-theory-lean-horizon must be searchable")
+
+
 def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -38813,6 +39176,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_roc_auc(expected)
     if metadata["id"] == "finite-precision-recall-v0":
         validate_finite_precision_recall(expected)
+    if metadata["id"] == "finite-calibration-brier-v0":
+        validate_finite_calibration_brier(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "cardinality-principles-v0":

@@ -229,6 +229,16 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_finite_r
 python3 scripts/query-foundational-resources.py checks --concept bridge_probability_mass_table --pack finite-precision-recall-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-precision-recall-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text "precision recall" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field statistics --text calibration --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-calibration-brier-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-calibration-brier-v0 --route Farkas --proof-status checked --text qf-lra-bad-brier-score --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-calibration-brier-v0 --proof-status replay-only --text "Brier score" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-calibration-brier-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_calibration_brier_shadow --pack finite-calibration-brier-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_classifier_metrics_shadow --pack finite-calibration-brier-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_probability_mass_table --pack finite-calibration-brier-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-calibration-brier-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text calibration --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked --text qf-lra-bad-ridge-beta0 --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --proof-status replay-only --text rejected --require-any >/dev/null

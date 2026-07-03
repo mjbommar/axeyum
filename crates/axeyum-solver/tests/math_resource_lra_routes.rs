@@ -79,6 +79,9 @@ const FINITE_ROC_AUC_BAD_AUC: &str = include_str!(
 const FINITE_PRECISION_RECALL_BAD_AVERAGE_PRECISION: &str = include_str!(
     "../../../artifacts/examples/math/finite-precision-recall-v0/smt2/bad-average-precision-farkas-conflict.smt2"
 );
+const FINITE_CALIBRATION_BRIER_BAD_BRIER_SCORE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-calibration-brier-v0/smt2/bad-brier-score-farkas-conflict.smt2"
+);
 const LEAST_SQUARES_BAD_RSS_IMPROVEMENT: &str = include_str!(
     "../../../artifacts/examples/math/least-squares-regression-v0/smt2/bad-rss-improvement-farkas-conflict.smt2"
 );
@@ -969,6 +972,14 @@ fn finite_precision_recall_bad_average_precision_artifact_emits_checked_farkas()
     assert_resource_farkas(
         "finite-precision-recall-v0 bad-average-precision SMT-LIB artifact",
         FINITE_PRECISION_RECALL_BAD_AVERAGE_PRECISION,
+    );
+}
+
+#[test]
+fn finite_calibration_brier_bad_brier_score_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-calibration-brier-v0 bad-Brier-score SMT-LIB artifact",
+        FINITE_CALIBRATION_BRIER_BAD_BRIER_SCORE,
     );
 }
 

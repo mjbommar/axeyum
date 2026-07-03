@@ -1,0 +1,227 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-calibration-brier-v0",
+  "witnesses": [
+    {
+      "id": "six-probability-binary-classifier-sample",
+      "description": "A six-row probabilistic binary classifier table with exact calibration-bin and Brier-score replay.",
+      "values": {
+        "classes": [
+          "positive",
+          "negative"
+        ],
+        "positive_class": "positive",
+        "negative_class": "negative",
+        "positive_actual_value": "1",
+        "negative_actual_value": "0",
+        "examples": [
+          {
+            "id": "low_a",
+            "actual_class": "negative",
+            "positive_probability": "1/10"
+          },
+          {
+            "id": "low_b",
+            "actual_class": "negative",
+            "positive_probability": "1/5"
+          },
+          {
+            "id": "mid_pos",
+            "actual_class": "positive",
+            "positive_probability": "2/5"
+          },
+          {
+            "id": "high_pos",
+            "actual_class": "positive",
+            "positive_probability": "3/5"
+          },
+          {
+            "id": "top_pos",
+            "actual_class": "positive",
+            "positive_probability": "4/5"
+          },
+          {
+            "id": "top_neg",
+            "actual_class": "negative",
+            "positive_probability": "9/10"
+          }
+        ],
+        "class_counts": {
+          "positive_count": "3",
+          "negative_count": "3",
+          "total": "6"
+        },
+        "calibration_bins": [
+          {
+            "id": "low",
+            "rule": "positive_probability < 1/2",
+            "example_ids": [
+              "low_a",
+              "low_b",
+              "mid_pos"
+            ],
+            "count": "3",
+            "average_prediction": "7/30",
+            "observed_positive_rate": "1/3",
+            "absolute_gap": "1/10",
+            "weighted_absolute_gap": "1/20"
+          },
+          {
+            "id": "high",
+            "rule": "positive_probability >= 1/2",
+            "example_ids": [
+              "high_pos",
+              "top_pos",
+              "top_neg"
+            ],
+            "count": "3",
+            "average_prediction": "23/30",
+            "observed_positive_rate": "2/3",
+            "absolute_gap": "1/10",
+            "weighted_absolute_gap": "1/20"
+          }
+        ],
+        "expected_calibration_error": "1/10",
+        "brier_score": {
+          "per_example_terms": [
+            {
+              "id": "low_a",
+              "actual_value": "0",
+              "residual": "1/10",
+              "squared_error": "1/100"
+            },
+            {
+              "id": "low_b",
+              "actual_value": "0",
+              "residual": "1/5",
+              "squared_error": "1/25"
+            },
+            {
+              "id": "mid_pos",
+              "actual_value": "1",
+              "residual": "-3/5",
+              "squared_error": "9/25"
+            },
+            {
+              "id": "high_pos",
+              "actual_value": "1",
+              "residual": "-2/5",
+              "squared_error": "4/25"
+            },
+            {
+              "id": "top_pos",
+              "actual_value": "1",
+              "residual": "-1/5",
+              "squared_error": "1/25"
+            },
+            {
+              "id": "top_neg",
+              "actual_value": "0",
+              "residual": "9/10",
+              "squared_error": "81/100"
+            }
+          ],
+          "sum_squared_error": "71/50",
+          "mean_brier_score": "71/300"
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "probability-forecast-table-witness",
+      "claim": "The listed six-row probabilistic classifier table has three positive and three negative rows with exact rational probabilities in [0,1].",
+      "expected_result": "sat",
+      "validation": "exact_rational_probability_forecast_table_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-probability-binary-classifier-sample"
+      ],
+      "notes": "The validator checks the committed probabilities, class labels, and class counts exactly."
+    },
+    {
+      "id": "calibration-bin-witness",
+      "claim": "The fixed two-bin calibration summary has low-bin and high-bin absolute gaps 1/10 with weighted gaps 1/20 each.",
+      "expected_result": "sat",
+      "validation": "exact_rational_calibration_bin_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-probability-binary-classifier-sample"
+      ],
+      "notes": "The validator applies the fixed p < 1/2 and p >= 1/2 split and recomputes each bin mean, observed positive rate, and weighted gap."
+    },
+    {
+      "id": "expected-calibration-error-witness",
+      "claim": "The fixed two-bin expected calibration error is 1/10.",
+      "expected_result": "sat",
+      "validation": "exact_rational_expected_calibration_error_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-probability-binary-classifier-sample"
+      ],
+      "notes": "The validator sums the committed weighted absolute calibration gaps."
+    },
+    {
+      "id": "brier-score-witness",
+      "claim": "The table has mean Brier score 71/300 from squared errors summing to 71/50.",
+      "expected_result": "sat",
+      "validation": "exact_rational_brier_score_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-probability-binary-classifier-sample"
+      ],
+      "notes": "The validator encodes positive labels as 1 and negative labels as 0, then recomputes every squared forecast error."
+    },
+    {
+      "id": "bad-brier-score-rejected",
+      "claim": "The same table has Brier score 1/5.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_brier_score_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "six-probability-binary-classifier-sample",
+        "metric": "brier_score",
+        "sum_squared_error": "71/50",
+        "computed_brier_score": "71/300",
+        "claimed_brier_score": "1/5"
+      },
+      "notes": "Exact replay computes mean Brier score as 71/300, so the claimed value 1/5 is rejected; the separate qf-lra-bad-brier-score row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-brier-score",
+      "claim": "The fixed malformed Brier-score claim is linearly inconsistent with the replayed Brier-score equation.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "six-probability-binary-classifier-sample",
+        "source_replay_row": "bad-brier-score-rejected",
+        "metric": "brier_score",
+        "sum_squared_error": "71/50",
+        "computed_brier_score": "71/300",
+        "claimed_brier_score": "1/5",
+        "brier_score_equations": [
+          "300*brier = 71",
+          "5*brier = 1"
+        ],
+        "farkas_conflict": "replayed Brier-score equation plus brier = 1/5",
+        "smt2_artifact": "artifacts/examples/math/finite-calibration-brier-v0/smt2/bad-brier-score-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_calibration_brier_bad_brier_score_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes 300*brier = 71 from squared forecast errors, while the malformed row claims 5*brier = 1; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-calibration-brier-theory-lean-horizon",
+      "claim": "Calibration theory, binning policy, proper-scoring-rule theorems, confidence intervals, sampling guarantees, continuous score distributions, and floating-point behavior require future theorem, statistical-inference, or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For finite or measurable probabilistic classifiers under stated binning, sampling, loss, and scoring assumptions, prove calibration, Brier-score, scoring-rule, or interval claims only with explicit theorem hypotheses.",
+        "future_checker": "Lean theorem statements for calibration and proper scoring rules plus separate statistical-inference and numerical-honesty artifacts for empirical intervals, binning policies, continuous score distributions, and floating-point probability implementations."
+      },
+      "notes": "The finite exact row checks one committed probabilistic classifier table and fixed calibration/Brier definitions, not a theorem about unseen data, calibration of a model family, statistical uncertainty, proper-scoring-rule optimality, or floating-point classifier behavior."
+    }
+  ]
+}
