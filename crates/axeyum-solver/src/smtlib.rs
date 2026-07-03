@@ -18,10 +18,101 @@ use axeyum_ir::{
     FuncValue, Op, Sort, TermArena, TermId, TermNode, Value, render, well_founded_default,
 };
 use axeyum_smtlib::{Script, ScriptCommand, parse_script};
+use axeyum_strings::{SearchBudget, SearchOutcome, solve_word_equations};
 
 use crate::auto::{solve, unsat_core};
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
+use crate::model::Model;
 use crate::optimize::{OptOutcome, maximize_bv, maximize_lia, minimize_bv, minimize_lia};
+
+/// The branch-node budget the word-equation route (ADR-0053, T-B.4b) spends per
+/// front-door query. The search additionally honors an absolute deadline derived
+/// from [`SolverConfig::timeout`]; this node cap is the sole termination guard
+/// when no timeout is set (and under `wasm32`, where the deadline is absent). It
+/// is deliberately generous — the search prunes hard via T-B.3 inference and the
+/// per-path Skolem cap — while bounding the pathological loop shape to a fast,
+/// first-class `unknown`.
+const WORD_ROUTE_MAX_NODES: u64 = 200_000;
+
+/// The word-equation second-chance route (ADR-0053, T-B.4b).
+///
+/// Runs **strictly after** the ADR-0029 bounded pre-check and the ADR-0052
+/// [`StringGate`], and only when the current verdict is `unknown` (the bounded
+/// path declined or the gate downgraded) *and* the parser accumulated a
+/// [`WordProblem`](axeyum_smtlib::WordProblem) side channel. It may only ever
+/// **add** `sat`: on a replay-checked [`SearchOutcome::Sat`] it returns `sat`,
+/// and on [`SearchOutcome::Unknown`] it preserves the prior `unknown` (recording
+/// the decline in the reason detail — the "unknown-ends-in-declined" telemetry
+/// invariant). The word search has no `unsat` capability by construction, so this
+/// can never introduce an `unsat`, and its `sat` is soundness-anchored by the
+/// mandatory ground-evaluator replay inside `axeyum-strings`.
+fn apply_word_route(
+    script: &mut Script,
+    config: &SolverConfig,
+    result: CheckResult,
+) -> CheckResult {
+    let CheckResult::Unknown(reason) = result else {
+        return result;
+    };
+    // Clone the (Copy-element) problem so the immutable borrow of `word_problem`
+    // ends before the `&mut arena` search call; leaves the side channel in place
+    // for the incremental path's later queries.
+    let Some((eqs, diseqs, syms)) = script.word_problem.as_ref().map(|wp| {
+        (
+            wp.equalities.clone(),
+            wp.disequalities.clone(),
+            wp.seq_symbols.clone(),
+        )
+    }) else {
+        return CheckResult::Unknown(reason);
+    };
+
+    let budget = word_route_budget(config);
+    match solve_word_equations(&mut script.arena, &eqs, &diseqs, &budget) {
+        // A model that has already replayed against every equality/disequality
+        // through the ground evaluator inside `axeyum-strings` (the trust anchor).
+        SearchOutcome::Sat(assignment) => {
+            let mut model = Model::new();
+            for &sym in &syms {
+                if let Some(value) = assignment.get(sym) {
+                    model.set(sym, value);
+                }
+            }
+            CheckResult::Sat(model)
+        }
+        // First-class `unknown`: keep the prior verdict, record the decline.
+        SearchOutcome::Unknown { reason: word } => {
+            let detail = if reason.detail.is_empty() {
+                format!("word-equation route declined ({word})")
+            } else {
+                format!("{}; word-equation route declined ({word})", reason.detail)
+            };
+            CheckResult::Unknown(UnknownReason {
+                kind: reason.kind,
+                detail,
+            })
+        }
+    }
+}
+
+/// The word-route [`SearchBudget`]: an absolute deadline from `config.timeout`
+/// (native targets) plus the [`WORD_ROUTE_MAX_NODES`] node cap.
+fn word_route_budget(config: &SolverConfig) -> SearchBudget {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        if let Some(t) = config.timeout
+            && let Some(deadline) = std::time::Instant::now().checked_add(t)
+        {
+            return SearchBudget::with_deadline(WORD_ROUTE_MAX_NODES, deadline);
+        }
+        SearchBudget::new(WORD_ROUTE_MAX_NODES)
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = config;
+        SearchBudget::new(WORD_ROUTE_MAX_NODES)
+    }
+}
 
 /// The result of deciding an SMT-LIB script, with the script's own declarations.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -257,7 +348,10 @@ pub fn confirm_bounded_string_verdict(
     result: CheckResult,
 ) -> Result<CheckResult, SolverError> {
     let gate = StringGate::from_script(script);
-    gate.confirm(&mut script.arena, assertions, config, result)
+    let confirmed = gate.confirm(&mut script.arena, assertions, config, result)?;
+    // Word-equation second-chance route (ADR-0053, T-B.4b), same as the
+    // `solve_smtlib` front door: adds `sat` only where the verdict is `unknown`.
+    Ok(apply_word_route(script, config, confirmed))
 }
 
 /// Whether `t` has any `Int`-sorted subterm — used by the step-1a LIA
@@ -469,6 +563,9 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
     let gate = StringGate::from_script(&script);
     let result = solve(&mut script.arena, &query.assertions, config)?;
     let result = gate.confirm(&mut script.arena, &query.assertions, config, result)?;
+    // Word-equation second-chance route (ADR-0053, T-B.4b): may only add `sat`
+    // where the bounded path + gate left an `unknown`.
+    let result = apply_word_route(&mut script, config, result);
     Ok(SmtLibOutcome {
         result,
         logic: script.logic,
@@ -754,6 +851,7 @@ pub fn solve_smtlib_get_info(
         let gate = StringGate::from_script(&script);
         let solved = solve(&mut script.arena, &query.assertions, config)?;
         let solved = gate.confirm(&mut script.arena, &query.assertions, config, solved)?;
+        let solved = apply_word_route(&mut script, config, solved);
         reason_unknown = Some(match solved {
             CheckResult::Unknown(reason) if reason.detail.is_empty() => {
                 format!("{:?}", reason.kind)
@@ -1073,7 +1171,11 @@ pub fn solve_smtlib_incremental(
     let mut stack: Vec<axeyum_ir::TermId> = Vec::new();
     let mut scopes: Vec<usize> = Vec::new(); // assertion-stack depth at each open push
     let mut results = Vec::new();
-    for command in &script.commands {
+    // Clone the command stream so the per-`check-sat` word route can take
+    // `&mut script` (arena + word-problem side channel) without holding a borrow
+    // of `script.commands` across the loop body.
+    let commands = script.commands.clone();
+    for command in &commands {
         match command {
             ScriptCommand::Assert(t) => stack.push(*t),
             ScriptCommand::Push(n) => {
@@ -1090,7 +1192,8 @@ pub fn solve_smtlib_incremental(
             }
             ScriptCommand::CheckSat => {
                 let result = solve(&mut script.arena, &stack, config)?;
-                results.push(gate.confirm(&mut script.arena, &stack, config, result)?);
+                let result = gate.confirm(&mut script.arena, &stack, config, result)?;
+                results.push(apply_word_route(&mut script, config, result));
             }
             ScriptCommand::CheckSatAssuming(assumptions) => {
                 // Decide the active assertions together with the assumptions, but
@@ -1098,7 +1201,11 @@ pub fn solve_smtlib_incremental(
                 let mut with = stack.clone();
                 with.extend_from_slice(assumptions);
                 let result = solve(&mut script.arena, &with, config)?;
-                results.push(gate.confirm(&mut script.arena, &with, config, result)?);
+                let result = gate.confirm(&mut script.arena, &with, config, result)?;
+                // The word-problem side channel is `None` whenever the script
+                // uses `check-sat-assuming` (see `build_word_problem`), so this is
+                // a plain pass-through here; kept uniform with the other queries.
+                results.push(apply_word_route(&mut script, config, result));
             }
             ScriptCommand::ResetAssertions => {
                 // Remove all assertions and open scopes (declarations stay interned

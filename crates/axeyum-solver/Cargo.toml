@@ -22,6 +22,7 @@ axeyum-lean-kernel = { path = "../axeyum-lean-kernel" }
 axeyum-query.workspace = true
 axeyum-rewrite = { path = "../axeyum-rewrite" }
 axeyum-smtlib = { path = "../axeyum-smtlib" }
+axeyum-strings.workspace = true
 z3 = { workspace = true, optional = true }
 
 # Browser-compatible monotonic clock for timeouts/telemetry (ADR-0017); only on

@@ -118,6 +118,39 @@ pub struct Script {
     /// present: the length abstraction may miss a bound bite, so only a
     /// confirmed (abstraction-refuted) `unsat` may pass the gate.
     pub len_abstraction_coarse: bool,
+    /// The parser-side **word-equation dual build** (ADR-0053, T-B.4b): a
+    /// first-class `Sort::Seq` translation of the script's string fragment,
+    /// populated **only** when *every* asserted atom is a word equation /
+    /// disequation over `str.++` / string literals / string variables (nothing
+    /// else — no `str.len`, `substr`, regex, `contains`, `ite`, or negations
+    /// deeper than a single disequality). It is the second-chance route the
+    /// solver front door reaches for **strictly after** the ADR-0029 bounded
+    /// pre-check and the ADR-0052 gate return `unknown`: the word-level search
+    /// may only ever *add* `sat`, never `unsat`, so a `None` (unrepresentable)
+    /// side channel simply leaves the prior verdict untouched. Built into the
+    /// same [`Script::arena`]; `String` = `Seq(BitVec(18))` with literals as the
+    /// right-associated `seq.unit` code-point chain (matching `axeyum-strings`).
+    pub word_problem: Option<WordProblem>,
+}
+
+/// A first-class `Sort::Seq` word-equation problem accumulated as a side channel
+/// while parsing a bounded-strings script (ADR-0053, T-B.4b).
+///
+/// Every field is over `Seq(BitVec(18))` (`Sort::string()`) terms interned in the
+/// owning [`Script::arena`]. This is populated only for the pure word-equation
+/// fragment (see [`Script::word_problem`]); the solver runs
+/// [`axeyum_strings::solve_word_equations`](https://docs.rs/axeyum-strings) over
+/// it and, on a replay-checked `Sat`, upgrades a prior `unknown` verdict to
+/// `sat`. It carries **no** `unsat` capability by construction.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct WordProblem {
+    /// Asserted equalities `l ≈ r` between `Seq`-sorted concatenations.
+    pub equalities: Vec<(TermId, TermId)>,
+    /// Asserted disequalities `l ≉ r` between `Seq`-sorted concatenations.
+    pub disequalities: Vec<(TermId, TermId)>,
+    /// The `Seq`-sorted symbols standing for the script's string variables (the
+    /// symbols a returned model binds), in first-declaration order.
+    pub seq_symbols: Vec<SymbolId>,
 }
 
 /// Parses an SMT-LIB script.
@@ -213,7 +246,237 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
             .unwrap_or(script.commands.len());
         script.commands.insert(at, ScriptCommand::Assert(cong));
     }
+    // Parser-side word-equation dual build (ADR-0053, T-B.4b). A minimal,
+    // all-or-nothing side channel: only populated for the pure word-equation
+    // fragment, and only when the script has no incremental scoping (so the
+    // active query at every `check-sat` is a subset of the accumulated
+    // assertions — a model of the whole is a model of any subset, keeping the
+    // "only ever add sat" invariant sound). `parse_sort`/`(Seq E)` are untouched.
+    if script.uses_bounded_strings {
+        script.word_problem = build_word_problem(&mut script.arena, &exprs);
+    }
     Ok(script)
+}
+
+// --- word-equation dual build (ADR-0053, T-B.4b) -----------------------------
+//
+// Walks the (post-desugar) top-level command s-expressions a *second* time,
+// translating the string fragment into first-class `Sort::Seq` terms in the same
+// arena. It never touches `parse_sort` or the bounded packed-BV representation —
+// it is a strictly additive side channel. The recognized fragment is exactly:
+//
+//   * string variables: `(declare-const x String)` / `(declare-fun x () String)`;
+//   * string expressions: a string literal, a string variable, or `(str.++ …)`
+//     over string expressions;
+//   * atoms (under top-level `assert` and nested `and`): `(= s t …)` (chained
+//     equality), `(distinct s t …)` (pairwise disequality), and `(not (= s t))`
+//     (a single disequality), all over string expressions.
+//
+// Anything else — `str.len`, `substr`, regex, `contains`, `ite` over strings, a
+// negation deeper than a single disequality, an atom over a non-string sort, or
+// any incremental command (`push`/`pop`/`check-sat-assuming`/`reset-assertions`)
+// or `define-fun` — collapses the whole side channel to `None`. All-or-nothing:
+// a partial translation could let a model of the represented subset violate a
+// dropped atom, so an unrepresentable atom forbids the whole problem.
+
+/// Builds the [`WordProblem`] side channel from the command s-expressions, or
+/// `None` when the script is outside the pure word-equation fragment (see the
+/// module comment above).
+fn build_word_problem(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordProblem> {
+    // Incremental scoping or macros put the "active subset ⊆ all asserts"
+    // soundness argument out of reach — decline wholesale.
+    for e in exprs {
+        if let Some(
+            "push" | "pop" | "check-sat-assuming" | "reset-assertions" | "define-fun"
+            | "define-fun-rec" | "define-funs-rec" | "define-sort",
+        ) = e.list().and_then(|l| l.first()).and_then(SExpr::atom)
+        {
+            return None;
+        }
+    }
+
+    // Collect declared string variables → one fresh `Seq`-sorted symbol each.
+    let mut vars: BTreeMap<String, (SymbolId, TermId)> = BTreeMap::new();
+    let mut order: Vec<SymbolId> = Vec::new();
+    for e in exprs {
+        if let Some(name) = declared_string_var(e)
+            && !vars.contains_key(name)
+        {
+            let sym = arena
+                .declare(&format!("!weq!{name}"), Sort::string())
+                .ok()?;
+            let term = arena.var(sym);
+            vars.insert(name.to_owned(), (sym, term));
+            order.push(sym);
+        }
+    }
+
+    // Translate every assertion; a single unrepresentable atom aborts the whole.
+    let mut wp = WordProblem::default();
+    for e in exprs {
+        let Some(items) = e.list() else { continue };
+        if items.first().and_then(SExpr::atom) == Some("assert") {
+            let [_, body] = items else { return None };
+            if !word_atom(arena, body, &vars, &mut wp) {
+                return None;
+            }
+        }
+    }
+
+    if wp.equalities.is_empty() && wp.disequalities.is_empty() {
+        return None;
+    }
+    wp.seq_symbols = order;
+    Some(wp)
+}
+
+/// The declared name of a 0-ary `String`-sorted symbol, if `e` is such a
+/// declaration (`(declare-const x String)` or `(declare-fun x () String)`).
+fn declared_string_var(e: &SExpr) -> Option<&str> {
+    let items = e.list()?;
+    match items.first().and_then(SExpr::atom)? {
+        "declare-const" if items.len() == 3 => {
+            (items[2].atom() == Some("String")).then(|| items[1].atom())?
+        }
+        "declare-fun" if items.len() == 4 => {
+            let empty_params = items[2].list().is_some_and(<[SExpr]>::is_empty);
+            (empty_params && items[2].list().is_some() && items[3].atom() == Some("String"))
+                .then(|| items[1].atom())?
+        }
+        _ => None,
+    }
+}
+
+/// Translates a Boolean atom into `wp`, returning `false` (abort) on anything
+/// outside the pure word-equation fragment. Recurses through top-level `and`.
+fn word_atom(
+    arena: &mut TermArena,
+    e: &SExpr,
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+    wp: &mut WordProblem,
+) -> bool {
+    // `true` is a trivial conjunct.
+    if e.atom() == Some("true") {
+        return true;
+    }
+    let Some(items) = e.list() else {
+        return false;
+    };
+    let Some(head) = items.first().and_then(SExpr::atom) else {
+        return false;
+    };
+    match head {
+        "and" => items[1..].iter().all(|c| word_atom(arena, c, vars, wp)),
+        // `(= a b …)` — chained equality over ≥2 string expressions.
+        "=" if items.len() >= 3 => {
+            let Some(terms) = word_terms(arena, &items[1..], vars) else {
+                return false;
+            };
+            for &t in &terms[1..] {
+                wp.equalities.push((terms[0], t));
+            }
+            true
+        }
+        // `(distinct a b …)` — pairwise disequality over ≥2 string expressions.
+        "distinct" if items.len() >= 3 => {
+            let Some(terms) = word_terms(arena, &items[1..], vars) else {
+                return false;
+            };
+            for i in 0..terms.len() {
+                for &t in &terms[i + 1..] {
+                    wp.disequalities.push((terms[i], t));
+                }
+            }
+            true
+        }
+        // `(not (= a b))` — a single disequality (exactly two operands: a deeper
+        // negation `¬(a=b=c)` is a *disjunction*, not representable, so decline).
+        "not" if items.len() == 2 => {
+            let Some(inner) = items[1].list() else {
+                return false;
+            };
+            if inner.first().and_then(SExpr::atom) == Some("=") && inner.len() == 3 {
+                let Some(terms) = word_terms(arena, &inner[1..], vars) else {
+                    return false;
+                };
+                wp.disequalities.push((terms[0], terms[1]));
+                true
+            } else {
+                false
+            }
+        }
+        _ => false,
+    }
+}
+
+/// Translates every element of `exprs` as a string expression, returning `None`
+/// if any is not one.
+fn word_terms(
+    arena: &mut TermArena,
+    exprs: &[SExpr],
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+) -> Option<Vec<TermId>> {
+    exprs
+        .iter()
+        .map(|e| word_str_expr(arena, e, vars))
+        .collect()
+}
+
+/// Translates one string expression into a `Seq`-sorted term: a string literal,
+/// a declared string variable, or `(str.++ …)` over string expressions. Returns
+/// `None` for anything else.
+fn word_str_expr(
+    arena: &mut TermArena,
+    e: &SExpr,
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+) -> Option<TermId> {
+    match e {
+        SExpr::Atom(a) => {
+            if a.len() >= 2 && a.starts_with('"') && a.ends_with('"') {
+                word_literal(arena, a)
+            } else {
+                vars.get(a).map(|&(_, term)| term)
+            }
+        }
+        SExpr::List(items) => {
+            if items.first().and_then(SExpr::atom) != Some("str.++") || items.len() < 2 {
+                return None;
+            }
+            let mut acc = word_str_expr(arena, &items[1], vars)?;
+            for it in &items[2..] {
+                let next = word_str_expr(arena, it, vars)?;
+                acc = arena.seq_concat(acc, next).ok()?;
+            }
+            Some(acc)
+        }
+    }
+}
+
+/// Builds the `Seq(BitVec(18))` term for a string literal atom (quotes included,
+/// `""`-escaped quotes) as the right-associated `seq.unit` chain of its Unicode
+/// code points — matching the `axeyum-strings` constant convention. The empty
+/// literal `""` is `seq.empty`.
+fn word_literal(arena: &mut TermArena, atom: &str) -> Option<TermId> {
+    let inner = &atom[1..atom.len() - 1];
+    let unescaped = inner.replace("\"\"", "\"");
+    let key = ArraySortKey::BitVec(Sort::STRING_ELEM_WIDTH);
+    let chars: Vec<char> = unescaped.chars().collect();
+    if chars.is_empty() {
+        return Some(arena.seq_empty(key));
+    }
+    // Right-associate: unit(c0) ++ (unit(c1) ++ (… ++ unit(cn))).
+    let mut acc: Option<TermId> = None;
+    for &c in chars.iter().rev() {
+        let elem = arena
+            .bv_const(Sort::STRING_ELEM_WIDTH, u128::from(c as u32))
+            .ok()?;
+        let unit = arena.seq_unit(elem).ok()?;
+        acc = Some(match acc {
+            None => unit,
+            Some(rest) => arena.seq_concat(unit, rest).ok()?,
+        });
+    }
+    acc
 }
 
 // --- constant arrays: `(select ((as const A) v) i)` → `v` --------------------
