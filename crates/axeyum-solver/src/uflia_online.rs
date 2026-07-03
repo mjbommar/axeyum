@@ -75,7 +75,8 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::time::Instant;
 
 use axeyum_ir::{
-    Assignment, FuncValue, Op, Sort, TermArena, TermId, TermNode, Value, eval, well_founded_default,
+    Assignment, FuncValue, Op, Sort, TermArena, TermId, TermNode, Value, eval, eval_with_memo,
+    well_founded_default,
 };
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
@@ -109,6 +110,32 @@ const MAX_BOOLEAN_ATOMS: usize = 512;
 /// keep the online slice bounded and let larger generated rows use the production
 /// lazy UFLIA route.
 const MAX_OPAQUE_BOOLEAN_ATOMS: usize = 128;
+
+/// The effective theory-atom ceiling: the compiled default [`MAX_BOOLEAN_ATOMS`],
+/// optionally raised via the `AXEYUM_UFLIA_MAX_BOOLEAN_ATOMS` environment variable.
+/// The env override is a measurement/experimentation lever (raising it routes more
+/// instances into the online CDCL(T) path); the deadline-aware spine — not admission —
+/// still decides tractability, and every `sat` remains replay-gated, so a raise can
+/// never make a verdict unsound.
+fn max_boolean_atoms() -> usize {
+    std::env::var("AXEYUM_UFLIA_MAX_BOOLEAN_ATOMS")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok())
+        .map_or(MAX_BOOLEAN_ATOMS, |v| v.max(MAX_BOOLEAN_ATOMS))
+}
+
+/// The effective opaque-app theory-atom ceiling: the compiled default
+/// [`MAX_OPAQUE_BOOLEAN_ATOMS`], optionally raised via
+/// `AXEYUM_UFLIA_MAX_OPAQUE_BOOLEAN_ATOMS`. Same soundness note as
+/// [`max_boolean_atoms`].
+fn max_opaque_boolean_atoms() -> usize {
+    std::env::var("AXEYUM_UFLIA_MAX_OPAQUE_BOOLEAN_ATOMS")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok())
+        .map_or(MAX_OPAQUE_BOOLEAN_ATOMS, |v| {
+            v.max(MAX_OPAQUE_BOOLEAN_ATOMS)
+        })
+}
 
 /// Hard ceiling on Tseitin clauses produced for the Boolean skeleton; above it the
 /// layer declines rather than build an unbounded encoding.
@@ -191,7 +218,7 @@ pub fn check_qf_uflia_online(
             return Ok(decline("no UFLIA literals for the online combination path"));
         }
         let opaque_atoms = opaque_lia_order_literal_count(arena, &literals);
-        if opaque_atoms > MAX_OPAQUE_BOOLEAN_ATOMS {
+        if opaque_atoms > max_opaque_boolean_atoms() {
             return Ok(decline(large_opaque_online_detail(
                 literals.len(),
                 opaque_atoms,
@@ -549,7 +576,6 @@ impl Search<'_> {
     fn combined_model(&mut self, lia: &LiaTheory, augmented: &[TermId]) -> Option<Model> {
         let mut model = lia.integer_model()?;
         complete_non_int_symbols(self.arena, &mut model);
-        let assignment = model.to_assignment();
 
         // Scalar UF interpretations from the EUF e-graph model (Bool/BitVec results).
         let euf_atom_terms: Vec<TermId> = self.euf_atoms.iter().map(|l| l.atom).collect();
@@ -565,8 +591,9 @@ impl Search<'_> {
             }
         }
 
-        // Integer-sorted UF interpretations, built from the LIA witness. Collect every
-        // integer-result application in the query, deterministically.
+        // Integer-sorted UF interpretations, built from the LIA witness with a
+        // *congruence-aware, model-faithful* construction. Collect every integer-result
+        // application in the query, deterministically.
         let mut apps: BTreeSet<TermId> = BTreeSet::new();
         for lit in self.literals {
             collect_int_apps(self.arena, lit.atom, &mut apps);
@@ -575,38 +602,102 @@ impl Search<'_> {
             return Some(model);
         }
 
-        // Congruence classes over the augmented EUF assertions (originals + chosen
-        // interface relations): equal terms must share an integer value. Each
-        // application's result value is its class value — pinned by any LIA-valued class
-        // member, else fresh-and-distinct. This makes the interpretation respect both
-        // the asserted equalities and functionality (equal arguments ⇒ equal results,
-        // since congruence merges such applications).
+        // Asserted-equality congruence classes over the augmented EUF assertions
+        // (originals + chosen interface relations): equal terms must share an integer
+        // value. Intern every application (and its subterms) so its class root is known.
         let mut classes = Congruence::new();
         for &assertion in augmented {
             classes.absorb(self.arena, assertion);
         }
-        let class_value = classes.assign_int_values(self.arena, &assignment, &apps);
+        for &app in &apps {
+            classes.node(self.arena, app);
+        }
 
-        // Assign every integer *symbol* (including EUF-only ones the LIA witness did not
-        // pin, e.g. a disequality side never in a LIA atom) its congruence-class value,
-        // so the combined model is total over the integer symbols and the replay can
-        // evaluate every application argument.
+        // Integer-sorted UF interpretations (the model-faithful reconstruction).
+        self.build_int_uf_functions(&mut model, &mut classes, &apps)?;
+        Some(model)
+    }
+
+    /// Builds every integer-result uninterpreted-function interpretation into `model`,
+    /// congruence-aware and model-faithful.
+    ///
+    /// The naive build ("assign each application class a fresh/pinned value, key the
+    /// function table by *class* values") is composition-blind: a deep application such as
+    /// `hash(hash(…))`, whose argument only evaluates to some concrete key `v` under the
+    /// LIA witness, is given a *fresh* class value even though `hash(v)` is already pinned
+    /// (e.g. by an asserted bijection literal `hash(xj)=xl` with `xj=v`). The two
+    /// definitions of `hash(v)` then collide in the table, one wins arbitrarily, and the
+    /// replay of the composition literal fails. Empirically this was exactly why the NAS
+    /// `hash_sat_*` instances failed to reconstruct on ~321 of 322 interface arrangements.
+    ///
+    /// This build instead keys every function table by the *concrete* integer value of
+    /// each argument (evaluated bottom-up, innermost applications first, through a memo
+    /// pre-seeded with the values already assigned to shallower applications) and assigns
+    /// each application the value forced, in priority order, by (1) an existing table entry
+    /// at that key — functionality; (2) its asserted-equality class value; (3) a fresh
+    /// distinct value. A key already bound to a *different* forced value is a genuine
+    /// infeasibility of *this* witness and yields a sound `None` (→ `Unknown`), never a
+    /// wrong verdict; replay remains the final gate.
+    fn build_int_uf_functions(
+        &mut self,
+        model: &mut Model,
+        classes: &mut Congruence,
+        apps: &BTreeSet<TermId>,
+    ) -> Option<()> {
+        let assignment = model.to_assignment();
+
+        // Concrete values for the integer symbols: the LIA witness pins the constrained
+        // ones. The rest (EUF-only symbols the witness never bound) must still be total so
+        // every application argument evaluates — take a class pin if one exists, else a
+        // fresh distinct value. Fresh values are allocated strictly above every value
+        // already "spoken for" (a bound symbol or a class pin), so an unconstrained value
+        // never silently aliases a constrained one.
+        let class_pin = classes.class_pins(self.arena, &assignment);
+        let mut used_max: i128 = 0;
+        for (symbol, _name, sort) in self.arena.symbols() {
+            if sort == Sort::Int
+                && let Some(Value::Int(value)) = model.get(symbol)
+            {
+                used_max = used_max.max(value);
+            }
+        }
+        for &value in class_pin.values() {
+            used_max = used_max.max(value);
+        }
+        let mut next_fresh = used_max.checked_add(1)?;
         for term in classes.int_symbols(self.arena) {
             if let TermNode::Symbol(symbol) = self.arena.node(term) {
                 let symbol = *symbol;
                 if model.get(symbol).is_none() {
                     let root = classes.root_of(term);
-                    if let Some(value) = class_value.get(&root) {
-                        model.set(symbol, value.clone());
-                    }
+                    let value = if let Some(&pin) = class_pin.get(&root) {
+                        pin
+                    } else {
+                        let fresh = next_fresh;
+                        next_fresh = next_fresh.checked_add(1)?;
+                        fresh
+                    };
+                    model.set(symbol, Value::Int(value));
                 }
             }
         }
-        // Rebuild the assignment now that every integer symbol has a value.
         let assignment = model.to_assignment();
 
+        // Process applications innermost-first: an application whose argument (transitively,
+        // through `ite`/`+`/… structure) contains another application has strictly greater
+        // height, so all sub-applications are already valued when its key is computed.
+        let mut ordered: Vec<TermId> = apps.iter().copied().collect();
+        let mut height_memo: BTreeMap<TermId, usize> = BTreeMap::new();
+        ordered.sort_by_key(|&t| (int_app_height(self.arena, t, &mut height_memo), t));
+
+        // `memo` doubles as the bottom-up application-value store: seeding it with each
+        // application's chosen value means `eval_with_memo` on a *later* argument resolves
+        // any nested application to the value we already fixed, instead of consulting the
+        // (still incomplete) function table.
+        let mut memo: HashMap<TermId, Value> = HashMap::new();
+        let mut class_assigned: BTreeMap<axeyum_egraph::ENodeId, i128> = BTreeMap::new();
         let mut tables: BTreeMap<axeyum_ir::FuncId, IntTable> = BTreeMap::new();
-        for &app in &apps {
+        for &app in &ordered {
             let TermNode::App {
                 op: Op::Apply(func),
                 args,
@@ -616,30 +707,54 @@ impl Search<'_> {
             };
             let func = *func;
             let args = args.clone();
-            let mut arg_values: Vec<Value> = Vec::with_capacity(args.len());
+            // Concrete argument key, bottom-up through the memo.
+            let mut key: Vec<Value> = Vec::with_capacity(args.len());
             for &a in &args {
-                // An argument that is itself an application uses its own class value
-                // (its result is not yet in the function table); a non-application
-                // evaluates directly.
-                let value = if is_int_app(self.arena, a) {
-                    class_value.get(&classes.root_of(a)).cloned()?
-                } else {
-                    eval(self.arena, a, &assignment).ok()?
+                let Ok(value @ Value::Int(_)) =
+                    eval_with_memo(self.arena, a, &assignment, &mut memo)
+                else {
+                    return None;
                 };
-                arg_values.push(value);
+                key.push(value);
             }
-            let result = class_value.get(&classes.root_of(app)).cloned()?;
+            let root = classes.root_of(app);
+            let candidate = tables.get(&func).and_then(|t| t.get(&key));
+            let pin = class_pin
+                .get(&root)
+                .copied()
+                .or_else(|| class_assigned.get(&root).copied());
+            let result = match (candidate, pin) {
+                // The function at this key is already forced one way; the class forces it
+                // another. A genuine infeasibility of this witness (e.g. a bijection value
+                // colliding with a composition value) — decline soundly.
+                (Some(Value::Int(c)), Some(p)) if c != p => return None,
+                (Some(Value::Int(c)), _) => c,
+                (None, Some(p)) => p,
+                (None, None) => {
+                    let value = next_fresh;
+                    next_fresh = next_fresh.checked_add(1)?;
+                    value
+                }
+                (Some(_), _) => return None, // non-integer table entry (should not happen)
+            };
+            // Every member of one congruence class shares a single value.
+            match class_assigned.get(&root) {
+                Some(&existing) if existing != result => return None,
+                _ => {
+                    class_assigned.insert(root, result);
+                }
+            }
             let (_, params, result_sort) = self.arena.function(func);
-            let entry = tables
+            tables
                 .entry(func)
-                .or_insert_with(|| IntTable::new(params.to_vec(), result_sort));
-            entry.define(arg_values, result);
+                .or_insert_with(|| IntTable::new(params.to_vec(), result_sort))
+                .define(key, Value::Int(result));
+            memo.insert(app, Value::Int(result));
         }
         for (func, table) in tables {
             model.set_function(func, table.into_func_value());
         }
-
-        Some(model)
+        Some(())
     }
 
     /// The `EUF` status of `(s, t)` given the original assertions plus the equalities /
@@ -1290,62 +1405,60 @@ impl Congruence {
         })
     }
 
-    /// Assigns each integer congruence class an integer value: any class member that
-    /// evaluates under `assignment` (an integer symbol / constant / linear term) pins
-    /// the class; otherwise a fresh value distinct from every pinned and
-    /// previously-issued value. Returns the class-root → value map (for the application
-    /// result lookups). Every application in `apps` is interned first so its class root
-    /// is known.
-    fn assign_int_values(
+    /// The concrete integer *pin* of each congruence class: the value of any class member
+    /// that evaluates under `assignment` (an integer symbol / constant / linear term that
+    /// does not itself contain an uninterpreted application). Applications are *not* pins
+    /// — their value is what the reconstruction is solving for. The first evaluable member
+    /// (in deterministic `TermId` order) fixes the class; a class with no evaluable member
+    /// is absent (its value is chosen during the bottom-up application build). Every
+    /// application must already be interned (via [`Self::node`]) so class roots are known.
+    fn class_pins(
         &mut self,
         arena: &TermArena,
         assignment: &Assignment,
-        apps: &BTreeSet<TermId>,
-    ) -> BTreeMap<axeyum_egraph::ENodeId, Value> {
-        // Intern every application and its arguments so the classes are complete.
-        for &app in apps {
-            let _ = self.node(arena, app);
-        }
-
-        // Gather every interned integer term, grouped by class root.
+    ) -> BTreeMap<axeyum_egraph::ENodeId, i128> {
         let terms: Vec<TermId> = self.nodes.keys().copied().collect();
-        let mut by_root: BTreeMap<axeyum_egraph::ENodeId, Vec<TermId>> = BTreeMap::new();
+        let mut pins: BTreeMap<axeyum_egraph::ENodeId, i128> = BTreeMap::new();
         for term in terms {
-            if arena.sort_of(term) == Sort::Int {
-                let root = self.root_of(term);
-                by_root.entry(root).or_default().push(term);
-            }
-        }
-
-        let mut used: BTreeSet<i128> = BTreeSet::new();
-        let mut class_value: BTreeMap<axeyum_egraph::ENodeId, Value> = BTreeMap::new();
-        // First pass: pin every class that has an evaluable member.
-        for (root, members) in &by_root {
-            for &m in members {
-                if let Ok(Value::Int(value)) = eval(arena, m, assignment) {
-                    class_value.insert(*root, Value::Int(value));
-                    used.insert(value);
-                    break;
-                }
-            }
-        }
-        // Second pass: fresh distinct values for the unpinned classes.
-        let mut next: i128 = 0;
-        for root in by_root.keys() {
-            if class_value.contains_key(root) {
+            if arena.sort_of(term) != Sort::Int || is_int_app(arena, term) {
                 continue;
             }
-            while used.contains(&next) {
-                next = match next.checked_add(1) {
-                    Some(v) => v,
-                    None => return class_value, // overflow: caller declines via missing key
-                };
+            if let Ok(Value::Int(value)) = eval(arena, term, assignment) {
+                let root = self.root_of(term);
+                pins.entry(root).or_insert(value);
             }
-            used.insert(next);
-            class_value.insert(*root, Value::Int(next));
         }
-        class_value
+        pins
     }
+}
+
+/// The nesting height of a term for the innermost-first application ordering: the maximum
+/// number of `Op::Apply` integer applications on any root-to-leaf path through the term,
+/// counting `term` itself. An application therefore has strictly greater height than any
+/// application nested inside its arguments (through `ite`/`+`/… structure too), so sorting
+/// by height ascending processes every sub-application before the applications that use it.
+fn int_app_height(arena: &TermArena, term: TermId, memo: &mut BTreeMap<TermId, usize>) -> usize {
+    if let Some(&height) = memo.get(&term) {
+        return height;
+    }
+    let (child_max, is_app) = match arena.node(term) {
+        TermNode::App { op, args } => {
+            let args = args.to_vec();
+            let child_max = args
+                .iter()
+                .map(|&a| int_app_height(arena, a, memo))
+                .max()
+                .unwrap_or(0);
+            (
+                child_max,
+                matches!(op, Op::Apply(_)) && arena.sort_of(term) == Sort::Int,
+            )
+        }
+        _ => (0, false),
+    };
+    let height = if is_app { child_max + 1 } else { child_max };
+    memo.insert(term, height);
+    height
 }
 
 /// An integer-valued function interpretation under construction: argument-`Value`
@@ -1363,6 +1476,15 @@ impl IntTable {
             result,
             entries: Vec::new(),
         }
+    }
+
+    /// The result already bound to `args`, if any (the concrete-key lookup the
+    /// model-faithful build uses to enforce functionality across applications).
+    fn get(&self, args: &[Value]) -> Option<Value> {
+        self.entries
+            .iter()
+            .find(|(a, _)| a.as_slice() == args)
+            .map(|(_, v)| v.clone())
     }
 
     /// Records `args → result`, keeping the first binding for a given argument tuple
@@ -1461,15 +1583,15 @@ fn check_qf_uflia_boolean(
     if atom_terms.is_empty() {
         return decline("no UFLIA atoms for the online combination boolean layer");
     }
-    if atom_terms.len() > MAX_BOOLEAN_ATOMS {
+    if atom_terms.len() > max_boolean_atoms() {
         return decline(format!(
             "too many theory atoms for the online combination boolean layer: {} > {}",
             atom_terms.len(),
-            MAX_BOOLEAN_ATOMS
+            max_boolean_atoms()
         ));
     }
     let opaque_atoms = opaque_lia_order_atom_count(arena, &atom_terms);
-    if opaque_atoms > MAX_OPAQUE_BOOLEAN_ATOMS {
+    if opaque_atoms > max_opaque_boolean_atoms() {
         return decline(large_opaque_online_detail(atom_terms.len(), opaque_atoms));
     }
     // Build the live combined state: it registers the interface eq/lt/gt variables beyond
@@ -1657,7 +1779,7 @@ pub(crate) fn combined_cdclt_diag(
     for &a in assertions {
         collect_uflia_atoms(arena, a, &mut atom_terms, &mut seen);
     }
-    if atom_terms.is_empty() || atom_terms.len() > MAX_BOOLEAN_ATOMS {
+    if atom_terms.is_empty() || atom_terms.len() > max_boolean_atoms() {
         return None;
     }
     let combined = crate::combined_theory_lia::CombinedIncrementalLia::new(arena, &atom_terms)?;
@@ -1796,15 +1918,15 @@ fn check_qf_uflia_boolean_enumerative(
     if atom_terms.is_empty() {
         return decline("no UFLIA atoms for the online combination boolean layer");
     }
-    if atom_terms.len() > MAX_BOOLEAN_ATOMS {
+    if atom_terms.len() > max_boolean_atoms() {
         return decline(format!(
             "too many theory atoms for the online combination boolean layer: {} > {}",
             atom_terms.len(),
-            MAX_BOOLEAN_ATOMS
+            max_boolean_atoms()
         ));
     }
     let opaque_atoms = opaque_lia_order_atom_count(arena, &atom_terms);
-    if opaque_atoms > MAX_OPAQUE_BOOLEAN_ATOMS {
+    if opaque_atoms > max_opaque_boolean_atoms() {
         return decline(large_opaque_online_detail(atom_terms.len(), opaque_atoms));
     }
 
