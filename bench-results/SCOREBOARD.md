@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 621 oracle-compared instances (992 files total, 674 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 622 oracle-compared instances (992 files total, 675 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -25,7 +25,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | Division | Slice | Files | Decided | Decide% | Unknown | Unsup | Cmp | DISAGREE | Ground-truth | PAR-2 (s) |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | ---: |
 | BV | `bv-bitwuzla-regress-clean-quantified` | 5 | 4 | 80% | 1 | 0 | 3 | 0 | z3-binary | 4.000 |
-| BV | `bv-cvc5-regress-clean-quantified` | 54 | 37 | 69% | 6 | 11 | 37 | 0 | z3-binary | 7.929 |
+| BV | `bv-cvc5-regress-clean-quantified` | 54 | 38 | 70% | 5 | 11 | 38 | 0 | z3-binary | 7.470 |
 | LIA | `lia-cvc5-regress-clean-quantified` | 12 | 0 | 0% | 8 | 4 | 0 | 0 | :status | 30.000 |
 | QF_ABV | `qf-abv-cvc5-bitwuzla-regress-clean` | 193 | 169 | 88% | 0 | 24 | 165 | 0 | z3-library+binary | 1.666 |
 | QF_ALIA | `qf-alia-cvc5-regress-clean` | 6 | 6 | 100% | 0 | 0 | 5 | 0 | z3-binary | 0.000 |
@@ -60,9 +60,32 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 674 decided, 621 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 675 decided, 622 oracle-compared, **0 disagreements.**
 
 <!-- NOTES:BEGIN (hand-written attribution notes — preserved by the generator) -->
+### BV quantified row re-measured 2026-07-03 (P2.6 slice 6 — closed-universal falsification)
+
+A census of the 17 undecided `bv-cvc5-regress-clean-quantified` instances
+retired the hypothesised lever (raise the e-matching round/instance budget) as
+**unjustified — it would decide zero**: none of the 17 was
+instantiation-depth/round-budget starved. The blockers are quantifier *shape*,
+not depth — 16 are existential/`¬∃`/nested-`∀∃`/let-nested or free-parameter
+`∀` shapes that never reach the top-level universal e-matching loop, and exactly
+one (`qbv-simp`, `∀A B C D. (A=B∧C=D)∨(A=C∧B=D)`, declared `unsat`) reaches the
+loop but has **no function-application trigger**, so no round budget helps. The
+census-supported lever is therefore *closed-universal falsification*: a closed
+`∀x⃗. body` (quantifier-free body over exactly its bound vars, no free
+function/constant symbols) is a sentence decided exactly by one bounded
+quantifier-free check of `¬body[x⃗:=c⃗]` — `Sat` ⇒ the universal is false ⇒
+`unsat`. This moves **`qbv-simp` unknown → unsat: 37 → 38 decided (69% → 70%),
+PAR-2 7.929 → 7.470, DISAGREE=0**. The valid direction is already owned upstream
+by `quant_valid_universal`; only the refuting direction is taken here, so the
+lever can never wrong-`unsat` a valid universal (soundness-guarded by the
+900-seed `qinst_bounded_instance_soundness` brute-force oracle + a 600-seed
+`quantified_bv_differential_fuzz` vs Z3, DISAGREE=0). The remaining 16 need
+existential/prenex normalization or free-parameter e-matching, out of this
+slice's scope.
+
 ### QF_NRA row re-measured 2026-07-02 (free-division `/0` witnesses + prior landings)
 
 The first-class free-division witness landing (forced-div-by-zero promotes

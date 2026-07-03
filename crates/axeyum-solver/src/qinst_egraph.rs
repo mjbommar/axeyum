@@ -75,6 +75,38 @@ pub fn prove_quantified_unsat_via_egraph(
         return check_auto(arena, &ground, config);
     }
 
+    // Closed-universal falsification (P2.6 slice-6, census-justified lever).
+    //
+    // The e-matching round loop below only refutes a `∀x⃗. body` by *weakening*:
+    // it adds ground instances `body[x⃗ := witness]` drawn from function-application
+    // triggers matched against the ground terms. A **closed** universal — one whose
+    // body is quantifier-free and mentions no symbol beyond its own bound variables
+    // — has no free parameters to match against and, for the shapes in the measured
+    // corpus (e.g. `∀A B C D. (A=B∧C=D) ∨ (A=C∧B=D)`), no function-application
+    // trigger at all, so `select_triggers` yields nothing and the loop returns
+    // `unknown` no matter how large the round/instance budget is. This is not
+    // depth-starvation; it is a distinct instantiation-strategy gap the census of
+    // the bv-cvc5-quantified division surfaced.
+    //
+    // A closed universal is a *sentence*: `∀x⃗. body` is a constant truth value.
+    // It is **false** iff `∃x⃗. ¬body` holds, i.e. iff `¬body[x⃗ := c⃗]` is
+    // satisfiable for fresh constants `c⃗` (the ground solver picks the falsifying
+    // witness). A false top-level assertion makes the whole conjunction `unsat`,
+    // regardless of the other assertions — so a satisfiable `¬body[c⃗]` transfers
+    // soundly to `Unsat` for the original query. This is **exact** for the closed
+    // universal (a closed sentence has no other truth value) and **terminates** in
+    // a single bounded quantifier-free `check_auto` call (no fixpoint, no growth).
+    // The valid direction (`¬body[c⃗]` unsat ⇒ the universal is `true`) is already
+    // handled upstream by `quant_valid_universal::eliminate_valid_universals`, so
+    // only the refuting direction is taken here; anything but a definite `Sat`
+    // (including a `check_auto` `unknown` on a hard body) declines and falls
+    // through to the e-matching loop, never a wrong verdict.
+    for &quantifier in &foralls {
+        if let Some(CheckResult::Unsat) = refute_closed_universal(arena, quantifier, config)? {
+            return Ok(CheckResult::Unsat);
+        }
+    }
+
     // Honor the wall-clock budget + a deterministic ground-size cap so an exploding
     // instantiation degrades to a graceful `unknown`, never spins (the "never hang" rule).
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
@@ -290,6 +322,90 @@ fn as_forall(arena: &TermArena, term: TermId) -> Option<(SymbolId, TermId)> {
         }
         _ => None,
     }
+}
+
+/// Refutes a **closed** top-level universal `∀x⃗. body` by falsifying its body.
+///
+/// Returns `Ok(Some(Unsat))` when `forall_term` is a closed universal (a
+/// quantifier-free body mentioning no symbol outside its own bound variables) and
+/// `¬body[x⃗ := c⃗]` is satisfiable for fresh constants `c⃗` — a witness that the
+/// closed sentence `∀x⃗. body` is *false*, hence the whole query is `unsat`.
+/// Returns `Ok(None)` when the shape does not apply (not a universal, an open or
+/// still-quantified body) or the falsification sub-check is not a definite `Sat`
+/// (`unsat` ⇒ the universal is valid, already handled upstream; `unknown` ⇒ decline
+/// so the e-matching loop still runs). Never returns a non-`Unsat` `CheckResult`.
+///
+/// # Errors
+///
+/// Propagates any [`SolverError`] from the ground [`check_auto`] sub-check.
+fn refute_closed_universal(
+    arena: &mut TermArena,
+    forall_term: TermId,
+    config: &SolverConfig,
+) -> Result<Option<CheckResult>, SolverError> {
+    let (vars, body) = peel_foralls(arena, forall_term);
+    if vars.is_empty() {
+        return Ok(None);
+    }
+    let bound: HashSet<SymbolId> = vars.iter().copied().collect();
+    // Only a *closed* quantifier-free body is a sentence we can falsify exactly.
+    if !body_is_closed_qf(arena, body, &bound) {
+        return Ok(None);
+    }
+    // Substitute each bound variable with a fresh Herbrand constant of its sort, so
+    // the ground solver is free to pick the falsifying witness.
+    let mut map: HashMap<TermId, TermId> = HashMap::new();
+    for &v in &vars {
+        let sort = arena.symbol(v).1;
+        let fresh = arena
+            .declare(&format!("!cu_{}", v.index()), sort)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        let var = arena.var(v);
+        let fresh_term = arena.var(fresh);
+        map.insert(var, fresh_term);
+    }
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    let instance = replace_subterms(arena, body, &map, &mut memo)
+        .map_err(|e| SolverError::Backend(e.to_string()))?;
+    let negated = arena
+        .not(instance)
+        .map_err(|e| SolverError::Backend(e.to_string()))?;
+    // `¬body[c⃗]` satisfiable ⇒ `∃x⃗. ¬body` ⇒ `∀x⃗. body` is false ⇒ query unsat.
+    match check_auto(arena, &[negated], config)? {
+        CheckResult::Sat(_) => Ok(Some(CheckResult::Unsat)),
+        _ => Ok(None),
+    }
+}
+
+/// Whether `term` is quantifier-free and every symbol it mentions is in `bound`
+/// (so the universal it bodies is a closed sentence over exactly `bound`).
+fn body_is_closed_qf(arena: &TermArena, term: TermId, bound: &HashSet<SymbolId>) -> bool {
+    let mut seen: HashSet<TermId> = HashSet::new();
+    let mut stack = vec![term];
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        match arena.node(t) {
+            TermNode::Symbol(s) if !bound.contains(s) => {
+                return false; // a free symbol: not a closed sentence
+            }
+            TermNode::App { op, args } => {
+                // Reject anything carrying a *free* symbol the substitution cannot
+                // reach: an inner quantifier (not quantifier-free) or an
+                // uninterpreted-function application (its `FuncId` is a free symbol
+                // — `∀x. f(x)=c` is satisfiable, not a refutable closed sentence).
+                if matches!(op, Op::Forall(_) | Op::Exists(_) | Op::Apply(_)) {
+                    return false;
+                }
+                for &a in args {
+                    stack.push(a);
+                }
+            }
+            _ => {}
+        }
+    }
+    true
 }
 
 /// Infers a trigger: a set of function-application subterms whose bound variables
@@ -871,6 +987,87 @@ mod tests {
         let instances = instantiate_forall_via_egraph(&mut arena, &[ground0], forall);
         let want = arena.eq(gab, c).unwrap();
         assert_eq!(instances, vec![want], "x↦a, y↦b from the g(x,y) trigger");
+    }
+
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn closed_universal_with_no_trigger_is_refuted() {
+        // The measured qbv-simp shape: ∀A B C D. (A=B ∧ C=D) ∨ (A=C ∧ B=D).
+        // status unsat — the universal is *false* (A=0,B=1,C=0,D=0 falsifies it),
+        // but its body has no function-application trigger, so the e-matching loop
+        // alone returns `unknown`. Closed-universal falsification decides it.
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let mk = |arena: &mut TermArena, n: &str| {
+            let s = arena.declare(n, sort).unwrap();
+            (s, arena.var(s))
+        };
+        let (a, av) = mk(&mut arena, "A");
+        let (b, bv) = mk(&mut arena, "B");
+        let (c, cv) = mk(&mut arena, "C");
+        let (d, dv) = mk(&mut arena, "D");
+        let ab = arena.eq(av, bv).unwrap();
+        let cd = arena.eq(cv, dv).unwrap();
+        let ac = arena.eq(av, cv).unwrap();
+        let bd = arena.eq(bv, dv).unwrap();
+        let left = arena.and(ab, cd).unwrap();
+        let right = arena.and(ac, bd).unwrap();
+        let body = arena.or(left, right).unwrap();
+        // Bind innermost-first so the peeled prefix is [A, B, C, D].
+        let mut forall = arena.forall(d, body).unwrap();
+        forall = arena.forall(c, forall).unwrap();
+        forall = arena.forall(b, forall).unwrap();
+        forall = arena.forall(a, forall).unwrap();
+
+        let result =
+            prove_quantified_unsat_via_egraph(&mut arena, &[forall], &SolverConfig::default())
+                .unwrap();
+        assert_eq!(
+            result,
+            CheckResult::Unsat,
+            "a false closed universal with no trigger must be refuted"
+        );
+    }
+
+    #[test]
+    fn valid_closed_universal_is_not_refuted() {
+        // ∀x. (x = x): valid (true), must NOT be reported unsat. The falsification
+        // sub-check `¬(x=x)` is unsat, so the lever declines and the loop reaches
+        // its own (non-unsat) verdict.
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let x = arena.declare("x", sort).unwrap();
+        let xv = arena.var(x);
+        let body = arena.eq(xv, xv).unwrap();
+        let forall = arena.forall(x, body).unwrap();
+        let result =
+            prove_quantified_unsat_via_egraph(&mut arena, &[forall], &SolverConfig::default())
+                .unwrap();
+        assert_ne!(
+            result,
+            CheckResult::Unsat,
+            "a valid closed universal must never be refuted"
+        );
+    }
+
+    #[test]
+    fn open_universal_is_not_treated_as_closed() {
+        // ∀x. (f x) = c has a free function symbol `f` — it is NOT a closed
+        // sentence, so `body_is_closed_qf` rejects it and the falsification lever
+        // does not fire (the e-matching path owns it).
+        let mut arena = TermArena::new();
+        let sort = Sort::BitVec(8);
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let c = arena.bv_const(8, 5).unwrap();
+        let x = arena.declare("x", sort).unwrap();
+        let xv = arena.var(x);
+        let fx = arena.apply(f, &[xv]).unwrap();
+        let body = arena.eq(fx, c).unwrap();
+        let bound: HashSet<SymbolId> = std::iter::once(x).collect();
+        assert!(
+            !body_is_closed_qf(&arena, body, &bound),
+            "a body mentioning a free function symbol is not closed"
+        );
     }
 
     #[test]

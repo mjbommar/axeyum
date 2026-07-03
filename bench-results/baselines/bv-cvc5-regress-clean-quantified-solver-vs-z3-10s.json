@@ -46,7 +46,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.031136999999999998
+        "solve_ms": 0.042799000000000004
       },
       "dag_nodes": 6,
       "detail": "term #4 uses unsupported pure-Rust BV operator Exists(SymbolId(0))",
@@ -108,7 +108,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.017617999999999998
+        "solve_ms": 0.020186999999999997
       },
       "dag_nodes": 19,
       "detail": "term #17 uses unsupported pure-Rust BV operator Forall(SymbolId(3))",
@@ -170,7 +170,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.018456
+        "solve_ms": 0.020467
       },
       "dag_nodes": 20,
       "detail": "term #20 uses unsupported pure-Rust BV operator Exists(SymbolId(1))",
@@ -232,7 +232,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 10.166174
+        "solve_ms": 10.62047
       },
       "dag_nodes": 8,
       "distinct_symbols": 3,
@@ -246,14 +246,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 11,
+          "solve_ms": 26,
           "verdict": "sat"
         }
       },
@@ -305,7 +305,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.445164
+        "solve_ms": 0.485469
       },
       "dag_nodes": 10,
       "distinct_symbols": 4,
@@ -319,14 +319,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 11,
+          "solve_ms": 9,
           "verdict": "sat"
         }
       },
@@ -378,21 +378,32 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 136.44878599999998
+        "solve_ms": 137.078789
       },
       "dag_nodes": 15,
-      "detail": "Incomplete: instantiation is satisfiable; the universal may still be violated outside the instantiated terms",
       "distinct_symbols": 4,
       "expected": "unsat",
       "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__qbv-simp.smt2",
       "max_depth": 8,
       "model_lift_ms": 0,
       "oracle": {
-        "backend_kind": "z3",
+        "backend_kind": "z3-binary",
+        "backend_stats": {},
+        "decision_agrees": true,
+        "decision_compared": true,
         "enabled": true,
-        "skipped": "primary-outcome-unknown"
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
+        "model_lift_ms": 0,
+        "outcome": "unsat",
+        "solve_ms": 0,
+        "translate_ms": 0,
+        "z3_binary": {
+          "raw": "unsat",
+          "solve_ms": 9,
+          "verdict": "unsat"
+        }
       },
-      "outcome": "unknown",
+      "outcome": "unsat",
       "query_plan": {
         "cache_key": {
           "assertions": 1,
@@ -430,17 +441,17 @@
         "output_distinct_symbols": 4,
         "output_max_depth": 8,
         "output_tree_nodes": 19,
-        "rewritten_outcome": "unknown",
+        "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 136,
+      "solve_ms": 137,
       "translate_ms": 0,
       "tree_nodes": 19
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 10.945161
+        "solve_ms": 10.244126
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -454,14 +465,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "unsat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 11,
+          "solve_ms": 27,
           "verdict": "unsat"
         }
       },
@@ -513,7 +524,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 9.021854
+        "solve_ms": 12.16503
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -527,14 +538,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -579,14 +590,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 9,
+      "solve_ms": 12,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 9.929469999999998
+        "solve_ms": 14.492278
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -600,14 +611,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 12,
           "verdict": "sat"
         }
       },
@@ -652,14 +663,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 9,
+      "solve_ms": 14,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 8.549731
+        "solve_ms": 9.824792
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -673,14 +684,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "unsat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 11,
+          "solve_ms": 10,
           "verdict": "unsat"
         }
       },
@@ -725,14 +736,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 8,
+      "solve_ms": 9,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 7.112187
+        "solve_ms": 8.886249000000001
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -746,14 +757,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 11,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -798,14 +809,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 7,
+      "solve_ms": 8,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 9.057215000000001
+        "solve_ms": 10.621571
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -819,7 +830,7 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
@@ -871,14 +882,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 9,
+      "solve_ms": 10,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 10.615813
+        "solve_ms": 10.994785
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -892,14 +903,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 11,
+          "solve_ms": 14,
           "verdict": "sat"
         }
       },
@@ -951,7 +962,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 8.722384
+        "solve_ms": 8.792539999999999
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -965,14 +976,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 28,
           "verdict": "sat"
         }
       },
@@ -1024,7 +1035,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 7.823008
+        "solve_ms": 10.824373
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -1038,14 +1049,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 11,
+          "solve_ms": 16,
           "verdict": "sat"
         }
       },
@@ -1090,14 +1101,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 7,
+      "solve_ms": 10,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 8.625978
+        "solve_ms": 9.666587000000002
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -1111,14 +1122,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 11,
           "verdict": "sat"
         }
       },
@@ -1163,14 +1174,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 8,
+      "solve_ms": 9,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 9.088311
+        "solve_ms": 10.7765
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -1184,14 +1195,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 11,
+          "solve_ms": 12,
           "verdict": "sat"
         }
       },
@@ -1236,14 +1247,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 9,
+      "solve_ms": 10,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 10.275001000000001
+        "solve_ms": 16.837606
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -1257,14 +1268,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 11,
           "verdict": "sat"
         }
       },
@@ -1309,14 +1320,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 10,
+      "solve_ms": 16,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 8.374055
+        "solve_ms": 8.22367
       },
       "dag_nodes": 5,
       "distinct_symbols": 2,
@@ -1330,14 +1341,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 12,
+          "solve_ms": 9,
           "verdict": "sat"
         }
       },
@@ -1389,7 +1400,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 8.499509
+        "solve_ms": 11.771761
       },
       "dag_nodes": 7,
       "distinct_symbols": 2,
@@ -1403,14 +1414,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "unsat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 90,
+          "solve_ms": 102,
           "verdict": "unsat"
         }
       },
@@ -1455,14 +1466,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 8,
+      "solve_ms": 11,
       "translate_ms": 0,
       "tree_nodes": 9
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 7.4244330000000005
+        "solve_ms": 10.226696
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -1476,14 +1487,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "unsat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 11,
+          "solve_ms": 14,
           "verdict": "unsat"
         }
       },
@@ -1528,14 +1539,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 7,
+      "solve_ms": 10,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 8.776226
+        "solve_ms": 10.762913000000001
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -1549,14 +1560,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 14,
           "verdict": "sat"
         }
       },
@@ -1601,14 +1612,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 8,
+      "solve_ms": 10,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 7.978436
+        "solve_ms": 13.206906
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -1622,14 +1633,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "unsat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 13,
+          "solve_ms": 12,
           "verdict": "unsat"
         }
       },
@@ -1674,14 +1685,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 7,
+      "solve_ms": 13,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 9.864424999999999
+        "solve_ms": 12.450545
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -1695,14 +1706,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 8,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -1747,14 +1758,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 9,
+      "solve_ms": 12,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 8.939434
+        "solve_ms": 9.541144999999998
       },
       "dag_nodes": 6,
       "distinct_symbols": 2,
@@ -1768,14 +1779,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 13,
+          "solve_ms": 11,
           "verdict": "sat"
         }
       },
@@ -1820,14 +1831,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 8,
+      "solve_ms": 9,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.021549
+        "solve_ms": 0.02719
       },
       "dag_nodes": 5,
       "detail": "term #3 uses unsupported pure-Rust BV operator Exists(SymbolId(0))",
@@ -1889,7 +1900,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.007214
+        "solve_ms": 0.007602
       },
       "dag_nodes": 7,
       "detail": "term #5 uses unsupported pure-Rust BV operator Exists(SymbolId(0))",
@@ -1951,7 +1962,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 4401.886339
+        "solve_ms": 4453.693226
       },
       "dag_nodes": 3317,
       "detail": "Incomplete: query has quantifiers instantiation does not reach (nested, existential, or non-top-level)",
@@ -2006,14 +2017,14 @@
         "rewritten_outcome": "unknown",
         "rule_counts": {}
       },
-      "solve_ms": 4401,
+      "solve_ms": 4453,
       "translate_ms": 0,
       "tree_nodes": 5760
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.049611
+        "solve_ms": 0.056864000000000005
       },
       "dag_nodes": 70,
       "detail": "term #68 uses unsupported pure-Rust BV operator Exists(SymbolId(13))",
@@ -2075,7 +2086,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.104417
+        "solve_ms": 0.078492
       },
       "dag_nodes": 5,
       "detail": "Incomplete: query has quantifiers instantiation does not reach (nested, existential, or non-top-level)",
@@ -2137,7 +2148,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.12246499999999999
+        "solve_ms": 0.13933700000000002
       },
       "dag_nodes": 24,
       "detail": "Incomplete: query has quantifiers instantiation does not reach (nested, existential, or non-top-level)",
@@ -2199,7 +2210,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.115955
+        "solve_ms": 0.115654
       },
       "dag_nodes": 66,
       "detail": "Incomplete: query has quantifiers instantiation does not reach (nested, existential, or non-top-level)",
@@ -2261,7 +2272,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 0.028006
+        "solve_ms": 0.033919
       },
       "dag_nodes": 32,
       "detail": "term #17 uses unsupported pure-Rust BV operator Exists(SymbolId(3))",
@@ -2323,7 +2334,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.120104
+        "solve_ms": 0.127386
       },
       "dag_nodes": 147,
       "detail": "term #121 uses unsupported pure-Rust BV operator Forall(SymbolId(14))",
@@ -2385,7 +2396,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 0.170904
+        "solve_ms": 0.184178
       },
       "dag_nodes": 217,
       "detail": "term #155 uses unsupported pure-Rust BV operator Forall(SymbolId(27))",
@@ -2447,7 +2458,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 19.027804999999997
+        "solve_ms": 19.288866000000002
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -2461,14 +2472,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 12,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -2520,7 +2531,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 493.348774
+        "solve_ms": 531.759396
       },
       "dag_nodes": 17,
       "distinct_symbols": 3,
@@ -2534,14 +2545,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 64,
+          "solve_ms": 67,
           "verdict": "sat"
         }
       },
@@ -2586,14 +2597,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 493,
+      "solve_ms": 531,
       "translate_ms": 0,
       "tree_nodes": 19
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 1.1897229999999999
+        "solve_ms": 1.364714
       },
       "dag_nodes": 43,
       "distinct_symbols": 5,
@@ -2607,14 +2618,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 12,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -2666,7 +2677,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 10.273828
+        "solve_ms": 11.282598
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -2680,14 +2691,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 14,
+          "solve_ms": 9,
           "verdict": "sat"
         }
       },
@@ -2732,14 +2743,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 10,
+      "solve_ms": 11,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 7.921361
+        "solve_ms": 11.00236
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -2753,14 +2764,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 12,
           "verdict": "sat"
         }
       },
@@ -2805,14 +2816,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 7,
+      "solve_ms": 11,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 7.8382060000000005
+        "solve_ms": 8.396548000000001
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -2826,7 +2837,7 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
@@ -2878,14 +2889,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 7,
+      "solve_ms": 8,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 10.799526
+        "solve_ms": 11.125273
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -2899,14 +2910,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 12,
+          "solve_ms": 10,
           "verdict": "sat"
         }
       },
@@ -2951,14 +2962,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 10,
+      "solve_ms": 11,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 20.326685
+        "solve_ms": 20.66684
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -2972,7 +2983,7 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
@@ -3031,7 +3042,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 54.030138
+        "solve_ms": 55.512240999999996
       },
       "dag_nodes": 15,
       "distinct_symbols": 3,
@@ -3045,14 +3056,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "unsat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 14,
+          "solve_ms": 15,
           "verdict": "unsat"
         }
       },
@@ -3097,14 +3108,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 54,
+      "solve_ms": 55,
       "translate_ms": 0,
       "tree_nodes": 20
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 56.467998
+        "solve_ms": 56.440137
       },
       "dag_nodes": 16,
       "distinct_symbols": 3,
@@ -3118,14 +3129,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 11,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -3177,7 +3188,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 16.879053000000003
+        "solve_ms": 17.368721999999998
       },
       "dag_nodes": 15,
       "distinct_symbols": 3,
@@ -3191,7 +3202,7 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "unsat",
         "solve_ms": 0,
@@ -3243,14 +3254,14 @@
         "rewritten_outcome": "unsat",
         "rule_counts": {}
       },
-      "solve_ms": 16,
+      "solve_ms": 17,
       "translate_ms": 0,
       "tree_nodes": 20
     },
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 18.962139
+        "solve_ms": 22.806313000000003
       },
       "dag_nodes": 16,
       "distinct_symbols": 3,
@@ -3264,14 +3275,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -3316,14 +3327,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 18,
+      "solve_ms": 22,
       "translate_ms": 0,
       "tree_nodes": 21
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 24.110488
+        "solve_ms": 27.46642
       },
       "dag_nodes": 6,
       "distinct_symbols": 3,
@@ -3337,14 +3348,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 13,
           "verdict": "sat"
         }
       },
@@ -3389,14 +3400,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 24,
+      "solve_ms": 27,
       "translate_ms": 0,
       "tree_nodes": 6
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 31.318752
+        "solve_ms": 35.508302
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -3410,14 +3421,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 10,
+          "solve_ms": 11,
           "verdict": "sat"
         }
       },
@@ -3462,14 +3473,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 31,
+      "solve_ms": 35,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 1.5901649999999998
+        "solve_ms": 2.509243
       },
       "dag_nodes": 7,
       "distinct_symbols": 3,
@@ -3483,14 +3494,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "sat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "sat",
-          "solve_ms": 9,
+          "solve_ms": 11,
           "verdict": "sat"
         }
       },
@@ -3535,14 +3546,14 @@
         "rewritten_outcome": "sat",
         "rule_counts": {}
       },
-      "solve_ms": 1,
+      "solve_ms": 2,
       "translate_ms": 0,
       "tree_nodes": 7
     },
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.22262700000000002
+        "solve_ms": 0.250733
       },
       "dag_nodes": 235,
       "detail": "Incomplete: query has quantifiers instantiation does not reach (nested, existential, or non-top-level)",
@@ -3604,7 +3615,7 @@
     {
       "assertions": 2,
       "backend_stats": {
-        "solve_ms": 0.404512
+        "solve_ms": 0.399644
       },
       "dag_nodes": 37,
       "detail": "term #35 uses unsupported pure-Rust BV operator Forall(SymbolId(6))",
@@ -3666,7 +3677,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 2.5811290000000002
+        "solve_ms": 2.561921
       },
       "dag_nodes": 11,
       "distinct_symbols": 3,
@@ -3680,14 +3691,14 @@
         "decision_agrees": true,
         "decision_compared": true,
         "enabled": true,
-        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, or floating point yet",
+        "in_repo_z3_detail": "z3 oracle does not support uninterpreted functions, integer/real arithmetic, datatypes, quantifiers, floating point, or sequences yet",
         "model_lift_ms": 0,
         "outcome": "unsat",
         "solve_ms": 0,
         "translate_ms": 0,
         "z3_binary": {
           "raw": "unsat",
-          "solve_ms": 13,
+          "solve_ms": 12,
           "verdict": "unsat"
         }
       },
@@ -3739,7 +3750,7 @@
     {
       "assertions": 1,
       "backend_stats": {
-        "solve_ms": 0.085492
+        "solve_ms": 0.090555
       },
       "dag_nodes": 88,
       "detail": "term #86 uses unsupported pure-Rust BV operator Exists(SymbolId(11))",
@@ -3800,9 +3811,9 @@
     }
   ],
   "summary": {
-    "agree": 37,
+    "agree": 38,
     "blocker_buckets": {
-      "unknown:Incomplete": 6,
+      "unknown:Incomplete": 5,
       "unsupported": 11
     },
     "disagree": 0,
@@ -3811,14 +3822,14 @@
     "layer_attribution": null,
     "model_replay_failures": 0,
     "oracle": {
-      "agree": 37,
+      "agree": 38,
       "backend": "z3 4.13.3.0",
-      "compared": 37,
+      "compared": 38,
       "disagree": 0,
       "enabled": true,
-      "skipped": 17
+      "skipped": 16
     },
-    "par2_mean_s": 7.929230226488372,
+    "par2_mean_s": 7.46961755104651,
     "query_plan": {
       "original_dag_nodes": 4642,
       "original_tree_nodes": 7651,
@@ -3840,8 +3851,8 @@
       "sat_unsat_conflicts": 0
     },
     "sat": 29,
-    "unknown": 6,
-    "unsat": 8,
+    "unknown": 5,
+    "unsat": 9,
     "unsupported": 11
   },
   "triage": {
