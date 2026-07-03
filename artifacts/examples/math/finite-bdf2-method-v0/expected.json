@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-bdf2-method-v0",
+  "witnesses": [
+    {
+      "id": "linear-decay-bdf2-trace",
+      "description": "Exact rational two-step BDF2 replay for y' = -y, y(0) = 1, h = 1/2, with a backward-Euler starter value.",
+      "values": {
+        "ode": "y_prime_equals_minus_y",
+        "method": "implicit_two_step_bdf2",
+        "step": "1/2",
+        "times": ["0", "1/2", "1", "3/2"],
+        "states": ["1", "2/3", "5/12", "1/4"],
+        "derivatives": ["-1", "-2/3", "-5/12", "-1/4"],
+        "endpoint_derivatives": ["-5/12", "-1/4"],
+        "implicit_residuals": ["0", "0"],
+        "starter_source": "backward_euler_single_step",
+        "starter_implicit_residual": "0",
+        "lower_bound": "0",
+        "upper_bound": "1",
+        "monotonicity": "strictly_decreasing"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "bdf2-history-witness",
+      "claim": "The listed starter value, history states, endpoint derivatives, and BDF2 residuals are correct for y' = -y with h = 1/2.",
+      "expected_result": "sat",
+      "validation": "exact_rational_bdf2_history_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["linear-decay-bdf2-trace"],
+      "notes": "The validator recomputes the backward-Euler starter value, derivative history, endpoint derivatives, and BDF2 implicit residuals for every listed multistep update."
+    },
+    {
+      "id": "bdf2-monotone-decay-witness",
+      "claim": "The finite BDF2 trace stays inside [0,1] and is strictly decreasing at the listed grid points.",
+      "expected_result": "sat",
+      "validation": "exact_rational_bdf2_decay_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["linear-decay-bdf2-trace"],
+      "notes": "The validator checks only the finite listed trace; this is not a BDF2 stability or convergence theorem."
+    },
+    {
+      "id": "bad-bdf2-step-rejected",
+      "claim": "For y' = -y, h = 1/2, y_0 = 1, y_1 = 2/3, the first BDF2 multistep update gives 1/3.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_bdf2_step_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "linear-decay-bdf2-trace",
+        "step_index": 1,
+        "previous_time": "0",
+        "previous_state": "1",
+        "time": "1/2",
+        "state": "2/3",
+        "endpoint_time": "1",
+        "endpoint_derivative": "-5/12",
+        "step": "1/2",
+        "bdf2_left_side": "-5/12",
+        "bdf2_right_side": "-5/12",
+        "computed_next_state": "5/12",
+        "claimed_next_state": "1/3",
+        "next_state_gap": "1/12"
+      },
+      "notes": "Exact replay computes the first BDF2 multistep next state as 5/12, so the claimed value 1/3 is rejected; the separate qf-lra-bad-bdf2-step row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-bdf2-step",
+      "claim": "The fixed malformed BDF2 next-state claim is linearly inconsistent.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "linear-decay-bdf2-trace",
+        "source_replay_row": "bad-bdf2-step-rejected",
+        "computed_next_state": "5/12",
+        "claimed_next_state": "1/3",
+        "farkas_conflict": "bdf2_next_state = 5/12 and bdf2_next_state = 1/3",
+        "smt2_artifact": "artifacts/examples/math/finite-bdf2-method-v0/smt2/bad-bdf2-step-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_bdf2_bad_step_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes the first BDF2 multistep next state as 5/12, while the malformed row claims 1/3; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-bdf2-theory-lean-horizon",
+      "claim": "General BDF2 order, consistency, zero-stability, convergence, history initialization, variable-step behavior, and floating-point time-stepping correctness require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For BDF2 and implicit linear multistep methods, prove order conditions, consistency, zero-stability, convergence, history initialization requirements, and method-specific hypotheses separately from finite replay rows.",
+        "future_checker": "Lean theorem statements for exact BDF2 theory plus separate numerical-honesty or QF_FP artifacts for floating-point and variable-step implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational BDF2 trace, not a theorem about arbitrary ODEs, multistep stability, variable-step solvers, or floating-point implementations."
+    }
+  ]
+}

@@ -240,6 +240,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite BDF2 method resource landed.**
+  `finite-bdf2-method-v0` now gives the differential-equations,
+  numerical-analysis, and real-analysis lanes a compact exact implicit
+  two-step multistep example: it checks `y' = -y`, `y(0)=1`, step size
+  `h=1/2`, times `[0, 1/2, 1, 3/2]`, backward-Euler starter `y_1=2/3`,
+  states `[1, 2/3, 5/12, 1/4]`, derivatives
+  `[-1, -2/3, -5/12, -1/4]`, endpoint derivatives `[-5/12, -1/4]`, zero
+  implicit residuals, and strict finite monotone decay. It then rejects the
+  malformed first multistep claim `1/3` versus exact `5/12` through a
+  source-linked QF_LRA/Farkas row. The focused learner page, dynamics and
+  analysis/numerical query guides, finite dynamics/time-stepping bridge,
+  validator, resource smoke queries, and `math_resource_lra_routes` regression
+  keep this fixed exact implicit multistep replay separate from general BDF2
+  order, convergence, zero-stability, nonlinear endpoint-solve correctness,
+  variable-step correctness, floating-point time-stepping, and PDE theory. The
+  public summary now reports 122 concept rows, 146 packs, 955 expected checks,
+  372 checked rows, 474 replay-only rows, 109 Lean-horizon rows, and 146
+  promoted solver-reuse packs.
 - **Finite Adams-Bashforth method resource landed.**
   `finite-adams-bashforth-method-v0` now gives the differential-equations,
   numerical-analysis, and real-analysis lanes a compact exact explicit
@@ -253,9 +271,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   smoke queries, and `math_resource_lra_routes` regression keep this fixed
   exact multistep replay separate from general Adams-Bashforth order,
   convergence, stability regions, variable-step correctness, floating-point
-  time-stepping, and PDE theory. The public summary now reports 122 concept
-  rows, 145 packs, 950 expected checks, 371 checked rows, 471 replay-only rows,
-  108 Lean-horizon rows, and 145 promoted solver-reuse packs.
+  time-stepping, and PDE theory. After that increment, the public summary
+  reported 122 concept rows, 145 packs, 950 expected checks, 371 checked rows,
+  471 replay-only rows, 108 Lean-horizon rows, and 145 promoted solver-reuse
+  packs.
 - **Finite Crank-Nicolson method resource landed.**
   `finite-crank-nicolson-method-v0` now gives the differential-equations,
   numerical-analysis, and real-analysis lanes a compact exact implicit

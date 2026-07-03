@@ -64,15 +64,15 @@ The current committed data boundary reports:
 - 18 math-field concept rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 145 non-template math example packs.
-- 950 expected checks.
-- 371 checked proof/evidence rows.
-- 471 replay-only rows.
-- 108 Lean-horizon rows.
-- 145 promoted solver-reuse packs.
+- 146 non-template math example packs.
+- 955 expected checks.
+- 372 checked proof/evidence rows.
+- 474 replay-only rows.
+- 109 Lean-horizon rows.
+- 146 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 145 focused learner-linked packs, with no path-only, index-only, or missing
+- 146 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2620,6 +2620,16 @@ Pick one item per commit unless the change is purely navigational.
      regression against exact `1` without claiming general Adams-Bashforth
      order, convergence, stability regions, variable-step correctness,
      floating-point stability, or PDE theory.
+192. Landed: add `finite-bdf2-method-v0` as an exact finite implicit multistep
+     time-stepping resource. The pack computes `y' = -y` from `y(0)=1` with
+     `h=1/2` and backward-Euler starter `y_1=2/3`, records BDF2 states
+     `[1, 2/3, 5/12, 1/4]`, endpoint derivatives `[-5/12, -1/4]`, zero
+     implicit residuals, and strict finite monotone decay, then promotes the
+     malformed first-multistep claim `1/3` through a source-linked
+     QF_LRA/Farkas regression against exact `5/12` without claiming general
+     BDF2 order, convergence, zero-stability, variable-step correctness,
+     floating-point stability, nonlinear endpoint-solve correctness, or PDE
+     theory.
 
 ## Validation Checklist
 

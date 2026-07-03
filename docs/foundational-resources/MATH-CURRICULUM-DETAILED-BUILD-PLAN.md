@@ -62,15 +62,15 @@ The committed resource query currently reports:
 - 18 field rows.
 - 76 bridge-concept rows.
 - 5 example-family rows.
-- 145 non-template math packs.
-- 950 expected checks.
-- 371 checked proof/evidence rows.
-- 471 replay-only rows.
-- 108 Lean-horizon rows.
-- 145 promoted solver-reuse packs.
+- 146 non-template math packs.
+- 955 expected checks.
+- 372 checked proof/evidence rows.
+- 474 replay-only rows.
+- 109 Lean-horizon rows.
+- 146 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 145 focused learner-linked packs, with no path-only, index-only, or missing
+- 146 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 145 current non-template packs satisfy the focused-lesson side of this
+all 146 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -260,8 +260,8 @@ Exit criteria:
 | `probability_theory` | finite probability, kernels, Markov chains, martingales, hitting times, concentration | standalone finite probability mass-table lesson landed; keep table rows exact and route bad rows through LRA/LIA | QF_LRA/Farkas, QF_LIA, finite replay |
 | `statistics` | descriptive stats, exact tests, regression, finite count tables | distinguish exact finite tests from numerical/statistical inference | QF_LIA, QF_LRA/Farkas, replay |
 | `optimization_and_convexity` | LP/Farkas, convexity, least squares, Hessians, root-finding steps, separation rows, KKT rows, active-set QP rows, SDP rows, gradient-descent rows, line-search rows, Wolfe line-search rows, projected-gradient rows, proximal-gradient rows | LP objective/Farkas, rational convexity/gradient bridge rows with checked bad midpoint and affine-threshold evidence, finite root-finding step and bisection-width replay, finite hyperplane-separation replay, finite KKT replay with checked bad stationarity and complementarity evidence, finite active-set QP face/slack replay with checked bad free-gradient, bad inactive-slack, and bad degenerate-multiplier rows, finite degenerate active-bound replay, finite SDP primal/dual replay with checked bad objective, bad duality-gap, and bad slack-entry rows, finite gradient-descent replay with checked bad decrease, bad step-coordinate, and bad descent-bound rows, finite Armijo line-search replay with checked bad Armijo, bad descent-direction, and bad accepted-candidate rows, finite Wolfe line-search replay with checked bad minimizer, bad sufficient-decrease, and bad curvature rows, finite projected-gradient interval/decrease replay with checked bad projection and bad projected-decrease rows, finite proximal soft-threshold/composite-decrease replay, and finite box-plus-L1 proximal replay landed with checked bad proximal-point, bad composite-decrease, and bad box-proximal-point rows; add only distinct duality, working-set pivots, higher-dimensional SDP, strong-Wolfe/nonconvex line-search, group-lasso, active-set proximal, or stochastic/convergence pressure next | QF_LRA/Farkas, QF_NRA shadows |
-| `numerical_analysis` | residuals, Euler steps, implicit time-stepping, Adams-Bashforth multistep replay, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | maintain landed finite dynamics/Euler bridge and keep numerical-honesty rows distinct from promoted exact residual/error certificates; finite recurrence-prefix, finite Euler, finite Backward Euler, finite Crank-Nicolson, finite Adams-Bashforth, and bounded dynamics now keep malformed source claims as replay-only rows with separate checked `qf-lra-*` Farkas proof rows; finite line-search and finite Wolfe now check descent-direction, accepted-candidate, exact-minimizer, sufficient-decrease, and curvature arithmetic conflicts, and finite proximal-gradient now checks false composite-decrease arithmetic | QF_LRA/Farkas, replay, Lean horizon |
-| `differential_equations_and_dynamical_systems` | bounded recurrences, explicit Euler traces, implicit Backward Euler traces, implicit Crank-Nicolson traces, and Adams-Bashforth derivative-history traces | maintain landed finite dynamics/Euler and bounded-family/asymptotic-boundary bridges; finite Euler, finite Backward Euler, finite Crank-Nicolson, and finite Adams-Bashforth now separate replay-only bad finite-error/fixed-step rows from explicit `qf-lra-*` Farkas proof rows; bounded dynamics now also separates replay-only bad transition-step, bad threshold-step, and bad invariant-bound rows from explicit `qf-lra-*` Farkas proof rows; add only distinct transition, reachability, invariant, stochastic, finite-error, implicit-solve, multistep-history, or theorem-boundary pressure | QF_LRA/Farkas, replay, Lean horizon |
+| `numerical_analysis` | residuals, Euler steps, implicit time-stepping, Adams-Bashforth and BDF2 multistep replay, exact error recurrences, matrix algorithms, root-finding, active-set QP, gradient-descent, Armijo/Wolfe line-search, projected-gradient, and proximal-gradient iterations | maintain landed finite dynamics/Euler bridge and keep numerical-honesty rows distinct from promoted exact residual/error certificates; finite recurrence-prefix, finite Euler, finite Backward Euler, finite Crank-Nicolson, finite Adams-Bashforth, finite BDF2, and bounded dynamics now keep malformed source claims as replay-only rows with separate checked `qf-lra-*` Farkas proof rows; finite line-search and finite Wolfe now check descent-direction, accepted-candidate, exact-minimizer, sufficient-decrease, and curvature arithmetic conflicts, and finite proximal-gradient now checks false composite-decrease arithmetic | QF_LRA/Farkas, replay, Lean horizon |
+| `differential_equations_and_dynamical_systems` | bounded recurrences, explicit Euler traces, implicit Backward Euler traces, implicit Crank-Nicolson traces, Adams-Bashforth derivative-history traces, and BDF2 implicit-history traces | maintain landed finite dynamics/Euler and bounded-family/asymptotic-boundary bridges; finite Euler, finite Backward Euler, finite Crank-Nicolson, finite Adams-Bashforth, and finite BDF2 now separate replay-only bad finite-error/fixed-step rows from explicit `qf-lra-*` Farkas proof rows; bounded dynamics now also separates replay-only bad transition-step, bad threshold-step, and bad invariant-bound rows from explicit `qf-lra-*` Farkas proof rows; add only distinct transition, reachability, invariant, stochastic, finite-error, implicit-solve, multistep-history, or theorem-boundary pressure | QF_LRA/Farkas, replay, Lean horizon |
 | `geometry` | coordinate, incidence, rigid-configuration, affine, orientation/area, circle, inversion, and cyclic rational geometry | maintain landed coordinate/oriented replay and finite circle/inversion/cyclic replay bridge rows; add only distinct nontrivial affine-coordinate, circle-line correspondence, higher-degree polynomial-geometry, or theorem-reconstruction pressure beyond the current midpoint-coordinate, affine collinearity-determinant, area-scaling, circle-line, square angle-dot, and Ptolemy rows | QF_LRA/Farkas, finite replay |
 | `functional_analysis_and_operator_theory` | finite operators, inner products, Chebyshev systems | finite-operator now keeps bad `l1` norm, bad operator-bound, and bad Chebyshev-prefix rows as exact replay, with separate checked `qf-lra-*` Farkas rows; inner-product now has checked bad negative-norm and projection-orthogonality rows; finite-Chebyshev now keeps duplicate-node, bad-interpolation, and bad-alternation source rows as exact replay with separate checked `qf-lra-*` Farkas rows; add only distinct norm, projection, recurrence, alternation variants, or finite-dimensional operator pressure | QF_LRA/Farkas, replay, Lean horizon |
 
@@ -2649,6 +2649,16 @@ Pick one row per commit unless the change is purely navigational.
      pages keep this finite exact multistep shadow separate from general
      Adams-Bashforth order, convergence, stability, variable-step,
      floating-point, and PDE theory.
+304. Landed: add `finite-bdf2-method-v0` as an exact finite implicit two-step
+     BDF2 resource. The pack replays `y' = -y`, `y(0)=1`, `h=1/2`,
+     backward-Euler starter `y_1=2/3`, endpoint derivatives
+     `[-5/12, -1/4]`, zero implicit residuals, exact states
+     `[1, 2/3, 5/12, 1/4]`, and strict finite monotone decay, then adds
+     `qf-lra-bad-bdf2-step` as the source-linked Farkas row for the false
+     first multistep claim `1/3` versus exact `5/12`. The learner and query
+     pages keep this finite exact implicit-multistep shadow separate from
+     general BDF2 order, convergence, zero-stability, nonlinear solve,
+     variable-step, floating-point, and PDE theory.
 
 ## Validation Checklist
 

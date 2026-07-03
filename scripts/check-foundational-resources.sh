@@ -236,6 +236,7 @@ python3 scripts/query-foundational-resources.py concepts --field differential_eq
 python3 scripts/query-foundational-resources.py concepts --field differential_equations_and_dynamical_systems --text "backward Euler" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field differential_equations_and_dynamical_systems --text "Crank-Nicolson" --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field differential_equations_and_dynamical_systems --text "Adams-Bashforth" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field differential_equations_and_dynamical_systems --text BDF2 --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field differential_equations_and_dynamical_systems --text asymptotic --require-any >/dev/null
 python3 scripts/query-foundational-resources.py concepts --field differential_equations_and_dynamical_systems --text stochastic --require-any >/dev/null
 python3 scripts/query-foundational-resources.py packs --concept bridge_finite_dynamics_euler_replay --route Farkas --require-any >/dev/null
@@ -275,6 +276,10 @@ python3 scripts/query-foundational-resources.py checks --pack finite-adams-bashf
 python3 scripts/query-foundational-resources.py checks --pack finite-adams-bashforth-method-v0 --route Farkas --proof-status checked --text qf-lra-bad-adams-bashforth-step --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_finite_dynamics_euler_replay --pack finite-adams-bashforth-method-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-adams-bashforth-method-v0 --proof-status replay-only --text rejected --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-bdf2-method-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-bdf2-method-v0 --route Farkas --proof-status checked --text qf-lra-bad-bdf2-step --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_dynamics_euler_replay --pack finite-bdf2-method-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-bdf2-method-v0 --proof-status replay-only --text rejected --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text ODE --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-euler-method-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-runge-kutta-midpoint-v0 --proof-status lean-horizon --require-any >/dev/null
@@ -282,6 +287,7 @@ python3 scripts/query-foundational-resources.py checks --pack finite-heun-method
 python3 scripts/query-foundational-resources.py checks --pack finite-backward-euler-method-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-crank-nicolson-method-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-adams-bashforth-method-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-bdf2-method-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text martingale --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-martingales-v0 --proof-status lean-horizon --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-markov-chain-v0 --route Farkas --proof-status checked --require-any >/dev/null

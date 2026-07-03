@@ -32435,6 +32435,70 @@ def validate_adams_bashforth_trace(context: str, values: dict[str, Any]) -> dict
     }
 
 
+def validate_bdf2_trace(context: str, values: dict[str, Any]) -> dict[str, Any]:
+    ode = require_euler_ode(f"{context}.ode", values.get("ode"))
+    method = values.get("method")
+    require_string(f"{context}.method", method)
+    if method != "implicit_two_step_bdf2":
+        fail(f"{context}.method must be implicit_two_step_bdf2")
+    step = require_fraction(f"{context}.step", values.get("step"))
+    times = require_fraction_vector(f"{context}.times", values.get("times"))
+    states = require_fraction_vector(f"{context}.states", values.get("states"))
+    derivatives = require_fraction_vector(f"{context}.derivatives", values.get("derivatives"))
+    endpoint_derivatives = require_fraction_vector(
+        f"{context}.endpoint_derivatives",
+        values.get("endpoint_derivatives"),
+    )
+    implicit_residuals = require_fraction_vector(
+        f"{context}.implicit_residuals",
+        values.get("implicit_residuals"),
+    )
+    if step <= 0:
+        fail(f"{context}.step must be positive")
+    if len(times) != len(states):
+        fail(f"{context}.times and states must have the same length")
+    if len(states) < 3:
+        fail(f"{context} must contain a starter value and at least one BDF2 update")
+    if len(derivatives) != len(states):
+        fail(f"{context}.derivatives must cover every listed state")
+    if len(endpoint_derivatives) != len(states) - 2:
+        fail(f"{context}.endpoint_derivatives must have one entry per BDF2 update")
+    if len(implicit_residuals) != len(states) - 2:
+        fail(f"{context}.implicit_residuals must have one entry per BDF2 update")
+    for index in range(len(states) - 1):
+        if times[index + 1] != times[index] + step:
+            fail(f"{context}.times transition {index}->{index + 1} does not match step")
+    for index, derivative in enumerate(derivatives):
+        expected_derivative = euler_derivative(ode, times[index], states[index])
+        if derivative != expected_derivative:
+            fail(f"{context}.derivatives[{index}] is incorrect")
+    for state_index in range(1, len(states) - 1):
+        update_index = state_index - 1
+        endpoint_derivative = derivatives[state_index + 1]
+        if endpoint_derivatives[update_index] != endpoint_derivative:
+            fail(f"{context}.endpoint_derivatives[{update_index}] is incorrect")
+        residual = (
+            3 * states[state_index + 1]
+            - 4 * states[state_index]
+            + states[state_index - 1]
+            - 2 * step * endpoint_derivative
+        )
+        if implicit_residuals[update_index] != residual:
+            fail(f"{context}.implicit_residuals[{update_index}] is incorrect")
+        if residual != 0:
+            fail(f"{context}.implicit_residuals[{update_index}] must be zero")
+    return {
+        "ode": ode,
+        "method": method,
+        "step": step,
+        "times": times,
+        "states": states,
+        "derivatives": derivatives,
+        "endpoint_derivatives": endpoint_derivatives,
+        "implicit_residuals": implicit_residuals,
+    }
+
+
 def validate_finite_euler_method(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -33550,6 +33614,177 @@ def validate_finite_adams_bashforth_method(expected: dict[str, Any]) -> None:
     require_string("Adams-Bashforth horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_bdf2_method(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    history = checks["bdf2-history-witness"]
+    if history["expected_result"] != "sat":
+        fail("bdf2-history-witness must expect sat")
+    if history.get("proof_status") != "replay-only":
+        fail("bdf2-history-witness must be replay-only")
+    values = single_witness_values(history, witnesses)
+    replay = validate_bdf2_trace("BDF2 trace", values)
+    if replay["ode"] != "y_prime_equals_minus_y":
+        fail("finite BDF2 replay must use y' = -y")
+    if replay["step"] != Fraction(1, 2):
+        fail("finite BDF2 replay must use h = 1/2")
+    starter_source = values.get("starter_source")
+    require_string("BDF2 starter_source", starter_source)
+    if starter_source != "backward_euler_single_step":
+        fail("finite BDF2 starter_source must be backward_euler_single_step")
+    starter_residual = require_fraction("BDF2 starter_implicit_residual", values.get("starter_implicit_residual"))
+    if replay["states"][1] - (replay["states"][0] + replay["step"] * replay["derivatives"][1]) != starter_residual:
+        fail("BDF2 starter_implicit_residual is incorrect")
+    if starter_residual != 0:
+        fail("BDF2 starter_implicit_residual must be zero")
+
+    decay = checks["bdf2-monotone-decay-witness"]
+    if decay["expected_result"] != "sat":
+        fail("bdf2-monotone-decay-witness must expect sat")
+    if decay.get("proof_status") != "replay-only":
+        fail("bdf2-monotone-decay-witness must be replay-only")
+    if single_witness_values(decay, witnesses) != values:
+        fail("bdf2-monotone-decay-witness must cite the BDF2 witness")
+    lower_bound = require_fraction("BDF2 lower_bound", values.get("lower_bound"))
+    upper_bound = require_fraction("BDF2 upper_bound", values.get("upper_bound"))
+    monotonicity = values.get("monotonicity")
+    require_string("BDF2 monotonicity", monotonicity)
+    if lower_bound > upper_bound:
+        fail("BDF2 lower_bound must be <= upper_bound")
+    if monotonicity != "strictly_decreasing":
+        fail("BDF2 monotonicity must be strictly_decreasing")
+    for index, state in enumerate(replay["states"]):
+        if not (lower_bound <= state <= upper_bound):
+            fail(f"BDF2 state {index} is outside the listed bounds")
+        if state <= 0:
+            fail(f"BDF2 state {index} must be positive")
+    for previous, current in zip(replay["states"], replay["states"][1:]):
+        if current >= previous:
+            fail("BDF2 trace must be strictly decreasing")
+
+    bad = checks["bad-bdf2-step-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-bdf2-step-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-bdf2-step-rejected must be replay-only")
+    if bad.get("validation") != "exact_rational_bad_bdf2_step_replay":
+        fail("bad-bdf2-step-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "linear-decay-bdf2-trace":
+        fail("bad-bdf2-step-rejected must cite the BDF2 witness")
+    step_index = require_int("bad BDF2 step_index", data.get("step_index"))
+    if step_index < 1 or step_index >= len(replay["states"]) - 1:
+        fail("bad-bdf2-step-rejected step_index out of range")
+    previous_time = require_fraction("bad BDF2 previous_time", data.get("previous_time"))
+    previous_state = require_fraction("bad BDF2 previous_state", data.get("previous_state"))
+    time = require_fraction("bad BDF2 time", data.get("time"))
+    state = require_fraction("bad BDF2 state", data.get("state"))
+    endpoint_time = require_fraction("bad BDF2 endpoint_time", data.get("endpoint_time"))
+    endpoint_derivative = require_fraction("bad BDF2 endpoint_derivative", data.get("endpoint_derivative"))
+    step = require_fraction("bad BDF2 step", data.get("step"))
+    bdf2_left_side = require_fraction("bad BDF2 bdf2_left_side", data.get("bdf2_left_side"))
+    bdf2_right_side = require_fraction("bad BDF2 bdf2_right_side", data.get("bdf2_right_side"))
+    computed_next_state = require_fraction(
+        "bad BDF2 computed_next_state",
+        data.get("computed_next_state"),
+    )
+    claimed_next_state = require_fraction(
+        "bad BDF2 claimed_next_state",
+        data.get("claimed_next_state"),
+    )
+    next_state_gap = require_fraction(
+        "bad BDF2 next_state_gap",
+        data.get("next_state_gap"),
+    )
+    if replay["times"][step_index - 1] != previous_time:
+        fail("bad-bdf2-step-rejected previous_time does not match source witness")
+    if replay["states"][step_index - 1] != previous_state:
+        fail("bad-bdf2-step-rejected previous_state does not match source witness")
+    if replay["times"][step_index] != time:
+        fail("bad-bdf2-step-rejected time does not match source witness")
+    if replay["states"][step_index] != state:
+        fail("bad-bdf2-step-rejected state does not match source witness")
+    if replay["times"][step_index + 1] != endpoint_time:
+        fail("bad-bdf2-step-rejected endpoint_time does not match source witness")
+    if replay["endpoint_derivatives"][step_index - 1] != endpoint_derivative:
+        fail("bad-bdf2-step-rejected endpoint_derivative does not match source witness")
+    if replay["step"] != step:
+        fail("bad-bdf2-step-rejected step does not match source witness")
+    if replay["states"][step_index + 1] != computed_next_state:
+        fail("bad-bdf2-step-rejected computed_next_state does not match source witness")
+    expected_left = 3 * computed_next_state - 4 * state + previous_state
+    expected_right = 2 * step * endpoint_derivative
+    if bdf2_left_side != expected_left:
+        fail("bad-bdf2-step-rejected bdf2_left_side is incorrect")
+    if bdf2_right_side != expected_right:
+        fail("bad-bdf2-step-rejected bdf2_right_side is incorrect")
+    if bdf2_left_side != bdf2_right_side:
+        fail("bad-bdf2-step-rejected BDF2 equation sides must match")
+    if computed_next_state == claimed_next_state:
+        fail("bad-bdf2-step-rejected malformed next state must disagree with replay")
+    if computed_next_state - claimed_next_state != next_state_gap:
+        fail("bad-bdf2-step-rejected next_state_gap is incorrect")
+    if next_state_gap <= 0:
+        fail("bad-bdf2-step-rejected next_state_gap must be positive")
+    if "separate qf-lra-bad-bdf2-step" not in bad.get("notes", ""):
+        fail("bad-bdf2-step-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-bdf2-step"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-bdf2-step must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-bdf2-step must be checked")
+    if qf_bad.get("validation") != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-bdf2-step must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "linear-decay-bdf2-trace":
+        fail("qf-lra-bad-bdf2-step must cite the BDF2 witness")
+    if qf_data.get("source_replay_row") != "bad-bdf2-step-rejected":
+        fail("qf-lra-bad-bdf2-step must cite the replay row")
+    qf_computed = require_fraction(
+        "qf BDF2 computed_next_state",
+        qf_data.get("computed_next_state"),
+    )
+    qf_claimed = require_fraction(
+        "qf BDF2 claimed_next_state",
+        qf_data.get("claimed_next_state"),
+    )
+    if qf_computed != computed_next_state or qf_claimed != claimed_next_state:
+        fail("qf-lra-bad-bdf2-step data must match the replay row")
+    conflict = qf_data.get("farkas_conflict")
+    require_string("qf BDF2 farkas_conflict", conflict)
+    expected_conflict = "bdf2_next_state = 5/12 and bdf2_next_state = 1/3"
+    if conflict != expected_conflict:
+        fail("qf-lra-bad-bdf2-step must document the Farkas conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf BDF2 smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-bdf2-method-v0/smt2/"
+        "bad-bdf2-step-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-bdf2-step smt2_artifact must name the checked source artifact")
+    check_source("qf BDF2 smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf BDF2 farkas_regression", regression)
+    if "finite_bdf2_bad_step_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-bdf2-step must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf BDF2 certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-bdf2-step certificate must document checked Farkas evidence")
+
+    horizon = checks["general-bdf2-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-bdf2-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-bdf2-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("BDF2 horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("BDF2 horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_bounded_dynamics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -33915,6 +34150,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_crank_nicolson_method(expected)
     if metadata["id"] == "finite-adams-bashforth-method-v0":
         validate_finite_adams_bashforth_method(expected)
+    if metadata["id"] == "finite-bdf2-method-v0":
+        validate_finite_bdf2_method(expected)
     if metadata["id"] == "finite-gaussian-elimination-v0":
         validate_finite_gaussian_elimination(expected)
     if metadata["id"] == "finite-lu-decomposition-v0":

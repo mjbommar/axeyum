@@ -10,7 +10,8 @@ and
 [finite-backward-euler-method-v0](../../../artifacts/examples/math/finite-backward-euler-method-v0/)
 and
 [finite-crank-nicolson-method-v0](../../../artifacts/examples/math/finite-crank-nicolson-method-v0/), and
-[finite-adams-bashforth-method-v0](../../../artifacts/examples/math/finite-adams-bashforth-method-v0/).
+[finite-adams-bashforth-method-v0](../../../artifacts/examples/math/finite-adams-bashforth-method-v0/), and
+[finite-bdf2-method-v0](../../../artifacts/examples/math/finite-bdf2-method-v0/).
 For the bounded recurrence and invariant slice alone, read
 [End To End: Bounded Recurrence Dynamics](bounded-dynamics-end-to-end.md).
 For the explicit Euler and finite error-table slice alone, read
@@ -25,6 +26,8 @@ For the implicit Crank-Nicolson slice alone, read
 [End To End: Finite Crank-Nicolson Method](crank-nicolson-method-end-to-end.md).
 For the explicit Adams-Bashforth multistep slice alone, read
 [End To End: Finite Adams-Bashforth Method](adams-bashforth-method-end-to-end.md).
+For the implicit BDF2 multistep slice alone, read
+[End To End: Finite BDF2 Method](bdf2-method-end-to-end.md).
 
 Concept rows:
 
@@ -86,6 +89,11 @@ Concept rows:
 | `bad-adams-bashforth-step-rejected` | `unsat` | replay-only |
 | `qf-lra-bad-adams-bashforth-step` | `unsat` | checked |
 | `general-adams-bashforth-theory-lean-horizon` | `not-run` | lean-horizon |
+| `bdf2-history-witness` | `sat` | replay-only |
+| `bdf2-monotone-decay-witness` | `sat` | replay-only |
+| `bad-bdf2-step-rejected` | `unsat` | replay-only |
+| `qf-lra-bad-bdf2-step` | `unsat` | checked |
+| `general-bdf2-theory-lean-horizon` | `not-run` | lean-horizon |
 | `general-ode-theory-lean-horizon` | `not-run` | lean-horizon |
 
 These rows are finite transition-system checks over exact rationals. They do
@@ -96,7 +104,7 @@ for this pattern across recurrence prefixes, bounded dynamics, finite
 invariants, threshold reachability, explicit Euler steps, Runge-Kutta midpoint
 stages, Heun predictor stages, backward Euler implicit solves,
 Crank-Nicolson averaged-slope solves, Adams-Bashforth derivative-history
-updates, and finite error tables.
+updates, BDF2 implicit history updates, and finite error tables.
 
 ## Replay A Bounded Recurrence
 
@@ -410,6 +418,30 @@ Adams-Bashforth row claims the first multistep result is `3/4`; exact replay
 computes `1`, and the separate `qf-lra-bad-adams-bashforth-step` row isolates
 that contradiction through checked Farkas evidence.
 
+## Encode BDF2 As An Implicit Multistep History System
+
+The BDF2 pack treats a stepper as an implicit two-step transition with the
+new endpoint state appearing in the derivative:
+
+```text
+(3*y_(n+1) - 4*y_n + y_(n-1)) / (2h) = f(t_(n+1), y_(n+1))
+```
+
+For `y' = -y`, `y(0)=1`, backward-Euler starter `y_1=2/3`, and `h=1/2`, the
+finite BDF2 trace is:
+
+```text
+times  = 0, 1/2, 1, 3/2
+states = 1, 2/3, 5/12, 1/4
+resids =    0,   0
+```
+
+The validator checks the starter residual, derivative history, each BDF2
+implicit residual, positivity, and strict finite monotone decay. The bad BDF2
+row claims the first multistep result is `1/3`; exact replay computes `5/12`,
+and the separate `qf-lra-bad-bdf2-step` row isolates that contradiction through
+checked Farkas evidence.
+
 ## Name The Lean Horizon
 
 The finite rows are useful because they isolate a trustworthy kernel of the
@@ -425,6 +457,7 @@ Heun predictor and averaged-slope replay
 backward Euler implicit endpoint solve
 Crank-Nicolson implicit trapezoid solve
 Adams-Bashforth derivative-history update
+BDF2 implicit history update
 finite error table
 bad-step refutation
 ```
@@ -457,6 +490,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-backward-euler-method-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-crank-nicolson-method-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-adams-bashforth-method-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-bdf2-method-v0
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_threshold_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas
@@ -468,6 +502,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_heun_bad_step
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_backward_euler_bad_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_crank_nicolson_bad_step_artifact_emits_checked_farkas
 cargo test -p axeyum-solver --test math_resource_lra_routes finite_adams_bashforth_bad_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --test math_resource_lra_routes finite_bdf2_bad_step_artifact_emits_checked_farkas
 ```
 
 Expected output for each command:
@@ -494,4 +529,5 @@ Runge-Kutta midpoint, Heun, and Backward Euler `qf-lra-*` rows now exercise
 that QF_LRA/Farkas route after replay computes the finite values; the
 Crank-Nicolson row adds the same checked split for an implicit trapezoid step,
 and the Adams-Bashforth row adds the checked split for an explicit multistep
-derivative-history update.
+derivative-history update. The BDF2 row adds the checked split for an implicit
+multistep endpoint-state update.
