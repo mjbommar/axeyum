@@ -1258,7 +1258,18 @@ Build sequence:
     bridges keep this fixed exact row separate from Fisher LDA theory,
     Gaussian classifier assumptions, Bayes risk, multiclass or regularized
     LDA, floating-point classifiers, and statistical guarantees.
-127. Revisit crate/repo boundaries only after three real consumers or repeated
+127. Landed: add the finite principal-components resource.
+    `finite-principal-components-v0` now records exact finite centering,
+    covariance, principal/secondary eigenpairs, projected scores,
+    one-component reconstruction, residual energy, and explained-variance
+    ratio for a four-row rational sample. It includes a checked QF_LRA/Farkas
+    artifact for the malformed principal-eigenvalue claim `lambda = 3/2`
+    against exact `2`. The finite-PCA, eigenpair, inner-product/projection,
+    exact-vs-floating, statistics, optimization, and numerical-analysis
+    bridges keep this fixed exact row separate from PCA/SVD optimality,
+    best-rank approximation, estimator consistency, randomized algorithms,
+    perturbation theory, floating-point PCA, and statistical guarantees.
+128. Revisit crate/repo boundaries only after three real consumers or repeated
     encoder implementations make scripts insufficient.
 
 ## Validation Commands

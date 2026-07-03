@@ -21,6 +21,7 @@ Example packs:
 - [finite-markov-chain-v0](../../../artifacts/examples/math/finite-markov-chain-v0/)
 - [descriptive-statistics-v0](../../../artifacts/examples/math/descriptive-statistics-v0/)
 - [finite-covariance-matrix-v0](../../../artifacts/examples/math/finite-covariance-matrix-v0/)
+- [finite-principal-components-v0](../../../artifacts/examples/math/finite-principal-components-v0/)
 - [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/)
 - [finite-linear-discriminant-v0](../../../artifacts/examples/math/finite-linear-discriminant-v0/)
 - [exact-statistical-tests-v0](../../../artifacts/examples/math/exact-statistical-tests-v0/)
@@ -70,6 +71,9 @@ QF_LRA bad-variance certificate,
 finite covariance-matrix replay over exact rational sample rows, centered
 Gram matrices, positive-semidefinite shadows, and a checked QF_LRA
 bad-covariance-entry certificate,
+finite principal-component covariance/eigenpair replay, projected scores,
+one-component residual energy, explained-variance ratio, and checked QF_LRA
+bad-principal-eigenvalue evidence,
 contingency table margins, a checked QF_LIA bad contingency-total certificate,
 least-squares normal equations, checked QF_LRA bad-RSS and bad-coefficients
 certificates, finite linear-discriminant class means, within-class scatter,
@@ -91,6 +95,8 @@ For a focused finite Bayes-update trace, read
 [End To End: Finite Bayes Update](finite-bayes-update-end-to-end.md).
 For a focused finite classification trace, read
 [End To End: Finite Linear Discriminant](linear-discriminant-end-to-end.md).
+For a focused finite PCA trace, read
+[End To End: Finite Principal Components](principal-components-end-to-end.md).
 
 The exact-test pack checks finite binomial tails, hypergeometric point
 probabilities, one-sided and probability-ordered two-sided Fisher p-values as

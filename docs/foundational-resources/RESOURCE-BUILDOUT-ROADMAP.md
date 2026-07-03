@@ -62,17 +62,17 @@ The current committed data boundary reports:
 
 - 23 curriculum-node concept rows.
 - 18 math-field concept rows.
-- 77 bridge-concept rows.
+- 78 bridge-concept rows.
 - 5 example-family rows.
-- 159 non-template math example packs.
-- 1033 expected checks.
-- 385 checked proof/evidence rows.
-- 526 replay-only rows.
-- 122 Lean-horizon rows.
-- 159 promoted solver-reuse packs.
+- 160 non-template math example packs.
+- 1040 expected checks.
+- 386 checked proof/evidence rows.
+- 531 replay-only rows.
+- 123 Lean-horizon rows.
+- 160 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 159 focused learner-linked packs, with no path-only, index-only, or missing
+- 160 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 This is broad enough that the next work is not "create a few examples." The
@@ -2775,6 +2775,16 @@ Pick one item per commit unless the change is purely navigational.
      optimality, Gaussian classifier assumptions, Bayes risk, multiclass or
      regularized LDA, statistical generalization, floating-point classifiers,
      or numerical stability.
+205. Landed: add `finite-principal-components-v0` as an exact finite PCA
+     resource. The pack computes a four-row rational sample mean, centered
+     Gram and covariance matrices, principal and secondary eigenpairs,
+     projected scores, one-component reconstruction, residual energy, and
+     explained-variance ratio `4/5`, then promotes the malformed principal
+     eigenvalue claim `3/2` through a source-linked QF_LRA/Farkas regression
+     against exact `2` without claiming PCA/SVD optimality, best-rank
+     approximation, estimator consistency, randomized algorithms,
+     perturbation theory, floating-point implementations, or statistical
+     generalization.
 
 ## Validation Checklist
 

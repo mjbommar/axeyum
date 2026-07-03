@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-principal-components-v0",
+  "witnesses": [
+    {
+      "id": "four-point-principal-component-sample",
+      "description": "A four-observation two-dimensional rational sample with exact covariance and principal-component replay.",
+      "values": {
+        "sample_matrix": [
+          ["-2", "0"],
+          ["2", "0"],
+          ["0", "-1"],
+          ["0", "1"]
+        ],
+        "mean": ["0", "0"],
+        "centered": [
+          ["-2", "0"],
+          ["2", "0"],
+          ["0", "-1"],
+          ["0", "1"]
+        ],
+        "centered_gram": [
+          ["8", "0"],
+          ["0", "2"]
+        ],
+        "population_denominator": "4",
+        "covariance": [
+          ["2", "0"],
+          ["0", "1/2"]
+        ],
+        "principal_vector": ["1", "0"],
+        "principal_eigenvalue": "2",
+        "secondary_vector": ["0", "1"],
+        "secondary_eigenvalue": "1/2",
+        "covariance_principal_product": ["2", "0"],
+        "covariance_secondary_product": ["0", "1/2"],
+        "projected_scores": ["-2", "2", "0", "0"],
+        "one_component_reconstruction": [
+          ["-2", "0"],
+          ["2", "0"],
+          ["0", "0"],
+          ["0", "0"]
+        ],
+        "residuals": [
+          ["0", "0"],
+          ["0", "0"],
+          ["0", "-1"],
+          ["0", "1"]
+        ],
+        "principal_sum_squares": "8",
+        "residual_sum_squares": "2",
+        "total_sum_squares": "10",
+        "total_variance": "5/2",
+        "explained_variance_ratio": "4/5"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "sample-mean-centering-witness",
+      "claim": "The listed sample has mean zero and the stated centered rows.",
+      "expected_result": "sat",
+      "validation": "exact_rational_pca_mean_centering_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["four-point-principal-component-sample"],
+      "notes": "The validator recomputes each mean coordinate and centered row exactly over rationals."
+    },
+    {
+      "id": "covariance-matrix-witness",
+      "claim": "The listed covariance matrix is the centered Gram matrix divided by the population denominator.",
+      "expected_result": "sat",
+      "validation": "exact_rational_pca_covariance_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["four-point-principal-component-sample"],
+      "notes": "The validator recomputes X^T X, divides by the number of observations, and checks the trace as total variance."
+    },
+    {
+      "id": "principal-eigenpair-witness",
+      "claim": "The listed principal and secondary covariance eigenpairs are exact for the fixed sample.",
+      "expected_result": "sat",
+      "validation": "exact_rational_pca_eigenpair_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["four-point-principal-component-sample"],
+      "notes": "The validator checks C*v = lambda*v for both rational eigenvectors and verifies the principal eigenvalue is strictly larger."
+    },
+    {
+      "id": "projection-reconstruction-witness",
+      "claim": "The listed principal projected scores, one-component reconstruction, residuals, and explained-variance ratio are exact.",
+      "expected_result": "sat",
+      "validation": "exact_rational_pca_projection_replay",
+      "proof_status": "replay-only",
+      "witnesses": ["four-point-principal-component-sample"],
+      "notes": "The validator recomputes the scores, rank-one reconstruction, residual energy, total energy, and explained-variance ratio exactly."
+    },
+    {
+      "id": "bad-principal-eigenvalue-rejected",
+      "claim": "The principal covariance eigenvalue is 3/2.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_principal_eigenvalue_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "four-point-principal-component-sample",
+        "computed_eigenvalue": "2",
+        "claimed_eigenvalue": "3/2",
+        "principal_vector": ["1", "0"]
+      },
+      "notes": "Exact replay computes the principal eigenvalue as 2, so the claimed value 3/2 is rejected; the separate qf-lra-bad-principal-eigenvalue row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-principal-eigenvalue",
+      "claim": "The fixed malformed principal-eigenvalue claim is linearly inconsistent with C*v = lambda*v.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "four-point-principal-component-sample",
+        "source_replay_row": "bad-principal-eigenvalue-rejected",
+        "computed_eigenvalue": "2",
+        "claimed_eigenvalue": "3/2",
+        "principal_vector": ["1", "0"],
+        "covariance_equations": [
+          "vx = 1",
+          "2*vx = lambda",
+          "lambda = 3/2"
+        ],
+        "farkas_conflict": "principal eigenpair equation plus lambda = 3/2",
+        "smt2_artifact": "artifacts/examples/math/finite-principal-components-v0/smt2/bad-principal-eigenvalue-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_principal_components_bad_eigenvalue_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes C*(1,0) = (2,0), so lambda must be 2 while the malformed row claims 3/2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-pca-spectral-theory-lean-horizon",
+      "claim": "General PCA optimality, SVD theorem coverage, estimator consistency, perturbation bounds, randomized PCA algorithms, and floating-point PCA implementations require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For finite-dimensional data matrices under stated assumptions, prove PCA variance optimality, SVD equivalence, projection-error minimization, and statistical guarantees only with explicit theorem hypotheses.",
+        "future_checker": "Lean theorem statements for PCA/SVD optimality plus separate numerical-honesty or QF_FP artifacts for floating-point PCA implementations."
+      },
+      "notes": "The finite exact row is a checked resource for one rational sample, not a theorem about arbitrary datasets, SVD existence, statistical generalization, perturbation behavior, randomized algorithms, or floating-point PCA."
+    }
+  ]
+}

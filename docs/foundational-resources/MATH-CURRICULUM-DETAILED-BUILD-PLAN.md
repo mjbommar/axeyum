@@ -60,17 +60,17 @@ The committed resource query currently reports:
 
 - 23 curriculum-node concept rows.
 - 18 field rows.
-- 77 bridge-concept rows.
+- 78 bridge-concept rows.
 - 5 example-family rows.
-- 159 non-template math packs.
-- 1033 expected checks.
-- 385 checked proof/evidence rows.
-- 526 replay-only rows.
-- 122 Lean-horizon rows.
-- 159 promoted solver-reuse packs.
+- 160 non-template math packs.
+- 1040 expected checks.
+- 386 checked proof/evidence rows.
+- 531 replay-only rows.
+- 123 Lean-horizon rows.
+- 160 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 - 0 unclassified solver-reuse packs.
-- 159 focused learner-linked packs, with no path-only, index-only, or missing
+- 160 focused learner-linked packs, with no path-only, index-only, or missing
   learner buckets; see [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md).
 
 The next phase is therefore a depth phase, not a seed phase. New packs are
@@ -158,7 +158,7 @@ Exit criteria:
 - No lesson implies a finite bounded check proves an unbounded theorem.
 
 Current audit: [Learner Coverage Audit](LEARNER-COVERAGE-AUDIT.md) records that
-all 159 current non-template packs satisfy the focused-lesson side of this
+all 160 current non-template packs satisfy the focused-lesson side of this
 gate. Keep this true as new packs land.
 
 ### Wave 3: Proof-Route Depth
@@ -2794,6 +2794,17 @@ Pick one row per commit unless the change is purely navigational.
      optimality, Gaussian class-model assumptions, Bayes risk, multiclass or
      regularized LDA, statistical generalization, floating-point classifiers,
      and numerical stability theory.
+318. Landed: add `finite-principal-components-v0` as an exact finite
+     principal-component resource. The pack replays a fixed four-row rational
+     sample, mean-zero centering, centered Gram and covariance matrices,
+     principal and secondary eigenpairs, projected scores, one-component
+     reconstruction, residual energy, and explained-variance ratio `4/5`,
+     then adds `qf-lra-bad-principal-eigenvalue` as the source-linked Farkas
+     row for the false principal-eigenvalue claim `3/2` versus exact `2`.
+     The learner and query pages keep this finite exact PCA shadow separate
+     from PCA/SVD optimality, best-rank approximation, estimator consistency,
+     randomized algorithms, perturbation theory, floating-point
+     implementations, and statistical generalization.
 
 ## Validation Checklist
 

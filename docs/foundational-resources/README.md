@@ -444,6 +444,10 @@ schemas, examples, and validation workflows.
   validates exact finite-sample means, centered rows, centered Gram and
   covariance matrices, a two-by-two positive-semidefinite shadow, and checked
   rejection of a false covariance-entry claim.
+- [`artifacts/examples/math/finite-principal-components-v0/`](../../artifacts/examples/math/finite-principal-components-v0/)
+  validates exact finite-sample centering, covariance, principal eigenpair,
+  projected scores, one-component residual energy, explained-variance ratio,
+  and checked rejection of a false principal-eigenvalue claim.
 - [`artifacts/examples/math/finite-markov-chain-v0/`](../../artifacts/examples/math/finite-markov-chain-v0/)
   validates exact stochastic matrices, finite-horizon distribution evolution,
   stationary distributions, replayed rejection of a malformed transition row
@@ -749,6 +753,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/matrix-invariants-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/random-matrix-finite-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-principal-components-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-factorization-rational-v0

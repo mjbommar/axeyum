@@ -240,6 +240,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite principal-components resource landed.**
+  `finite-principal-components-v0` now gives the statistics, linear-algebra,
+  optimization/convexity, numerical-analysis, rational, and real-analysis
+  lanes a compact exact PCA example: it replays a four-row rational sample,
+  mean-zero centering, centered Gram and covariance matrices, principal and
+  secondary eigenpairs, projected scores, one-component reconstruction,
+  residual energy, and explained-variance ratio `4/5`; rejects the malformed
+  principal-eigenvalue claim `3/2` versus exact `2`; and routes that scalar
+  conflict through a source-linked QF_LRA/Farkas row. The focused learner page,
+  statistics/matrix/optimization/analysis query guides, finite-PCA,
+  random-matrix/covariance, eigenpair, inner-product/projection,
+  exact-vs-floating, and QF_LRA/Farkas bridge rows, validator, resource smoke
+  queries, generated dashboards, and `math_resource_lra_routes` regression
+  keep this fixed finite replay separate from PCA/SVD optimality, best-rank
+  approximation, estimator consistency, randomized algorithms, perturbation
+  theory, floating-point PCA implementations, and statistical generalization.
+  The public summary now reports 124 concept rows, 160 packs, 1040 expected
+  checks, 386 checked rows, 531 replay-only rows, 123 Lean-horizon rows, and
+  160 promoted solver-reuse packs.
 - **Finite linear discriminant resource landed.**
   `finite-linear-discriminant-v0` now gives the statistics, linear-algebra,
   optimization/convexity, numerical-analysis, rational, and real-analysis
@@ -256,9 +275,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   fixed finite training-set replay separate from Fisher LDA optimality,
   Gaussian classifier assumptions, Bayes risk, multiclass or regularized LDA,
   statistical generalization, floating-point classifiers, and numerical
-  stability. The public summary now reports 123 concept rows, 159 packs, 1033
-  expected checks, 385 checked rows, 526 replay-only rows, 122 Lean-horizon
-  rows, and 159 promoted solver-reuse packs.
+  stability. The public summary at landing reported 123 concept rows, 159
+  packs, 1033 expected checks, 385 checked rows, 526 replay-only rows, 122
+  Lean-horizon rows, and 159 promoted solver-reuse packs.
 - **Finite ridge regression resource landed.**
   `finite-ridge-regression-v0` now gives the statistics, linear-algebra,
   optimization/convexity, numerical-analysis, rational, and real-analysis

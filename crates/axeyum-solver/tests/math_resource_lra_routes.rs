@@ -61,6 +61,9 @@ const DESCRIPTIVE_STATS_BAD_VARIANCE: &str = include_str!(
 const FINITE_COVARIANCE_MATRIX_BAD_ENTRY: &str = include_str!(
     "../../../artifacts/examples/math/finite-covariance-matrix-v0/smt2/bad-covariance-entry-farkas-conflict.smt2"
 );
+const FINITE_PRINCIPAL_COMPONENTS_BAD_EIGENVALUE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-principal-components-v0/smt2/bad-principal-eigenvalue-farkas-conflict.smt2"
+);
 const LEAST_SQUARES_BAD_RSS_IMPROVEMENT: &str = include_str!(
     "../../../artifacts/examples/math/least-squares-regression-v0/smt2/bad-rss-improvement-farkas-conflict.smt2"
 );
@@ -903,6 +906,14 @@ fn finite_covariance_matrix_bad_entry_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-covariance-matrix-v0 bad-covariance-entry SMT-LIB artifact",
         FINITE_COVARIANCE_MATRIX_BAD_ENTRY,
+    );
+}
+
+#[test]
+fn finite_principal_components_bad_eigenvalue_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-principal-components-v0 bad-principal-eigenvalue SMT-LIB artifact",
+        FINITE_PRINCIPAL_COMPONENTS_BAD_EIGENVALUE,
     );
 }
 

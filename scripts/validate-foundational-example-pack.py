@@ -33763,6 +33763,225 @@ def validate_finite_covariance_matrix(expected: dict[str, Any]) -> None:
     require_string("covariance horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_principal_components(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    mean_check = checks["sample-mean-centering-witness"]
+    if mean_check["expected_result"] != "sat":
+        fail("sample-mean-centering-witness must expect sat")
+    if mean_check.get("proof_status") != "replay-only":
+        fail("sample-mean-centering-witness must be replay-only")
+    values = single_witness_values(mean_check, witnesses)
+    sample = require_fraction_matrix("PCA sample_matrix", values.get("sample_matrix"))
+    mean = require_fraction_vector("PCA mean", values.get("mean"))
+    centered = require_fraction_matrix("PCA centered", values.get("centered"))
+    centered_gram = require_fraction_matrix("PCA centered_gram", values.get("centered_gram"))
+    denominator = require_fraction("PCA population_denominator", values.get("population_denominator"))
+    covariance = require_fraction_matrix("PCA covariance", values.get("covariance"))
+    principal_vector = require_fraction_vector("PCA principal_vector", values.get("principal_vector"))
+    principal_eigenvalue = require_fraction(
+        "PCA principal_eigenvalue",
+        values.get("principal_eigenvalue"),
+    )
+    secondary_vector = require_fraction_vector("PCA secondary_vector", values.get("secondary_vector"))
+    secondary_eigenvalue = require_fraction(
+        "PCA secondary_eigenvalue",
+        values.get("secondary_eigenvalue"),
+    )
+    covariance_principal_product = require_fraction_vector(
+        "PCA covariance_principal_product",
+        values.get("covariance_principal_product"),
+    )
+    covariance_secondary_product = require_fraction_vector(
+        "PCA covariance_secondary_product",
+        values.get("covariance_secondary_product"),
+    )
+    projected_scores = require_fraction_vector("PCA projected_scores", values.get("projected_scores"))
+    reconstruction = require_fraction_matrix(
+        "PCA one_component_reconstruction",
+        values.get("one_component_reconstruction"),
+    )
+    residuals = require_fraction_matrix("PCA residuals", values.get("residuals"))
+    principal_sum_squares = require_fraction(
+        "PCA principal_sum_squares",
+        values.get("principal_sum_squares"),
+    )
+    residual_sum_squares = require_fraction(
+        "PCA residual_sum_squares",
+        values.get("residual_sum_squares"),
+    )
+    total_sum_squares = require_fraction("PCA total_sum_squares", values.get("total_sum_squares"))
+    total_variance = require_fraction("PCA total_variance", values.get("total_variance"))
+    explained_variance_ratio = require_fraction(
+        "PCA explained_variance_ratio",
+        values.get("explained_variance_ratio"),
+    )
+
+    if not sample:
+        fail("sample-mean-centering-witness sample must be nonempty")
+    if len(sample[0]) != 2:
+        fail("finite-principal-components-v0 intentionally uses a 2D sample")
+    if len(mean) != len(sample[0]):
+        fail("sample-mean-centering-witness mean width must match sample width")
+    if matrix_column_means(sample) != mean:
+        fail("sample-mean-centering-witness mean does not match sample")
+    if matrix_subtract_row_vector(sample, mean) != centered:
+        fail("sample-mean-centering-witness centered rows do not match sample minus mean")
+    if any(total != 0 for total in matrix_column_sums_fraction(centered)):
+        fail("sample-mean-centering-witness centered column sums must be zero")
+
+    covariance_check = checks["covariance-matrix-witness"]
+    if covariance_check["expected_result"] != "sat":
+        fail("covariance-matrix-witness must expect sat")
+    if covariance_check.get("proof_status") != "replay-only":
+        fail("covariance-matrix-witness must be replay-only")
+    if denominator != Fraction(len(sample)):
+        fail("covariance-matrix-witness denominator must equal the sample count")
+    computed_gram = mat_mul(matrix_transpose(centered), centered)
+    if computed_gram != centered_gram:
+        fail("covariance-matrix-witness centered Gram matrix is incorrect")
+    if matrix_divide_scalar(centered_gram, denominator) != covariance:
+        fail("covariance-matrix-witness covariance matrix is incorrect")
+    require_square_matrix("PCA covariance", covariance)
+    if covariance != matrix_transpose(covariance):
+        fail("covariance-matrix-witness covariance matrix must be symmetric")
+    computed_total_sum_squares = sum((dot_product(row, row) for row in centered), Fraction(0))
+    if computed_total_sum_squares != total_sum_squares:
+        fail("covariance-matrix-witness total_sum_squares is incorrect")
+    if total_sum_squares / denominator != total_variance:
+        fail("covariance-matrix-witness total_variance is incorrect")
+    if sum((covariance[index][index] for index in range(len(covariance))), Fraction(0)) != total_variance:
+        fail("covariance-matrix-witness covariance trace must equal total variance")
+
+    eigenpair = checks["principal-eigenpair-witness"]
+    if eigenpair["expected_result"] != "sat":
+        fail("principal-eigenpair-witness must expect sat")
+    if eigenpair.get("proof_status") != "replay-only":
+        fail("principal-eigenpair-witness must be replay-only")
+    if dot_product(principal_vector, principal_vector) != 1:
+        fail("principal-eigenpair-witness principal vector must be unit length")
+    if dot_product(secondary_vector, secondary_vector) != 1:
+        fail("principal-eigenpair-witness secondary vector must be unit length")
+    if dot_product(principal_vector, secondary_vector) != 0:
+        fail("principal-eigenpair-witness vectors must be orthogonal")
+    if mat_vec(covariance, principal_vector) != covariance_principal_product:
+        fail("principal-eigenpair-witness principal product is incorrect")
+    if covariance_principal_product != scalar_vec(principal_eigenvalue, principal_vector):
+        fail("principal-eigenpair-witness principal eigenpair equation is incorrect")
+    if mat_vec(covariance, secondary_vector) != covariance_secondary_product:
+        fail("principal-eigenpair-witness secondary product is incorrect")
+    if covariance_secondary_product != scalar_vec(secondary_eigenvalue, secondary_vector):
+        fail("principal-eigenpair-witness secondary eigenpair equation is incorrect")
+    if principal_eigenvalue <= secondary_eigenvalue:
+        fail("principal-eigenpair-witness principal eigenvalue must be strictly larger")
+
+    projection = checks["projection-reconstruction-witness"]
+    if projection["expected_result"] != "sat":
+        fail("projection-reconstruction-witness must expect sat")
+    if projection.get("proof_status") != "replay-only":
+        fail("projection-reconstruction-witness must be replay-only")
+    computed_scores = [dot_product(row, principal_vector) for row in centered]
+    if computed_scores != projected_scores:
+        fail("projection-reconstruction-witness projected scores are incorrect")
+    computed_reconstruction = [scalar_vec(score, principal_vector) for score in projected_scores]
+    if computed_reconstruction != reconstruction:
+        fail("projection-reconstruction-witness reconstruction is incorrect")
+    computed_residuals = [
+        vector_sub(row, reconstructed)
+        for row, reconstructed in zip(centered, reconstruction)
+    ]
+    if computed_residuals != residuals:
+        fail("projection-reconstruction-witness residuals are incorrect")
+    if sum((score * score for score in projected_scores), Fraction(0)) != principal_sum_squares:
+        fail("projection-reconstruction-witness principal energy is incorrect")
+    if sum((dot_product(row, row) for row in residuals), Fraction(0)) != residual_sum_squares:
+        fail("projection-reconstruction-witness residual energy is incorrect")
+    if principal_sum_squares + residual_sum_squares != total_sum_squares:
+        fail("projection-reconstruction-witness energy decomposition is incorrect")
+    if principal_sum_squares / denominator != principal_eigenvalue:
+        fail("projection-reconstruction-witness principal variance must match eigenvalue")
+    if residual_sum_squares / denominator != secondary_eigenvalue:
+        fail("projection-reconstruction-witness residual variance must match secondary eigenvalue")
+    if principal_eigenvalue / total_variance != explained_variance_ratio:
+        fail("projection-reconstruction-witness explained-variance ratio is incorrect")
+
+    bad = checks["bad-principal-eigenvalue-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-principal-eigenvalue-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-principal-eigenvalue-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_principal_eigenvalue_replay":
+        fail("bad-principal-eigenvalue-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "four-point-principal-component-sample":
+        fail("bad-principal-eigenvalue-rejected must cite four-point-principal-component-sample")
+    computed_eigenvalue = require_fraction(
+        "bad PCA computed_eigenvalue",
+        data.get("computed_eigenvalue"),
+    )
+    claimed_eigenvalue = require_fraction(
+        "bad PCA claimed_eigenvalue",
+        data.get("claimed_eigenvalue"),
+    )
+    bad_vector = require_fraction_vector("bad PCA principal_vector", data.get("principal_vector"))
+    if computed_eigenvalue != principal_eigenvalue or bad_vector != principal_vector:
+        fail("bad-principal-eigenvalue-rejected data must match replay")
+    if claimed_eigenvalue == computed_eigenvalue:
+        fail("bad-principal-eigenvalue-rejected must document a false eigenvalue claim")
+    if "separate qf-lra-bad-principal-eigenvalue" not in bad.get("notes", ""):
+        fail("bad-principal-eigenvalue-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-principal-eigenvalue"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-principal-eigenvalue must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-principal-eigenvalue must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-principal-eigenvalue must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "four-point-principal-component-sample":
+        fail("qf-lra-bad-principal-eigenvalue must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-principal-eigenvalue-rejected":
+        fail("qf-lra-bad-principal-eigenvalue must cite the replay row")
+    qf_computed = require_fraction("qf PCA computed_eigenvalue", qf_data.get("computed_eigenvalue"))
+    qf_claimed = require_fraction("qf PCA claimed_eigenvalue", qf_data.get("claimed_eigenvalue"))
+    qf_vector = require_fraction_vector("qf PCA principal_vector", qf_data.get("principal_vector"))
+    if qf_computed != computed_eigenvalue or qf_claimed != claimed_eigenvalue:
+        fail("qf-lra-bad-principal-eigenvalue data must match the replay row")
+    if qf_vector != principal_vector:
+        fail("qf-lra-bad-principal-eigenvalue principal vector must match replay")
+    equations = require_string_list("qf PCA covariance_equations", qf_data.get("covariance_equations"))
+    if equations != ["vx = 1", "2*vx = lambda", "lambda = 3/2"]:
+        fail("qf-lra-bad-principal-eigenvalue must document the linear conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf PCA smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-principal-components-v0/smt2/"
+        "bad-principal-eigenvalue-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-principal-eigenvalue smt2_artifact must name the checked source artifact")
+    check_source("qf PCA smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf PCA farkas_regression", regression)
+    if "finite_principal_components_bad_eigenvalue_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-principal-eigenvalue must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf PCA certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-principal-eigenvalue certificate must document checked Farkas evidence")
+
+    horizon = checks["general-pca-spectral-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-pca-spectral-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-pca-spectral-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("PCA horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("PCA horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -36969,6 +37188,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_ridge_regression(expected)
     if metadata["id"] == "finite-linear-discriminant-v0":
         validate_finite_linear_discriminant(expected)
+    if metadata["id"] == "finite-principal-components-v0":
+        validate_finite_principal_components(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "cardinality-principles-v0":

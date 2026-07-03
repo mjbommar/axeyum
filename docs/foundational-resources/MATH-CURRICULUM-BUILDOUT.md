@@ -1522,9 +1522,9 @@ Exit criteria:
   QF_LRA/Farkas infeasibility, Boolean CNF/LRAT refutations, integer/count
   Diophantine obstructions, and fixed-width QF_BV/DRAT rows.
 - At least 12 validated example packs.
-  Status: 159 non-template math example packs validate.
+  Status: 160 non-template math example packs validate.
 - At least 6 packs with checked proof/evidence routes.
-  Status: 159 non-template packs have at least one `checked` expected-result row.
+  Status: 160 non-template packs have at least one `checked` expected-result row.
 - At least one downstream consumer can read the data without repository-internal
   knowledge.
   Status: `scripts/consume-foundational-resources.py` reads the committed atlas
@@ -3732,6 +3732,17 @@ A source-linked QF_LRA/Farkas artifact rejects the malformed direction claim
 classifier assumptions, Bayes risk, multiclass or regularized LDA, statistical
 generalization, floating-point classifiers, and numerical stability stay in
 future Lean/theorem or numerical-honesty lanes.
+The statistics/linear-algebra/optimization/numerical-analysis layer now adds
+`finite-principal-components-v0` as the 160th non-template math pack. Exact
+rational replay checks a four-row sample, mean-zero centering, centered Gram
+and covariance matrices, principal and secondary eigenpairs, principal
+projected scores, one-component reconstruction, residual energy, and
+explained-variance ratio `4/5`. A source-linked QF_LRA/Farkas artifact rejects
+the malformed principal eigenvalue claim `3/2` against exact `2`. General
+PCA/SVD optimality, best-rank approximation, estimator consistency,
+randomized algorithms, perturbation theory, floating-point PCA
+implementations, and statistical generalization stay in future Lean/theorem
+or numerical-honesty lanes.
 Continue by adding the next curriculum-adjacent pack from the field ledger
 or by replacing finite enumeration routes with emitted, checked proof objects
 where appropriate.
