@@ -7207,6 +7207,27 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   pulled early: `contains`/`prefixof`/`suffixof` are equisatisfiable concat
   forms with fresh tails), the len↔search link, and T-B.7 unsat derivations
   as the next decide-rate levers (baselines untouched — timing noise only).
+  **T-B.7 first slice LANDED (`717f85b5`): the word route now decides
+  `unsat` — only through an independently re-checked derivation.** The
+  standalone checker (`check_derivation.rs`, no reasoning code shared with
+  the inference engine) re-derives a T-B.3 constant-clash conflict from the
+  cited premises alone (own union-find + own alignment walker; the record is
+  a hint, never trusted); anything it cannot re-derive — loops, parity,
+  length arguments, inference-dependent conflicts — stays `unknown`. 10
+  negative checker tests (corrupted derivations rejected); ≥1000-case
+  property tests both directions; the word fuzz now gates BOTH directions:
+  600 scripts, 316 jointly decided, **96 sat + 220 unsat, DISAGREE=0**
+  (independently re-run before push). Committed string corpora unchanged —
+  their unsat remainder is inference-dependent; the next T-B.7 slice is
+  `check_fact` for cycle-ε/length derivations + the bench-side word hook on
+  the non-fallback path. Also same-session: **word-route harness parity
+  moved QF_S 52→57** (`f5d3e1ec`, five long-literal sat instances incl. the
+  quadratic issue6520, each z3-binary-verified) and the **first committed
+  lazy-vs-eager PAR-2 head-to-head** landed (`582ecba8`: lazy weakly
+  dominates at 20s (7>4 decided) but telemetry shows lazy_ops_total=0
+  everywhere — the edge is inherited preprocessing, not CEGAR; the QF_BV
+  parity lever is reduction depth). Frontier ratchets are now a recorded
+  pre-merge gate (CLAUDE.md, `efdbb0ff`).
 - **Session 2026-07-01 (cont.) — Strings keystone (P2.7) INITIATED: ADR + Phase-A slice A.1a landed.**
   Strings are the largest decide-rate gap by count (~117) and were unrepresentable
   (no string/sequence sort in the IR — only the length-≤16 bounded BV encoder).
