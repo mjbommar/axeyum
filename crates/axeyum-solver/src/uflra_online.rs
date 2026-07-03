@@ -96,6 +96,15 @@ const MAX_BOOLEAN_ATOMS: usize = 48;
 /// layer declines rather than build an unbounded encoding.
 const MAX_BOOLEAN_CLAUSES: usize = 200_000;
 
+/// Whether an absolute wall-clock deadline (if any) has passed. A `None` deadline
+/// never expires (the default, unbounded budget); a `Some` deadline expires once the
+/// clock reaches it. Mirrors the `past_deadline` helper in the arithmetic backends and
+/// the UFLIA sibling so a hard interface split degrades to a graceful `Unknown` rather
+/// than grinding past `config.timeout`.
+pub(crate) fn past_deadline(deadline: Option<Instant>) -> bool {
+    deadline.is_some_and(|d| Instant::now() >= d)
+}
+
 /// A classified literal of the conjunction: the atom term and its asserted polarity.
 ///
 /// `pub(crate)` so the warm [`crate::combined_theory::CombinedTheory`] (the
@@ -164,7 +173,12 @@ pub fn check_qf_uflra_online(
         if literals.is_empty() {
             return Ok(decline("no UFLRA literals for the online combination path"));
         }
-        return Ok(decide_conjunction(arena, &literals));
+        // Thread `config.timeout` into the conjunctive core as an absolute deadline: the
+        // interface case-split DFS is otherwise budget-blind and a hard arrangement can
+        // grind far past the timeout. Expiry degrades to a graceful `Unknown`, never a
+        // wrong verdict.
+        let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+        return Ok(decide_conjunction(arena, &literals, deadline));
     }
 
     // 2. Boolean-structured QF_UFLRA: drive the combination from the real CDCL(T) layer —
@@ -225,7 +239,14 @@ pub fn check_qf_uflra_boolean_prop_metrics(
 /// when every interface branch is infeasible, and a conservative
 /// [`CheckResult::Unknown`] otherwise (an unsupported atom, the depth cap, or a leaf
 /// model that did not replay).
-pub(crate) fn decide_conjunction(arena: &mut TermArena, literals: &[Literal]) -> CheckResult {
+pub(crate) fn decide_conjunction(
+    arena: &mut TermArena,
+    literals: &[Literal],
+    deadline: Option<Instant>,
+) -> CheckResult {
+    if past_deadline(deadline) {
+        return decline("deadline reached before the UFLRA online combination");
+    }
     // 2. Partition the literals; decline an unsupported atom.
     let Some(part) = partition(arena, literals) else {
         return decline("atom outside QF_UFLRA for the online combination path");
@@ -236,6 +257,9 @@ pub(crate) fn decide_conjunction(arena: &mut TermArena, literals: &[Literal]) ->
     let pairs = unordered_pairs(&shared);
     if pairs.len() > MAX_SPLIT_DEPTH {
         return decline("too many interface pairs for the online combination split");
+    }
+    if past_deadline(deadline) {
+        return decline("deadline reached building the UFLRA interface pairs");
     }
 
     // 4. The initial EUF assertions (original equalities / disequalities). A
@@ -288,6 +312,7 @@ pub(crate) fn decide_conjunction(arena: &mut TermArena, literals: &[Literal]) ->
         &pairs,
         &pair_atoms,
         &mut lra,
+        deadline,
     )
 }
 
@@ -307,6 +332,7 @@ pub(crate) fn run_interface_search(
     pairs: &[(TermId, TermId)],
     pair_atoms: &[PairAtoms],
     lra: &mut LraTheory,
+    deadline: Option<Instant>,
 ) -> CheckResult {
     let mut search = Search {
         arena,
@@ -315,6 +341,7 @@ pub(crate) fn run_interface_search(
         euf_assertions,
         pairs,
         pair_atoms,
+        deadline,
     };
     match search.run(lra, &mut Vec::new(), 0) {
         Outcome::Sat(model) => CheckResult::Sat(model),
@@ -344,6 +371,12 @@ struct Search<'a> {
     pairs: &'a [(TermId, TermId)],
     /// The `LraTheory` atom indices per shared pair.
     pair_atoms: &'a [PairAtoms],
+    /// The absolute wall-clock deadline inherited from `config.timeout`. Checked at
+    /// each recursion node so a hard interface split (up to `3^MAX_SPLIT_DEPTH`
+    /// arrangements) degrades to a graceful `Unknown` at expiry rather than grinding
+    /// past the budget. Expiry never changes a verdict — it only replaces further
+    /// search with `Unknown`.
+    deadline: Option<Instant>,
 }
 
 /// The result of the interface search at a node.
@@ -363,6 +396,9 @@ impl Search<'_> {
         forced: &mut Vec<(usize, bool)>,
         index: usize,
     ) -> Outcome {
+        if past_deadline(self.deadline) {
+            return Outcome::Unknown("interface split reached its deadline");
+        }
         if forced.len() > MAX_SPLIT_DEPTH {
             return Outcome::Unknown("interface split exceeded the depth bound");
         }
@@ -1313,7 +1349,7 @@ fn cdclt_combined(
             literals.push(Literal { atom, value });
         }
     }
-    match decide_conjunction(arena, &literals) {
+    match decide_conjunction(arena, &literals, deadline) {
         CheckResult::Sat(mut model) => {
             // The conjunctive core only assigns theory symbols; a Bool symbol used purely
             // as a Boolean-skeleton leaf (e.g. a free `b` in `(b ∨ x < 0)`) never enters
@@ -1448,7 +1484,7 @@ pub(crate) fn combined_cdclt_diag(
                 literals.push(Literal { atom, value });
             }
         }
-        match decide_conjunction(arena, &literals) {
+        match decide_conjunction(arena, &literals, None) {
             CheckResult::Sat(_) => 1,
             _ => 2,
         }
@@ -1541,7 +1577,8 @@ fn check_qf_uflra_boolean_enumerative(
     // Build the warm equality-sharing oracle once over the atom set (the indices align
     // with the BoolSearch variables). The enumeration is unchanged — only this theory
     // oracle is warm across the per-model checks.
-    let combined = crate::combined_theory::CombinedTheory::new(arena, &atom_terms);
+    let combined =
+        crate::combined_theory::CombinedTheory::new_with_deadline(arena, &atom_terms, deadline);
     let mut search = BoolSearch {
         var_count: enc.var_count,
         atom_count: atom_terms.len(),

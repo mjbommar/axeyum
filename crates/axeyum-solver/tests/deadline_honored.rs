@@ -18,8 +18,11 @@
 
 use std::time::{Duration, Instant};
 
+use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_smtlib::parse_script;
-use axeyum_solver::{CheckResult, SolverConfig, check_auto};
+use axeyum_solver::{
+    CheckResult, SolverConfig, check_auto, check_qf_uflra_online, check_with_uf_arithmetic,
+};
 
 /// The `QF_AUFLIA` `bug330` instance verbatim (declared `unsat` upstream; the
 /// point here is *timeliness*, not the verdict).
@@ -93,5 +96,135 @@ fn bug330_honors_config_timeout() {
     // never hang.
     match result {
         CheckResult::Sat(_) | CheckResult::Unsat | CheckResult::Unknown(_) => {}
+    }
+}
+
+// ---------------------------------------------------------------------------
+// QF_UFLRA deadline gate (#16, the `uflra_online` differential-fuzz hang class).
+//
+// The two 600-case differential fuzzes in `tests/uflra_online.rs` ran with **no
+// `config.timeout`** and hung on a loaded box (one stale binary was observed
+// running ~3.9h). The grinding path is the *offline reference*
+// `check_with_uf_arithmetic` (eager Ackermann → `check_auto` on the
+// function-eliminated arithmetic): on a small but hard random conjunction its
+// downstream reduced solve grinds unbounded when the budget is `None`. Under a set
+// `config.timeout` it degrades to a graceful `Unknown` in ~budget (never a wrong
+// verdict). The companion online combination `check_qf_uflra_online` now also
+// threads the deadline through its interface-search DFS (up to `3^pairs`
+// arrangements) so *it* honors the same budget — parity with the UFLIA sibling
+// (bug330 / commit `3cd6c810`), which had left the UFLRA combination untouched.
+//
+// This gate reconstructs the first grinding fuzz case deterministically (the shared
+// LCG advanced to case 99 of the `differential_fuzz_agrees_with_offline_ackermann`
+// corpus) and asserts BOTH deciders return within a small multiple of a tight budget.
+// ---------------------------------------------------------------------------
+
+/// Advances the fuzz's 64-bit LCG (verbatim from `tests/uflra_online.rs`).
+fn next_rand(state: &mut u64) -> u32 {
+    *state = state
+        .wrapping_mul(6_364_136_223_846_793_005)
+        .wrapping_add(1_442_695_040_888_963_407);
+    (*state >> 33) as u32
+}
+
+/// Builds one deterministic-random `QF_UFLRA` conjunction — verbatim from the
+/// `differential_fuzz_agrees_with_offline_ackermann` corpus in `tests/uflra_online.rs`
+/// — so the grinding case reproduces bit-for-bit.
+#[allow(clippy::many_single_char_names)]
+fn build_fuzz_case(arena: &mut TermArena, state: &mut u64) -> Vec<TermId> {
+    let f = arena
+        .declare_fun("f", &[Sort::Real], Sort::Real)
+        .expect("declare f");
+    let x = {
+        let s = arena.declare("x", Sort::Real).expect("declare x");
+        arena.var(s)
+    };
+    let y = {
+        let s = arena.declare("y", Sort::Real).expect("declare y");
+        arena.var(s)
+    };
+    let z = {
+        let s = arena.declare("z", Sort::Real).expect("declare z");
+        arena.var(s)
+    };
+    let mut pool: Vec<TermId> = vec![x, y, z];
+    for _ in 0..2 {
+        let n = i128::from(next_rand(state) % 5);
+        pool.push(arena.real_const(Rational::integer(n)));
+    }
+    for _ in 0..3 {
+        let pick = pool[(next_rand(state) as usize) % pool.len()];
+        pool.push(arena.apply(f, &[pick]).unwrap());
+    }
+    let atom_count = 2 + (next_rand(state) % 3) as usize;
+    let mut atoms: Vec<TermId> = Vec::with_capacity(atom_count);
+    for _ in 0..atom_count {
+        let lhs = pool[(next_rand(state) as usize) % pool.len()];
+        let rhs = pool[(next_rand(state) as usize) % pool.len()];
+        let atom = match next_rand(state) % 5 {
+            0 => arena.real_lt(lhs, rhs).unwrap(),
+            1 => arena.real_le(lhs, rhs).unwrap(),
+            2 => arena.eq(lhs, rhs).unwrap(),
+            3 => {
+                let e = arena.eq(lhs, rhs).unwrap();
+                arena.not(e).unwrap()
+            }
+            _ => arena.real_ge(lhs, rhs).unwrap(),
+        };
+        atoms.push(atom);
+    }
+    atoms
+}
+
+#[test]
+fn uflra_fuzz_grinder_honors_config_timeout() {
+    // Reconstruct case 99 of the `differential_fuzz` corpus: the first case whose
+    // offline eager-Ackermann reduced solve grinds unbounded under a `None` budget
+    // (the fuzz-hang root). The shared LCG is advanced through cases 0..99 exactly as
+    // the fuzz loop does (each on a throwaway arena), then case 99 is built for real.
+    let mut state: u64 = 0x1234_5678_9abc_def0;
+    for _ in 0..99 {
+        let mut throwaway = TermArena::new();
+        let _ = build_fuzz_case(&mut throwaway, &mut state);
+    }
+    let mut arena = TermArena::new();
+    let assertions = build_fuzz_case(&mut arena, &mut state);
+
+    let budget = Duration::from_millis(300);
+    let cfg = SolverConfig::default().with_timeout(budget);
+
+    // The offline reference — the path that actually grinds — must honor the budget.
+    let start = Instant::now();
+    let offline = check_with_uf_arithmetic(&mut arena, &assertions, &cfg).expect("no solver error");
+    let offline_elapsed = start.elapsed();
+    assert!(
+        offline_elapsed < budget * 30,
+        "offline check_with_uf_arithmetic overran its {budget:?} budget on the fuzz grinder: \
+         elapsed {offline_elapsed:?} (result {offline:?})"
+    );
+
+    // The online combination (its interface DFS now deadline-threaded) must likewise
+    // stay bounded — it decides these small cases instantly, and a hard arrangement
+    // degrades to `Unknown` at expiry rather than grinding past the budget.
+    let start = Instant::now();
+    let online = check_qf_uflra_online(&mut arena, &assertions, &cfg).expect("no solver error");
+    let online_elapsed = start.elapsed();
+    assert!(
+        online_elapsed < budget * 30,
+        "online check_qf_uflra_online overran its {budget:?} budget on the fuzz grinder: \
+         elapsed {online_elapsed:?} (result {online:?})"
+    );
+
+    // Only a *wrong* verdict would be a soundness bug; any of sat/unsat/unknown is fine
+    // (in practice the offline path degrades to a graceful `Unknown` at expiry). Where
+    // both decide, they must agree — the fuzz's own soundness contract, re-checked here.
+    match (&offline, &online) {
+        (CheckResult::Sat(_), CheckResult::Unsat) | (CheckResult::Unsat, CheckResult::Sat(_)) => {
+            panic!(
+                "UFLRA online/offline disagree on the reconstructed fuzz grinder: \
+                    offline={offline:?}, online={online:?}"
+            );
+        }
+        _ => {}
     }
 }

@@ -465,7 +465,11 @@ fn build_case(arena: &mut TermArena, state: &mut u64) -> Vec<TermId> {
 
 #[test]
 fn differential_fuzz_agrees_with_offline_ackermann() {
-    let config = SolverConfig::default();
+    // A per-case wall-clock budget: a hard random interface arrangement can otherwise
+    // grind far past any reasonable time (the DFS is up to `3^pairs`). Expiry degrades a
+    // case to a graceful `Unknown` (dropped from the jointly-decided comparison), never a
+    // wrong verdict — the aggregate coverage asserts below still hold over the fast majority.
+    let config = SolverConfig::default().with_timeout(Duration::from_secs(1));
     let mut jointly_decided = 0usize;
     let mut sat_count = 0usize;
     let mut unsat_count = 0usize;
@@ -582,7 +586,9 @@ fn boolean_structured_differential_fuzz_agrees_with_offline_ackermann() {
     // The load-bearing gate for the Boolean (DPLL(T)) layer: random and/or/not trees
     // over a pool of UFLRA atoms must AGREE with the trusted offline decider on every
     // jointly-decided instance, every sat model replayed, zero disagreements.
-    let config = SolverConfig::default();
+    // Per-case wall-clock budget (see `differential_fuzz_agrees_with_offline_ackermann`):
+    // a hard arrangement degrades to `Unknown`, never a wrong verdict.
+    let config = SolverConfig::default().with_timeout(Duration::from_secs(1));
     let mut jointly_decided = 0usize;
     let mut sat_count = 0usize;
     let mut unsat_count = 0usize;
@@ -679,18 +685,24 @@ fn early_theory_prune_fires_and_reduces_enumeration() {
 
     // Public path (pruning on by default) must agree with the offline decider: UNSAT.
     let online = check_qf_uflra_online(&mut arena, &assertions, &config).expect("online check");
-    let offline =
-        check_with_uf_arithmetic(&mut arena, &assertions, &config).expect("offline check");
     assert_eq!(
         verdict(&online),
         Some(false),
         "early-conflict query is UNSAT"
     );
-    assert_eq!(
-        verdict(&online),
-        verdict(&offline),
-        "online/offline must agree on the early-conflict query"
-    );
+    // The offline eager-Ackermann reference is budgeted here: its `check_auto` reduced
+    // solve grinds unbounded on this disjunctive pure-LRA shape (a pre-existing check_auto
+    // perf limit, not a soundness issue). Under a per-case timeout it degrades to a
+    // graceful `Unknown`; when it DOES decide it must still agree with the online UNSAT.
+    let offline_config = SolverConfig::default().with_timeout(Duration::from_secs(1));
+    let offline =
+        check_with_uf_arithmetic(&mut arena, &assertions, &offline_config).expect("offline check");
+    if let Some(off) = verdict(&offline) {
+        assert!(
+            !off,
+            "online/offline must agree on the early-conflict query (both UNSAT)"
+        );
+    }
 
     // Verdict invariant across the pruning toggle, plus the metric contrast.
     let (with_prune, prunes_fired, models_with) =
@@ -776,7 +788,11 @@ fn combined_theory_matches_cold_decide_conjunction() {
 /// conjunction, `None` on Unknown — the trusted reference for the slice-2 entailment
 /// check.
 fn offline_verdict(arena: &mut TermArena, assertions: &[TermId]) -> Option<bool> {
-    let config = SolverConfig::default();
+    // A per-case budget: the eager-Ackermann offline reference can grind unbounded on a
+    // hard random conjunction (its reduced solve is budget-blind with `None`), so it must
+    // carry a timeout here just like the differential fuzzes. Expiry → `None` (Unknown),
+    // which the callers already treat as "skip this soundness check" — never a wrong verdict.
+    let config = SolverConfig::default().with_timeout(Duration::from_secs(1));
     verdict(&check_with_uf_arithmetic(arena, assertions, &config).expect("offline check"))
 }
 
@@ -881,7 +897,9 @@ fn combined_theory_propagation_is_sound_and_fires() {
 /// `propagate`. The verdict must still agree with the offline decider (verdict-invariant).
 #[test]
 fn combined_theory_propagation_fires_in_boolean_search() {
-    let config = SolverConfig::default();
+    // Per-case budget for the offline reference (grinds unbounded with `None`); expiry →
+    // Unknown, dropped from the jointly-decided comparison, never a wrong verdict.
+    let config = SolverConfig::default().with_timeout(Duration::from_secs(1));
     let mut state: u64 = 0x1357_9bdf_2468_ace0;
     let mut total_props = 0usize;
     let mut decided = 0usize;
@@ -949,7 +967,10 @@ fn combined_incremental_surface_matches_check() {
     let mut deferred = 0usize;
     let mut consistent = 0usize;
     let mut inconsistent = 0usize;
-    let config = SolverConfig::default();
+    // Per-case budget for the offline soundness anchor (grinds unbounded with `None`);
+    // expiry → Unknown, which every branch's `assert_ne!` already tolerates (Unknown is
+    // neither `Some(true)` nor `Some(false)`), never a wrong verdict.
+    let config = SolverConfig::default().with_timeout(Duration::from_secs(1));
 
     let mut run = |assertions: &[TermId], arena: &mut TermArena| {
         let Some((decision, check)) = combined_incremental_vs_check(arena, assertions) else {

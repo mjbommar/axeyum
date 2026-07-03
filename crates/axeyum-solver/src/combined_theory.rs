@@ -32,6 +32,7 @@
 //! warmed in slice 1.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::time::Instant;
 
 use axeyum_ir::{TermArena, TermId};
 
@@ -75,6 +76,10 @@ pub(crate) struct CombinedTheory {
     /// names is then dropped (a sound omission — theory propagation only ever *adds*
     /// implied assignments).
     atom_var: BTreeMap<TermId, usize>,
+    /// The absolute wall-clock deadline inherited from the online Boolean driver's
+    /// `config.timeout`, forwarded to the shared interface-search DFS so the warm oracle
+    /// honors the same budget as the cold core. `None` is the default, unbounded budget.
+    deadline: Option<Instant>,
 }
 
 /// One warm-reusable `LraTheory` together with the layout it was built for.
@@ -96,7 +101,19 @@ impl CombinedTheory {
     /// cache fills lazily from the first conjunction); it is kept so the wiring mirrors
     /// the cold core's atom-set discovery and leaves room for a future eager pre-warm.
     #[must_use]
-    pub(crate) fn new(_arena: &mut TermArena, atom_terms: &[TermId]) -> Self {
+    pub(crate) fn new(arena: &mut TermArena, atom_terms: &[TermId]) -> Self {
+        Self::new_with_deadline(arena, atom_terms, None)
+    }
+
+    /// Builds the warm oracle with a caller-owned deadline forwarded to the shared
+    /// interface-search DFS, so the warm path honors the same `config.timeout` budget as
+    /// the cold core rather than grinding a hard arrangement past it.
+    #[must_use]
+    pub(crate) fn new_with_deadline(
+        _arena: &mut TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Self {
         let mut atom_var = BTreeMap::new();
         for (var, &atom) in atom_terms.iter().enumerate() {
             // First occurrence wins, mirroring the `BoolSearch` atom numbering (the atom
@@ -107,6 +124,7 @@ impl CombinedTheory {
             cache: None,
             atom_terms: atom_terms.to_vec(),
             atom_var,
+            deadline,
         }
     }
 
@@ -174,6 +192,7 @@ impl CombinedTheory {
             });
         }
 
+        let deadline = self.deadline;
         let cached = self.cache.as_mut().expect("cache populated above");
         run_interface_search(
             arena,
@@ -183,6 +202,7 @@ impl CombinedTheory {
             &cached.pairs,
             &cached.pair_atoms,
             &mut cached.theory,
+            deadline,
         )
     }
 
@@ -387,8 +407,9 @@ pub fn combined_vs_cold_conjunction(
         return None;
     }
 
-    // The cold reference verdict.
-    let cold = verdict_code(&decide_conjunction(arena, &literals));
+    // The cold reference verdict (deadline-free: the trusted reference the warm oracle
+    // must match on every input).
+    let cold = verdict_code(&decide_conjunction(arena, &literals, None));
 
     // The warm oracle over the conjunction's atom set, checked twice so the cache-reuse
     // path is exercised (the second check must hit the warm baseline and still agree).
