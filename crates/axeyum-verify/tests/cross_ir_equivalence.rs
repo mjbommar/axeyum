@@ -40,6 +40,75 @@ start:
 }
 ";
 
+// ---- `sel(x) = if x > 100 { x & 0xff } else { x | 1 }` : real CFG ---------------
+// MIR keeps the branch (a switchInt diamond over a computed bool); `-O` LLVM
+// if-converts it to a straight-line `select`. Proving them equal validates
+// **if-conversion** — a genuinely structural compiler transform, not just algebra.
+
+const SEL_MIR: &str = r"
+fn sel(_1: u32) -> u32 {
+    debug x => _1;
+    let mut _0: u32;
+    let mut _2: bool;
+
+    bb0: {
+        StorageLive(_2);
+        _2 = Gt(copy _1, const 100_u32);
+        switchInt(move _2) -> [0: bb2, otherwise: bb1];
+    }
+
+    bb1: {
+        _0 = BitAnd(copy _1, const 255_u32);
+        goto -> bb3;
+    }
+
+    bb2: {
+        _0 = BitOr(copy _1, const 1_u32);
+        goto -> bb3;
+    }
+
+    bb3: {
+        StorageDead(_2);
+        return;
+    }
+}
+";
+
+const SEL_LL: &str = r"
+define i32 @sel(i32 %x) unnamed_addr {
+start:
+  %c = icmp ugt i32 %x, 100
+  %a = and i32 %x, 255
+  %b = or i32 %x, 1
+  %_0 = select i1 %c, i32 %a, i32 %b
+  ret i32 %_0
+}
+";
+
+// ---- `sar(x: i32) = x >> 4` : signed MIR `Shr` ~ LLVM `ashr` ---------------------
+// Sign-aware lowering: MIR's `Shr` is arithmetic on a signed local; the shared
+// reflector must pick `ashr` (not `lshr`) from the `i32` signature.
+
+const SAR_MIR: &str = r"
+fn sar(_1: i32) -> i32 {
+    debug x => _1;
+    let mut _0: i32;
+
+    bb0: {
+        _0 = Shr(copy _1, const 4_i32);
+        return;
+    }
+}
+";
+
+const SAR_LL: &str = r"
+define i32 @sar(i32 %x) unnamed_addr {
+start:
+  %_0 = ashr i32 %x, 4
+  ret i32 %_0
+}
+";
+
 // ---- `scale(x) = x*4 + 1` : MIR `Mul` ~ LLVM strength-reduced `shl` -------------
 
 /// Release/optimized MIR keeps the multiply.
@@ -146,6 +215,42 @@ fn masked_mir_equals_llvm() {
         MASKED_MIR,
         MASKED_LL,
         &[0, 1, 0xff, 0x100, 0xdead_beef, u128::from(u32::MAX)],
+    );
+}
+
+/// `sel`: branch-preserving MIR (switchInt diamond over a computed `Gt` bool) ==
+/// LLVM's if-converted straight-line `select`, for all u32 — the solver validates
+/// **if-conversion**, with real CFG on the MIR side (statements in arm blocks,
+/// a bool scrutinee, `goto` join, Storage noise skipped).
+#[test]
+fn sel_mir_diamond_equals_llvm_select() {
+    assert_equivalent(
+        32,
+        SEL_MIR,
+        SEL_LL,
+        &[
+            0,
+            1,
+            100,
+            101,
+            0xff,
+            0x100,
+            0xdead_beef,
+            u128::from(u32::MAX),
+        ],
+    );
+}
+
+/// `sar`: signed MIR `Shr` on `i32` == LLVM `ashr`, for all i32 — sign-aware
+/// lowering picked from the MIR signature (an `lshr` mismatch would be refuted
+/// at any negative input).
+#[test]
+fn sar_signed_shift_mir_equals_llvm() {
+    assert_equivalent(
+        32,
+        SAR_MIR,
+        SAR_LL,
+        &[0, 1, 16, 0x7fff_ffff, 0x8000_0000, u128::from(u32::MAX)],
     );
 }
 
