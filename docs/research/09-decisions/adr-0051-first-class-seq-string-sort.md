@@ -1,6 +1,6 @@
 # ADR-0051: First-class `Seq`/`String` sort in the IR
 
-Status: proposed
+Status: accepted (2026-07-03 — the work resting on it is landed, measured, and fuzz-gated)
 Date: 2026-07-01
 
 ## Context

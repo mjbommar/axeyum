@@ -236,3 +236,14 @@ agent's staged files into an unrelated commit and had to be recovered):
 - If your staged set gets swept by another lane's commit: do NOT rewrite
   history; re-stage and re-commit your pathspec set on the new HEAD, then
   verify with `git show --stat`.
+
+## The pre-push compile gate (mechanism, not vigilance)
+
+Every checkout should run `git config core.hooksPath hooks` once. The
+committed `hooks/pre-push` refuses to push Rust/TOML changes that do not
+compile (`cargo check --workspace`) or are unformatted — the exact class
+that reached `main` on 2026-07-03 when a shared-index sweep published a
+re-export one commit before its definition. Docs-only pushes skip the cargo
+steps, so the curriculum lane's cadence is unaffected. The heavy gates
+(clippy/tests/rustdoc) remain in CI and `just check`; this hook only
+guarantees "main always compiles".

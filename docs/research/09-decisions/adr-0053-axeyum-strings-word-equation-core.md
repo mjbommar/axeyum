@@ -1,6 +1,6 @@
 # ADR-0053: `axeyum-strings` crate + the Phase-B word-equation core
 
-Status: proposed
+Status: accepted (2026-07-03 — the work resting on it is landed, measured, and fuzz-gated)
 Date: 2026-07-03
 
 ## Context

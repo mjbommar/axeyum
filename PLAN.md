@@ -23,9 +23,9 @@ relentlessly. Scored against [the north-star definition of done](docs/plan/00-no
 
 | North-star criterion | Status | Evidence (measured, not asserted) |
 |---|---|---|
-| **Soundness (never a wrong verdict)** | **Strong / holding** | `DISAGREE = 0` across all 35 division baselines, 611 oracle-compared instances ([SCOREBOARD](bench-results/SCOREBOARD.md)). Two real wrong-safes in the consumer apps were found by new differential fuzzes and fixed. |
+| **Soundness (never a wrong verdict)** | **Strong / holding** | `DISAGREE = 0` across all 35 division baselines (oracle-compared count lives in the generated scoreboard — hand-copies rotted three times) ([SCOREBOARD](bench-results/SCOREBOARD.md)). Two real wrong-safes in the consumer apps were found by new differential fuzzes and fixed. |
 | **Feature coverage (breadth)** | **Partial** | Columns exist for ~24 fragments (BV/ABV/UF/LRA/LIA/NRA/NIA/FP/DT/strings/seq/FF/…), but many are shallow. |
-| **Completeness / decide-rate** | **Partial — the central gap** | **674 / 992 decided (~68%)** per the generated [SCOREBOARD](bench-results/SCOREBOARD.md) (authoritative — check it rather than trusting this dated 2026-07-03 snapshot), decide-rate **0%–100%** across divisions; only **19/35 rows are decide-strong (≥80%)**. Z3/cvc5 decide far more on most fragments and cover more divisions than the 35 measured. |
+| **Completeness / decide-rate** | **Partial — the central gap** | decided/total live in the generated [SCOREBOARD](bench-results/SCOREBOARD.md) **Totals** line (authoritative; ~68% as of 2026-07-03 evening — do not hand-copy the integers, they rotted three times today), decide-rate **0%–100%** across divisions; only **19/35 rows are decide-strong (≥80%)**. Z3/cvc5 decide far more on most fragments and cover more divisions than the 35 measured. |
 | **Measured performance (PAR-2 head-to-head)** | **Weak — but now measured where it matters most** | The north star says *no parity claim without this number*. The first committed head-to-head exists (`582ecba8`, 2026-07-03, public QF_BV p4dfa lazy-vs-eager at 3s/20s, DISAGREE=0): lazy weakly dominates (7>4 at 20s) but `lazy_ops_total=0` on all 113 — the edge is inherited word-level preprocessing, not CEGAR, and Z3 decides all 113 in ≤1s. Not competitive at scale; the measured lever is reduction depth. |
 | **Lean parity (every unsat carries a kernel-checkable proof)** | **Early / narrow** | ~15/35 rows have a Lean route worth auditing; the trusted-reduction ledger is **not yet zero**. The Lean *tactic backend* (P3.7) is unbuilt. |
 | **Pareto-dominance on selected fragments** | **Growing — the real, defensible claim** | **23 fragments** carry a committed, audited `dominant%` ([DOMINANCE](bench-results/DOMINANCE.md)). This — not wholesale replacement — is what the strategy actually targets. |
@@ -1352,7 +1352,7 @@ QF_BV 35/35, QF_ABV 8/8, QF_FP 5/5, QF_LRA 5/5 — **parity**; QF_LIA **8/9 vs 9
 
 **Measurement now DISCHARGED (2026-06-24).** The parallel agent generalized this
 into a committed, regenerable **[`bench-results/SCOREBOARD.md`](bench-results/SCOREBOARD.md)**
-— **24 logic fragments, 992 files, 663 decided, 611 oracle-compared, DISAGREE = 0**
+— **24 logic fragments, DISAGREE = 0 everywhere; decided/compared totals live in the generated scoreboard**
 — plus the oracle-free per-lever frontier dashboard. The "MEASURE, don't seed"
 correction is answered: the weak rows now *name* the blockers (see
 [`docs/PARITY-STATUS-AND-PATH.md`](docs/PARITY-STATUS-AND-PATH.md)). The strategic
@@ -1452,8 +1452,8 @@ against competitor source, are now binding:
    now combines the measured decide/PAR-2 rows with a conservative proof-route
    audit queue. Rows without a committed audit remain readiness entries because
    the division baseline JSONs do not record per-instance Lean reconstruction
-   coverage. Current report: **35 rows**, **992 files**, **663 decided**,
-   **611 oracle-compared**, **DISAGREE = 0**, with **23 complete exact audit rows**
+   coverage. Current report: **35 rows**, **DISAGREE = 0** (decided/compared
+   totals: see the generated scoreboard), with **23 complete exact audit rows**
    and **0 remaining first-queue rows** marked `audit now` for evidence/Lean
    coverage measurement.
    **QF_UF REMEASURE + SMT-LIB DIV/MOD GUARD LANDED (2026-06-26):**
