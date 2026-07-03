@@ -240,6 +240,30 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite entropy/information-gain resource landed.**
+  `finite-entropy-information-gain-v0` now gives the statistics, probability,
+  and discrete/counting lanes the entropy-based sibling of the decision-tree
+  Gini pack: it replays an eight-row training table whose root and split
+  nodes all have class proportions in `{0, 1/2, 1}`, so every `log2` value is
+  an integer and every entropy is an exact rational number of bits — root
+  entropy `1`, the three-child `color` split weighted entropy `1/2` with
+  information gain `1/2`, the `shape` split weighted entropy `1` with gain
+  `0`, and the best-split comparison; rejects the malformed weighted-entropy
+  claim `3/4`; and routes that scalar conflict through a source-linked
+  QF_LRA/Farkas row. The validator rejects any non-dyadic node proportion, so
+  the pack cannot silently overclaim entropy arithmetic that would need an
+  irrational logarithm. The focused learner page, probability/statistics
+  query guide, probability-mass-table, entropy/information-gain,
+  decision-tree-Gini, exact-vs-floating, and QF_LRA/Farkas bridge rows,
+  validator, resource smoke queries, generated dashboards, and
+  `math_resource_lra_routes` regression keep this dyadic finite replay
+  separate from non-dyadic entropy, log-loss and mutual-information variants,
+  greedy-optimality, pruning, threshold policy, statistical generalization,
+  continuous feature thresholds, and floating-point logarithm behavior. The
+  public summary now reports 132 concept rows, 168 packs, 1096 expected
+  checks, 394 checked rows, 571 replay-only rows, 131 Lean-horizon rows, and
+  168 promoted solver-reuse packs.
+
 - **Finite decision-tree Gini split resource landed.**
   `finite-decision-tree-gini-v0` now gives the statistics, probability, and
   discrete/counting lanes a compact exact training-table example: it replays
@@ -254,10 +278,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_lra_routes` regression keep this fixed finite split replay
   separate from greedy-tree optimality, pruning, threshold policy,
   entropy/information-gain variants, statistical generalization, continuous
-  feature thresholds, and floating-point tree-training behavior. The public
-  summary now reports 131 concept rows, 167 packs, 1089 expected checks, 393
-  checked rows, 566 replay-only rows, 130 Lean-horizon rows, and 167 promoted
-  solver-reuse packs.
+  feature thresholds, and floating-point tree-training behavior. At that
+  landing, the public summary reported 131 concept rows, 167 packs, 1089
+  expected checks, 393 checked rows, 566 replay-only rows, 130 Lean-horizon
+  rows, and 167 promoted solver-reuse packs.
 
 - **Finite calibration/Brier probabilistic-classifier resource landed.**
   `finite-calibration-brier-v0` now gives the statistics and probability lanes

@@ -248,6 +248,15 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_finite_d
 python3 scripts/query-foundational-resources.py checks --concept bridge_probability_mass_table --pack finite-decision-tree-gini-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-decision-tree-gini-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text decision-tree --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field statistics --text "information gain" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-entropy-information-gain-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-entropy-information-gain-v0 --route Farkas --proof-status checked --text qf-lra-bad-weighted-entropy --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-entropy-information-gain-v0 --proof-status replay-only --text entropy --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-entropy-information-gain-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_entropy_information_gain_shadow --pack finite-entropy-information-gain-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_probability_mass_table --pack finite-entropy-information-gain-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-entropy-information-gain-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text entropy --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked --text qf-lra-bad-ridge-beta0 --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --proof-status replay-only --text rejected --require-any >/dev/null

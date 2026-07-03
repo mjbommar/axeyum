@@ -24,7 +24,8 @@ finite PCA, finite k-means clustering, finite linear-discriminant/classification
 replay, finite Naive Bayes classifier posterior replay, finite
 confusion-matrix classifier metrics, finite ROC/AUC score-ranking rows, and
 finite precision-recall score-ranking rows, finite calibration/Brier scoring
-rows, finite decision-tree Gini split rows, and finite random-matrix moments.
+rows, finite decision-tree Gini split rows, finite dyadic entropy/information-gain
+rows, and finite random-matrix moments.
 Continuous distributions, sampling
 guarantees, asymptotic inference, MCMC/VI, stochastic-process limits,
 random-matrix limit laws, clustering consistency, Lloyd convergence, global
@@ -33,7 +34,8 @@ validity, classifier calibration/generalization, general ROC/AUC theory,
 general precision-recall theory, general calibration/scoring-rule theory,
 confidence intervals, threshold policy, tie/interpolation conventions beyond
 committed finite rows, binning-policy claims, decision-tree greedy optimality,
-pruning, entropy/information-gain splitting, continuous score distributions,
+pruning, non-dyadic entropy and log-loss splitting, continuous score
+distributions,
 and floating-point statistical-library behavior remain in proof-horizon or
 numerical-honesty lanes.
 
@@ -98,7 +100,8 @@ needs concrete checked rows to display.
 | Finite ROC/AUC ranking and threshold rows | `bridge_finite_roc_auc_shadow`; pack `finite-roc-auc-v0` | `Farkas` | `checks --concept bridge_finite_roc_auc_shadow --route Farkas --proof-status checked`; `checks --pack finite-roc-auc-v0 --proof-status replay-only`; `horizon-frontier --text "roc auc"` |
 | Finite precision-recall ranking and average-precision rows | `bridge_finite_precision_recall_shadow`; pack `finite-precision-recall-v0` | `Farkas` | `checks --concept bridge_finite_precision_recall_shadow --route Farkas --proof-status checked`; `checks --pack finite-precision-recall-v0 --proof-status replay-only`; `horizon-frontier --text "precision recall"` |
 | Finite calibration bins, ECE, and Brier-score rows | `bridge_finite_calibration_brier_shadow`; pack `finite-calibration-brier-v0` | `Farkas` | `checks --concept bridge_finite_calibration_brier_shadow --route Farkas --proof-status checked`; `checks --pack finite-calibration-brier-v0 --proof-status replay-only`; `horizon-frontier --text calibration` |
-| Finite decision-tree feature/class partitions, Gini impurities, and split selection | `bridge_finite_decision_tree_gini_shadow`; pack `finite-decision-tree-gini-v0` | `Farkas` | `checks --concept bridge_finite_decision_tree_gini_shadow --route Farkas --proof-status checked`; `checks --pack finite-decision-tree-gini-v0 --proof-status replay-only`; `horizon-frontier --text "decision tree"` |
+| Finite decision-tree feature/class partitions, Gini impurities, and split selection | `bridge_finite_decision_tree_gini_shadow`; pack `finite-decision-tree-gini-v0` | `Farkas` | `checks --concept bridge_finite_decision_tree_gini_shadow --route Farkas --proof-status checked`; `checks --pack finite-decision-tree-gini-v0 --proof-status replay-only`; `horizon-frontier --text decision-tree` |
+| Finite dyadic entropy, weighted split entropy, and information-gain selection | `bridge_finite_entropy_information_gain_shadow`; pack `finite-entropy-information-gain-v0` | `Farkas` | `checks --concept bridge_finite_entropy_information_gain_shadow --route Farkas --proof-status checked`; `checks --pack finite-entropy-information-gain-v0 --proof-status replay-only`; `horizon-frontier --text entropy` |
 | Random-matrix finite moments, covariance matrices, PCA shadows, Schur conditional-variance shadows, and expected-rank rows | `bridge_random_matrix_finite_moment`; `bridge_schur_complement`; `bridge_finite_pca_shadow` | `Farkas` | `checks --concept bridge_random_matrix_finite_moment --route Farkas --proof-status checked`; `checks --concept bridge_schur_complement --route Farkas --proof-status checked`; `checks --concept bridge_finite_pca_shadow --route Farkas --proof-status checked`; `checks --pack finite-covariance-matrix-v0 --route Farkas --proof-status checked`; `checks --pack finite-principal-components-v0 --route Farkas --proof-status checked`; `checks --pack finite-schur-complement-v0 --route Farkas --proof-status checked` |
 
 ## Copyable Examples
@@ -249,7 +252,26 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py horizon-frontier \
-  --text "decision tree" \
+  --text decision-tree \
+  --require-any
+```
+
+Display finite dyadic entropy/information-gain rows, then the checked
+malformed weighted-entropy row and theorem boundary:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-entropy-information-gain-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_entropy_information_gain_shadow \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text entropy \
   --require-any
 ```
 

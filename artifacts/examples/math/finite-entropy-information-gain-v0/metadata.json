@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "finite-entropy-information-gain-v0",
+  "title": "Finite Entropy Information Gain",
+  "domain": "statistics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_statistics",
+    "field_probability_theory",
+    "field_discrete_math",
+    "curriculum_counting",
+    "curriculum_rationals",
+    "bridge_probability_mass_table",
+    "bridge_finite_entropy_information_gain_shadow",
+    "bridge_finite_decision_tree_gini_shadow",
+    "bridge_exact_vs_floating_arithmetic",
+    "bridge_qf_lra_farkas_anatomy"
+  ],
+  "field_ids": [
+    "statistics",
+    "probability_theory",
+    "discrete_math"
+  ],
+  "curriculum_nodes": [
+    "counting",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite classifier table replay",
+    "finite decision-tree split replay",
+    "finite dyadic entropy replay",
+    "finite information-gain replay",
+    "exact rational arithmetic",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-entropy-information-gain-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite entropy bad weighted-entropy QF_LRA/Farkas regression seed",
+    "pressure": "Exact finite dyadic-entropy replay computes color-split weighted entropy 1/2 from eight classified rows whose node proportions all lie in {0, 1/2, 1}, while a malformed row claims 3/4, isolating a compact scalar Farkas conflict.",
+    "evidence": [
+      "qf-lra-bad-weighted-entropy"
+    ],
+    "next_step": "Promote additional entropy rows only when they add distinct non-dyadic exact-log, log-loss, mutual-information, multiclass, threshold, pruning, or numerical-honesty pressure; keep generalization, greedy-optimality, and general-logarithm entropy claims in theorem or statistical-inference lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/entropy-information-gain-end-to-end.md",
+    "artifacts/examples/math/finite-entropy-information-gain-v0/smt2/bad-weighted-entropy-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "entropy-table-witness",
+    "root-entropy-witness",
+    "split-entropy-witness",
+    "best-information-gain-witness",
+    "bad-weighted-entropy-rejected",
+    "qf-lra-bad-weighted-entropy",
+    "general-entropy-information-gain-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed finite classifier table, feature domains, class totals, dyadic node entropies, candidate split entropies, and information-gain comparison as deterministic exact-rational replay obligations over nodes whose class proportions lie in {0, 1/2, 1}.",
+    "Route the false weighted-entropy claim through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting split equation.",
+    "Expose the pack through statistics, probability, discrete/counting, decision-tree, exact-vs-floating, and learner-query surfaces.",
+    "Keep general-logarithm entropy, log-loss splitting, mutual information, greedy-tree optimality, pruning, threshold policy, statistical generalization, continuous feature thresholds, and floating-point tree-training behavior marked theorem, statistical-inference, or numerical-honesty horizon."
+  ]
+}

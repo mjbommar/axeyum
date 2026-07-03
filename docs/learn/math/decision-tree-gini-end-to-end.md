@@ -144,6 +144,6 @@ python3 scripts/query-foundational-resources.py checks \
   --require-any
 
 python3 scripts/query-foundational-resources.py horizon-frontier \
-  --text "decision tree" \
+  --text decision-tree \
   --require-any
 ```

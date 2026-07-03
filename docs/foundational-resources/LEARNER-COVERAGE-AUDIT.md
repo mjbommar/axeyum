@@ -29,21 +29,21 @@ python3 scripts/query-foundational-resources.py summary
 
 Current summary:
 
-- 131 concept rows.
-- 167 non-template math packs.
-- 1089 expected checks.
-- 393 checked proof/evidence rows.
-- 566 replay-only rows.
-- 130 Lean-horizon rows.
-- 167 promoted solver-reuse packs.
+- 132 concept rows.
+- 168 non-template math packs.
+- 1096 expected checks.
+- 394 checked proof/evidence rows.
+- 571 replay-only rows.
+- 131 Lean-horizon rows.
+- 168 promoted solver-reuse packs.
 - 0 non-benchmark-horizon solver-reuse packs.
 
 The generated learner dashboard reports:
 
 ```text
-math example packs: 167
+math example packs: 168
 Learner Status Totals:
-- focused: 167
+- focused: 168
 ```
 
 `focused` means the pack is explicitly mentioned by at least one
@@ -58,7 +58,7 @@ coverage as follows:
 
 | Status | Meaning | Current Count |
 |---|---|---:|
-| `focused` | At least one non-README `docs/learn/math/*-end-to-end.md` page mentions the pack id or pack path. | 167 |
+| `focused` | At least one non-README `docs/learn/math/*-end-to-end.md` page mentions the pack id or pack path. | 168 |
 | `path-only` | Only a non-end-to-end learner page mentions the pack. | 0 |
 | `index-only` | Only `docs/learn/math/README.md` mentions the pack. | 0 |
 | `missing` | No learner page mentions the pack id or pack path. | 0 |
@@ -119,7 +119,7 @@ docs/foundational-resources/generated/learner-proof-upgrade-dashboard.md
 
 The expected healthy state for the current inventory is:
 
-- `focused`: 167;
+- `focused`: 168;
 - no `path-only`, `index-only`, or `missing` rows.
 
 When the pack count changes, the expected focused count should change with it

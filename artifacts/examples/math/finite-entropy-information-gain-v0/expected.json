@@ -1,0 +1,299 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-entropy-information-gain-v0",
+  "witnesses": [
+    {
+      "id": "eight-row-dyadic-entropy-sample",
+      "description": "An eight-row binary-classification table whose root and split nodes all have class proportions in {0, 1/2, 1}, so every entropy value is an exact rational number of bits.",
+      "values": {
+        "classes": [
+          "positive",
+          "negative"
+        ],
+        "positive_class": "positive",
+        "negative_class": "negative",
+        "features": [
+          {
+            "id": "color",
+            "values": [
+              "red",
+              "green",
+              "blue"
+            ]
+          },
+          {
+            "id": "shape",
+            "values": [
+              "square",
+              "circle"
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "id": "r1",
+            "feature_values": {
+              "color": "red",
+              "shape": "square"
+            },
+            "class": "positive"
+          },
+          {
+            "id": "r2",
+            "feature_values": {
+              "color": "red",
+              "shape": "circle"
+            },
+            "class": "positive"
+          },
+          {
+            "id": "r3",
+            "feature_values": {
+              "color": "green",
+              "shape": "square"
+            },
+            "class": "negative"
+          },
+          {
+            "id": "r4",
+            "feature_values": {
+              "color": "green",
+              "shape": "circle"
+            },
+            "class": "negative"
+          },
+          {
+            "id": "r5",
+            "feature_values": {
+              "color": "blue",
+              "shape": "square"
+            },
+            "class": "positive"
+          },
+          {
+            "id": "r6",
+            "feature_values": {
+              "color": "blue",
+              "shape": "square"
+            },
+            "class": "negative"
+          },
+          {
+            "id": "r7",
+            "feature_values": {
+              "color": "blue",
+              "shape": "circle"
+            },
+            "class": "positive"
+          },
+          {
+            "id": "r8",
+            "feature_values": {
+              "color": "blue",
+              "shape": "circle"
+            },
+            "class": "negative"
+          }
+        ],
+        "class_counts": {
+          "positive_count": "4",
+          "negative_count": "4",
+          "total": "8"
+        },
+        "root_entropy": {
+          "positive_count": "4",
+          "negative_count": "4",
+          "total": "8",
+          "entropy_bits": "1"
+        },
+        "candidate_splits": [
+          {
+            "feature": "color",
+            "child_nodes": [
+              {
+                "value": "red",
+                "example_ids": [
+                  "r1",
+                  "r2"
+                ],
+                "positive_count": "2",
+                "negative_count": "0",
+                "count": "2",
+                "entropy_bits": "0",
+                "weighted_entropy": "0"
+              },
+              {
+                "value": "green",
+                "example_ids": [
+                  "r3",
+                  "r4"
+                ],
+                "positive_count": "0",
+                "negative_count": "2",
+                "count": "2",
+                "entropy_bits": "0",
+                "weighted_entropy": "0"
+              },
+              {
+                "value": "blue",
+                "example_ids": [
+                  "r5",
+                  "r6",
+                  "r7",
+                  "r8"
+                ],
+                "positive_count": "2",
+                "negative_count": "2",
+                "count": "4",
+                "entropy_bits": "1",
+                "weighted_entropy": "1/2"
+              }
+            ],
+            "weighted_entropy": "1/2",
+            "information_gain": "1/2"
+          },
+          {
+            "feature": "shape",
+            "child_nodes": [
+              {
+                "value": "square",
+                "example_ids": [
+                  "r1",
+                  "r3",
+                  "r5",
+                  "r6"
+                ],
+                "positive_count": "2",
+                "negative_count": "2",
+                "count": "4",
+                "entropy_bits": "1",
+                "weighted_entropy": "1/2"
+              },
+              {
+                "value": "circle",
+                "example_ids": [
+                  "r2",
+                  "r4",
+                  "r7",
+                  "r8"
+                ],
+                "positive_count": "2",
+                "negative_count": "2",
+                "count": "4",
+                "entropy_bits": "1",
+                "weighted_entropy": "1/2"
+              }
+            ],
+            "weighted_entropy": "1",
+            "information_gain": "0"
+          }
+        ],
+        "best_split": {
+          "feature": "color",
+          "weighted_entropy": "1/2",
+          "information_gain": "1/2",
+          "strict_better_than": [
+            "shape"
+          ]
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "entropy-table-witness",
+      "claim": "The listed eight-row binary-classification table has one three-valued feature, one binary feature, and four positive and four negative rows, and every root or split node has class proportions in {0, 1/2, 1}.",
+      "expected_result": "sat",
+      "validation": "exact_rational_entropy_table_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "eight-row-dyadic-entropy-sample"
+      ],
+      "notes": "The validator checks the committed feature values, class labels, feature domains, class totals, and the dyadic-proportion restriction exactly."
+    },
+    {
+      "id": "root-entropy-witness",
+      "claim": "The root node has entropy 1 bit.",
+      "expected_result": "sat",
+      "validation": "exact_rational_root_entropy_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "eight-row-dyadic-entropy-sample"
+      ],
+      "notes": "The validator recomputes the root entropy from the committed positive and negative counts; the balanced proportion 1/2 makes log2 exact because log2(1/2) = -1."
+    },
+    {
+      "id": "split-entropy-witness",
+      "claim": "The color split has weighted entropy 1/2 bit and information gain 1/2 bit, while the shape split has weighted entropy 1 bit and information gain 0.",
+      "expected_result": "sat",
+      "validation": "exact_rational_split_entropy_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "eight-row-dyadic-entropy-sample"
+      ],
+      "notes": "The validator partitions the committed rows by each candidate feature and recomputes every child entropy and weighted sum exactly; every child is pure or exactly balanced, so every entropy term is an integer number of bits."
+    },
+    {
+      "id": "best-information-gain-witness",
+      "claim": "Among the committed candidate splits, color is strictly better than shape because 1/2 < 1.",
+      "expected_result": "sat",
+      "validation": "exact_rational_information_gain_best_split_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "eight-row-dyadic-entropy-sample"
+      ],
+      "notes": "The validator compares the candidate weighted entropies over exact rationals."
+    },
+    {
+      "id": "bad-weighted-entropy-rejected",
+      "claim": "The color split has weighted entropy 3/4 bit.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_weighted_entropy_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "eight-row-dyadic-entropy-sample",
+        "metric": "weighted_entropy_bits",
+        "feature": "color",
+        "computed_weighted_entropy": "1/2",
+        "claimed_weighted_entropy": "3/4"
+      },
+      "notes": "Exact replay computes the color split weighted entropy as 1/2, so the claimed value 3/4 is rejected; the separate qf-lra-bad-weighted-entropy row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-weighted-entropy",
+      "claim": "The fixed malformed weighted-entropy claim is linearly inconsistent with the replayed split-entropy equation.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "eight-row-dyadic-entropy-sample",
+        "source_replay_row": "bad-weighted-entropy-rejected",
+        "metric": "weighted_entropy_bits",
+        "feature": "color",
+        "computed_weighted_entropy": "1/2",
+        "claimed_weighted_entropy": "3/4",
+        "weighted_entropy_equations": [
+          "2*entropy_color = 1",
+          "4*entropy_color = 3"
+        ],
+        "farkas_conflict": "replayed weighted-entropy equation plus entropy_color = 3/4",
+        "smt2_artifact": "artifacts/examples/math/finite-entropy-information-gain-v0/smt2/bad-weighted-entropy-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_entropy_information_gain_bad_weighted_entropy_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes 2*entropy_color = 1 from the finite dyadic split table, while the malformed row claims 4*entropy_color = 3; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-entropy-information-gain-lean-horizon",
+      "claim": "General entropy with non-dyadic proportions, log-loss and mutual-information variants, entropy concavity, greedy information-gain optimality, pruning, tie-breaking policy, continuous thresholds, multiclass generality, statistical generalization, and floating-point logarithm behavior require future theorem, statistical-inference, or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For finite or measurable training distributions under stated feature, loss, split-policy, depth, pruning, and sampling assumptions, prove entropy-based split optimality, information-gain identities over general rational or real proportions, or generalization claims only with explicit theorem hypotheses and an exact treatment of the logarithm.",
+        "future_checker": "Lean theorem statements for entropy, mutual information, and decision-tree split policies plus separate numerical-honesty artifacts for floating-point logarithm and tree-training implementations."
+      },
+      "notes": "The finite exact rows check one committed table whose node proportions all lie in {0, 1/2, 1}, so every log2 value is an integer; they do not prove anything about entropy at non-dyadic proportions, information-gain behavior in general, greedy-tree optimality, pruning correctness, statistical generalization, continuous-threshold search, or floating-point logarithm behavior."
+    }
+  ]
+}
