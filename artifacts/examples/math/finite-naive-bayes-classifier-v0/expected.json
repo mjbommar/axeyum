@@ -1,0 +1,227 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-naive-bayes-classifier-v0",
+  "witnesses": [
+    {
+      "id": "two-class-binary-naive-bayes-sample",
+      "description": "A six-row binary-feature training table with exact Laplace-smoothed Naive Bayes posterior replay.",
+      "values": {
+        "classes": [
+          "positive",
+          "negative"
+        ],
+        "features": [
+          "symptom",
+          "lab_positive"
+        ],
+        "feature_values": [
+          "absent",
+          "present"
+        ],
+        "training_rows": [
+          {
+            "id": "p0",
+            "class": "positive",
+            "symptom": "present",
+            "lab_positive": "present"
+          },
+          {
+            "id": "p1",
+            "class": "positive",
+            "symptom": "present",
+            "lab_positive": "absent"
+          },
+          {
+            "id": "p2",
+            "class": "positive",
+            "symptom": "absent",
+            "lab_positive": "present"
+          },
+          {
+            "id": "n0",
+            "class": "negative",
+            "symptom": "present",
+            "lab_positive": "absent"
+          },
+          {
+            "id": "n1",
+            "class": "negative",
+            "symptom": "absent",
+            "lab_positive": "present"
+          },
+          {
+            "id": "n2",
+            "class": "negative",
+            "symptom": "absent",
+            "lab_positive": "absent"
+          }
+        ],
+        "class_counts": {
+          "positive": "3",
+          "negative": "3"
+        },
+        "class_priors": {
+          "positive": "1/2",
+          "negative": "1/2"
+        },
+        "alpha": "1",
+        "feature_value_count": "2",
+        "observed_feature_values": {
+          "symptom": "present",
+          "lab_positive": "present"
+        },
+        "class_feature_present_counts": {
+          "positive": {
+            "symptom": "2",
+            "lab_positive": "2"
+          },
+          "negative": {
+            "symptom": "1",
+            "lab_positive": "1"
+          }
+        },
+        "class_feature_absent_counts": {
+          "positive": {
+            "symptom": "1",
+            "lab_positive": "1"
+          },
+          "negative": {
+            "symptom": "2",
+            "lab_positive": "2"
+          }
+        },
+        "smoothed_present_likelihoods": {
+          "positive": {
+            "symptom": "3/5",
+            "lab_positive": "3/5"
+          },
+          "negative": {
+            "symptom": "2/5",
+            "lab_positive": "2/5"
+          }
+        },
+        "smoothed_absent_likelihoods": {
+          "positive": {
+            "symptom": "2/5",
+            "lab_positive": "2/5"
+          },
+          "negative": {
+            "symptom": "3/5",
+            "lab_positive": "3/5"
+          }
+        },
+        "class_scores": {
+          "positive": "9/50",
+          "negative": "2/25"
+        },
+        "evidence_score": "13/50",
+        "posterior": {
+          "positive": "9/13",
+          "negative": "4/13"
+        },
+        "decision": "positive",
+        "score_margin": "1/10",
+        "posterior_margin": "5/13"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "training-count-witness",
+      "claim": "The listed six-row training table has three positive rows, three negative rows, and the stated binary feature counts per class.",
+      "expected_result": "sat",
+      "validation": "exact_rational_naive_bayes_training_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "two-class-binary-naive-bayes-sample"
+      ],
+      "notes": "The validator counts rows by class and by binary feature value exactly."
+    },
+    {
+      "id": "smoothed-likelihood-witness",
+      "claim": "Laplace smoothing with alpha = 1 gives the listed class-conditional feature likelihoods.",
+      "expected_result": "sat",
+      "validation": "exact_rational_naive_bayes_likelihood_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "two-class-binary-naive-bayes-sample"
+      ],
+      "notes": "The validator recomputes each conditional likelihood as (class-feature count + alpha) / (class count + alpha * 2)."
+    },
+    {
+      "id": "class-score-witness",
+      "claim": "The observed positive-positive feature vector has unnormalized class scores 9/50 and 2/25.",
+      "expected_result": "sat",
+      "validation": "exact_rational_naive_bayes_score_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "two-class-binary-naive-bayes-sample"
+      ],
+      "notes": "The validator multiplies each exact class prior by the smoothed likelihoods for the observed feature values."
+    },
+    {
+      "id": "posterior-classification-witness",
+      "claim": "Normalizing the class scores gives posterior probabilities 9/13 and 4/13, so the finite classifier predicts positive.",
+      "expected_result": "sat",
+      "validation": "exact_rational_naive_bayes_posterior_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "two-class-binary-naive-bayes-sample"
+      ],
+      "notes": "The validator recomputes the evidence score, normalized posterior probabilities, score margin, posterior margin, and decision."
+    },
+    {
+      "id": "bad-posterior-rejected",
+      "claim": "The same feature vector has positive posterior probability 2/3.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_naive_bayes_posterior_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "two-class-binary-naive-bayes-sample",
+        "class": "positive",
+        "score": "9/50",
+        "evidence_score": "13/50",
+        "computed_posterior": "9/13",
+        "claimed_posterior": "2/3"
+      },
+      "notes": "Exact replay computes the positive posterior as 9/13, so the claimed value 2/3 is rejected; the separate qf-lra-bad-posterior row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-posterior",
+      "claim": "The fixed malformed posterior claim is linearly inconsistent with the replayed posterior equation.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "two-class-binary-naive-bayes-sample",
+        "source_replay_row": "bad-posterior-rejected",
+        "class": "positive",
+        "score": "9/50",
+        "evidence_score": "13/50",
+        "computed_posterior": "9/13",
+        "claimed_posterior": "2/3",
+        "posterior_equations": [
+          "13*p_positive = 9",
+          "3*p_positive = 2"
+        ],
+        "farkas_conflict": "replayed posterior equation plus p_positive = 2/3",
+        "smt2_artifact": "artifacts/examples/math/finite-naive-bayes-classifier-v0/smt2/bad-posterior-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_naive_bayes_classifier_bad_posterior_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes 13*p_positive = 9 from the normalized class scores, while the malformed row claims 3*p_positive = 2; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-naive-bayes-classifier-theory-lean-horizon",
+      "claim": "Conditional-independence validity, Bayes optimality, calibration, statistical consistency, model selection, multiclass generality, and floating-point implementations require future theorem or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For finite or measurable feature spaces under stated independence and sampling assumptions, prove classifier optimality, calibration, consistency, or error bounds only with explicit theorem hypotheses.",
+        "future_checker": "Lean theorem statements for conditional-independence classifier theory plus separate numerical-honesty or QF_FP artifacts for floating-point Naive Bayes implementations."
+      },
+      "notes": "The finite exact row checks one committed training table and one observed feature vector, not a theorem about arbitrary data, valid independence assumptions, statistical generalization, or floating-point classifier behavior."
+    }
+  ]
+}

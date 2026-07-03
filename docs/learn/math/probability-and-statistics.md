@@ -335,6 +335,10 @@ For finite covariance, it recomputes the sample mean vector, centered rows,
 centered Gram matrix, covariance matrix, and two-by-two
 positive-semidefinite shadow, then emits checked `UnsatFarkas` evidence for
 the malformed off-diagonal covariance entry.
+For finite Naive Bayes classification, it recomputes exact class counts,
+binary feature counts, Laplace-smoothed likelihoods, class scores, normalized
+posterior probabilities, and the finite decision, then emits checked
+`UnsatFarkas` evidence for a malformed posterior claim.
 For DAG examples, the validator enumerates simple skeleton paths and applies
 the collider/non-collider conditioning rules. For random matrices, it
 recomputes weighted trace, determinant, Gram, and rank claims from exact
@@ -363,6 +367,7 @@ cargo test -p axeyum-solver --test math_resource_lra_routes finite_product_measu
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-markov-chain-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-naive-bayes-classifier-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
@@ -390,6 +395,8 @@ For exact finite statistics and regression replay, read
 [End To End: Descriptive Statistics And Regression](descriptive-statistics-regression-end-to-end.md).
 For exact finite covariance replay, read
 [End To End: Finite Covariance Matrix](covariance-matrix-end-to-end.md).
+For exact finite Naive Bayes classifier replay, read
+[End To End: Finite Naive Bayes Classifier](naive-bayes-classifier-end-to-end.md).
 For finite matrix-valued probability tables, read
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md).
 For the cross-pack finite random-matrix query map, read
@@ -410,12 +417,13 @@ topology-to-measure bridge, read
 
 Finite probability tables, random variables, kernels, martingales, product
 measures, Markov chains, d-separation rows, exact statistics, finite
-covariance matrices, and random-matrix moments first use
+covariance matrices, finite Naive Bayes classifiers, and random-matrix moments first use
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md):
 the validator recomputes exact atom-table sums and finite path conditions.
 Malformed probability normalization, Bayes-posterior rows, measure-complement
 rows, conditional expectation tables, stochastic rows, expected hitting-time
-equations, tail bounds, regression coefficients, covariance entries, and
+equations, tail bounds, regression coefficients, covariance entries, classifier
+posteriors, and
 random-matrix moment/rank rows graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
 Discrete count contradictions such as contingency totals and exact tail counts

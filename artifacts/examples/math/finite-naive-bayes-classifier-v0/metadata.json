@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "finite-naive-bayes-classifier-v0",
+  "title": "Finite Naive Bayes Classifier Checks",
+  "domain": "statistics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_statistics",
+    "field_probability_theory",
+    "curriculum_rationals",
+    "curriculum_counting",
+    "bridge_probability_mass_table",
+    "bridge_finite_naive_bayes_shadow",
+    "bridge_exact_vs_floating_arithmetic",
+    "bridge_qf_lra_farkas_anatomy"
+  ],
+  "field_ids": [
+    "statistics",
+    "probability_theory"
+  ],
+  "curriculum_nodes": [
+    "rationals",
+    "counting"
+  ],
+  "axeyum_fragments": [
+    "finite probability tables",
+    "finite classifier replay",
+    "finite Naive Bayes replay",
+    "exact rational arithmetic",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-naive-bayes-classifier-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite Naive Bayes bad posterior QF_LRA/Farkas regression seed",
+    "pressure": "Exact rational Naive Bayes replay computes posterior 9/13 for a binary-feature observation, while a malformed row claims 2/3, isolating a compact scalar Farkas conflict.",
+    "evidence": [
+      "qf-lra-bad-posterior"
+    ],
+    "next_step": "Promote additional finite classifier rows only when they add distinct conditional-independence, smoothing, threshold, multiclass, calibration, or numerical-honesty pressure; keep statistical generalization and floating-point classifier claims in theorem or numerical-honesty lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/naive-bayes-classifier-end-to-end.md",
+    "artifacts/examples/math/finite-naive-bayes-classifier-v0/smt2/bad-posterior-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "training-count-witness",
+    "smoothed-likelihood-witness",
+    "class-score-witness",
+    "posterior-classification-witness",
+    "bad-posterior-rejected",
+    "qf-lra-bad-posterior",
+    "general-naive-bayes-classifier-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed finite training rows, binary feature counts, Laplace-smoothed likelihoods, class scores, posterior probabilities, and classifier decision as deterministic exact-rational replay obligations.",
+    "Route the false posterior claim through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting posterior equation.",
+    "Expose the pack through probability, statistics, finite classifier, exact-vs-floating, and learner-query surfaces.",
+    "Keep conditional-independence validity, Bayes optimality, calibration, statistical consistency, model selection, and floating-point classifier behavior marked Lean or numerical-honesty horizon."
+  ]
+}

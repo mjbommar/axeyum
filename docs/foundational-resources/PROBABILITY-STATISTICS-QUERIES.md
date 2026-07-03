@@ -21,12 +21,13 @@ rows, stochastic kernels, finite Markov chains, finite hitting times,
 concentration/tail-count rows, exact tests, finite covariance matrices, and
 finite Schur conditional-variance shadows, ordinary and ridge regression, and
 finite PCA, finite k-means clustering, finite linear-discriminant/classification
-replay, and finite random-matrix moments. Continuous distributions, sampling
+replay, finite Naive Bayes classifier posterior replay, and finite random-matrix moments. Continuous distributions, sampling
 guarantees, asymptotic inference, MCMC/VI, stochastic-process limits,
 random-matrix limit laws, clustering consistency, Lloyd convergence, global
-clustering optimality, regularization-path theory, classifier generalization,
-and floating-point statistical-library behavior remain in proof-horizon or
-numerical-honesty lanes.
+clustering optimality, regularization-path theory, conditional-independence
+validity, classifier calibration/generalization, and floating-point
+statistical-library behavior remain in proof-horizon or numerical-honesty
+lanes.
 
 ## Query Shape
 
@@ -84,6 +85,7 @@ needs concrete checked rows to display.
 | Finite PCA covariance/eigenpair/projection rows | `bridge_finite_pca_shadow`; pack `finite-principal-components-v0` | `Farkas` | `checks --concept bridge_finite_pca_shadow --route Farkas --proof-status checked`; `checks --pack finite-principal-components-v0 --proof-status replay-only`; `horizon-frontier --text pca` |
 | Finite k-means assignment, centroid, WCSS, and clustering-objective rows | `bridge_finite_k_means_shadow`; pack `finite-k-means-clustering-v0` | `Farkas` | `checks --concept bridge_finite_k_means_shadow --route Farkas --proof-status checked`; `checks --pack finite-k-means-clustering-v0 --proof-status replay-only`; `horizon-frontier --text clustering` |
 | Finite linear-discriminant and classification rows | `bridge_finite_linear_discriminant_shadow`; pack `finite-linear-discriminant-v0` | `Farkas` | `checks --concept bridge_finite_linear_discriminant_shadow --route Farkas --proof-status checked`; `checks --pack finite-linear-discriminant-v0 --proof-status replay-only`; `horizon-frontier --text discriminant` |
+| Finite Naive Bayes classifier posterior rows | `bridge_finite_naive_bayes_shadow`; pack `finite-naive-bayes-classifier-v0` | `Farkas` | `checks --concept bridge_finite_naive_bayes_shadow --route Farkas --proof-status checked`; `checks --pack finite-naive-bayes-classifier-v0 --proof-status replay-only`; `horizon-frontier --text "naive bayes"` |
 | Random-matrix finite moments, covariance matrices, PCA shadows, Schur conditional-variance shadows, and expected-rank rows | `bridge_random_matrix_finite_moment`; `bridge_schur_complement`; `bridge_finite_pca_shadow` | `Farkas` | `checks --concept bridge_random_matrix_finite_moment --route Farkas --proof-status checked`; `checks --concept bridge_schur_complement --route Farkas --proof-status checked`; `checks --concept bridge_finite_pca_shadow --route Farkas --proof-status checked`; `checks --pack finite-covariance-matrix-v0 --route Farkas --proof-status checked`; `checks --pack finite-principal-components-v0 --route Farkas --proof-status checked`; `checks --pack finite-schur-complement-v0 --route Farkas --proof-status checked` |
 
 ## Copyable Examples
@@ -121,6 +123,25 @@ python3 scripts/query-foundational-resources.py checks \
   --pack finite-probability-v0 \
   --text Bayes \
   --proof-status checked \
+  --require-any
+```
+
+Display finite Naive Bayes classifier rows, then the checked malformed
+posterior row and theorem boundary:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-naive-bayes-classifier-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_naive_bayes_shadow \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text "naive bayes" \
   --require-any
 ```
 

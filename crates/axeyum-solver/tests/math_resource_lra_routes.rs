@@ -67,6 +67,9 @@ const FINITE_PRINCIPAL_COMPONENTS_BAD_EIGENVALUE: &str = include_str!(
 const FINITE_K_MEANS_CLUSTERING_BAD_CENTROID: &str = include_str!(
     "../../../artifacts/examples/math/finite-k-means-clustering-v0/smt2/bad-centroid-x-farkas-conflict.smt2"
 );
+const FINITE_NAIVE_BAYES_CLASSIFIER_BAD_POSTERIOR: &str = include_str!(
+    "../../../artifacts/examples/math/finite-naive-bayes-classifier-v0/smt2/bad-posterior-farkas-conflict.smt2"
+);
 const LEAST_SQUARES_BAD_RSS_IMPROVEMENT: &str = include_str!(
     "../../../artifacts/examples/math/least-squares-regression-v0/smt2/bad-rss-improvement-farkas-conflict.smt2"
 );
@@ -925,6 +928,14 @@ fn finite_k_means_clustering_bad_centroid_artifact_emits_checked_farkas() {
     assert_resource_farkas(
         "finite-k-means-clustering-v0 bad-centroid-x SMT-LIB artifact",
         FINITE_K_MEANS_CLUSTERING_BAD_CENTROID,
+    );
+}
+
+#[test]
+fn finite_naive_bayes_classifier_bad_posterior_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-naive-bayes-classifier-v0 bad-posterior SMT-LIB artifact",
+        FINITE_NAIVE_BAYES_CLASSIFIER_BAD_POSTERIOR,
     );
 }
 

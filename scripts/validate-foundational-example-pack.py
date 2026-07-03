@@ -34226,6 +34226,322 @@ def validate_finite_k_means_clustering(expected: dict[str, Any]) -> None:
     require_string("k-means horizon future_checker", horizon_data.get("future_checker"))
 
 
+def validate_finite_naive_bayes_classifier(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    def require_key_fraction_map(context: str, value: Any, keys: list[str]) -> dict[str, Fraction]:
+        if not isinstance(value, dict):
+            fail(f"{context} must be an object")
+        key_set = set(keys)
+        if set(value) != key_set:
+            missing = sorted(key_set - set(value))
+            extra = sorted(set(value) - key_set)
+            fail(f"{context} must cover exactly {keys}; missing={missing} extra={extra}")
+        return {
+            key: require_fraction(f"{context}.{key}", value[key])
+            for key in keys
+        }
+
+    def require_nested_fraction_map(
+        context: str,
+        value: Any,
+        outer_keys: list[str],
+        inner_keys: list[str],
+    ) -> dict[str, dict[str, Fraction]]:
+        if not isinstance(value, dict):
+            fail(f"{context} must be an object")
+        outer_set = set(outer_keys)
+        if set(value) != outer_set:
+            missing = sorted(outer_set - set(value))
+            extra = sorted(set(value) - outer_set)
+            fail(f"{context} must cover exactly outer keys; missing={missing} extra={extra}")
+        return {
+            outer: require_key_fraction_map(f"{context}.{outer}", value[outer], inner_keys)
+            for outer in outer_keys
+        }
+
+    training = checks["training-count-witness"]
+    if training["expected_result"] != "sat":
+        fail("training-count-witness must expect sat")
+    if training.get("proof_status") != "replay-only":
+        fail("training-count-witness must be replay-only")
+    values = single_witness_values(training, witnesses)
+    classes = require_string_list("naive Bayes classes", values.get("classes"))
+    features = require_string_list("naive Bayes features", values.get("features"))
+    feature_values = require_string_list("naive Bayes feature_values", values.get("feature_values"))
+    if set(feature_values) != {"absent", "present"}:
+        fail("finite-naive-bayes-classifier-v0 intentionally uses absent/present binary features")
+    raw_rows = values.get("training_rows")
+    if not isinstance(raw_rows, list) or not raw_rows:
+        fail("naive Bayes training_rows must be a non-empty list")
+    class_set = set(classes)
+    feature_value_set = set(feature_values)
+    seen_rows: set[str] = set()
+    parsed_rows: list[dict[str, str]] = []
+    for index, row in enumerate(raw_rows):
+        if not isinstance(row, dict):
+            fail(f"naive Bayes training_rows[{index}] must be an object")
+        row_id = row.get("id")
+        require_string(f"naive Bayes training_rows[{index}].id", row_id)
+        if row_id in seen_rows:
+            fail(f"naive Bayes training_rows repeats id {row_id!r}")
+        seen_rows.add(row_id)
+        class_id = row.get("class")
+        require_string(f"naive Bayes training_rows[{index}].class", class_id)
+        if class_id not in class_set:
+            fail(f"naive Bayes training_rows[{index}].class is unknown")
+        parsed: dict[str, str] = {"class": class_id}
+        for feature in features:
+            value = row.get(feature)
+            require_string(f"naive Bayes training_rows[{index}].{feature}", value)
+            if value not in feature_value_set:
+                fail(f"naive Bayes training_rows[{index}].{feature} has unknown feature value")
+            parsed[feature] = value
+        parsed_rows.append(parsed)
+
+    class_counts = require_key_fraction_map("naive Bayes class_counts", values.get("class_counts"), classes)
+    class_priors = require_key_fraction_map("naive Bayes class_priors", values.get("class_priors"), classes)
+    alpha = require_fraction("naive Bayes alpha", values.get("alpha"))
+    feature_value_count = require_fraction(
+        "naive Bayes feature_value_count",
+        values.get("feature_value_count"),
+    )
+    if alpha <= 0:
+        fail("naive Bayes alpha must be positive")
+    if feature_value_count != Fraction(len(feature_values)):
+        fail("naive Bayes feature_value_count must match feature_values length")
+    observed = require_mapping_object(
+        "naive Bayes observed_feature_values",
+        values.get("observed_feature_values"),
+        features,
+        feature_values,
+    )
+    present_counts = require_nested_fraction_map(
+        "naive Bayes class_feature_present_counts",
+        values.get("class_feature_present_counts"),
+        classes,
+        features,
+    )
+    absent_counts = require_nested_fraction_map(
+        "naive Bayes class_feature_absent_counts",
+        values.get("class_feature_absent_counts"),
+        classes,
+        features,
+    )
+    present_likelihoods = require_nested_fraction_map(
+        "naive Bayes smoothed_present_likelihoods",
+        values.get("smoothed_present_likelihoods"),
+        classes,
+        features,
+    )
+    absent_likelihoods = require_nested_fraction_map(
+        "naive Bayes smoothed_absent_likelihoods",
+        values.get("smoothed_absent_likelihoods"),
+        classes,
+        features,
+    )
+    class_scores = require_key_fraction_map("naive Bayes class_scores", values.get("class_scores"), classes)
+    evidence_score = require_fraction("naive Bayes evidence_score", values.get("evidence_score"))
+    posterior = require_key_fraction_map("naive Bayes posterior", values.get("posterior"), classes)
+    decision = values.get("decision")
+    require_string("naive Bayes decision", decision)
+    score_margin = require_fraction("naive Bayes score_margin", values.get("score_margin"))
+    posterior_margin = require_fraction("naive Bayes posterior_margin", values.get("posterior_margin"))
+
+    computed_counts = {
+        class_id: Fraction(sum(1 for row in parsed_rows if row["class"] == class_id))
+        for class_id in classes
+    }
+    if computed_counts != class_counts:
+        fail("training-count-witness class_counts are incorrect")
+    total_rows = Fraction(len(parsed_rows))
+    if any(count <= 0 for count in class_counts.values()):
+        fail("training-count-witness every class must have at least one row")
+    if {
+        class_id: class_counts[class_id] / total_rows
+        for class_id in classes
+    } != class_priors:
+        fail("training-count-witness class_priors are incorrect")
+
+    computed_present_counts: dict[str, dict[str, Fraction]] = {}
+    computed_absent_counts: dict[str, dict[str, Fraction]] = {}
+    for class_id in classes:
+        class_rows = [row for row in parsed_rows if row["class"] == class_id]
+        computed_present_counts[class_id] = {
+            feature: Fraction(sum(1 for row in class_rows if row[feature] == "present"))
+            for feature in features
+        }
+        computed_absent_counts[class_id] = {
+            feature: Fraction(sum(1 for row in class_rows if row[feature] == "absent"))
+            for feature in features
+        }
+    if computed_present_counts != present_counts:
+        fail("training-count-witness present feature counts are incorrect")
+    if computed_absent_counts != absent_counts:
+        fail("training-count-witness absent feature counts are incorrect")
+    for class_id in classes:
+        for feature in features:
+            if present_counts[class_id][feature] + absent_counts[class_id][feature] != class_counts[class_id]:
+                fail("training-count-witness feature counts must sum to class count")
+
+    likelihood = checks["smoothed-likelihood-witness"]
+    if likelihood["expected_result"] != "sat":
+        fail("smoothed-likelihood-witness must expect sat")
+    if likelihood.get("proof_status") != "replay-only":
+        fail("smoothed-likelihood-witness must be replay-only")
+    for class_id in classes:
+        denominator = class_counts[class_id] + alpha * feature_value_count
+        if denominator <= 0:
+            fail("smoothed-likelihood-witness denominator must be positive")
+        for feature in features:
+            expected_present = (present_counts[class_id][feature] + alpha) / denominator
+            expected_absent = (absent_counts[class_id][feature] + alpha) / denominator
+            if present_likelihoods[class_id][feature] != expected_present:
+                fail("smoothed-likelihood-witness present likelihood is incorrect")
+            if absent_likelihoods[class_id][feature] != expected_absent:
+                fail("smoothed-likelihood-witness absent likelihood is incorrect")
+
+    score_check = checks["class-score-witness"]
+    if score_check["expected_result"] != "sat":
+        fail("class-score-witness must expect sat")
+    if score_check.get("proof_status") != "replay-only":
+        fail("class-score-witness must be replay-only")
+    computed_scores: dict[str, Fraction] = {}
+    for class_id in classes:
+        score = class_priors[class_id]
+        for feature in features:
+            if observed[feature] == "present":
+                score *= present_likelihoods[class_id][feature]
+            elif observed[feature] == "absent":
+                score *= absent_likelihoods[class_id][feature]
+            else:
+                fail("class-score-witness observed feature value must be present or absent")
+        computed_scores[class_id] = score
+    if computed_scores != class_scores:
+        fail("class-score-witness class_scores are incorrect")
+
+    posterior_check = checks["posterior-classification-witness"]
+    if posterior_check["expected_result"] != "sat":
+        fail("posterior-classification-witness must expect sat")
+    if posterior_check.get("proof_status") != "replay-only":
+        fail("posterior-classification-witness must be replay-only")
+    if sum(class_scores.values(), Fraction(0)) != evidence_score:
+        fail("posterior-classification-witness evidence_score is incorrect")
+    if evidence_score <= 0:
+        fail("posterior-classification-witness evidence_score must be positive")
+    computed_posterior = {
+        class_id: class_scores[class_id] / evidence_score
+        for class_id in classes
+    }
+    if computed_posterior != posterior:
+        fail("posterior-classification-witness posterior is incorrect")
+    if sum(posterior.values(), Fraction(0)) != 1:
+        fail("posterior-classification-witness posterior probabilities must sum to one")
+    ordered_classes = sorted(classes, key=lambda class_id: posterior[class_id], reverse=True)
+    if len(ordered_classes) < 2:
+        fail("posterior-classification-witness needs at least two classes")
+    if posterior[ordered_classes[0]] == posterior[ordered_classes[1]]:
+        fail("posterior-classification-witness decision must be unique")
+    if decision != ordered_classes[0]:
+        fail("posterior-classification-witness decision is incorrect")
+    if len(classes) == 2:
+        first, second = classes
+        if class_scores[first] - class_scores[second] != score_margin:
+            fail("posterior-classification-witness score_margin is incorrect")
+        if posterior[first] - posterior[second] != posterior_margin:
+            fail("posterior-classification-witness posterior_margin is incorrect")
+    if score_margin <= 0 or posterior_margin <= 0:
+        fail("posterior-classification-witness margins must be positive for the listed class order")
+
+    bad = checks["bad-posterior-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-posterior-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-posterior-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_naive_bayes_posterior_replay":
+        fail("bad-posterior-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "two-class-binary-naive-bayes-sample":
+        fail("bad-posterior-rejected must cite two-class-binary-naive-bayes-sample")
+    class_id = data.get("class")
+    require_string("bad naive Bayes class", class_id)
+    if class_id not in class_set:
+        fail("bad-posterior-rejected class is unknown")
+    score = require_fraction("bad naive Bayes score", data.get("score"))
+    bad_evidence = require_fraction("bad naive Bayes evidence_score", data.get("evidence_score"))
+    computed = require_fraction("bad naive Bayes computed_posterior", data.get("computed_posterior"))
+    claimed = require_fraction("bad naive Bayes claimed_posterior", data.get("claimed_posterior"))
+    if score != class_scores[class_id]:
+        fail("bad-posterior-rejected score must match replay")
+    if bad_evidence != evidence_score:
+        fail("bad-posterior-rejected evidence_score must match replay")
+    if score / bad_evidence != computed:
+        fail("bad-posterior-rejected computed_posterior is incorrect")
+    if computed != posterior[class_id]:
+        fail("bad-posterior-rejected computed_posterior must match posterior replay")
+    if claimed == computed:
+        fail("bad-posterior-rejected must document a false posterior claim")
+    if "separate qf-lra-bad-posterior" not in bad.get("notes", ""):
+        fail("bad-posterior-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-posterior"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-posterior must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-posterior must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-posterior must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "two-class-binary-naive-bayes-sample":
+        fail("qf-lra-bad-posterior must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-posterior-rejected":
+        fail("qf-lra-bad-posterior must cite the replay row")
+    qf_score = require_fraction("qf naive Bayes score", qf_data.get("score"))
+    qf_evidence = require_fraction("qf naive Bayes evidence_score", qf_data.get("evidence_score"))
+    qf_computed = require_fraction("qf naive Bayes computed_posterior", qf_data.get("computed_posterior"))
+    qf_claimed = require_fraction("qf naive Bayes claimed_posterior", qf_data.get("claimed_posterior"))
+    if (qf_score, qf_evidence, qf_computed, qf_claimed) != (
+        score,
+        bad_evidence,
+        computed,
+        claimed,
+    ):
+        fail("qf-lra-bad-posterior data must match the replay row")
+    equations = require_string_list(
+        "qf naive Bayes posterior_equations",
+        qf_data.get("posterior_equations"),
+    )
+    if equations != ["13*p_positive = 9", "3*p_positive = 2"]:
+        fail("qf-lra-bad-posterior must document the linear conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf naive Bayes smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-naive-bayes-classifier-v0/smt2/"
+        "bad-posterior-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-posterior smt2_artifact must name the checked source artifact")
+    check_source("qf naive Bayes smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf naive Bayes farkas_regression", regression)
+    if "finite_naive_bayes_classifier_bad_posterior_artifact_emits_checked_farkas" not in regression:
+        fail("qf-lra-bad-posterior must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf naive Bayes certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-posterior certificate must document checked Farkas evidence")
+
+    horizon = checks["general-naive-bayes-classifier-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-naive-bayes-classifier-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-naive-bayes-classifier-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string("naive Bayes horizon target_theorem_shape", horizon_data.get("target_theorem_shape"))
+    require_string("naive Bayes horizon future_checker", horizon_data.get("future_checker"))
+
+
 def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -37436,6 +37752,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_principal_components(expected)
     if metadata["id"] == "finite-k-means-clustering-v0":
         validate_finite_k_means_clustering(expected)
+    if metadata["id"] == "finite-naive-bayes-classifier-v0":
+        validate_finite_naive_bayes_classifier(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "cardinality-principles-v0":

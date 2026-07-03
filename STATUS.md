@@ -240,6 +240,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite Naive Bayes classifier resource landed.**
+  `finite-naive-bayes-classifier-v0` now gives the statistics and probability
+  lanes a compact exact classifier example: it replays a six-row binary-feature
+  training table, class priors, Laplace-smoothed likelihoods, class scores,
+  posterior probabilities, and the positive decision; rejects the malformed
+  positive-posterior claim `2/3` versus exact `9/13`; and routes that scalar
+  conflict through a source-linked QF_LRA/Farkas row. The focused learner page,
+  probability/statistics query guide, probability-mass-table,
+  exact-vs-floating, finite Naive Bayes, and QF_LRA/Farkas bridge rows,
+  validator, resource smoke queries, generated dashboards, and
+  `math_resource_lra_routes` regression keep this fixed finite replay separate
+  from conditional-independence validity, Bayes optimality, calibration,
+  statistical consistency, model selection, multiclass generality, and
+  floating-point classifier behavior. The public summary now reports 126
+  concept rows, 162 packs, 1054 expected checks, 388 checked rows, 541
+  replay-only rows, 125 Lean-horizon rows, and 162 promoted solver-reuse packs.
+
 - **Finite k-means clustering resource landed.**
   `finite-k-means-clustering-v0` now gives the statistics, linear-algebra,
   optimization/convexity, numerical-analysis, rational, and real-analysis
@@ -255,8 +272,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   keep this fixed finite replay separate from Lloyd convergence, global
   optimality, clustering consistency, randomized initialization, floating-point
   k-means implementations, and statistical generalization. The public summary
-  now reports 125 concept rows, 161 packs, 1047 expected checks, 387 checked
-  rows, 536 replay-only rows, 124 Lean-horizon rows, and 161 promoted
+  at landing reported 125 concept rows, 161 packs, 1047 expected checks, 387
+  checked rows, 536 replay-only rows, 124 Lean-horizon rows, and 161 promoted
   solver-reuse packs.
 - **Finite principal-components resource landed.**
   `finite-principal-components-v0` now gives the statistics, linear-algebra,
