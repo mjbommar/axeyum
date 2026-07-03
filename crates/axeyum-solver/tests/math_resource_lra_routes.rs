@@ -91,6 +91,9 @@ const FINITE_ENTROPY_INFORMATION_GAIN_BAD_WEIGHTED_ENTROPY: &str = include_str!(
 const FINITE_K_NEAREST_NEIGHBORS_BAD_SQUARED_DISTANCE: &str = include_str!(
     "../../../artifacts/examples/math/finite-k-nearest-neighbors-v0/smt2/bad-squared-distance-farkas-conflict.smt2"
 );
+const FINITE_PERCEPTRON_BAD_WEIGHT_UPDATE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-perceptron-v0/smt2/bad-weight-update-farkas-conflict.smt2"
+);
 const LEAST_SQUARES_BAD_RSS_IMPROVEMENT: &str = include_str!(
     "../../../artifacts/examples/math/least-squares-regression-v0/smt2/bad-rss-improvement-farkas-conflict.smt2"
 );
@@ -1013,6 +1016,14 @@ fn finite_k_nearest_neighbors_bad_squared_distance_artifact_emits_checked_farkas
     assert_resource_farkas(
         "finite-k-nearest-neighbors-v0 bad-squared-distance SMT-LIB artifact",
         FINITE_K_NEAREST_NEIGHBORS_BAD_SQUARED_DISTANCE,
+    );
+}
+
+#[test]
+fn finite_perceptron_bad_weight_update_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-perceptron-v0 bad-weight-update SMT-LIB artifact",
+        FINITE_PERCEPTRON_BAD_WEIGHT_UPDATE,
     );
 }
 

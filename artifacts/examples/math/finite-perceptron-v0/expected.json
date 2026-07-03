@@ -1,0 +1,245 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-perceptron-v0",
+  "witnesses": [
+    {
+      "id": "four-point-perceptron-trace",
+      "description": "A four-point linearly separable training set in augmented coordinates with a complete perceptron training trace: two mistake updates, final weights (-1, 3, 0), and a strict-margin convergence pass.",
+      "values": {
+        "classes": [
+          "positive",
+          "negative"
+        ],
+        "initial_weights": [
+          "0",
+          "0",
+          "0"
+        ],
+        "training_points": [
+          {
+            "id": "p1",
+            "coordinates": [
+              "1",
+              "2",
+              "1"
+            ],
+            "class": "positive",
+            "label": "1"
+          },
+          {
+            "id": "n1",
+            "coordinates": [
+              "2",
+              "-1",
+              "1"
+            ],
+            "class": "negative",
+            "label": "-1"
+          },
+          {
+            "id": "p2",
+            "coordinates": [
+              "2",
+              "3",
+              "1"
+            ],
+            "class": "positive",
+            "label": "1"
+          },
+          {
+            "id": "n2",
+            "coordinates": [
+              "1",
+              "-2",
+              "1"
+            ],
+            "class": "negative",
+            "label": "-1"
+          }
+        ],
+        "presentation_steps": [
+          {
+            "step": "1",
+            "point_id": "p1",
+            "weights_before": [
+              "0",
+              "0",
+              "0"
+            ],
+            "score": "0",
+            "label_times_score": "0",
+            "mistake": true,
+            "weights_after": [
+              "1",
+              "2",
+              "1"
+            ]
+          },
+          {
+            "step": "2",
+            "point_id": "n1",
+            "weights_before": [
+              "1",
+              "2",
+              "1"
+            ],
+            "score": "1",
+            "label_times_score": "-1",
+            "mistake": true,
+            "weights_after": [
+              "-1",
+              "3",
+              "0"
+            ]
+          },
+          {
+            "step": "3",
+            "point_id": "p2",
+            "weights_before": [
+              "-1",
+              "3",
+              "0"
+            ],
+            "score": "7",
+            "label_times_score": "7",
+            "mistake": false,
+            "weights_after": [
+              "-1",
+              "3",
+              "0"
+            ]
+          },
+          {
+            "step": "4",
+            "point_id": "n2",
+            "weights_before": [
+              "-1",
+              "3",
+              "0"
+            ],
+            "score": "-7",
+            "label_times_score": "7",
+            "mistake": false,
+            "weights_after": [
+              "-1",
+              "3",
+              "0"
+            ]
+          }
+        ],
+        "final_weights": [
+          "-1",
+          "3",
+          "0"
+        ],
+        "update_count": "2",
+        "final_margins": {
+          "p1": "5",
+          "n1": "5",
+          "p2": "7",
+          "n2": "7"
+        },
+        "minimum_final_margin": "5"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "perceptron-table-witness",
+      "claim": "The listed four-point training set has two positive and two negative points in augmented coordinates with a fixed bias component 1, and training starts from the zero weight vector.",
+      "expected_result": "sat",
+      "validation": "exact_rational_perceptron_table_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "four-point-perceptron-trace"
+      ],
+      "notes": "The validator checks the committed coordinates, labels, augmented bias components, and initial weights exactly."
+    },
+    {
+      "id": "perceptron-update-witness",
+      "claim": "Every presented training step matches exact replay of the perceptron rule: the dot-product score, the mistake condition label*score <= 0, and the update w + label*x on mistakes; the trace makes exactly two updates and ends at weights (-1, 3, 0).",
+      "expected_result": "sat",
+      "validation": "exact_rational_perceptron_update_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "four-point-perceptron-trace"
+      ],
+      "notes": "All coordinates are integers, so every dot product, mistake flag, and weight update in the trace is exact rational arithmetic."
+    },
+    {
+      "id": "perceptron-convergence-witness",
+      "claim": "The final weight vector classifies every training point with a strictly positive functional margin, so a further full pass makes no updates.",
+      "expected_result": "sat",
+      "validation": "exact_rational_perceptron_convergence_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "four-point-perceptron-trace"
+      ],
+      "notes": "The validator recomputes label*(w . x) for every training point against the committed final weights and requires each product to be strictly positive."
+    },
+    {
+      "id": "perceptron-margin-witness",
+      "claim": "The final functional margins are 5, 5, 7, 7 and the minimum final margin is 5.",
+      "expected_result": "sat",
+      "validation": "exact_rational_perceptron_margin_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "four-point-perceptron-trace"
+      ],
+      "notes": "Functional margins label*(w . x) are exact integers here; geometric margins would divide by the irrational norm ||w|| and stay outside this pack."
+    },
+    {
+      "id": "bad-weight-update-rejected",
+      "claim": "After the second mistake update, the first weight coordinate is 1.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_weight_update_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "four-point-perceptron-trace",
+        "metric": "perceptron_weight_coordinate",
+        "step": "2",
+        "coordinate_index": "0",
+        "computed_weight_coordinate": "-1",
+        "claimed_weight_coordinate": "1"
+      },
+      "notes": "Exact replay computes 1 + (-1)*2 = -1 for the first coordinate after the second update, so the claimed value 1 is rejected; the separate qf-lra-bad-weight-update row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-weight-update",
+      "claim": "The fixed malformed weight-coordinate claim is linearly inconsistent with the replayed update equation.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "four-point-perceptron-trace",
+        "source_replay_row": "bad-weight-update-rejected",
+        "metric": "perceptron_weight_coordinate",
+        "step": "2",
+        "coordinate_index": "0",
+        "computed_weight_coordinate": "-1",
+        "claimed_weight_coordinate": "1",
+        "weight_update_equations": [
+          "perceptron_w1 = -1",
+          "perceptron_w1 = 1"
+        ],
+        "farkas_conflict": "replayed weight-update equation plus perceptron_w1 = 1",
+        "smt2_artifact": "artifacts/examples/math/finite-perceptron-v0/smt2/bad-weight-update-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_perceptron_bad_weight_update_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes perceptron_w1 = -1 from the fixed trace, while the malformed row claims perceptron_w1 = 1; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-perceptron-theory-lean-horizon",
+      "claim": "The Novikoff mistake bound, perceptron convergence theorems for separable data, geometric-margin theory, non-separable and kernel-perceptron behavior, averaged/voted variants, learning-rate policy, statistical generalization, and floating-point training behavior require future theorem, statistical-inference, or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For linearly separable data with margin gamma and radius R under stated presentation-order and learning-rate assumptions, prove the perceptron makes at most (R/gamma)^2 mistakes, and prove convergence, margin, or generalization claims only with explicit theorem hypotheses; the finite rows here replay one committed trace.",
+        "future_checker": "Lean theorem statements for the Novikoff bound and perceptron convergence plus separate numerical-honesty artifacts for floating-point dot-product and training implementations."
+      },
+      "notes": "The finite exact rows replay one committed training trace with two mistake updates and a strict-margin convergence pass; they do not prove the Novikoff mistake bound, convergence for other presentation orders or datasets, geometric-margin theory (which divides by an irrational norm), non-separable or kernel behavior, statistical generalization, or floating-point training behavior."
+    }
+  ]
+}

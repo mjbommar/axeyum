@@ -266,6 +266,15 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_finite_n
 python3 scripts/query-foundational-resources.py checks --concept bridge_probability_mass_table --pack finite-k-nearest-neighbors-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-k-nearest-neighbors-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text neighbor --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field statistics --text perceptron --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-perceptron-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-perceptron-v0 --route Farkas --proof-status checked --text qf-lra-bad-weight-update --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-perceptron-v0 --proof-status replay-only --text perceptron --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-perceptron-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_perceptron_shadow --pack finite-perceptron-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_probability_mass_table --pack finite-perceptron-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-perceptron-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text perceptron --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked --text qf-lra-bad-ridge-beta0 --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --proof-status replay-only --text rejected --require-any >/dev/null

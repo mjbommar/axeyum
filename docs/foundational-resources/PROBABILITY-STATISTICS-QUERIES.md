@@ -25,8 +25,8 @@ replay, finite Naive Bayes classifier posterior replay, finite
 confusion-matrix classifier metrics, finite ROC/AUC score-ranking rows, and
 finite precision-recall score-ranking rows, finite calibration/Brier scoring
 rows, finite decision-tree Gini split rows, finite dyadic entropy/information-gain
-rows, finite nearest-neighbor classification rows, and finite random-matrix
-moments.
+rows, finite nearest-neighbor classification rows, finite perceptron
+training traces, and finite random-matrix moments.
 Continuous distributions, sampling
 guarantees, asymptotic inference, MCMC/VI, stochastic-process limits,
 random-matrix limit laws, clustering consistency, Lloyd convergence, global
@@ -36,7 +36,8 @@ general precision-recall theory, general calibration/scoring-rule theory,
 confidence intervals, threshold policy, tie/interpolation conventions beyond
 committed finite rows, binning-policy claims, decision-tree greedy optimality,
 pruning, non-dyadic entropy and log-loss splitting, nearest-neighbor
-consistency and tie policy, continuous score
+consistency and tie policy, perceptron mistake bounds and convergence,
+continuous score
 distributions,
 and floating-point statistical-library behavior remain in proof-horizon or
 numerical-honesty lanes.
@@ -105,6 +106,7 @@ needs concrete checked rows to display.
 | Finite decision-tree feature/class partitions, Gini impurities, and split selection | `bridge_finite_decision_tree_gini_shadow`; pack `finite-decision-tree-gini-v0` | `Farkas` | `checks --concept bridge_finite_decision_tree_gini_shadow --route Farkas --proof-status checked`; `checks --pack finite-decision-tree-gini-v0 --proof-status replay-only`; `horizon-frontier --text decision-tree` |
 | Finite dyadic entropy, weighted split entropy, and information-gain selection | `bridge_finite_entropy_information_gain_shadow`; pack `finite-entropy-information-gain-v0` | `Farkas` | `checks --concept bridge_finite_entropy_information_gain_shadow --route Farkas --proof-status checked`; `checks --pack finite-entropy-information-gain-v0 --proof-status replay-only`; `horizon-frontier --text entropy` |
 | Finite squared distances, neighbor ranking, and majority-vote classification | `bridge_finite_nearest_neighbor_shadow`; pack `finite-k-nearest-neighbors-v0` | `Farkas` | `checks --concept bridge_finite_nearest_neighbor_shadow --route Farkas --proof-status checked`; `checks --pack finite-k-nearest-neighbors-v0 --proof-status replay-only`; `horizon-frontier --text neighbor` |
+| Finite perceptron dot products, mistake updates, and strict-margin convergence | `bridge_finite_perceptron_shadow`; pack `finite-perceptron-v0` | `Farkas` | `checks --concept bridge_finite_perceptron_shadow --route Farkas --proof-status checked`; `checks --pack finite-perceptron-v0 --proof-status replay-only`; `horizon-frontier --text perceptron` |
 | Random-matrix finite moments, covariance matrices, PCA shadows, Schur conditional-variance shadows, and expected-rank rows | `bridge_random_matrix_finite_moment`; `bridge_schur_complement`; `bridge_finite_pca_shadow` | `Farkas` | `checks --concept bridge_random_matrix_finite_moment --route Farkas --proof-status checked`; `checks --concept bridge_schur_complement --route Farkas --proof-status checked`; `checks --concept bridge_finite_pca_shadow --route Farkas --proof-status checked`; `checks --pack finite-covariance-matrix-v0 --route Farkas --proof-status checked`; `checks --pack finite-principal-components-v0 --route Farkas --proof-status checked`; `checks --pack finite-schur-complement-v0 --route Farkas --proof-status checked` |
 
 ## Copyable Examples
@@ -294,6 +296,25 @@ python3 scripts/query-foundational-resources.py checks \
 
 python3 scripts/query-foundational-resources.py horizon-frontier \
   --text neighbor \
+  --require-any
+```
+
+Display finite perceptron rows, then the checked malformed weight-update row
+and theorem boundary:
+
+```sh
+python3 scripts/query-foundational-resources.py checks \
+  --pack finite-perceptron-v0 \
+  --require-any
+
+python3 scripts/query-foundational-resources.py checks \
+  --concept bridge_finite_perceptron_shadow \
+  --route Farkas \
+  --proof-status checked \
+  --require-any
+
+python3 scripts/query-foundational-resources.py horizon-frontier \
+  --text perceptron \
   --require-any
 ```
 

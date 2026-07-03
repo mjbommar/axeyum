@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": "finite-perceptron-v0",
+  "title": "Finite Perceptron",
+  "domain": "statistics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_statistics",
+    "field_probability_theory",
+    "field_linear_algebra",
+    "curriculum_linear_algebra",
+    "curriculum_rationals",
+    "bridge_probability_mass_table",
+    "bridge_finite_perceptron_shadow",
+    "bridge_exact_vs_floating_arithmetic",
+    "bridge_qf_lra_farkas_anatomy"
+  ],
+  "field_ids": [
+    "statistics",
+    "probability_theory",
+    "linear_algebra"
+  ],
+  "curriculum_nodes": [
+    "linear-algebra",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite classifier table replay",
+    "finite perceptron trace replay",
+    "finite dot-product replay",
+    "finite mistake counting",
+    "exact rational arithmetic",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-perceptron-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite perceptron bad weight-update QF_LRA/Farkas regression seed",
+    "pressure": "Exact finite trace replay computes the first weight coordinate -1 after the second perceptron mistake update, while a malformed row claims 1, isolating a compact scalar Farkas conflict beneath the training trace.",
+    "evidence": [
+      "qf-lra-bad-weight-update"
+    ],
+    "next_step": "Promote additional perceptron rows only when they add distinct averaged/voted-perceptron, kernel, margin-bound, non-separable, learning-rate, or numerical-honesty pressure; keep Novikoff mistake bounds, convergence theorems, and floating-point training claims in theorem or statistical-inference lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/03-destinations/linear-algebra.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/perceptron-end-to-end.md",
+    "artifacts/examples/math/finite-perceptron-v0/smt2/bad-weight-update-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "perceptron-table-witness",
+    "perceptron-update-witness",
+    "perceptron-convergence-witness",
+    "perceptron-margin-witness",
+    "bad-weight-update-rejected",
+    "qf-lra-bad-weight-update",
+    "general-perceptron-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed finite training set, augmented coordinates, initial weights, every presented step's dot-product score, mistake flag, and weight update, the final weights, and the strict-margin convergence pass as deterministic exact-rational replay obligations.",
+    "Route the false weight-update claim through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting coordinate equation.",
+    "Expose the pack through statistics, probability, linear-algebra, perceptron, exact-vs-floating, and learner-query surfaces.",
+    "Keep Novikoff mistake bounds, perceptron convergence theorems, margin theory, non-separable and kernel behavior, learning-rate policy, statistical generalization, and floating-point training marked theorem, statistical-inference, or numerical-honesty horizon."
+  ]
+}

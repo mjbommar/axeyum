@@ -37063,6 +37063,292 @@ def validate_finite_k_nearest_neighbors(expected: dict[str, Any]) -> None:
         fail("general-nearest-neighbor-theory-lean-horizon must be searchable")
 
 
+def validate_finite_perceptron(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    def require_vector(context: str, value: Any, length: int) -> list[Fraction]:
+        if not isinstance(value, list):
+            fail(f"{context} must be a list")
+        if len(value) != length:
+            fail(f"{context} must have exactly {length} coordinates")
+        return [require_fraction(f"{context}[{i}]", entry) for i, entry in enumerate(value)]
+
+    def dot(u: list[Fraction], v: list[Fraction]) -> Fraction:
+        return sum((a * b for a, b in zip(u, v)), Fraction(0))
+
+    def require_sat_replay(check_id: str, validation: str) -> None:
+        check = checks[check_id]
+        if check["expected_result"] != "sat":
+            fail(f"{check_id} must expect sat")
+        if check.get("proof_status") != "replay-only":
+            fail(f"{check_id} must be replay-only")
+        if check["validation"] != validation:
+            fail(f"{check_id} validation is incorrect")
+        values_again = single_witness_values(check, witnesses)
+        if values_again != values:
+            fail(f"{check_id} must cite the shared perceptron witness")
+
+    table_check = checks["perceptron-table-witness"]
+    if table_check["expected_result"] != "sat":
+        fail("perceptron-table-witness must expect sat")
+    if table_check.get("proof_status") != "replay-only":
+        fail("perceptron-table-witness must be replay-only")
+    if table_check["validation"] != "exact_rational_perceptron_table_replay":
+        fail("perceptron-table-witness validation is incorrect")
+    values = single_witness_values(table_check, witnesses)
+
+    classes = require_string_list("perceptron classes", values.get("classes"))
+    if classes != ["positive", "negative"]:
+        fail("perceptron classes must be positive and negative")
+
+    dimension = 3
+    initial_weights = require_vector(
+        "perceptron initial_weights", values.get("initial_weights"), dimension
+    )
+    if any(entry != 0 for entry in initial_weights):
+        fail("perceptron initial_weights must be the zero vector")
+
+    raw_points = values.get("training_points")
+    if not isinstance(raw_points, list) or not raw_points:
+        fail("perceptron training_points must be a non-empty list")
+    points: dict[str, dict[str, Any]] = {}
+    class_totals = {label: 0 for label in classes}
+    for index, point in enumerate(raw_points):
+        if not isinstance(point, dict):
+            fail(f"perceptron training_points[{index}] must be an object")
+        point_id = point.get("id")
+        point_class = point.get("class")
+        require_string(f"perceptron training_points[{index}].id", point_id)
+        require_string(f"perceptron training_points[{index}].class", point_class)
+        if point_id in points:
+            fail(f"perceptron training_points repeats id {point_id!r}")
+        if point_class not in classes:
+            fail(f"perceptron training_points[{index}].class is unknown")
+        coordinates = require_vector(
+            f"perceptron training_points[{index}].coordinates",
+            point.get("coordinates"),
+            dimension,
+        )
+        if coordinates[-1] != 1:
+            fail(f"perceptron training_points[{index}] must have augmented bias component 1")
+        label = require_fraction(f"perceptron training_points[{index}].label", point.get("label"))
+        expected_label = Fraction(1) if point_class == "positive" else Fraction(-1)
+        if label != expected_label:
+            fail(f"perceptron training_points[{index}].label must match its class")
+        class_totals[point_class] += 1
+        points[point_id] = {"coordinates": coordinates, "label": label}
+    if any(total <= 0 for total in class_totals.values()):
+        fail("perceptron training set must include both classes")
+
+    require_sat_replay("perceptron-update-witness", "exact_rational_perceptron_update_replay")
+    require_sat_replay(
+        "perceptron-convergence-witness",
+        "exact_rational_perceptron_convergence_replay",
+    )
+    require_sat_replay("perceptron-margin-witness", "exact_rational_perceptron_margin_replay")
+
+    raw_steps = values.get("presentation_steps")
+    if not isinstance(raw_steps, list) or not raw_steps:
+        fail("perceptron presentation_steps must be a non-empty list")
+    weights = initial_weights
+    update_count = 0
+    step2_weights: list[Fraction] | None = None
+    for index, step in enumerate(raw_steps):
+        if not isinstance(step, dict):
+            fail(f"perceptron presentation_steps[{index}] must be an object")
+        step_number = require_fraction(
+            f"perceptron presentation_steps[{index}].step", step.get("step")
+        )
+        if step_number != Fraction(index + 1):
+            fail(f"perceptron presentation_steps[{index}] must be numbered {index + 1}")
+        point_id = step.get("point_id")
+        require_string(f"perceptron presentation_steps[{index}].point_id", point_id)
+        if point_id not in points:
+            fail(f"perceptron presentation_steps[{index}] references unknown point")
+        point = points[point_id]
+        weights_before = require_vector(
+            f"perceptron presentation_steps[{index}].weights_before",
+            step.get("weights_before"),
+            dimension,
+        )
+        if weights_before != weights:
+            fail(f"perceptron presentation_steps[{index}].weights_before is incorrect")
+        score = require_fraction(
+            f"perceptron presentation_steps[{index}].score", step.get("score")
+        )
+        label_times_score = require_fraction(
+            f"perceptron presentation_steps[{index}].label_times_score",
+            step.get("label_times_score"),
+        )
+        computed_score = dot(weights, point["coordinates"])
+        if (score, label_times_score) != (computed_score, point["label"] * computed_score):
+            fail(f"perceptron presentation_steps[{index}] score replay is incorrect")
+        mistake = step.get("mistake")
+        if not isinstance(mistake, bool):
+            fail(f"perceptron presentation_steps[{index}].mistake must be a boolean")
+        computed_mistake = point["label"] * computed_score <= 0
+        if mistake != computed_mistake:
+            fail(f"perceptron presentation_steps[{index}].mistake flag is incorrect")
+        weights_after = require_vector(
+            f"perceptron presentation_steps[{index}].weights_after",
+            step.get("weights_after"),
+            dimension,
+        )
+        if computed_mistake:
+            computed_after = [
+                w + point["label"] * x
+                for w, x in zip(weights, point["coordinates"])
+            ]
+            update_count += 1
+        else:
+            computed_after = weights
+        if weights_after != computed_after:
+            fail(f"perceptron presentation_steps[{index}].weights_after is incorrect")
+        weights = computed_after
+        if update_count == 2 and step2_weights is None and computed_mistake:
+            step2_weights = weights
+
+    final_weights = require_vector(
+        "perceptron final_weights", values.get("final_weights"), dimension
+    )
+    if final_weights != weights:
+        fail("perceptron final_weights must match the replayed trace")
+    committed_updates = require_fraction(
+        "perceptron update_count", values.get("update_count")
+    )
+    if committed_updates != Fraction(update_count):
+        fail("perceptron update_count must match the replayed trace")
+
+    raw_margins = values.get("final_margins")
+    if not isinstance(raw_margins, dict) or set(raw_margins) != set(points):
+        fail("perceptron final_margins must cover every training point")
+    computed_margins: dict[str, Fraction] = {}
+    for point_id, point in points.items():
+        committed_margin = require_fraction(
+            f"perceptron final_margins.{point_id}", raw_margins[point_id]
+        )
+        computed_margin = point["label"] * dot(final_weights, point["coordinates"])
+        if committed_margin != computed_margin:
+            fail(f"perceptron final margin for {point_id} is incorrect")
+        if computed_margin <= 0:
+            fail(f"perceptron final weights must classify {point_id} strictly correctly")
+        computed_margins[point_id] = computed_margin
+    minimum_margin = require_fraction(
+        "perceptron minimum_final_margin", values.get("minimum_final_margin")
+    )
+    if minimum_margin != min(computed_margins.values()):
+        fail("perceptron minimum_final_margin is incorrect")
+
+    bad = checks["bad-weight-update-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-weight-update-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-weight-update-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_weight_update_replay":
+        fail("bad-weight-update-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "four-point-perceptron-trace":
+        fail("bad-weight-update-rejected must cite the source witness")
+    if data.get("metric") != "perceptron_weight_coordinate":
+        fail("bad-weight-update-rejected must document perceptron_weight_coordinate")
+    if data.get("step") != "2" or data.get("coordinate_index") != "0":
+        fail("bad-weight-update-rejected must document the step-2 first coordinate")
+    bad_computed = require_fraction(
+        "bad perceptron computed_weight_coordinate",
+        data.get("computed_weight_coordinate"),
+    )
+    bad_claimed = require_fraction(
+        "bad perceptron claimed_weight_coordinate",
+        data.get("claimed_weight_coordinate"),
+    )
+    if step2_weights is None or bad_computed != step2_weights[0]:
+        fail("bad-weight-update-rejected computed value must match replay")
+    if bad_claimed == bad_computed:
+        fail("bad-weight-update-rejected must document a false weight claim")
+    if "separate qf-lra-bad-weight-update" not in bad.get("notes", ""):
+        fail("bad-weight-update-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-weight-update"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-weight-update must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-weight-update must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-weight-update must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "four-point-perceptron-trace":
+        fail("qf-lra-bad-weight-update must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-weight-update-rejected":
+        fail("qf-lra-bad-weight-update must cite the replay row")
+    if qf_data.get("metric") != "perceptron_weight_coordinate":
+        fail("qf-lra-bad-weight-update must document perceptron_weight_coordinate")
+    if qf_data.get("step") != "2" or qf_data.get("coordinate_index") != "0":
+        fail("qf-lra-bad-weight-update must document the step-2 first coordinate")
+    qf_computed = require_fraction(
+        "qf perceptron computed_weight_coordinate",
+        qf_data.get("computed_weight_coordinate"),
+    )
+    qf_claimed = require_fraction(
+        "qf perceptron claimed_weight_coordinate",
+        qf_data.get("claimed_weight_coordinate"),
+    )
+    if (qf_computed, qf_claimed) != (bad_computed, bad_claimed):
+        fail("qf-lra-bad-weight-update data must match the replay row")
+    equations = require_string_list(
+        "qf perceptron weight_update_equations",
+        qf_data.get("weight_update_equations"),
+    )
+    if equations != ["perceptron_w1 = -1", "perceptron_w1 = 1"]:
+        fail("qf-lra-bad-weight-update must document the linear conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf perceptron smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-perceptron-v0/smt2/"
+        "bad-weight-update-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-weight-update smt2_artifact must name the checked source artifact")
+    check_source("qf perceptron smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf perceptron farkas_regression", regression)
+    if (
+        "finite_perceptron_bad_weight_update_artifact_emits_checked_farkas"
+        not in regression
+    ):
+        fail("qf-lra-bad-weight-update must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf perceptron certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-weight-update certificate must document checked Farkas evidence")
+
+    horizon = checks["general-perceptron-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-perceptron-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-perceptron-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "perceptron horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string("perceptron horizon future_checker", horizon_data.get("future_checker"))
+    horizon_text = " ".join(
+        [
+            horizon.get("claim", ""),
+            horizon_data.get("target_theorem_shape", ""),
+            horizon_data.get("future_checker", ""),
+            horizon.get("notes", ""),
+        ]
+    ).lower()
+    if (
+        "perceptron" not in horizon_text
+        or "mistake" not in horizon_text
+        or "margin" not in horizon_text
+    ):
+        fail("general-perceptron-theory-lean-horizon must be searchable")
+
+
 def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -40289,6 +40575,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_entropy_information_gain(expected)
     if metadata["id"] == "finite-k-nearest-neighbors-v0":
         validate_finite_k_nearest_neighbors(expected)
+    if metadata["id"] == "finite-perceptron-v0":
+        validate_finite_perceptron(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "cardinality-principles-v0":

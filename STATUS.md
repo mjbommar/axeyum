@@ -240,6 +240,30 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite perceptron resource landed.**
+  `finite-perceptron-v0` now gives the statistics, probability, and
+  linear-algebra lanes an iterative learning-algorithm trace — a new proof
+  shape next to the closed-form (ridge/LDA), instance-based (kNN), and
+  split-based (Gini/entropy) classifier packs: it replays a four-point
+  linearly separable training set in augmented coordinates from the zero
+  weight vector, every presented dot-product score and mistake condition,
+  the two mistake updates ending at weights `(-1, 3, 0)`, and a
+  strict-margin convergence pass with functional margins `5, 5, 7, 7`;
+  rejects the malformed first-weight-coordinate claim `1` against exact
+  `-1`; and routes that scalar conflict through a source-linked
+  QF_LRA/Farkas row. All data and updates are integers, so the whole trace
+  is exact arithmetic; geometric margins (which divide by the irrational
+  norm `sqrt(10)`) stay explicitly out of scope. The focused learner page,
+  probability/statistics query guide, probability-mass-table, perceptron,
+  exact-vs-floating, and QF_LRA/Farkas bridge rows, validator, resource
+  smoke queries, generated dashboards, and `math_resource_lra_routes`
+  regression keep this fixed finite trace separate from the Novikoff
+  mistake bound, convergence theorems, kernel/averaged/voted variants,
+  statistical generalization, and floating-point training behavior. The
+  public summary now reports 134 concept rows, 170 packs, 1110 expected
+  checks, 396 checked rows, 581 replay-only rows, 133 Lean-horizon rows,
+  and 170 promoted solver-reuse packs.
+
 - **Finite k-nearest-neighbors resource landed.**
   `finite-k-nearest-neighbors-v0` now gives the statistics, probability, and
   discrete/counting lanes a distance-based classifier example: it replays a
@@ -257,10 +281,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   dashboards, and `math_resource_lra_routes` regression keep this fixed
   finite replay separate from nearest-neighbor consistency, Bayes-risk
   bounds, curse-of-dimensionality behavior, metric/weighting/tie policy,
-  statistical generalization, and floating-point distance behavior. The
-  public summary now reports 133 concept rows, 169 packs, 1103 expected
-  checks, 395 checked rows, 576 replay-only rows, 132 Lean-horizon rows, and
-  169 promoted solver-reuse packs.
+  statistical generalization, and floating-point distance behavior. At that
+  landing, the public summary reported 133 concept rows, 169 packs, 1103
+  expected checks, 395 checked rows, 576 replay-only rows, 132 Lean-horizon
+  rows, and 169 promoted solver-reuse packs.
 
 - **Finite entropy/information-gain resource landed.**
   `finite-entropy-information-gain-v0` now gives the statistics, probability,

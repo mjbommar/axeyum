@@ -561,6 +561,10 @@ CURRICULUM_MAP = {
                 "finite-k-nearest-neighbors-v0",
                 "Exact rational coordinate and squared-distance replay feeding finite nearest-neighbor classification checks.",
             ),
+            (
+                "finite-perceptron-v0",
+                "Exact integer perceptron trace replay feeding finite dot-product, mistake-update, and margin checks.",
+            ),
         ],
     },
     "number-theory": {
@@ -602,6 +606,10 @@ CURRICULUM_MAP = {
             (
                 "finite-linear-discriminant-v0",
                 "Exact class means, within-class scatter, Fisher direction, finite threshold, and checked bad-direction evidence.",
+            ),
+            (
+                "finite-perceptron-v0",
+                "Exact integer perceptron training-trace replay: dot products, mistake updates, converged weights, strict margins, and checked bad weight-update evidence.",
             ),
             (
                 "finite-gaussian-elimination-v0",
@@ -869,14 +877,14 @@ FIELD_PACKS = {
     "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, decision-tree feature/class partitions, dyadic entropy/information-gain partitions, nearest-neighbor majority votes, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
-    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram, PCA, k-means centroid/objective, and linear-discriminant replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, regularized normal-equation replay, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
+    "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram, PCA, k-means centroid/objective, and linear-discriminant replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, regularized normal-equation replay, and Jordan-chain shadows, perceptron training-trace replay, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
     "abstract_algebra": ("finite-fields-v0", "Finite groups, permutation groups, monoids, group actions, rings, fields, ideals, modules, dual spaces, tensor products, homomorphism tables, polynomial factorization slices, Jordan-chain polynomial/module shadows, and Cayley-table validation."),
     "real_analysis": ("real-analysis-rational-v0", "Rational interval/ball checks, bounded epsilon-delta samples, algebraic factorization, sequence and fixed-point acceleration, divided-difference and barycentric interpolation, finite-difference derivative stencils, finite Taylor polynomial replay, finite cubic Hermite interpolation replay, finite cubic spline assembly replay, finite secant/root-finding replay, fixed-decimal rounding shadows, Riemann-sum, Simpson-rule, and Romberg quadrature shadows, multivariable-calculus, Newton-step, Runge-Kutta midpoint, Heun-method, backward Euler, Crank-Nicolson, Adams-Bashforth, and BDF2 shadows, and proof horizons."),
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
-    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, Naive Bayes classifier posterior replay, confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, finite decision-tree Gini split rows, finite dyadic entropy/information-gain rows, finite nearest-neighbor vote rows, product measures, and exact discrete distributions."),
-    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance/PCA and finite clustering identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, finite Naive Bayes classifier replay, finite confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, finite decision-tree Gini split rows, finite dyadic entropy/information-gain rows, finite nearest-neighbor classification rows, and Simpson witnesses."),
+    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, Naive Bayes classifier posterior replay, confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, finite decision-tree Gini split rows, finite dyadic entropy/information-gain rows, finite nearest-neighbor vote rows, finite perceptron training traces, product measures, and exact discrete distributions."),
+    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance/PCA and finite clustering identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, finite Naive Bayes classifier replay, finite confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, finite decision-tree Gini split rows, finite dyadic entropy/information-gain rows, finite nearest-neighbor classification rows, finite perceptron training traces, and Simpson witnesses."),
     "optimization_and_convexity": [
         ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
         ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and checked bad midpoint-convexity plus affine-threshold rejection."),
@@ -1682,6 +1690,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_decision_tree_gini_shadow",
             "bridge_finite_entropy_information_gain_shadow",
             "bridge_finite_nearest_neighbor_shadow",
+            "bridge_finite_perceptron_shadow",
             "bridge_eigenpair",
         ],
         "decidability": "decidable",
@@ -1736,6 +1745,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-k-nearest-neighbors-v0",
                 "Malformed squared-distance row checked through exact rational Farkas evidence after finite coordinate replay.",
+            ),
+            (
+                "finite-perceptron-v0",
+                "Malformed weight-update row checked through exact rational Farkas evidence after finite training-trace replay.",
             ),
             (
                 "numerical-linear-algebra-v0",
@@ -1798,6 +1811,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/decision-tree-gini-end-to-end.md",
             "docs/learn/math/entropy-information-gain-end-to-end.md",
             "docs/learn/math/k-nearest-neighbors-end-to-end.md",
+            "docs/learn/math/perceptron-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -1853,6 +1867,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_decision_tree_gini_shadow",
             "bridge_finite_entropy_information_gain_shadow",
             "bridge_finite_nearest_neighbor_shadow",
+            "bridge_finite_perceptron_shadow",
             "field_numerical_analysis",
             "field_statistics",
         ],
@@ -2003,6 +2018,10 @@ BRIDGE_CONCEPTS = [
                 "Squared Euclidean distances, neighbor rankings, majority votes, and bad squared-distance rows checked as exact rational replay, not floating-point distance or statistical generalization evidence.",
             ),
             (
+                "finite-perceptron-v0",
+                "Perceptron dot products, mistake updates, converged weights, margins, and bad weight-update rows checked as exact rational replay, not floating-point training or statistical generalization evidence.",
+            ),
+            (
                 "finite-root-finding-v0",
                 "One-step bisection/Newton rows replayed exactly while convergence and floating-point stability remain horizon claims.",
             ),
@@ -2082,6 +2101,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/decision-tree-gini-end-to-end.md",
                     "docs/learn/math/entropy-information-gain-end-to-end.md",
                     "docs/learn/math/k-nearest-neighbors-end-to-end.md",
+                    "docs/learn/math/perceptron-end-to-end.md",
                     "docs/learn/math/principal-components-end-to-end.md",
                     "docs/learn/math/k-means-clustering-end-to-end.md",
                     "docs/foundational-resources/MATH-FIELDS.md",
@@ -2130,12 +2150,14 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/decision-tree-gini-end-to-end.md",
             "docs/learn/math/entropy-information-gain-end-to-end.md",
             "docs/learn/math/k-nearest-neighbors-end-to-end.md",
+            "docs/learn/math/perceptron-end-to-end.md",
             "artifacts/examples/math/finite-rounding-shadow-v0/smt2/bad-rounded-delta-farkas-conflict.smt2",
             "artifacts/examples/math/finite-interval-arithmetic-shadow-v0/smt2/bad-product-upper-farkas-conflict.smt2",
             "artifacts/examples/math/finite-calibration-brier-v0/smt2/bad-brier-score-farkas-conflict.smt2",
             "artifacts/examples/math/finite-decision-tree-gini-v0/smt2/bad-weighted-gini-farkas-conflict.smt2",
             "artifacts/examples/math/finite-entropy-information-gain-v0/smt2/bad-weighted-entropy-farkas-conflict.smt2",
             "artifacts/examples/math/finite-k-nearest-neighbors-v0/smt2/bad-squared-distance-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-perceptron-v0/smt2/bad-weight-update-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
@@ -3663,6 +3685,118 @@ BRIDGE_CONCEPTS = [
                 "The validator recomputes all finite distances, rankings, and votes from committed source data and rejects neighbor sets without a strict rank gap.",
                 "Malformed finite squared-distance claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
                 "Learner and query docs keep finite exact nearest-neighbor replay separate from consistency, Bayes-risk, dimensionality, metric-policy, tie-breaking, statistical, continuous-feature, and floating-point claims.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_perceptron_shadow",
+        "title": "Finite Perceptron Shadow",
+        "field_ids": [
+            "statistics",
+            "probability_theory",
+            "linear_algebra",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite perceptron rows replay a fixed integer training set in "
+            "augmented coordinates, every presented dot-product score, "
+            "mistake flag, and weight update in the training trace, the "
+            "final weights, a strict-margin convergence pass, and "
+            "source-linked bad weight-update Farkas evidence while keeping "
+            "the Novikoff mistake bound, convergence theorems, "
+            "geometric-margin theory, non-separable and kernel variants, "
+            "statistical generalization, and floating-point training "
+            "behavior separate."
+        ),
+        "prerequisites": [
+            "curriculum_linear_algebra",
+            "curriculum_rationals",
+            "bridge_probability_mass_table",
+            "bridge_exact_vs_floating_arithmetic",
+            "bridge_qf_lra_farkas_anatomy",
+        ],
+        "unlocks": [
+            "field_statistics",
+            "field_probability_theory",
+            "field_linear_algebra",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite classifier table replay",
+            "finite perceptron trace replay",
+            "finite dot-product replay",
+            "finite mistake counting",
+            "exact rational arithmetic",
+            "QF_LRA",
+            "Farkas certificate",
+            "finite replay",
+            "Lean horizon",
+            "numerical-honesty metadata",
+        ],
+        "example_packs": [
+            (
+                "finite-perceptron-v0",
+                "Exact four-point separable training trace with two mistake updates, final weights (-1, 3, 0), strict margins 5, 5, 7, 7, bad weight-update replay, and checked QF_LRA/Farkas row.",
+            ),
+            (
+                "finite-linear-discriminant-v0",
+                "Exact closed-form linear-classifier replay that supplies the direct-solve contrast to the iterative trace.",
+            ),
+            (
+                "finite-k-nearest-neighbors-v0",
+                "Exact instance-based classifier replay that supplies the non-parametric contrast.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite perceptron trace replay plus QF_LRA/Farkas",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/perceptron-end-to-end.md",
+                    "artifacts/examples/math/finite-perceptron-v0/smt2/bad-weight-update-farkas-conflict.smt2",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker replays the whole training trace "
+                    "step by step — scores, mistake conditions, and weight "
+                    "updates — then requires strictly positive functional "
+                    "margins at the final weights. Only the final malformed "
+                    "weight-update row is promoted to checked Farkas "
+                    "evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/perceptron-end-to-end.md",
+            "docs/learn/math/probability-and-statistics.md",
+            "artifacts/examples/math/finite-perceptron-v0/smt2/bad-weight-update-farkas-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite trace replay over one committed presentation order does not prove the Novikoff mistake bound, perceptron convergence for other datasets or orders, or classifier generalization.",
+            "Geometric margins divide by the irrational norm of the weight vector and need algebraic-real or theorem resources before they can be replayed exactly.",
+            "Averaged, voted, kernel, and non-separable perceptron variants and learning-rate policy need separate resources before they can be treated as checked claims.",
+            "Floating-point dot-product and training behavior needs numerical-honesty or QF_FP resources before it can be presented as checked implementation behavior.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite training set, augmented coordinates, initial weights, every presented step's score, mistake flag, and update, the final weights, update count, and strict functional margins.",
+                "The validator replays the whole training trace from committed source data and rejects final weights that do not classify every point strictly correctly.",
+                "Malformed finite weight-update claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
+                "Learner and query docs keep finite exact perceptron trace replay separate from mistake-bound, convergence, geometric-margin, kernel/variant, statistical, and floating-point claims.",
             ],
         },
     },
@@ -8429,6 +8563,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_decision_tree_gini_shadow",
             "bridge_finite_entropy_information_gain_shadow",
             "bridge_finite_nearest_neighbor_shadow",
+            "bridge_finite_perceptron_shadow",
         ],
         "decidability": "bounded",
         "axeyum_fragments": [
@@ -8474,6 +8609,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-k-nearest-neighbors-v0",
                 "Finite neighbor class counts, majority-vote replay, and checked bad squared-distance evidence.",
+            ),
+            (
+                "finite-perceptron-v0",
+                "Finite labeled training points, mistake-update trace replay, and checked bad weight-update evidence.",
             ),
             (
                 "finite-measure-v0",
