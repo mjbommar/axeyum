@@ -34,10 +34,30 @@
 //!
 //! [`normal_form::concat_components`] exposes the flattened, ε-dropped,
 //! constant-fused component view that the later flat/normal-form slices consume.
+//!
+//! ## What is here (slice T-B.2): flat forms, normal forms, explanations
+//!
+//! [`classes`] builds a deterministic union-find over a caller-supplied slice of
+//! asserted `Seq`-sorted equalities (each positionally indexed as its *premise
+//! ID*) and computes, bottom-up over an acyclic class-containment ordering, the
+//! CAV-2014 (Liang–Reynolds–Tinelli) **normal form** of every equivalence
+//! class — a vector of sub-class representatives that concatenates to the same
+//! sequence as every member. Every derived fact carries a **sufficient premise
+//! set** ([`BTreeSet<usize>`](std::collections::BTreeSet), cvc5's `d_expDep`).
+//!
+//! T-B.2 is soundness-first: a **containment cycle** (a loop for the later
+//! `F-Loop` device) yields [`classes::Declined::Cycle`], and members that
+//! disagree beyond exact-vector reconciliation yield
+//! [`classes::Declined::Unreconciled`] — the T-B.3 inference and T-B.4
+//! arrangement rules that would reconcile those cases are not part of this
+//! slice, so it declines rather than guess. Congruence over `str.++` is the
+//! e-graph's responsibility, not this union-find's.
 
 #![forbid(unsafe_code)]
-#![allow(clippy::missing_errors_doc)] // this crate returns no `Result` on its public surface
+#![allow(clippy::missing_errors_doc)] // documented per-item where a `Result` is returned
 
+pub mod classes;
 pub mod normal_form;
 
+pub use classes::{Classes, Declined, FlatForm, NormalForm, NormalForms, Unreconciled};
 pub use normal_form::{concat_components, normalize};
