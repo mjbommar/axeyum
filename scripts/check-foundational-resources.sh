@@ -257,6 +257,15 @@ python3 scripts/query-foundational-resources.py checks --concept bridge_finite_e
 python3 scripts/query-foundational-resources.py checks --concept bridge_probability_mass_table --pack finite-entropy-information-gain-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-entropy-information-gain-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py horizon-frontier --text entropy --require-any >/dev/null
+python3 scripts/query-foundational-resources.py concepts --field statistics --text "nearest neighbor" --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-k-nearest-neighbors-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-k-nearest-neighbors-v0 --route Farkas --proof-status checked --text qf-lra-bad-squared-distance --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-k-nearest-neighbors-v0 --proof-status replay-only --text neighbor --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --pack finite-k-nearest-neighbors-v0 --proof-status lean-horizon --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_finite_nearest_neighbor_shadow --pack finite-k-nearest-neighbors-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_probability_mass_table --pack finite-k-nearest-neighbors-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py checks --concept bridge_exact_vs_floating_arithmetic --pack finite-k-nearest-neighbors-v0 --route Farkas --proof-status checked --require-any >/dev/null
+python3 scripts/query-foundational-resources.py horizon-frontier --text neighbor --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --route Farkas --proof-status checked --text qf-lra-bad-ridge-beta0 --require-any >/dev/null
 python3 scripts/query-foundational-resources.py checks --pack finite-ridge-regression-v0 --proof-status replay-only --text rejected --require-any >/dev/null

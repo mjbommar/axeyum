@@ -88,6 +88,9 @@ const FINITE_DECISION_TREE_GINI_BAD_WEIGHTED_GINI: &str = include_str!(
 const FINITE_ENTROPY_INFORMATION_GAIN_BAD_WEIGHTED_ENTROPY: &str = include_str!(
     "../../../artifacts/examples/math/finite-entropy-information-gain-v0/smt2/bad-weighted-entropy-farkas-conflict.smt2"
 );
+const FINITE_K_NEAREST_NEIGHBORS_BAD_SQUARED_DISTANCE: &str = include_str!(
+    "../../../artifacts/examples/math/finite-k-nearest-neighbors-v0/smt2/bad-squared-distance-farkas-conflict.smt2"
+);
 const LEAST_SQUARES_BAD_RSS_IMPROVEMENT: &str = include_str!(
     "../../../artifacts/examples/math/least-squares-regression-v0/smt2/bad-rss-improvement-farkas-conflict.smt2"
 );
@@ -1002,6 +1005,14 @@ fn finite_entropy_information_gain_bad_weighted_entropy_artifact_emits_checked_f
     assert_resource_farkas(
         "finite-entropy-information-gain-v0 bad-weighted-entropy SMT-LIB artifact",
         FINITE_ENTROPY_INFORMATION_GAIN_BAD_WEIGHTED_ENTROPY,
+    );
+}
+
+#[test]
+fn finite_k_nearest_neighbors_bad_squared_distance_artifact_emits_checked_farkas() {
+    assert_resource_farkas(
+        "finite-k-nearest-neighbors-v0 bad-squared-distance SMT-LIB artifact",
+        FINITE_K_NEAREST_NEIGHBORS_BAD_SQUARED_DISTANCE,
     );
 }
 

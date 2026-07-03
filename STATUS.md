@@ -240,6 +240,28 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Process/documentation lane (2026-06-27) — `WIP`
 
+- **Finite k-nearest-neighbors resource landed.**
+  `finite-k-nearest-neighbors-v0` now gives the statistics, probability, and
+  discrete/counting lanes a distance-based classifier example: it replays a
+  six-point two-class rational training set with two query points and
+  `k = 3`, every squared Euclidean distance (squaring keeps the arithmetic
+  rational while preserving the ranking), strict rank gaps `2 < 18` and
+  `5 < 13` so no tie policy is needed, the neighbor sets, and the `3-0`
+  majority votes; rejects the malformed squared-distance claim `16` against
+  exact `18`; and routes that scalar conflict through a source-linked
+  QF_LRA/Farkas row. The validator rejects neighbor sets without a strict
+  rank gap, so the pack cannot silently smuggle in a tie-breaking policy.
+  The focused learner page, probability/statistics query guide,
+  probability-mass-table, nearest-neighbor, exact-vs-floating, and
+  QF_LRA/Farkas bridge rows, validator, resource smoke queries, generated
+  dashboards, and `math_resource_lra_routes` regression keep this fixed
+  finite replay separate from nearest-neighbor consistency, Bayes-risk
+  bounds, curse-of-dimensionality behavior, metric/weighting/tie policy,
+  statistical generalization, and floating-point distance behavior. The
+  public summary now reports 133 concept rows, 169 packs, 1103 expected
+  checks, 395 checked rows, 576 replay-only rows, 132 Lean-horizon rows, and
+  169 promoted solver-reuse packs.
+
 - **Finite entropy/information-gain resource landed.**
   `finite-entropy-information-gain-v0` now gives the statistics, probability,
   and discrete/counting lanes the entropy-based sibling of the decision-tree
@@ -259,10 +281,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `math_resource_lra_routes` regression keep this dyadic finite replay
   separate from non-dyadic entropy, log-loss and mutual-information variants,
   greedy-optimality, pruning, threshold policy, statistical generalization,
-  continuous feature thresholds, and floating-point logarithm behavior. The
-  public summary now reports 132 concept rows, 168 packs, 1096 expected
-  checks, 394 checked rows, 571 replay-only rows, 131 Lean-horizon rows, and
-  168 promoted solver-reuse packs.
+  continuous feature thresholds, and floating-point logarithm behavior. At
+  that landing, the public summary reported 132 concept rows, 168 packs,
+  1096 expected checks, 394 checked rows, 571 replay-only rows, 131
+  Lean-horizon rows, and 168 promoted solver-reuse packs.
 
 - **Finite decision-tree Gini split resource landed.**
   `finite-decision-tree-gini-v0` now gives the statistics, probability, and

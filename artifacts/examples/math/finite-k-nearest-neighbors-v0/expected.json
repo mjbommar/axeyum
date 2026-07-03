@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "pack_id": "finite-k-nearest-neighbors-v0",
+  "witnesses": [
+    {
+      "id": "six-point-knn-sample",
+      "description": "A six-point two-class rational training set with two query points, exact squared Euclidean distances, k=3 neighbor selection with a strict rank gap, and majority-vote classification.",
+      "values": {
+        "classes": [
+          "positive",
+          "negative"
+        ],
+        "k": "3",
+        "training_points": [
+          {
+            "id": "t1",
+            "x": "0",
+            "y": "0",
+            "class": "positive"
+          },
+          {
+            "id": "t2",
+            "x": "1",
+            "y": "0",
+            "class": "positive"
+          },
+          {
+            "id": "t3",
+            "x": "0",
+            "y": "1",
+            "class": "positive"
+          },
+          {
+            "id": "t4",
+            "x": "4",
+            "y": "4",
+            "class": "negative"
+          },
+          {
+            "id": "t5",
+            "x": "5",
+            "y": "4",
+            "class": "negative"
+          },
+          {
+            "id": "t6",
+            "x": "4",
+            "y": "5",
+            "class": "negative"
+          }
+        ],
+        "queries": [
+          {
+            "id": "q1",
+            "x": "1",
+            "y": "1",
+            "squared_distances": {
+              "t1": "2",
+              "t2": "1",
+              "t3": "1",
+              "t4": "18",
+              "t5": "25",
+              "t6": "25"
+            },
+            "neighbor_ids": [
+              "t1",
+              "t2",
+              "t3"
+            ],
+            "max_neighbor_squared_distance": "2",
+            "min_non_neighbor_squared_distance": "18",
+            "vote_counts": {
+              "positive": "3",
+              "negative": "0"
+            },
+            "predicted_class": "positive"
+          },
+          {
+            "id": "q2",
+            "x": "3",
+            "y": "3",
+            "squared_distances": {
+              "t1": "18",
+              "t2": "13",
+              "t3": "13",
+              "t4": "2",
+              "t5": "5",
+              "t6": "5"
+            },
+            "neighbor_ids": [
+              "t4",
+              "t5",
+              "t6"
+            ],
+            "max_neighbor_squared_distance": "5",
+            "min_non_neighbor_squared_distance": "13",
+            "vote_counts": {
+              "positive": "0",
+              "negative": "3"
+            },
+            "predicted_class": "negative"
+          }
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "knn-table-witness",
+      "claim": "The listed six-point training set has three positive and three negative rational points, two rational query points, and k = 3.",
+      "expected_result": "sat",
+      "validation": "exact_rational_knn_table_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-point-knn-sample"
+      ],
+      "notes": "The validator checks the committed coordinates, class labels, query points, and the fixed neighbor count exactly."
+    },
+    {
+      "id": "knn-distance-witness",
+      "claim": "Every committed squared Euclidean distance from each query point to each training point matches exact rational replay.",
+      "expected_result": "sat",
+      "validation": "exact_rational_knn_distance_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-point-knn-sample"
+      ],
+      "notes": "Squared distances avoid square roots entirely, so every distance comparison is exact rational arithmetic."
+    },
+    {
+      "id": "knn-neighbor-witness",
+      "claim": "For each query point, the committed k = 3 neighbor set is exactly the set of training points with the three smallest squared distances, and the largest neighbor distance is strictly smaller than the smallest non-neighbor distance.",
+      "expected_result": "sat",
+      "validation": "exact_rational_knn_neighbor_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-point-knn-sample"
+      ],
+      "notes": "The strict rank gap (2 < 18 for q1 and 5 < 13 for q2) means no boundary tie-breaking policy is needed for these fixed queries."
+    },
+    {
+      "id": "knn-vote-witness",
+      "claim": "For each query point, the committed neighbor class counts and the majority-vote prediction match exact replay: q1 votes 3-0 positive and q2 votes 3-0 negative.",
+      "expected_result": "sat",
+      "validation": "exact_rational_knn_vote_replay",
+      "proof_status": "replay-only",
+      "witnesses": [
+        "six-point-knn-sample"
+      ],
+      "notes": "The validator recounts neighbor classes and requires a strict majority for the committed predicted class."
+    },
+    {
+      "id": "bad-squared-distance-rejected",
+      "claim": "The squared distance from q1 to t4 is 16.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_bad_squared_distance_replay",
+      "proof_status": "replay-only",
+      "data": {
+        "source_witness": "six-point-knn-sample",
+        "metric": "squared_euclidean_distance",
+        "query": "q1",
+        "training_point": "t4",
+        "computed_squared_distance": "18",
+        "claimed_squared_distance": "16"
+      },
+      "notes": "Exact replay computes (4-1)^2 + (4-1)^2 = 18, so the claimed value 16 is rejected; the separate qf-lra-bad-squared-distance row owns the checked Farkas evidence."
+    },
+    {
+      "id": "qf-lra-bad-squared-distance",
+      "claim": "The fixed malformed squared-distance claim is linearly inconsistent with the replayed distance equation.",
+      "expected_result": "unsat",
+      "validation": "exact_rational_farkas_evidence",
+      "proof_status": "checked",
+      "data": {
+        "source_witness": "six-point-knn-sample",
+        "source_replay_row": "bad-squared-distance-rejected",
+        "metric": "squared_euclidean_distance",
+        "query": "q1",
+        "training_point": "t4",
+        "computed_squared_distance": "18",
+        "claimed_squared_distance": "16",
+        "squared_distance_equations": [
+          "knn_distance = 18",
+          "knn_distance = 16"
+        ],
+        "farkas_conflict": "replayed squared-distance equation plus knn_distance = 16",
+        "smt2_artifact": "artifacts/examples/math/finite-k-nearest-neighbors-v0/smt2/bad-squared-distance-farkas-conflict.smt2",
+        "farkas_regression": "cargo test -p axeyum-solver --test math_resource_lra_routes finite_k_nearest_neighbors_bad_squared_distance_artifact_emits_checked_farkas",
+        "certificate": "The resource regression parses the source SMT-LIB artifact, emits UnsatFarkas evidence, and independently checks the certificate."
+      },
+      "notes": "Exact replay computes knn_distance = 18 from the fixed coordinates, while the malformed row claims knn_distance = 16; the source QF_LRA artifact isolates that scalar contradiction for Farkas checking."
+    },
+    {
+      "id": "general-nearest-neighbor-theory-lean-horizon",
+      "claim": "Nearest-neighbor consistency, Bayes-risk bounds, curse-of-dimensionality behavior, metric and weighting policy, tie-breaking policy, cross-validated choice of k, continuous feature spaces, statistical generalization, and floating-point distance computation require future theorem, statistical-inference, or numerical-honesty resources.",
+      "expected_result": "not-run",
+      "validation": "lean_horizon_boundary",
+      "proof_status": "lean-horizon",
+      "data": {
+        "target_theorem_shape": "For training distributions under stated metric, sampling, smoothness, and tie-handling assumptions, prove nearest-neighbor consistency, Bayes-risk, or generalization claims only with explicit theorem hypotheses; the finite rows here fix the training set, the queries, and k.",
+        "future_checker": "Lean theorem statements for nearest-neighbor consistency and risk bounds plus separate numerical-honesty artifacts for floating-point distance and ranking implementations."
+      },
+      "notes": "The finite exact rows check one committed training set, two query points, and k = 3 with strict rank gaps; they do not prove nearest-neighbor consistency, Bayes-risk bounds, curse-of-dimensionality claims, metric or tie-breaking policy, statistical generalization, or floating-point distance behavior."
+    }
+  ]
+}

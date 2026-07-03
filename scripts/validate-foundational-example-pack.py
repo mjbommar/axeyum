@@ -36797,6 +36797,272 @@ def validate_finite_entropy_information_gain(expected: dict[str, Any]) -> None:
         fail("general-entropy-information-gain-lean-horizon must be searchable")
 
 
+def validate_finite_k_nearest_neighbors(expected: dict[str, Any]) -> None:
+    witnesses = witness_by_id(expected)
+    checks = {check["id"]: check for check in expected["checks"]}
+
+    def require_sat_replay(check_id: str, validation: str) -> None:
+        check = checks[check_id]
+        if check["expected_result"] != "sat":
+            fail(f"{check_id} must expect sat")
+        if check.get("proof_status") != "replay-only":
+            fail(f"{check_id} must be replay-only")
+        if check["validation"] != validation:
+            fail(f"{check_id} validation is incorrect")
+        values_again = single_witness_values(check, witnesses)
+        if values_again != values:
+            fail(f"{check_id} must cite the shared nearest-neighbor witness")
+
+    table_check = checks["knn-table-witness"]
+    if table_check["expected_result"] != "sat":
+        fail("knn-table-witness must expect sat")
+    if table_check.get("proof_status") != "replay-only":
+        fail("knn-table-witness must be replay-only")
+    if table_check["validation"] != "exact_rational_knn_table_replay":
+        fail("knn-table-witness validation is incorrect")
+    values = single_witness_values(table_check, witnesses)
+
+    classes = require_string_list("knn classes", values.get("classes"))
+    if len(set(classes)) != len(classes) or len(classes) != 2:
+        fail("knn classes must be two distinct labels")
+
+    k = require_fraction("knn k", values.get("k"))
+    if k.denominator != 1 or k <= 0:
+        fail("knn k must be a positive integer")
+    k_count = int(k)
+
+    raw_training = values.get("training_points")
+    if not isinstance(raw_training, list) or not raw_training:
+        fail("knn training_points must be a non-empty list")
+    training: list[dict[str, Any]] = []
+    seen_points: set[str] = set()
+    class_totals = {label: 0 for label in classes}
+    for index, point in enumerate(raw_training):
+        if not isinstance(point, dict):
+            fail(f"knn training_points[{index}] must be an object")
+        point_id = point.get("id")
+        point_class = point.get("class")
+        require_string(f"knn training_points[{index}].id", point_id)
+        require_string(f"knn training_points[{index}].class", point_class)
+        if point_id in seen_points:
+            fail(f"knn training_points repeats id {point_id!r}")
+        if point_class not in classes:
+            fail(f"knn training_points[{index}].class is unknown")
+        x = require_fraction(f"knn training_points[{index}].x", point.get("x"))
+        y = require_fraction(f"knn training_points[{index}].y", point.get("y"))
+        seen_points.add(point_id)
+        class_totals[point_class] += 1
+        training.append({"id": point_id, "x": x, "y": y, "class": point_class})
+    if any(total <= 0 for total in class_totals.values()):
+        fail("knn training set must include every class")
+    if k_count >= len(training):
+        fail("knn k must be smaller than the training-set size")
+
+    require_sat_replay("knn-distance-witness", "exact_rational_knn_distance_replay")
+    require_sat_replay("knn-neighbor-witness", "exact_rational_knn_neighbor_replay")
+    require_sat_replay("knn-vote-witness", "exact_rational_knn_vote_replay")
+
+    raw_queries = values.get("queries")
+    if not isinstance(raw_queries, list) or not raw_queries:
+        fail("knn queries must be a non-empty list")
+    training_ids = [point["id"] for point in training]
+    query_distances: dict[str, dict[str, Fraction]] = {}
+    for query_index, query in enumerate(raw_queries):
+        if not isinstance(query, dict):
+            fail(f"knn queries[{query_index}] must be an object")
+        query_id = query.get("id")
+        require_string(f"knn queries[{query_index}].id", query_id)
+        qx = require_fraction(f"knn queries[{query_index}].x", query.get("x"))
+        qy = require_fraction(f"knn queries[{query_index}].y", query.get("y"))
+
+        raw_distances = query.get("squared_distances")
+        if not isinstance(raw_distances, dict):
+            fail(f"knn query {query_id} squared_distances must be an object")
+        if set(raw_distances) != set(training_ids):
+            fail(f"knn query {query_id} squared_distances must cover every training point")
+        computed_distances: dict[str, Fraction] = {}
+        for point in training:
+            committed = require_fraction(
+                f"knn query {query_id} squared_distances.{point['id']}",
+                raw_distances[point["id"]],
+            )
+            computed = (qx - point["x"]) ** 2 + (qy - point["y"]) ** 2
+            if committed != computed:
+                fail(f"knn query {query_id} squared distance to {point['id']} is incorrect")
+            computed_distances[point["id"]] = computed
+        query_distances[query_id] = computed_distances
+
+        neighbor_ids = require_string_list(
+            f"knn query {query_id} neighbor_ids",
+            query.get("neighbor_ids"),
+        )
+        if len(neighbor_ids) != k_count:
+            fail(f"knn query {query_id} must commit exactly k neighbor ids")
+        if len(set(neighbor_ids)) != len(neighbor_ids):
+            fail(f"knn query {query_id} neighbor_ids repeats a point")
+        if any(neighbor not in set(training_ids) for neighbor in neighbor_ids):
+            fail(f"knn query {query_id} neighbor_ids reference unknown points")
+        expected_neighbor_order = [
+            point_id
+            for point_id in training_ids
+            if point_id in set(neighbor_ids)
+        ]
+        if neighbor_ids != expected_neighbor_order:
+            fail(f"knn query {query_id} neighbor_ids must preserve training order")
+        neighbor_set = set(neighbor_ids)
+        non_neighbor_set = [
+            point_id for point_id in training_ids if point_id not in neighbor_set
+        ]
+        max_neighbor = max(computed_distances[point_id] for point_id in neighbor_ids)
+        min_non_neighbor = min(
+            computed_distances[point_id] for point_id in non_neighbor_set
+        )
+        if max_neighbor >= min_non_neighbor:
+            fail(f"knn query {query_id} neighbor set lacks a strict rank gap")
+        committed_max = require_fraction(
+            f"knn query {query_id} max_neighbor_squared_distance",
+            query.get("max_neighbor_squared_distance"),
+        )
+        committed_min = require_fraction(
+            f"knn query {query_id} min_non_neighbor_squared_distance",
+            query.get("min_non_neighbor_squared_distance"),
+        )
+        if (committed_max, committed_min) != (max_neighbor, min_non_neighbor):
+            fail(f"knn query {query_id} rank-gap distances are incorrect")
+
+        raw_votes = query.get("vote_counts")
+        if not isinstance(raw_votes, dict) or set(raw_votes) != set(classes):
+            fail(f"knn query {query_id} vote_counts must cover exactly the classes")
+        computed_votes = {label: 0 for label in classes}
+        class_by_id = {point["id"]: point["class"] for point in training}
+        for neighbor in neighbor_ids:
+            computed_votes[class_by_id[neighbor]] += 1
+        for label in classes:
+            committed_vote = require_fraction(
+                f"knn query {query_id} vote_counts.{label}",
+                raw_votes[label],
+            )
+            if committed_vote != Fraction(computed_votes[label]):
+                fail(f"knn query {query_id} vote count for {label} is incorrect")
+        predicted = query.get("predicted_class")
+        require_string(f"knn query {query_id} predicted_class", predicted)
+        if predicted not in classes:
+            fail(f"knn query {query_id} predicted_class is unknown")
+        other_votes = [
+            computed_votes[label] for label in classes if label != predicted
+        ]
+        if any(computed_votes[predicted] <= votes for votes in other_votes):
+            fail(f"knn query {query_id} predicted_class must win a strict majority")
+
+    bad = checks["bad-squared-distance-rejected"]
+    if bad["expected_result"] != "unsat":
+        fail("bad-squared-distance-rejected must expect unsat")
+    if bad.get("proof_status") != "replay-only":
+        fail("bad-squared-distance-rejected must be replay-only")
+    if bad["validation"] != "exact_rational_bad_squared_distance_replay":
+        fail("bad-squared-distance-rejected validation is incorrect")
+    data = bad.get("data", {})
+    if data.get("source_witness") != "six-point-knn-sample":
+        fail("bad-squared-distance-rejected must cite the source witness")
+    if data.get("metric") != "squared_euclidean_distance":
+        fail("bad-squared-distance-rejected must document squared_euclidean_distance")
+    if data.get("query") != "q1" or data.get("training_point") != "t4":
+        fail("bad-squared-distance-rejected must document the q1/t4 pair")
+    bad_computed = require_fraction(
+        "bad knn computed_squared_distance",
+        data.get("computed_squared_distance"),
+    )
+    bad_claimed = require_fraction(
+        "bad knn claimed_squared_distance",
+        data.get("claimed_squared_distance"),
+    )
+    if bad_computed != query_distances["q1"]["t4"]:
+        fail("bad-squared-distance-rejected computed value must match replay")
+    if bad_claimed == bad_computed:
+        fail("bad-squared-distance-rejected must document a false distance claim")
+    if "separate qf-lra-bad-squared-distance" not in bad.get("notes", ""):
+        fail("bad-squared-distance-rejected notes must name the checked qf-lra row")
+
+    qf_bad = checks["qf-lra-bad-squared-distance"]
+    if qf_bad["expected_result"] != "unsat":
+        fail("qf-lra-bad-squared-distance must expect unsat")
+    if qf_bad.get("proof_status") != "checked":
+        fail("qf-lra-bad-squared-distance must be checked")
+    if qf_bad["validation"] != "exact_rational_farkas_evidence":
+        fail("qf-lra-bad-squared-distance must use exact_rational_farkas_evidence")
+    qf_data = qf_bad.get("data", {})
+    if qf_data.get("source_witness") != "six-point-knn-sample":
+        fail("qf-lra-bad-squared-distance must cite the source witness")
+    if qf_data.get("source_replay_row") != "bad-squared-distance-rejected":
+        fail("qf-lra-bad-squared-distance must cite the replay row")
+    if qf_data.get("metric") != "squared_euclidean_distance":
+        fail("qf-lra-bad-squared-distance must document squared_euclidean_distance")
+    if qf_data.get("query") != "q1" or qf_data.get("training_point") != "t4":
+        fail("qf-lra-bad-squared-distance must document the q1/t4 pair")
+    qf_computed = require_fraction(
+        "qf knn computed_squared_distance",
+        qf_data.get("computed_squared_distance"),
+    )
+    qf_claimed = require_fraction(
+        "qf knn claimed_squared_distance",
+        qf_data.get("claimed_squared_distance"),
+    )
+    if (qf_computed, qf_claimed) != (bad_computed, bad_claimed):
+        fail("qf-lra-bad-squared-distance data must match the replay row")
+    equations = require_string_list(
+        "qf knn squared_distance_equations",
+        qf_data.get("squared_distance_equations"),
+    )
+    if equations != ["knn_distance = 18", "knn_distance = 16"]:
+        fail("qf-lra-bad-squared-distance must document the linear conflict")
+    smt2_artifact = qf_data.get("smt2_artifact")
+    require_string("qf knn smt2_artifact", smt2_artifact)
+    expected_smt2 = (
+        "artifacts/examples/math/finite-k-nearest-neighbors-v0/smt2/"
+        "bad-squared-distance-farkas-conflict.smt2"
+    )
+    if smt2_artifact != expected_smt2:
+        fail("qf-lra-bad-squared-distance smt2_artifact must name the checked source artifact")
+    check_source("qf knn smt2_artifact", smt2_artifact)
+    regression = qf_data.get("farkas_regression")
+    require_string("qf knn farkas_regression", regression)
+    if (
+        "finite_k_nearest_neighbors_bad_squared_distance_artifact_emits_checked_farkas"
+        not in regression
+    ):
+        fail("qf-lra-bad-squared-distance must link the Farkas regression")
+    certificate = qf_data.get("certificate")
+    require_string("qf knn certificate", certificate)
+    if "UnsatFarkas" not in certificate or "independently checks" not in certificate:
+        fail("qf-lra-bad-squared-distance certificate must document checked Farkas evidence")
+
+    horizon = checks["general-nearest-neighbor-theory-lean-horizon"]
+    if horizon["expected_result"] != "not-run":
+        fail("general-nearest-neighbor-theory-lean-horizon must be not-run")
+    if horizon.get("proof_status") != "lean-horizon":
+        fail("general-nearest-neighbor-theory-lean-horizon must remain lean-horizon")
+    horizon_data = horizon.get("data", {})
+    require_string(
+        "knn horizon target_theorem_shape",
+        horizon_data.get("target_theorem_shape"),
+    )
+    require_string("knn horizon future_checker", horizon_data.get("future_checker"))
+    horizon_text = " ".join(
+        [
+            horizon.get("claim", ""),
+            horizon_data.get("target_theorem_shape", ""),
+            horizon_data.get("future_checker", ""),
+            horizon.get("notes", ""),
+        ]
+    ).lower()
+    if (
+        "nearest" not in horizon_text
+        or "neighbor" not in horizon_text
+        or "distance" not in horizon_text
+    ):
+        fail("general-nearest-neighbor-theory-lean-horizon must be searchable")
+
+
 def validate_descriptive_statistics(expected: dict[str, Any]) -> None:
     witnesses = witness_by_id(expected)
     checks = {check["id"]: check for check in expected["checks"]}
@@ -40021,6 +40287,8 @@ def validate_pack_semantics(metadata: dict[str, Any], expected: dict[str, Any]) 
         validate_finite_decision_tree_gini(expected)
     if metadata["id"] == "finite-entropy-information-gain-v0":
         validate_finite_entropy_information_gain(expected)
+    if metadata["id"] == "finite-k-nearest-neighbors-v0":
+        validate_finite_k_nearest_neighbors(expected)
     if metadata["id"] == "finite-cardinality-v0":
         validate_finite_cardinality(expected)
     if metadata["id"] == "cardinality-principles-v0":

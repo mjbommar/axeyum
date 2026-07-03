@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": "finite-k-nearest-neighbors-v0",
+  "title": "Finite K Nearest Neighbors",
+  "domain": "statistics",
+  "claim_status": "checked",
+  "trust_status": "checked-evidence",
+  "concept_ids": [
+    "field_statistics",
+    "field_probability_theory",
+    "field_discrete_math",
+    "curriculum_counting",
+    "curriculum_rationals",
+    "bridge_probability_mass_table",
+    "bridge_finite_nearest_neighbor_shadow",
+    "bridge_exact_vs_floating_arithmetic",
+    "bridge_qf_lra_farkas_anatomy"
+  ],
+  "field_ids": [
+    "statistics",
+    "probability_theory",
+    "discrete_math"
+  ],
+  "curriculum_nodes": [
+    "counting",
+    "rationals"
+  ],
+  "axeyum_fragments": [
+    "finite classifier table replay",
+    "finite squared-distance replay",
+    "finite neighbor-ranking replay",
+    "finite majority-vote counting",
+    "exact rational arithmetic",
+    "LRA (exact rationals)",
+    "QF_LRA",
+    "Farkas",
+    "finite replay",
+    "Lean horizon",
+    "numerical-honesty metadata"
+  ],
+  "validator_command": "python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-k-nearest-neighbors-v0",
+  "solver_reuse": {
+    "status": "promoted",
+    "target": "finite nearest-neighbor bad squared-distance QF_LRA/Farkas regression seed",
+    "pressure": "Exact finite replay computes the squared Euclidean distance 18 from the first query point to a fixed training point, while a malformed row claims 16, isolating a compact scalar Farkas conflict beneath the neighbor ranking.",
+    "evidence": [
+      "qf-lra-bad-squared-distance"
+    ],
+    "next_step": "Promote additional nearest-neighbor rows only when they add distinct tie-breaking, weighted-vote, alternative-metric, dimensionality, or numerical-honesty pressure; keep consistency, Bayes-risk, curse-of-dimensionality, and floating-point distance claims in theorem or statistical-inference lanes."
+  },
+  "source_refs": [
+    "docs/foundational-resources/MATH-FIELDS.md",
+    "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+    "docs/curriculum/01-number-systems/rationals.md",
+    "docs/curriculum/02-structures/counting.md",
+    "docs/proof-cookbook/recipes/finite-model-replay.md",
+    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+    "docs/learn/math/k-nearest-neighbors-end-to-end.md",
+    "artifacts/examples/math/finite-k-nearest-neighbors-v0/smt2/bad-squared-distance-farkas-conflict.smt2",
+    "crates/axeyum-solver/tests/math_resource_lra_routes.rs"
+  ],
+  "expected_results": [
+    "knn-table-witness",
+    "knn-distance-witness",
+    "knn-neighbor-witness",
+    "knn-vote-witness",
+    "bad-squared-distance-rejected",
+    "qf-lra-bad-squared-distance",
+    "general-nearest-neighbor-theory-lean-horizon"
+  ],
+  "graduation_criteria": [
+    "Encode the fixed finite training table, rational query points, exact squared Euclidean distances, k-nearest neighbor selection with a strict rank gap, and majority-vote class counts as deterministic exact-rational replay obligations.",
+    "Route the false squared-distance claim through a source-linked QF_LRA artifact and checked Farkas evidence after exact replay computes the conflicting distance equation.",
+    "Expose the pack through statistics, probability, discrete/counting, nearest-neighbor, exact-vs-floating, and learner-query surfaces.",
+    "Keep nearest-neighbor consistency, Bayes-risk bounds, curse-of-dimensionality behavior, metric and weighting policy, tie-breaking policy, continuous feature spaces, and floating-point distance computation marked theorem, statistical-inference, or numerical-honesty horizon."
+  ]
+}

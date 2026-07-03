@@ -207,6 +207,10 @@ CURRICULUM_MAP = {
                 "finite-entropy-information-gain-v0",
                 "Exact rational dyadic-entropy and information-gain split replay with checked bad weighted-entropy evidence.",
             ),
+            (
+                "finite-k-nearest-neighbors-v0",
+                "Exact rational nearest-neighbor distance, ranking, and majority-vote replay with checked bad squared-distance evidence.",
+            ),
         ],
     },
     "reals": {
@@ -553,6 +557,10 @@ CURRICULUM_MAP = {
                 "finite-entropy-information-gain-v0",
                 "Finite dyadic class-proportion replay feeding exact rational entropy and information-gain checks.",
             ),
+            (
+                "finite-k-nearest-neighbors-v0",
+                "Exact rational coordinate and squared-distance replay feeding finite nearest-neighbor classification checks.",
+            ),
         ],
     },
     "number-theory": {
@@ -858,7 +866,7 @@ CURRICULUM_MAP = {
 FIELD_PACKS = {
     "logic_and_proof": ("proof-methods-refutation-v0", "Negation-as-query, finite CNF checks, finite order counterexamples, and proof-object lessons."),
     "set_theory_and_foundations": ("finite-sets-v0", "Finite set, relation, function, monoid/function-composition, permutation-group, group-action, order, lattice, and cardinality checks."),
-    "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, decision-tree feature/class partitions, dyadic entropy/information-gain partitions, and combinatorial witness checks."),
+    "discrete_math": ("counting-v0", "Finite counting, finite permutations, finite transformation monoids, group-action orbits, order/lattice, decision-tree feature/class partitions, dyadic entropy/information-gain partitions, nearest-neighbor majority votes, and combinatorial witness checks."),
     "graph_theory": ("graph-coloring-v0", "SAT colorings, non-colorability, reachability, search cost counters, matching, cuts, finite flow/cut certificates, finite shortest-path certificates, finite DAG/topological-order certificates, and d-separation."),
     "number_theory": ("modular-arithmetic-v0", "Congruences, CRT, residues, finite fields, finite ideals in modular rings, and bounded Diophantine examples."),
     "linear_algebra": ("linear-algebra-rational-v0", "Fixed exact matrices, finite vector spaces and modules, dual spaces, inner products, tensor products, Gaussian elimination, LU, pivoted-LU, and LDLT decomposition, QR/Cholesky/Schur replay, Gram-Schmidt transcripts, Givens rotations, Householder reflections, covariance/Gram, PCA, k-means centroid/objective, and linear-discriminant replay, orthogonal transforms, rank, inverse, condition-number, singular-value, orthogonal diagonalization, real Schur decomposition, polar decomposition, QR-iteration and shifted-QR steps, power-iteration, conjugate-gradient, Arnoldi/Hessenberg, GMRES residual-minimization, Lanczos/tridiagonalization, regularized normal-equation replay, and Jordan-chain shadows, Jacobians, Hessians, Newton-step Hessian solves, projections, and infeasibility."),
@@ -867,8 +875,8 @@ FIELD_PACKS = {
     "complex_analysis": ("complex-algebraic-v0", "Complex arithmetic, real-pair transforms, finite Cauchy-Riemann derivative shadows, and polynomial factorization shadows as real/rational algebra before analytic proof horizons."),
     "topology": ("finite-topology-v0", "Finite topologies, metric balls, closure/interior, continuous maps, and finite simplicial-homology checks."),
     "measure_theory": ("finite-measure-v0", "Finite sigma-algebras, finite measures, monotonicity/subadditivity, random variables, conditional expectations, finite kernels, martingales, hitting times, concentration checks, product tables, and exact probability foundations."),
-    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, Naive Bayes classifier posterior replay, confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, finite decision-tree Gini split rows, finite dyadic entropy/information-gain rows, product measures, and exact discrete distributions."),
-    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance/PCA and finite clustering identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, finite Naive Bayes classifier replay, finite confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, finite decision-tree Gini split rows, finite dyadic entropy/information-gain rows, and Simpson witnesses."),
+    "probability_theory": ("finite-probability-v0", "Finite mass tables, random variables, conditional expectation, kernels, martingales, hitting times, concentration/tail bounds, finite covariance tables, conditioning, independence, Bayes rule, Naive Bayes classifier posterior replay, confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, finite decision-tree Gini split rows, finite dyadic entropy/information-gain rows, finite nearest-neighbor vote rows, product measures, and exact discrete distributions."),
+    "statistics": ("descriptive-statistics-v0", "Mean/variance/covariance/PCA and finite clustering identities, Schur conditional-variance shadows, random variables, conditional expectation, finite kernel, hitting-time, martingale, and concentration checks, contingency tables, exact tests, ordinary and ridge regression, finite linear-discriminant/classification replay, finite Naive Bayes classifier replay, finite confusion-matrix classifier metrics, finite ROC/AUC ranking metrics, finite precision-recall ranking metrics, finite calibration/Brier scoring rows, finite decision-tree Gini split rows, finite dyadic entropy/information-gain rows, finite nearest-neighbor classification rows, and Simpson witnesses."),
     "optimization_and_convexity": [
         ("linear-optimization-v0", "LP feasibility, threshold cliffs, and Farkas-style certificates."),
         ("convexity-rational-v0", "Finite midpoint convexity, second differences, affine threshold monotonicity, and checked bad midpoint-convexity plus affine-threshold rejection."),
@@ -1673,6 +1681,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_calibration_brier_shadow",
             "bridge_finite_decision_tree_gini_shadow",
             "bridge_finite_entropy_information_gain_shadow",
+            "bridge_finite_nearest_neighbor_shadow",
             "bridge_eigenpair",
         ],
         "decidability": "decidable",
@@ -1723,6 +1732,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-entropy-information-gain-v0",
                 "Malformed weighted-entropy row checked through exact rational Farkas evidence after finite dyadic-entropy replay.",
+            ),
+            (
+                "finite-k-nearest-neighbors-v0",
+                "Malformed squared-distance row checked through exact rational Farkas evidence after finite coordinate replay.",
             ),
             (
                 "numerical-linear-algebra-v0",
@@ -1784,6 +1797,7 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/precision-recall-end-to-end.md",
             "docs/learn/math/decision-tree-gini-end-to-end.md",
             "docs/learn/math/entropy-information-gain-end-to-end.md",
+            "docs/learn/math/k-nearest-neighbors-end-to-end.md",
             "docs/learn/math/linear-algebra-and-optimization.md",
             "docs/foundational-resources/PROOF-UPGRADE-FRONTIER.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
@@ -1838,6 +1852,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_calibration_brier_shadow",
             "bridge_finite_decision_tree_gini_shadow",
             "bridge_finite_entropy_information_gain_shadow",
+            "bridge_finite_nearest_neighbor_shadow",
             "field_numerical_analysis",
             "field_statistics",
         ],
@@ -1984,6 +1999,10 @@ BRIDGE_CONCEPTS = [
                 "Dyadic node entropies, weighted split entropies, information gains, and bad weighted-entropy rows checked as exact rational replay, not floating-point logarithm or statistical generalization evidence.",
             ),
             (
+                "finite-k-nearest-neighbors-v0",
+                "Squared Euclidean distances, neighbor rankings, majority votes, and bad squared-distance rows checked as exact rational replay, not floating-point distance or statistical generalization evidence.",
+            ),
+            (
                 "finite-root-finding-v0",
                 "One-step bisection/Newton rows replayed exactly while convergence and floating-point stability remain horizon claims.",
             ),
@@ -2062,6 +2081,7 @@ BRIDGE_CONCEPTS = [
                     "docs/learn/math/calibration-brier-end-to-end.md",
                     "docs/learn/math/decision-tree-gini-end-to-end.md",
                     "docs/learn/math/entropy-information-gain-end-to-end.md",
+                    "docs/learn/math/k-nearest-neighbors-end-to-end.md",
                     "docs/learn/math/principal-components-end-to-end.md",
                     "docs/learn/math/k-means-clustering-end-to-end.md",
                     "docs/foundational-resources/MATH-FIELDS.md",
@@ -2109,11 +2129,13 @@ BRIDGE_CONCEPTS = [
             "docs/learn/math/calibration-brier-end-to-end.md",
             "docs/learn/math/decision-tree-gini-end-to-end.md",
             "docs/learn/math/entropy-information-gain-end-to-end.md",
+            "docs/learn/math/k-nearest-neighbors-end-to-end.md",
             "artifacts/examples/math/finite-rounding-shadow-v0/smt2/bad-rounded-delta-farkas-conflict.smt2",
             "artifacts/examples/math/finite-interval-arithmetic-shadow-v0/smt2/bad-product-upper-farkas-conflict.smt2",
             "artifacts/examples/math/finite-calibration-brier-v0/smt2/bad-brier-score-farkas-conflict.smt2",
             "artifacts/examples/math/finite-decision-tree-gini-v0/smt2/bad-weighted-gini-farkas-conflict.smt2",
             "artifacts/examples/math/finite-entropy-information-gain-v0/smt2/bad-weighted-entropy-farkas-conflict.smt2",
+            "artifacts/examples/math/finite-k-nearest-neighbors-v0/smt2/bad-squared-distance-farkas-conflict.smt2",
             "docs/foundational-resources/MATH-CURRICULUM-RESOURCE-MASTER-PLAN.md",
             "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
         ],
@@ -3530,6 +3552,117 @@ BRIDGE_CONCEPTS = [
                 "The validator recomputes all finite dyadic-entropy quantities from committed source data and rejects non-dyadic node proportions.",
                 "Malformed finite weighted-entropy claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
                 "Learner and query docs keep finite dyadic entropy/information-gain replay separate from non-dyadic entropy, log-loss, mutual-information, greedy-optimality, pruning, statistical, continuous-feature, and floating-point claims.",
+            ],
+        },
+    },
+    {
+        "id": "bridge_finite_nearest_neighbor_shadow",
+        "title": "Finite Nearest Neighbor Shadow",
+        "field_ids": [
+            "statistics",
+            "probability_theory",
+            "discrete_math",
+        ],
+        "resource_status": "validated",
+        "summary": (
+            "Finite nearest-neighbor rows replay a fixed rational training "
+            "set, exact squared Euclidean distances, k-nearest neighbor "
+            "selection with a strict rank gap, majority-vote class counts, "
+            "and source-linked bad squared-distance Farkas evidence while "
+            "keeping nearest-neighbor consistency, Bayes-risk bounds, "
+            "curse-of-dimensionality behavior, metric and tie-breaking "
+            "policy, statistical generalization, and floating-point distance "
+            "behavior separate."
+        ),
+        "prerequisites": [
+            "curriculum_counting",
+            "curriculum_rationals",
+            "bridge_probability_mass_table",
+            "bridge_exact_vs_floating_arithmetic",
+            "bridge_qf_lra_farkas_anatomy",
+        ],
+        "unlocks": [
+            "field_statistics",
+            "field_probability_theory",
+            "field_discrete_math",
+            "bridge_lean_horizon",
+        ],
+        "decidability": "bounded",
+        "axeyum_fragments": [
+            "finite classifier table replay",
+            "finite squared-distance replay",
+            "finite neighbor-ranking replay",
+            "finite majority-vote counting",
+            "exact rational arithmetic",
+            "QF_LRA",
+            "Farkas certificate",
+            "finite replay",
+            "Lean horizon",
+            "numerical-honesty metadata",
+        ],
+        "example_packs": [
+            (
+                "finite-k-nearest-neighbors-v0",
+                "Exact six-point training set with two rational queries, squared-distance replay, strict-gap k=3 neighbor selection, majority-vote replay, bad squared-distance replay, and checked QF_LRA/Farkas row.",
+            ),
+            (
+                "finite-decision-tree-gini-v0",
+                "Exact decision-tree split replay that supplies the partition-based classifier contrast.",
+            ),
+            (
+                "finite-naive-bayes-classifier-v0",
+                "Finite classifier posterior replay that supplies the probabilistic-model contrast.",
+            ),
+        ],
+        "proof_routes": [
+            {
+                "name": "finite nearest-neighbor replay plus QF_LRA/Farkas",
+                "status": "checked",
+                "checker": "scripts/validate-foundational-example-pack.py and cargo test -p axeyum-solver --test math_resource_lra_routes",
+                "lean_status": "partial",
+                "sources": [
+                    "docs/proof-cookbook/recipes/finite-model-replay.md",
+                    "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+                    "docs/proof-cookbook/recipes/lean-horizon-template.md",
+                    "docs/learn/math/k-nearest-neighbors-end-to-end.md",
+                    "artifacts/examples/math/finite-k-nearest-neighbors-v0/smt2/bad-squared-distance-farkas-conflict.smt2",
+                    "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+                ],
+                "notes": (
+                    "The finite checker recomputes the committed squared "
+                    "Euclidean distances, requires a strict rank gap between "
+                    "the k-th and (k+1)-th distances so no tie policy is "
+                    "needed, and recounts the majority vote. Only the final "
+                    "malformed squared-distance row is promoted to checked "
+                    "Farkas evidence."
+                ),
+            }
+        ],
+        "source_refs": [
+            "docs/foundational-resources/MATH-FIELDS.md",
+            "docs/foundational-resources/MATH-CURRICULUM-IMPLEMENTATION-MATRIX.md",
+            "docs/foundational-resources/MATH-CURRICULUM-BUILDOUT.md",
+            "docs/proof-cookbook/recipes/finite-model-replay.md",
+            "docs/proof-cookbook/recipes/qf-lra-farkas.md",
+            "docs/proof-cookbook/recipes/lean-horizon-template.md",
+            "docs/learn/math/k-nearest-neighbors-end-to-end.md",
+            "docs/learn/math/probability-and-statistics.md",
+            "artifacts/examples/math/finite-k-nearest-neighbors-v0/smt2/bad-squared-distance-farkas-conflict.smt2",
+            "crates/axeyum-solver/tests/math_resource_lra_routes.rs",
+        ],
+        "open_gaps": [
+            "Finite squared-distance replay over one committed training set does not prove nearest-neighbor consistency, Bayes-risk bounds, curse-of-dimensionality behavior, metric or feature-scaling policy, or classifier generalization.",
+            "Boundary tie-breaking and weighted-vote policies are excluded by the strict-rank-gap restriction and need separate resources before they can be treated as checked claims.",
+            "Euclidean (non-squared) distances involve square roots and need algebraic-real or theorem resources before they can be replayed exactly.",
+            "Floating-point distance computation and ranking needs numerical-honesty or QF_FP resources before it can be presented as checked implementation behavior.",
+        ],
+        "graduation": {
+            "status": "validated",
+            "criteria": [
+                "Rows state the finite training set, query points, squared-distance tables, strict-gap neighbor sets, vote counts, and predicted classes.",
+                "The validator recomputes all finite distances, rankings, and votes from committed source data and rejects neighbor sets without a strict rank gap.",
+                "Malformed finite squared-distance claims link to source SMT-LIB artifacts and checked QF_LRA/Farkas regressions after replay.",
+                "Learner and query docs keep finite exact nearest-neighbor replay separate from consistency, Bayes-risk, dimensionality, metric-policy, tie-breaking, statistical, continuous-feature, and floating-point claims.",
             ],
         },
     },
@@ -8295,6 +8428,7 @@ BRIDGE_CONCEPTS = [
             "bridge_finite_roc_auc_shadow",
             "bridge_finite_decision_tree_gini_shadow",
             "bridge_finite_entropy_information_gain_shadow",
+            "bridge_finite_nearest_neighbor_shadow",
         ],
         "decidability": "bounded",
         "axeyum_fragments": [
@@ -8336,6 +8470,10 @@ BRIDGE_CONCEPTS = [
             (
                 "finite-entropy-information-gain-v0",
                 "Finite dyadic feature/class partitions, exact entropy replay, information-gain selection, and checked bad weighted-entropy evidence.",
+            ),
+            (
+                "finite-k-nearest-neighbors-v0",
+                "Finite neighbor class counts, majority-vote replay, and checked bad squared-distance evidence.",
             ),
             (
                 "finite-measure-v0",

@@ -25,6 +25,7 @@ Example packs:
 - [finite-k-means-clustering-v0](../../../artifacts/examples/math/finite-k-means-clustering-v0/)
 - [finite-decision-tree-gini-v0](../../../artifacts/examples/math/finite-decision-tree-gini-v0/)
 - [finite-entropy-information-gain-v0](../../../artifacts/examples/math/finite-entropy-information-gain-v0/)
+- [finite-k-nearest-neighbors-v0](../../../artifacts/examples/math/finite-k-nearest-neighbors-v0/)
 - [least-squares-regression-v0](../../../artifacts/examples/math/least-squares-regression-v0/)
 - [finite-linear-discriminant-v0](../../../artifacts/examples/math/finite-linear-discriminant-v0/)
 - [exact-statistical-tests-v0](../../../artifacts/examples/math/exact-statistical-tests-v0/)
@@ -86,6 +87,9 @@ checked QF_LRA bad weighted-Gini evidence,
 finite dyadic entropy replay over pure or exactly balanced nodes, weighted
 split entropies, information-gain comparison, replayed bad weighted-entropy
 rejection, and checked QF_LRA bad weighted-entropy evidence,
+finite nearest-neighbor squared-distance replay, strict-gap neighbor
+ranking, majority-vote replay, replayed bad squared-distance rejection, and
+checked QF_LRA bad squared-distance evidence,
 contingency table margins, a checked QF_LIA bad contingency-total certificate,
 least-squares normal equations, checked QF_LRA bad-RSS and bad-coefficients
 certificates, finite linear-discriminant class means, within-class scatter,
@@ -373,6 +377,10 @@ node entropies, weighted split entropies, information gains, and the best
 split, rejecting any node whose class proportion is not `0`, `1/2`, or `1`,
 then emits checked `UnsatFarkas` evidence for a malformed weighted-entropy
 claim.
+For finite nearest-neighbor classification, it recomputes exact squared
+Euclidean distances, requires a strict rank gap between the k-th and
+(k+1)-th distances, recounts the majority vote, then emits checked
+`UnsatFarkas` evidence for a malformed squared-distance claim.
 For DAG examples, the validator enumerates simple skeleton paths and applies
 the collider/non-collider conditioning rules. For random matrices, it
 recomputes weighted trace, determinant, Gram, and rank claims from exact
@@ -408,6 +416,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-calibration-brier-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-decision-tree-gini-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-entropy-information-gain-v0
+python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-k-nearest-neighbors-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
@@ -449,6 +458,8 @@ For exact finite decision-tree Gini split replay, read
 [End To End: Finite Decision Tree Gini](decision-tree-gini-end-to-end.md).
 For exact finite dyadic entropy and information-gain replay, read
 [End To End: Finite Entropy Information Gain](entropy-information-gain-end-to-end.md).
+For exact finite nearest-neighbor distance and majority-vote replay, read
+[End To End: Finite K Nearest Neighbors](k-nearest-neighbors-end-to-end.md).
 For finite matrix-valued probability tables, read
 [End To End: Finite Random Matrices](random-matrix-finite-end-to-end.md).
 For the cross-pack finite random-matrix query map, read
@@ -470,8 +481,8 @@ topology-to-measure bridge, read
 Finite probability tables, random variables, kernels, martingales, product
 measures, Markov chains, d-separation rows, exact statistics, finite
 covariance matrices, finite Naive Bayes classifiers, finite decision-tree
-Gini rows, finite dyadic entropy/information-gain rows, and random-matrix
-moments first use
+Gini rows, finite dyadic entropy/information-gain rows, finite
+nearest-neighbor vote rows, and random-matrix moments first use
 [Finite Model Replay](../../proof-cookbook/recipes/finite-model-replay.md):
 the validator recomputes exact atom-table sums and finite path conditions.
 Malformed probability normalization, Bayes-posterior rows, measure-complement
@@ -479,7 +490,8 @@ rows, conditional expectation tables, stochastic rows, expected hitting-time
 equations, tail bounds, regression coefficients, covariance entries, classifier
 posteriors, classifier metric rows, ROC/AUC rows, precision-recall rows,
 calibration/Brier rows, decision-tree weighted-Gini rows, dyadic
-weighted-entropy rows, and random-matrix moment/rank rows graduate through
+weighted-entropy rows, nearest-neighbor squared-distance rows, and
+random-matrix moment/rank rows graduate through
 [QF_LRA / Farkas Evidence](../../proof-cookbook/recipes/qf-lra-farkas.md).
 Discrete count contradictions such as contingency totals and exact tail counts
 use
@@ -505,7 +517,8 @@ claims, model calibration, calibration-bin policy, proper-scoring-rule
 theorems, ROC/AUC and precision-recall threshold policy, confidence intervals,
 tie/interpolation conventions beyond committed finite rows, continuous score
 distributions, decision-tree greedy optimality, pruning, threshold search,
-non-dyadic entropy and log-loss splitting, causal identification,
+non-dyadic entropy and log-loss splitting, nearest-neighbor consistency and
+tie policy, causal identification,
 do-calculus, and floating-point
 diagnostics are not proof claims. They need either
 Lean-backed probability/measure formalization or explicit reproducibility
